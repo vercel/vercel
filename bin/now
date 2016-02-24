@@ -29,23 +29,27 @@ let config;
 try {
   config = fs.readFileSync(resolve(os.homedir(), '.now.json'), 'utf8');
   config = JSON.parse(config);
-} catch (err) {
+} catch (err) {}
+
+if (!config || !config.token) {
   login()
-  .then(() => {
+  .then((token) => {
     if (program.L) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
       process.exit(0);
     } else {
-      sync();
+      sync(token);
     }
   })
   .catch((e) => {
     error(`Authentication error – ${e.message}`);
     process.exit(1);
   });
+} else {
+  sync(config.token);
 }
 
-const sync = () => {
+const sync = (token) => {
   const debug = !!program.debug;
   const clipboard = !program.noClipboard;
   const start = Date.now();
