@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+import program from 'commander';
+import { resolve } from 'path';
+import { copy } from 'copy-paste';
+import now from '../lib';
+import ms from 'ms';
+
+program
+.option('-d, --debug', 'Debug mode [off]', false)
+.option('-C, --no-clipboard', 'Do not attempt to copy URL to clipboard')
+.parse(process.argv);
+
+let path = program.args[program.args.length - 1];
+
+if (path) {
+  if ('/' !== path[0]) {
+    path = resolve(process.cwd(), path);
+  }
+} else {
+  path = process.cwd();
+}
+
+const debug = !!program.debug;
+const clipboard = !program.noClipboard;
+const start = Date.now();
+
+console.log(`> Deploying ${path}`);
+
+now(path, { debug }).then((url) => {
+  const elapsed = ms(new Date() - start);
+  if (clipboard) {
+    copy(url, (err) => {
+      console.log(`> ${url} ${!err ? '(copied to clipboard)' : ''} [${elapsed}]`);
+    });
+  } else {
+    console.log(`> ${url} [${elapsed}]`);
+  }
+}, (err) => {
+  error(err.message);
+  process.exit(1);
+});
+
+function error (err) {
+  console.error(`> \u001b[31mError!\u001b[39m ${err}.`);
+}
