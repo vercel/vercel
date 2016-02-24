@@ -54,7 +54,6 @@ gulp.task('compile-scripts', function () {
   .pipe(gulp.dest('build/scripts'));
 });
 
-
 gulp.task('lint', function () {
   return gulp.src([
     'gulpfile.js',
