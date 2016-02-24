@@ -12,9 +12,10 @@
     "now": "./build/bin/now"
   },
   "dependencies": {
-    "babel-runtime": "6.5.0",
     "arr-flatten": "1.0.1",
     "array-unique": "0.2.1",
+    "babel-plugin-transform-runtime": "6.5.2",
+    "babel-runtime": "6.5.0",
     "commander": "2.9.0",
     "copy-paste": "1.1.4",
     "fs-promise": "0.4.1",
@@ -41,7 +42,8 @@
   },
   "scripts": {
     "gulp": "gulp",
-    "test": "ava"
+    "test": "ava",
+    "postinstall": "scripts/post-install.js"
   },
   "babel": {
     "presets": [

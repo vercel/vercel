@@ -1,22 +1,31 @@
+import { homedir } from 'os';
+import { join as pathJoin } from 'path';
 import readline from 'readline';
+import fs from 'fs-promise';
 import fetch from 'isomorphic-fetch';
 import { stringify as stringifyQuery } from 'querystring';
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const stdin = process.openStdin();
 
 function readEmail () {
-  return new Promise((reject, resolve) => {
-    rl.question('> Enter your email address: ', resolve);
+  return new Promise((resolve, reject) => {
+    process.stdout.write('> Enter your email address: ');
+    stdin.on('data', (d) => {
+      resolve(d.toString().trim());
+    });
   });
 }
 
 async function getVerificationToken (email) {
+  const data = JSON.stringify({ email });
   const res = await fetch('http://localhost:3001/', {
     method: 'POST',
-    body: { email }
+    mode: 'cors',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      'Content-Length': data.length
+    }),
+    body: data
   });
 
   const body = await res.json();
@@ -29,7 +38,7 @@ async function verify (email, verificationToken) {
     token: verificationToken
   };
 
-  const res = await fetch('http://localhost:3001?' + stringifyQuery(query));
+  const res = await fetch('http://localhost:3001/verify?' + stringifyQuery(query));
 
   const body = await res.json();
   return body.token;
@@ -51,15 +60,16 @@ async function register () {
   do {
     await sleep(5000);
     try {
-      const res = await verify(email, verificationToken);
-      final = res.token;
+      final = await verify(email, verificationToken);
     } catch (e) {}
   } while (!final);
 
   return { email, token: final };
 }
 
-register().then(({ email, token }) => {
-  console.log('got email', email);
-  console.log('got final token', token);
+register().then((loginData) => {
+  return fs.writeFile(pathJoin(homedir(), '.now.json'), JSON.stringify(loginData));
+}).then(() => {
+  console.log('> Registration successful. `now` is now ready to use. Your credentials are stored in `~/.now.json`');
+  process.exit(0);
 });
