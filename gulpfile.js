@@ -9,7 +9,8 @@ gulp.task('help', help);
 
 gulp.task('compile', [
   'compile-lib',
-  'compile-bin'
+  'compile-bin',
+  'compile-scripts'
 ]);
 
 gulp.task('compile-lib', function () {
@@ -38,6 +39,21 @@ gulp.task('compile-bin', function () {
   .pipe(ext.crop())
   .pipe(gulp.dest('build/bin'));
 });
+
+gulp.task('compile-scripts', function () {
+  return gulp.src('scripts/*')
+  .pipe(babel({
+    presets: ['es2015'],
+    plugins: [
+      'syntax-async-functions',
+      'transform-async-to-generator',
+      'transform-runtime'
+    ]
+  }))
+  .pipe(ext.crop())
+  .pipe(gulp.dest('build/scripts'));
+});
+
 
 gulp.task('lint', function () {
   return gulp.src([
