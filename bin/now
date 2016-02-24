@@ -41,6 +41,7 @@ try {
   })
   .catch((e) => {
     error(`Authentication error – ${e.message}`);
+    process.exit(1);
   });
 }
 
