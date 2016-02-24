@@ -1,3 +1,6 @@
 import login from '../lib/login';
 
-login();
+login().then(() => {
+  console.log('> Logged in successfully. Token saved in ~/.now.json');
+  process.exit(0);
+});
