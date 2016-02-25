@@ -16,6 +16,7 @@
     "array-unique": "0.2.1",
     "babel-plugin-transform-runtime": "6.5.2",
     "babel-runtime": "6.5.0",
+    "chalk": "1.1.1",
     "commander": "2.9.0",
     "copy-paste": "1.1.4",
     "fs-promise": "0.4.1",
