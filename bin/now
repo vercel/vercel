@@ -49,7 +49,7 @@ if (!config || !config.token) {
   sync(config.token);
 }
 
-const sync = (token) => {
+function sync (token) {
   const debug = !!program.debug;
   const clipboard = !program.noClipboard;
   const start = Date.now();
@@ -67,15 +67,17 @@ const sync = (token) => {
       console.log(`> ${url} [${elapsed}]`);
     }
   }, (err) => {
-    if (403 === err.statusCode) {
-      error('Authorization error. Run `now -L` to log-in again.');
+    if (403 === err.status) {
+      error('Authentication error. Run `now -L` to log-in again.');
+    } else if (500 === err.status) {
+      error('Unexpected server error. Please retry');
     } else {
-      error(err.message);
+      error(`Unexpected error. Please retry. (${err.message})`);
     }
 
     process.exit(1);
   });
-};
+}
 
 function error (err) {
   console.error(`> \u001b[31mError!\u001b[39m ${err}.`);
