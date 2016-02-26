@@ -15,11 +15,12 @@ every time you run it, you get a new URL (unless nothing's changed).
 
 ### Conventions
 
-- Only files that would be included in `npm publish` are synchronized.
-- `package.json` `files`, `.npmignore`, `.gitignore` supported
-- `package.json` must contain a `start` task inside `scripts`.
-  If a `now` script is defined, that's used instead.
-- Your HTTP server is expected to run in port `3000`.
+1. `package.json` must contain a `start` task inside `scripts`.
+   If a `now` script is defined, that's used instead.
+2. Only files that would be included in `npm publish` are synchronized.
+   `package.json` `files` field, `.npmignore` and `.gitignore` are supported.
+3. If a build step is needed, specify a `build` task in `scripts`.
+   If `now-build` is defined, that's used instead.
 
 ## Installing
 
@@ -31,9 +32,10 @@ $ npm install -g now
 
 ## Features
 
-- No reliance on Git.
-- File de-duping.
-- Respects NPM conventions.
+- **Slim**. No reliance on Git.
+- **Fast**. Blazing fast sync with deduping.
+- **Standard**. Respects npm and Node.JS conventions.
+- **Easy**. No need to specify ports, `Dockerfile` or config.
 
 ## Options
 
