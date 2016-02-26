@@ -10,6 +10,7 @@ import os from 'os';
 
 program
 .option('-d, --debug', 'Debug mode [off]', false)
+.option('-f, --force', 'Force a new deployment even if nothing has changed', false)
 .option('-L, --login', 'Configure login')
 .option('-C, --no-clipboard', 'Do not attempt to copy URL to clipboard')
 .parse(process.argv);
@@ -56,7 +57,7 @@ function sync (token) {
 
   console.log(`> Deploying ${path}`);
 
-  now(path, token, { debug })
+  now(path, token, { forceNew: program.force, debug })
   .then((url) => {
     const elapsed = ms(new Date() - start);
     if (clipboard) {
