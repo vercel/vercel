@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import program from 'commander';
+import Progress from 'progress';
+import copy from '../lib/copy';
 import { resolve } from 'path';
-import { copy } from 'copy-paste';
 import login from '../lib/login';
-import now from '../lib';
+import bytes from 'bytes';
+import Now from '../lib';
 import fs from 'fs';
 import ms from 'ms';
 import os from 'os';
@@ -39,7 +41,9 @@ if (!config || !config.token) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
       process.exit(0);
     } else {
-      sync(token);
+      sync(token).catch((err) => {
+        error(`Unknown error: ${err.stack}`);
+      });
     }
   })
   .catch((e) => {
@@ -47,37 +51,89 @@ if (!config || !config.token) {
     process.exit(1);
   });
 } else {
-  sync(config.token);
+  sync(config.token).catch((err) => {
+    error(`Unknown error: ${err.stack}`);
+  });
 }
 
-function sync (token) {
+async function sync (token) {
   const debug = !!program.debug;
   const clipboard = !program.noClipboard;
   const start = Date.now();
 
   console.log(`> Deploying ${path}`);
 
-  now(path, token, { forceNew: program.force, debug })
-  .then((url) => {
-    const elapsed = ms(new Date() - start);
-    if (clipboard) {
-      copy(url, (err) => {
-        console.log(`> ${url} ${!err ? '(copied to clipboard)' : ''} [${elapsed}]`);
-      });
-    } else {
+  const now = new Now(token, { debug });
+
+  try {
+    await now.create(path, { forceNew: program.force });
+  } catch (err) {
+    handleError(err);
+  }
+
+  const { url } = now;
+  const elapsed = ms(new Date() - start);
+
+  if (clipboard) {
+    try {
+      await copy(url);
+      console.log(`> ${url} (copied to clipboard) [${elapsed}]`);
+    } catch (err) {
       console.log(`> ${url} [${elapsed}]`);
     }
-  }, (err) => {
-    if (403 === err.status) {
-      error('Authentication error. Run `now -L` to log-in again.');
-    } else if (500 === err.status) {
-      error('Unexpected server error. Please retry');
-    } else {
-      error(`Unexpected error. Please retry. (${err.message})`);
-    }
+  } else {
+    console.log(`> ${url} [${elapsed}]`);
+  }
 
-    process.exit(1);
-  });
+  const start_u = new Date();
+  const complete = () => {
+    const elapsed_u = ms(new Date() - start_u);
+    console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+    now.close();
+  };
+
+  if (now.syncAmount) {
+    const bar = new Progress('> Upload [:bar] :percent :etas', {
+      width: 20,
+      complete: '=',
+      incomplete: '',
+      total: now.syncAmount
+    });
+
+    now.upload();
+
+    now.on('upload', ({ name, data }) => {
+      const amount = Buffer.byteLength(data);
+      if (debug) {
+        console.log(`> [debug] Uploaded: ${name} (${bytes(Buffer.byteLength(data))})`);
+      }
+      bar.tick(amount);
+    });
+
+    now.on('complete', () => {
+      complete();
+    });
+
+    now.on('error', (err) => {
+      error('Upload failed');
+      handleError(err);
+      process.exit(1);
+    });
+  } else {
+    console.log('> Sync complete (cached)');
+    now.close();
+  }
+}
+
+function handleError (err) {
+  if (403 === err.status) {
+    error('Authentication error. Run `now -L` to log-in again.');
+  } else if (500 === err.status) {
+    error('Unexpected server error. Please retry.');
+  } else {
+    error(`Unexpected error. Please try later. (${err.message})`);
+  }
+  process.exit(1);
 }
 
 function error (err) {
