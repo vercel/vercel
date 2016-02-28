@@ -50,7 +50,7 @@ test('hashes', async t => {
   const files = await getFiles(fixture('hashes'));
   const hashes = await hash(files);
   t.same(hashes.size, 3);
-  t.same(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172'), prefix + 'hashes/dei.png');
-  t.same(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45'), prefix + 'hashes/index.js');
-  t.same(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd'), prefix + 'hashes/package.json');
+  t.same(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').name, prefix + 'hashes/dei.png');
+  t.same(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').name, prefix + 'hashes/index.js');
+  t.same(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').name, prefix + 'hashes/package.json');
 });
