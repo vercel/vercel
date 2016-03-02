@@ -54,3 +54,10 @@ test('hashes', async t => {
   t.same(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').name, prefix + 'hashes/index.js');
   t.same(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').name, prefix + 'hashes/package.json');
 });
+
+test('ignore node_modules', async t => {
+  let files = await getFiles(fixture('no-node_modules'));
+  files = files.sort(alpha);
+  t.same(base(files[0]), 'no-node_modules/index.js');
+  t.same(base(files[1]), 'no-node_modules/package.json');
+});
