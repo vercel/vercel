@@ -5,6 +5,7 @@ import copy from '../lib/copy';
 import { resolve } from 'path';
 import login from '../lib/login';
 import bytes from 'bytes';
+import chalk from 'chalk';
 import Now from '../lib';
 import fs from 'fs';
 import ms from 'ms';
@@ -77,9 +78,9 @@ async function sync (token) {
   if (clipboard) {
     try {
       await copy(url);
-      console.log(`> ${url} (copied to clipboard) [${elapsed}]`);
+      console.log(`> ${chalk.cyan('Ready!')} ${chalk.bold(`https://${url}`)} (copied to clipboard) [${elapsed}]`);
     } catch (err) {
-      console.log(`> ${url} [${elapsed}]`);
+      console.log(`> ${chalk.cyan('Ready!')} ${chalk.bold(`https://${url}`)} [${elapsed}]`);
     }
   } else {
     console.log(`> ${url} [${elapsed}]`);
