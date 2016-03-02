@@ -90,6 +90,7 @@ async function sync (token) {
     const elapsed_u = ms(new Date() - start_u);
     console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
     now.close();
+    process.exit(0);
   };
 
   if (now.syncAmount) {
