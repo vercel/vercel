@@ -123,6 +123,7 @@ async function sync (token) {
   } else {
     console.log('> Sync complete (cached)');
     now.close();
+    process.exit(0);
   }
 }
 
