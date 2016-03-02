@@ -62,7 +62,7 @@ async function sync (token) {
   const clipboard = !program.noClipboard;
   const start = Date.now();
 
-  console.log(`> Deploying ${path}`);
+  console.log(`> Deploying "${path}"`);
 
   const now = new Now(token, { debug });
 
