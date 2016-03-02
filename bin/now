@@ -112,9 +112,7 @@ async function sync (token) {
       bar.tick(amount);
     });
 
-    now.on('complete', () => {
-      complete();
-    });
+    now.on('complete', complete);
 
     now.on('error', (err) => {
       error('Upload failed');
