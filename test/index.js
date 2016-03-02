@@ -1,12 +1,15 @@
 import test from 'ava';
 import { join, resolve } from 'path';
-import getFiles from '../lib/get-files';
+import _getFiles from '../lib/get-files';
 import hash from '../lib/hash';
 import { asc as alpha } from 'alpha-sort';
 
 const prefix = join(__dirname, '_fixtures') + '/';
 const base = (path) => path.replace(prefix, '');
 const fixture = (name) => resolve(`./_fixtures/${name}`);
+
+// overload to force debugging
+const getFiles = (dir) => _getFiles(dir, null, true);
 
 test('`files` + README', async t => {
   let files = await getFiles(fixture('files-in-package'));
@@ -60,4 +63,11 @@ test('ignore node_modules', async t => {
   files = files.sort(alpha);
   t.same(base(files[0]), 'no-node_modules/index.js');
   t.same(base(files[1]), 'no-node_modules/package.json');
+});
+
+test('ignore files over limit', async t => {
+  let files = await _getFiles(fixture('big-file'), null, { limit: 200 });
+  t.same(base(files[0]), 'big-file/package.json');
+  t.same(base(files[1]), 'big-file/small-two.js');
+  t.same(base(files[2]), 'big-file/small.js');
 });
