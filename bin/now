@@ -34,10 +34,10 @@ try {
   config = JSON.parse(config);
 } catch (err) {}
 
-if (!config || !config.token) {
+if (!config || !config.token || program.login) {
   login()
   .then((token) => {
-    if (program.L) {
+    if (program.login) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
       process.exit(0);
     } else {
@@ -129,7 +129,7 @@ async function sync (token) {
 
 function handleError (err) {
   if (403 === err.status) {
-    error('Authentication error. Run `now -L` to log-in again.');
+    error('Authentication error. Run `now -L` or `now --login` to log-in again.');
   } else if (500 === err.status) {
     error('Unexpected server error. Please retry.');
   } else {
@@ -139,5 +139,5 @@ function handleError (err) {
 }
 
 function error (err) {
-  console.error(`> \u001b[31mError!\u001b[39m ${err}.`);
+  console.error(`> \u001b[31mError!\u001b[39m ${err}`);
 }
