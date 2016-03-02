@@ -6,7 +6,8 @@
   "main": "./build/lib/index",
   "files": [
     "build/lib",
-    "build/bin"
+    "build/bin",
+    "build/scripts"
   ],
   "bin": {
     "now": "./build/bin/now"
