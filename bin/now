@@ -33,7 +33,12 @@ const debug = !!program.debug;
 const clipboard = !program.noClipboard;
 const config = cfg.read();
 const update = checkUpdate({ debug });
-const exit = (code) => update.then(() => process.exit(code));
+const exit = (code) => {
+  update.then(() => process.exit(code));
+  // don't wait for updates more than a second
+  // when the process really wants to exit
+  setTimeout(() => process.exit(code), 1000);
+};
 
 if (!config.token || program.login) {
   login()
