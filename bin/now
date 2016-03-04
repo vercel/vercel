@@ -2,14 +2,14 @@
 import program from 'commander';
 import Progress from 'progress';
 import copy from '../lib/copy';
+import * as cfg from '../lib/cfg';
 import { resolve } from 'path';
 import login from '../lib/login';
+import checkUpdate from '../lib/check-update';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import Now from '../lib';
-import fs from 'fs';
 import ms from 'ms';
-import os from 'os';
 
 program
 .usage('[options]')
@@ -29,38 +29,37 @@ if (path) {
   path = process.cwd();
 }
 
-let config;
+const debug = !!program.debug;
+const clipboard = !program.noClipboard;
+const config = cfg.read();
+const update = checkUpdate({ debug });
+const exit = (code) => update.then(() => process.exit(code));
 
-try {
-  config = fs.readFileSync(resolve(os.homedir(), '.now.json'), 'utf8');
-  config = JSON.parse(config);
-} catch (err) {}
-
-if (!config || !config.token || program.login) {
+if (!config.token || program.login) {
   login()
   .then((token) => {
     if (program.login) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
-      process.exit(0);
+      exit(0);
     } else {
       sync(token).catch((err) => {
         error(`Unknown error: ${err.stack}`);
+        exit(1);
       });
     }
   })
   .catch((e) => {
     error(`Authentication error – ${e.message}`);
-    process.exit(1);
+    exit(1);
   });
 } else {
   sync(config.token).catch((err) => {
     error(`Unknown error: ${err.stack}`);
+    exit(1);
   });
 }
 
 async function sync (token) {
-  const debug = !!program.debug;
-  const clipboard = !program.noClipboard;
   const start = Date.now();
 
   console.log(`> Deploying "${path}"`);
@@ -71,6 +70,7 @@ async function sync (token) {
     await now.create(path, { forceNew: program.force });
   } catch (err) {
     handleError(err);
+    return;
   }
 
   const { url } = now;
@@ -92,7 +92,7 @@ async function sync (token) {
     const elapsed_u = ms(new Date() - start_u);
     console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
     now.close();
-    process.exit(0);
+    exit(0);
   };
 
   if (now.syncAmount) {
@@ -118,24 +118,26 @@ async function sync (token) {
     now.on('error', (err) => {
       error('Upload failed');
       handleError(err);
-      process.exit(1);
+      exit(1);
     });
   } else {
     console.log('> Sync complete (cached)');
     now.close();
-    process.exit(0);
+    exit(0);
   }
 }
 
 function handleError (err) {
   if (403 === err.status) {
     error('Authentication error. Run `now -L` or `now --login` to log-in again.');
+  } else if (err.userError) {
+    error(err.message);
   } else if (500 === err.status) {
     error('Unexpected server error. Please retry.');
   } else {
     error(`Unexpected error. Please try later. (${err.message})`);
   }
-  process.exit(1);
+  exit(1);
 }
 
 function error (err) {
