@@ -1,4 +1,14 @@
 
+0.9.5 / 2016-03-04
+==================
+
+  * login: fix usage of `Object.assign` [@rauchg]
+  * post-install: improve error handling [@rauchg]
+  * post-install: make runnable as script [@rauchg]
+  * package: use `build/scripts` for postinstall [@rauchg]
+  * index: fallback to directory name [@rauchg]
+  * index: send `package.json` metadata like `name` [@rauchg]
+
 0.9.4 / 2016-03-03
 ==================
 
