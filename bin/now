@@ -12,7 +12,7 @@ import ms from 'ms';
 import os from 'os';
 
 program
-.usage('[options] <path>')
+.usage('[options]')
 .option('-d, --debug', 'Debug mode [off]', false)
 .option('-f, --force', 'Force a new deployment even if nothing has changed', false)
 .option('-L, --login', 'Configure login')
@@ -26,9 +26,7 @@ if (path) {
     path = resolve(process.cwd(), path);
   }
 } else {
-  error('Missing path. To deploy this directory, run `now .`');
-  program.outputHelp();
-  process.exit(1);
+  path = process.cwd();
 }
 
 let config;
