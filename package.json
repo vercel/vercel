@@ -45,7 +45,8 @@
     "gulp-babel": "6.1.2",
     "gulp-eslint": "1.1.1",
     "gulp-ext": "1.0.0",
-    "gulp-task-listing": "1.0.1"
+    "gulp-task-listing": "1.0.1",
+    "gulp-uglify": "1.5.3"
   },
   "scripts": {
     "gulp": "gulp",

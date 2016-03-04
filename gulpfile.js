@@ -3,6 +3,7 @@ const del = require('del');
 const ext = require('gulp-ext');
 const babel = require('gulp-babel');
 const eslint = require('gulp-eslint');
+const uglify = require('gulp-uglify');
 const help = require('gulp-task-listing');
 
 gulp.task('help', help);
@@ -23,6 +24,7 @@ gulp.task('compile-lib', function () {
       'transform-runtime'
     ]
   }))
+  .pipe(uglify())
   .pipe(gulp.dest('build/lib'));
 });
 
@@ -36,6 +38,7 @@ gulp.task('compile-bin', function () {
       'transform-runtime'
     ]
   }))
+  .pipe(uglify())
   .pipe(ext.crop())
   .pipe(gulp.dest('build/bin'));
 });
