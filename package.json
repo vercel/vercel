@@ -4,9 +4,7 @@
   "description": "Realtime Deployments for Node.JS apps.",
   "main": "./build/lib/index",
   "files": [
-    "build/lib",
-    "build/bin",
-    "build/scripts"
+    "build"
   ],
   "bin": {
     "now": "./build/bin/now"
