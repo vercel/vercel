@@ -48,7 +48,7 @@
   "scripts": {
     "gulp": "gulp",
     "test": "ava",
-    "postinstall": "scripts/post-install.js"
+    "postinstall": "build/scripts/post-install.js"
   },
   "babel": {
     "presets": [
