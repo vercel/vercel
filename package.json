@@ -1,8 +1,7 @@
 {
   "name": "now",
-  "private": true,
-  "version": "0.0.1",
-  "description": "",
+  "version": "0.9.0",
+  "description": "Realtime Deployments for Node.JS apps.",
   "main": "./build/lib/index",
   "files": [
     "build/lib",
