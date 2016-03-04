@@ -10,5 +10,6 @@ login()
   process.exit(0);
 })
 .catch((err) => {
-  console.error(`> Error. Login filed. Run \`now --login\` to retry.`);
+  console.error(`> Error. Login filed: (${err.message})`);
+  console.error(`> Run \`now --login\` to retry`);
 });
