@@ -1,8 +1,13 @@
 
+0.9.3 / 2016-03-03
+==================
+
+  * more debug information [@rauchg]
+
 0.9.2 / 2016-03-03
 ==================
 
-  * update ignores list
+  * update ignores list [@rauchg]
 
 0.9.1 / 2016-03-03
 ==================
