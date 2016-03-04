@@ -1,4 +1,9 @@
 
+0.9.4 / 2016-03-03
+==================
+
+  * login: extend configuration instead of overwriting it [@rauchg]
+
 0.9.3 / 2016-03-03
 ==================
 
