@@ -111,9 +111,9 @@ async function sync (token) {
     now.upload();
 
     now.on('upload', ({ name, data }) => {
-      const amount = Buffer.byteLength(data);
+      const amount = data.length;
       if (debug) {
-        console.log(`> [debug] Uploaded: ${name} (${bytes(Buffer.byteLength(data))})`);
+        console.log(`> [debug] Uploaded: ${name} (${bytes(data.length)})`);
       }
       bar.tick(amount);
     });
