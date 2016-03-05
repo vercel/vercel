@@ -3,6 +3,7 @@
   "parser": "babel-eslint",
   "rules": {
     "yoda": 0,
+    "arrow-parens": 0,
     "semi": [2, "always"],
     "no-extra-semi": 2,
     "semi-spacing": [2, { "before": false, "after": true }],
