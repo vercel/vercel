@@ -1,4 +1,14 @@
 
+0.9.6 / 2016-03-04
+==================
+
+  * send files as buffers [@rase-]
+  * simplify cfg reading / merging [@rauchg]
+  * ignored: ignore `.dockerignore` [@rauchg]
+  * add auto updater with support for timeout, exit handler [@rauchg]
+  * package: bump `gulp-eslint` to work with latest eslint [@rauchg]
+  * fix eslint [@rauchg]
+
 0.9.5 / 2016-03-04
 ==================
 
