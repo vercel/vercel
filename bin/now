@@ -15,6 +15,7 @@ program
 .usage('[options]')
 .option('-d, --debug', 'Debug mode [off]', false)
 .option('-f, --force', 'Force a new deployment even if nothing has changed', false)
+.option('-F, --forceSync', 'Force a new deployment even if nothing has changed and force syncing of all files', false)
 .option('-L, --login', 'Configure login')
 .option('-C, --no-clipboard', 'Do not attempt to copy URL to clipboard')
 .parse(process.argv);
@@ -72,7 +73,7 @@ async function sync (token) {
   const now = new Now(token, { debug });
 
   try {
-    await now.create(path, { forceNew: program.force });
+    await now.create(path, { forceNew: program.force, forceSync: program.forceSync });
   } catch (err) {
     handleError(err);
     return;
