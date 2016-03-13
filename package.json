@@ -25,7 +25,8 @@
     "progress": "1.1.8",
     "resumer": "0.0.0",
     "retry": "0.9.0",
-    "spdy": "3.2.3"
+    "spdy": "3.2.3",
+    "split-array": "1.0.1"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
