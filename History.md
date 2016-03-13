@@ -1,4 +1,10 @@
 
+0.9.8 / 2016-03-12
+==================
+
+  * cap maximum concurrent uploads due to HTTP/2 streams limit [@rauchg]
+  * make login resolve token [@rase-]
+
 0.9.7 / 2016-03-10
 ==================
 
