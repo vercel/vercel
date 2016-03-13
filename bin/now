@@ -13,6 +13,7 @@ import ms from 'ms';
 
 program
 .usage('[options]')
+.version(require('../../package').version)
 .option('-d, --debug', 'Debug mode [off]', false)
 .option('-f, --force', 'Force a new deployment even if nothing has changed', false)
 .option('-F, --forceSync', 'Force a new deployment even if nothing has changed and force syncing of all files', false)
