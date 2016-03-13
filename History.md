@@ -1,8 +1,13 @@
 
+0.9.11 / 2016-03-12
+===================
+
+  * fix registration url [@rauchg]
+
 0.9.10 / 2016-03-12
 ===================
 
-  * delete post-install
+  * delete post-install [@rauchg]
 
 0.9.9 / 2016-03-12
 ==================
