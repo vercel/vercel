@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "Realtime Deployments for Node.JS apps.",
   "main": "./build/lib/index",
   "files": [
