@@ -137,6 +137,14 @@ async function sync (token) {
 function handleError (err) {
   if (403 === err.status) {
     error('Authentication error. Run `now -L` or `now --login` to log-in again.');
+  } else if (429 === err.status) {
+    if (null != err.retryAfter) {
+      error('Rate limit exceeded error. Try again in ' +
+          ms(err.retryAfter * 1000, { long: true }) +
+          ', or upgrade your account: https://zeit.co/now#pricing');
+    } else {
+      error('Rate limit exceeded error. Please try later.');
+    }
   } else if (err.userError) {
     error(err.message);
   } else if (500 === err.status) {
