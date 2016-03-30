@@ -15,16 +15,16 @@ import ms from 'ms';
 const argv = minimist(process.argv.slice(2));
 const help = () => {
   console.log(`
-𝚫 now [options] <path>
+  𝚫 now [options] <path>
 
-Options:
+  Options:
 
-  -h, --help          output usage information
-  -v, --version       output the version number
-  -d, --debug         Debug mode [off]
-  -f, --force         Force a new deployment even if nothing has changed
-  -L, --login         Configure login
-  -C, --no-clipboard  Do not attempt to copy URL to clipboard
+    -h, --help          output usage information
+    -v, --version       output the version number
+    -d, --debug         Debug mode [off]
+    -f, --force         Force a new deployment even if nothing has changed
+    -L, --login         Configure login
+    -C, --no-clipboard  Do not attempt to copy URL to clipboard
 `);
 };
 
