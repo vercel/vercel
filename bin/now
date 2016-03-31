@@ -6,6 +6,7 @@ import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { version } from '../../package';
 import checkUpdate from '../lib/check-update';
+import Logger from '../lib/build-logger';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import minimist from 'minimist';
@@ -105,9 +106,9 @@ async function sync (token) {
   if (clipboard) {
     try {
       await copy(url);
-      console.log(`> ${chalk.cyan('Ready!')} ${chalk.bold(`https://${url}`)} (copied to clipboard) [${elapsed}]`);
+      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
     } catch (err) {
-      console.log(`> ${chalk.cyan('Ready!')} ${chalk.bold(`https://${url}`)} [${elapsed}]`);
+      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
     }
   } else {
     console.log(`> ${url} [${elapsed}]`);
@@ -117,8 +118,12 @@ async function sync (token) {
   const complete = () => {
     const elapsed_u = ms(new Date() - start_u);
     console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+
+    // show build logs
+    printLogs(now.host);
+
+    // close http2 agent
     now.close();
-    exit(0);
   };
 
   if (now.syncAmount) {
@@ -148,9 +153,27 @@ async function sync (token) {
     });
   } else {
     console.log('> Sync complete (cached)');
+
+    if (force) {
+      // show build logs
+      printLogs(now.host);
+    }
+
     now.close();
-    exit(0);
   }
+}
+
+function printLogs (host) {
+  // log build
+  const logger = new Logger(host);
+  logger.on('error', () => {
+    console.log('> Connection error.');
+    exit(1);
+  });
+  logger.on('close', () => {
+    console.log(`${chalk.cyan('> Build completed!')}`);
+    exit(0);
+  });
 }
 
 function handleError (err) {
