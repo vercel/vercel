@@ -119,11 +119,11 @@ async function sync (token) {
     const elapsed_u = ms(new Date() - start_u);
     console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
 
-    // show build logs
-    printLogs(now.host);
-
     // close http2 agent
     now.close();
+
+    // show build logs
+    printLogs(now.host);
   };
 
   if (now.syncAmount) {
@@ -154,14 +154,11 @@ async function sync (token) {
   } else {
     console.log('> Sync complete (cached)');
 
+    // close http2 agent
     now.close();
 
-    if (force) {
-      // show build logs
-      printLogs(now.host);
-    } else {
-      exit(0);
-    }
+    // show build logs
+    printLogs(now.host);
   }
 }
 
@@ -173,7 +170,7 @@ function printLogs (host) {
     exit(1);
   });
   logger.on('close', () => {
-    console.log(`${chalk.cyan('> Build completed!')}`);
+    console.log(`${chalk.cyan('> Deployment complete!')}`);
     exit(0);
   });
 }
