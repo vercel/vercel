@@ -1,4 +1,13 @@
 
+0.9.15 / 2016-04-01
+===================
+
+  * print logs from build [@rauchg]
+  * fix unwanted bails in retrying logic [@rase-]
+  * ignore update checking if no tty [@rauchg]
+  * add messages for rate limit exceeded error [@nkzawa]
+  * check for updates upon `-h` and `-v` [@rauchg]
+
 0.9.14 / 2016-03-17
 ===================
 
