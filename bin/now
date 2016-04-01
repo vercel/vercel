@@ -154,12 +154,14 @@ async function sync (token) {
   } else {
     console.log('> Sync complete (cached)');
 
+    now.close();
+
     if (force) {
       // show build logs
       printLogs(now.host);
+    } else {
+      exit(0);
     }
-
-    now.close();
   }
 }
 
