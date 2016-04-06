@@ -1,4 +1,9 @@
 
+0.9.18 / 2016-04-06
+==================
+
+  * if file not found at all, don't attempt to list it [@rase-]
+
 0.9.17 / 2016-04-06
 ===================
 
