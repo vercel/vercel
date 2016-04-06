@@ -1,7 +1,8 @@
 {
   "name": "now",
-  "version": "0.9.16",
-  "description": "Realtime Deployments for Node.JS apps.",
+  "version": "0.9.17",
+  "description": "",
+  "readme": "",
   "main": "./build/lib/index",
   "files": [
     "build"
@@ -24,7 +25,6 @@
     "progress": "1.1.8",
     "resumer": "0.0.0",
     "retry": "0.9.0",
-    "spdy": "3.2.3",
     "split-array": "1.0.1",
     "minimist": "1.2.0",
     "ansi-escapes": "1.3.0",
