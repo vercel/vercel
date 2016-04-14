@@ -5,7 +5,6 @@ import { resolve } from 'path';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { version } from '../../package';
-import checkUpdate from '../lib/check-update';
 import Logger from '../lib/build-logger';
 import bytes from 'bytes';
 import chalk from 'chalk';
@@ -51,43 +50,35 @@ const force = argv.f || argv.force;
 const forceSync = argv.F || argv.forceSync;
 const shouldLogin = argv.L || argv.login;
 
-// auto-update checking
 const config = cfg.read();
-const update = checkUpdate({ debug });
-const exit = (code) => {
-  update.then(() => process.exit(code));
-  // don't wait for updates more than a second
-  // when the process really wants to exit
-  setTimeout(() => process.exit(code), 1000);
-};
 
 if (argv.h || argv.help) {
   help();
-  exit(0);
+  process.exit(0);
 } else if (argv.v || argv.version) {
   console.log(chalk.bold('𝚫 now'), version);
-  exit(0);
+  process.exit(0);
 } else if (!config.token || shouldLogin) {
   login()
   .then((token) => {
     if (shouldLogin) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
-      exit(0);
+      process.exit(0);
     } else {
       sync(token).catch((err) => {
         error(`Unknown error: ${err.stack}`);
-        exit(1);
+        process.exit(1);
       });
     }
   })
   .catch((e) => {
     error(`Authentication error – ${e.message}`);
-    exit(1);
+    process.exit(1);
   });
 } else {
   sync(config.token).catch((err) => {
     error(`Unknown error: ${err.stack}`);
-    exit(1);
+    process.exit(1);
   });
 }
 
@@ -154,7 +145,7 @@ async function sync (token) {
     now.on('error', (err) => {
       error('Upload failed');
       handleError(err);
-      exit(1);
+      process.exit(1);
     });
   } else {
     console.log('> Sync complete (cached)');
@@ -172,11 +163,11 @@ function printLogs (host) {
   const logger = new Logger(host);
   logger.on('error', () => {
     console.log('> Connection error.');
-    exit(1);
+    process.exit(1);
   });
   logger.on('close', () => {
     console.log(`${chalk.cyan('> Deployment complete!')}`);
-    exit(0);
+    process.exit(0);
   });
 }
 
@@ -198,7 +189,7 @@ function handleError (err) {
   } else {
     error(`Unexpected error. Please try later. (${err.message})`);
   }
-  exit(1);
+  process.exit(1);
 }
 
 function error (err) {
