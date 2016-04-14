@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+import minimist from 'minimist';
+import { resolve } from 'path';
+import { spawn } from 'child_process';
+import checkUpdate from '../lib/check-update';
+
+const argv = minimist(process.argv.slice(2));
+
+// options
+const debug = argv.debug || argv.d;
+
+// auto-update checking
+const update = checkUpdate({ debug });
+const exit = (code) => {
+  update.then(() => process.exit(code));
+  // don't wait for updates more than a second
+  // when the process really wants to exit
+  setTimeout(() => process.exit(code), 1000);
+};
+
+const commands = new Set(['deploy', 'list', 'ls']);
+const aliases = new Map([['ls', 'list']]);
+
+let cmd = argv._[0];
+let args;
+
+if (commands.has(cmd)) {
+  cmd = aliases.get(cmd) || cmd;
+  args = process.argv.slice(3);
+} else {
+  cmd = 'deploy';
+  args = process.argv.slice(2);
+}
+
+const bin = resolve(__dirname, 'now-' + cmd);
+const proc = spawn(bin, args, { stdio: 'inherit', customFds: [0, 1, 2] });
+proc.on('close', (code) => exit(code));
+proc.on('error', () => exit(1));
