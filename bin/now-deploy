@@ -16,7 +16,12 @@ import ms from 'ms';
 const argv = minimist(process.argv.slice(2));
 const help = () => {
   console.log(`
-  𝚫 now [options] <path>
+  𝚫 now [options] <command|path>
+
+  Commands:
+
+    list    output list of instances
+    ls      alias of list
 
   Options:
 
