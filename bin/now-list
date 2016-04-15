@@ -1,3 +1,44 @@
 #!/usr/bin/env node
 
-console.log('!list', process.argv);
+import minimist from 'minimist';
+import Now from '../lib';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import { handleError, error } from '../lib/error';
+
+const argv = minimist(process.argv.slice(2));
+const app = argv._[0];
+
+// options
+const debug = argv.debug || argv.d;
+const apiUrl = argv.url || 'https://api.now.sh';
+
+const config = cfg.read();
+
+Promise.resolve(config.token || login(apiUrl))
+.then(async (token) => {
+  try {
+    await list(token);
+  } catch (err) {
+    error(`Unknown error: ${err.stack}`);
+    process.exit(1);
+  }
+})
+.catch((e) => {
+  error(`Authentication error – ${e.message}`);
+  process.exit(1);
+});
+
+async function list (token) {
+  const now = new Now(apiUrl, token, { debug });
+
+  let deployments;
+  try {
+    deployments = await now.list(app);
+  } catch (err) {
+    handleError(err);
+    process.exit(1);
+  }
+
+  console.log(deployments);
+}

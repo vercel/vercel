@@ -11,6 +11,7 @@ import chalk from 'chalk';
 import minimist from 'minimist';
 import Now from '../lib';
 import ms from 'ms';
+import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2));
 const help = () => {
@@ -49,6 +50,7 @@ const clipboard = !(argv.noClipboard || argv.C);
 const force = argv.f || argv.force;
 const forceSync = argv.F || argv.forceSync;
 const shouldLogin = argv.L || argv.login;
+const apiUrl = argv.url || 'https://api.now.sh';
 
 const config = cfg.read();
 
@@ -59,7 +61,7 @@ if (argv.h || argv.help) {
   console.log(chalk.bold('𝚫 now'), version);
   process.exit(0);
 } else if (!config.token || shouldLogin) {
-  login()
+  login(apiUrl)
   .then((token) => {
     if (shouldLogin) {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
@@ -87,13 +89,13 @@ async function sync (token) {
 
   console.log(`> Deploying "${path}"`);
 
-  const now = new Now(token, { debug });
+  const now = new Now(apiUrl, token, { debug });
 
   try {
     await now.create(path, { forceNew: force, forceSync: forceSync });
   } catch (err) {
     handleError(err);
-    return;
+    process.exit(1);
   }
 
   const { url } = now;
@@ -169,29 +171,4 @@ function printLogs (host) {
     console.log(`${chalk.cyan('> Deployment complete!')}`);
     process.exit(0);
   });
-}
-
-function handleError (err) {
-  if (403 === err.status) {
-    error('Authentication error. Run `now -L` or `now --login` to log-in again.');
-  } else if (429 === err.status) {
-    if (null != err.retryAfter) {
-      error('Rate limit exceeded error. Try again in ' +
-          ms(err.retryAfter * 1000, { long: true }) +
-          ', or upgrade your account: https://zeit.co/now#pricing');
-    } else {
-      error('Rate limit exceeded error. Please try later.');
-    }
-  } else if (err.userError) {
-    error(err.message);
-  } else if (500 === err.status) {
-    error('Unexpected server error. Please retry.');
-  } else {
-    error(`Unexpected error. Please try later. (${err.message})`);
-  }
-  process.exit(1);
-}
-
-function error (err) {
-  console.error(`> \u001b[31mError!\u001b[39m ${err}`);
 }
