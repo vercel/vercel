@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import fs from 'fs-promise';
 import minimist from 'minimist';
 import chalk from 'chalk';
 import table from 'text-table';
@@ -51,8 +52,10 @@ async function list (token) {
     apps.set(dep.name, deps.concat(dep));
   }
 
+  const sorted = await sort([...apps]);
+
   const current = Date.now();
-  const text = [...apps].map(([name, deps]) => {
+  const text = sorted.map(([name, deps]) => {
     const t = table(deps.map(({ uid, url, created }) => {
       const time = ms(current - created, { long: true }) + ' ago';
       return [ uid, time, `https://${url}` ];
@@ -61,6 +64,29 @@ async function list (token) {
   }).join('\n\n');
 
   if (text) console.log('\n' + text + '\n');
+}
+
+async function sort (apps) {
+  let pkg;
+  try {
+    const json = await fs.readFile('package.json');
+    pkg = JSON.parse(json);
+  } catch (err) {
+    pkg = {};
+  }
+
+  return apps
+  .map(([name, deps]) => {
+    deps = deps.slice().sort((a, b) => {
+      return b.created - a.created;
+    });
+    return [name, deps];
+  })
+  .sort(([nameA, depsA], [nameB, depsB]) => {
+    if (pkg.name === nameA) return -1;
+    if (pkg.name === nameB) return 1;
+    return depsB[0].created - depsA[0].created;
+  });
 }
 
 function indent (text, n) {
