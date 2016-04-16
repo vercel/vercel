@@ -1,0 +1,174 @@
+#!/usr/bin/env node
+import Progress from 'progress';
+import copy from '../lib/copy';
+import { resolve } from 'path';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import { version } from '../../package';
+import Logger from '../lib/build-logger';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import minimist from 'minimist';
+import Now from '../lib';
+import ms from 'ms';
+import { handleError, error } from '../lib/error';
+
+const argv = minimist(process.argv.slice(2));
+const help = () => {
+  console.log(`
+  𝚫 now [options] <command|path>
+
+  Commands:
+
+    list    output list of instances
+    ls      alias of list
+
+  Options:
+
+    -h, --help          output usage information
+    -v, --version       output the version number
+    -d, --debug         Debug mode [off]
+    -f, --force         Force a new deployment even if nothing has changed
+    -L, --login         Configure login
+    -C, --no-clipboard  Do not attempt to copy URL to clipboard
+`);
+};
+
+let path = argv._[0];
+
+if (path) {
+  if ('/' !== path[0]) {
+    path = resolve(process.cwd(), path);
+  }
+} else {
+  path = process.cwd();
+}
+
+// options
+const debug = argv.debug || argv.d;
+const clipboard = !(argv.noClipboard || argv.C);
+const force = argv.f || argv.force;
+const forceSync = argv.F || argv.forceSync;
+const shouldLogin = argv.L || argv.login;
+const apiUrl = argv.url || 'https://api.now.sh';
+
+const config = cfg.read();
+
+if (argv.h || argv.help) {
+  help();
+  process.exit(0);
+} else if (argv.v || argv.version) {
+  console.log(chalk.bold('𝚫 now'), version);
+  process.exit(0);
+} else if (!config.token || shouldLogin) {
+  login(apiUrl)
+  .then((token) => {
+    if (shouldLogin) {
+      console.log('> Logged in successfully. Token saved in ~/.now.json');
+      process.exit(0);
+    } else {
+      sync(token).catch((err) => {
+        error(`Unknown error: ${err.stack}`);
+        process.exit(1);
+      });
+    }
+  })
+  .catch((e) => {
+    error(`Authentication error – ${e.message}`);
+    process.exit(1);
+  });
+} else {
+  sync(config.token).catch((err) => {
+    error(`Unknown error: ${err.stack}`);
+    process.exit(1);
+  });
+}
+
+async function sync (token) {
+  const start = Date.now();
+
+  console.log(`> Deploying "${path}"`);
+
+  const now = new Now(apiUrl, token, { debug });
+
+  try {
+    await now.create(path, { forceNew: force, forceSync: forceSync });
+  } catch (err) {
+    handleError(err);
+    process.exit(1);
+  }
+
+  const { url } = now;
+  const elapsed = ms(new Date() - start);
+
+  if (clipboard) {
+    try {
+      await copy(url);
+      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
+    } catch (err) {
+      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+    }
+  } else {
+    console.log(`> ${url} [${elapsed}]`);
+  }
+
+  const start_u = new Date();
+  const complete = () => {
+    const elapsed_u = ms(new Date() - start_u);
+    console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+
+    // close http2 agent
+    now.close();
+
+    // show build logs
+    printLogs(now.host);
+  };
+
+  if (now.syncAmount) {
+    const bar = new Progress('> Upload [:bar] :percent :etas', {
+      width: 20,
+      complete: '=',
+      incomplete: '',
+      total: now.syncAmount
+    });
+
+    now.upload();
+
+    now.on('upload', ({ name, data }) => {
+      const amount = data.length;
+      if (debug) {
+        console.log(`> [debug] Uploaded: ${name} (${bytes(data.length)})`);
+      }
+      bar.tick(amount);
+    });
+
+    now.on('complete', complete);
+
+    now.on('error', (err) => {
+      error('Upload failed');
+      handleError(err);
+      process.exit(1);
+    });
+  } else {
+    console.log('> Sync complete (cached)');
+
+    // close http2 agent
+    now.close();
+
+    // show build logs
+    printLogs(now.host);
+  }
+}
+
+function printLogs (host) {
+  // log build
+  const logger = new Logger(host);
+  logger.on('error', () => {
+    console.log('> Connection error.');
+    process.exit(1);
+  });
+  logger.on('close', () => {
+    console.log(`${chalk.cyan('> Deployment complete!')}`);
+    process.exit(0);
+  });
+}

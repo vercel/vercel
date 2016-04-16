@@ -1,53 +1,15 @@
 #!/usr/bin/env node
-import Progress from 'progress';
-import copy from '../lib/copy';
-import { resolve } from 'path';
-import login from '../lib/login';
-import * as cfg from '../lib/cfg';
-import { version } from '../../package';
-import checkUpdate from '../lib/check-update';
-import Logger from '../lib/build-logger';
-import bytes from 'bytes';
-import chalk from 'chalk';
 import minimist from 'minimist';
-import Now from '../lib';
-import ms from 'ms';
+import { resolve } from 'path';
+import { spawn } from 'child_process';
+import checkUpdate from '../lib/check-update';
 
 const argv = minimist(process.argv.slice(2));
-const help = () => {
-  console.log(`
-  𝚫 now [options] <path>
-
-  Options:
-
-    -h, --help          output usage information
-    -v, --version       output the version number
-    -d, --debug         Debug mode [off]
-    -f, --force         Force a new deployment even if nothing has changed
-    -L, --login         Configure login
-    -C, --no-clipboard  Do not attempt to copy URL to clipboard
-`);
-};
-
-let path = argv._[0];
-
-if (path) {
-  if ('/' !== path[0]) {
-    path = resolve(process.cwd(), path);
-  }
-} else {
-  path = process.cwd();
-}
 
 // options
 const debug = argv.debug || argv.d;
-const clipboard = !(argv.noClipboard || argv.C);
-const force = argv.f || argv.force;
-const forceSync = argv.F || argv.forceSync;
-const shouldLogin = argv.L || argv.login;
 
 // auto-update checking
-const config = cfg.read();
 const update = checkUpdate({ debug });
 const exit = (code) => {
   update.then(() => process.exit(code));
@@ -56,146 +18,21 @@ const exit = (code) => {
   setTimeout(() => process.exit(code), 1000);
 };
 
-if (argv.h || argv.help) {
-  help();
-  exit(0);
-} else if (argv.v || argv.version) {
-  console.log(chalk.bold('𝚫 now'), version);
-  exit(0);
-} else if (!config.token || shouldLogin) {
-  login()
-  .then((token) => {
-    if (shouldLogin) {
-      console.log('> Logged in successfully. Token saved in ~/.now.json');
-      exit(0);
-    } else {
-      sync(token).catch((err) => {
-        error(`Unknown error: ${err.stack}`);
-        exit(1);
-      });
-    }
-  })
-  .catch((e) => {
-    error(`Authentication error – ${e.message}`);
-    exit(1);
-  });
+const commands = new Set(['deploy', 'list', 'ls']);
+const aliases = new Map([['ls', 'list']]);
+
+let cmd = argv._[0];
+let args;
+
+if (commands.has(cmd)) {
+  cmd = aliases.get(cmd) || cmd;
+  args = process.argv.slice(3);
 } else {
-  sync(config.token).catch((err) => {
-    error(`Unknown error: ${err.stack}`);
-    exit(1);
-  });
+  cmd = 'deploy';
+  args = process.argv.slice(2);
 }
 
-async function sync (token) {
-  const start = Date.now();
-
-  console.log(`> Deploying "${path}"`);
-
-  const now = new Now(token, { debug });
-
-  try {
-    await now.create(path, { forceNew: force, forceSync: forceSync });
-  } catch (err) {
-    handleError(err);
-    return;
-  }
-
-  const { url } = now;
-  const elapsed = ms(new Date() - start);
-
-  if (clipboard) {
-    try {
-      await copy(url);
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
-    } catch (err) {
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
-    }
-  } else {
-    console.log(`> ${url} [${elapsed}]`);
-  }
-
-  const start_u = new Date();
-  const complete = () => {
-    const elapsed_u = ms(new Date() - start_u);
-    console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
-
-    // close http2 agent
-    now.close();
-
-    // show build logs
-    printLogs(now.host);
-  };
-
-  if (now.syncAmount) {
-    const bar = new Progress('> Upload [:bar] :percent :etas', {
-      width: 20,
-      complete: '=',
-      incomplete: '',
-      total: now.syncAmount
-    });
-
-    now.upload();
-
-    now.on('upload', ({ name, data }) => {
-      const amount = data.length;
-      if (debug) {
-        console.log(`> [debug] Uploaded: ${name} (${bytes(data.length)})`);
-      }
-      bar.tick(amount);
-    });
-
-    now.on('complete', complete);
-
-    now.on('error', (err) => {
-      error('Upload failed');
-      handleError(err);
-      exit(1);
-    });
-  } else {
-    console.log('> Sync complete (cached)');
-
-    // close http2 agent
-    now.close();
-
-    // show build logs
-    printLogs(now.host);
-  }
-}
-
-function printLogs (host) {
-  // log build
-  const logger = new Logger(host);
-  logger.on('error', () => {
-    console.log('> Connection error.');
-    exit(1);
-  });
-  logger.on('close', () => {
-    console.log(`${chalk.cyan('> Deployment complete!')}`);
-    exit(0);
-  });
-}
-
-function handleError (err) {
-  if (403 === err.status) {
-    error('Authentication error. Run `now -L` or `now --login` to log-in again.');
-  } else if (429 === err.status) {
-    if (null != err.retryAfter) {
-      error('Rate limit exceeded error. Try again in ' +
-          ms(err.retryAfter * 1000, { long: true }) +
-          ', or upgrade your account: https://zeit.co/now#pricing');
-    } else {
-      error('Rate limit exceeded error. Please try later.');
-    }
-  } else if (err.userError) {
-    error(err.message);
-  } else if (500 === err.status) {
-    error('Unexpected server error. Please retry.');
-  } else {
-    error(`Unexpected error. Please try later. (${err.message})`);
-  }
-  exit(1);
-}
-
-function error (err) {
-  console.error(`> \u001b[31mError!\u001b[39m ${err}`);
-}
+const bin = resolve(__dirname, 'now-' + cmd);
+const proc = spawn(bin, args, { stdio: 'inherit', customFds: [0, 1, 2] });
+proc.on('close', (code) => exit(code));
+proc.on('error', () => exit(1));
