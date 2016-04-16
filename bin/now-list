@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import minimist from 'minimist';
+import chalk from 'chalk';
+import table from 'text-table';
+import ms from 'ms';
 import Now from '../lib';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
@@ -40,5 +43,26 @@ async function list (token) {
     process.exit(1);
   }
 
-  console.log(deployments);
+  now.close();
+
+  const apps = new Map();
+  for (const dep of deployments) {
+    const deps = apps.get(dep.name) || [];
+    apps.set(dep.name, deps.concat(dep));
+  }
+
+  const current = Date.now();
+  const text = [...apps].map(([name, deps]) => {
+    const t = table(deps.map(({ uid, url, created }) => {
+      const time = ms(current - created, { long: true }) + ' ago';
+      return [ uid, time, `https://${url}` ];
+    }), { align: ['l', 'r', 'l'] });
+    return chalk.bold(name) + '\n\n' + indent(t, 2).split('\n').join('\n\n');
+  }).join('\n\n');
+
+  if (text) console.log('\n' + text + '\n');
+}
+
+function indent (text, n) {
+  return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
 }
