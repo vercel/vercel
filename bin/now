@@ -18,8 +18,8 @@ const exit = (code) => {
   setTimeout(() => process.exit(code), 1000);
 };
 
-const commands = new Set(['deploy', 'list', 'ls']);
-const aliases = new Map([['ls', 'list']]);
+const commands = new Set(['deploy', 'list', 'ls', 'rm', 'remove']);
+const aliases = new Map([['ls', 'list'], ['rm', 'remove']]);
 
 let cmd = argv._[0];
 let args;

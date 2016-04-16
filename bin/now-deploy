@@ -22,6 +22,8 @@ const help = () => {
 
     list    output list of instances
     ls      alias of list
+    rm      remove a deployment by deployment id
+    remove  alias of rm
 
   Options:
 
