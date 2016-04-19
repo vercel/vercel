@@ -11,6 +11,25 @@ import { handleError, error } from '../lib/error';
 const argv = minimist(process.argv.slice(2));
 const deploymentId = argv._[0];
 
+// options
+const help = () => {
+  console.log(`
+  𝚫 now remove [deploymentId]
+
+  Alias: rm
+
+  Options:
+
+    -h, --help   output usage information
+    -d, --debug  Debug mode [off]
+`);
+};
+
+if (argv.h || argv.help) {
+  help();
+  process.exit(0);
+}
+
 if (!deploymentId) {
   console.log(`${chalk.cyan('> No deployment id specified. You can see active deployments with `now ls`.')}`);
   process.exit(1);
