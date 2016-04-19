@@ -31,7 +31,7 @@ if (argv.h || argv.help) {
 }
 
 if (!deploymentId) {
-  console.log(`${chalk.cyan('> No deployment id specified. You can see active deployments with `now ls`.')}`);
+  error('No deployment id specified. You can see active deployments with `now ls`.');
   process.exit(1);
 }
 
