@@ -11,6 +11,24 @@ import * as cfg from '../lib/cfg';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2));
+const help = () => {
+  console.log(`
+  𝚫 now list [app]
+
+  Alias: ls
+
+  Options:
+
+    -h, --help   output usage information
+    -d, --debug  Debug mode [off]
+`);
+};
+
+if (argv.h || argv.help) {
+  help();
+  process.exit(0);
+}
+
 const app = argv._[0];
 
 // options
