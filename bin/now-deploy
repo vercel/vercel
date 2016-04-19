@@ -20,8 +20,9 @@ const help = () => {
 
   Commands:
 
-    list    output list of instances
-    ls      alias of list
+    list [app]  output list of instances
+    ls [app]    alias of list
+    help [cmd]  display help for [cmd]
 
   Options:
 

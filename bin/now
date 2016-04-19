@@ -18,18 +18,25 @@ const exit = (code) => {
   setTimeout(() => process.exit(code), 1000);
 };
 
-const commands = new Set(['deploy', 'list', 'ls']);
+const defaultCommand = 'deploy';
+const commands = new Set([defaultCommand, 'list', 'ls']);
 const aliases = new Map([['ls', 'list']]);
 
 let cmd = argv._[0];
-let args;
+let args = [];
+
+if ('help' === cmd) {
+  cmd = argv._[1];
+  if (!commands.has(cmd)) cmd = defaultCommand;
+  args.push('--help');
+}
 
 if (commands.has(cmd)) {
   cmd = aliases.get(cmd) || cmd;
-  args = process.argv.slice(3);
+  args = args.concat(process.argv.slice(3));
 } else {
-  cmd = 'deploy';
-  args = process.argv.slice(2);
+  cmd = defaultCommand;
+  args = args.concat(process.argv.slice(2));
 }
 
 const bin = resolve(__dirname, 'now-' + cmd);
