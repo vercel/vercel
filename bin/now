@@ -26,7 +26,8 @@ let cmd = argv._[0];
 let args = [];
 
 if ('help' === cmd) {
-  cmd = argv._[1] || defaultCommand;
+  cmd = argv._[1];
+  if (!commands.has(cmd)) cmd = defaultCommand;
   args.push('--help');
 }
 
