@@ -75,10 +75,10 @@ async function list (token) {
   const current = Date.now();
   const text = sorted.map(([name, deps]) => {
     const t = table(deps.map(({ uid, url, created }) => {
-      const time = ms(current - created, { long: true }) + ' ago';
+      const time = chalk.gray(ms(current - created) + ' ago');
       return [ uid, time, `https://${url}` ];
-    }), { align: ['l', 'r', 'l'] });
-    return chalk.bold(name) + '\n\n' + indent(t, 2).split('\n').join('\n\n');
+    }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) });
+    return chalk.bold(name) + '\n\n' + indent(t, 2);
   }).join('\n\n');
 
   if (text) console.log('\n' + text + '\n');
