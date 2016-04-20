@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.9.19",
+  "version": "0.10.0",
   "description": "",
   "readme": "",
   "main": "./build/lib/index",

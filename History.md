@@ -1,4 +1,14 @@
 
+0.10.0 / 2016-04-19
+===================
+
+  * display default help if wrong command was specified [@nkzawa]
+  * add the `help` command [@nkzawa]
+  * add base command [@nkzawa]
+  * add `now-list` [@nkzawa]
+  * bin/now -> bin/now-deploy [@nkzawa]
+  * add `now-rm` (hidden) [@rase-]
+
 0.9.19 / 2016-04-06
 ===================
 
