@@ -38,6 +38,7 @@ if (!deploymentId) {
 // options
 const debug = argv.debug || argv.d;
 const apiUrl = argv.url || 'https://api.now.sh';
+const hard = argv.hard || false;
 
 const config = cfg.read();
 
@@ -76,7 +77,7 @@ async function remove (token) {
     }
 
     const start = new Date();
-    await now.remove(deploymentId);
+    await now.remove(deploymentId, { hard });
     const elapsed = ms(new Date() - start);
     console.log(`${chalk.cyan('> Deployment ')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
   } catch (err) {
