@@ -83,7 +83,7 @@ async function remove (token) {
     const start = new Date();
     await now.remove(deploymentId, { hard });
     const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Deployment ')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
+    console.log(`${chalk.cyan('> Deployment')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
   } catch (err) {
     handleError(err);
     process.exit(1);
