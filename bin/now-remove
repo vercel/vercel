@@ -32,6 +32,7 @@ if (argv.h || argv.help) {
 
 if (!deploymentId) {
   error('No deployment id specified. You can see active deployments with `now ls`.');
+  help();
   process.exit(1);
 }
 
