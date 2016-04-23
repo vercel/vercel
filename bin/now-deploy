@@ -20,11 +20,9 @@ const help = () => {
 
   Commands:
 
-    list [app]  output list of instances
-    ls [app]    alias of list
-    remove [id] deletes the specified deployment
-    rm [id]     alias of remove
-    help [cmd]  display help for [cmd]
+    ls | list [app]   output list of instances
+    rm | remove [id]  alias of remove
+    help [cmd]        display help for [cmd]
 
   Options:
 
