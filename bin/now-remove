@@ -1,0 +1,89 @@
+#!/usr/bin/env node
+
+import minimist from 'minimist';
+import chalk from 'chalk';
+import ms from 'ms';
+import Now from '../lib';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import { handleError, error } from '../lib/error';
+
+const argv = minimist(process.argv.slice(2));
+const deploymentId = argv._[0];
+
+// options
+const help = () => {
+  console.log(`
+  𝚫 now remove [deploymentId]
+
+  Alias: rm
+
+  Options:
+
+    -h, --help   output usage information
+    -d, --debug  Debug mode [off]
+`);
+};
+
+if (argv.h || argv.help) {
+  help();
+  process.exit(0);
+}
+
+if (!deploymentId) {
+  error('No deployment id specified. You can see active deployments with `now ls`.');
+  process.exit(1);
+}
+
+// options
+const debug = argv.debug || argv.d;
+const apiUrl = argv.url || 'https://api.now.sh';
+const hard = argv.hard || false;
+
+const config = cfg.read();
+
+function readConfirmation () {
+  return new Promise((resolve, reject) => {
+    process.stdout.write(`${chalk.cyan('> Are you sure? ')} ${chalk.bold(deploymentId)} ${chalk.cyan('will be removed permanently')} [${chalk.bold('yN')}]`);
+    process.stdin.on('data', (d) => {
+      process.stdin.pause();
+      resolve(d.toString().trim());
+    }).resume();
+  });
+}
+
+Promise.resolve(config.token || login(apiUrl))
+.then(async (token) => {
+  try {
+    await remove(token);
+  } catch (err) {
+    error(`Unknown error: ${err.stack}`);
+    process.exit(1);
+  }
+})
+.catch((e) => {
+  error(`Authentication error – ${e.message}`);
+  process.exit(1);
+});
+
+async function remove (token) {
+  const now = new Now(apiUrl, token, { debug });
+
+  try {
+    const confirmation = (await readConfirmation()).toLowerCase();
+    if ('y' !== confirmation) {
+      console.log(`${chalk.cyan('> Aborted ')}`);
+      return;
+    }
+
+    const start = new Date();
+    await now.remove(deploymentId, { hard });
+    const elapsed = ms(new Date() - start);
+    console.log(`${chalk.cyan('> Deployment ')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
+  } catch (err) {
+    handleError(err);
+    process.exit(1);
+  }
+
+  now.close();
+}
