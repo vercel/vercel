@@ -1,4 +1,9 @@
 
+0.10.1 / 2016-04-22
+==================
+
+  * fix subcommands (including deploying) on windows [@nkzawa]
+
 0.10.0 / 2016-04-19
 ===================
 
