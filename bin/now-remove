@@ -3,6 +3,7 @@
 import minimist from 'minimist';
 import chalk from 'chalk';
 import ms from 'ms';
+import table from 'text-table';
 import Now from '../lib';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
@@ -43,9 +44,18 @@ const hard = argv.hard || false;
 
 const config = cfg.read();
 
-function readConfirmation (url) {
+function readConfirmation (app) {
   return new Promise((resolve, reject) => {
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.bold('https://' + url)} will be removed permanently ${chalk.gray('[yN] ')}`);
+    const time = chalk.gray(ms(new Date() - app.created) + ' ago');
+    const tbl = table(
+      [[app.uid, time, `https://${app.url}`]],
+      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    );
+
+    process.stdout.write('> The following deployment will be removed permanently\n');
+    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+
     process.stdin.on('data', (d) => {
       process.stdin.pause();
       resolve(d.toString().trim());
@@ -71,10 +81,10 @@ async function remove (token) {
   const now = new Now(apiUrl, token, { debug });
 
   const deployments = await now.list();
-  const url = deployments.find((d) => d.uid === deploymentId).url;
+  const app = deployments.find((d) => d.uid === deploymentId);
 
   try {
-    const confirmation = (await readConfirmation(url)).toLowerCase();
+    const confirmation = (await readConfirmation(app)).toLowerCase();
     if ('y' !== confirmation && 'yes' !== confirmation) {
       console.log('> Aborted');
       return;
