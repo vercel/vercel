@@ -45,7 +45,7 @@ const config = cfg.read();
 
 function readConfirmation (url) {
   return new Promise((resolve, reject) => {
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.bold(url)} will be removed permanently ${chalk.gray('[yN] ')}`);
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.bold('https://' + url)} will be removed permanently ${chalk.gray('[yN] ')}`);
     process.stdin.on('data', (d) => {
       process.stdin.pause();
       resolve(d.toString().trim());
