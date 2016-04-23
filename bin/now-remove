@@ -3,6 +3,7 @@
 import minimist from 'minimist';
 import chalk from 'chalk';
 import ms from 'ms';
+import table from 'text-table';
 import Now from '../lib';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
@@ -43,9 +44,18 @@ const hard = argv.hard || false;
 
 const config = cfg.read();
 
-function readConfirmation () {
+function readConfirmation (app) {
   return new Promise((resolve, reject) => {
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.bold(deploymentId)} will be removed permanently ${chalk.gray('[yN] ')}`);
+    const time = chalk.gray(ms(new Date() - app.created) + ' ago');
+    const tbl = table(
+      [[app.uid, time, `https://${app.url}`]],
+      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    );
+
+    process.stdout.write('> The following deployment will be removed permanently\n');
+    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+
     process.stdin.on('data', (d) => {
       process.stdin.pause();
       resolve(d.toString().trim());
@@ -70,9 +80,12 @@ Promise.resolve(config.token || login(apiUrl))
 async function remove (token) {
   const now = new Now(apiUrl, token, { debug });
 
+  const deployments = await now.list();
+  const app = deployments.find((d) => d.uid === deploymentId);
+
   try {
-    const confirmation = (await readConfirmation()).toLowerCase();
-    if ('y' !== confirmation || 'yes' !== confirmation) {
+    const confirmation = (await readConfirmation(app)).toLowerCase();
+    if ('y' !== confirmation && 'yes' !== confirmation) {
       console.log('> Aborted');
       return;
     }
@@ -80,7 +93,7 @@ async function remove (token) {
     const start = new Date();
     await now.remove(deploymentId, { hard });
     const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Deployment ')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
+    console.log(`${chalk.cyan('> Deployment')} ${chalk.bold(deploymentId)} ${chalk.cyan('removed')} [${elapsed}]`);
   } catch (err) {
     handleError(err);
     process.exit(1);
