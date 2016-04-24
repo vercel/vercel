@@ -1,4 +1,11 @@
 
+0.11.0 / 2016-04-24
+===================
+
+  * improve error for wrong directory [@rauchg]
+  * improved help [@rauchg]
+  * now-rm [@rase-]
+
 0.10.2 / 2016-04-23
 ==================
 
