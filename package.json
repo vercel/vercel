@@ -30,7 +30,8 @@
     "retry": "0.9.0",
     "socket.io-client": "1.4.5",
     "split-array": "1.0.1",
-    "text-table": "0.2.0"
+    "text-table": "0.2.0",
+    "spdy": "3.3.2"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
