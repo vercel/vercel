@@ -1,4 +1,10 @@
 
+0.13.0 / 2016-05-12
+===================
+
+  * add warning reports for `/create` [@rauchg, @rase-]
+  * migrate to `api.zeit.co` [@rauchg]
+
 0.12.0 / 2016-04-29
 ===================
 
