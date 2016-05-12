@@ -51,7 +51,7 @@ const clipboard = !(argv.noClipboard || argv.C);
 const force = argv.f || argv.force;
 const forceSync = argv.F || argv.forceSync;
 const shouldLogin = argv.L || argv.login;
-const apiUrl = argv.url || 'https://api.now.sh';
+const apiUrl = argv.url || 'https://api.zeit.co';
 
 const config = cfg.read();
 
