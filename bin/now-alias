@@ -106,13 +106,13 @@ async function run (token) {
 
   switch (subcommand) {
     case 'ls':
-      alias.ls(url);
+      await alias.ls(url);
       break;
     case 'rm':
-      alias.rm(url, aliases);
+      await alias.rm(url, aliases);
       break;
     case 'set':
-      alias.set(url, aliases);
+      await alias.set(url, aliases);
       break;
     default:
       error('Invalid subcommand');
