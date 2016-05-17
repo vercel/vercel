@@ -33,7 +33,7 @@ const app = argv._[0];
 
 // options
 const debug = argv.debug || argv.d;
-const apiUrl = argv.url || 'https://api.now.sh';
+const apiUrl = argv.url || 'https://api.zeit.co';
 
 const config = cfg.read();
 

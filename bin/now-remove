@@ -39,7 +39,7 @@ if (!deploymentId) {
 
 // options
 const debug = argv.debug || argv.d;
-const apiUrl = argv.url || 'https://api.now.sh';
+const apiUrl = argv.url || 'https://api.zeit.co';
 const hard = argv.hard || false;
 
 const config = cfg.read();

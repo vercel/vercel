@@ -1,4 +1,20 @@
 
+0.13.2 / 2016-05-14
+===================
+
+  * remove `test` and `tests` from ignored files
+
+0.13.1 / 2016-05-12
+==================
+
+  * fix zeit endpoints [@rauchg]
+
+0.13.0 / 2016-05-12
+===================
+
+  * add warning reports for `/create` [@rauchg, @rase-]
+  * migrate to `api.zeit.co` [@rauchg]
+
 0.12.0 / 2016-04-29
 ===================
 
