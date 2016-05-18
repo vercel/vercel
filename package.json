@@ -31,7 +31,7 @@
     "socket.io-client": "1.4.5",
     "split-array": "1.0.1",
     "text-table": "0.2.0",
-    "spdy": "3.3.2"
+    "spdy": "3.3.3"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
