@@ -86,8 +86,8 @@ async function remove (token) {
   try {
     const confirmation = (await readConfirmation(app)).toLowerCase();
     if ('y' !== confirmation && 'yes' !== confirmation) {
-      console.log('> Aborted');
-      return;
+      console.log('\n> Aborted');
+      process.exit(0);
     }
 
     const start = new Date();
