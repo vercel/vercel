@@ -1,4 +1,10 @@
 
+0.14.0 / 2016-05-22
+===================
+
+  * add email validation and input retrying [@rauchg]
+  * add http2 support back [@rauchg]
+
 0.13.3 / 2016-05-17
 ==================
 
