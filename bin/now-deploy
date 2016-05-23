@@ -135,10 +135,10 @@ async function sync (token) {
 
     now.upload();
 
-    now.on('upload', ({ name, data }) => {
+    now.on('upload', ({ names, data }) => {
       const amount = data.length;
       if (debug) {
-        console.log(`> [debug] Uploaded: ${name} (${bytes(data.length)})`);
+        console.log(`> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
       }
       bar.tick(amount);
     });
