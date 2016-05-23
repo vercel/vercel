@@ -1,4 +1,10 @@
 
+0.14.1 / 2016-05-23
+===================
+
+  * remove .next from ignored [@rauchg]
+  * add support for `email-prompt` [@rauchg]
+
 0.14.0 / 2016-05-22
 ===================
 

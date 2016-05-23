@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "realtime instant node.js deployment with one command",
   "readme": "",
   "main": "./build/lib/index",
