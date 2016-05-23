@@ -31,7 +31,6 @@
     "socket.io-client": "1.4.5",
     "split-array": "1.0.1",
     "text-table": "0.2.0",
-    "spdy": "3.3.3",
     "email-validator": "1.0.4",
     "email-prompt": "0.1.4"
   },
