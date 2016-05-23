@@ -32,7 +32,8 @@
     "split-array": "1.0.1",
     "text-table": "0.2.0",
     "email-validator": "1.0.4",
-    "email-prompt": "0.1.4"
+    "email-prompt": "0.1.4",
+    "async-retry": "0.1.1"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
