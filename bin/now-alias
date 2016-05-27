@@ -21,15 +21,15 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-    Lists all your aliases:
+  ${chalk.gray('–')} Lists all your aliases:
 
       ${chalk.cyan('$ now alias ls')}
 
-    Adds a particular alias to my-api.now.sh:
+  ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
 
       ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.now.sh')}`)}
 
-      The \`.now.sh\` suffix can be ommited:
+      The ${chalk.dim('`.now.sh`')} suffix can be ommited:
 
       ${chalk.cyan('$ now alias set api-ownv3nc9f8 my-api')}
 
@@ -37,19 +37,18 @@ const help = () => {
 
       ${chalk.cyan('$ now alias set deploymentId my-alias')}
 
-      Custom domains work as well. They will ask you for your email
-      address as we dynamically provision a certificate:
+      Custom domains work as alias targets:
 
       ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.com')}`)}
 
-      You can optionally put ${chalk.dim('`http://`')} or ${chalk.dim('`https://`')} in front of the
-      parameters and they will be ignored.
+      ${chalk.dim('–')} The subcommand ${chalk.dim('`set`')} is the default and can be skipped.
+      ${chalk.dim('–')} ${chalk.dim('`http://`')} and ${chalk.dim('`https://`')} in the target URLs are ignored.
 
-    Removing an alias:
+  ${chalk.gray('–')} Removing an alias:
 
       ${chalk.cyan('$ now alias rm aliasId')}
 
-      To get the list of alias ids, use \`now alias ls\`.
+      To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
 
   ${chalk.dim('Alias:')} ln
 `);
