@@ -15,12 +15,12 @@ const help = () => {
   console.log(`
   𝚫 now list [app]
 
-  Alias: ls
-
   Options:
 
     -h, --help   output usage information
     -d, --debug  Debug mode [off]
+
+  Alias: ls
 `);
 };
 
