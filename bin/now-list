@@ -13,14 +13,24 @@ import { handleError, error } from '../lib/error';
 const argv = minimist(process.argv.slice(2));
 const help = () => {
   console.log(`
-  𝚫 now list [app]
+  ${chalk.bold('𝚫 now list')} [app]
 
-  Options:
+  ${chalk.dim('Options:')}
 
     -h, --help   output usage information
-    -d, --debug  Debug mode [off]
+    -d, --debug  debug mode [off]
 
-  Alias: ls
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} List all deployments
+
+    ${chalk.cyan('$ now ls')}
+
+  ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
+
+    ${chalk.cyan('$ now ls my-app')}
+
+  ${chalk.dim('Alias:')} ls
 `);
 };
 

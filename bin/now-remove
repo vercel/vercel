@@ -20,11 +20,11 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help   output usage information
-    -d, --debug  Debug mode [off]
+    -d, --debug  debug mode [off]
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Remove a deployment identified by ${chalk.gray('`deploymentId`')}:
+  ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim('`deploymentId`')}:
 
     ${chalk.cyan('$ now rm deploymentId')}
 
