@@ -1,0 +1,122 @@
+#!/usr/bin/env node
+
+import minimist from 'minimist';
+// import chalk from 'chalk';
+// import ms from 'ms';
+// import table from 'text-table';
+import NowAlias from '../lib/alias';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import { error } from '../lib/error';
+
+const argv = minimist(process.argv.slice(2));
+const subcommand = argv._[0];
+
+// options
+const help = () => {
+  console.log(`
+  𝚫 now alias <ls | set | rm> <now_url> <alias> [≤alias2>[, <alias3>]]
+
+  Alias: ln
+
+  Options:
+
+    -h, --help   output usage information
+    -d, --debug  Debug mode [off]
+
+  Examples:
+    Lists all the aliases you have configured:
+
+      $ now alias ls
+
+    Adds a particular alias to my-api.now.sh:
+      $ now alias set api-ownv3nc9f8.now.sh my-api.now.sh
+
+      The \`.now.sh\` suffix can be ommited:
+
+      $ now alias set api-ownv3nc9f8 my-api
+
+      The deployment id can be used as the source:
+
+      $ now alias set deploymentId my-alias
+
+      Custom domains work as well. They will ask you for your email
+      address as we dynamically provision a certificate:
+
+      $ now alias set api-ownv3nc9f8.now.sh my-api.com
+
+      You can optionally put \`http://\` or \`https://\` in front of the
+      parameters and they will be ignored.
+
+    Removing an alias:
+      $ now alias rm aliasId
+
+      To get the list of alias ids, use \`now alias ls\`.
+`);
+};
+
+if (argv.h || argv.help) {
+  help();
+  process.exit(0);
+}
+
+if (!subcommand) {
+  error('No subcommand specified');
+  help();
+  process.exit(1);
+}
+
+// options
+const debug = argv.debug || argv.d;
+const apiUrl = argv.url || 'https://api.zeit.co';
+
+const config = cfg.read();
+
+Promise.resolve(config.token || login(apiUrl))
+.then(async (token) => {
+  try {
+    await run(token);
+  } catch (err) {
+    error(`Unknown error: ${err.stack}`);
+    process.exit(1);
+  }
+})
+.catch((e) => {
+  error(`Authentication error – ${e.message}`);
+  process.exit(1);
+});
+
+function getArgs (args) {
+  return { url: args[1], aliases: args.slice(2) };
+}
+
+async function run (token) {
+  const alias = new NowAlias(apiUrl, token, { debug });
+  const { url, aliases } = getArgs(argv._);
+
+  if ('ls' !== subcommand) {
+    if (!url) {
+      error('No deployment url specified. You can see active deployments with `now ls`.');
+      help();
+      process.exit(1);
+    } else if (!aliases.length) {
+      error('No alias url specified. This is the URL your deployment will be tied to.');
+    }
+  }
+
+  switch (subcommand) {
+    case 'ls':
+      await alias.ls(url);
+      break;
+    case 'rm':
+      await alias.rm(url, aliases);
+      break;
+    case 'set':
+      await alias.set(url, aliases);
+      break;
+    default:
+      error('Invalid subcommand');
+      help();
+      process.exit();
+  }
+}
