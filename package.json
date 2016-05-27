@@ -33,7 +33,7 @@
     "text-table": "0.2.0",
     "spdy": "3.3.3",
     "email-validator": "1.0.4",
-    "email-prompt": "0.1.4",
+    "email-prompt": "0.1.5",
     "async-retry": "0.1.1"
   },
   "devDependencies": {
