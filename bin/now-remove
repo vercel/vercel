@@ -17,12 +17,12 @@ const help = () => {
   console.log(`
   𝚫 now remove [deploymentId]
 
-  Alias: rm
-
   Options:
 
     -h, --help   output usage information
     -d, --debug  Debug mode [off]
+
+  Alias: rm
 `);
 };
 
