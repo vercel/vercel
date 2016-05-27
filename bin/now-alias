@@ -54,6 +54,10 @@ const help = () => {
 `);
 };
 
+// options
+const debug = argv.debug || argv.d;
+const apiUrl = argv.url || 'https://api.zeit.co';
+
 const exit = (code) => {
   // we give stdout some time to flush out
   // because there's a node bug where 
@@ -66,10 +70,6 @@ if (argv.h || argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  // options
-  const debug = argv.debug || argv.d;
-  const apiUrl = argv.url || 'https://api.zeit.co';
-
   const config = cfg.read();
 
   Promise.resolve(config.token || login(apiUrl))
@@ -87,37 +87,36 @@ if (argv.h || argv.help || !subcommand) {
   });
 }
 
-function getArgs (args) {
-  return { url: args[1], aliases: args.slice(2) };
-}
-
 async function run (token) {
   const alias = new NowAlias(apiUrl, token, { debug });
-  const { url, aliases } = getArgs(argv._);
-
-  if ('ls' !== subcommand) {
-    if (!url) {
-      error('No deployment url specified. You can see active deployments with `now ls`.');
-      help();
-      return exit(1);
-    } else if (!aliases.length) {
-      error('No alias url specified. This is the URL your deployment will be tied to.');
-    }
-  }
 
   switch (subcommand) {
+    case 'list':
     case 'ls':
-      await alias.ls(url);
+      await alias.ls(argv[0]);
       break;
+
+    case 'remove':
     case 'rm':
-      await alias.rm(url, aliases);
+      await alias.rm(argv[0]);
       break;
+
     case 'set':
-      await alias.set(url, aliases);
+      await alias.set(argv[0], argv[1]);
       break;
+
     default:
-      error('Invalid subcommand');
-      help();
-      exit(0);
+      if (2 === argv._.length) {
+        console.log(chalk.dim(`> Running \`now alias set ${argv[0]} ${argv[1]}\``));
+        await alias.set(url, alias);
+      } else if (argv._.length >= 3) {
+        error('Invalid number of arguments');
+        help();
+        exit(1);
+      } else {
+        error('Please specify a valid subcommand: ls | set | rm');
+        help();
+        exit(1);
+      }
   }
 }
