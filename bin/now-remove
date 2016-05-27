@@ -15,26 +15,26 @@ const deploymentId = argv._[0];
 // options
 const help = () => {
   console.log(`
-  𝚫 now remove [deploymentId]
+  ${chalk.bold('𝚫 now remove')} [deploymentId]
 
-  Options:
+  ${chalk.dim('Options:')}
 
     -h, --help   output usage information
     -d, --debug  Debug mode [off]
 
-  Alias: rm
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Remove a deployment identified by ${chalk.gray('`deploymentId`')}:
+
+    ${chalk.cyan('$ now rm deploymentId')}
+
+  ${chalk.dim('Alias:')} rm
 `);
 };
 
-if (argv.h || argv.help) {
+if (argv.h || argv.help || !deploymentId) {
   help();
   process.exit(0);
-}
-
-if (!deploymentId) {
-  error('No deployment id specified. You can see active deployments with `now ls`.');
-  help();
-  process.exit(1);
 }
 
 // options
