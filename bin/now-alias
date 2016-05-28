@@ -101,6 +101,7 @@ async function run (token) {
       await alias.rm(argv[0]);
       break;
 
+    case 'add':
     case 'set':
       await alias.set(argv[0], argv[1]);
       break;
