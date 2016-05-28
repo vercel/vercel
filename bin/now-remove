@@ -10,8 +10,11 @@ import * as cfg from '../lib/cfg';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  // all options are booleans
-  boolean: true
+  boolean: ['help', 'debug', 'hard'],
+  alias: {
+    help: 'h',
+    debug: 'd'
+  }
 });
 
 const deploymentId = argv._[0];
@@ -36,13 +39,13 @@ const help = () => {
 `);
 };
 
-if (argv.h || argv.help || !deploymentId) {
+if (argv.help || !deploymentId) {
   help();
   process.exit(0);
 }
 
 // options
-const debug = argv.debug || argv.d;
+const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 const hard = argv.hard || false;
 

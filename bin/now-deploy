@@ -14,8 +14,16 @@ import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  // all options are booleans
-  boolean: true
+  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard'],
+  alias: {
+    help: 'h',
+    debug: 'd',
+    version: 'v',
+    force: 'f',
+    forceSync: 'F',
+    login: 'L',
+    'no-clipboard': 'C'
+  }
 });
 
 const help = () => {
@@ -82,11 +90,11 @@ const exit = (code) => {
 };
 
 // options
-const debug = argv.debug || argv.d;
-const clipboard = !(argv.noClipboard || argv.C);
-const force = argv.f || argv.force;
-const forceSync = argv.F || argv.forceSync;
-const shouldLogin = argv.L || argv.login;
+const debug = argv.debug;
+const clipboard = !argv['no-clipboard'];
+const force = argv.force;
+const forceSync = argv.forceSync;
+const shouldLogin = argv.login;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
 const config = cfg.read();

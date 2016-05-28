@@ -7,8 +7,11 @@ import * as cfg from '../lib/cfg';
 import { error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  // all options are booleans
-  boolean: true
+  boolean: ['help', 'debug'],
+  alias: {
+    help: 'h',
+    debug: 'd'
+  }
 });
 const subcommand = argv._[0];
 
@@ -58,7 +61,7 @@ const help = () => {
 };
 
 // options
-const debug = argv.debug || argv.d;
+const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
 const exit = (code) => {
@@ -69,7 +72,7 @@ const exit = (code) => {
   setTimeout(() => process.exit(code || 0), 100);
 };
 
-if (argv.h || argv.help || !subcommand) {
+if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
