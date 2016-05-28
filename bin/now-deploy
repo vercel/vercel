@@ -30,10 +30,10 @@ const help = () => {
 
     -h, --help          output usage information
     -v, --version       output the version number
-    -d, --debug         Debug mode [off]
-    -f, --force         Force a new deployment even if nothing has changed
-    -L, --login         Configure login
-    -C, --no-clipboard  Do not attempt to copy URL to clipboard
+    -d, --debug         debug mode [off]
+    -f, --force         force a new deployment even if nothing has changed
+    -L, --login         configure login
+    -C, --no-clipboard  do not attempt to copy URL to clipboard
 
   ${chalk.dim('Examples:')}
 
