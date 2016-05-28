@@ -83,7 +83,11 @@ if (argv.help || !subcommand) {
     try {
       await run(token);
     } catch (err) {
-      error(`Unknown error: ${err.stack}`);
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
       exit(1);
     }
   })
