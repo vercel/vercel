@@ -55,4 +55,4 @@ gulp.task('clean', () => {
   return del(['build']);
 });
 
-gulp.task('default', ['watch']);
+gulp.task('default', ['compile', 'watch']);
