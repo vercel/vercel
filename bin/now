@@ -19,7 +19,7 @@ const exit = (code) => {
 };
 
 const defaultCommand = 'deploy';
-const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias']);
+const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias', 'ln']);
 const aliases = new Map([['ls', 'list'], ['rm', 'remove'], ['ln', 'alias']]);
 
 let cmd = argv._[0];
