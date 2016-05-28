@@ -13,7 +13,11 @@ import Now from '../lib';
 import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
-const argv = minimist(process.argv.slice(2));
+const argv = minimist(process.argv.slice(2), {
+  // all options are booleans
+  boolean: true
+});
+
 const help = () => {
   console.log(`
   ${chalk.bold('𝚫 now')} [options] <command | path>

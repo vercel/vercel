@@ -6,7 +6,10 @@ import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { error } from '../lib/error';
 
-const argv = minimist(process.argv.slice(2));
+const argv = minimist(process.argv.slice(2), {
+  // all options are booleans
+  boolean: true
+});
 const subcommand = argv._[0];
 
 // options
