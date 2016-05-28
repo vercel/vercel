@@ -16,15 +16,17 @@ import { handleError, error } from '../lib/error';
 const argv = minimist(process.argv.slice(2));
 const help = () => {
   console.log(`
-  𝚫 now [options] <command|path>
+  ${chalk.bold('𝚫 now')} [options] <command | path>
 
-  Commands:
+  ${chalk.dim('Commands:')}
 
-    ls | list   [app]   output list of instances
-    rm | remove  [id]   alias of remove
-    help [cmd]          display help for [cmd]
+    deploy       [path]       performs a deployment ${chalk.bold('(default)')}
+    ls | list    [app]        list deployments
+    rm | remove  [id]         remove a deployment
+    ln | alias   [id] [url]   configures an alias / domain
+    help         [cmd]        displays complete help for [cmd]
 
-  Options:
+  ${chalk.dim('Options:')}
 
     -h, --help          output usage information
     -v, --version       output the version number
@@ -32,6 +34,28 @@ const help = () => {
     -f, --force         Force a new deployment even if nothing has changed
     -L, --login         Configure login
     -C, --no-clipboard  Do not attempt to copy URL to clipboard
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Deploys the current directory
+
+    ${chalk.cyan('$ now')}
+
+  ${chalk.gray('–')} Deploys a custom path ${chalk.dim('`/usr/src/project`')}
+
+    ${chalk.cyan('$ now /usr/src/project')}
+
+  ${chalk.gray('–')} Lists all deployments with their IDs
+
+    ${chalk.cyan('$ now ls')}
+
+  ${chalk.gray('–')} Associates deployment ${chalk.dim('`deploymentId`')} with ${chalk.dim('`custom-domain.com`')}
+
+    ${chalk.cyan('$ now alias deploymentId custom-domain.com')}
+
+  ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
+
+    ${chalk.cyan('$ now help list')}
 `);
 };
 
@@ -45,6 +69,14 @@ if (path) {
   path = process.cwd();
 }
 
+const exit = (code) => {
+  // we give stdout some time to flush out
+  // because there's a node bug where
+  // stdout writes are asynchronous
+  // https://github.com/nodejs/node/issues/6456
+  setTimeout(() => process.exit(code || 0), 100);
+};
+
 // options
 const debug = argv.debug || argv.d;
 const clipboard = !(argv.noClipboard || argv.C);
@@ -57,7 +89,7 @@ const config = cfg.read();
 
 if (argv.h || argv.help) {
   help();
-  process.exit(0);
+  exit(0);
 } else if (argv.v || argv.version) {
   console.log(chalk.bold('𝚫 now'), version);
   process.exit(0);
