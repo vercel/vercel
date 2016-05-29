@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
 import minimist from 'minimist';
+import table from 'text-table';
+import ms from 'ms';
 import NowAlias from '../lib/alias';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
@@ -104,7 +106,31 @@ async function run (token) {
   switch (subcommand) {
     case 'list':
     case 'ls':
-      await alias.ls(null != args[0] ? String(args[0]) : null);
+      const target = null != args[0] ? String(args[0]) : null;
+      const aliases = await alias.ls(target);
+      const byTarget = new Map();
+      if (target) {
+        byTarget.set(target, aliases);
+      } else {
+        aliases.forEach((_alias) => {
+          const _aliases = byTarget.get(_alias.deploymentId) || [];
+          byTarget.set(_alias.deploymentId, _aliases.concat(_alias));
+        });
+      }
+
+      const sorted = await sort([...byTarget]);
+
+      const current = Date.now();
+      const text = sorted.map(([target, _aliases]) => {
+        const t = table(_aliases.map((_alias) => {
+          const _url = chalk.underline(`https://${_alias.alias}`);
+          const time = chalk.gray(ms(current - _alias.created) + ' ago');
+          return [_alias.uid, _url, time];
+        }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) });
+        return chalk.bold(target) + '\n\n' + indent(t, 2);
+      }).join('\n\n');
+
+      if (text) console.log('\n' + text + '\n');
       break;
 
     case 'remove':
@@ -136,4 +162,31 @@ async function run (token) {
   }
 
   exit(0);
+}
+
+async function sort (aliases) {
+  let pkg;
+  try {
+    const json = await fs.readFile('package.json');
+    pkg = JSON.parse(json);
+  } catch (err) {
+    pkg = {};
+  }
+
+  return aliases
+  .map(([target, _aliases]) => {
+    _aliases = _aliases.slice().sort((a, b) => {
+      return b.created - a.created;
+    });
+    return [target, _aliases];
+  })
+  .sort(([targetA, aliasesA], [targetB, aliasesB]) => {
+    if (pkg.name === targetA) return -1;
+    if (pkg.name === targetB) return 1;
+    return aliasesB[0].created - aliasesA[0].created;
+  });
+}
+
+function indent (text, n) {
+  return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
 }
