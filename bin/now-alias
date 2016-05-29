@@ -99,31 +99,32 @@ if (argv.help || !subcommand) {
 
 async function run (token) {
   const alias = new NowAlias(apiUrl, token, { debug });
+  const args = argv._.slice(1);
 
   switch (subcommand) {
     case 'list':
     case 'ls':
-      await alias.ls(null != argv._[0] ? String(argv._[0]) : null);
+      await alias.ls(null != args[0] ? String(args[0]) : null);
       break;
 
     case 'remove':
     case 'rm':
-      await alias.rm(String(argv._[0]));
+      await alias.rm(String(args[0]));
       break;
 
     case 'add':
     case 'set':
-      if (2 !== argv._.length) {
+      if (2 !== args.length) {
         error('Invalid number of arguments');
         return;
       }
-      await alias.set(String(argv._[0]), String(argv._[1]));
+      await alias.set(String(args[0]), String(args[1]));
       break;
 
     default:
-      if (2 === argv._.length) {
-        await alias.set(String(argv._[0]), String(argv._[1]));
-      } else if (argv._.length >= 3) {
+      if (2 === args.length) {
+        await alias.set(String(args[0]), String(args[1]));
+      } else if (args.length >= 3) {
         error('Invalid number of arguments');
         help();
         exit(1);
