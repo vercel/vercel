@@ -134,4 +134,6 @@ async function run (token) {
         exit(1);
       }
   }
+
+  exit(0);
 }
