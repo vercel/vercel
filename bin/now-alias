@@ -7,6 +7,7 @@ import NowAlias from '../lib/alias';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { error } from '../lib/error';
+import toHost from '../lib/to-host';
 
 const argv = minimist(process.argv.slice(2), {
   boolean: ['help', 'debug'],
@@ -136,7 +137,38 @@ async function run (token) {
 
     case 'remove':
     case 'rm':
-      await alias.rm(String(args[0]));
+      const _target = String(args[0]);
+      if (!_target) {
+        const err = new Error('No alias id specified');
+        err.userError = true;
+        throw err;
+      }
+
+      const _aliases = await alias.ls();
+      const _alias = findAlias(_target, _aliases);
+
+      if (!_alias) {
+        const err = new Error(`Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`);
+        err.userError = true;
+        throw err;
+      }
+
+      try {
+        const confirmation = (await readConfirmation(_alias)).toLowerCase();
+        if ('y' !== confirmation && 'yes' !== confirmation) {
+          console.log('\n> Aborted');
+          process.exit(0);
+        }
+
+        const start = new Date();
+        await alias.rm(_alias);
+        const elapsed = ms(new Date() - start);
+        console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`);
+      } catch (err) {
+        error(err);
+        exit(1);
+      }
+
       break;
 
     case 'add':
@@ -189,3 +221,52 @@ async function sort (aliases) {
 function indent (text, n) {
   return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
 }
+
+function readConfirmation (_alias) {
+  return new Promise((resolve, reject) => {
+    const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago');
+    const tbl = table(
+      [[_alias.uid,  `https://${_alias.alias}`, time]],
+      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    );
+
+    process.stdout.write('> The following deployment will be removed permanently\n');
+    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+
+    process.stdin.on('data', (d) => {
+      process.stdin.pause();
+      resolve(d.toString().trim());
+    }).resume();
+  });
+}
+
+function findAlias (alias, list) {
+  let key, val;
+  if (/\./.test(alias)) {
+    val = toHost(alias);
+    key = 'alias';
+  } else {
+    val = alias;
+    key = 'uid';
+  }
+
+  const _alias = list.find((d) => {
+    if (d[key] === val) {
+      if (debug) console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`);
+      return true;
+    }
+
+    // match prefix
+    if (`${val}.now.sh` === d.alias) {
+      if (debug) console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`);
+      return true;
+    }
+
+    return false;
+  });
+
+  return _alias;
+}
+
+
