@@ -27,14 +27,13 @@
     "node-fetch": "1.5.3",
     "progress": "1.1.8",
     "resumer": "0.0.0",
-    "retry": "0.9.0",
     "socket.io-client": "1.4.6",
     "split-array": "1.0.1",
     "text-table": "0.2.0",
     "spdy": "3.3.3",
     "email-validator": "1.0.4",
     "email-prompt": "0.1.6",
-    "async-retry": "0.1.1"
+    "async-retry": "0.2.0"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
