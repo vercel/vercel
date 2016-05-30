@@ -2,7 +2,6 @@ const gulp = require('gulp');
 const del = require('del');
 const ext = require('gulp-ext');
 const babel = require('gulp-babel');
-const eslint = require('gulp-eslint');
 const uglify = require('gulp-uglify');
 const help = require('gulp-task-listing');
 
@@ -13,7 +12,7 @@ gulp.task('compile', [
   'compile-bin'
 ]);
 
-gulp.task('compile-lib', function () {
+gulp.task('compile-lib', () => {
   return gulp.src('lib/**/*.js')
   .pipe(babel({
     presets: ['es2015'],
@@ -27,7 +26,7 @@ gulp.task('compile-lib', function () {
   .pipe(gulp.dest('build/lib'));
 });
 
-gulp.task('compile-bin', function () {
+gulp.task('compile-bin', () => {
   return gulp.src('bin/*')
   .pipe(babel({
     presets: ['es2015'],
@@ -42,19 +41,18 @@ gulp.task('compile-bin', function () {
   .pipe(gulp.dest('build/bin'));
 });
 
-gulp.task('lint', function () {
-  return gulp.src([
-    'gulpfile.js',
-    'lib/**/*.js',
-    'bin/*'
-  ])
-  .pipe(eslint())
-  .pipe(eslint.format())
-  .pipe(eslint.failAfterError());
+gulp.task('watch', ['watch-lib', 'watch-bin']);
+
+gulp.task('watch-lib', () => {
+  return gulp.watch('lib/*.js', ['compile-lib']);
 });
 
-gulp.task('clean', function () {
+gulp.task('watch-bin', () => {
+  return gulp.watch('bin/*', ['compile-bin']);
+});
+
+gulp.task('clean', () => {
   return del(['build']);
 });
 
-gulp.task('default', ['lint', 'compile']);
+gulp.task('default', ['compile', 'watch']);

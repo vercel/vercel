@@ -10,21 +10,38 @@ import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { handleError, error } from '../lib/error';
 
-const argv = minimist(process.argv.slice(2));
+const argv = minimist(process.argv.slice(2), {
+  boolean: ['help', 'debug'],
+  alias: {
+    help: 'h',
+    debug: 'd'
+  }
+});
+
 const help = () => {
   console.log(`
-  𝚫 now list [app]
+  ${chalk.bold('𝚫 now list')} [app]
 
-  Alias: ls
-
-  Options:
+  ${chalk.dim('Options:')}
 
     -h, --help   output usage information
-    -d, --debug  Debug mode [off]
+    -d, --debug  debug mode [off]
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} List all deployments
+
+    ${chalk.cyan('$ now ls')}
+
+  ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
+
+    ${chalk.cyan('$ now ls my-app')}
+
+  ${chalk.dim('Alias:')} ls
 `);
 };
 
-if (argv.h || argv.help) {
+if (argv.help) {
   help();
   process.exit(0);
 }
@@ -32,7 +49,7 @@ if (argv.h || argv.help) {
 const app = argv._[0];
 
 // options
-const debug = argv.debug || argv.d;
+const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
 const config = cfg.read();
@@ -75,8 +92,9 @@ async function list (token) {
   const current = Date.now();
   const text = sorted.map(([name, deps]) => {
     const t = table(deps.map(({ uid, url, created }) => {
+      const _url = chalk.underline(`https://${url}`);
       const time = chalk.gray(ms(current - created) + ' ago');
-      return [ uid, time, `https://${url}` ];
+      return [uid, _url, time];
     }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) });
     return chalk.bold(name) + '\n\n' + indent(t, 2);
   }).join('\n\n');

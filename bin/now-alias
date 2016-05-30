@@ -1,0 +1,280 @@
+#!/usr/bin/env node
+import chalk from 'chalk';
+import minimist from 'minimist';
+import table from 'text-table';
+import ms from 'ms';
+import NowAlias from '../lib/alias';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import { error } from '../lib/error';
+import toHost from '../lib/to-host';
+
+const argv = minimist(process.argv.slice(2), {
+  boolean: ['help', 'debug'],
+  alias: {
+    help: 'h',
+    debug: 'd'
+  }
+});
+const subcommand = argv._[0];
+
+// options
+const help = () => {
+  console.log(`
+  ${chalk.bold('𝚫 now alias')} <ls | set | rm> <deployment> <alias>
+
+  ${chalk.dim('Options:')}
+
+    -h, --help   output usage information
+    -d, --debug  debug mode [off]
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Lists all your aliases:
+
+      ${chalk.cyan('$ now alias ls')}
+
+  ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
+
+      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.now.sh')}`)}
+
+      The ${chalk.dim('`.now.sh`')} suffix can be ommited:
+
+      ${chalk.cyan('$ now alias set api-ownv3nc9f8 my-api')}
+
+      The deployment id can be used as the source:
+
+      ${chalk.cyan('$ now alias set deploymentId my-alias')}
+
+      Custom domains work as alias targets:
+
+      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.com')}`)}
+
+      ${chalk.dim('–')} The subcommand ${chalk.dim('`set`')} is the default and can be skipped.
+      ${chalk.dim('–')} ${chalk.dim('`http(s)://`')} in the URLs is unneeded / ignored.
+
+  ${chalk.gray('–')} Removing an alias:
+
+      ${chalk.cyan('$ now alias rm aliasId')}
+
+      To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
+
+  ${chalk.dim('Alias:')} ln
+`);
+};
+
+// options
+const debug = argv.debug;
+const apiUrl = argv.url || 'https://api.zeit.co';
+
+const exit = (code) => {
+  // we give stdout some time to flush out
+  // because there's a node bug where
+  // stdout writes are asynchronous
+  // https://github.com/nodejs/node/issues/6456
+  setTimeout(() => process.exit(code || 0), 100);
+};
+
+if (argv.help || !subcommand) {
+  help();
+  exit(0);
+} else {
+  const config = cfg.read();
+
+  Promise.resolve(config.token || login(apiUrl))
+  .then(async (token) => {
+    try {
+      await run(token);
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
+      exit(1);
+    }
+  })
+  .catch((e) => {
+    error(`Authentication error – ${e.message}`);
+    exit(1);
+  });
+}
+
+async function run (token) {
+  const alias = new NowAlias(apiUrl, token, { debug });
+  const args = argv._.slice(1);
+
+  switch (subcommand) {
+    case 'list':
+    case 'ls':
+      const list = await alias.list();
+      const urls = new Map(list.map(l => [l.uid, l.url]));
+
+      const target = null != args[0] ? String(args[0]) : null;
+      const aliases = await alias.ls(target);
+      const byTarget = new Map();
+      if (target) {
+        byTarget.set(target, aliases);
+      } else {
+        aliases.forEach((_alias) => {
+          const _aliases = byTarget.get(_alias.deploymentId) || [];
+          byTarget.set(_alias.deploymentId, _aliases.concat(_alias));
+        });
+      }
+
+      const sorted = await sort([...byTarget]);
+
+      const current = new Date();
+      const text = sorted.map(([target, _aliases]) => {
+        return table(_aliases.map((_alias) => {
+          const _url = chalk.underline(`https://${_alias.alias}`);
+          const _sourceUrl = chalk.underline(`https://${urls.get(target)}`);
+          const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago');
+          return [_alias.uid, _sourceUrl, _url, time];
+        }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
+      }).join('\n\n');
+
+      if (text) console.log('\n' + text + '\n');
+      break;
+
+    case 'remove':
+    case 'rm':
+      const _target = String(args[0]);
+      if (!_target) {
+        const err = new Error('No alias id specified');
+        err.userError = true;
+        throw err;
+      }
+
+      const _aliases = await alias.ls();
+      const _alias = findAlias(_target, _aliases);
+
+      if (!_alias) {
+        const err = new Error(`Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`);
+        err.userError = true;
+        throw err;
+      }
+
+      try {
+        const confirmation = (await readConfirmation(alias, _alias)).toLowerCase();
+        if ('y' !== confirmation && 'yes' !== confirmation) {
+          console.log('\n> Aborted');
+          process.exit(0);
+        }
+
+        const start = new Date();
+        await alias.rm(_alias);
+        const elapsed = ms(new Date() - start);
+        console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`);
+      } catch (err) {
+        error(err);
+        exit(1);
+      }
+
+      break;
+
+    case 'add':
+    case 'set':
+      if (2 !== args.length) {
+        error('Invalid number of arguments');
+        return;
+      }
+      await alias.set(String(args[0]), String(args[1]));
+      break;
+
+    default:
+      if (2 === argv._.length) {
+        await alias.set(String(argv._[0]), String(argv._[1]));
+      } else if (argv._.length >= 3) {
+        error('Invalid number of arguments');
+        help();
+        exit(1);
+      } else {
+        error('Please specify a valid subcommand: ls | set | rm');
+        help();
+        exit(1);
+      }
+  }
+
+  alias.close();
+}
+
+async function sort (aliases) {
+  let pkg;
+  try {
+    const json = await fs.readFile('package.json');
+    pkg = JSON.parse(json);
+  } catch (err) {
+    pkg = {};
+  }
+
+  return aliases
+  .map(([target, _aliases]) => {
+    _aliases = _aliases.slice().sort((a, b) => {
+      return b.created - a.created;
+    });
+    return [target, _aliases];
+  })
+  .sort(([targetA, aliasesA], [targetB, aliasesB]) => {
+    if (pkg.name === targetA) return -1;
+    if (pkg.name === targetB) return 1;
+    return aliasesB[0].created - aliasesA[0].created;
+  });
+}
+
+function indent (text, n) {
+  return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
+}
+
+async function readConfirmation (alias, _alias) {
+  const list = await alias.list();
+  const urls = new Map(list.map(l => [l.uid, l.url]));
+
+  return new Promise((resolve, reject) => {
+    const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago');
+    const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`);
+    const tbl = table(
+      [[_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]],
+      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    );
+
+    process.stdout.write('> The following deployment will be removed permanently\n');
+    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+
+    process.stdin.on('data', (d) => {
+      process.stdin.pause();
+      resolve(d.toString().trim());
+    }).resume();
+  });
+}
+
+function findAlias (alias, list) {
+  let key, val;
+  if (/\./.test(alias)) {
+    val = toHost(alias);
+    key = 'alias';
+  } else {
+    val = alias;
+    key = 'uid';
+  }
+
+  const _alias = list.find((d) => {
+    if (d[key] === val) {
+      if (debug) console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`);
+      return true;
+    }
+
+    // match prefix
+    if (`${val}.now.sh` === d.alias) {
+      if (debug) console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`);
+      return true;
+    }
+
+    return false;
+  });
+
+  return _alias;
+}
+
+

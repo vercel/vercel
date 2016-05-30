@@ -13,61 +13,55 @@ const getFiles = (dir) => _getFiles(dir, null, true);
 
 test('`files` + README', async t => {
   let files = await getFiles(fixture('files-in-package'));
-  t.same(files.length, 3);
+  t.is(files.length, 3);
   files = files.sort(alpha);
-  t.same(base(files[0]), 'files-in-package/build/a/b/c/d.js');
-  t.same(base(files[1]), 'files-in-package/build/a/e.js');
-  t.same(base(files[2]), 'files-in-package/package.json');
+  t.is(base(files[0]), 'files-in-package/build/a/b/c/d.js');
+  t.is(base(files[1]), 'files-in-package/build/a/e.js');
+  t.is(base(files[2]), 'files-in-package/package.json');
 });
 
 test('`files` + README + `.*.swp` + `.npmignore`', async t => {
   let files = await getFiles(fixture('files-in-package-ignore'));
-  t.same(files.length, 3);
+  t.is(files.length, 3);
   files = files.sort(alpha);
-  t.same(base(files[0]), 'files-in-package-ignore/build/a/b/c/d.js');
-  t.same(base(files[1]), 'files-in-package-ignore/build/a/e.js');
-  t.same(base(files[2]), 'files-in-package-ignore/package.json');
+  t.is(base(files[0]), 'files-in-package-ignore/build/a/b/c/d.js');
+  t.is(base(files[1]), 'files-in-package-ignore/build/a/e.js');
+  t.is(base(files[2]), 'files-in-package-ignore/package.json');
 });
 
 test('simple', async t => {
   let files = await getFiles(fixture('simple'));
-  t.same(files.length, 5);
+  t.is(files.length, 5);
   files = files.sort(alpha);
-  t.same(base(files[0]), 'simple/bin/test');
-  t.same(base(files[1]), 'simple/index.js');
-  t.same(base(files[2]), 'simple/lib/woot');
-  t.same(base(files[3]), 'simple/lib/woot.jsx');
-  t.same(base(files[4]), 'simple/package.json');
+  t.is(base(files[0]), 'simple/bin/test');
+  t.is(base(files[1]), 'simple/index.js');
+  t.is(base(files[2]), 'simple/lib/woot');
+  t.is(base(files[3]), 'simple/lib/woot.jsx');
+  t.is(base(files[4]), 'simple/package.json');
 });
 
 test('simple with main', async t => {
   let files = await getFiles(fixture('simple-main'));
-  t.same(files.length, 3);
+  t.is(files.length, 3);
   files = files.sort(alpha);
-  t.same(base(files[0]), 'simple-main/build/a.js');
-  t.same(base(files[1]), 'simple-main/index.js');
-  t.same(base(files[2]), 'simple-main/package.json');
+  t.is(base(files[0]), 'simple-main/build/a.js');
+  t.is(base(files[1]), 'simple-main/index.js');
+  t.is(base(files[2]), 'simple-main/package.json');
 });
 
 test('hashes', async t => {
   const files = await getFiles(fixture('hashes'));
   const hashes = await hash(files);
-  t.same(hashes.size, 3);
-  t.same(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').name, prefix + 'hashes/dei.png');
-  t.same(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').name, prefix + 'hashes/index.js');
-  t.same(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').name, prefix + 'hashes/package.json');
+  t.is(hashes.size, 3);
+  t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[0], prefix + 'hashes/dei.png');
+  t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[1], prefix + 'hashes/duplicate/dei.png');
+  t.is(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0], prefix + 'hashes/index.js');
+  t.is(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').names[0], prefix + 'hashes/package.json');
 });
 
 test('ignore node_modules', async t => {
   let files = await getFiles(fixture('no-node_modules'));
   files = files.sort(alpha);
-  t.same(base(files[0]), 'no-node_modules/index.js');
-  t.same(base(files[1]), 'no-node_modules/package.json');
-});
-
-test('ignore files over limit', async t => {
-  let files = await _getFiles(fixture('big-file'), null, { limit: 200 });
-  t.same(base(files[0]), 'big-file/package.json');
-  t.same(base(files[1]), 'big-file/small-two.js');
-  t.same(base(files[2]), 'big-file/small.js');
+  t.is(base(files[0]), 'no-node_modules/index.js');
+  t.is(base(files[1]), 'no-node_modules/package.json');
 });
