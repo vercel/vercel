@@ -55,13 +55,13 @@ function readConfirmation (app) {
   return new Promise((resolve, reject) => {
     const time = chalk.gray(ms(new Date() - app.created) + ' ago');
     const tbl = table(
-      [[app.uid, time, `https://${app.url}`]],
+      [[app.uid, `https://${app.url}`, time]],
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
 
     process.stdout.write('> The following deployment will be removed permanently\n');
     process.stdout.write('  ' + tbl + '\n');
-    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
 
     process.stdin.on('data', (d) => {
       process.stdin.pause();
