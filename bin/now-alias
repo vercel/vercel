@@ -107,6 +107,9 @@ async function run (token) {
   switch (subcommand) {
     case 'list':
     case 'ls':
+      const list = await alias.list();
+      const urls = new Map(list.map(l => [l.uid, l.url]));
+
       const target = null != args[0] ? String(args[0]) : null;
       const aliases = await alias.ls(target);
       const byTarget = new Map();
@@ -123,12 +126,12 @@ async function run (token) {
 
       const current = new Date();
       const text = sorted.map(([target, _aliases]) => {
-        const t = table(_aliases.map((_alias) => {
+        return table(_aliases.map((_alias) => {
           const _url = chalk.underline(`https://${_alias.alias}`);
+          const _sourceUrl = chalk.underline(`https://${urls.get(target)}`);
           const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago');
-          return [_alias.uid, _url, time];
-        }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) });
-        return chalk.bold(target) + '\n\n' + indent(t, 2);
+          return [_alias.uid, _sourceUrl, _url, time];
+        }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
       }).join('\n\n');
 
       if (text) console.log('\n' + text + '\n');
