@@ -84,7 +84,6 @@ if (argv.help || !subcommand) {
   .then(async (token) => {
     try {
       await run(token);
-      exit(0);
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -164,6 +163,8 @@ async function run (token) {
         exit(1);
       }
   }
+
+  alias.close();
 }
 
 async function sort (aliases) {
