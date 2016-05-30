@@ -156,7 +156,7 @@ async function run (token) {
       }
 
       try {
-        const confirmation = (await readConfirmation(_alias)).toLowerCase();
+        const confirmation = (await readConfirmation(alias, _alias)).toLowerCase();
         if ('y' !== confirmation && 'yes' !== confirmation) {
           console.log('\n> Aborted');
           process.exit(0);
@@ -226,11 +226,15 @@ function indent (text, n) {
   return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
 }
 
-function readConfirmation (_alias) {
+async function readConfirmation (alias, _alias) {
+  const list = await alias.list();
+  const urls = new Map(list.map(l => [l.uid, l.url]));
+
   return new Promise((resolve, reject) => {
     const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago');
+    const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`);
     const tbl = table(
-      [[_alias.uid,  `https://${_alias.alias}`, time]],
+      [[_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]],
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
 

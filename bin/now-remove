@@ -55,7 +55,7 @@ function readConfirmation (app) {
   return new Promise((resolve, reject) => {
     const time = chalk.gray(ms(new Date() - app.created) + ' ago');
     const tbl = table(
-      [[app.uid, `https://${app.url}`, time]],
+      [[app.uid, chalk.underline(`https://${app.url}`), time]],
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
 
