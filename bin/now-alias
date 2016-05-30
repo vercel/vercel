@@ -148,9 +148,9 @@ async function run (token) {
       break;
 
     default:
-      if (2 === args.length) {
-        await alias.set(String(args[0]), String(args[1]));
-      } else if (args.length >= 3) {
+      if (2 === argv._.length) {
+        await alias.set(String(argv._[0]), String(argv._[1]));
+      } else if (argv._.length >= 3) {
         error('Invalid number of arguments');
         help();
         exit(1);
