@@ -59,7 +59,7 @@
   },
   "scripts": {
     "test": "ava",
-    "prepublish": "gulp"
+    "prepublish": "gulp compile"
   },
   "babel": {
     "presets": [
