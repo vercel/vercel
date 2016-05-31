@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.14.4",
+  "version": "0.15.0",
   "description": "realtime instant node.js deployment with one command",
   "readme": "",
   "main": "./build/lib/index",
@@ -33,7 +33,7 @@
     "spdy": "3.3.3",
     "email-validator": "1.0.4",
     "email-prompt": "0.1.6",
-    "async-retry": "0.2.0"
+    "async-retry": "0.2.1"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
