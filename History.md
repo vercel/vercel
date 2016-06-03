@@ -1,4 +1,10 @@
 
+0.16.0 / 2016-06-03
+===================
+
+  * now-deploy: add "initializing" message [@rauchg]
+  * Use `"now"` nampespace for `"engines"` [@rase-]
+
 0.15.0 / 2016-05-30
 ===================
 
