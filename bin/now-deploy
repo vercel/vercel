@@ -161,6 +161,7 @@ async function sync (token) {
   const complete = () => {
     const elapsed_u = ms(new Date() - start_u);
     console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+    console.log('> Initializing…');
 
     // close http2 agent
     now.close();
@@ -195,7 +196,7 @@ async function sync (token) {
       process.exit(1);
     });
   } else {
-    console.log('> Sync complete (cached)');
+    console.log(`> Initializing…`);
 
     // close http2 agent
     now.close();
