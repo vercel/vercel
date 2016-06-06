@@ -1,4 +1,11 @@
 
+0.17.0 / 2016-06-06
+===================
+
+  * index: add support for `engines` [@rauchg]
+  * index: add version reporting to CLI [@rauchg]
+  * login: add support for token name [@nkzawa]
+
 0.16.0 / 2016-06-03
 ===================
 
