@@ -51,7 +51,7 @@ const hard = argv.hard || false;
 
 const config = cfg.read();
 
-function readConfirmation (app) {
+function readConfirmation (app, aliases) {
   return new Promise((resolve, reject) => {
     const time = chalk.gray(ms(new Date() - app.created) + ' ago');
     const tbl = table(
@@ -61,6 +61,13 @@ function readConfirmation (app) {
 
     process.stdout.write('> The following deployment will be removed permanently\n');
     process.stdout.write('  ' + tbl + '\n');
+
+    if (aliases.length) {
+      process.stdout.write(`> ${chalk.yellow('Warning!')} This deployment's `
+      + `${chalk.bold(aliases.length + ' alias' + (aliases.length > 1 ? 'es': ''))} `
+      + `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`);
+    }
+
     process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
 
     process.stdin.on('data', (d) => {
@@ -90,8 +97,10 @@ async function remove (token) {
   const deployments = await now.list();
   const app = deployments.find((d) => d.uid === deploymentId);
 
+  const aliases = await now.listAliases(app.uid);
+
   try {
-    const confirmation = (await readConfirmation(app)).toLowerCase();
+    const confirmation = (await readConfirmation(app, aliases)).toLowerCase();
     if ('y' !== confirmation && 'yes' !== confirmation) {
       console.log('\n> Aborted');
       process.exit(0);
