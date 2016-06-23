@@ -51,11 +51,11 @@ const hard = argv.hard || false;
 
 const config = cfg.read();
 
-function readConfirmation (app, aliases) {
+function readConfirmation (depl, aliases) {
   return new Promise((resolve, reject) => {
-    const time = chalk.gray(ms(new Date() - app.created) + ' ago');
+    const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
     const tbl = table(
-      [[app.uid, chalk.underline(`https://${app.url}`), time]],
+      [[depl.uid, chalk.underline(`https://${depl.url}`), time]],
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
 
@@ -95,12 +95,15 @@ async function remove (token) {
   const now = new Now(apiUrl, token, { debug });
 
   const deployments = await now.list();
-  const app = deployments.find((d) => d.uid === deploymentId);
-
+  const depl = deployments.find((d) => d.uid === deploymentId);
+  if (null != deploymentId && !depl) {
+    error(`Could not find a deployment by ${chalk.bold(`"${deploymentId}"`)}. Run ${chalk.dim(`\`now ls\``)} to list.`);
+    return process.exit(1);
+  }
   const aliases = await now.listAliases(app.uid);
 
   try {
-    const confirmation = (await readConfirmation(app, aliases)).toLowerCase();
+    const confirmation = (await readConfirmation(depl, aliases)).toLowerCase();
     if ('y' !== confirmation && 'yes' !== confirmation) {
       console.log('\n> Aborted');
       process.exit(0);

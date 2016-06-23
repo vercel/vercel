@@ -35,7 +35,8 @@ const help = () => {
     deploy       [path]       performs a deployment ${chalk.bold('(default)')}
     ls | list    [app]        list deployments
     rm | remove  [id]         remove a deployment
-    ln | alias   [id] [url]   configures an alias / domain
+    ln | alias   [id] [url]   configures aliases for deployments
+    domains      [name]       manages your domain names
     help         [cmd]        displays complete help for [cmd]
 
   ${chalk.dim('Options:')}

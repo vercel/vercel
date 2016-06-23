@@ -33,7 +33,8 @@
     "spdy": "3.3.3",
     "email-validator": "1.0.4",
     "email-prompt": "0.1.8",
-    "async-retry": "0.2.1"
+    "async-retry": "0.2.1",
+    "domain-regex": "0.0.1"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
@@ -53,8 +54,8 @@
     "gulp-ext": "1.0.0",
     "gulp-task-listing": "1.0.1",
     "gulp-uglify": "1.5.3",
-    "eslint": "2.11.0",
-    "eslint-plugin-promise": "1.3.1",
+    "eslint": "2.12.0",
+    "eslint-plugin-promise": "1.3.2",
     "estraverse-fb": "1.3.1"
   },
   "scripts": {

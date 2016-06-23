@@ -107,42 +107,35 @@ async function run (token) {
   switch (subcommand) {
     case 'list':
     case 'ls':
-      const list = await alias.list();
-      const urls = new Map(list.map(l => [l.uid, l.url]));
-
-      const target = null != args[0] ? String(args[0]) : null;
-      const aliases = await alias.ls(target);
-      const byTarget = new Map();
-      if (target) {
-        byTarget.set(target, aliases);
-      } else {
-        aliases.forEach((_alias) => {
-          const _aliases = byTarget.get(_alias.deploymentId) || [];
-          byTarget.set(_alias.deploymentId, _aliases.concat(_alias));
-        });
+      if (0 !== args.length) {
+        error('Invalid number of arguments');
+        return exit(1);
       }
 
-      const sorted = await sort([...byTarget]);
-
+      const list = await alias.list();
+      const urls = new Map(list.map(l => [l.uid, l.url]));
+      const aliases = await alias.ls();
+      aliases.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
-      const text = sorted.map(([target, _aliases]) => {
-        return table(_aliases.map((_alias) => {
-          const _url = chalk.underline(`https://${_alias.alias}`);
-          const _sourceUrl = urls.get(target)
-            ? chalk.underline(`https://${urls.get(target)}`)
-            : chalk.gray('<null>');
 
-          const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago');
-          return [
-            // we default to `''` because some early aliases didn't
-            // have an uid associated
-            null == _alias.uid ? '' : _alias.uid,
-            _sourceUrl,
-            _url,
-            time
-          ];
-        }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
-      }).join('\n\n');
+      const text = table(aliases.map((_alias) => {
+        const _url = chalk.underline(`https://${_alias.alias}`);
+        const target = _alias.deploymentId;
+        const _sourceUrl = urls.get(target)
+          ? chalk.underline(`https://${urls.get(target)}`)
+          : chalk.gray('<null>');
+
+        const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago');
+        return [
+          '',
+          // we default to `''` because some early aliases didn't
+          // have an uid associated
+          null == _alias.uid ? '' : _alias.uid,
+          _sourceUrl,
+          _url,
+          time
+        ];
+      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
 
       if (text) console.log('\n' + text + '\n');
       break;
@@ -156,6 +149,11 @@ async function run (token) {
         throw err;
       }
 
+      if (1 !== args.length) {
+        error('Invalid number of arguments');
+        return exit(1);
+      }
+
       const _aliases = await alias.ls();
       const _alias = findAlias(_target, _aliases);
 
@@ -166,7 +164,7 @@ async function run (token) {
       }
 
       try {
-        const confirmation = (await readConfirmation(alias, _alias)).toLowerCase();
+        const confirmation = (await readConfirmation(alias, _alias, _aliases)).toLowerCase();
         if ('y' !== confirmation && 'yes' !== confirmation) {
           console.log('\n> Aborted');
           process.exit(0);
@@ -187,7 +185,7 @@ async function run (token) {
     case 'set':
       if (2 !== args.length) {
         error('Invalid number of arguments');
-        return;
+        return exit(1);
       }
       await alias.set(String(args[0]), String(args[1]));
       break;
@@ -209,36 +207,13 @@ async function run (token) {
   alias.close();
 }
 
-async function sort (aliases) {
-  let pkg;
-  try {
-    const json = await fs.readFile('package.json');
-    pkg = JSON.parse(json);
-  } catch (err) {
-    pkg = {};
-  }
-
-  return aliases
-  .map(([target, _aliases]) => {
-    _aliases = _aliases.slice().sort((a, b) => {
-      return b.created - a.created;
-    });
-    return [target, _aliases];
-  })
-  .sort(([targetA, aliasesA], [targetB, aliasesB]) => {
-    if (pkg.name === targetA) return -1;
-    if (pkg.name === targetB) return 1;
-    return aliasesB[0].created - aliasesA[0].created;
-  });
-}
-
 function indent (text, n) {
   return text.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
 }
 
-async function readConfirmation (alias, _alias) {
-  const list = await alias.list();
-  const urls = new Map(list.map(l => [l.uid, l.url]));
+async function readConfirmation (alias, _alias, list) {
+  const deploymentsList = await alias.list();
+  const urls = new Map(deploymentsList.map(l => [l.uid, l.url]));
 
   return new Promise((resolve, reject) => {
     const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago');
