@@ -100,7 +100,7 @@ async function remove (token) {
     error(`Could not find a deployment by ${chalk.bold(`"${deploymentId}"`)}. Run ${chalk.dim(`\`now ls\``)} to list.`);
     return process.exit(1);
   }
-  const aliases = await now.listAliases(app.uid);
+  const aliases = await now.listAliases(depl.uid);
 
   try {
     const confirmation = (await readConfirmation(depl, aliases)).toLowerCase();
