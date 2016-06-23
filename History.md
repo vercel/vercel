@@ -1,4 +1,16 @@
 
+0.18.0 / 2016-06-23
+===================
+
+  * don't use http2 agent when `--url` is set [@nkzawa]
+  * send user-agent on login [@nkzawa]
+  * removing a deployment warns about alias removal [@rauchg]
+  * improve error handling for certificates [@rauchg]
+  * improve alias message [@rauchg]
+  * improve alias listing style [@rauchg]
+  * add automatic DNS records configuration [@rauchg]
+  * add support for `now domains` [@rauchg]
+
 0.17.1 / 2016-06-07
 ===================
 
