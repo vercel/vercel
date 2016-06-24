@@ -95,6 +95,7 @@
     "gulp-uglify": "1.5.3"
   },
   "scripts": {
+    "start": "gulp",
     "test": "ava",
     "prepublish": "gulp compile"
   },
