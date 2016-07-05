@@ -130,6 +130,8 @@ if (argv.h || argv.help) {
   });
 }
 
+const isTTY = process.stdout.isTTY;
+
 async function sync (token) {
   const start = Date.now();
 
@@ -138,7 +140,11 @@ async function sync (token) {
   const now = new Now(apiUrl, token, { debug });
 
   try {
-    await now.create(path, { forceNew: force, forceSync: forceSync });
+    await now.create(path, {
+      forceNew: force,
+      forceSync: forceSync,
+      quiet: !isTTY
+    });
   } catch (err) {
     handleError(err);
     process.exit(1);
@@ -147,15 +153,19 @@ async function sync (token) {
   const { url } = now;
   const elapsed = ms(new Date() - start);
 
-  if (clipboard) {
-    try {
-      await copy(url);
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
-    } catch (err) {
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+  if (isTTY) {
+    if (clipboard) {
+      try {
+        await copy(url);
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
+      } catch (err) {
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+      }
+    } else {
+      console.log(`> ${url} [${elapsed}]`);
     }
   } else {
-    console.log(`> ${url} [${elapsed}]`);
+    system.stdout.write(url);
   }
 
   const start_u = new Date();
@@ -209,9 +219,8 @@ async function sync (token) {
 
 function printLogs (host) {
   // log build
-  const logger = new Logger(host);
+  const logger = new Logger(host, { debug, quiet: !isTTY });
   logger.on('error', () => {
-    console.log('> Connection error.');
     process.exit(1);
   });
   logger.on('close', () => {
