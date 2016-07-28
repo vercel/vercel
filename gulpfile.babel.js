@@ -3,6 +3,7 @@ import del from 'del';
 import babel from 'gulp-babel';
 import uglify from 'gulp-uglify';
 import help from 'gulp-task-listing';
+import { exec as enclose } from 'enclose';
 
 gulp.task('help', help);
 
@@ -22,6 +23,14 @@ gulp.task('compile-bin', () =>
   .pipe(babel())
   .pipe(uglify())
   .pipe(gulp.dest('build/bin')));
+
+gulp.task('enclose', ['compile'], (cb) => {
+  enclose([
+    'build/bin/now',
+    '-c', 'enclose.js',
+    '-o', 'build/now'
+  ], cb);
+});
 
 gulp.task('watch-lib', () => gulp.watch('lib/*.js', ['compile-lib']));
 gulp.task('watch-bin', () => gulp.watch('bin/*', ['compile-bin']));

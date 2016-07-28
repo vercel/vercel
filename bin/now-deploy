@@ -14,7 +14,7 @@ import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard'],
+  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm'],
   alias: {
     help: 'h',
     debug: 'd',
@@ -22,7 +22,8 @@ const argv = minimist(process.argv.slice(2), {
     force: 'f',
     forceSync: 'F',
     login: 'L',
-    'no-clipboard': 'C'
+    'no-clipboard': 'C',
+    'forward-npm': 'N'
   }
 });
 
@@ -47,6 +48,7 @@ const help = () => {
     -f, --force         force a new deployment even if nothing has changed
     -L, --login         configure login
     -C, --no-clipboard  do not attempt to copy URL to clipboard
+    -N, --forward-npm   Forward login information to install private NPM modules
 
   ${chalk.dim('Examples:')}
 
@@ -93,7 +95,8 @@ const exit = (code) => {
 // options
 const debug = argv.debug;
 const clipboard = !argv['no-clipboard'];
-const force = argv.force;
+const forwardNpm = argv['forward-npm'];
+const forceNew = argv.force;
 const forceSync = argv.forceSync;
 const shouldLogin = argv.login;
 const apiUrl = argv.url || 'https://api.zeit.co';
@@ -141,8 +144,9 @@ async function sync (token) {
 
   try {
     await now.create(path, {
-      forceNew: force,
-      forceSync: forceSync,
+      forceNew,
+      forceSync,
+      forwardNpm,
       quiet: !isTTY
     });
   } catch (err) {

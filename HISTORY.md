@@ -1,4 +1,12 @@
 
+0.19.0 / 2016-07-22
+===================
+
+  * alias: handle `ESERVFAIL` [@rauchg]
+  * add cmd line flag to forward NPM auth token [@rase-]
+  * make a binary of `now` using enclosejs [@igorklopov]
+  * bunch of misc improvements to build process [@leo]
+
 0.18.1 / 2016-06-23
 ===================
 

@@ -39,7 +39,12 @@ if (commands.has(cmd)) {
   args = args.concat(process.argv.slice(2));
 }
 
-const bin = resolve(__dirname, 'now-' + cmd);
+let bin = resolve(__dirname, 'now-' + cmd);
+if (process.enclose) {
+  args.unshift("--entrypoint", bin);
+  bin = process.execPath;
+}
+
 const proc = spawn(bin, args, { stdio: 'inherit', customFds: [0, 1, 2] });
 proc.on('close', (code) => exit(code));
 proc.on('error', () => exit(1));
