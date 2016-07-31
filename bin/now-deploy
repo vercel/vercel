@@ -102,6 +102,7 @@ const shouldLogin = argv.login;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
 const config = cfg.read();
+const alwaysForwardNpm = config.forwardNpm;
 
 if (argv.h || argv.help) {
   help();
@@ -141,7 +142,7 @@ async function sync (token) {
   const now = new Now(apiUrl, token, { debug });
 
   try {
-    await now.create(path, { forceNew: force, forceSync: forceSync, forwardNpm });
+    await now.create(path, { forceNew: force, forceSync: forceSync, forwardNpm: alwaysForwardNpm || forwardNpm });
   } catch (err) {
     handleError(err);
     process.exit(1);
