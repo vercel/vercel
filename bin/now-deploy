@@ -100,7 +100,8 @@ const forceNew = argv.force;
 const forceSync = argv.forceSync;
 const shouldLogin = argv.login;
 const apiUrl = argv.url || 'https://api.zeit.co';
-
+const isTTY = process.stdout.isTTY;
+const quiet = !isTTY;
 const config = cfg.read();
 
 if (argv.h || argv.help) {
@@ -133,12 +134,12 @@ if (argv.h || argv.help) {
   });
 }
 
-const isTTY = process.stdout.isTTY;
-
 async function sync (token) {
   const start = Date.now();
 
-  console.log(`> Deploying "${path}"`);
+  if (!quiet) {
+    console.log(`> Deploying "${path}"`);
+  }
 
   const now = new Now(apiUrl, token, { debug });
 
@@ -147,7 +148,7 @@ async function sync (token) {
       forceNew,
       forceSync,
       forwardNpm,
-      quiet: !isTTY
+      quiet
     });
   } catch (err) {
     handleError(err);
@@ -169,14 +170,16 @@ async function sync (token) {
       console.log(`> ${url} [${elapsed}]`);
     }
   } else {
-    system.stdout.write(url);
+    process.stdout.write(url);
   }
 
   const start_u = new Date();
   const complete = () => {
-    const elapsed_u = ms(new Date() - start_u);
-    console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
-    console.log('> Initializing…');
+    if (!quiet) {
+      const elapsed_u = ms(new Date() - start_u);
+      console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+      console.log('> Initializing…');
+    }
 
     // close http2 agent
     now.close();
@@ -211,7 +214,9 @@ async function sync (token) {
       process.exit(1);
     });
   } else {
-    console.log(`> Initializing…`);
+    if (!quiet) {
+      console.log(`> Initializing…`);
+    }
 
     // close http2 agent
     now.close();
@@ -223,12 +228,14 @@ async function sync (token) {
 
 function printLogs (host) {
   // log build
-  const logger = new Logger(host, { debug, quiet: !isTTY });
+  const logger = new Logger(host, { debug, quiet });
   logger.on('error', () => {
     process.exit(1);
   });
   logger.on('close', () => {
-    console.log(`${chalk.cyan('> Deployment complete!')}`);
+    if (!quiet) {
+      console.log(`${chalk.cyan('> Deployment complete!')}`);
+    }
     process.exit(0);
   });
 }
