@@ -103,6 +103,7 @@ const apiUrl = argv.url || 'https://api.zeit.co';
 const isTTY = process.stdout.isTTY;
 const quiet = !isTTY;
 const config = cfg.read();
+const alwaysForwardNpm = config.forwardNpm;
 
 if (argv.h || argv.help) {
   help();
@@ -147,7 +148,7 @@ async function sync (token) {
     await now.create(path, {
       forceNew,
       forceSync,
-      forwardNpm,
+      forwardNpm: alwaysForwardNpm || forwardNpm,
       quiet
     });
   } catch (err) {
