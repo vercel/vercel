@@ -10,6 +10,7 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import minimist from 'minimist';
 import Now from '../lib';
+import toHumanPath from '../lib/utils/to-human-path';
 import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
@@ -138,7 +139,7 @@ async function sync (token) {
   const start = Date.now();
 
   if (!quiet) {
-    console.log(`> Deploying "${path}"`);
+    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`);
   }
 
   const now = new Now(apiUrl, token, { debug });
