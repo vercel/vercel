@@ -96,11 +96,12 @@ const exit = (code) => {
 const debug = argv.debug;
 const clipboard = !argv['no-clipboard'];
 const forwardNpm = argv['forward-npm'];
-const force = argv.force;
+const forceNew = argv.force;
 const forceSync = argv.forceSync;
 const shouldLogin = argv.login;
 const apiUrl = argv.url || 'https://api.zeit.co';
-
+const isTTY = process.stdout.isTTY;
+const quiet = !isTTY;
 const config = cfg.read();
 const alwaysForwardNpm = config.forwardNpm;
 
@@ -137,12 +138,19 @@ if (argv.h || argv.help) {
 async function sync (token) {
   const start = Date.now();
 
-  console.log(`> Deploying "${path}"`);
+  if (!quiet) {
+    console.log(`> Deploying "${path}"`);
+  }
 
   const now = new Now(apiUrl, token, { debug });
 
   try {
-    await now.create(path, { forceNew: force, forceSync: forceSync, forwardNpm: alwaysForwardNpm || forwardNpm });
+    await now.create(path, {
+      forceNew,
+      forceSync,
+      forwardNpm: alwaysForwardNpm || forwardNpm,
+      quiet
+    });
   } catch (err) {
     handleError(err);
     process.exit(1);
@@ -151,22 +159,28 @@ async function sync (token) {
   const { url } = now;
   const elapsed = ms(new Date() - start);
 
-  if (clipboard) {
-    try {
-      await copy(url);
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
-    } catch (err) {
-      console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+  if (isTTY) {
+    if (clipboard) {
+      try {
+        await copy(url);
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
+      } catch (err) {
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+      }
+    } else {
+      console.log(`> ${url} [${elapsed}]`);
     }
   } else {
-    console.log(`> ${url} [${elapsed}]`);
+    process.stdout.write(url);
   }
 
   const start_u = new Date();
   const complete = () => {
-    const elapsed_u = ms(new Date() - start_u);
-    console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
-    console.log('> Initializing…');
+    if (!quiet) {
+      const elapsed_u = ms(new Date() - start_u);
+      console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
+      console.log('> Initializing…');
+    }
 
     // close http2 agent
     now.close();
@@ -201,7 +215,9 @@ async function sync (token) {
       process.exit(1);
     });
   } else {
-    console.log(`> Initializing…`);
+    if (!quiet) {
+      console.log(`> Initializing…`);
+    }
 
     // close http2 agent
     now.close();
@@ -213,13 +229,14 @@ async function sync (token) {
 
 function printLogs (host) {
   // log build
-  const logger = new Logger(host);
+  const logger = new Logger(host, { debug, quiet });
   logger.on('error', () => {
-    console.log('> Connection error.');
     process.exit(1);
   });
   logger.on('close', () => {
-    console.log(`${chalk.cyan('> Deployment complete!')}`);
+    if (!quiet) {
+      console.log(`${chalk.cyan('> Deployment complete!')}`);
+    }
     process.exit(0);
   });
 }
