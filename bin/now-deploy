@@ -3,6 +3,7 @@ import Progress from 'progress';
 import copy from '../lib/copy';
 import { resolve } from 'path';
 import login from '../lib/login';
+import { stat } from 'fs-promise';
 import * as cfg from '../lib/cfg';
 import { version } from '../../package';
 import Logger from '../lib/build-logger';
@@ -11,11 +12,12 @@ import chalk from 'chalk';
 import minimist from 'minimist';
 import Now from '../lib';
 import toHumanPath from '../lib/utils/to-human-path';
+import promptOptions from '../lib/utils/prompt-options';
 import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm'],
+  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm', 'docker', 'npm'],
   alias: {
     help: 'h',
     debug: 'd',
@@ -143,16 +145,92 @@ async function sync (token) {
     console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`);
   }
 
+  try {
+    await stat(path);
+  } catch (err) {
+    error(`Could not read directory ${chalk.bold(path)}`);
+    process.exit(1);
+  }
+
+  let deploymentType, hasPackage, hasDockerfile;
+
+  if (argv.docker) {
+    if (debug) {
+      console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``);
+    }
+    deploymentType = 'docker';
+  } else {
+    if (argv.npm) {
+      deploymentType = 'npm';
+    } else {
+      try {
+        await stat(resolve(path, 'package.json'));
+      } catch (err) {
+        hasPackage = true;
+      }
+
+      [hasPackage, hasDockerfile] = await Promise.all([
+        await (async () => {
+          try {
+            await stat(resolve(path, 'package.json'));
+          } catch (err) {
+            return false;
+          }
+          return true;
+        })(),
+        await (async () => {
+          try {
+            await stat(resolve(path, 'Dockerfile'));
+          } catch (err) {
+            return false;
+          }
+          return true;
+        })()
+      ]);
+
+      if (hasPackage && hasDockerfile) {
+        if (debug) console.log('[debug] multiple manifests found, disambiguating');
+        if (isTTY) {
+          try {
+            console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`);
+            deploymentType = await promptOptions([
+              ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+              ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+            ]);
+          } catch (err) {
+            error(err.message);
+            process.exit(1);
+          }
+        } else {
+          error('Ambiguous deployment (`package.json` and `Dockerfile` found). ' +
+            'Please supply `--npm` or `--docker` to disambiguate.');
+        }
+      } else if (hasPackage) {
+        if (debug) console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`');
+        deploymentType = 'npm';
+      } else if (hasDockerFile) {
+        if (debug) console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`');
+        deploymentType = 'docker';
+      } else {
+        error(`Could not read directory ${chalk.bold(path)}`);
+        process.exit(1);
+      }
+    }
+  }
+
+
   const now = new Now(apiUrl, token, { debug });
 
   try {
     await now.create(path, {
+      deploymentType,
       forceNew,
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
       quiet
     });
   } catch (err) {
+    if (debug) console.log(`> [debug] error: ${err.stack}`);
     handleError(err);
     process.exit(1);
   }

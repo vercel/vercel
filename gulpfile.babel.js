@@ -32,7 +32,7 @@ gulp.task('enclose', ['compile'], (cb) => {
   ], cb);
 });
 
-gulp.task('watch-lib', () => gulp.watch('lib/*.js', ['compile-lib']));
+gulp.task('watch-lib', () => gulp.watch('lib/**/*.js', ['compile-lib']));
 gulp.task('watch-bin', () => gulp.watch('bin/*', ['compile-bin']));
 gulp.task('clean', () => del(['build']));
 
