@@ -79,10 +79,10 @@ const help = () => {
 
 let path = argv._[0];
 
-if (path) {
-  if ('/' !== path[0]) {
-    path = resolve(process.cwd(), path);
-  }
+if (null != path) {
+  // if path is relative: resolve
+  // if path is absolute: clear up strange `/` etc
+  path = resolve(process.cwd(), path);
 } else {
   path = process.cwd();
 }
