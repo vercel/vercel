@@ -1,0 +1,10 @@
+{
+  "name": "should-include-main",
+  "version": "0.0.1",
+  "description": "",
+  "main": "a.js",
+  "files": [
+    "woot.js"
+  ],
+  "dependencies": {}
+}
