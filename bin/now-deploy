@@ -231,7 +231,7 @@ async function sync (token) {
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
       quiet,
-      public: wantsPublic
+      wantsPublic
     });
   } catch (err) {
     if (debug) console.log(`> [debug] error: ${err.stack}`);
