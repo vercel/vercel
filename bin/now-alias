@@ -223,7 +223,7 @@ async function readConfirmation (alias, _alias, list) {
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
 
-    process.stdout.write('> The following deployment will be removed permanently\n');
+    process.stdout.write('> The following alias will be removed permanently\n');
     process.stdout.write('  ' + tbl + '\n');
     process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
 
