@@ -41,7 +41,8 @@
           "builtinGlobals": true,
           "hoist": "functions"
         }
-      ]
+      ],
+      "generator-star-spacing": 0
     }
   },
   "bin": {
