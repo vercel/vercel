@@ -7,6 +7,9 @@
   "files": [
     "build"
   ],
+  "greenkeeper": {
+    "emails": false
+  },
   "babel": {
     "presets": [
       "es2015"
@@ -41,8 +44,7 @@
           "builtinGlobals": true,
           "hoist": "functions"
         }
-      ],
-      "generator-star-spacing": 0
+      ]
     }
   },
   "bin": {
