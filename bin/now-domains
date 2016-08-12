@@ -21,7 +21,7 @@ const subcommand = argv._[0];
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now domains')} <ls | set | rm> <domain>
+  ${chalk.bold('𝚫 now domains')} <ls | add | rm> <domain>
 
   ${chalk.dim('Options:')}
 
