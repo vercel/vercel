@@ -66,7 +66,6 @@ test('hashes', async t => {
   const files = await getNpmFiles(fixture('hashes'));
   const hashes = await hash(files);
   t.is(hashes.size, 3);
-  console.log(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names)
   t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[0], prefix + 'hashes/dei.png');
   t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[1], prefix + 'hashes/duplicate/dei.png');
   t.is(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0], prefix + 'hashes/index.js');

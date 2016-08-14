@@ -82,7 +82,7 @@
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
-    "ava": "0.16.0",
+    "ava": "^0.16.0",
     "babel-eslint": "6.1.2",
     "babel-plugin-syntax-async-functions": "6.13.0",
     "babel-plugin-transform-async-to-generator": "6.8.0",
