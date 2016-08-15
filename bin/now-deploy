@@ -313,9 +313,6 @@ async function sync (token) {
 function printLogs (host) {
   // log build
   const logger = new Logger(host, { debug, quiet });
-  logger.on('error', () => {
-    process.exit(1);
-  });
   logger.on('close', () => {
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`);
