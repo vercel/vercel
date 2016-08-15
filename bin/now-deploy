@@ -212,7 +212,7 @@ async function sync (token) {
       } else if (hasPackage) {
         if (debug) console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`');
         deploymentType = 'npm';
-      } else if (hasDockerFile) {
+      } else if (hasDockerfile) {
         if (debug) console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`');
         deploymentType = 'docker';
       } else {
@@ -314,9 +314,6 @@ async function sync (token) {
 function printLogs (host) {
   // log build
   const logger = new Logger(host, { debug, quiet });
-  logger.on('error', () => {
-    process.exit(1);
-  });
   logger.on('close', () => {
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`);
