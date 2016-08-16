@@ -1,4 +1,16 @@
 
+0.21.0 / 2016-08-16
+==================
+
+  * fix exceptions
+  * domain add: try fallback if the list of name servers is empty [@hbp]
+  * show a proper error message for protected domain names [@hbp]
+
+0.20.0 / 2016-08-16
+==================
+
+  * docker support
+
 0.19.0 / 2016-07-22
 ===================
 
