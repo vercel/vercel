@@ -8,7 +8,10 @@
     "build"
   ],
   "greenkeeper": {
-    "emails": false
+    "emails": false,
+    "ignore": [
+      "babel-runtime"
+    ]
   },
   "babel": {
     "presets": [
