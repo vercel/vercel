@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.19.0",
+  "version": "0.21.0",
   "description": "realtime instant node.js deployment with one command",
   "readme": "",
   "main": "./build/lib/index",
@@ -8,7 +8,10 @@
     "build"
   ],
   "greenkeeper": {
-    "emails": false
+    "emails": false,
+    "ignore": [
+      "babel-runtime"
+    ]
   },
   "babel": {
     "presets": [
@@ -89,7 +92,7 @@
     "babel-register": "6.11.6",
     "del": "2.2.2",
     "enclose": "2.2.0",
-    "eslint": "3.3.0",
+    "eslint": "3.3.1",
     "eslint-config-standard": "5.3.5",
     "eslint-plugin-promise": "2.0.1",
     "eslint-plugin-standard": "2.0.0",
