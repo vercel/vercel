@@ -19,8 +19,8 @@ const exit = (code) => {
 };
 
 const defaultCommand = 'deploy';
-const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias', 'aliases', 'ln', 'domain', 'domains']);
-const aliases = new Map([['ls', 'list'], ['rm', 'remove'], ['ln', 'alias'], ['aliases', 'alias'], ['domain', 'domains']]);
+const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias', 'aliases', 'ln', 'domain', 'domains', 'secret', 'secrets']);
+const aliases = new Map([['ls', 'list'], ['rm', 'remove'], ['ln', 'alias'], ['aliases', 'alias'], ['domain', 'domains'], ['secret', 'secrets']]);
 
 let cmd = argv._[0];
 let args = [];
@@ -41,7 +41,7 @@ if (commands.has(cmd)) {
 
 let bin = resolve(__dirname, 'now-' + cmd);
 if (process.enclose) {
-  args.unshift("--entrypoint", bin);
+  args.unshift('--entrypoint', bin);
   bin = process.execPath;
 }
 
