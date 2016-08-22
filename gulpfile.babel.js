@@ -1,7 +1,6 @@
 import gulp from 'gulp';
 import del from 'del';
 import babel from 'gulp-babel';
-import uglify from 'gulp-uglify';
 import help from 'gulp-task-listing';
 import { exec as enclose } from 'enclose';
 
@@ -15,13 +14,11 @@ gulp.task('compile', [
 gulp.task('compile-lib', () =>
   gulp.src('lib/**/*.js')
   .pipe(babel())
-  .pipe(uglify())
   .pipe(gulp.dest('build/lib')));
 
 gulp.task('compile-bin', () =>
   gulp.src('bin/*')
   .pipe(babel())
-  .pipe(uglify())
   .pipe(gulp.dest('build/bin')));
 
 gulp.task('enclose', ['compile'], (cb) => {
