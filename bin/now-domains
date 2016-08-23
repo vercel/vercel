@@ -217,6 +217,11 @@ async function readConfirmation (domain, _domain, list) {
 
     process.stdout.write('> The following domain will be removed permanently\n');
     process.stdout.write('  ' + tbl + '\n');
+    if (_domain.aliases.length) {
+      process.stdout.write(`> ${chalk.yellow('Warning!')} This domain's `
+      + `${chalk.bold(_domain.aliases.length + ' alias' + (_domain.aliases.length > 1 ? 'es': ''))} `
+      + `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`);
+    }
     process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
 
     process.stdin.on('data', (d) => {
