@@ -64,7 +64,7 @@
     "cross-spawn-async": "2.2.4",
     "docker-file-parser": "0.1.0",
     "email-prompt": "0.1.8",
-    "email-validator": "1.0.4",
+    "email-validator": "1.0.5",
     "fs-promise": "0.5.0",
     "gitignore-parser": "0.0.2",
     "graceful-fs": "4.1.6",
