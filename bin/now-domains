@@ -10,10 +10,13 @@ import toHost from '../lib/to-host';
 import NowDomains from '../lib/domains';
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'token'],
   boolean: ['help', 'debug'],
   alias: {
     help: 'h',
-    debug: 'd'
+    config: 'c',
+    debug: 'd',
+    token: 't'
   }
 });
 const subcommand = argv._[0];
@@ -25,8 +28,10 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help   output usage information
-    -d, --debug  debug mode [off]
+    -h, --help              output usage information
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -d, --debug             debug mode [off]
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
 
   ${chalk.dim('Examples:')}
 
@@ -71,6 +76,7 @@ const help = () => {
 // options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
+if (argv.config) cfg.setConfigFile(argv.config);
 
 const exit = (code) => {
   // we give stdout some time to flush out
@@ -86,7 +92,7 @@ if (argv.help || !subcommand) {
 } else {
   const config = cfg.read();
 
-  Promise.resolve(config.token || login(apiUrl))
+  Promise.resolve(argv.token || config.token || login(apiUrl))
   .then(async (token) => {
     try {
       await run(token);

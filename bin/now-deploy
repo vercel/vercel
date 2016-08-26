@@ -17,12 +17,15 @@ import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'token'],
   boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm', 'docker', 'npm'],
   alias: {
     help: 'h',
+    config: 'c',
     debug: 'd',
     version: 'v',
     force: 'f',
+    token: 't',
     forceSync: 'F',
     login: 'L',
     public: 'p',
@@ -47,14 +50,16 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help          output usage information
-    -v, --version       output the version number
-    -d, --debug         debug mode [off]
-    -f, --force         force a new deployment even if nothing has changed
-    -L, --login         configure login
-    -p, --public        deployment is public (\`/_src\` is exposed) [on for oss, off for premium]
-    -C, --no-clipboard  do not attempt to copy URL to clipboard
-    -N, --forward-npm   Forward login information to install private NPM modules
+    -h, --help              output usage information
+    -v, --version           output the version number
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -d, --debug             debug mode [off]
+    -f, --force             force a new deployment even if nothing has changed
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
+    -L, --login             configure login
+    -p, --public            deployment is public (\`/_src\` is exposed) [on for oss, off for premium]
+    -C, --no-clipboard      do not attempt to copy URL to clipboard
+    -N, --forward-npm       Forward login information to install private NPM modules
 
   ${chalk.dim('Examples:')}
 
@@ -109,6 +114,7 @@ const wantsPublic = argv.public;
 const apiUrl = argv.url || 'https://api.zeit.co';
 const isTTY = process.stdout.isTTY;
 const quiet = !isTTY;
+if (argv.config) cfg.setConfigFile(argv.config);
 const config = cfg.read();
 const alwaysForwardNpm = config.forwardNpm;
 
@@ -118,7 +124,7 @@ if (argv.h || argv.help) {
 } else if (argv.v || argv.version) {
   console.log(chalk.bold('𝚫 now'), version);
   process.exit(0);
-} else if (!config.token || shouldLogin) {
+} else if (!(argv.token || config.token) || shouldLogin) {
   login(apiUrl)
   .then((token) => {
     if (shouldLogin) {
@@ -136,7 +142,7 @@ if (argv.h || argv.help) {
     process.exit(1);
   });
 } else {
-  sync(config.token).catch((err) => {
+  sync(argv.token || config.token).catch((err) => {
     error(`Unknown error: ${err.stack}`);
     process.exit(1);
   });

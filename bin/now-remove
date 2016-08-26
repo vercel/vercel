@@ -10,10 +10,13 @@ import * as cfg from '../lib/cfg';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'token'],
   boolean: ['help', 'debug', 'hard'],
   alias: {
     help: 'h',
-    debug: 'd'
+    config: 'c',
+    debug: 'd',
+    token: 't'
   }
 });
 
@@ -26,8 +29,10 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help   output usage information
-    -d, --debug  debug mode [off]
+    -h, --help              output usage information
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -d, --debug             debug mode [off]
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
 
   ${chalk.dim('Examples:')}
 
@@ -48,7 +53,7 @@ if (argv.help || !deploymentId) {
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 const hard = argv.hard || false;
-
+if (argv.config) cfg.setConfigFile(argv.config);
 const config = cfg.read();
 
 function readConfirmation (depl, aliases) {
@@ -77,7 +82,7 @@ function readConfirmation (depl, aliases) {
   });
 }
 
-Promise.resolve(config.token || login(apiUrl))
+Promise.resolve(argv.token || config.token || login(apiUrl))
 .then(async (token) => {
   try {
     await remove(token);
