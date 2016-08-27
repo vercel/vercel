@@ -1,4 +1,13 @@
 
+0.22.0 / 2016-08-26
+===================
+
+  * hide secrets for now
+  * Add --token and --config options
+  * don't use domain-regex
+  * warn about removing bound aliases when removing a domain
+  * stop minifying the code
+
 0.21.1 / 2016-08-17
 ===================
 
