@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import minimist from 'minimist';
 import { resolve } from 'path';
-import { spawn } from 'cross-spawn-async';
+import { spawn } from 'cross-spawn';
 import checkUpdate from '../lib/check-update';
 
 const argv = minimist(process.argv.slice(2));
