@@ -20,6 +20,7 @@ const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
   boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm', 'docker', 'npm'],
   alias: {
+    env: 'e',
     help: 'h',
     config: 'c',
     debug: 'd',
@@ -49,16 +50,17 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              output usage information
-    -v, --version           output the version number
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
-    -d, --debug             debug mode [off]
-    -f, --force             force a new deployment even if nothing has changed
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
-    -L, --login             configure login
-    -p, --public            deployment is public (\`/_src\` is exposed) [on for oss, off for premium]
-    -C, --no-clipboard      do not attempt to copy URL to clipboard
-    -N, --forward-npm       Forward login information to install private NPM modules
+    -h, --help                output usage information
+    -v, --version             output the version number
+    -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    config file
+    -d, --debug               debug mode [off]
+    -f, --force               force a new deployment even if nothing has changed
+    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   login token
+    -L, --login               configure login
+    -p, --public              deployment is public (\${clalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
+    -e, --env                 include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
+    -C, --no-clipboard        do not attempt to copy URL to clipboard
+    -N, --forward-npm         forward login information to install private NPM modules
 
   ${chalk.dim('Examples:')}
 
@@ -77,6 +79,14 @@ const help = () => {
   ${chalk.gray('–')} Associates deployment ${chalk.dim('`deploymentId`')} with ${chalk.dim('`custom-domain.com`')}
 
     ${chalk.cyan('$ now alias deploymentId custom-domain.com')}
+
+  ${chalk.gray('–')} Stores a secret
+
+    ${chalk.cyan('$ now secret add mysql-password 123456')}
+
+  ${chalk.gray('–')} Deploys with ENV vars (using the ${chalk.dim('`mysql-password`')} secret stored above)
+
+    ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
   ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
 
@@ -229,9 +239,84 @@ async function sync (token) {
 
 
   const now = new Now(apiUrl, token, { debug });
+  const envs = [].concat(argv.env);
+
+  let secrets;
+  const findSecret = async (uidOrName) => {
+    if (!secrets) secrets = await now.listSecrets();
+    return secrets.filter((secret) => {
+      return secret.name === uidOrName || secret.uid === uidOrName;
+    });
+  };
+
+  const env_ = await Promise.all(envs.map(async (kv) => {
+    const [key, val_, ...rest] = kv.split('=');
+    let val;
+
+    if (rest.length) {
+      error(`Invalid env ${chalk.bold(`"${kv}"`)}. It cannot contain more than one ${chalk.dim(`=`)} symbol`);
+      return process.exit(1);
+    }
+
+    if (/[^A-z0-9_]/i.test(key)) {
+      error(`Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`);
+      return process.exit(1);
+    }
+
+    if ('' === key || null == key) {
+      error(`Invalid env option ${chalk.bold(`"${kv}"`)}`);
+      return process.exit(1);
+    }
+
+    if (val_ == null) {
+      if (!(key in process.env)) {
+        error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`);
+        return process.exit(1);
+      } else {
+        console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`);
+        // escape value if it begins with @
+        val = process.env[key].replace(/^\@/, '\\@');
+      }
+    } else {
+      val = val_;
+    }
+
+    if ('@' === val[0]) {
+      const uidOrName = val.substr(1);
+      const secrets = await findSecret(uidOrName);
+      if (secrets.length === 0) {
+        if ('' === uidOrName) {
+          error(`Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`);
+        } else {
+          error(`No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`);
+        }
+        return process.exit(1);
+      } else if (secrets.length > 1) {
+        error(`Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`);
+        return process.exit(1);
+      } else {
+        val = { uid: secrets[0].uid };
+      }
+    }
+
+    return [
+      key,
+      // add support for escaping the @ as \@
+      val.replace(/^\\@/, '@')
+    ];
+  }));
+
+  let env = {};
+  env_
+  .filter(v => !!v)
+  .forEach(([key, val]) => {
+    if (key in env) console.log(`> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
+    env[key] = val
+  });
 
   try {
     await now.create(path, {
+      env,
       deploymentType,
       forceNew,
       forceSync,
