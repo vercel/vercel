@@ -274,7 +274,8 @@ async function sync (token) {
         return process.exit(1);
       } else {
         console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`);
-        val = process.env[key];
+        // escape value if it begins with @
+        val = process.env[key].replace(/^\@/, '\\@');
       }
     } else {
       val = val_;
@@ -298,7 +299,11 @@ async function sync (token) {
       }
     }
 
-    return [key, val];
+    return [
+      key,
+      // add support for escaping the @ as \@
+      val.replace(/^\\@/, '@')
+    ];
   }));
 
   let env = {};
