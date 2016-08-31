@@ -301,8 +301,10 @@ async function sync (token) {
 
     return [
       key,
-      // add support for escaping the @ as \@
-      val.replace(/^\\@/, '@')
+      typeof val === 'string'
+        // add support for escaping the @ as \@
+        ? val.replace(/^\\@/, '@')
+        : val
     ];
   }));
 
