@@ -239,7 +239,7 @@ async function sync (token) {
 
 
   const now = new Now(apiUrl, token, { debug });
-  const envs = [].concat(argv.env);
+  const envs = [].concat(argv.env || []);
 
   let secrets;
   const findSecret = async (uidOrName) => {
