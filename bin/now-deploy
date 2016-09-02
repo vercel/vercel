@@ -57,7 +57,7 @@ const help = () => {
     -f, --force               force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   login token
     -L, --login               configure login
-    -p, --public              deployment is public (\${clalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
+    -p, --public              deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
     -e, --env                 include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        do not attempt to copy URL to clipboard
     -N, --forward-npm         forward login information to install private NPM modules
