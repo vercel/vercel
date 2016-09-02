@@ -1,4 +1,12 @@
 
+0.23.0 / 2016-09-02
+===================
+
+  * add `-e` [@rauchg]
+  * add `now secret` [@rauchg]
+  * fix Docker CMD docs link (#124) [@tootallnate]
+  * Use "cross-spawn" instead of "cross-spawn-async" (#125) [@tootallnate]
+
 0.22.0 / 2016-08-26
 ===================
 
