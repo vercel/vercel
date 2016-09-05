@@ -1,4 +1,12 @@
 
+0.23.1 / 2016-09-05
+===================
+
+  * workaround for node-spdy bug
+  * index: filter empty entries
+  * alias: improve error
+  * fix whois-ns-fallback request once again (#143)
+
 0.23.0 / 2016-09-02
 ===================
 
