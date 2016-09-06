@@ -118,6 +118,7 @@ async function run (token) {
         return exit(1);
       }
 
+      const start_ = new Date();
       const list = await alias.list();
       const urls = new Map(list.map(l => [l.uid, l.url]));
       const aliases = await alias.ls();
@@ -143,6 +144,8 @@ async function run (token) {
         ];
       }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
 
+      const elapsed_ = ms(new Date() - start_);
+      console.log(`> ${list.length} alias${list.length > 1 ? 'es' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
       if (text) console.log('\n' + text + '\n');
       break;
 
