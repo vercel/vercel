@@ -135,7 +135,7 @@ async function run (token) {
           url,
           time
         ];
-      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
+      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(2) });
 
       if (out) console.log('\n' + out + '\n');
       break;

@@ -141,7 +141,7 @@ async function run (token) {
           _url,
           time
         ];
-      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
+      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(2) });
 
       if (text) console.log('\n' + text + '\n');
       break;
