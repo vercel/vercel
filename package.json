@@ -105,7 +105,7 @@
     "start": "gulp",
     "test": "ava",
     "prepublish": "gulp compile",
-    "pkg": "pkg ."
+    "pkg": "pkg . --out-dir out"
   },
   "pkgConfig": {
     "scripts": "build/**/*"
