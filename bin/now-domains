@@ -123,6 +123,7 @@ async function run (token) {
         return exit(1);
       }
 
+      const start_ = new Date();
       const domains = await domain.ls();
       domains.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
@@ -137,6 +138,8 @@ async function run (token) {
         ];
       }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(3) });
 
+      const elapsed_ = ms(new Date() - start_);
+      console.log(`> ${domains.length} domain${domains.length > 1 ? 's' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
       if (out) console.log('\n' + out + '\n');
       break;
 
