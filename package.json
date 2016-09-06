@@ -90,7 +90,6 @@
     "babel-preset-es2015": "6.14.0",
     "babel-register": "6.14.0",
     "del": "2.2.2",
-    "enclose": "2.2.0",
     "eslint": "3.4.0",
     "eslint-config-standard": "6.0.0",
     "eslint-plugin-promise": "2.0.1",
@@ -99,13 +98,17 @@
     "gulp": "3.9.1",
     "gulp-babel": "6.1.2",
     "gulp-eslint": "3.0.1",
-    "gulp-task-listing": "1.0.1"
+    "gulp-task-listing": "1.0.1",
+    "pkg": "3.0.0-beta.4"
   },
   "scripts": {
     "start": "gulp",
     "test": "ava",
     "prepublish": "gulp compile",
-    "enclose": "gulp enclose"
+    "pkg": "pkg ."
+  },
+  "pkgConfig": {
+    "scripts": "build/**/*"
   },
   "ava": {
     "failFast": true,
