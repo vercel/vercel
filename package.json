@@ -99,13 +99,13 @@
     "gulp-babel": "6.1.2",
     "gulp-eslint": "3.0.1",
     "gulp-task-listing": "1.0.1",
-    "pkg": "3.0.0-beta.4"
+    "pkg": "3.0.0-beta.6"
   },
   "scripts": {
     "start": "gulp",
     "test": "ava",
     "prepublish": "gulp compile",
-    "pkg": "pkg ."
+    "pkg": "pkg . --out-dir out"
   },
   "pkgConfig": {
     "scripts": "build/**/*"
