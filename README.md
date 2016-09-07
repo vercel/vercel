@@ -1,6 +1,6 @@
 # &#120491; now
 
-The fastest way to deploy a Node.JS service.
+Realtime global deployments for any kind of application.
 
 ## How it works
 
@@ -8,10 +8,9 @@ In any directory with a `package.json`, run:
 
 ```bash
 $ now
-> https://some-code-nd23n2.now.sh
 ```
 
-every time you run it, you get a new URL (unless nothing's changed).
+Every time you run it, you get a new URL (unless nothing's changed).
 
 ### Conventions
 
