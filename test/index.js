@@ -120,3 +120,11 @@ test('support docker', async t => {
   t.is(base(files[0]), 'dockerfile/Dockerfile');
   t.is(base(files[1]), 'dockerfile/a.js');
 });
+
+test('prefix regression', async t => {
+  let files = await getNpmFiles(fixture('prefix-regression'));
+  files = files.sort(alpha);
+  t.is(files.length, 2);
+  t.is(base(files[0]), 'prefix-regression/package.json');
+  t.is(base(files[1]), 'prefix-regression/woot.js');
+});
