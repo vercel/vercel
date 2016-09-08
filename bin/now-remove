@@ -20,12 +20,12 @@ const argv = minimist(process.argv.slice(2), {
   }
 });
 
-const deploymentId = argv._[0];
+const ids = argv._;
 
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now remove')} [deploymentId]
+  ${chalk.bold('𝚫 now remove')} deploymentId|deploymentName [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
@@ -40,11 +40,19 @@ const help = () => {
 
     ${chalk.cyan('$ now rm deploymentId')}
 
+  ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}:
+
+    ${chalk.cyan('$ now rm my-app')}
+
+  ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim('`eyWt6zuSdeus`')} and ${chalk.dim('`uWHoA9RQ1d1o`')}:
+
+    ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
+
   ${chalk.dim('Alias:')} rm
 `);
 };
 
-if (argv.help || !deploymentId) {
+if (argv.help || 0 === ids.length) {
   help();
   process.exit(0);
 }
@@ -56,21 +64,28 @@ const hard = argv.hard || false;
 if (argv.config) cfg.setConfigFile(argv.config);
 const config = cfg.read();
 
-function readConfirmation (depl, aliases) {
+function readConfirmation (matches) {
   return new Promise((resolve, reject) => {
-    const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
+
+    process.stdout.write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`);
+
     const tbl = table(
-      [[depl.uid, chalk.underline(`https://${depl.url}`), time]],
+      matches.map((depl) => {
+        const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
+        const url = chalk.underline(`https://${depl.url}`);
+        return [depl.uid, url, time];
+      }),
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
+    process.stdout.write(tbl + '\n');
 
-    process.stdout.write('> The following deployment will be removed permanently\n');
-    process.stdout.write('  ' + tbl + '\n');
-
-    if (aliases.length) {
-      process.stdout.write(`> ${chalk.yellow('Warning!')} This deployment's `
-      + `${chalk.bold(aliases.length + ' alias' + (aliases.length > 1 ? 'es': ''))} `
-      + `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`);
+    for (let depl of matches) {
+      for (let alias of depl.aliases) {
+        process.stdout.write(
+          `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
+          `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
+        );
+      }
     }
 
     process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
@@ -100,24 +115,37 @@ async function remove (token) {
   const now = new Now(apiUrl, token, { debug });
 
   const deployments = await now.list();
-  const depl = deployments.find((d) => d.uid === deploymentId);
-  if (null != deploymentId && !depl) {
-    error(`Could not find a deployment by ${chalk.bold(`"${deploymentId}"`)}. Run ${chalk.dim(`\`now ls\``)} to list.`);
+
+  const matches = deployments.filter((d) => {
+    return ids.find((id) => d.uid === id || d.name === id);
+  });
+
+  if (0 === matches.length) {
+    error(`Could not find any deployments matching ${ids.map((id) => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`);
     return process.exit(1);
   }
-  const aliases = await now.listAliases(depl.uid);
+
+  const aliases = await Promise.all(matches.map((depl) => now.listAliases(depl.uid)));
+  for (let i = 0; i < matches.length; i++) {
+    matches[i].aliases = aliases[i];
+  }
 
   try {
-    const confirmation = (await readConfirmation(depl, aliases)).toLowerCase();
+    const confirmation = (await readConfirmation(matches)).toLowerCase();
     if ('y' !== confirmation && 'yes' !== confirmation) {
       console.log('\n> Aborted');
       process.exit(0);
     }
 
     const start = new Date();
-    await now.remove(deploymentId, { hard });
+
+    await Promise.all(matches.map((depl) => now.remove(depl.uid, { hard })));
+
     const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} Deployment ${chalk.bold(deploymentId)} removed [${elapsed}]`);
+    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`);
+    console.log(table(matches.map((depl) => {
+      return [ `Deployment ${chalk.bold(depl.uid)} removed` ];
+    })));
   } catch (err) {
     handleError(err);
     process.exit(1);
