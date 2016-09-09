@@ -1,4 +1,13 @@
 
+0.24.0 / 2016-09-09
+===================
+
+  * now rm: remove by app name [@rauchg]
+  * fix ignore implementation [@rauchg]
+  * bump pkg to 3.0.0-beta.6 [@rauchg]
+  * make indendation consistent in listings [@rauchg]
+  * add totals to listings and fix plurals [@rauchg]
+
 0.23.1 / 2016-09-05
 ===================
 
