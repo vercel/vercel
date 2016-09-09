@@ -231,12 +231,12 @@ async function sync (token) {
         if (debug) console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`');
         deploymentType = 'docker';
       } else {
-        error(`Could not read directory ${chalk.bold(path)}`);
+        error(`Could not access a ${chalk.dim('`package.json`')} or ${chalk.dim('`Dockerfile`')} in ${chalk.bold(path)}`);
+        console.log(`> To deploy statically, try: ${chalk.dim(chalk.underline('https://zeit.co/blog/serve-it-now'))}.`);
         process.exit(1);
       }
     }
   }
-
 
   const now = new Now(apiUrl, token, { debug });
   const envs = [].concat(argv.env || []);
