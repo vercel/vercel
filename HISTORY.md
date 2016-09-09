@@ -1,4 +1,9 @@
 
+0.25.0 / 2016-09-09
+==================
+
+  * improve error message for not finding a manifest file [@rauchg]
+
 0.24.1 / 2016-09-09
 ===================
 
