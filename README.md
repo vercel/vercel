@@ -1,44 +1,23 @@
-# &#120491; now
+# △ now
 
-Realtime global deployments for any kind of application.
+Realtime global deployments served over HTTP/2.
 
-## How it works
-
-In any directory with a `package.json`, run:
+## How to install
 
 ```bash
-$ now
+npm install -g now
 ```
 
-Every time you run it, you get a new URL (unless nothing's changed).
+## How to use
 
-### Conventions
-
-1. `package.json` must contain a `start` task inside `scripts`.
-   If a `now` script is defined, that's used instead.
-2. Only files that would be included in `npm publish` are synchronized.
-   `package.json` `files` field, `.npmignore` and `.gitignore` are supported.
-3. If a build step is needed, specify a `build` task in `scripts`.
-   If `now-build` is defined, that's used instead.
-
-## Installing
+In any directory with a `package.json` or `Dockerfile`, run:
 
 ```bash
-$ npm install -g now
-> Enter your email: rauchg@gmail.com.
-> We sent an email. Click to log in.
+now
 ```
 
-## Features
+For more examples, usage instructions and other commands run:
 
-- **Slim**. No reliance on Git.
-- **Fast**. Blazing fast sync with deduping.
-- **Standard**. Respects npm and Node.JS conventions.
-- **Easy**. No need to specify ports, `Dockerfile` or config.
-
-## Options
-
-```
--d  Debug mode. Lists all files to be uploaded.
--f  Force. Creates a new URL even if nothing has changed.
+```bash
+now help
 ```
