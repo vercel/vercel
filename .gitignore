@@ -1,3 +1,9 @@
-node_modules
+# build output
 build
+out
+
+# dependencies
+node_modules
+
+# logs
 npm-debug.log
