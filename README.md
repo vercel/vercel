@@ -2,13 +2,13 @@
 
 Realtime global deployments served over HTTP/2.
 
-## How to install
+## Usage
+
+Firstly, make sure to install the package:
 
 ```bash
 $ npm install -g now
 ```
-
-## How to use
 
 In any directory with a `package.json` or `Dockerfile`, run:
 
