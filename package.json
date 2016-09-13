@@ -2,6 +2,7 @@
   "name": "now",
   "version": "0.25.0",
   "description": "realtime instant node.js deployment with one command",
+  "repository": "zeit/now",
   "readme": "",
   "main": "./build/lib/index",
   "files": [
