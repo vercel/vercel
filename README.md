@@ -1,5 +1,8 @@
 # △ now
 
+[![Build Status](https://travis-ci.org/zeit/now.svg?branch=master)](https://travis-ci.org/zeit/now)
+[![Slack Channel](https://zeit-slackin.now.sh/badge.svg)](https://zeit.chat)
+
 Realtime global deployments served over HTTP/2.
 
 ## Usage
