@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/zeit/now.svg?branch=master)](https://travis-ci.org/zeit/now)
 [![Slack Channel](https://zeit-slackin.now.sh/badge.svg)](https://zeit.chat)
 
-Realtime global deployments served over HTTP/2.
+Realtime global deployments served over HTTP/2. You can find a list of frequently asked questions [here](https://github.com/zeit/now/wiki/FAQ).
 
 ## Usage
 
