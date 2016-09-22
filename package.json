@@ -77,7 +77,7 @@
     "resumer": "0.0.0",
     "semver-compare": "1.0.0",
     "socket.io-client": "1.4.8",
-    "spdy": "3.4.1",
+    "spdy": "3.4.2",
     "split-array": "1.0.1",
     "text-table": "0.2.0"
   },
