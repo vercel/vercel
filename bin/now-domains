@@ -7,6 +7,7 @@ import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { error } from '../lib/error';
 import toHost from '../lib/to-host';
+import strlen from '../lib/strlen';
 import NowDomains from '../lib/domains';
 
 const argv = minimist(process.argv.slice(2), {
@@ -127,15 +128,19 @@ async function run (token) {
       const domains = await domain.ls();
       domains.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
-      const out = table(domains.map((domain) => {
+      const header = [['', 'id', 'dns', 'url', 'created']];
+      const out = table(header.concat(domains.map((domain) => {
+        const ns = domain.isExternal ? 'external' : 'zeit.world';
         const url = chalk.underline(`https://${domain.name}`);
         const time = chalk.gray(ms(current - new Date(domain.created)) + ' ago');
         return [
+          '',
           domain.uid,
+          ns,
           url,
           time
         ];
-      }), { align: ['r', 'l', 'l'], hsep: ' '.repeat(2) });
+      })), { align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
 
       const elapsed_ = ms(new Date() - start_);
       console.log(`> ${domains.length} domain${domains.length > 1 ? 's' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
