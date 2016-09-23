@@ -105,7 +105,7 @@ async function list (token) {
     return chalk.bold(name) + '\n\n' + indent(t, 2);
   }).join('\n\n');
   const elapsed = ms(new Date() - start);
-  console.log(`> ${deployments.length} deployment${deployments.length > 1 ? 's' : ''} found ${chalk.gray(`[${elapsed}]`)}`);
+  console.log(`> ${deployments.length} deployment${deployments.length !== 1 ? 's' : ''} found ${chalk.gray(`[${elapsed}]`)}`);
   if (text) console.log('\n' + text + '\n');
 }
 
