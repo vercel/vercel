@@ -131,12 +131,11 @@ async function run (token) {
         const url = chalk.underline(`https://${domain.name}`);
         const time = chalk.gray(ms(current - new Date(domain.created)) + ' ago');
         return [
-          '',
           domain.uid,
           url,
           time
         ];
-      }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(2) });
+      }), { align: ['r', 'l', 'l'], hsep: ' '.repeat(2) });
 
       const elapsed_ = ms(new Date() - start_);
       console.log(`> ${domains.length} domain${domains.length > 1 ? 's' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
