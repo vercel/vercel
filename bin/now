@@ -19,8 +19,8 @@ const exit = (code) => {
 };
 
 const defaultCommand = 'deploy';
-const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias', 'aliases', 'ln', 'domain', 'domains', 'secret', 'secrets']);
-const aliases = new Map([['ls', 'list'], ['rm', 'remove'], ['ln', 'alias'], ['aliases', 'alias'], ['domain', 'domains'], ['secret', 'secrets']]);
+const commands = new Set([defaultCommand, 'list', 'ls', 'rm', 'remove', 'alias', 'aliases', 'ln', 'domain', 'domains', 'cert', 'certs', 'secret', 'secrets']);
+const aliases = new Map([['ls', 'list'], ['rm', 'remove'], ['ln', 'alias'], ['aliases', 'alias'], ['domain', 'domains'], ['cert', 'certs'], ['secret', 'secrets']]);
 
 let cmd = argv._[0];
 let args = [];
