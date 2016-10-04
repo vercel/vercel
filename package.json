@@ -4,6 +4,7 @@
   "description": "Realtime global deployments",
   "repository": "zeit/now",
   "main": "./build/lib/index",
+  "license": "MIT",
   "files": [
     "build"
   ],
