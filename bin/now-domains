@@ -128,7 +128,7 @@ async function run (token) {
       const domains = await domain.ls();
       domains.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
-      const header = [['', 'id', 'dns', 'url', 'created']];
+      const header = [['', 'id', 'dns', 'url', 'created'].map(s => chalk.dim(s))];
       const out = table(header.concat(domains.map((domain) => {
         const ns = domain.isExternal ? 'external' : 'zeit.world';
         const url = chalk.underline(`https://${domain.name}`);
