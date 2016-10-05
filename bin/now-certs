@@ -95,6 +95,11 @@ if (argv.help || !subcommand) {
   });
 }
 
+function formatExpirationDate (date) {
+  const diff = date - Date.now();
+  return diff < 0 ? chalk.gray(ms(new Date(-expDiff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)));
+}
+
 async function run (token) {
   const certs = new NowCerts(apiUrl, token, { debug });
   const args = argv._.slice(1);
@@ -116,7 +121,7 @@ async function run (token) {
     const out = table(header.concat(list.map((cert) => {
       const cn = chalk.bold(cert.cn);
       const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
-      const expiration = chalk.gray(new Date(cert.expiration));
+      const expiration = formatExpirationDate(new Date(cert.expiration));
       return [
         '',
         cert.uid ? cert.uid : 'unknown',
