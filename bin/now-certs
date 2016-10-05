@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
 import table from 'text-table';
+import strlen from '../lib/strlen';
 import minimist from 'minimist';
 import * as cfg from '../lib/cfg';
 import { handleError, error } from '../lib/error';
@@ -111,16 +112,19 @@ async function run (token) {
     list.sort((a, b) => {
       return a.cn.localeCompare(b.cn);
     });
-    const out = table(list.map((cert) => {
+    const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))];
+    const out = table(header.concat(list.map((cert) => {
       const cn = chalk.bold(cert.cn);
       const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
+      const expiration = chalk.gray(new Date(cert.expiration));
       return [
         '',
         cert.uid ? cert.uid : 'unknown',
         cn,
-        time
+        time,
+        expiration
       ];
-    }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(2) });
+    })), { align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
     if (out) console.log('\n' + out + '\n');
   } else if ('create' === subcommand) {
     if (1 !== args.length) {
