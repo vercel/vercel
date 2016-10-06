@@ -2,6 +2,7 @@
 import chalk from 'chalk';
 import minimist from 'minimist';
 import table from 'text-table';
+import strlen from '../lib/strlen';
 import ms from 'ms';
 import NowAlias from '../lib/alias';
 import login from '../lib/login';
@@ -142,7 +143,7 @@ async function run (token) {
           _url,
           time
         ];
-      }), { align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2) });
+      }), { align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
 
       const elapsed_ = ms(new Date() - start_);
       console.log(`> ${aliases.length} alias${aliases.length > 1 ? 'es' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);

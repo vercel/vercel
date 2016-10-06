@@ -4,6 +4,7 @@ import fs from 'fs-promise';
 import minimist from 'minimist';
 import chalk from 'chalk';
 import table from 'text-table';
+import strlen from '../lib/strlen';
 import ms from 'ms';
 import Now from '../lib';
 import login from '../lib/login';
@@ -101,7 +102,7 @@ async function list (token) {
       const _url = chalk.underline(`https://${url}`);
       const time = chalk.gray(ms(current - created) + ' ago');
       return [uid, _url, time];
-    }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) });
+    }), { align: ['l', 'r', 'l'], hsep: ' '.repeat(6), stringLength: strlen });
     return chalk.bold(name) + '\n\n' + indent(t, 2);
   }).join('\n\n');
   const elapsed = ms(new Date() - start);
