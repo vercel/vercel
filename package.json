@@ -108,7 +108,7 @@
     "prepublish": "gulp compile",
     "pkg": "pkg . --out-dir out"
   },
-  "pkgConfig": {
+  "pkg": {
     "scripts": "build/**/*"
   },
   "ava": {
