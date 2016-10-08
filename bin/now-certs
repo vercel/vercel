@@ -113,24 +113,27 @@ async function run (token) {
     const list = await certs.ls();
     const elapsed = ms(new Date() - start);
     console.log(`> ${list.length} certificate${list.length > 1 ? 's' : ''} found ${chalk.gray(`[${elapsed}]`)}`);
-    const cur = Date.now();
-    list.sort((a, b) => {
-      return a.cn.localeCompare(b.cn);
-    });
-    const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))];
-    const out = table(header.concat(list.map((cert) => {
-      const cn = chalk.bold(cert.cn);
-      const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
-      const expiration = formatExpirationDate(new Date(cert.expiration));
-      return [
-        '',
-        cert.uid ? cert.uid : 'unknown',
-        cn,
-        time,
-        expiration
-      ];
-    })), { align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
-    if (out) console.log('\n' + out + '\n');
+
+    if (0 < list.length) {
+      const cur = Date.now();
+      list.sort((a, b) => {
+        return a.cn.localeCompare(b.cn);
+      });
+      const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))];
+      const out = table(header.concat(list.map((cert) => {
+        const cn = chalk.bold(cert.cn);
+        const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
+        const expiration = formatExpirationDate(new Date(cert.expiration));
+        return [
+          '',
+          cert.uid ? cert.uid : 'unknown',
+          cn,
+          time,
+          expiration
+        ];
+      })), { align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
+      if (out) console.log('\n' + out + '\n');
+    }
   } else if ('create' === subcommand) {
     if (1 !== args.length) {
       error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs create <cn>`')}`);

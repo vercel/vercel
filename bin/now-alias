@@ -127,7 +127,7 @@ async function run (token) {
       const current = new Date();
 
       const header = [['', 'id', 'source', 'url', 'created'].map(s => chalk.dim(s))];
-      const text = table(header.concat(aliases.map((_alias) => {
+      const text = 0 === list.length ? null : table(header.concat(aliases.map((_alias) => {
         const _url = chalk.underline(`https://${_alias.alias}`);
         const target = _alias.deploymentId;
         const _sourceUrl = urls.get(target)
