@@ -126,7 +126,8 @@ async function run (token) {
       aliases.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
 
-      const text = table(aliases.map((_alias) => {
+      const header = [['', 'id', 'source', 'url', 'created'].map(s => chalk.dim(s))];
+      const text = table(header.concat(aliases.map((_alias) => {
         const _url = chalk.underline(`https://${_alias.alias}`);
         const target = _alias.deploymentId;
         const _sourceUrl = urls.get(target)
@@ -143,7 +144,7 @@ async function run (token) {
           _url,
           time
         ];
-      }), { align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
+      })), { align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
 
       const elapsed_ = ms(new Date() - start_);
       console.log(`> ${aliases.length} alias${aliases.length > 1 ? 'es' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
