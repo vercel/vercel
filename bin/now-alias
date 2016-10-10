@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import chalk from 'chalk';
-import minimist from 'minimist';
-import table from 'text-table';
-import ms from 'ms';
-import NowAlias from '../lib/alias';
-import login from '../lib/login';
-import * as cfg from '../lib/cfg';
-import { error } from '../lib/error';
-import toHost from '../lib/to-host';
+import chalk from 'chalk'
+import minimist from 'minimist'
+import table from 'text-table'
+import ms from 'ms'
+import NowAlias from '../lib/alias'
+import login from '../lib/login'
+import * as cfg from '../lib/cfg'
+import {error} from '../lib/error'
+import toHost from '../lib/to-host'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -18,8 +18,8 @@ const argv = minimist(process.argv.slice(2), {
     debug: 'd',
     token: 't'
   }
-});
-const subcommand = argv._[0];
+})
+const subcommand = argv._[0]
 
 // options
 const help = () => {
@@ -65,45 +65,48 @@ const help = () => {
       To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
 
   ${chalk.dim('Alias:')} ln
-`);
-};
+`)
+}
 
 // options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
-if (argv.config) cfg.setConfigFile(argv.config);
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
 
-const exit = (code) => {
+if (argv.config) {
+  cfg.setConfigFile(argv.config)
+}
+
+const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
   // stdout writes are asynchronous
   // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100);
-};
+  setTimeout(() => process.exit(code || 0), 100)
+}
 
 if (argv.help || !subcommand) {
-  help();
-  exit(0);
+  help()
+  exit(0)
 } else {
-  const config = cfg.read();
+  const config = cfg.read()
 
   Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async (token) => {
+  .then(async token => {
     try {
-      await run(token);
+      await run(token)
     } catch (err) {
       if (err.userError) {
-        error(err.message);
+        error(err.message)
       } else {
-        error(`Unknown error: ${err.stack}`);
+        error(`Unknown error: ${err.stack}`)
       }
-      exit(1);
+      exit(1)
     }
   })
-  .catch((e) => {
-    error(`Authentication error – ${e.message}`);
-    exit(1);
-  });
+  .catch(e => {
+    error(`Authentication error – ${e.message}`)
+    exit(1)
+  })
 }
 
 async function run (token) {
@@ -243,32 +246,37 @@ async function readConfirmation (alias, _alias, list) {
   });
 }
 
-function findAlias (alias, list) {
-  let key, val;
+function findAlias(alias, list) {
+  let key
+  let val
+
   if (/\./.test(alias)) {
-    val = toHost(alias);
-    key = 'alias';
+    val = toHost(alias)
+    key = 'alias'
   } else {
-    val = alias;
-    key = 'uid';
+    val = alias
+    key = 'uid'
   }
 
-  const _alias = list.find((d) => {
+  const _alias = list.find(d => {
     if (d[key] === val) {
-      if (debug) console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`);
-      return true;
+      if (debug) {
+        console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`)
+      }
+      return true
     }
 
     // match prefix
     if (`${val}.now.sh` === d.alias) {
-      if (debug) console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`);
-      return true;
+      if (debug) {
+        console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`)
+      }
+
+      return true
     }
 
-    return false;
-  });
+    return false
+  })
 
-  return _alias;
+  return _alias
 }
-
-
