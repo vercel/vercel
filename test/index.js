@@ -1,26 +1,28 @@
-import test from 'ava'
+// Native
 import {join, resolve} from 'path'
-import {
-  npm as getNpmFiles_,
-  docker as getDockerFiles
-} from '../lib/get-files'
-import hash from '../lib/hash'
+
+// Packages
+import test from 'ava'
 import {asc as alpha} from 'alpha-sort'
 import {readFile} from 'fs-promise'
+
+// Ours
+import {npm as getNpmFiles_, docker as getDockerFiles} from '../lib/get-files'
+import hash from '../lib/hash'
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./_fixtures/${name}`)
 
+const readJSON = async file => {
+  const data = await readFile(file)
+  return JSON.parse(data)
+}
+
 // overload to force debugging
 const getNpmFiles = async dir => {
   const pkg = await readJSON(resolve(dir, 'package.json'))
   return getNpmFiles_(dir, pkg)
-}
-
-const readJSON = async file => {
-  const data = await readFile(file)
-  return JSON.parse(data)
 }
 
 test('`files`', async t => {
