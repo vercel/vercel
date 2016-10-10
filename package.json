@@ -17,7 +17,12 @@
   "xo": {
     "esnext": true,
     "space": true,
-    "semicolon": false
+    "semicolon": false,
+    "ignores": [
+      "build/**",
+      "out/**",
+      "test/_fixtures/**"
+    ]
   },
   "ava": {
     "failFast": true,
