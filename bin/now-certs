@@ -97,7 +97,7 @@ if (argv.help || !subcommand) {
 
 function formatExpirationDate (date) {
   const diff = date - Date.now();
-  return diff < 0 ? chalk.gray(ms(new Date(-expDiff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)));
+  return diff < 0 ? chalk.gray(ms(new Date(-diff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)));
 }
 
 async function run (token) {
