@@ -250,12 +250,11 @@ async function sync (token) {
   };
 
   const env_ = await Promise.all(envs.map(async (kv) => {
-    const [key, val_, ...rest] = kv.split('=');
+    const [key, ...rest] = kv.split('=');
     let val;
 
     if (rest.length) {
-      error(`Invalid env ${chalk.bold(`"${kv}"`)}. It cannot contain more than one ${chalk.dim(`=`)} symbol`);
-      return process.exit(1);
+      val = rest.join('=');
     }
 
     if (/[^A-z0-9_]/i.test(key)) {
@@ -268,7 +267,7 @@ async function sync (token) {
       return process.exit(1);
     }
 
-    if (val_ == null) {
+    if (val == null) {
       if (!(key in process.env)) {
         error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`);
         return process.exit(1);
@@ -277,8 +276,6 @@ async function sync (token) {
         // escape value if it begins with @
         val = process.env[key].replace(/^\@/, '\\@');
       }
-    } else {
-      val = val_;
     }
 
     if ('@' === val[0]) {
