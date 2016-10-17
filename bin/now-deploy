@@ -46,6 +46,8 @@ const help = () => {
     rm | remove  [id]         remove a deployment
     ln | alias   [id] [url]   configures aliases for deployments
     domains      [name]       manages your domain names
+    certs        [cmd]        manages your SSL certificates
+    secrets      [name]       manages your secret environment variables
     help         [cmd]        displays complete help for [cmd]
 
   ${chalk.dim('Options:')}
