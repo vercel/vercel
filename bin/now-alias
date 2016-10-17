@@ -115,7 +115,7 @@ async function run (token) {
     case 'list':
     case 'ls':
       if (0 !== args.length) {
-        error('Invalid number of arguments');
+        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`);
         return exit(1);
       }
 
@@ -161,7 +161,7 @@ async function run (token) {
       }
 
       if (1 !== args.length) {
-        error('Invalid number of arguments');
+        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`);
         return exit(1);
       }
 
@@ -195,7 +195,7 @@ async function run (token) {
     case 'add':
     case 'set':
       if (2 !== args.length) {
-        error('Invalid number of arguments');
+        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`);
         return exit(1);
       }
       await alias.set(String(args[0]), String(args[1]));
