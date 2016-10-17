@@ -61,6 +61,8 @@ const help = () => {
     -e, --env                 include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        do not attempt to copy URL to clipboard
     -N, --forward-npm         forward login information to install private NPM modules
+    --npm                     force npm deployment (when both package.json and Dockerfile exist)
+    --docker                  force docker deployment (when both package.json and Dockerfile exist)
 
   ${chalk.dim('Examples:')}
 
