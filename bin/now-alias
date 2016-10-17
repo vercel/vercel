@@ -147,7 +147,7 @@ async function run (token) {
       })), { align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
 
       const elapsed_ = ms(new Date() - start_);
-      console.log(`> ${aliases.length} alias${aliases.length > 1 ? 'es' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
+      console.log(`> ${aliases.length} alias${aliases.length !== 1 ? 'es' : ''} found ${chalk.gray(`[${elapsed_}]`)}`);
       if (text) console.log('\n' + text + '\n');
       break;
 
