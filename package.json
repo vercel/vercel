@@ -26,7 +26,12 @@
     "extensions": [
       "",
       ".js"
-    ]
+    ],
+    "rules": {
+      "complexity": "off",
+      "eqeqeq": "off",
+      "no-eq-null": "off"
+    }
   },
   "ava": {
     "failFast": true,
