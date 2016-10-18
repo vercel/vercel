@@ -117,7 +117,18 @@ async function remove (token) {
   const deployments = await now.list();
 
   const matches = deployments.filter((d) => {
-    return ids.find((id) => d.uid === id || d.name === id);
+    return ids.find((id) => {
+      // `url` should match the hostname of the deployment
+      let u = id.replace(/^https\:\/\//i, '');
+      if (-1 === u.indexOf('.')) {
+        // `.now.sh` domain is implied if just the subdomain is given
+        u += '.now.sh';
+      }
+
+      return d.uid === id
+          || d.name === id
+          || d.url === u;
+    });
   });
 
   if (0 === matches.length) {
