@@ -30,6 +30,7 @@
     "rules": {
       "complexity": "off",
       "eqeqeq": "off",
+      "max-depth": "off",
       "no-eq-null": "off"
     }
   },
