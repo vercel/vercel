@@ -17,8 +17,21 @@ import ms from 'ms';
 import { handleError, error } from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token'],
-  boolean: ['help', 'version', 'debug', 'force', 'login', 'no-clipboard', 'forward-npm', 'docker', 'npm'],
+  string: [
+    'config',
+    'token'
+  ],
+  boolean: [
+    'help',
+    'version',
+    'debug',
+    'force',
+    'login',
+    'no-clipboard',
+    'forward-npm',
+    'docker',
+    'npm'
+  ],
   alias: {
     env: 'e',
     help: 'h',
