@@ -1,21 +1,26 @@
 #!/usr/bin/env node
 
+// Native
+import {resolve} from 'path';
+
+// Packages
 import Progress from 'progress';
-import copy from '../lib/copy';
-import { resolve } from 'path';
-import login from '../lib/login';
-import { stat } from 'fs-promise';
-import * as cfg from '../lib/cfg';
-import { version } from '../../package';
-import Logger from '../lib/build-logger';
+import {stat} from 'fs-promise';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import minimist from 'minimist';
+import ms from 'ms';
+
+// Ours
+import copy from '../lib/copy';
+import login from '../lib/login';
+import * as cfg from '../lib/cfg';
+import {version} from '../../package';
+import Logger from '../lib/build-logger';
 import Now from '../lib';
 import toHumanPath from '../lib/utils/to-human-path';
 import promptOptions from '../lib/utils/prompt-options';
-import ms from 'ms';
-import { handleError, error } from '../lib/error';
+import {handleError, error} from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
   string: [

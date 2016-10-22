@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
+// Packages
 import chalk from 'chalk';
 import minimist from 'minimist';
 import table from 'text-table';
 import ms from 'ms';
+
+// Ours
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
 import { error } from '../lib/error';

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
+// Packages
 import minimist from 'minimist';
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
+
+// Ours
 import Now from '../lib';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
-import { handleError, error } from '../lib/error';
+import {handleError, error} from '../lib/error';
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
