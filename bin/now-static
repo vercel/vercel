@@ -42,7 +42,7 @@ const uniqueIdentifier = md5(current)
 const listCommand = 'list ./content' + (flags.single ? ' -s' : '')
 
 const pkgDefaults = {
-  name: 'ns',
+  name: 'static',
   version: '1.0.0',
   scripts: {
     start: flags.cmd || listCommand
@@ -75,7 +75,7 @@ try {
     // We need to use the hased directory identifier
     // Because if we don't use the same id every time,
     // now won't update the existing deployment and create a new one instead
-    name: `now-serve-${uniqueIdentifier}`,
+    name: `now-static-${uniqueIdentifier}`,
 
     // Keep it, because we'll remove it manually later
     keep: true
