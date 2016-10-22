@@ -1,9 +1,13 @@
 #!/usr/bin/env node
+
+// Packages
 import chalk from 'chalk';
 import minimist from 'minimist';
 import table from 'text-table';
-import strlen from '../lib/strlen';
 import ms from 'ms';
+
+// Ours
+import strlen from '../lib/strlen';
 import NowAlias from '../lib/alias';
 import login from '../lib/login';
 import * as cfg from '../lib/cfg';
@@ -30,10 +34,10 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
-    -d, --debug             debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
+    -h, --help              Output usage information
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -d, --debug             Debug mode [off]
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
   ${chalk.dim('Examples:')}
 
