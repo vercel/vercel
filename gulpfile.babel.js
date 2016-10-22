@@ -3,6 +3,7 @@ import gulp from 'gulp'
 import del from 'del'
 import babel from 'gulp-babel'
 import help from 'gulp-task-listing'
+import {crop as cropExt} from 'gulp-ext'
 
 gulp.task('help', help)
 
@@ -19,6 +20,7 @@ gulp.task('compile-lib', () =>
 gulp.task('compile-bin', () =>
   gulp.src('bin/*')
   .pipe(babel())
+  .pipe(cropExt())
   .pipe(gulp.dest('build/bin')))
 
 gulp.task('watch-lib', () => gulp.watch('lib/**/*.js', ['compile-lib']))
