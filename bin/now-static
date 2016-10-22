@@ -1,3 +1,104 @@
 #!/usr/bin/env node
 
-import chalk from 'chalk';
+// Native
+import path from 'path'
+
+// Packages
+import fs from 'fs-extra'
+import tmp from 'tmp'
+import args from 'args'
+import chalk from 'chalk'
+import md5 from 'md5'
+
+// Ours
+import {copyContents, injectPackage} from '../lib/static'
+
+args
+  .option('cmd', 'The command to run when starting')
+  .option('packages', 'Custom packages to add to dependencies (comma-separated)')
+  .option('name', 'Custom name for deployment')
+  .option('arguments', 'Flags that you want to pass to now')
+  .option('single', 'Serve single page apps with just one index.html')
+
+const flags = args.parse(process.argv)
+
+if (flags.cmd && flags.single) {
+  console.log(chalk.red('The "single" flag only works if you\'re not using a custom command'))
+}
+
+const file = args.sub[0]
+let current = process.cwd()
+
+if (file) {
+  current = path.resolve(process.cwd(), file)
+}
+
+if (!fs.existsSync(current)) {
+  console.error(chalk.red('Specified path doesn\'t exist!'))
+  process.exit(1)
+}
+
+const uniqueIdentifier = md5(current)
+const listCommand = 'list ./content' + (flags.single ? ' -s' : '')
+
+const pkgDefaults = {
+  name: 'ns',
+  version: '1.0.0',
+  scripts: {
+    start: flags.cmd || listCommand
+  },
+  dependencies: {
+    list: 'latest'
+  }
+}
+
+if (flags.packages) {
+  const list = flags.packages.split(',')
+
+  for (const item of list) {
+    pkgDefaults.dependencies[item] = 'latest'
+  }
+
+  if (flags.cmd) {
+    delete pkgDefaults.dependencies.list
+  }
+}
+
+if (flags.name) {
+  pkgDefaults.name = flags.name
+}
+
+let tmpDir = false
+
+try {
+  tmpDir = tmp.dirSync({
+    // We need to use the hased directory identifier
+    // Because if we don't use the same id every time,
+    // now won't update the existing deployment and create a new one instead
+    name: `now-serve-${uniqueIdentifier}`,
+
+    // Keep it, because we'll remove it manually later
+    keep: true
+  })
+} catch (err) {
+  throw err
+}
+
+const details = fs.lstatSync(current)
+
+if (details.isDirectory()) {
+  copyContents(current, tmpDir.name, pkgDefaults, flags.arguments)
+} else if (details.isFile()) {
+  const fileName = path.parse(current).base
+  const target = path.join(tmpDir.name, '/content', fileName)
+
+  fs.copy(current, target, err => {
+    if (err) {
+      throw err
+    }
+
+    injectPackage(tmpDir.name, pkgDefaults, flags.arguments)
+  })
+} else {
+  console.error(chalk.red('Path is neither a file nor a directory!'))
+}

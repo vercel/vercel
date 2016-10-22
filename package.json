@@ -55,6 +55,7 @@
   },
   "dependencies": {
     "ansi-escapes": "1.4.0",
+    "args": "2.1.0",
     "arr-flatten": "1.0.1",
     "array-unique": "0.3.2",
     "async-retry": "0.2.1",
@@ -70,6 +71,7 @@
     "graceful-fs": "4.1.9",
     "ignore": "3.2.0",
     "ini": "1.3.4",
+    "md5": "2.2.1",
     "minimatch": "3.0.3",
     "minimist": "1.2.0",
     "ms": "0.7.1",
@@ -80,7 +82,9 @@
     "socket.io-client": "1.4.8",
     "spdy": "3.4.4",
     "split-array": "1.0.1",
-    "text-table": "0.2.0"
+    "text-table": "0.2.0",
+    "tmp": "0.0.29",
+    "walk": "2.3.9"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
