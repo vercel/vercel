@@ -41,30 +41,30 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    deploy       [path]       performs a deployment ${chalk.bold('(default)')}
-    ls | list    [app]        list deployments
-    rm | remove  [id]         remove a deployment
-    ln | alias   [id] [url]   configures aliases for deployments
-    domains      [name]       manages your domain names
-    certs        [cmd]        manages your SSL certificates
-    secrets      [name]       manages your secret environment variables
-    help         [cmd]        displays complete help for [cmd]
+    deploy       [path]       Performs a deployment ${chalk.bold('(default)')}
+    ls | list    [app]        List deployments
+    rm | remove  [id]         Remove a deployment
+    ln | alias   [id] [url]   Configures aliases for deployments
+    domains      [name]       Manages your domain names
+    certs        [cmd]        Manages your SSL certificates
+    secrets      [name]       Manages your secret environment variables
+    help         [cmd]        Displays complete help for [cmd]
 
   ${chalk.dim('Options:')}
 
-    -h, --help                output usage information
-    -v, --version             output the version number
-    -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    config file
-    -d, --debug               debug mode [off]
-    -f, --force               force a new deployment even if nothing has changed
-    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   login token
-    -L, --login               configure login
-    -p, --public              deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
-    -e, --env                 include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
-    -C, --no-clipboard        do not attempt to copy URL to clipboard
-    -N, --forward-npm         forward login information to install private NPM modules
-    --npm                     force npm deployment (when both package.json and Dockerfile exist)
-    --docker                  force docker deployment (when both package.json and Dockerfile exist)
+    -h, --help                Output usage information
+    -v, --version             Output the version number
+    -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    Config file
+    -d, --debug               Debug mode [off]
+    -f, --force               Force a new deployment even if nothing has changed
+    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   Login token
+    -L, --login               Configure login
+    -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
+    -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
+    -C, --no-clipboard        Do not attempt to copy URL to clipboard
+    -N, --forward-npm         Forward login information to install private NPM modules
+    --npm                     Force npm deployment (when both package.json and Dockerfile exist)
+    --docker                  Force docker deployment (when both package.json and Dockerfile exist)
 
   ${chalk.dim('Examples:')}
 

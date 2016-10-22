@@ -33,12 +33,12 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
-    -d, --debug             debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
-    --crt ${chalk.bold.underline('FILE')}              certificate file
-    --key ${chalk.bold.underline('FILE')}              certificate key file
+    -h, --help              Output usage information
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -d, --debug             Debug mode [off]
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    --crt ${chalk.bold.underline('FILE')}              Certificate file
+    --key ${chalk.bold.underline('FILE')}              Certificate key file
     --ca ${chalk.bold.underline('FILE')}               CA certificate chain file
 
   ${chalk.dim('Examples:')}
