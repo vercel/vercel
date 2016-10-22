@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import Progress from 'progress';
 import copy from '../lib/copy';
 import { resolve } from 'path';

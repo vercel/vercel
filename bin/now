@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import minimist from 'minimist';
 import { resolve } from 'path';
 import { spawn } from 'cross-spawn';
