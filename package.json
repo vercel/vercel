@@ -8,6 +8,24 @@
   "files": [
     "build"
   ],
+  "scripts": {
+    "start": "gulp",
+    "test": "xo && ava",
+    "prepublish": "gulp compile",
+    "pkg": "pkg . --out-dir out"
+  },
+  "pkg": {
+    "scripts": "build/**/*"
+  },
+  "ava": {
+    "failFast": true,
+    "files": [
+      "test/*.js"
+    ],
+    "require": [
+      "babel-register"
+    ]
+  },
   "greenkeeper": {
     "emails": false,
     "ignore": [
@@ -83,23 +101,5 @@
     "gulp-task-listing": "1.0.1",
     "pkg": "3.0.0-beta.14",
     "xo": "0.17.0"
-  },
-  "scripts": {
-    "start": "gulp",
-    "test": "xo && ava",
-    "prepublish": "gulp compile",
-    "pkg": "pkg . --out-dir out"
-  },
-  "pkg": {
-    "scripts": "build/**/*"
-  },
-  "ava": {
-    "failFast": true,
-    "files": [
-      "test/*.js"
-    ],
-    "require": [
-      "babel-register"
-    ]
   }
 }
