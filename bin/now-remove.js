@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
 // Packages
-import minimist from 'minimist';
-import chalk from 'chalk';
-import ms from 'ms';
-import table from 'text-table';
+import minimist from 'minimist'
+import chalk from 'chalk'
+import ms from 'ms'
+import table from 'text-table'
 
 // Ours
-import Now from '../lib';
-import login from '../lib/login';
-import * as cfg from '../lib/cfg';
-import {handleError, error} from '../lib/error';
+import Now from '../lib'
+import login from '../lib/login'
+import * as cfg from '../lib/cfg'
+import {handleError, error} from '../lib/error'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -21,9 +21,9 @@ const argv = minimist(process.argv.slice(2), {
     debug: 'd',
     token: 't'
   }
-});
+})
 
-const ids = argv._;
+const ids = argv._
 
 // options
 const help = () => {
@@ -52,118 +52,120 @@ const help = () => {
     ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
 
   ${chalk.dim('Alias:')} rm
-`);
-};
+`)
+}
 
-if (argv.help || 0 === ids.length) {
-  help();
-  process.exit(0);
+if (argv.help || ids.length === 0) {
+  help()
+  process.exit(0)
 }
 
 // options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
-const hard = argv.hard || false;
-if (argv.config) cfg.setConfigFile(argv.config);
-const config = cfg.read();
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
+const hard = argv.hard || false
 
-function readConfirmation (matches) {
-  return new Promise((resolve, reject) => {
+if (argv.config) {
+  cfg.setConfigFile(argv.config)
+}
 
-    process.stdout.write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`);
+const config = cfg.read()
+
+function readConfirmation(matches) {
+  return new Promise(resolve => {
+    process.stdout.write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`)
 
     const tbl = table(
-      matches.map((depl) => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
-        const url = chalk.underline(`https://${depl.url}`);
-        return [depl.uid, url, time];
+      matches.map(depl => {
+        const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
+        const url = chalk.underline(`https://${depl.url}`)
+        return [depl.uid, url, time]
       }),
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
-    process.stdout.write(tbl + '\n');
+      {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
+    )
+    process.stdout.write(tbl + '\n')
 
-    for (let depl of matches) {
-      for (let alias of depl.aliases) {
+    for (const depl of matches) {
+      for (const alias of depl.aliases) {
         process.stdout.write(
           `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
           `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
-        );
+        )
       }
     }
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
 
-    process.stdin.on('data', (d) => {
-      process.stdin.pause();
-      resolve(d.toString().trim());
-    }).resume();
-  });
+    process.stdin.on('data', d => {
+      process.stdin.pause()
+      resolve(d.toString().trim())
+    }).resume()
+  })
 }
 
 Promise.resolve(argv.token || config.token || login(apiUrl))
-.then(async (token) => {
+.then(async token => {
   try {
-    await remove(token);
+    await remove(token)
   } catch (err) {
-    error(`Unknown error: ${err.stack}`);
-    process.exit(1);
+    error(`Unknown error: ${err.stack}`)
+    process.exit(1)
   }
 })
-.catch((e) => {
-  error(`Authentication error – ${e.message}`);
-  process.exit(1);
-});
+.catch(e => {
+  error(`Authentication error – ${e.message}`)
+  process.exit(1)
+})
 
-async function remove (token) {
-  const now = new Now(apiUrl, token, { debug });
+async function remove(token) {
+  const now = new Now(apiUrl, token, {debug})
 
-  const deployments = await now.list();
+  const deployments = await now.list()
 
-  const matches = deployments.filter((d) => {
-    return ids.find((id) => {
+  const matches = deployments.filter(d => {
+    return ids.find(id => {
       // `url` should match the hostname of the deployment
-      let u = id.replace(/^https\:\/\//i, '');
-      if (-1 === u.indexOf('.')) {
+      let u = id.replace(/^https\:\/\//i, '')
+
+      if (u.indexOf('.') === -1) {
         // `.now.sh` domain is implied if just the subdomain is given
-        u += '.now.sh';
+        u += '.now.sh'
       }
 
-      return d.uid === id
-          || d.name === id
-          || d.url === u;
-    });
-  });
+      return d.uid === id || d.name === id || d.url === u
+    })
+  })
 
-  if (0 === matches.length) {
-    error(`Could not find any deployments matching ${ids.map((id) => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`);
-    return process.exit(1);
+  if (matches.length === 0) {
+    error(`Could not find any deployments matching ${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
+    return process.exit(1)
   }
 
-  const aliases = await Promise.all(matches.map((depl) => now.listAliases(depl.uid)));
+  const aliases = await Promise.all(matches.map(depl => now.listAliases(depl.uid)))
   for (let i = 0; i < matches.length; i++) {
-    matches[i].aliases = aliases[i];
+    matches[i].aliases = aliases[i]
   }
 
   try {
-    const confirmation = (await readConfirmation(matches)).toLowerCase();
-    if ('y' !== confirmation && 'yes' !== confirmation) {
-      console.log('\n> Aborted');
-      process.exit(0);
+    const confirmation = (await readConfirmation(matches)).toLowerCase()
+    if (confirmation !== 'y' && confirmation !== 'yes') {
+      console.log('\n> Aborted')
+      process.exit(0)
     }
 
-    const start = new Date();
+    const start = new Date()
 
-    await Promise.all(matches.map((depl) => now.remove(depl.uid, { hard })));
+    await Promise.all(matches.map(depl => now.remove(depl.uid, {hard})))
 
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`);
-    console.log(table(matches.map((depl) => {
-      return [ `Deployment ${chalk.bold(depl.uid)} removed` ];
-    })));
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`)
+    console.log(table(matches.map(depl => {
+      return [`Deployment ${chalk.bold(depl.uid)} removed`]
+    })))
   } catch (err) {
-    handleError(err);
-    process.exit(1);
+    handleError(err)
+    process.exit(1)
   }
 
-  now.close();
+  now.close()
 }

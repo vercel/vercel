@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 
 // Native
-import path from 'path';
+import path from 'path'
 
 // Packages
-import chalk from 'chalk';
-import table from 'text-table';
-import minimist from 'minimist';
-import fs from 'fs-promise';
-import ms from 'ms';
+import chalk from 'chalk'
+import table from 'text-table'
+import minimist from 'minimist'
+import fs from 'fs-promise'
+import ms from 'ms'
 
 // Ours
-import strlen from '../lib/strlen';
-import * as cfg from '../lib/cfg';
-import {handleError, error} from '../lib/error';
-import NowCerts from '../lib/certs';
+import strlen from '../lib/strlen'
+import * as cfg from '../lib/cfg'
+import {handleError, error} from '../lib/error'
+import NowCerts from '../lib/certs'
+import login from '../lib/login'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
@@ -25,8 +26,9 @@ const argv = minimist(process.argv.slice(2), {
     debug: 'd',
     token: 't'
   }
-});
-const subcommand = argv._[0];
+})
+
+const subcommand = argv._[0]
 
 // options
 const help = () => {
@@ -64,190 +66,199 @@ const help = () => {
   ${chalk.gray('–')} Replacing an existing certificate with a user-supplied certificate:
 
       ${chalk.cyan('$ now certs replace --crt domain.crt --key domain.key --ca ca_chain.crt domain.com')}
-`);
-};
+`)
+}
 
 // options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
-if (argv.config) cfg.setConfigFile(argv.config);
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
 
-const exit = (code) => {
+if (argv.config) {
+  cfg.setConfigFile(argv.config)
+}
+
+const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
   // stdout writes are asynchronous
   // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100);
-};
+  setTimeout(() => process.exit(code || 0), 100)
+}
 
 if (argv.help || !subcommand) {
-  help();
-  exit(0);
+  help()
+  exit(0)
 } else {
-  const config = cfg.read();
+  const config = cfg.read()
 
   Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async (token) => {
+  .then(async token => {
     try {
-      await run(token);
+      await run(token)
     } catch (err) {
-      handleError(err);
-      exit(1);
+      handleError(err)
+      exit(1)
     }
   })
-  .catch((e) => {
-    error(`Authentication error – ${e.message}`);
-    exit(1);
-  });
+  .catch(e => {
+    error(`Authentication error – ${e.message}`)
+    exit(1)
+  })
 }
 
-function formatExpirationDate (date) {
-  const diff = date - Date.now();
-  return diff < 0 ? chalk.gray(ms(new Date(-diff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)));
+function formatExpirationDate(date) {
+  const diff = date - Date.now()
+  return diff < 0 ? chalk.gray(ms(new Date(-diff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)))
 }
 
-async function run (token) {
-  const certs = new NowCerts(apiUrl, token, { debug });
-  const args = argv._.slice(1);
-  const start = Date.now();
+async function run(token) {
+  const certs = new NowCerts(apiUrl, token, {debug})
+  const args = argv._.slice(1)
+  const start = Date.now()
 
-  if ('ls' === subcommand || 'list' === subcommand) {
-    if (0 !== args.length) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`);
-      return exit(1);
+  if (subcommand === 'ls' || subcommand === 'list') {
+    if (args.length !== 0) {
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`)
+      return exit(1)
     }
-    const list = await certs.ls();
-    const elapsed = ms(new Date() - start);
-    console.log(`> ${list.length} certificate${list.length !== 1 ? 's' : ''} found ${chalk.gray(`[${elapsed}]`)}`);
 
-    if (0 < list.length) {
-      const cur = Date.now();
+    const list = await certs.ls()
+    const elapsed = ms(new Date() - start)
+
+    console.log(`> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`)
+
+    if (list.length > 0) {
+      const cur = Date.now()
       list.sort((a, b) => {
-        return a.cn.localeCompare(b.cn);
-      });
-      const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))];
-      const out = table(header.concat(list.map((cert) => {
-        const cn = chalk.bold(cert.cn);
-        const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
-        const expiration = formatExpirationDate(new Date(cert.expiration));
+        return a.cn.localeCompare(b.cn)
+      })
+      const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))]
+      const out = table(header.concat(list.map(cert => {
+        const cn = chalk.bold(cert.cn)
+        const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago')
+        const expiration = formatExpirationDate(new Date(cert.expiration))
         return [
           '',
           cert.uid ? cert.uid : 'unknown',
           cn,
           time,
           expiration
-        ];
-      })), { align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen });
-      if (out) console.log('\n' + out + '\n');
+        ]
+      })), {align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
+
+      if (out) {
+        console.log('\n' + out + '\n')
+      }
     }
-  } else if ('create' === subcommand) {
-    if (1 !== args.length) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs create <cn>`')}`);
-      return exit(1);
+  } else if (subcommand === 'create') {
+    if (args.length !== 1) {
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs create <cn>`')}`)
+      return exit(1)
     }
-    const cn = args[0];
-    const cert = await certs.create(cn);
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} issued ${chalk.gray(`[${elapsed}]`)}`);
-  } else if ('renew' === subcommand) {
-    if (1 !== args.length) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs renew <id | cn>`')}`);
-      return exit(1);
+    const cn = args[0]
+    const cert = await certs.create(cn)
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} issued ${chalk.gray(`[${elapsed}]`)}`)
+  } else if (subcommand === 'renew') {
+    if (args.length !== 1) {
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs renew <id | cn>`')}`)
+      return exit(1)
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
-    const yes = await readConfirmation(cert, 'The following certificate will be renewed\n');
+    const cert = await getCertIdCn(certs, args[0])
+    const yes = await readConfirmation(cert, 'The following certificate will be renewed\n')
+
     if (!yes) {
-      error('User abort');
-      return exit(0);
+      error('User abort')
+      return exit(0)
     }
 
-    await certs.renew(cert.cn);
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} renewed ${chalk.gray(`[${elapsed}]`)}`);
-  } else if ('replace' === subcommand) {
+    await certs.renew(cert.cn)
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} renewed ${chalk.gray(`[${elapsed}]`)}`)
+  } else if (subcommand === 'replace') {
     if (!argv.crt || !argv.key) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`);
-      return exit(1);
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`)
+      return exit(1)
     }
 
-    const crt = readX509File(argv.crt);
-    const key = readX509File(argv.key);
-    const ca = argv.ca ? readX509File(argv.ca) : '';
+    const crt = readX509File(argv.crt)
+    const key = readX509File(argv.key)
+    const ca = argv.ca ? readX509File(argv.ca) : ''
 
-    const cert = await getCertIdCn(certs, args[0]);
-    const yes = await readConfirmation(cert, 'The following certificate will be replaced permanently\n');
+    const cert = await getCertIdCn(certs, args[0])
+    const yes = await readConfirmation(cert, 'The following certificate will be replaced permanently\n')
     if (!yes) {
-      error('User abort');
-      return exit(0);
+      error('User abort')
+      return exit(0)
     }
 
-    await certs.replace(cert.cn, crt, key, ca);
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} replaced ${chalk.gray(`[${elapsed}]`)}`);
-  } else if ('rm' === subcommand || 'remove' === subcommand) {
-    if (1 !== args.length) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs rm <id | cn>`')}`);
-      return exit(1);
+    await certs.replace(cert.cn, crt, key, ca)
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} replaced ${chalk.gray(`[${elapsed}]`)}`)
+  } else if (subcommand === 'rm' || subcommand === 'remove') {
+    if (args.length !== 1) {
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs rm <id | cn>`')}`)
+      return exit(1)
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
-    const yes = await readConfirmation(cert, 'The following certificate will be removed permanently\n');
+    const cert = await getCertIdCn(certs, args[0])
+    const yes = await readConfirmation(cert, 'The following certificate will be removed permanently\n')
     if (!yes) {
-      error('User abort');
-      return exit(0);
+      error('User abort')
+      return exit(0)
     }
 
-    await certs.delete(cert.cn);
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`);
+    await certs.delete(cert.cn)
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`)
   } else {
-    error('Please specify a valid subcommand: ls | create | renew | replace | rm');
-    help();
-    exit(1);
+    error('Please specify a valid subcommand: ls | create | renew | replace | rm')
+    help()
+    exit(1)
   }
-  return certs.close();
+  return certs.close()
 }
 
-process.on('uncaughtException', (err) => {
-  handleError(err);
-  exit(1);
-});
+process.on('uncaughtException', err => {
+  handleError(err)
+  exit(1)
+})
 
-function readConfirmation (cert, msg) {
-  return new Promise((resolve, reject) => {
-    const time = chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago');
+function readConfirmation(cert, msg) {
+  return new Promise(resolve => {
+    const time = chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
     const tbl = table(
       [[cert.uid, chalk.bold(cert.cn), time]],
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
+      {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
+    )
 
-    process.stdout.write(`> ${msg}`);
-    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`> ${msg}`)
+    process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`);
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
 
-    process.stdin.on('data', (d) => {
-      process.stdin.pause();
-      resolve('y' === d.toString().trim().toLowerCase());
-    }).resume();
-  });
+    process.stdin.on('data', d => {
+      process.stdin.pause()
+      resolve(d.toString().trim().toLowerCase() === 'y')
+    }).resume()
+  })
 }
 
-function readX509File (file) {
-  return fs.readFileSync(path.resolve(file), 'utf8');
+function readX509File(file) {
+  return fs.readFileSync(path.resolve(file), 'utf8')
 }
 
-async function getCertIdCn (certs, idOrCn) {
-  const list = await certs.ls();
-  const thecert = list.filter((cert) => {
-    return cert.uid === idOrCn || cert.cn === idOrCn;
-  })[0];
+async function getCertIdCn(certs, idOrCn) {
+  const list = await certs.ls()
+  const thecert = list.filter(cert => {
+    return cert.uid === idOrCn || cert.cn === idOrCn
+  })[0]
 
   if (!thecert) {
-    error(`No certificate found by id or cn "${idOrCn}"`);
-    return exit(1);
+    error(`No certificate found by id or cn "${idOrCn}"`)
+    return exit(1)
   }
 
-  return thecert;
+  return thecert
 }

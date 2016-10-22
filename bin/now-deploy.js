@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 
 // Native
-import {resolve} from 'path';
+import {resolve} from 'path'
 
 // Packages
-import Progress from 'progress';
-import {stat} from 'fs-promise';
-import bytes from 'bytes';
-import chalk from 'chalk';
-import minimist from 'minimist';
-import ms from 'ms';
+import Progress from 'progress'
+import {stat} from 'fs-promise'
+import bytes from 'bytes'
+import chalk from 'chalk'
+import minimist from 'minimist'
+import ms from 'ms'
 
 // Ours
-import copy from '../lib/copy';
-import login from '../lib/login';
-import * as cfg from '../lib/cfg';
-import {version} from '../../package';
-import Logger from '../lib/build-logger';
-import Now from '../lib';
-import toHumanPath from '../lib/utils/to-human-path';
-import promptOptions from '../lib/utils/prompt-options';
-import {handleError, error} from '../lib/error';
+import copy from '../lib/copy'
+import login from '../lib/login'
+import * as cfg from '../lib/cfg'
+import {version} from '../../package'
+import Logger from '../lib/build-logger'
+import Now from '../lib'
+import toHumanPath from '../lib/utils/to-human-path'
+import promptOptions from '../lib/utils/prompt-options'
+import {handleError, error} from '../lib/error'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -52,7 +52,7 @@ const argv = minimist(process.argv.slice(2), {
     'no-clipboard': 'C',
     'forward-npm': 'N'
   }
-});
+})
 
 const help = () => {
   console.log(`
@@ -115,227 +115,243 @@ const help = () => {
   ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
 
     ${chalk.cyan('$ now help list')}
-`);
-};
-
-let path = argv._[0];
-
-if (null != path) {
-  // if path is relative: resolve
-  // if path is absolute: clear up strange `/` etc
-  path = resolve(process.cwd(), path);
-} else {
-  path = process.cwd();
+`)
 }
 
-const exit = (code) => {
+let path = argv._[0]
+
+if (path === null) {
+  path = process.cwd()
+} else {
+  // if path is relative: resolve
+  // if path is absolute: clear up strange `/` etc
+  path = resolve(process.cwd(), path)
+}
+
+const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
   // stdout writes are asynchronous
   // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100);
-};
-
-// options
-const debug = argv.debug;
-const clipboard = !argv['no-clipboard'];
-const forwardNpm = argv['forward-npm'];
-const forceNew = argv.force;
-const forceSync = argv.forceSync;
-const shouldLogin = argv.login;
-const wantsPublic = argv.public;
-const apiUrl = argv.url || 'https://api.zeit.co';
-const isTTY = process.stdout.isTTY;
-const quiet = !isTTY;
-if (argv.config) cfg.setConfigFile(argv.config);
-const config = cfg.read();
-const alwaysForwardNpm = config.forwardNpm;
-
-if (argv.h || argv.help) {
-  help();
-  exit(0);
-} else if (argv.v || argv.version) {
-  console.log(chalk.bold('𝚫 now'), version);
-  process.exit(0);
-} else if (!(argv.token || config.token) || shouldLogin) {
-  login(apiUrl)
-  .then((token) => {
-    if (shouldLogin) {
-      console.log('> Logged in successfully. Token saved in ~/.now.json');
-      process.exit(0);
-    } else {
-      sync(token).catch((err) => {
-        error(`Unknown error: ${err.stack}`);
-        process.exit(1);
-      });
-    }
-  })
-  .catch((e) => {
-    error(`Authentication error – ${e.message}`);
-    process.exit(1);
-  });
-} else {
-  sync(argv.token || config.token).catch((err) => {
-    error(`Unknown error: ${err.stack}`);
-    process.exit(1);
-  });
+  setTimeout(() => process.exit(code || 0), 100)
 }
 
-async function sync (token) {
-  const start = Date.now();
+// options
+const debug = argv.debug
+const clipboard = !argv['no-clipboard']
+const forwardNpm = argv['forward-npm']
+const forceNew = argv.force
+const forceSync = argv.forceSync
+const shouldLogin = argv.login
+const wantsPublic = argv.public
+const apiUrl = argv.url || 'https://api.zeit.co'
+const isTTY = process.stdout.isTTY
+const quiet = !isTTY
+
+if (argv.config) {
+  cfg.setConfigFile(argv.config)
+}
+
+const config = cfg.read()
+const alwaysForwardNpm = config.forwardNpm
+
+if (argv.h || argv.help) {
+  help()
+  exit(0)
+} else if (argv.v || argv.version) {
+  console.log(chalk.bold('𝚫 now'), version)
+  process.exit(0)
+} else if (!(argv.token || config.token) || shouldLogin) {
+  login(apiUrl)
+  .then(token => {
+    if (shouldLogin) {
+      console.log('> Logged in successfully. Token saved in ~/.now.json')
+      process.exit(0)
+    } else {
+      sync(token).catch(err => {
+        error(`Unknown error: ${err.stack}`)
+        process.exit(1)
+      })
+    }
+  })
+  .catch(e => {
+    error(`Authentication error – ${e.message}`)
+    process.exit(1)
+  })
+} else {
+  sync(argv.token || config.token).catch(err => {
+    error(`Unknown error: ${err.stack}`)
+    process.exit(1)
+  })
+}
+
+async function sync(token) {
+  const start = Date.now()
 
   if (!quiet) {
-    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`);
+    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
   }
 
   try {
-    await stat(path);
+    await stat(path)
   } catch (err) {
-    error(`Could not read directory ${chalk.bold(path)}`);
-    process.exit(1);
+    error(`Could not read directory ${chalk.bold(path)}`)
+    process.exit(1)
   }
 
-  let deploymentType, hasPackage, hasDockerfile;
+  let deploymentType
+  let hasPackage
+  let hasDockerfile
 
   if (argv.docker) {
     if (debug) {
-      console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``);
+      console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
     }
-    deploymentType = 'docker';
+    deploymentType = 'docker'
+  } else if (argv.npm) {
+    deploymentType = 'npm'
   } else {
-    if (argv.npm) {
-      deploymentType = 'npm';
-    } else {
-      try {
-        await stat(resolve(path, 'package.json'));
-      } catch (err) {
-        hasPackage = true;
+    try {
+      await stat(resolve(path, 'package.json'))
+    } catch (err) {
+      hasPackage = true
+    }
+
+    [hasPackage, hasDockerfile] = await Promise.all([
+      await (async () => {
+        try {
+          await stat(resolve(path, 'package.json'))
+        } catch (err) {
+          return false
+        }
+        return true
+      })(),
+      await (async () => {
+        try {
+          await stat(resolve(path, 'Dockerfile'))
+        } catch (err) {
+          return false
+        }
+        return true
+      })()
+    ])
+
+    if (hasPackage && hasDockerfile) {
+      if (debug) {
+        console.log('[debug] multiple manifests found, disambiguating')
       }
 
-      [hasPackage, hasDockerfile] = await Promise.all([
-        await (async () => {
-          try {
-            await stat(resolve(path, 'package.json'));
-          } catch (err) {
-            return false;
-          }
-          return true;
-        })(),
-        await (async () => {
-          try {
-            await stat(resolve(path, 'Dockerfile'));
-          } catch (err) {
-            return false;
-          }
-          return true;
-        })()
-      ]);
-
-      if (hasPackage && hasDockerfile) {
-        if (debug) console.log('[debug] multiple manifests found, disambiguating');
-        if (isTTY) {
-          try {
-            console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`);
-            deploymentType = await promptOptions([
+      if (isTTY) {
+        try {
+          console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`)
+          deploymentType = await promptOptions([
               ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
               ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
-            ]);
-          } catch (err) {
-            error(err.message);
-            process.exit(1);
-          }
-        } else {
-          error('Ambiguous deployment (`package.json` and `Dockerfile` found). ' +
-            'Please supply `--npm` or `--docker` to disambiguate.');
+          ])
+        } catch (err) {
+          error(err.message)
+          process.exit(1)
         }
-      } else if (hasPackage) {
-        if (debug) console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`');
-        deploymentType = 'npm';
-      } else if (hasDockerfile) {
-        if (debug) console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`');
-        deploymentType = 'docker';
       } else {
-        error(`Could not access a ${chalk.dim('`package.json`')} or ${chalk.dim('`Dockerfile`')} in ${chalk.bold(path)}`);
-        console.log(`> To deploy statically, try: ${chalk.dim(chalk.underline('https://zeit.co/blog/serve-it-now'))}.`);
-        process.exit(1);
+        error('Ambiguous deployment (`package.json` and `Dockerfile` found). ' +
+            'Please supply `--npm` or `--docker` to disambiguate.')
       }
+    } else if (hasPackage) {
+      if (debug) {
+        console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`')
+      }
+
+      deploymentType = 'npm'
+    } else if (hasDockerfile) {
+      if (debug) {
+        console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`')
+      }
+
+      deploymentType = 'docker'
+    } else {
+      error(`Could not access a ${chalk.dim('`package.json`')} or ${chalk.dim('`Dockerfile`')} in ${chalk.bold(path)}`)
+      console.log(`> To deploy statically, try: ${chalk.dim(chalk.underline('https://zeit.co/blog/serve-it-now'))}.`)
+      process.exit(1)
     }
   }
 
-  const now = new Now(apiUrl, token, { debug });
-  const envs = [].concat(argv.env || []);
+  const now = new Now(apiUrl, token, {debug})
+  const envs = [].concat(argv.env || [])
 
-  let secrets;
-  const findSecret = async (uidOrName) => {
-    if (!secrets) secrets = await now.listSecrets();
-    return secrets.filter((secret) => {
-      return secret.name === uidOrName || secret.uid === uidOrName;
-    });
-  };
+  let secrets
+  const findSecret = async uidOrName => {
+    if (!secrets) {
+      secrets = await now.listSecrets()
+    }
 
-  const env_ = await Promise.all(envs.map(async (kv) => {
-    const [key, ...rest] = kv.split('=');
-    let val;
+    return secrets.filter(secret => {
+      return secret.name === uidOrName || secret.uid === uidOrName
+    })
+  }
 
-    if (rest.length) {
-      val = rest.join('=');
+  const env_ = await Promise.all(envs.map(async kv => {
+    const [key, ...rest] = kv.split('=')
+    let val
+
+    if (rest.length > 0) {
+      val = rest.join('=')
     }
 
     if (/[^A-z0-9_]/i.test(key)) {
-      error(`Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`);
-      return process.exit(1);
+      error(`Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`)
+      return process.exit(1)
     }
 
-    if ('' === key || null == key) {
-      error(`Invalid env option ${chalk.bold(`"${kv}"`)}`);
-      return process.exit(1);
+    if (key === '' || key === null) {
+      error(`Invalid env option ${chalk.bold(`"${kv}"`)}`)
+      return process.exit(1)
     }
 
-    if (val == null) {
-      if (!(key in process.env)) {
-        error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`);
-        return process.exit(1);
-      } else {
-        console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`);
+    if (val === null) {
+      if ((key in process.env)) {
+        console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
         // escape value if it begins with @
-        val = process.env[key].replace(/^\@/, '\\@');
+        val = process.env[key].replace(/^\@/, '\\@')
+      } else {
+        error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`)
+        return process.exit(1)
       }
     }
 
-    if ('@' === val[0]) {
-      const uidOrName = val.substr(1);
-      const secrets = await findSecret(uidOrName);
+    if (val[0] === '@') {
+      const uidOrName = val.substr(1)
+      const secrets = await findSecret(uidOrName)
       if (secrets.length === 0) {
-        if ('' === uidOrName) {
-          error(`Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`);
+        if (uidOrName === '') {
+          error(`Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`)
         } else {
-          error(`No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`);
+          error(`No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`)
         }
-        return process.exit(1);
+        return process.exit(1)
       } else if (secrets.length > 1) {
-        error(`Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`);
-        return process.exit(1);
-      } else {
-        val = { uid: secrets[0].uid };
+        error(`Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`)
+        return process.exit(1)
       }
+
+      val = {uid: secrets[0].uid}
     }
 
     return [
       key,
-      typeof val === 'string'
-        // add support for escaping the @ as \@
-        ? val.replace(/^\\@/, '@')
-        : val
-    ];
-  }));
+      typeof val === 'string' ? val.replace(/^\\@/, '@') : val
+    ]
+  }))
 
-  let env = {};
+  const env = {}
   env_
-  .filter(v => !!v)
+  .filter(v => Boolean(v))
   .forEach(([key, val]) => {
-    if (key in env) console.log(`> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
+    if (key in env) {
+      console.log(`> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`)
+    }
+
     env[key] = val
-  });
+  })
 
   try {
     await now.create(path, {
@@ -346,45 +362,49 @@ async function sync (token) {
       forwardNpm: alwaysForwardNpm || forwardNpm,
       quiet,
       wantsPublic
-    });
+    })
   } catch (err) {
-    if (debug) console.log(`> [debug] error: ${err.stack}`);
-    handleError(err);
-    process.exit(1);
+    if (debug) {
+      console.log(`> [debug] error: ${err.stack}`)
+    }
+
+    handleError(err)
+    process.exit(1)
   }
 
-  const { url } = now;
-  const elapsed = ms(new Date() - start);
+  const {url} = now
+  const elapsed = ms(new Date() - start)
 
   if (isTTY) {
     if (clipboard) {
       try {
-        await copy(url);
-        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`);
+        await copy(url)
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`)
       } catch (err) {
-        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`);
+        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`)
       }
     } else {
-      console.log(`> ${url} [${elapsed}]`);
+      console.log(`> ${url} [${elapsed}]`)
     }
   } else {
-    process.stdout.write(url);
+    process.stdout.write(url)
   }
 
-  const start_u = new Date();
+  const startU = new Date()
+
   const complete = () => {
     if (!quiet) {
-      const elapsed_u = ms(new Date() - start_u);
-      console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsed_u}] `);
-      console.log('> Initializing…');
+      const elapsedU = ms(new Date() - startU)
+      console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsedU}] `)
+      console.log('> Initializing…')
     }
 
     // close http2 agent
-    now.close();
+    now.close()
 
     // show build logs
-    printLogs(now.host);
-  };
+    printLogs(now.host)
+  }
 
   if (now.syncAmount) {
     const bar = new Progress('> Upload [:bar] :percent :etas', {
@@ -392,45 +412,45 @@ async function sync (token) {
       complete: '=',
       incomplete: '',
       total: now.syncAmount
-    });
+    })
 
-    now.upload();
+    now.upload()
 
-    now.on('upload', ({ names, data }) => {
-      const amount = data.length;
+    now.on('upload', ({names, data}) => {
+      const amount = data.length
       if (debug) {
-        console.log(`> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
+        console.log(`> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
       }
-      bar.tick(amount);
-    });
+      bar.tick(amount)
+    })
 
-    now.on('complete', complete);
+    now.on('complete', complete)
 
-    now.on('error', (err) => {
-      error('Upload failed');
-      handleError(err);
-      process.exit(1);
-    });
+    now.on('error', err => {
+      error('Upload failed')
+      handleError(err)
+      process.exit(1)
+    })
   } else {
     if (!quiet) {
-      console.log(`> Initializing…`);
+      console.log(`> Initializing…`)
     }
 
     // close http2 agent
-    now.close();
+    now.close()
 
     // show build logs
-    printLogs(now.host);
+    printLogs(now.host)
   }
 }
 
-function printLogs (host) {
+function printLogs(host) {
   // log build
-  const logger = new Logger(host, { debug, quiet });
+  const logger = new Logger(host, {debug, quiet})
   logger.on('close', () => {
     if (!quiet) {
-      console.log(`${chalk.cyan('> Deployment complete!')}`);
+      console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
-    process.exit(0);
-  });
+    process.exit(0)
+  })
 }
