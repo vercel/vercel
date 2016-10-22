@@ -23,32 +23,15 @@
       "transform-async-to-generator"
     ]
   },
-  "eslintConfig": {
-    "extends": "standard",
-    "parser": "babel-eslint",
-    "rules": {
-      "yoda": 0,
-      "arrow-parens": 0,
-      "semi": [
-        2,
-        "always"
-      ],
-      "no-extra-semi": 2,
-      "semi-spacing": [
-        2,
-        {
-          "before": false,
-          "after": true
-        }
-      ],
-      "no-shadow": [
-        2,
-        {
-          "builtinGlobals": true,
-          "hoist": "functions"
-        }
-      ]
-    }
+  "xo": {
+    "esnext": true,
+    "space": true,
+    "semicolon": false,
+    "ignores": [
+      "build/**",
+      "out/**",
+      "test/_fixtures/**"
+    ]
   },
   "bin": {
     "now": "./build/bin/now"
@@ -89,26 +72,21 @@
   "devDependencies": {
     "alpha-sort": "1.0.2",
     "ava": "0.16.0",
-    "babel-eslint": "7.0.0",
     "babel-plugin-transform-async-to-generator": "6.16.0",
     "babel-plugin-transform-runtime": "6.15.0",
     "babel-preset-es2015": "6.16.0",
     "babel-register": "6.16.3",
     "del": "2.2.2",
-    "eslint": "3.8.0",
-    "eslint-config-standard": "6.2.0",
-    "eslint-plugin-promise": "3.2.1",
-    "eslint-plugin-standard": "2.0.1",
     "estraverse-fb": "1.3.1",
     "gulp": "3.9.1",
     "gulp-babel": "6.1.2",
-    "gulp-eslint": "3.0.1",
     "gulp-task-listing": "1.0.1",
-    "pkg": "3.0.0-beta.14"
+    "pkg": "3.0.0-beta.14",
+    "xo": "0.17.0"
   },
   "scripts": {
     "start": "gulp",
-    "test": "ava",
+    "test": "xo && ava",
     "prepublish": "gulp compile",
     "pkg": "pkg . --out-dir out"
   },
