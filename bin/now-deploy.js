@@ -128,8 +128,6 @@ if (path) {
   path = process.cwd()
 }
 
-console.log(path)
-
 const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
