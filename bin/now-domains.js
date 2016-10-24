@@ -16,11 +16,12 @@ import NowDomains from '../lib/domains'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug'],
+  boolean: ['help', 'debug', 'force'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
+    force: 'f',
     token: 't'
   }
 })
@@ -36,6 +37,7 @@ const help = () => {
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
+    -f, --force             Skip DNS verification
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
   ${chalk.dim('Examples:')}
@@ -207,7 +209,7 @@ async function run(token) {
 
       const start = new Date()
       const name = String(args[0])
-      const {uid, created} = await domain.add(name)
+      const {uid, created} = await domain.add(name, argv.force)
       const elapsed = ms(new Date() - start)
       if (created) {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`)
