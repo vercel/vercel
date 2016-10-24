@@ -299,9 +299,10 @@ async function realias(alias) {
     quiet: true // `quiet`
   })
 
-  const pkgConfig = pkg ? pkg.config || {} : {}
+  const pkgConfig = pkg ? pkg.now || {} : {}
   const target = pkgConfig.alias
 
+  // the user never intended to support aliases from the package
   if (!target) {
     help()
     return exit(0)
