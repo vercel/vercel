@@ -120,13 +120,15 @@ const help = () => {
 
 let path = argv._[0]
 
-if (path === null) {
-  path = process.cwd()
-} else {
+if (path) {
   // if path is relative: resolve
   // if path is absolute: clear up strange `/` etc
   path = resolve(process.cwd(), path)
+} else {
+  path = process.cwd()
 }
+
+console.log(path)
 
 const exit = code => {
   // we give stdout some time to flush out
