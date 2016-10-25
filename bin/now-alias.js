@@ -13,6 +13,7 @@ import login from '../lib/login'
 import * as cfg from '../lib/cfg'
 import {error} from '../lib/error'
 import toHost from '../lib/to-host'
+import readMetaData from '../lib/read-metadata'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -89,7 +90,7 @@ const exit = code => {
   setTimeout(() => process.exit(code || 0), 100)
 }
 
-if (argv.help || !subcommand) {
+if (argv.help) {
   help()
   exit(0)
 } else {
@@ -211,6 +212,11 @@ async function run(token) {
       break
 
     default:
+      if (argv._.length === 0) {
+        await realias(alias)
+        break
+      }
+
       if (argv._.length === 2) {
         await alias.set(String(argv._[0]), String(argv._[1]))
       } else if (argv._.length >= 3) {
@@ -284,4 +290,26 @@ function findAlias(alias, list) {
   })
 
   return _alias
+}
+
+async function realias(alias) {
+  const path = process.cwd()
+  const {pkg, name} = await readMetaData(path, {
+    deploymentType: 'npm', // FIXME: hard coding settings…
+    quiet: true // `quiet`
+  })
+
+  const pkgConfig = pkg ? pkg.now || {} : {}
+  const target = pkgConfig.alias
+
+  // the user never intended to support aliases from the package
+  if (!target) {
+    help()
+    return exit(0)
+  }
+
+  // now try to find the last deployment
+  const source = await alias.last(name)
+
+  await alias.set(source.url, target)
 }
