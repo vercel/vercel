@@ -87,7 +87,7 @@
     "md5": "2.2.1",
     "minimatch": "3.0.3",
     "minimist": "1.2.0",
-    "ms": "0.7.1",
+    "ms": "0.7.2",
     "node-fetch": "1.6.3",
     "progress": "1.1.8",
     "resumer": "0.0.0",
