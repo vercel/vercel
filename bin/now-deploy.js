@@ -61,7 +61,6 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     deploy       [path]       Performs a deployment ${chalk.bold('(default)')}
-    static       [path]       Share project using a static file server
     ls | list    [app]        List deployments
     rm | remove  [id]         Remove a deployment
     ln | alias   [id] [url]   Configures aliases for deployments

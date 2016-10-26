@@ -41,8 +41,7 @@ const commands = new Set([
   'cert',
   'certs',
   'secret',
-  'secrets',
-  'static'
+  'secrets'
 ])
 
 const aliases = new Map([
