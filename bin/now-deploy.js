@@ -36,7 +36,8 @@ const argv = minimist(process.argv.slice(2), {
     'no-clipboard',
     'forward-npm',
     'docker',
-    'npm'
+    'npm',
+    'static'
   ],
   alias: {
     env: 'e',
@@ -82,8 +83,12 @@ const help = () => {
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private NPM modules
-    --npm                     Force npm deployment (when both package.json and Dockerfile exist)
-    --docker                  Force docker deployment (when both package.json and Dockerfile exist)
+
+  ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
+
+    --npm                     Node.js application
+    --docker                  Docker container
+    --static                  Static file hosting
 
   ${chalk.dim('Examples:')}
 
