@@ -11,6 +11,7 @@
   "scripts": {
     "start": "gulp",
     "test": "xo && ava",
+    "pretest": "gulp compile",
     "prepublish": "gulp compile",
     "pkg": "pkg . --out-dir out"
   },
