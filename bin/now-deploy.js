@@ -389,7 +389,8 @@ async function sync(token) {
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
       quiet,
-      wantsPublic
+      wantsPublic,
+      isStatic
     })
   } catch (err) {
     if (debug) {
