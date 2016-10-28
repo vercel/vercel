@@ -204,16 +204,26 @@ async function sync(token) {
   }
 
   let deploymentType
+
   let hasPackage
   let hasDockerfile
+  let isStatic
 
   if (argv.docker) {
     if (debug) {
       console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
     }
+
     deploymentType = 'docker'
   } else if (argv.npm) {
     deploymentType = 'npm'
+  } else if (argv.static) {
+    if (debug) {
+      console.log(`> [debug] Forcing static deployment`)
+    }
+
+    deploymentType = 'npm'
+    isStatic = true
   } else {
     try {
       await stat(resolve(path, 'package.json'))
@@ -221,7 +231,7 @@ async function sync(token) {
       hasPackage = true
     }
 
-    [hasPackage, hasDockerfile] = await Promise.all([
+    [hasPackage, hasDockerfile, isStatic] = await Promise.all([
       await (async () => {
         try {
           await stat(resolve(path, 'package.json'))
@@ -233,6 +243,14 @@ async function sync(token) {
       await (async () => {
         try {
           await stat(resolve(path, 'Dockerfile'))
+        } catch (err) {
+          return false
+        }
+        return true
+      })(),
+      await (async () => {
+        try {
+          await stat(resolve(path, 'index.html'))
         } catch (err) {
           return false
         }
@@ -272,10 +290,16 @@ async function sync(token) {
       }
 
       deploymentType = 'docker'
+    } else if (isStatic) {
+      if (debug) {
+        console.log('[debug] `index.html` found, assuming static deployment')
+      }
     } else {
-      error(`Could not access a ${chalk.dim('`package.json`')} or ${chalk.dim('`Dockerfile`')} in ${chalk.bold(path)}`)
-      console.log(`> To deploy statically, try: ${chalk.dim(chalk.underline('https://zeit.co/blog/serve-it-now'))}.`)
-      process.exit(1)
+      if (debug) {
+        console.log('[debug] No manifest files found, assuming static deployment')
+      }
+
+      isStatic = true
     }
   }
 
