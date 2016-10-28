@@ -231,7 +231,7 @@ async function sync(token) {
       hasPackage = true
     }
 
-    [hasPackage, hasDockerfile, isStatic] = await Promise.all([
+    [hasPackage, hasDockerfile] = await Promise.all([
       await (async () => {
         try {
           await stat(resolve(path, 'package.json'))
@@ -243,14 +243,6 @@ async function sync(token) {
       await (async () => {
         try {
           await stat(resolve(path, 'Dockerfile'))
-        } catch (err) {
-          return false
-        }
-        return true
-      })(),
-      await (async () => {
-        try {
-          await stat(resolve(path, 'index.html'))
         } catch (err) {
           return false
         }
@@ -290,10 +282,6 @@ async function sync(token) {
       }
 
       deploymentType = 'docker'
-    } else if (isStatic) {
-      if (debug) {
-        console.log('[debug] `index.html` found, assuming static deployment')
-      }
     } else {
       if (debug) {
         console.log('[debug] No manifest files found, assuming static deployment')
