@@ -318,6 +318,10 @@ async function sync(token) {
   }
 
   const env_ = await Promise.all(envs.map(async kv => {
+    if (typeof kv !== 'string') {
+      error('Env key and value missing')
+      return process.exit(1)
+    }
     const [key, ...rest] = kv.split('=')
     let val
 
