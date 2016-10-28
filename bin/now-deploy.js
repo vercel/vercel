@@ -330,12 +330,12 @@ async function sync(token) {
       return process.exit(1)
     }
 
-    if (key === '' || key === null) {
+    if (!key) {
       error(`Invalid env option ${chalk.bold(`"${kv}"`)}`)
       return process.exit(1)
     }
 
-    if (val === null) {
+    if (val === undefined) {
       if ((key in process.env)) {
         console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
         // escape value if it begins with @
