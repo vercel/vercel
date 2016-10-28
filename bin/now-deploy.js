@@ -306,6 +306,10 @@ async function sync(token) {
   }
 
   const env_ = await Promise.all(envs.map(async kv => {
+    if (typeof kv !== 'string') {
+      error('Env key and value missing')
+      return process.exit(1)
+    }
     const [key, ...rest] = kv.split('=')
     let val
 
@@ -318,12 +322,12 @@ async function sync(token) {
       return process.exit(1)
     }
 
-    if (key === '' || key === null) {
+    if (!key) {
       error(`Invalid env option ${chalk.bold(`"${kv}"`)}`)
       return process.exit(1)
     }
 
-    if (val === null) {
+    if (val === undefined) {
       if ((key in process.env)) {
         console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
         // escape value if it begins with @
