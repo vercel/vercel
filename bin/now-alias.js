@@ -17,11 +17,12 @@ import readMetaData from '../lib/read-metadata'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug'],
+  boolean: ['help', 'debug', 'force'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
+    force: 'f',
     token: 't'
   }
 })
@@ -37,6 +38,7 @@ const help = () => {
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
+    -f, --force             Skip DNS verification
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
   ${chalk.dim('Examples:')}
@@ -76,6 +78,7 @@ const help = () => {
 
 // options
 const debug = argv.debug
+const force = argv.force
 const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
@@ -116,7 +119,7 @@ if (argv.help) {
 }
 
 async function run(token) {
-  const alias = new NowAlias(apiUrl, token, {debug})
+  const alias = new NowAlias(apiUrl, token, {debug, force})
   const args = argv._.slice(1)
 
   switch (subcommand) {
@@ -218,7 +221,7 @@ async function run(token) {
       }
 
       if (argv._.length === 2) {
-        await alias.set(String(argv._[0]), String(argv._[1]))
+        await alias.set(String(argv._[0]), String(argv._[1]), argv.force)
       } else if (argv._.length >= 3) {
         error('Invalid number of arguments')
         help()
