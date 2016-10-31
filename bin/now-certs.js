@@ -166,6 +166,7 @@ async function run(token) {
     }
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) return exit(1)
     const yes = await readConfirmation(cert, 'The following certificate will be renewed\n')
 
     if (!yes) {
@@ -187,6 +188,7 @@ async function run(token) {
     const ca = argv.ca ? readX509File(argv.ca) : ''
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) return exit(1)
     const yes = await readConfirmation(cert, 'The following certificate will be replaced permanently\n')
     if (!yes) {
       error('User abort')
@@ -203,6 +205,7 @@ async function run(token) {
     }
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) return exit(1)
     const yes = await readConfirmation(cert, 'The following certificate will be removed permanently\n')
     if (!yes) {
       error('User abort')
@@ -257,7 +260,7 @@ async function getCertIdCn(certs, idOrCn) {
 
   if (!thecert) {
     error(`No certificate found by id or cn "${idOrCn}"`)
-    return exit(1)
+    return null;
   }
 
   return thecert
