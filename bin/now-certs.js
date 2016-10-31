@@ -156,9 +156,24 @@ async function run(token) {
       return exit(1)
     }
     const cn = args[0]
-    const cert = await certs.create(cn)
+    let cert
+
+    if (argv.crt || argv.key || argv.ca) { // Issue a custom certificate
+      if (!argv.crt || !argv.key) {
+        error(`Missing required arguments for a custom certificate entry. Usage: ${chalk.cyan('`now certs create --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`)
+        return exit(1)
+      }
+
+      const crt = readX509File(argv.crt)
+      const key = readX509File(argv.key)
+      const ca = argv.ca ? readX509File(argv.ca) : ''
+
+      cert = await certs.put(cn, crt, key, ca)
+    } else { // Issue a standard certificate
+      cert = await certs.create(cn)
+    }
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} issued ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(`${chalk.cyan('> Success!')} Certificate entry ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
   } else if (subcommand === 'renew') {
     if (args.length !== 1) {
       error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs renew <id | cn>`')}`)
@@ -166,6 +181,9 @@ async function run(token) {
     }
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) {
+      return exit(1)
+    }
     const yes = await readConfirmation(cert, 'The following certificate will be renewed\n')
 
     if (!yes) {
@@ -187,13 +205,16 @@ async function run(token) {
     const ca = argv.ca ? readX509File(argv.ca) : ''
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) {
+      return exit(1)
+    }
     const yes = await readConfirmation(cert, 'The following certificate will be replaced permanently\n')
     if (!yes) {
       error('User abort')
       return exit(0)
     }
 
-    await certs.replace(cert.cn, crt, key, ca)
+    await certs.put(cert.cn, crt, key, ca)
     const elapsed = ms(new Date() - start)
     console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} replaced ${chalk.gray(`[${elapsed}]`)}`)
   } else if (subcommand === 'rm' || subcommand === 'remove') {
@@ -203,6 +224,9 @@ async function run(token) {
     }
 
     const cert = await getCertIdCn(certs, args[0])
+    if (!cert) {
+      return exit(1)
+    }
     const yes = await readConfirmation(cert, 'The following certificate will be removed permanently\n')
     if (!yes) {
       error('User abort')
@@ -257,7 +281,7 @@ async function getCertIdCn(certs, idOrCn) {
 
   if (!thecert) {
     error(`No certificate found by id or cn "${idOrCn}"`)
-    return exit(1)
+    return null
   }
 
   return thecert
