@@ -92,6 +92,7 @@
     "socket.io-client": "1.4.8",
     "spdy": "3.4.4",
     "split-array": "1.0.1",
+    "stat-mode": "0.2.2",
     "text-table": "0.2.0"
   },
   "devDependencies": {
