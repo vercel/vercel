@@ -14,12 +14,13 @@ import {handleError, error} from '../lib/error'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'hard'],
+  boolean: ['help', 'debug', 'hard', 'force'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
-    token: 't'
+    token: 't',
+    force: 'f',
   }
 })
 
@@ -32,6 +33,7 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
+    -f, --force             Attempt to remove without prompting for confirmation
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
@@ -64,6 +66,7 @@ if (argv.help || ids.length === 0) {
 const debug = argv.debug
 const apiUrl = argv.url || 'https://api.zeit.co'
 const hard = argv.hard || false
+const force = argv.force || false
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -147,10 +150,12 @@ async function remove(token) {
   }
 
   try {
-    const confirmation = (await readConfirmation(matches)).toLowerCase()
-    if (confirmation !== 'y' && confirmation !== 'yes') {
-      console.log('\n> Aborted')
-      process.exit(0)
+    if (!force) {
+      const confirmation = (await readConfirmation(matches)).toLowerCase()
+      if (confirmation !== 'y' && confirmation !== 'yes') {
+        console.log('\n> Aborted')
+        process.exit(0)
+      }
     }
 
     const start = new Date()
