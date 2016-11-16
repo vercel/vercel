@@ -20,7 +20,7 @@ const argv = minimist(process.argv.slice(2), {
     config: 'c',
     debug: 'd',
     token: 't',
-    force: 'f',
+    force: 'f'
   }
 })
 
