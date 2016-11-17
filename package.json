@@ -108,7 +108,7 @@
     "gulp-babel": "6.1.2",
     "gulp-ext": "1.0.0",
     "gulp-task-listing": "1.0.1",
-    "pkg": "3.0.0-beta.14",
+    "pkg": "3.0.0-beta.21",
     "xo": "0.17.0"
   }
 }
