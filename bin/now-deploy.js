@@ -21,6 +21,7 @@ import Now from '../lib'
 import toHumanPath from '../lib/utils/to-human-path'
 import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
+import readMetaData from '../lib/read-metadata'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -291,8 +292,20 @@ async function sync(token) {
     }
   }
 
+  const {pkg: {now: pkgConfig = {}} = {}} = await readMetaData(path, {
+    deploymentType,
+    isStatic,
+    quiet: true
+  })
+
   const now = new Now(apiUrl, token, {debug})
-  const envs = [].concat(argv.env || [])
+
+  // Merge `now.env` from package.json with `-e` arguments.
+  const pkgEnv = pkgConfig.env
+  const envs = [
+    ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
+    ...(argv.env || [])
+  ]
 
   let secrets
   const findSecret = async uidOrName => {
