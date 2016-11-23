@@ -304,7 +304,7 @@ async function sync(token) {
   const pkgEnv = pkgConfig.env
   const envs = [
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
-    ...(argv.env || [])
+    ...[].concat(argv.env || [])
   ]
 
   let secrets
