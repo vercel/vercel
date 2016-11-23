@@ -295,7 +295,7 @@ function findAlias(alias, list) {
 async function realias(alias) {
   const path = process.cwd()
   const {pkg, name} = await readMetaData(path, {
-    deploymentType: 'npm', // FIXME: hard coding settings…
+    deploymentType: 'npm', // hard coding settings…
     quiet: true // `quiet`
   })
 
