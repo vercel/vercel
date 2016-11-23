@@ -12,7 +12,7 @@ import hash from '../lib/hash'
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
-const fixture = name => resolve(`./_fixtures/${name}`)
+const fixture = name => resolve(`./test/_fixtures/${name}`)
 
 const readJSON = async file => {
   const data = await readFile(file)
