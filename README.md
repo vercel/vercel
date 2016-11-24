@@ -14,7 +14,7 @@ Firstly, make sure to install the package:
 $ npm install -g now
 ```
 
-In any directory with a `package.json` or `Dockerfile`, run:
+Run this in any kind of directory:
 
 ```bash
 $ now
