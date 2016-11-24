@@ -38,6 +38,7 @@ const commands = new Set([
   'ln',
   'domain',
   'domains',
+  'dns',
   'cert',
   'certs',
   'secret',

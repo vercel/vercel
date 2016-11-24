@@ -9,6 +9,7 @@ import ms from 'ms'
 
 // Ours
 import strlen from '../lib/strlen'
+import indent from '../lib/indent'
 import Now from '../lib'
 import login from '../lib/login'
 import * as cfg from '../lib/cfg'
@@ -149,8 +150,4 @@ async function sort(apps) {
 
     return depsB[0].created - depsA[0].created
   })
-}
-
-function indent(text, n) {
-  return text.split('\n').map(l => ' '.repeat(n) + l).join('\n')
 }
