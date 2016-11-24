@@ -4,7 +4,7 @@
 [![XO code style](https://img.shields.io/badge/code_style-XO-5ed9c7.svg)](https://github.com/sindresorhus/xo)
 [![Slack Channel](https://zeit-slackin.now.sh/badge.svg)](https://zeit.chat)
 
-Realtime global deployments served over HTTP/2. You can find a list of frequently asked questions [here](https://github.com/zeit/now/wiki/FAQ).
+Realtime global deployments served over HTTP/2. You can find the FAQ [here](https://github.com/zeit/now/wiki/FAQ).
 
 ## Usage
 
@@ -14,7 +14,7 @@ Firstly, make sure to install the package:
 $ npm install -g now
 ```
 
-Run this in any kind of directory:
+Run this in any directory:
 
 ```bash
 $ now
