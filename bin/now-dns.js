@@ -42,15 +42,15 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Listing all your DNS records:
+  ${chalk.gray('–')} List all your DNS records
 
       ${chalk.cyan('$ now dns ls')}
 
-  ${chalk.gray('–')} Adding an A record for a subdomain:
+  ${chalk.gray('–')} Add an A record for a subdomain
 
       ${chalk.cyan('$ now dns add zeit.rocks subdomain A 198.51.100.100')}
 
-  ${chalk.gray('–')} Adding an MX record (@ as a name refers to the domain):
+  ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
       ${chalk.cyan('$ now dns add zeit.rocks @ MX mail.zeit.rocks 10')}
 `)
