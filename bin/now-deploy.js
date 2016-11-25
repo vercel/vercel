@@ -22,6 +22,7 @@ import toHumanPath from '../lib/utils/to-human-path'
 import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
 import readMetaData from '../lib/read-metadata'
+import {onGitHub, isRepoPath} from '../lib/github'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -192,17 +193,34 @@ if (argv.h || argv.help) {
 
 async function sync(token) {
   const start = Date.now()
+  const rawPath = argv._[0]
 
-  if (!quiet) {
-    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+  const stopDeployment = msg => {
+    error(msg)
+    process.exit(1)
   }
 
   try {
     await stat(path)
   } catch (err) {
-    error(`Could not read directory ${chalk.bold(path)}`)
-    process.exit(1)
+    const repo = await onGitHub(rawPath, debug)
+
+    if (repo) {
+      path = repo
+    } else if (isRepoPath(rawPath)) {
+      stopDeployment(`This path neither exists, nor is there a repository named "${rawPath}" on GitHub`)
+    } else {
+      stopDeployment(`Could not read directory ${chalk.bold(path)}`)
+    }
+
+    console.log(repo)
   }
+
+  if (!quiet) {
+    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+  }
+
+  process.exit()
 
   let deploymentType
 
