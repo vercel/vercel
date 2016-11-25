@@ -195,6 +195,8 @@ async function sync(token) {
   const start = Date.now()
   const rawPath = argv._[0]
 
+  let gitHubRepo
+
   const stopDeployment = msg => {
     error(msg)
     process.exit(1)
@@ -206,18 +208,21 @@ async function sync(token) {
     const repo = await onGitHub(rawPath, debug)
 
     if (repo) {
-      path = repo
+      path = repo.path
+      gitHubRepo = repo
     } else if (isRepoPath(rawPath)) {
       stopDeployment(`This path neither exists, nor is there a repository named "${rawPath}" on GitHub`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
-
-    console.log(repo)
   }
 
   if (!quiet) {
-    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+    if (gitHubRepo) {
+      console.log(`> Deploying GitHub repository "${chalk.bold(toHumanPath(rawPath))}"`)
+    } else {
+      console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+    }
   }
 
   process.exit()
