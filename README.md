@@ -8,7 +8,7 @@ Realtime global deployments served over HTTP/2. You can find the FAQ [here](http
 
 ## Usage
 
-Firstly, make sure to install the package:
+Firstly, make sure to install the package globally:
 
 ```bash
 $ npm install -g now
