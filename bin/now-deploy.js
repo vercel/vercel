@@ -134,6 +134,9 @@ if (path) {
   path = process.cwd()
 }
 
+// If the current deployment is a repo
+let gitHubRepo
+
 const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
@@ -195,8 +198,6 @@ async function sync(token) {
   const start = Date.now()
   const rawPath = argv._[0]
 
-  let gitHubRepo
-
   const stopDeployment = msg => {
     error(msg)
     process.exit(1)
@@ -214,7 +215,7 @@ async function sync(token) {
 
     if (repo) {
       path = repo.path
-      gitHubRepo = repo
+      gitHubRepo = true
     } else if (isRepoPath(rawPath)) {
       stopDeployment(`This path neither exists, nor is there a repository named "${rawPath}" on GitHub`)
     } else {
@@ -511,6 +512,15 @@ function printLogs(host) {
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
+
+    if (gitHubRepo) {
+      fs.removeSync(path)
+
+      if (debug) {
+        console.log(`> [debug] Removed temporary repo directory`)
+      }
+    }
+
     process.exit(0)
   })
 }
