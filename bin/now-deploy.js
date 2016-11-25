@@ -205,7 +205,12 @@ async function sync(token) {
   try {
     await stat(path)
   } catch (err) {
-    const repo = await onGitHub(rawPath, debug)
+    let repo
+
+    if (isRepoPath(rawPath)) {
+      console.log('> Didn\'t find directory. Searching on GitHub...')
+      repo = await onGitHub(rawPath, debug)
+    }
 
     if (repo) {
       path = repo.path
@@ -224,8 +229,6 @@ async function sync(token) {
       console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
     }
   }
-
-  process.exit()
 
   let deploymentType
 
