@@ -5,12 +5,11 @@ import {resolve} from 'path'
 
 // Packages
 import Progress from 'progress'
-import {stat} from 'fs-promise'
+import fs from 'fs-promise'
 import bytes from 'bytes'
 import chalk from 'chalk'
 import minimist from 'minimist'
 import ms from 'ms'
-import fs from 'fs-promise'
 
 // Ours
 import copy from '../lib/copy'
@@ -205,7 +204,7 @@ async function sync(token) {
   }
 
   try {
-    await stat(path)
+    await fs.stat(path)
   } catch (err) {
     let repo
 
@@ -270,7 +269,7 @@ async function sync(token) {
     isStatic = true
   } else {
     try {
-      await stat(resolve(path, 'package.json'))
+      await fs.stat(resolve(path, 'package.json'))
     } catch (err) {
       hasPackage = true
     }
@@ -278,7 +277,7 @@ async function sync(token) {
     [hasPackage, hasDockerfile] = await Promise.all([
       await (async () => {
         try {
-          await stat(resolve(path, 'package.json'))
+          await fs.stat(resolve(path, 'package.json'))
         } catch (err) {
           return false
         }
@@ -286,7 +285,7 @@ async function sync(token) {
       })(),
       await (async () => {
         try {
-          await stat(resolve(path, 'Dockerfile'))
+          await fs.stat(resolve(path, 'Dockerfile'))
         } catch (err) {
           return false
         }
