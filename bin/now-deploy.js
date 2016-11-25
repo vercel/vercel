@@ -10,6 +10,7 @@ import bytes from 'bytes'
 import chalk from 'chalk'
 import minimist from 'minimist'
 import ms from 'ms'
+import fs from 'fs-promise'
 
 // Ours
 import copy from '../lib/copy'
