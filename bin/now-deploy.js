@@ -209,25 +209,15 @@ async function sync(token) {
     let repo
 
     if (isRepoPath(rawPath)) {
-      process.stdout.write('> Didn\'t find directory. Searching on GitHub')
-
-      let dotCount = 0
-
-      const dots = setInterval(() => {
-        dotCount++
-        process.stdout.write('.')
-
-        if (dotCount === 20) {
-          clearInterval(dots)
-        }
+      const searchMessage = setTimeout(() => {
+        console.log('> Didn\'t find directory. Searching on GitHub...')
       }, 500)
 
       try {
         repo = await onGitHub(rawPath, debug)
       } catch (err) {}
 
-      clearInterval(dots)
-      process.stdout.write('\n')
+      clearTimeout(searchMessage)
     }
 
     if (repo) {
