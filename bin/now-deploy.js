@@ -21,8 +21,8 @@ import Now from '../lib'
 import toHumanPath from '../lib/utils/to-human-path'
 import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
+import {onGitHub, isRepoPath, gitPathParts} from '../lib/github'
 import readMetaData from '../lib/read-metadata'
-import {onGitHub, isRepoPath} from '../lib/github'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -228,7 +228,10 @@ async function sync(token) {
       // once the deployment has finished
       gitHubRepo = repo
     } else if (isRepoPath(rawPath)) {
-      stopDeployment(`This path neither exists, nor is there a repository named "${rawPath}" on GitHub`)
+      const gitParts = gitPathParts(rawPath)
+      const gitRef = gitParts.ref ? `with the ref "${gitParts.ref}" ` : ''
+
+      stopDeployment(`There's no repository named "${gitParts.main}" ${gitRef}on GitHub`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
