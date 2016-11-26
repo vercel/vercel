@@ -29,6 +29,7 @@ const defaultCommand = 'deploy'
 
 const commands = new Set([
   defaultCommand,
+  'help',
   'list',
   'ls',
   'rm',
@@ -55,25 +56,26 @@ const aliases = new Map([
   ['secret', 'secrets']
 ])
 
-let cmd = argv._[0]
-let args = []
+let cmd = defaultCommand
+const args = process.argv.slice(2)
+const index = args.findIndex(a => commands.has(a))
 
-if (cmd === 'help') {
-  cmd = argv._[1]
+if (index > -1) {
+  cmd = args[index]
+  args.splice(index, 1)
 
-  if (!commands.has(cmd)) {
-    cmd = defaultCommand
+  if (cmd === 'help') {
+    if (index < args.length && commands.has(args[index])) {
+      cmd = args[index]
+      args.splice(index, 1)
+    } else {
+      cmd = defaultCommand
+    }
+
+    args.unshift('--help')
   }
 
-  args.push('--help')
-}
-
-if (commands.has(cmd)) {
   cmd = aliases.get(cmd) || cmd
-  args = args.concat(process.argv.slice(3))
-} else {
-  cmd = defaultCommand
-  args = args.concat(process.argv.slice(2))
 }
 
 let bin = resolve(__dirname, 'now-' + cmd)
