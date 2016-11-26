@@ -229,8 +229,12 @@ async function sync(token) {
     }
 
     if (repo) {
+      // Tell now which directory to deploy
       path = repo.path
-      gitHubRepo = true
+
+      // Set global variable for deleting tmp dir later
+      // once the deployment has finished
+      gitHubRepo = repo
     } else if (isRepoPath(rawPath)) {
       stopDeployment(`This path neither exists, nor is there a repository named "${rawPath}" on GitHub`)
     } else {
@@ -529,7 +533,8 @@ function printLogs(host) {
     }
 
     if (gitHubRepo) {
-      fs.removeSync(path)
+      // Delete temporary directory that contains repository
+      gitHubRepo.cleanup()
 
       if (debug) {
         console.log(`> [debug] Removed temporary repo directory`)
