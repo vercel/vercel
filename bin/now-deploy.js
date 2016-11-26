@@ -222,7 +222,9 @@ async function sync(token) {
         }
       }, 500)
 
-      repo = await onGitHub(rawPath, debug)
+      try {
+        repo = await onGitHub(rawPath, debug)
+      } catch (err) {}
 
       clearInterval(dots)
       process.stdout.write('\n')
