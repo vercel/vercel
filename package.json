@@ -87,7 +87,7 @@
     "progress": "1.1.8",
     "resumer": "0.0.0",
     "semver-compare": "1.0.0",
-    "socket.io-client": "1.6.0",
+    "socket.io-client": "1.7.0",
     "spdy": "3.4.4",
     "split-array": "1.0.1",
     "text-table": "0.2.0"
