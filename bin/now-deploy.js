@@ -135,7 +135,7 @@ if (path) {
 }
 
 // If the current deployment is a repo
-let gitHubRepo
+const gitHubRepo = {}
 
 const exit = code => {
   // we give stdout some time to flush out
@@ -218,6 +218,9 @@ async function sync(token) {
       } catch (err) {}
 
       clearTimeout(searchMessage)
+
+      const gitParts = gitPathParts(rawPath)
+      Object.assign(gitHubRepo, gitParts)
     }
 
     if (repo) {
@@ -226,12 +229,10 @@ async function sync(token) {
 
       // Set global variable for deleting tmp dir later
       // once the deployment has finished
-      gitHubRepo = repo
+      Object.assign(gitHubRepo, repo)
     } else if (isRepoPath(rawPath)) {
-      const gitParts = gitPathParts(rawPath)
-      const gitRef = gitParts.ref ? `with the ref "${gitParts.ref}" ` : ''
-
-      stopDeployment(`There's no repository named "${gitParts.main}" ${gitRef}on GitHub`)
+      const gitRef = gitHubRepo.ref ? `with the ref "${gitHubRepo.ref}" ` : ''
+      stopDeployment(`There's no repository named "${gitHubRepo.main}" ${gitRef}on GitHub`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
@@ -239,7 +240,7 @@ async function sync(token) {
 
   if (!quiet) {
     if (gitHubRepo) {
-      console.log(`> Deploying GitHub repository "${chalk.bold(toHumanPath(rawPath))}"`)
+      console.log(`> Deploying GitHub repository "${chalk.bold(gitHubRepo.main)}"`)
     } else {
       console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
     }
@@ -527,7 +528,7 @@ function printLogs(host) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
 
-    if (gitHubRepo) {
+    if (gitHubRepo && gitHubRepo.cleanup) {
       // Delete temporary directory that contains repository
       gitHubRepo.cleanup()
 
