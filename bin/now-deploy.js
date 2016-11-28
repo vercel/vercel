@@ -235,8 +235,8 @@ async function sync(token) {
     } else if (isValidRepo === 'no-valid-url') {
       stopDeployment(`URL is no valid repository from GitHub or GitLab.`)
     } else if (isValidRepo) {
-      const gitRef = gitHubRepo.ref ? `with the ref "${gitHubRepo.ref}" ` : ''
-      stopDeployment(`There's no repository named "${gitHubRepo.main}" ${gitRef}on GitHub`)
+      const gitRef = gitHubRepo.ref ? `with "${chalk.bold(gitHubRepo.ref)}" ` : ''
+      stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on GitHub or GitLab`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
