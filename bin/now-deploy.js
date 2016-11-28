@@ -203,12 +203,14 @@ async function sync(token) {
     process.exit(1)
   }
 
+  const isValidRepo = isRepoPath(rawPath)
+
   try {
     await fs.stat(path)
   } catch (err) {
     let repo
 
-    if (isRepoPath(rawPath)) {
+    if (isValidRepo && isValidRepo !== 'no-valid-url') {
       const searchMessage = setTimeout(() => {
         console.log('> Didn\'t find directory. Searching on GitHub...')
       }, 500)
@@ -230,7 +232,9 @@ async function sync(token) {
       // Set global variable for deleting tmp dir later
       // once the deployment has finished
       Object.assign(gitHubRepo, repo)
-    } else if (isRepoPath(rawPath)) {
+    } else if (isValidRepo === 'no-valid-url') {
+      stopDeployment(`URL is no valid repository from GitHub or GitLab.`)
+    } else if (isValidRepo) {
       const gitRef = gitHubRepo.ref ? `with the ref "${gitHubRepo.ref}" ` : ''
       stopDeployment(`There's no repository named "${gitHubRepo.main}" ${gitRef}on GitHub`)
     } else {
