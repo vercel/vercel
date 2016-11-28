@@ -106,7 +106,7 @@ const help = () => {
 
     ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray('–')} Deploys a GitHub or GitLab repo using its URL
+  ${chalk.gray('–')} Deploys a GitHub, GitLab or Bitbucket repo using its URL
 
     ${chalk.cyan('$ now https://gitlab.com/user/repo')}
 
