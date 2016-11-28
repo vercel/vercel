@@ -229,7 +229,7 @@ async function sync(token) {
       // once the deployment has finished
       Object.assign(gitHubRepo, repo)
     } else if (isValidRepo === 'no-valid-url') {
-      stopDeployment(`URL is no valid repository from GitHub or GitLab.`)
+      stopDeployment(`This URL is not a valid repository from GitHub or GitLab.`)
     } else if (isValidRepo) {
       const gitRef = gitHubRepo.ref ? `with "${chalk.bold(gitHubRepo.ref)}" ` : ''
       stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on GitHub or GitLab`)
