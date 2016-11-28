@@ -21,7 +21,7 @@ import Now from '../lib'
 import toHumanPath from '../lib/utils/to-human-path'
 import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
-import {onGitHub, isRepoPath, gitPathParts} from '../lib/github'
+import {fromGit, isRepoPath, gitPathParts} from '../lib/git'
 import readMetaData from '../lib/read-metadata'
 
 const argv = minimist(process.argv.slice(2), {
@@ -131,7 +131,7 @@ if (path) {
 }
 
 // If the current deployment is a repo
-const gitHubRepo = {}
+const gitRepo = {}
 
 const exit = code => {
   // we give stdout some time to flush out
@@ -208,14 +208,14 @@ async function sync(token) {
 
     if (isValidRepo && isValidRepo !== 'no-valid-url') {
       const gitParts = gitPathParts(rawPath)
-      Object.assign(gitHubRepo, gitParts)
+      Object.assign(gitRepo, gitParts)
 
       const searchMessage = setTimeout(() => {
-        console.log(`> Didn\'t find directory. Searching on ${gitHubRepo.type}...`)
+        console.log(`> Didn\'t find directory. Searching on ${gitRepo.type}...`)
       }, 500)
 
       try {
-        repo = await onGitHub(rawPath, debug)
+        repo = await fromGit(rawPath, debug)
       } catch (err) {}
 
       clearTimeout(searchMessage)
@@ -227,21 +227,21 @@ async function sync(token) {
 
       // Set global variable for deleting tmp dir later
       // once the deployment has finished
-      Object.assign(gitHubRepo, repo)
+      Object.assign(gitRepo, repo)
     } else if (isValidRepo === 'no-valid-url') {
       stopDeployment(`This URL is neither a valid repository from GitHub, nor from GitLab.`)
     } else if (isValidRepo) {
-      const gitRef = gitHubRepo.ref ? `with "${chalk.bold(gitHubRepo.ref)}" ` : ''
-      stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on ${gitHubRepo.type}`)
+      const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+      stopDeployment(`There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
   }
 
   if (!quiet) {
-    if (gitHubRepo) {
-      const gitRef = gitHubRepo.ref ? ` at "${chalk.bold(gitHubRepo.ref)}" ` : ''
-      console.log(`> Deploying ${gitHubRepo.type} repository "${chalk.bold(gitHubRepo.main)}"` + gitRef)
+    if (gitRepo) {
+      const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
+      console.log(`> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` + gitRef)
     } else {
       console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
     }
@@ -529,9 +529,9 @@ function printLogs(host) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
 
-    if (gitHubRepo && gitHubRepo.cleanup) {
+    if (gitRepo && gitRepo.cleanup) {
       // Delete temporary directory that contains repository
-      gitHubRepo.cleanup()
+      gitRepo.cleanup()
 
       if (debug) {
         console.log(`> [debug] Removed temporary repo directory`)
