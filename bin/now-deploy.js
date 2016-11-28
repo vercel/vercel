@@ -102,19 +102,15 @@ const help = () => {
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Lists all deployments with their IDs
+  ${chalk.gray('–')} Deploys a GitHub repository
 
-    ${chalk.cyan('$ now ls')}
+    ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray('–')} Associates deployment ${chalk.dim('`deploymentId`')} with ${chalk.dim('`custom-domain.com`')}
+  ${chalk.gray('–')} Deploys a GitHub or GitLab repo using its URL
 
-    ${chalk.cyan('$ now alias deploymentId custom-domain.com')}
+    ${chalk.cyan('$ now https://gitlab.com/user/repo')}
 
-  ${chalk.gray('–')} Stores a secret
-
-    ${chalk.cyan('$ now secret add mysql-password 123456')}
-
-  ${chalk.gray('–')} Deploys with ENV vars (using the ${chalk.dim('`mysql-password`')} secret stored above)
+  ${chalk.gray('–')} Deploys with ENV vars
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
