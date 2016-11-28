@@ -244,7 +244,8 @@ async function sync(token) {
 
   if (!quiet) {
     if (gitHubRepo) {
-      console.log(`> Deploying GitHub repository "${chalk.bold(gitHubRepo.main)}"`)
+      const gitRef = gitHubRepo.ref ? ` at "${chalk.bold(gitHubRepo.ref)}" ` : ''
+      console.log(`> Deploying GitHub repository "${chalk.bold(gitHubRepo.main)}"` + gitRef)
     } else {
       console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
     }
