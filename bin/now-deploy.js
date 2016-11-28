@@ -5,7 +5,7 @@ import {resolve} from 'path'
 
 // Packages
 import Progress from 'progress'
-import {stat} from 'fs-promise'
+import fs from 'fs-promise'
 import bytes from 'bytes'
 import chalk from 'chalk'
 import minimist from 'minimist'
@@ -21,6 +21,7 @@ import Now from '../lib'
 import toHumanPath from '../lib/utils/to-human-path'
 import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
+import {onGitHub, isRepoPath, gitPathParts} from '../lib/github'
 import readMetaData from '../lib/read-metadata'
 
 const argv = minimist(process.argv.slice(2), {
@@ -101,19 +102,15 @@ const help = () => {
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Lists all deployments with their IDs
+  ${chalk.gray('–')} Deploys a GitHub repository
 
-    ${chalk.cyan('$ now ls')}
+    ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray('–')} Associates deployment ${chalk.dim('`deploymentId`')} with ${chalk.dim('`custom-domain.com`')}
+  ${chalk.gray('–')} Deploys a GitHub or GitLab repo using its URL
 
-    ${chalk.cyan('$ now alias deploymentId custom-domain.com')}
+    ${chalk.cyan('$ now https://gitlab.com/user/repo')}
 
-  ${chalk.gray('–')} Stores a secret
-
-    ${chalk.cyan('$ now secret add mysql-password 123456')}
-
-  ${chalk.gray('–')} Deploys with ENV vars (using the ${chalk.dim('`mysql-password`')} secret stored above)
+  ${chalk.gray('–')} Deploys with ENV vars
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
@@ -132,6 +129,9 @@ if (path) {
 } else {
   path = process.cwd()
 }
+
+// If the current deployment is a repo
+const gitHubRepo = {}
 
 const exit = code => {
   // we give stdout some time to flush out
@@ -192,16 +192,59 @@ if (argv.h || argv.help) {
 
 async function sync(token) {
   const start = Date.now()
+  const rawPath = argv._[0]
 
-  if (!quiet) {
-    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+  const stopDeployment = msg => {
+    error(msg)
+    process.exit(1)
   }
 
+  const isValidRepo = isRepoPath(rawPath)
+
   try {
-    await stat(path)
+    await fs.stat(path)
   } catch (err) {
-    error(`Could not read directory ${chalk.bold(path)}`)
-    process.exit(1)
+    let repo
+
+    if (isValidRepo && isValidRepo !== 'no-valid-url') {
+      const searchMessage = setTimeout(() => {
+        console.log('> Didn\'t find directory. Searching on GitHub...')
+      }, 500)
+
+      try {
+        repo = await onGitHub(rawPath, debug)
+      } catch (err) {}
+
+      clearTimeout(searchMessage)
+
+      const gitParts = gitPathParts(rawPath)
+      Object.assign(gitHubRepo, gitParts)
+    }
+
+    if (repo) {
+      // Tell now which directory to deploy
+      path = repo.path
+
+      // Set global variable for deleting tmp dir later
+      // once the deployment has finished
+      Object.assign(gitHubRepo, repo)
+    } else if (isValidRepo === 'no-valid-url') {
+      stopDeployment(`This URL is not a valid repository from GitHub or GitLab.`)
+    } else if (isValidRepo) {
+      const gitRef = gitHubRepo.ref ? `with "${chalk.bold(gitHubRepo.ref)}" ` : ''
+      stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on GitHub or GitLab`)
+    } else {
+      stopDeployment(`Could not read directory ${chalk.bold(path)}`)
+    }
+  }
+
+  if (!quiet) {
+    if (gitHubRepo) {
+      const gitRef = gitHubRepo.ref ? ` at "${chalk.bold(gitHubRepo.ref)}" ` : ''
+      console.log(`> Deploying GitHub repository "${chalk.bold(gitHubRepo.main)}"` + gitRef)
+    } else {
+      console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+    }
   }
 
   let deploymentType
@@ -227,7 +270,7 @@ async function sync(token) {
     isStatic = true
   } else {
     try {
-      await stat(resolve(path, 'package.json'))
+      await fs.stat(resolve(path, 'package.json'))
     } catch (err) {
       hasPackage = true
     }
@@ -235,7 +278,7 @@ async function sync(token) {
     [hasPackage, hasDockerfile] = await Promise.all([
       await (async () => {
         try {
-          await stat(resolve(path, 'package.json'))
+          await fs.stat(resolve(path, 'package.json'))
         } catch (err) {
           return false
         }
@@ -243,7 +286,7 @@ async function sync(token) {
       })(),
       await (async () => {
         try {
-          await stat(resolve(path, 'Dockerfile'))
+          await fs.stat(resolve(path, 'Dockerfile'))
         } catch (err) {
           return false
         }
@@ -485,6 +528,16 @@ function printLogs(host) {
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
+
+    if (gitHubRepo && gitHubRepo.cleanup) {
+      // Delete temporary directory that contains repository
+      gitHubRepo.cleanup()
+
+      if (debug) {
+        console.log(`> [debug] Removed temporary repo directory`)
+      }
+    }
+
     process.exit(0)
   })
 }

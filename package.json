@@ -74,6 +74,7 @@
     "copy-paste": "1.3.0",
     "cross-spawn": "5.0.1",
     "docker-file-parser": "0.1.0",
+    "download": "5.0.2",
     "email-prompt": "0.1.8",
     "email-validator": "1.0.7",
     "fs-promise": "1.0.0",
@@ -81,6 +82,7 @@
     "graceful-fs": "4.1.11",
     "ignore": "3.2.0",
     "ini": "1.3.4",
+    "is-url": "1.2.2",
     "minimist": "1.2.0",
     "ms": "0.7.2",
     "node-fetch": "1.6.3",
@@ -90,7 +92,8 @@
     "socket.io-client": "1.7.1",
     "spdy": "3.4.4",
     "split-array": "1.0.1",
-    "text-table": "0.2.0"
+    "text-table": "0.2.0",
+    "tmp-promise": "1.0.2"
   },
   "devDependencies": {
     "alpha-sort": "1.0.2",
