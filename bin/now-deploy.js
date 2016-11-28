@@ -207,8 +207,11 @@ async function sync(token) {
     let repo
 
     if (isValidRepo && isValidRepo !== 'no-valid-url') {
+      const gitParts = gitPathParts(rawPath)
+      Object.assign(gitHubRepo, gitParts)
+
       const searchMessage = setTimeout(() => {
-        console.log('> Didn\'t find directory. Searching on GitHub...')
+        console.log(`> Didn\'t find directory. Searching on ${gitHubRepo.type}...`)
       }, 500)
 
       try {
@@ -216,9 +219,6 @@ async function sync(token) {
       } catch (err) {}
 
       clearTimeout(searchMessage)
-
-      const gitParts = gitPathParts(rawPath)
-      Object.assign(gitHubRepo, gitParts)
     }
 
     if (repo) {
@@ -229,10 +229,10 @@ async function sync(token) {
       // once the deployment has finished
       Object.assign(gitHubRepo, repo)
     } else if (isValidRepo === 'no-valid-url') {
-      stopDeployment(`This URL is not a valid repository from GitHub or GitLab.`)
+      stopDeployment(`This URL is neither a valid repository from GitHub, nor from GitLab.`)
     } else if (isValidRepo) {
       const gitRef = gitHubRepo.ref ? `with "${chalk.bold(gitHubRepo.ref)}" ` : ''
-      stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on GitHub or GitLab`)
+      stopDeployment(`There's no repository named "${chalk.bold(gitHubRepo.main)}" ${gitRef}on ${gitHubRepo.type}`)
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
@@ -241,7 +241,7 @@ async function sync(token) {
   if (!quiet) {
     if (gitHubRepo) {
       const gitRef = gitHubRepo.ref ? ` at "${chalk.bold(gitHubRepo.ref)}" ` : ''
-      console.log(`> Deploying GitHub repository "${chalk.bold(gitHubRepo.main)}"` + gitRef)
+      console.log(`> Deploying ${gitHubRepo.type} repository "${chalk.bold(gitHubRepo.main)}"` + gitRef)
     } else {
       console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
     }
