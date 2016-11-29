@@ -69,7 +69,6 @@ test('hashes', async t => {
   const hashes = await hash(files)
   t.is(hashes.size, 3)
   t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[0], prefix + 'hashes/dei.png')
-  t.is(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names[1], prefix + 'hashes/duplicate/dei.png')
   t.is(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0], prefix + 'hashes/index.js')
   t.is(hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').names[0], prefix + 'hashes/package.json')
 })
