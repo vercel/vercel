@@ -239,7 +239,7 @@ async function sync(token) {
   }
 
   if (!quiet) {
-    if (gitRepo) {
+    if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
       console.log(`> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` + gitRef)
     } else {
