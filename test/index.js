@@ -7,22 +7,18 @@ const {asc: alpha} = require('alpha-sort')
 const {readFile} = require('fs-promise')
 
 // Ours
-const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
 const hash = require('../lib/hash')
+const readMetadata = require('../lib/read-metadata')
+const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./test/_fixtures/${name}`)
 
-const readJSON = async file => {
-  const data = await readFile(file)
-  return JSON.parse(data)
-}
-
 // overload to force debugging
-const getNpmFiles = async dir => {
-  const pkg = await readJSON(resolve(dir, 'package.json'))
-  return getNpmFiles_(dir, pkg)
+const getNpmFiles = async (dir) => {
+  const { pkg, nowConfig } = await readMetadata(dir, { quiet: true, strict: false })
+  return getNpmFiles_(dir, pkg, nowConfig)
 }
 
 test('`files`', async t => {
