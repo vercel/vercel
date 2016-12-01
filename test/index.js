@@ -16,8 +16,8 @@ const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./test/_fixtures/${name}`)
 
 // overload to force debugging
-const getNpmFiles = async (dir) => {
-  const { pkg, nowConfig } = await readMetadata(dir, { quiet: true, strict: false })
+const getNpmFiles = async dir => {
+  const {pkg, nowConfig} = await readMetadata(dir, {quiet: true, strict: false})
   return getNpmFiles_(dir, pkg, nowConfig)
 }
 
