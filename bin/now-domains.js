@@ -16,11 +16,12 @@ import NowDomains from '../lib/domains'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'force'],
+  boolean: ['help', 'debug', 'external', 'force'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
+    external: 'e',
     force: 'f',
     token: 't'
   }
@@ -37,6 +38,7 @@ const help = () => {
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
+    -e, --external          Use external DNS server
     -f, --force             Skip DNS verification
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
@@ -77,6 +79,18 @@ const help = () => {
       ${chalk.cyan('$ now domain rm domainId')}
 
       To get the list of domain ids, use ${chalk.dim('`now domains ls`')}.
+
+  ${chalk.gray('–')} Adding and verifying a domain name using zeit.world nameservers:
+
+      ${chalk.cyan('$ now domain add my-app.com')}
+
+      The command will tell you if the domain was verified succesfully. In case the domain was not verified succesfully you should retry adding the domain after some time.
+
+  ${chalk.gray('–')} Adding and verifying a domain name using an external nameserver:
+
+      ${chalk.cyan('$ now domain add -e my-app.com')}
+
+      and follow the verification instructions if requested. Finally, rerun the same command after completing the verification step.
 `)
 }
 
@@ -137,7 +151,7 @@ async function run(token) {
       const domains = await domain.ls()
       domains.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
-      const header = [['', 'id', 'dns', 'url', 'created'].map(s => chalk.dim(s))]
+      const header = [['', 'id', 'dns', 'url', 'verified', 'created'].map(s => chalk.dim(s))]
       const out = domains.length === 0 ? null : table(header.concat(domains.map(domain => {
         const ns = domain.isExternal ? 'external' : 'zeit.world'
         const url = chalk.underline(`https://${domain.name}`)
@@ -147,9 +161,10 @@ async function run(token) {
           domain.uid,
           ns,
           url,
+          domain.verified,
           time
         ]
-      })), {align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
+      })), {align: ['l', 'r', 'l', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
 
       const elapsed_ = ms(new Date() - start_)
       console.log(`> ${domains.length} domain${domains.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed_}]`)}`)
@@ -209,12 +224,18 @@ async function run(token) {
 
       const start = new Date()
       const name = String(args[0])
-      const {uid, created} = await domain.add(name, argv.force)
+      const {uid, code, verified, verifyToken, created} = await domain.add(name, argv.force, argv.external)
       const elapsed = ms(new Date() - start)
-      if (created) {
+      if (created && verified) {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`)
-      } else {
+      } else if (verified) {
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} verified [${elapsed}]`)
+      } else if (verifyToken) {
+        console.log(`> Verification required: Please add the following TXT record on the external DNS server: _now.${name}: ${verifyToken}`)
+      } else if (code === 'not_modified') {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} already exists [${elapsed}]`)
+      } else {
+        console.log('> Verification required: Please rerun this command after some time')
       }
       break
 
