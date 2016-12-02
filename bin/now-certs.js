@@ -108,7 +108,7 @@ if (argv.help || !subcommand) {
 
 function formatExpirationDate(date) {
   const diff = date - Date.now()
-  return diff < 0 ? chalk.gray(ms(new Date(-diff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)))
+  return diff < 0 ? chalk.gray(ms(-diff) + ' ago') : chalk.gray('in ' + ms(diff))
 }
 
 async function run(token) {
@@ -171,6 +171,10 @@ async function run(token) {
       cert = await certs.put(cn, crt, key, ca)
     } else { // Issue a standard certificate
       cert = await certs.create(cn)
+    }
+    if (!cert) {
+      // Cert is undefined and "Cert is alread issued" has been printed to stdout
+      return exit(1)
     }
     const elapsed = ms(new Date() - start)
     console.log(`${chalk.cyan('> Success!')} Certificate entry ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
