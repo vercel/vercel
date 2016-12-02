@@ -173,7 +173,7 @@ async function run(token) {
       cert = await certs.create(cn)
     }
     if (!cert) {
-      // Cert is undefined and "Cert is alread issued" has been printed to stdout
+      // Cert is undefined and "Cert is already issued" has been printed to stdout
       return exit(1)
     }
     const elapsed = ms(new Date() - start)
