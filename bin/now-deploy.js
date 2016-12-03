@@ -320,19 +320,19 @@ async function sync(token) {
       }
     } else if (hasPackage) {
       if (debug) {
-        console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`')
+        console.log('> [debug] `package.json` found, assuming `deploymentType` = `npm`')
       }
 
       deploymentType = 'npm'
     } else if (hasDockerfile) {
       if (debug) {
-        console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`')
+        console.log('> [debug] `Dockerfile` found, assuming `deploymentType` = `docker`')
       }
 
       deploymentType = 'docker'
     } else {
       if (debug) {
-        console.log('[debug] No manifest files found, assuming static deployment')
+        console.log('> [debug] No manifest files found, assuming static deployment')
       }
 
       isStatic = true
