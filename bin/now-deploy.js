@@ -23,6 +23,7 @@ import promptOptions from '../lib/utils/prompt-options'
 import {handleError, error} from '../lib/error'
 import {fromGit, isRepoPath, gitPathParts} from '../lib/git'
 import readMetaData from '../lib/read-metadata'
+import checkPath from '../lib/utils/check-path'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -249,6 +250,9 @@ async function sync(token) {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
   }
+
+  // Make sure that directory is not too big
+  await checkPath(path)
 
   if (!quiet) {
     if (gitRepo.main) {
