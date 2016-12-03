@@ -145,10 +145,10 @@ const exit = code => {
 }
 
 // options
+let forceNew = argv.force
 const debug = argv.debug
 const clipboard = !argv['no-clipboard']
 const forwardNpm = argv['forward-npm']
-const forceNew = argv.force
 const forceSync = argv.forceSync
 const shouldLogin = argv.login
 const wantsPublic = argv.public
@@ -159,6 +159,14 @@ const quiet = !isTTY
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
+}
+
+// Create a new deployment if user changed
+// the name or made _src public.
+// This should just work fine because it doesn't
+// force a new sync, it just forces a new deployment.
+if (deploymentName || wantsPublic) {
+  forceNew = true
 }
 
 const config = cfg.read()
