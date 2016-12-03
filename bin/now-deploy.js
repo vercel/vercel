@@ -27,7 +27,8 @@ import readMetaData from '../lib/read-metadata'
 const argv = minimist(process.argv.slice(2), {
   string: [
     'config',
-    'token'
+    'token',
+    'name'
   ],
   boolean: [
     'help',
@@ -53,7 +54,8 @@ const argv = minimist(process.argv.slice(2), {
     login: 'L',
     public: 'p',
     'no-clipboard': 'C',
-    'forward-npm': 'N'
+    'forward-npm': 'N',
+    name: 'n'
   }
 })
 
@@ -76,6 +78,7 @@ const help = () => {
 
     -h, --help                Output usage information
     -v, --version             Output the version number
+    -n, --name                Set the name of the deployment
     -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    Config file
     -d, --debug               Debug mode [off]
     -f, --force               Force a new deployment even if nothing has changed
@@ -149,6 +152,7 @@ const forceNew = argv.force
 const forceSync = argv.forceSync
 const shouldLogin = argv.login
 const wantsPublic = argv.public
+const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
@@ -337,6 +341,7 @@ async function sync(token) {
 
   const {pkg: {now: pkgConfig = {}} = {}} = await readMetaData(path, {
     deploymentType,
+    deploymentName,
     isStatic,
     quiet: true
   })
@@ -366,6 +371,7 @@ async function sync(token) {
       error('Env key and value missing')
       return process.exit(1)
     }
+
     const [key, ...rest] = kv.split('=')
     let val
 
@@ -433,6 +439,7 @@ async function sync(token) {
     await now.create(path, {
       env,
       deploymentType,
+      deploymentName,
       forceNew,
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
