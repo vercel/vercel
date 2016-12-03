@@ -264,7 +264,7 @@ function readConfirmation(cert, msg) {
     process.stdout.write(`> ${msg}`)
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()

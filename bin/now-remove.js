@@ -94,7 +94,7 @@ function readConfirmation(matches) {
       }
     }
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()

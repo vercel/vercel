@@ -229,7 +229,7 @@ function readConfirmation(secret) {
     process.stdout.write('> The following secret will be removed permanently\n')
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()

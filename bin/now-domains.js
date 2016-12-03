@@ -244,7 +244,7 @@ async function readConfirmation(domain, _domain) {
       `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`)
     }
 
-    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()
