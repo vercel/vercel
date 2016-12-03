@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.33.2",
+  "version": "0.34.0",
   "description": "Realtime global deployments",
   "repository": "zeit/now",
   "main": "./build/lib/index",
