@@ -2,7 +2,7 @@
   "name": "now",
   "version": "0.34.0",
   "description": "Realtime global deployments",
-  "repository": "zeit/now",
+  "repository": "zeit/now-cli",
   "main": "./build/lib/index",
   "license": "MIT",
   "files": [
