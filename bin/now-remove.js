@@ -14,12 +14,13 @@ import {handleError, error} from '../lib/error'
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'hard'],
+  boolean: ['help', 'debug', 'hard', 'yes'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
-    token: 't'
+    token: 't',
+    yes: 'y'
   }
 })
 
@@ -36,6 +37,7 @@ const help = () => {
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -y, --yes               Skip confirmation
 
   ${chalk.dim('Examples:')}
 
@@ -64,6 +66,7 @@ if (argv.help || ids.length === 0) {
 const debug = argv.debug
 const apiUrl = argv.url || 'https://api.zeit.co'
 const hard = argv.hard || false
+const skipConfirmation = argv.yes || false
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -147,10 +150,13 @@ async function remove(token) {
   }
 
   try {
-    const confirmation = (await readConfirmation(matches)).toLowerCase()
-    if (confirmation !== 'y' && confirmation !== 'yes') {
-      console.log('\n> Aborted')
-      process.exit(0)
+    if (!skipConfirmation) {
+      const confirmation = (await readConfirmation(matches)).toLowerCase()
+
+      if (confirmation !== 'y' && confirmation !== 'yes') {
+        console.log('\n> Aborted')
+        process.exit(0)
+      }
     }
 
     const start = new Date()
