@@ -88,6 +88,7 @@
     "node-fetch": "1.6.3",
     "node-version": "1.0.0",
     "progress": "1.1.8",
+    "publicsuffixlist": "0.2.71",
     "resumer": "0.0.0",
     "semver-compare": "1.0.0",
     "socket.io-client": "1.7.1",
