@@ -73,6 +73,7 @@ const help = () => {
     domains      [name]       Manages your domain names
     certs        [cmd]        Manages your SSL certificates
     secrets      [name]       Manages your secret environment variables
+    dns          [name]       Manages your DNS records
     help         [cmd]        Displays complete help for [cmd]
 
   ${chalk.dim('Options:')}
