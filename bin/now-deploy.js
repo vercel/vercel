@@ -10,6 +10,7 @@ import bytes from 'bytes'
 import chalk from 'chalk'
 import minimist from 'minimist'
 import ms from 'ms'
+import publicSuffixList from 'psl'
 
 // Ours
 import copy from '../lib/copy'
@@ -547,6 +548,8 @@ async function sync(token) {
 }
 
 const assignAlias = async (token, deployment) => {
+  const type = publicSuffixList.isValid(autoAlias) ? 'alias' : 'uid'
+
   const aliases = new NowAlias(apiUrl, token, {debug})
   const list = await aliases.ls()
 
@@ -554,7 +557,7 @@ const assignAlias = async (token, deployment) => {
 
   // Check if alias even exists
   for (const alias of list) {
-    if (alias.alias === autoAlias) {
+    if (alias[type] === autoAlias) {
       related = alias
       break
     }
@@ -566,7 +569,7 @@ const assignAlias = async (token, deployment) => {
     return
   }
 
-  console.log(`> Assigning alias "${autoAlias}" to deployment...`)
+  console.log(`> Assigning alias ${chalk.bold.underline(related.alias)} to deployment...`)
 
   // Assign alias
   await aliases.set(String(deployment), String(related.alias))
