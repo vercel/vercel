@@ -546,12 +546,13 @@ async function sync(token) {
   }
 }
 
-const assignAlias = async token => {
+const assignAlias = async (token, deployment) => {
   const aliases = new NowAlias(apiUrl, token, {debug})
   const list = await aliases.ls()
 
   let related
 
+  // Check if alias even exists
   for (const alias of list) {
     if (alias.alias === autoAlias) {
       related = alias
@@ -559,12 +560,16 @@ const assignAlias = async token => {
     }
   }
 
+  // Throw an error if it doesn't
   if (!related) {
     error(`Alias "${autoAlias}" doesn't exist`)
     return
   }
 
   console.log(`> Assigning alias "${autoAlias}" to deployment...`)
+
+  // Assign alias
+  await aliases.set(String(deployment), String(related.alias))
 }
 
 function printLogs(host, token) {
@@ -573,7 +578,7 @@ function printLogs(host, token) {
 
   logger.on('close', async () => {
     if (autoAlias) {
-      await assignAlias(token)
+      await assignAlias(token, host)
     }
 
     if (!quiet) {
