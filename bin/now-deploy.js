@@ -24,12 +24,14 @@ import {handleError, error} from '../lib/error'
 import {fromGit, isRepoPath, gitPathParts} from '../lib/git'
 import readMetaData from '../lib/read-metadata'
 import checkPath from '../lib/utils/check-path'
+import NowAlias from '../lib/alias'
 
 const argv = minimist(process.argv.slice(2), {
   string: [
     'config',
     'token',
-    'name'
+    'name',
+    'alias'
   ],
   boolean: [
     'help',
@@ -56,7 +58,8 @@ const argv = minimist(process.argv.slice(2), {
     public: 'p',
     'no-clipboard': 'C',
     'forward-npm': 'N',
-    name: 'n'
+    name: 'n',
+    alias: 'a'
   }
 })
 
@@ -90,6 +93,7 @@ const help = () => {
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private NPM modules
+    -a, --alias               Assign an alias to the deployment
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -158,6 +162,7 @@ const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
+const autoAlias = argv.alias || false
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -500,7 +505,7 @@ async function sync(token) {
     now.close()
 
     // show build logs
-    printLogs(now.host)
+    printLogs(now.host, token)
   }
 
   if (now.syncAmount) {
@@ -537,14 +542,40 @@ async function sync(token) {
     now.close()
 
     // show build logs
-    printLogs(now.host)
+    printLogs(now.host, token)
   }
 }
 
-function printLogs(host) {
+const assignAlias = async token => {
+  const aliases = new NowAlias(apiUrl, token, {debug})
+  const list = await aliases.ls()
+
+  let related
+
+  for (const alias of list) {
+    if (alias.alias === autoAlias) {
+      related = alias
+      break
+    }
+  }
+
+  if (!related) {
+    error(`Alias "${autoAlias}" doesn't exist`)
+    return
+  }
+
+  console.log(`> Assigning alias "${autoAlias}" to deployment...`)
+}
+
+function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
-  logger.on('close', () => {
+
+  logger.on('close', async () => {
+    if (autoAlias) {
+      await assignAlias(token)
+    }
+
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
