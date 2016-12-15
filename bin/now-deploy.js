@@ -565,7 +565,8 @@ const assignAlias = async (token, deployment) => {
 
   // Throw an error if it doesn't
   if (!related) {
-    error(`Alias "${autoAlias}" doesn't exist`)
+    const withID = type === 'uid' ? 'with ID ' : ''
+    error(`Alias ${withID}"${autoAlias}" doesn't exist`)
     return
   }
 
