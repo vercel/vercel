@@ -22,11 +22,19 @@ const argv = minimist(process.argv.slice(2))
 // options
 const debug = argv.debug || argv.d
 
+// Disable updates by default
+let update = false
+
 // auto-update checking
-const update = checkUpdate({debug})
+// only for the npm version, not the enclosed one
+if (!process.pkg) {
+  update = checkUpdate({debug})
+}
 
 const exit = code => {
-  update.then(() => process.exit(code))
+  if (update) {
+    update.then(() => process.exit(code))
+  }
   // don't wait for updates more than a second
   // when the process really wants to exit
   setTimeout(() => process.exit(code), 1000)
