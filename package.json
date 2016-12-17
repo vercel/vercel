@@ -99,7 +99,7 @@
     "tmp-promise": "1.0.2"
   },
   "devDependencies": {
-    "alpha-sort": "1.0.2",
+    "alpha-sort": "2.0.0",
     "ava": "0.17.0",
     "babel-plugin-transform-async-to-generator": "6.16.0",
     "babel-plugin-transform-runtime": "6.15.0",
