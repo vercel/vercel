@@ -14,7 +14,7 @@
     "test": "xo && ava",
     "pretest": "npm run build",
     "prepublish": "npm run build",
-    "pkg": "pkg . --out-dir out"
+    "pack": "pkg . --out-dir out"
   },
   "pkg": {
     "scripts": "build/**/*"
