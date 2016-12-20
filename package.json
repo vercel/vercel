@@ -9,7 +9,7 @@
     "build"
   ],
   "scripts": {
-    "start": "gulp",
+    "dev": "gulp",
     "test": "xo && ava",
     "pretest": "gulp compile",
     "prepublish": "gulp compile",
