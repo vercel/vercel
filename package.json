@@ -10,9 +10,10 @@
   ],
   "scripts": {
     "dev": "gulp",
+    "build": "gulp compile",
     "test": "xo && ava",
-    "pretest": "gulp compile",
-    "prepublish": "gulp compile",
+    "pretest": "npm run build",
+    "prepublish": "npm run build",
     "pkg": "pkg . --out-dir out"
   },
   "pkg": {
