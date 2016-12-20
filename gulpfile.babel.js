@@ -4,6 +4,7 @@ import del from 'del'
 import babel from 'gulp-babel'
 import help from 'gulp-task-listing'
 import {crop as cropExt} from 'gulp-ext'
+import cache from 'gulp-cached'
 
 gulp.task('help', help)
 
@@ -14,11 +15,13 @@ gulp.task('compile', [
 
 gulp.task('compile-lib', () =>
   gulp.src('lib/**/*.js')
+  .pipe(cache('lib'))
   .pipe(babel())
   .pipe(gulp.dest('build/lib')))
 
 gulp.task('compile-bin', () =>
   gulp.src('bin/*')
+  .pipe(cache('bin'))
   .pipe(babel())
   .pipe(cropExt())
   .pipe(gulp.dest('build/bin')))
