@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "0.37.0",
+  "version": "0.37.1",
   "description": "Realtime global deployments",
   "repository": "zeit/now-cli",
   "main": "./build/lib/index",
