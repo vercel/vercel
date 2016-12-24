@@ -108,7 +108,7 @@ async function list(token) {
 
   const text = sorted.map(([name, deps]) => {
     const t = table(deps.map(({uid, url, created}) => {
-      const _url = chalk.underline(`https://${url}`)
+      const _url = url ? chalk.underline(`https://${url}`) : 'incomplete';
       const time = chalk.gray(ms(current - created) + ' ago')
       return [uid, _url, time]
     }), {align: ['l', 'r', 'l'], hsep: ' '.repeat(6), stringLength: strlen})
