@@ -39,6 +39,7 @@ const argv = minimist(process.argv.slice(2), {
     'version',
     'debug',
     'force',
+    'links',
     'login',
     'no-clipboard',
     'forward-npm',
@@ -55,6 +56,7 @@ const argv = minimist(process.argv.slice(2), {
     force: 'f',
     token: 't',
     forceSync: 'F',
+    links: 'l',
     login: 'L',
     public: 'p',
     'no-clipboard': 'C',
@@ -90,6 +92,7 @@ const help = () => {
     -f, --force               Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   Login token
     -L, --login               Configure login
+    -l, --links               Copy symlinks without resolving their target
     -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
@@ -158,6 +161,7 @@ const clipboard = !argv['no-clipboard']
 const forwardNpm = argv['forward-npm']
 const forceSync = argv.forceSync
 const shouldLogin = argv.login
+const followSymlinks = !argv.links
 const wantsPublic = argv.public
 const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
@@ -459,6 +463,7 @@ async function sync(token) {
       env,
       deploymentType,
       deploymentName,
+      followSymlinks,
       forceNew,
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
