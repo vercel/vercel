@@ -30,7 +30,7 @@ const subcommand = argv._[0]
 const help = () => {
   console.log(`
   ${chalk.bold('𝚫 now dns ls')} [domain]
-  ${chalk.bold('𝚫 now dns add')} <domain> <name> <A | AAAA | ALIAS | CNAME | MX> <value> [mx_priority]
+  ${chalk.bold('𝚫 now dns add')} <domain> <name> <A | AAAA | ALIAS | CNAME | MX | TXT> <value> [mx_priority]
   ${chalk.bold('𝚫 now dns rm')} <id>
 
   ${chalk.dim('Options:')}
