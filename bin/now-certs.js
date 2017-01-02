@@ -132,7 +132,7 @@ async function run(token) {
       list.sort((a, b) => {
         return a.cn.localeCompare(b.cn)
       })
-      const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))]
+      const header = [['', 'id', 'cn', 'created', 'expiration', 'auto-renew'].map(s => chalk.dim(s))]
       const out = table(header.concat(list.map(cert => {
         const cn = chalk.bold(cert.cn)
         const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago')
@@ -142,7 +142,8 @@ async function run(token) {
           cert.uid ? cert.uid : 'unknown',
           cn,
           time,
-          expiration
+          expiration,
+          cert.autoRenew ? 'yes' : 'no'
         ]
       })), {align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
 
