@@ -141,7 +141,7 @@ async function run(token) {
 
   switch (subcommand) {
     case 'ls':
-    case 'list':
+    case 'list': {
       if (args.length !== 0) {
         error('Invalid number of arguments')
         return exit(1)
@@ -174,9 +174,9 @@ async function run(token) {
       }
 
       break
-
+    }
     case 'rm':
-    case 'remove':
+    case 'remove': {
       if (args.length !== 1) {
         error('Invalid number of arguments')
         return exit(1)
@@ -214,9 +214,9 @@ async function run(token) {
         exit(1)
       }
       break
-
+    }
     case 'add':
-    case 'set':
+    case 'set': {
       if (args.length !== 1) {
         error('Invalid number of arguments')
         return exit(1)
@@ -238,7 +238,7 @@ async function run(token) {
         console.log('> Verification required: Please rerun this command after some time')
       }
       break
-
+    }
     default:
       error('Please specify a valid subcommand: ls | add | rm')
       help()
