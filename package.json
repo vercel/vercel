@@ -51,7 +51,6 @@
     ],
     "rules": {
       "import/no-unresolved": 0,
-      "ava/no-ignored-test-files": 0,
       "max-depth": 0,
       "no-use-before-define": 0,
       "complexity": 0,
