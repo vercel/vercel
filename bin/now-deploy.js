@@ -235,7 +235,7 @@ async function sync(token) {
       Object.assign(gitRepo, gitParts)
 
       const searchMessage = setTimeout(() => {
-        console.log(`> Didn\'t find directory. Searching on ${gitRepo.type}...`)
+        console.log(`> Didn't find directory. Searching on ${gitRepo.type}...`)
       }, 500)
 
       try {
@@ -416,7 +416,7 @@ async function sync(token) {
       if ((key in process.env)) {
         console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
         // escape value if it begins with @
-        val = process.env[key].replace(/^\@/, '\\@')
+        val = process.env[key].replace(/^@/, '\\@')
       } else {
         error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`)
         return process.exit(1)

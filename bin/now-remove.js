@@ -128,7 +128,7 @@ async function remove(token) {
   const matches = deployments.filter(d => {
     return ids.find(id => {
       // `url` should match the hostname of the deployment
-      let u = id.replace(/^https\:\/\//i, '')
+      let u = id.replace(/^https:\/\//i, '')
 
       if (u.indexOf('.') === -1) {
         // `.now.sh` domain is implied if just the subdomain is given
