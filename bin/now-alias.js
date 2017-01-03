@@ -120,8 +120,8 @@ async function run(token) {
   const args = argv._.slice(1)
 
   switch (subcommand) {
-    case 'list':
     case 'ls':
+    case 'list': {
       if (args.length !== 0) {
         error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
         return exit(1)
@@ -160,9 +160,9 @@ async function run(token) {
       }
 
       break
-
-    case 'remove':
+    }
     case 'rm':
+    case 'remove': {
       const _target = String(args[0])
       if (!_target) {
         const err = new Error('No alias id specified')
@@ -201,17 +201,17 @@ async function run(token) {
       }
 
       break
-
+    }
     case 'add':
-    case 'set':
+    case 'set': {
       if (args.length !== 2) {
         error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`)
         return exit(1)
       }
       await alias.set(String(args[0]), String(args[1]))
       break
-
-    default:
+    }
+    default: {
       if (argv._.length === 0) {
         await realias(alias)
         break
@@ -228,6 +228,7 @@ async function run(token) {
         help()
         exit(1)
       }
+    }
   }
 
   alias.close()

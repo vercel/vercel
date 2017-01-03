@@ -51,14 +51,11 @@
     ],
     "rules": {
       "import/no-unresolved": 0,
-      "ava/no-ignored-test-files": 0,
       "max-depth": 0,
       "no-use-before-define": 0,
       "complexity": 0,
       "unicorn/no-process-exit": 0,
-      "no-control-regex": 0,
-      "no-case-declarations": 0,
-      "no-useless-escape": 0
+      "no-control-regex": 0
     }
   },
   "bin": {
