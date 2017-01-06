@@ -11,19 +11,19 @@ Realtime global deployments served over HTTP/2. You can find the FAQs [here](htt
 Firstly, make sure to install the package globally:
 
 ```bash
-$ npm install -g now
+npm install -g now
 ```
 
-Run this in any directory:
+Run this command in your terminal:
 
 ```bash
-$ now
+now
 ```
 
 For more examples, usage instructions and other commands run:
 
 ```bash
-$ now help
+now help
 ```
 
 ## Caught a Bug?
