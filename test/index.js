@@ -43,6 +43,24 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
   t.is(base(files[2]), 'files-in-package-ignore/package.json')
 })
 
+test('`files` overrides `.gitignore`', async t => {
+  let files = await getNpmFiles(fixture('files-overrides-gitignore'))
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'files-overrides-gitignore/package.json')
+  t.is(base(files[1]), 'files-overrides-gitignore/test.js')
+  t.is(base(files[2]), 'files-overrides-gitignore/test.json')
+})
+
+test('`now.files` overrides `.npmignore`', async t => {
+  let files = await getNpmFiles(fixture('now-files-overrides-npmignore'))
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'now-files-overrides-npmignore/package.json')
+  t.is(base(files[1]), 'now-files-overrides-npmignore/test.js')
+  t.is(base(files[2]), 'now-files-overrides-npmignore/test.json')
+})
+
 test('simple', async t => {
   let files = await getNpmFiles(fixture('simple'))
   files = files.sort(alpha)
