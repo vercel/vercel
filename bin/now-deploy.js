@@ -11,6 +11,7 @@ import chalk from 'chalk'
 import minimist from 'minimist'
 import ms from 'ms'
 import publicSuffixList from 'psl'
+import flatten from 'arr-flatten'
 
 // Ours
 import copy from '../lib/copy'
@@ -167,7 +168,7 @@ const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
-const autoAlias = argv.alias || false
+const autoAliases = argv.alias ? flatten([argv.alias]) : []
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -552,7 +553,7 @@ async function sync(token) {
   }
 }
 
-const assignAlias = async (token, deployment) => {
+const assignAlias = async (autoAlias, token, deployment) => {
   const type = publicSuffixList.isValid(autoAlias) ? 'alias' : 'uid'
 
   const aliases = new NowAlias(apiUrl, token, {debug})
@@ -586,8 +587,8 @@ function printLogs(host, token) {
   const logger = new Logger(host, {debug, quiet})
 
   logger.on('close', async () => {
-    if (autoAlias) {
-      await assignAlias(token, host)
+    for (const autoAlias of autoAliases) {
+      await assignAlias(autoAlias, token, host)
     }
 
     if (!quiet) {
