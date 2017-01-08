@@ -569,8 +569,14 @@ const assignAlias = async (autoAlias, token, deployment) => {
     }
   }
 
-  // Throw an error if it doesn't
+  // If alias doesn't exist
   if (!related) {
+    // Check if the uid was actually an alias
+    if (type === 'uid') {
+      return assignAlias(`${autoAlias}.now.sh`, token, deployment)
+    }
+
+    // If not, throw an error
     const withID = type === 'uid' ? 'with ID ' : ''
     error(`Alias ${withID}"${autoAlias}" doesn't exist`)
     return
