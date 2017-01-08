@@ -26,7 +26,7 @@ For more examples, usage instructions and other commands run:
 now help
 ```
 
-## Options
+### Options
 
 Run this command to get a list of all available commands:
 
