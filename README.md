@@ -26,6 +26,14 @@ For more examples, usage instructions and other commands run:
 now help
 ```
 
+## Options
+
+Run this command to get a list of all available commands:
+
+```bash
+now help
+```
+
 ## Caught a Bug?
 
 1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
