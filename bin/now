@@ -78,7 +78,6 @@ const aliases = new Map([
 ])
 
 let cmd = defaultCommand
-// Prepare process.argv for subcommand
 const args = process.argv.slice(2)
 const index = args.findIndex(a => commands.has(a))
 
@@ -102,7 +101,8 @@ if (index > -1) {
 
 let bin = resolve(__dirname, 'now-' + cmd)
 
-process.argv = args
+// Prepare process.argv for subcommand
+process.argv = process.argv.slice(0, 2).concat(args);
 require(bin)
 
 // vi:syntax=javascript
