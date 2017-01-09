@@ -101,10 +101,6 @@ if (index > -1) {
 }
 
 let bin = resolve(__dirname, 'now-' + cmd)
-if (process.pkg) {
-  args.unshift('--entrypoint', bin)
-  bin = process.execPath
-}
 
 process.argv = args
 require(bin)
