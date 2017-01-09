@@ -1,5 +1,5 @@
 #!/bin/sh
-//>&/dev/null;exec node --harmony_async_await $0 $@
+// >&/dev/null;exec node --harmony_async_await $0 $@
 
 // Native
 const {resolve} = require('path')
@@ -9,14 +9,14 @@ const minimist = require('minimist')
 const {spawn} = require('cross-spawn')
 const nodeVersion = require('node-version')
 const isAsyncSupported = require('is-async-supported')
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 // Ours
 const checkUpdate = require('../lib/check-update')
 const {error} = require('../lib/error')
 
-if (!isAsyncSupported()) {
-  require('async-to-gen/register')
-}
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
@@ -78,6 +78,7 @@ const aliases = new Map([
 ])
 
 let cmd = defaultCommand
+// Prepare process.argv for subcommand
 const args = process.argv.slice(2)
 const index = args.findIndex(a => commands.has(a))
 
@@ -105,12 +106,7 @@ if (process.pkg) {
   bin = process.execPath
 }
 
-const proc = spawn(bin, args, {
-  stdio: 'inherit',
-  customFds: [0, 1, 2]
-})
-
-proc.on('close', code => exit(code))
-proc.on('error', () => exit(1))
+process.argv = args
+require(bin)
 
 // vi:syntax=javascript

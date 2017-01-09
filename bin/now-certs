@@ -1,5 +1,5 @@
 #!/bin/sh
-//>&/dev/null;exec node --harmony_async_await $0 $@
+// >&/dev/null;exec node --harmony_async_await $0 $@
 
 // Native
 const path = require('path')
@@ -10,7 +10,6 @@ const table = require('text-table')
 const minimist = require('minimist')
 const fs = require('fs-promise')
 const ms = require('ms')
-const isAsyncSupported = require('is-async-supported')
 
 // Ours
 const strlen = require('../lib/strlen')
@@ -77,10 +76,6 @@ const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
-}
-
-if (!isAsyncSupported()) {
-  require('async-to-gen/register')
 }
 
 const exit = code => {

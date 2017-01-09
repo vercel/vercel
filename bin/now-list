@@ -1,5 +1,5 @@
 #!/bin/sh
-//>&/dev/null;exec node --harmony_async_await $0 $@
+// >&/dev/null;exec node --harmony_async_await $0 $@
 
 // Packages
 const fs = require('fs-promise')
@@ -7,7 +7,6 @@ const minimist = require('minimist')
 const chalk = require('chalk')
 const table = require('text-table')
 const ms = require('ms')
-const isAsyncSupported = require('is-async-supported')
 
 // Ours
 const strlen = require('../lib/strlen')
@@ -27,10 +26,6 @@ const argv = minimist(process.argv.slice(2), {
     token: 't'
   }
 })
-
-if (!isAsyncSupported()) {
-  require('async-to-gen/register')
-}
 
 const help = () => {
   console.log(`

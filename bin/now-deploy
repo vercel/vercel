@@ -1,5 +1,5 @@
 #!/bin/sh
-//>&/dev/null;exec node --harmony_async_await $0 $@
+// >&/dev/null;exec node --harmony_async_await $0 $@
 
 // Native
 const {resolve} = require('path')
@@ -13,7 +13,6 @@ const minimist = require('minimist')
 const ms = require('ms')
 const publicSuffixList = require('psl')
 const flatten = require('arr-flatten')
-const isAsyncSupported = require('is-async-supported')
 
 // Ours
 const copy = require('../lib/copy')
@@ -68,10 +67,6 @@ const argv = minimist(process.argv.slice(2), {
     alias: 'a'
   }
 })
-
-if (!isAsyncSupported()) {
-  require('async-to-gen/register')
-}
 
 const help = () => {
   console.log(`

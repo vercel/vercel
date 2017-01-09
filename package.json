@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Realtime global deployments",
   "repository": "zeit/now-cli",
-  "main": "./build/lib/index",
+  "main": "./lib/index",
   "license": "MIT",
   "files": [
     "build"
@@ -14,7 +14,10 @@
     "pack": "pkg . --out-dir out --options harmony-async-await"
   },
   "pkg": {
-    "scripts": "{bin,lib}/**/*"
+    "scripts": [ "./bin/*", "./lib/**/*" ]
+  },
+  "bin": {
+    "now": "./bin/now"
   },
   "ava": {
     "failFast": true,
@@ -45,9 +48,6 @@
       "unicorn/no-process-exit": 0,
       "no-control-regex": 0
     }
-  },
-  "bin": {
-    "now": "./bin/now"
   },
   "dependencies": {
     "ansi-escapes": "1.4.0",
