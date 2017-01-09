@@ -10,14 +10,11 @@
   ],
   "scripts": {
     "dev": "gulp",
-    "build": "echo 'not building'",
     "test": "xo && ava",
-    "pretest": "npm run build",
-    "prepublish": "npm run build",
-    "pack": "pkg . --out-dir out"
+    "pack": "pkg . --out-dir out --options harmony-async-await"
   },
   "pkg": {
-    "scripts": "build/**/*"
+    "scripts": "{bin,lib}/**/*"
   },
   "ava": {
     "failFast": true,
@@ -50,7 +47,7 @@
     }
   },
   "bin": {
-    "now": "./build/bin/now"
+    "now": "./bin/now"
   },
   "dependencies": {
     "ansi-escapes": "1.4.0",
