@@ -49,6 +49,9 @@
       "no-control-regex": 0
     }
   },
+  "engines": {
+    "node": ">=6.9.0"
+  },
   "dependencies": {
     "ansi-escapes": "1.4.0",
     "arr-flatten": "1.0.1",
