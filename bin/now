@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 // >&/dev/null; exec node $(node -p "process.version[1] >= 7 ? '--harmony-async-await' : '--lazy'") $0 $@
 
 // Native
