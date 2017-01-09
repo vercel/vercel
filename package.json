@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "gulp",
-    "build": "gulp compile",
+    "build": "echo 'not building'",
     "test": "xo && ava",
     "pretest": "npm run build",
     "prepublish": "npm run build",
@@ -25,20 +25,11 @@
       "test/*.js"
     ],
     "require": [
-      "babel-register"
+      "async-to-gen/register"
     ]
   },
   "greenkeeper": {
     "emails": false
-  },
-  "babel": {
-    "presets": [
-      "es2015"
-    ],
-    "plugins": [
-      "transform-runtime",
-      "transform-async-to-generator"
-    ]
   },
   "xo": {
     "esnext": true,
@@ -66,7 +57,7 @@
     "arr-flatten": "1.0.1",
     "array-unique": "0.3.2",
     "async-retry": "0.2.1",
-    "babel-runtime": "6.20.0",
+    "async-to-gen": "1.3.0",
     "bytes": "2.4.0",
     "chalk": "1.1.3",
     "copy-paste": "1.3.0",
@@ -80,6 +71,7 @@
     "graceful-fs": "4.1.11",
     "ignore": "3.2.0",
     "ini": "1.3.4",
+    "is-async-supported": "1.2.0",
     "is-url": "1.2.2",
     "minimist": "1.2.0",
     "ms": "0.7.2",
@@ -99,17 +91,8 @@
   "devDependencies": {
     "alpha-sort": "2.0.0",
     "ava": "0.17.0",
-    "babel-plugin-transform-async-to-generator": "6.16.0",
-    "babel-plugin-transform-runtime": "6.15.0",
-    "babel-preset-es2015": "6.18.0",
-    "babel-register": "6.18.0",
     "del": "2.2.2",
     "estraverse-fb": "1.3.1",
-    "gulp": "3.9.1",
-    "gulp-babel": "6.1.2",
-    "gulp-cached": "1.1.1",
-    "gulp-ext": "1.0.0",
-    "gulp-task-listing": "1.0.1",
     "pkg": "3.0.0-beta.22",
     "xo": "0.17.1"
   }

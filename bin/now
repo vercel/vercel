@@ -1,16 +1,22 @@
-#!/usr/bin/env node
+#!/bin/sh
+//>&/dev/null;exec node --harmony_async_await $0 $@
 
 // Native
-import {resolve} from 'path'
+const {resolve} = require('path')
 
 // Packages
-import minimist from 'minimist'
-import {spawn} from 'cross-spawn'
-import nodeVersion from 'node-version'
+const minimist = require('minimist')
+const {spawn} = require('cross-spawn')
+const nodeVersion = require('node-version')
+const isAsyncSupported = require('is-async-supported')
 
 // Ours
-import checkUpdate from '../lib/check-update'
-import {error} from '../lib/error'
+const checkUpdate = require('../lib/check-update')
+const {error} = require('../lib/error')
+
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
@@ -106,3 +112,5 @@ const proc = spawn(bin, args, {
 
 proc.on('close', code => exit(code))
 proc.on('error', () => exit(1))
+
+// vi:syntax=javascript

@@ -1,19 +1,21 @@
-#!/usr/bin/env node
+#!/bin/sh
+//>&/dev/null;exec node --harmony_async_await $0 $@
 
 // Packages
-import chalk from 'chalk'
-import minimist from 'minimist'
-import table from 'text-table'
-import ms from 'ms'
+const chalk = require('chalk')
+const minimist = require('minimist')
+const table = require('text-table')
+const ms = require('ms')
+const isAsyncSupported = require('is-async-supported')
 
 // Ours
-import strlen from '../lib/strlen'
-import NowAlias from '../lib/alias'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {error} from '../lib/error'
-import toHost from '../lib/to-host'
-import readMetaData from '../lib/read-metadata'
+const strlen = require('../lib/strlen')
+const NowAlias = require('../lib/alias')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {error} = require('../lib/error')
+const toHost = require('../lib/to-host')
+const readMetaData = require('../lib/read-metadata')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -26,6 +28,10 @@ const argv = minimist(process.argv.slice(2), {
   }
 })
 const subcommand = argv._[0]
+
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 // options
 const help = () => {
@@ -314,3 +320,5 @@ async function realias(alias) {
 
   await alias.set(source.url, target)
 }
+
+// vi:syntax=javascript

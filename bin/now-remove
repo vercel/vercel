@@ -1,16 +1,18 @@
-#!/usr/bin/env node
+#!/bin/sh
+//>&/dev/null;exec node --harmony_async_await $0 $@
 
 // Packages
-import minimist from 'minimist'
-import chalk from 'chalk'
-import ms from 'ms'
-import table from 'text-table'
+const minimist = require('minimist')
+const chalk = require('chalk')
+const ms = require('ms')
+const table = require('text-table')
+const isAsyncSupported = require('is-async-supported')
 
 // Ours
-import Now from '../lib'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -25,6 +27,10 @@ const argv = minimist(process.argv.slice(2), {
 })
 
 const ids = argv._
+
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 // options
 const help = () => {
@@ -175,3 +181,5 @@ async function remove(token) {
 
   now.close()
 }
+
+// vi:syntax=javascript

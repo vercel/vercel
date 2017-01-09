@@ -1,19 +1,21 @@
-#!/usr/bin/env node
+#!/bin/sh
+//>&/dev/null;exec node --harmony_async_await $0 $@
 
 // Packages
-import fs from 'fs-promise'
-import minimist from 'minimist'
-import chalk from 'chalk'
-import table from 'text-table'
-import ms from 'ms'
+const fs = require('fs-promise')
+const minimist = require('minimist')
+const chalk = require('chalk')
+const table = require('text-table')
+const ms = require('ms')
+const isAsyncSupported = require('is-async-supported')
 
 // Ours
-import strlen from '../lib/strlen'
-import indent from '../lib/indent'
-import Now from '../lib'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
+const strlen = require('../lib/strlen')
+const indent = require('../lib/indent')
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -25,6 +27,10 @@ const argv = minimist(process.argv.slice(2), {
     token: 't'
   }
 })
+
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 const help = () => {
   console.log(`
@@ -151,3 +157,5 @@ async function sort(apps) {
     return depsB[0].created - depsA[0].created
   })
 }
+
+// vi:syntax=javascript
