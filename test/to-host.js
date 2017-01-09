@@ -1,5 +1,5 @@
-import test from 'ava'
-import toHost from '../lib/to-host'
+const test = require('ava')
+const toHost = require('../lib/to-host')
 
 test('simple', async t => {
   t.is(toHost('zeit.co'), 'zeit.co')
