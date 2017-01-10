@@ -9,6 +9,7 @@ const minimist = require('minimist')
 const {spawn} = require('cross-spawn')
 const nodeVersion = require('node-version')
 const isAsyncSupported = require('is-async-supported')
+
 if (!isAsyncSupported()) {
   require('async-to-gen/register')
 }
