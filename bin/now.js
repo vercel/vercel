@@ -76,7 +76,7 @@ if (index > -1) {
   cmd = aliases.get(cmd) || cmd
 }
 
-const bin = resolve(__dirname, 'now-' + cmd)
+const bin = resolve(__dirname, 'now-' + cmd + '.js')
 
 // Prepare process.argv for subcommand
 process.argv = process.argv.slice(0, 2).concat(args)
