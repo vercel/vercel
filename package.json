@@ -10,7 +10,6 @@
     "lib"
   ],
   "scripts": {
-    "dev": "gulp",
     "test": "xo && ava",
     "pack": "pkg . --out-dir out --options harmony-async-await"
   },

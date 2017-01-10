@@ -38,9 +38,8 @@ now help
 
 1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
 2. Link the package to the global module directory: `npm link`
-3. Transpile the source code and watch for changes: `npm run dev`
-4. Generate a [testing token](https://zeit.co/account#api-tokens) and put it into `~/.now.json`
-5. You can now start using `now` from the command line!
+3. Generate a [testing token](https://zeit.co/account#api-tokens) and put it into `~/.now.json`
+4. You can now start using `now` from the command line!
 
 As always, you can use `npm test` to run the tests and see if your changes have broken anything.
 
