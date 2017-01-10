@@ -1,4 +1,4 @@
-#!/usr/bin/env node --harmony-async-await
+#!/usr/bin/env node
 
 // Native
 const path = require('path')

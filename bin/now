@@ -1,22 +1,17 @@
-#!/bin/bash
-// >&/dev/null; exec node $(node -p "process.version[1] >= 7 ? '--harmony-async-await' : '--lazy'") $0 $@
-// vi:syntax=javascript
+#!/usr/bin/env node
 
 // Native
 const {resolve} = require('path')
 
 // Packages
 const nodeVersion = require('node-version')
-const isAsyncSupported = require('is-async-supported')
 const updateNotifier = require('update-notifier')
 
 // Ours
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
-if (!isAsyncSupported()) {
-  require('async-to-gen/register')
-}
+require('async-to-gen/register')
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')

@@ -1,5 +1,4 @@
-#!/usr/bin/env node --harmony-async-await
-
+#!/usr/bin/env node
 
 // Packages
 const fs = require('fs-promise')
