@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "test": "xo && ava",
-    "pack": "pkg . --out-dir packed --options harmony-async-await"
+    "pack": "pkg . --out-dir packed"
   },
   "pkg": {
     "scripts": [
