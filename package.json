@@ -14,7 +14,10 @@
     "pack": "pkg . --out-dir out --options harmony-async-await"
   },
   "pkg": {
-    "scripts": [ "./bin/*", "./lib/**/*" ]
+    "scripts": [
+      "./bin/*",
+      "./lib/**/*"
+    ]
   },
   "bin": {
     "now": "./bin/now"
