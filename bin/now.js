@@ -11,7 +11,9 @@ const updateNotifier = require('update-notifier')
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
-require('async-to-gen/register')
+require('async-to-gen/register')({
+  excludes: null
+})
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
