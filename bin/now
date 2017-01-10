@@ -1,12 +1,12 @@
 #!/bin/bash
 // >&/dev/null; exec node $(node -p "process.version[1] >= 7 ? '--harmony-async-await' : '--lazy'") $0 $@
+// vi:syntax=javascript
 
 // Native
 const {resolve} = require('path')
 
 // Packages
 const minimist = require('minimist')
-const {spawn} = require('cross-spawn')
 const nodeVersion = require('node-version')
 const isAsyncSupported = require('is-async-supported')
 
@@ -17,7 +17,6 @@ if (!isAsyncSupported()) {
 // Ours
 const checkUpdate = require('../lib/check-update')
 const {error} = require('../lib/error')
-
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
@@ -100,10 +99,8 @@ if (index > -1) {
   cmd = aliases.get(cmd) || cmd
 }
 
-let bin = resolve(__dirname, 'now-' + cmd)
+const bin = resolve(__dirname, 'now-' + cmd)
 
 // Prepare process.argv for subcommand
-process.argv = process.argv.slice(0, 2).concat(args);
+process.argv = process.argv.slice(0, 2).concat(args)
 require(bin)
-
-// vi:syntax=javascript
