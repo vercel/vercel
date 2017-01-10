@@ -8,17 +8,24 @@ const {resolve} = require('path')
 // Packages
 const nodeVersion = require('node-version')
 const isAsyncSupported = require('is-async-supported')
+const updateNotifier = require('update-notifier')
+
+// Ours
+const {error} = require('../lib/error')
+const pkg = require('../package')
 
 if (!isAsyncSupported()) {
   require('async-to-gen/register')
 }
 
-// Ours
-const {error} = require('../lib/error')
-
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
   process.exit(1)
+}
+
+// Only check for updates in the npm version
+if (!process.pkg) {
+  updateNotifier({pkg}).notify()
 }
 
 const defaultCommand = 'deploy'

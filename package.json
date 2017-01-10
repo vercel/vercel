@@ -89,7 +89,8 @@
     "spdy": "^3.4.4",
     "split-array": "^1.0.1",
     "text-table": "^0.2.0",
-    "tmp-promise": "^1.0.3"
+    "tmp-promise": "^1.0.3",
+    "update-notifier": "^1.0.3"
   },
   "devDependencies": {
     "alpha-sort": "^2.0.0",
