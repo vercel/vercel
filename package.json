@@ -42,7 +42,6 @@
       "test/_fixtures/**"
     ],
     "rules": {
-      "import/no-unresolved": 0,
       "import/no-unassigned-import": 0,
       "import/no-dynamic-require": 0,
       "max-depth": 0,
