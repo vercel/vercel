@@ -39,7 +39,6 @@
     "space": true,
     "semicolon": false,
     "ignores": [
-      "build/**",
       "out/**",
       "test/_fixtures/**"
     ],
