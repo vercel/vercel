@@ -6,7 +6,6 @@
 const {resolve} = require('path')
 
 // Packages
-const minimist = require('minimist')
 const nodeVersion = require('node-version')
 const isAsyncSupported = require('is-async-supported')
 
@@ -15,35 +14,11 @@ if (!isAsyncSupported()) {
 }
 
 // Ours
-const checkUpdate = require('../lib/check-update')
 const {error} = require('../lib/error')
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
   process.exit(1)
-}
-
-const argv = minimist(process.argv.slice(2))
-
-// options
-const debug = argv.debug || argv.d
-
-// Disable updates by default
-let update = false
-
-// auto-update checking
-// only for the npm version, not the enclosed one
-if (!process.pkg) {
-  update = checkUpdate({debug})
-}
-
-const exit = code => {
-  if (update) {
-    update.then(() => process.exit(code))
-  }
-  // don't wait for updates more than a second
-  // when the process really wants to exit
-  setTimeout(() => process.exit(code), 1000)
 }
 
 const defaultCommand = 'deploy'
