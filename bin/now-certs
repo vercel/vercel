@@ -291,5 +291,3 @@ async function getCertIdCn(certs, idOrCn) {
 
   return thecert
 }
-
-// vi:syntax=javascript

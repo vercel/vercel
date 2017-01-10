@@ -613,5 +613,3 @@ function printLogs(host, token) {
     process.exit(0)
   })
 }
-
-// vi:syntax=javascript

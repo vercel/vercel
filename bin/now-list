@@ -151,5 +151,3 @@ async function sort(apps) {
     return depsB[0].created - depsA[0].created
   })
 }
-
-// vi:syntax=javascript

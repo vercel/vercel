@@ -200,5 +200,3 @@ function readConfirmation(record, msg) {
     }).resume()
   })
 }
-
-// vi:syntax=javascript

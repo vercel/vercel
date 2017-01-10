@@ -175,5 +175,3 @@ async function remove(token) {
 
   now.close()
 }
-
-// vi:syntax=javascript

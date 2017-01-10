@@ -296,5 +296,3 @@ function findDomain(val, list) {
     return false
   })
 }
-
-// vi:syntax=javascript

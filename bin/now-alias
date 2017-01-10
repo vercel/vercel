@@ -314,5 +314,3 @@ async function realias(alias) {
 
   await alias.set(source.url, target)
 }
-
-// vi:syntax=javascript
