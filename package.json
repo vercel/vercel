@@ -19,7 +19,7 @@
     ]
   },
   "bin": {
-    "now": "./bin/now"
+    "now": "./bin/now.js"
   },
   "ava": {
     "failFast": true,
