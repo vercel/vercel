@@ -6,7 +6,8 @@
   "main": "./lib/index",
   "license": "MIT",
   "files": [
-    "build"
+    "bin",
+    "lib"
   ],
   "scripts": {
     "dev": "gulp",
