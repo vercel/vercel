@@ -1,6 +1,6 @@
-import path from 'path'
-import test from 'ava'
-import {spawn} from 'cross-spawn'
+const path = require('path')
+const test = require('ava')
+const {spawn} = require('cross-spawn')
 
 const deployHelpMessage = '𝚫 now [options] <command | path>'
 const aliasHelpMessage = '𝚫 now alias <ls | set | rm> <deployment> <alias>'
@@ -66,7 +66,7 @@ test('"now alias --help" is the same as "now --help alias"', async t => {
  */
 function now(...args) {
   return new Promise((resolve, reject) => {
-    const command = path.resolve(__dirname, '../build/bin/now')
+    const command = path.resolve(__dirname, '../bin/now')
     const now = spawn(command, args)
 
     let stdout = ''

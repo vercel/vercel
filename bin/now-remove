@@ -1,16 +1,16 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --harmony-async-await
 
 // Packages
-import minimist from 'minimist'
-import chalk from 'chalk'
-import ms from 'ms'
-import table from 'text-table'
+const minimist = require('minimist')
+const chalk = require('chalk')
+const ms = require('ms')
+const table = require('text-table')
 
 // Ours
-import Now from '../lib'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -175,3 +175,5 @@ async function remove(token) {
 
   now.close()
 }
+
+// vi:syntax=javascript

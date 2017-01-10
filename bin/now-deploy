@@ -1,32 +1,32 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --harmony-async-await
 
 // Native
-import {resolve} from 'path'
+const {resolve} = require('path')
 
 // Packages
-import Progress from 'progress'
-import fs from 'fs-promise'
-import bytes from 'bytes'
-import chalk from 'chalk'
-import minimist from 'minimist'
-import ms from 'ms'
-import publicSuffixList from 'psl'
-import flatten from 'arr-flatten'
+const Progress = require('progress')
+const fs = require('fs-promise')
+const bytes = require('bytes')
+const chalk = require('chalk')
+const minimist = require('minimist')
+const ms = require('ms')
+const publicSuffixList = require('psl')
+const flatten = require('arr-flatten')
 
 // Ours
-import copy from '../lib/copy'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {version} from '../../package'
-import Logger from '../lib/build-logger'
-import Now from '../lib'
-import toHumanPath from '../lib/utils/to-human-path'
-import promptOptions from '../lib/utils/prompt-options'
-import {handleError, error} from '../lib/error'
-import {fromGit, isRepoPath, gitPathParts} from '../lib/git'
-import readMetaData from '../lib/read-metadata'
-import checkPath from '../lib/utils/check-path'
-import NowAlias from '../lib/alias'
+const copy = require('../lib/copy')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {version} = require('../package')
+const Logger = require('../lib/build-logger')
+const Now = require('../lib')
+const toHumanPath = require('../lib/utils/to-human-path')
+const promptOptions = require('../lib/utils/prompt-options')
+const {handleError, error} = require('../lib/error')
+const {fromGit, isRepoPath, gitPathParts} = require('../lib/git')
+const readMetaData = require('../lib/read-metadata')
+const checkPath = require('../lib/utils/check-path')
+const NowAlias = require('../lib/alias')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -613,3 +613,5 @@ function printLogs(host, token) {
     process.exit(0)
   })
 }
+
+// vi:syntax=javascript

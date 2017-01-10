@@ -1,21 +1,21 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --harmony-async-await
 
 // Native
-import path from 'path'
+const path = require('path')
 
 // Packages
-import chalk from 'chalk'
-import table from 'text-table'
-import minimist from 'minimist'
-import fs from 'fs-promise'
-import ms from 'ms'
+const chalk = require('chalk')
+const table = require('text-table')
+const minimist = require('minimist')
+const fs = require('fs-promise')
+const ms = require('ms')
 
 // Ours
-import strlen from '../lib/strlen'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
-import NowCerts from '../lib/certs'
-import login from '../lib/login'
+const strlen = require('../lib/strlen')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
+const NowCerts = require('../lib/certs')
+const login = require('../lib/login')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
@@ -291,3 +291,5 @@ async function getCertIdCn(certs, idOrCn) {
 
   return thecert
 }
+
+// vi:syntax=javascript

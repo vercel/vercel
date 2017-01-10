@@ -1,14 +1,14 @@
 // Native
-import {join, resolve} from 'path'
+const {join, resolve} = require('path')
 
 // Packages
-import test from 'ava'
-import {asc as alpha} from 'alpha-sort'
-import {readFile} from 'fs-promise'
+const test = require('ava')
+const {asc: alpha} = require('alpha-sort')
+const {readFile} = require('fs-promise')
 
 // Ours
-import {npm as getNpmFiles_, docker as getDockerFiles} from '../lib/get-files'
-import hash from '../lib/hash'
+const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
+const hash = require('../lib/hash')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')

@@ -1,18 +1,18 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --harmony-async-await
 
 // Packages
-import chalk from 'chalk'
-import minimist from 'minimist'
-import table from 'text-table'
-import ms from 'ms'
+const chalk = require('chalk')
+const minimist = require('minimist')
+const table = require('text-table')
+const ms = require('ms')
 
 // Ours
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {error} from '../lib/error'
-import toHost from '../lib/to-host'
-import strlen from '../lib/strlen'
-import NowDomains from '../lib/domains'
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {error} = require('../lib/error')
+const toHost = require('../lib/to-host')
+const strlen = require('../lib/strlen')
+const NowDomains = require('../lib/domains')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -296,3 +296,5 @@ function findDomain(val, list) {
     return false
   })
 }
+
+// vi:syntax=javascript

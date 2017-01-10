@@ -1,16 +1,22 @@
-#!/usr/bin/env node
+#!/bin/bash
+// >&/dev/null; exec node $(node -p "process.version[1] >= 7 ? '--harmony-async-await' : '--lazy'") $0 $@
 
 // Native
-import {resolve} from 'path'
+const {resolve} = require('path')
 
 // Packages
-import minimist from 'minimist'
-import {spawn} from 'cross-spawn'
-import nodeVersion from 'node-version'
+const minimist = require('minimist')
+const {spawn} = require('cross-spawn')
+const nodeVersion = require('node-version')
+const isAsyncSupported = require('is-async-supported')
+if (!isAsyncSupported()) {
+  require('async-to-gen/register')
+}
 
 // Ours
-import checkUpdate from '../lib/check-update'
-import {error} from '../lib/error'
+const checkUpdate = require('../lib/check-update')
+const {error} = require('../lib/error')
+
 
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
@@ -94,15 +100,9 @@ if (index > -1) {
 }
 
 let bin = resolve(__dirname, 'now-' + cmd)
-if (process.pkg) {
-  args.unshift('--entrypoint', bin)
-  bin = process.execPath
-}
 
-const proc = spawn(bin, args, {
-  stdio: 'inherit',
-  customFds: [0, 1, 2]
-})
+// Prepare process.argv for subcommand
+process.argv = process.argv.slice(0, 2).concat(args);
+require(bin)
 
-proc.on('close', code => exit(code))
-proc.on('error', () => exit(1))
+// vi:syntax=javascript
