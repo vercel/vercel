@@ -38,7 +38,7 @@
     "space": true,
     "semicolon": false,
     "ignores": [
-      "out/**",
+      "packed/**",
       "test/_fixtures/**"
     ],
     "rules": {
