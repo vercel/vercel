@@ -24,6 +24,7 @@ const argv = minimist(process.argv.slice(2), {
     token: 't'
   }
 })
+
 const subcommand = argv._[0]
 
 // options
