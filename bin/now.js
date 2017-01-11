@@ -11,10 +11,12 @@ const updateNotifier = require('update-notifier')
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
+// Support for keywords "async" and "await"
 require('async-to-gen/register')({
   excludes: null
 })
 
+// Throw an error if node version is too low
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
   process.exit(1)
@@ -25,6 +27,7 @@ if (!process.pkg) {
   updateNotifier({pkg}).notify()
 }
 
+// This command will be run if no other sub command is specified
 const defaultCommand = 'deploy'
 
 const commands = new Set([
@@ -82,4 +85,6 @@ const bin = resolve(__dirname, 'now-' + cmd + '.js')
 
 // Prepare process.argv for subcommand
 process.argv = process.argv.slice(0, 2).concat(args)
+
+// Load sub command
 require(bin)
