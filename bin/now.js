@@ -87,4 +87,5 @@ const bin = resolve(__dirname, 'now-' + cmd + '.js')
 process.argv = process.argv.slice(0, 2).concat(args)
 
 // Load sub command
-require(bin)
+// With custom parameter to make "pkg" happy
+require(bin, 'may-exclude')
