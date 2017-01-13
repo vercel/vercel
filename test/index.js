@@ -82,6 +82,26 @@ test('simple with main', async t => {
   t.is(base(files[2]), 'simple-main/package.json')
 })
 
+test('directory main', async t => {
+  let files = await getNpmFiles(fixture('directory-main'))
+  t.is(files.length, 3)
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'directory-main/a/index.js')
+  t.is(base(files[1]), 'directory-main/build/a.js')
+  t.is(base(files[2]), 'directory-main/package.json')
+})
+
+test('extensionless main', async t => {
+  let files = await getNpmFiles(fixture('extensionless-main'))
+  t.is(files.length, 3)
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'extensionless-main/build/a.js')
+  t.is(base(files[1]), 'extensionless-main/index.js')
+  t.is(base(files[2]), 'extensionless-main/package.json')
+})
+
 test('hashes', async t => {
   const files = await getNpmFiles(fixture('hashes'))
   const hashes = await hash(files)
