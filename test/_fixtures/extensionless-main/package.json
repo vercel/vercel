@@ -1,0 +1,8 @@
+{
+  "name": "extensionless-main",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./index",
+  "files": ["build/a.js"],
+  "dependencies": {}
+}
