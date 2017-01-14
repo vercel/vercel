@@ -81,7 +81,7 @@ function readConfirmation(matches) {
     const tbl = table(
       matches.map(depl => {
         const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
-        const url = chalk.underline(`https://${depl.url}`)
+        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
         return [depl.uid, url, time]
       }),
       {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
