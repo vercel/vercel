@@ -4,6 +4,7 @@
 const chalk = require('chalk')
 const minimist = require('minimist')
 const ms = require('ms')
+const inquirer = require('inquirer')
 
 // Ours
 const login = require('../lib/login')
@@ -105,6 +106,7 @@ if (argv.help || !subcommand) {
 async function run(token) {
   const start = new Date()
   const creditCards = new NowCreditCards(apiUrl, token, {debug})
+  const args = argv._.slice(1)
 
   switch (subcommand) {
     case 'ls':
@@ -144,6 +146,71 @@ async function run(token) {
       console.log(`> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`)
       if (text) {
         console.log(`\n${text}\n`)
+      }
+
+      break
+    }
+
+    case 'set-default': {
+      if (args.length > 1) {
+        error('Invalid number of arguments')
+        return exit(1)
+      }
+
+      const start = new Date()
+      const cards = await creditCards.ls()
+      const ANSWER_NAME = 'now-cc-set-default'
+      let cardId = args[0]
+
+      if (cardId === undefined) {
+        const choices = cards.cards.map(card => {
+          const _default = card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+          const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
+          const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
+          const str = [
+            id,
+            indent(card.name, 2),
+            indent(`${card.brand} ${number}`, 2)
+          ].join('\n')
+
+          return {
+            name: str, // Will be displayed by Inquirer
+            value: card.id, // Will be used to identify the answer
+            short: card.id // Will be displayed after the users answers
+          }
+        }).reduce((prev, curr) => prev.concat(curr, new inquirer.Separator(' ')), [new inquirer.Separator(' ')])
+
+        choices.pop() // We added an extra blank separator with the `reduce`
+        choices.push(new inquirer.Separator()) // but we actually want a `---` one
+        choices.push({
+          name: 'Abort',
+          value: undefined
+        })
+
+        const elapsed = ms(new Date() - start)
+        const message = `Selecting a new default payment card from 2 total ${chalk.gray(`[${elapsed}]`)}`
+        const answer = await inquirer.prompt({
+          name: ANSWER_NAME,
+          type: 'list',
+          message,
+          choices,
+          pageSize: 15 // Show 15 lines wihtout scrolling (~4 credit cards)
+        })
+
+        cardId = answer[ANSWER_NAME]
+      }
+
+      if (cardId) {
+        const start = new Date()
+        await creditCards.setDefault(cardId)
+
+        const card = cards.cards.find(card => card.id === cardId)
+        const elapsed = ms(new Date() - start)
+        const text = `${chalk.cyan('Success!')} ${card.brand} finishing in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+
+        console.log(text)
+      } else {
+        console.log('No changes made')
       }
 
       break
