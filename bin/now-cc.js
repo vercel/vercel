@@ -3,11 +3,14 @@
 // Packages
 const chalk = require('chalk')
 const minimist = require('minimist')
+const ms = require('ms')
 
 // Ours
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const {error} = require('../lib/error')
+const NowCreditCards = require('../lib/credit-cards')
+const indent = require('../lib/indent')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -83,7 +86,7 @@ if (argv.help || !subcommand) {
   Promise.resolve(argv.token || config.token || login(apiUrl))
   .then(async token => {
     try {
-      console.log(`logged in; token: ${token}`)
+      await run(token)
     } catch (err) {
       if (err.userError) {
         error(err.message)
@@ -97,4 +100,60 @@ if (argv.help || !subcommand) {
     error(`Authentication error – ${e.message}`)
     exit(1)
   })
+}
+
+async function run(token) {
+  const start = new Date()
+  const creditCards = new NowCreditCards(apiUrl, token, {debug})
+
+  switch (subcommand) {
+    case 'ls':
+    case 'list': {
+      const cards = await creditCards.ls()
+      const text = cards.cards.map(card => {
+        const _default = card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+        const id = `${chalk.gray('-')} ${chalk.cyan(`ID: ${card.id}`)}${_default}`
+        const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
+        let address = card.address_line1
+
+        if (card.address_line2) {
+          address += `, ${card.address_line2}.`
+        } else {
+          address += '.'
+        }
+
+        address += `\n${card.address_city}, `
+
+        if (card.address_state) {
+          address += `${card.address_state}, `
+        }
+
+        // TODO: Stripe is returning a two digit code for the country,
+        // but we want the full country name
+        address += `${card.address_zip}. ${card.address_country}`
+
+        return [
+          id,
+          indent(card.name, 2),
+          indent(`${card.brand} ${number}`, 2),
+          indent(address, 2)
+        ].join('\n')
+      }).join('\n\n')
+
+      const elapsed = ms(new Date() - start)
+      console.log(`> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`)
+      if (text) {
+        console.log(`\n${text}\n`)
+      }
+
+      break
+    }
+
+    default:
+      error('Please specify a valid subcommand: ls | add | rm | set-default')
+      help()
+      exit(1)
+  }
+
+  creditCards.close()
 }
