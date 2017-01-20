@@ -188,7 +188,7 @@ async function run(token) {
         })
 
         const elapsed = ms(new Date() - start)
-        const message = `Selecting a new default payment card from 2 total ${chalk.gray(`[${elapsed}]`)}`
+        const message = `Selecting a new default payment card from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`
         const answer = await inquirer.prompt({
           name: ANSWER_NAME,
           type: 'list',
