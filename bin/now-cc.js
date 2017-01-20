@@ -103,6 +103,26 @@ if (argv.help || !subcommand) {
   })
 }
 
+// Builds a `choices` object that can be passesd to inquirer.prompt()
+function buildInquirerChoices(cards) {
+  return cards.cards.map(card => {
+    const _default = card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+    const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
+    const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
+    const str = [
+      id,
+      indent(card.name, 2),
+      indent(`${card.brand} ${number}`, 2)
+    ].join('\n')
+
+    return {
+      name: str, // Will be displayed by Inquirer
+      value: card.id, // Will be used to identify the answer
+      short: card.id // Will be displayed after the users answers
+    }
+  }).reduce((prev, curr) => prev.concat(new inquirer.Separator(' '), curr), [])
+}
+
 async function run(token) {
   const start = new Date()
   const creditCards = new NowCreditCards(apiUrl, token, {debug})
@@ -163,25 +183,8 @@ async function run(token) {
       let cardId = args[0]
 
       if (cardId === undefined) {
-        const choices = cards.cards.map(card => {
-          const _default = card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
-          const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
-          const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
-          const str = [
-            id,
-            indent(card.name, 2),
-            indent(`${card.brand} ${number}`, 2)
-          ].join('\n')
-
-          return {
-            name: str, // Will be displayed by Inquirer
-            value: card.id, // Will be used to identify the answer
-            short: card.id // Will be displayed after the users answers
-          }
-        }).reduce((prev, curr) => prev.concat(curr, new inquirer.Separator(' ')), [new inquirer.Separator(' ')])
-
-        choices.pop() // We added an extra blank separator with the `reduce`
-        choices.push(new inquirer.Separator()) // but we actually want a `---` one
+        const choices = buildInquirerChoices(cards)
+        choices.push(new inquirer.Separator())
         choices.push({
           name: 'Abort',
           value: undefined
@@ -200,14 +203,87 @@ async function run(token) {
         cardId = answer[ANSWER_NAME]
       }
 
+      // TODO: check if the provided cardId (in case the user
+      // typed `now cc set-default <some-id>`) is valid
       if (cardId) {
         const start = new Date()
         await creditCards.setDefault(cardId)
 
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
-        const text = `${chalk.cyan('Success!')} ${card.brand} finishing in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+        const text = `${chalk.cyan('Success!')} ${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
 
+        console.log(text)
+      } else {
+        console.log('No changes made')
+      }
+
+      break
+    }
+
+    case 'rm':
+    case 'remove': {
+      if (args.length > 1) {
+        error('Invalid number of arguments')
+        return exit(1)
+      }
+
+      const start = new Date()
+      const cards = await creditCards.ls()
+      const ANSWER_NAME = 'now-cc-rm'
+      let cardId = args[0]
+
+      if (cardId === undefined) {
+        const choices = buildInquirerChoices(cards)
+        const blankSeparator = choices.shift()
+
+        choices.unshift(new inquirer.Separator())
+        choices.unshift({
+          name: 'Abort',
+          value: undefined
+        })
+        choices.unshift(blankSeparator)
+
+        const elapsed = ms(new Date() - start)
+        const message = `Selecting a card to ${chalk.underline('remove')} from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`
+        const answer = await inquirer.prompt({
+          name: ANSWER_NAME,
+          type: 'list',
+          message,
+          choices,
+          pageSize: 15 // Show 15 lines without scrolling (~4 credit cards)
+        })
+
+        cardId = answer[ANSWER_NAME]
+      }
+
+      // TODO: check if the provided cardId (in case the user
+      // typed `now cc rm <some-id>`) is valid
+      if (cardId) {
+        const start = new Date()
+        await creditCards.rm(cardId)
+
+        const deletedCard = cards.cards.find(card => card.id === cardId)
+        const remainingCards = cards.cards.filter(card => card.id !== cardId)
+
+        let text = `${chalk.cyan('Success!')} ${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
+        //  ${chalk.gray(`[${elapsed}]`)}
+
+        if (cardId === cards.defaultCardId) {
+          if (remainingCards.length === 0) {
+            // The user deleted the last card in their account
+            text += `\n${chalk.yellow('Warning!')} You have no default card`
+          } else {
+            // We can't guess the current default card – let's ask the API
+            const cards = await creditCards.ls()
+            const newDefaultCard = cards.cards.find(card => card.id === cards.defaultCardId)
+
+            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default`
+          }
+        }
+
+        const elapsed = ms(new Date() - start)
+        text += ` ${chalk.gray(`[${elapsed}]`)}`
         console.log(text)
       } else {
         console.log('No changes made')
