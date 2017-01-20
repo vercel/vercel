@@ -179,6 +179,12 @@ async function run(token) {
 
       const start = new Date()
       const cards = await creditCards.ls()
+
+      if (cards.cards.length === 0) {
+        error('You have no credit cards to choose from')
+        return exit(0)
+      }
+
       const ANSWER_NAME = 'now-cc-set-default'
       let cardId = args[0]
 
@@ -230,6 +236,12 @@ async function run(token) {
 
       const start = new Date()
       const cards = await creditCards.ls()
+
+      if (cards.cards.length === 0) {
+        error('You have no credit cards to choose from to delete')
+        return exit(0)
+      }
+
       const ANSWER_NAME = 'now-cc-rm'
       let cardId = args[0]
 
