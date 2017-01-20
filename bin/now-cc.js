@@ -194,7 +194,7 @@ async function run(token) {
           type: 'list',
           message,
           choices,
-          pageSize: 15 // Show 15 lines wihtout scrolling (~4 credit cards)
+          pageSize: 15 // Show 15 lines without scrolling (~4 credit cards)
         })
 
         cardId = answer[ANSWER_NAME]
