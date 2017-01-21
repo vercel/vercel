@@ -1,34 +1,38 @@
 #!/usr/bin/env node
 
 // Native
-import {resolve} from 'path'
+const {resolve} = require('path')
 
 // Packages
-import minimist from 'minimist'
-import {spawn} from 'cross-spawn'
+const nodeVersion = require('node-version')
+const updateNotifier = require('update-notifier')
 
 // Ours
-import checkUpdate from '../lib/check-update'
+const {error} = require('../lib/error')
+const pkg = require('../package')
 
-const argv = minimist(process.argv.slice(2))
+// Support for keywords "async" and "await"
+require('async-to-gen/register')({
+  excludes: null
+})
 
-// options
-const debug = argv.debug || argv.d
-
-// auto-update checking
-const update = checkUpdate({debug})
-
-const exit = code => {
-  update.then(() => process.exit(code))
-  // don't wait for updates more than a second
-  // when the process really wants to exit
-  setTimeout(() => process.exit(code), 1000)
+// Throw an error if node version is too low
+if (nodeVersion.major < 6) {
+  error('Now requires at least version 6 of Node. Please upgrade!')
+  process.exit(1)
 }
 
+// Only check for updates in the npm version
+if (!process.pkg) {
+  updateNotifier({pkg}).notify()
+}
+
+// This command will be run if no other sub command is specified
 const defaultCommand = 'deploy'
 
 const commands = new Set([
   defaultCommand,
+  'help',
   'list',
   'ls',
   'rm',
@@ -55,37 +59,33 @@ const aliases = new Map([
   ['secret', 'secrets']
 ])
 
-let cmd = argv._[0]
-let args = []
+let cmd = defaultCommand
+const args = process.argv.slice(2)
+const index = args.findIndex(a => commands.has(a))
 
-if (cmd === 'help') {
-  cmd = argv._[1]
+if (index > -1) {
+  cmd = args[index]
+  args.splice(index, 1)
 
-  if (!commands.has(cmd)) {
-    cmd = defaultCommand
+  if (cmd === 'help') {
+    if (index < args.length && commands.has(args[index])) {
+      cmd = args[index]
+      args.splice(index, 1)
+    } else {
+      cmd = defaultCommand
+    }
+
+    args.unshift('--help')
   }
 
-  args.push('--help')
-}
-
-if (commands.has(cmd)) {
   cmd = aliases.get(cmd) || cmd
-  args = args.concat(process.argv.slice(3))
-} else {
-  cmd = defaultCommand
-  args = args.concat(process.argv.slice(2))
 }
 
-let bin = resolve(__dirname, 'now-' + cmd)
-if (process.pkg) {
-  args.unshift('--entrypoint', bin)
-  bin = process.execPath
-}
+const bin = resolve(__dirname, 'now-' + cmd + '.js')
 
-const proc = spawn(bin, args, {
-  stdio: 'inherit',
-  customFds: [0, 1, 2]
-})
+// Prepare process.argv for subcommand
+process.argv = process.argv.slice(0, 2).concat(args)
 
-proc.on('close', code => exit(code))
-proc.on('error', () => exit(1))
+// Load sub command
+// With custom parameter to make "pkg" happy
+require(bin, 'may-exclude')

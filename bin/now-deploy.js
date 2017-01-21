@@ -1,38 +1,46 @@
 #!/usr/bin/env node
 
 // Native
-import {resolve} from 'path'
+const {resolve} = require('path')
 
 // Packages
-import Progress from 'progress'
-import {stat} from 'fs-promise'
-import bytes from 'bytes'
-import chalk from 'chalk'
-import minimist from 'minimist'
-import ms from 'ms'
+const Progress = require('progress')
+const fs = require('fs-promise')
+const bytes = require('bytes')
+const chalk = require('chalk')
+const minimist = require('minimist')
+const ms = require('ms')
+const publicSuffixList = require('psl')
+const flatten = require('arr-flatten')
 
 // Ours
-import copy from '../lib/copy'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {version} from '../../package'
-import Logger from '../lib/build-logger'
-import Now from '../lib'
-import toHumanPath from '../lib/utils/to-human-path'
-import promptOptions from '../lib/utils/prompt-options'
-import {handleError, error} from '../lib/error'
-import readMetaData from '../lib/read-metadata'
+const copy = require('../lib/copy')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {version} = require('../package')
+const Logger = require('../lib/build-logger')
+const Now = require('../lib')
+const toHumanPath = require('../lib/utils/to-human-path')
+const promptOptions = require('../lib/utils/prompt-options')
+const {handleError, error} = require('../lib/error')
+const {fromGit, isRepoPath, gitPathParts} = require('../lib/git')
+const readMetaData = require('../lib/read-metadata')
+const checkPath = require('../lib/utils/check-path')
+const NowAlias = require('../lib/alias')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
     'config',
-    'token'
+    'token',
+    'name',
+    'alias'
   ],
   boolean: [
     'help',
     'version',
     'debug',
     'force',
+    'links',
     'login',
     'no-clipboard',
     'forward-npm',
@@ -49,10 +57,13 @@ const argv = minimist(process.argv.slice(2), {
     force: 'f',
     token: 't',
     forceSync: 'F',
+    links: 'l',
     login: 'L',
     public: 'p',
     'no-clipboard': 'C',
-    'forward-npm': 'N'
+    'forward-npm': 'N',
+    name: 'n',
+    alias: 'a'
   }
 })
 
@@ -69,21 +80,25 @@ const help = () => {
     domains      [name]       Manages your domain names
     certs        [cmd]        Manages your SSL certificates
     secrets      [name]       Manages your secret environment variables
+    dns          [name]       Manages your DNS records
     help         [cmd]        Displays complete help for [cmd]
 
   ${chalk.dim('Options:')}
 
     -h, --help                Output usage information
     -v, --version             Output the version number
+    -n, --name                Set the name of the deployment
     -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    Config file
     -d, --debug               Debug mode [off]
     -f, --force               Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   Login token
     -L, --login               Configure login
+    -l, --links               Copy symlinks without resolving their target
     -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private NPM modules
+    -a, --alias               Reassign an existing alias to the deployment
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -101,19 +116,15 @@ const help = () => {
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Lists all deployments with their IDs
+  ${chalk.gray('–')} Deploys a GitHub repository
 
-    ${chalk.cyan('$ now ls')}
+    ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray('–')} Associates deployment ${chalk.dim('`deploymentId`')} with ${chalk.dim('`custom-domain.com`')}
+  ${chalk.gray('–')} Deploys a GitHub, GitLab or Bitbucket repo using its URL
 
-    ${chalk.cyan('$ now alias deploymentId custom-domain.com')}
+    ${chalk.cyan('$ now https://gitlab.com/user/repo')}
 
-  ${chalk.gray('–')} Stores a secret
-
-    ${chalk.cyan('$ now secret add mysql-password 123456')}
-
-  ${chalk.gray('–')} Deploys with ENV vars (using the ${chalk.dim('`mysql-password`')} secret stored above)
+  ${chalk.gray('–')} Deploys with ENV vars
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
@@ -133,6 +144,9 @@ if (path) {
   path = process.cwd()
 }
 
+// If the current deployment is a repo
+const gitRepo = {}
+
 const exit = code => {
   // we give stdout some time to flush out
   // because there's a node bug where
@@ -142,19 +156,30 @@ const exit = code => {
 }
 
 // options
+let forceNew = argv.force
 const debug = argv.debug
 const clipboard = !argv['no-clipboard']
 const forwardNpm = argv['forward-npm']
-const forceNew = argv.force
 const forceSync = argv.forceSync
 const shouldLogin = argv.login
+const followSymlinks = !argv.links
 const wantsPublic = argv.public
+const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
+const autoAliases = argv.alias ? flatten([argv.alias]) : []
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
+}
+
+// Create a new deployment if user changed
+// the name or made _src public.
+// This should just work fine because it doesn't
+// force a new sync, it just forces a new deployment.
+if (deploymentName || wantsPublic) {
+  forceNew = true
 }
 
 const config = cfg.read()
@@ -192,16 +217,62 @@ if (argv.h || argv.help) {
 
 async function sync(token) {
   const start = Date.now()
+  const rawPath = argv._[0]
 
-  if (!quiet) {
-    console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+  const stopDeployment = msg => {
+    error(msg)
+    process.exit(1)
   }
 
+  const isValidRepo = isRepoPath(rawPath)
+
   try {
-    await stat(path)
+    await fs.stat(path)
   } catch (err) {
-    error(`Could not read directory ${chalk.bold(path)}`)
-    process.exit(1)
+    let repo
+
+    if (isValidRepo && isValidRepo !== 'no-valid-url') {
+      const gitParts = gitPathParts(rawPath)
+      Object.assign(gitRepo, gitParts)
+
+      const searchMessage = setTimeout(() => {
+        console.log(`> Didn't find directory. Searching on ${gitRepo.type}...`)
+      }, 500)
+
+      try {
+        repo = await fromGit(rawPath, debug)
+      } catch (err) {}
+
+      clearTimeout(searchMessage)
+    }
+
+    if (repo) {
+      // Tell now which directory to deploy
+      path = repo.path
+
+      // Set global variable for deleting tmp dir later
+      // once the deployment has finished
+      Object.assign(gitRepo, repo)
+    } else if (isValidRepo === 'no-valid-url') {
+      stopDeployment(`This URL is neither a valid repository from GitHub, nor from GitLab.`)
+    } else if (isValidRepo) {
+      const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+      stopDeployment(`There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`)
+    } else {
+      stopDeployment(`Could not read directory ${chalk.bold(path)}`)
+    }
+  }
+
+  // Make sure that directory is not too big
+  await checkPath(path)
+
+  if (!quiet) {
+    if (gitRepo.main) {
+      const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
+      console.log(`> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` + gitRef)
+    } else {
+      console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`)
+    }
   }
 
   let deploymentType
@@ -227,7 +298,7 @@ async function sync(token) {
     isStatic = true
   } else {
     try {
-      await stat(resolve(path, 'package.json'))
+      await fs.stat(resolve(path, 'package.json'))
     } catch (err) {
       hasPackage = true
     }
@@ -235,7 +306,7 @@ async function sync(token) {
     [hasPackage, hasDockerfile] = await Promise.all([
       await (async () => {
         try {
-          await stat(resolve(path, 'package.json'))
+          await fs.stat(resolve(path, 'package.json'))
         } catch (err) {
           return false
         }
@@ -243,7 +314,7 @@ async function sync(token) {
       })(),
       await (async () => {
         try {
-          await stat(resolve(path, 'Dockerfile'))
+          await fs.stat(resolve(path, 'Dockerfile'))
         } catch (err) {
           return false
         }
@@ -273,19 +344,19 @@ async function sync(token) {
       }
     } else if (hasPackage) {
       if (debug) {
-        console.log('[debug] `package.json` found, assuming `deploymentType` = `npm`')
+        console.log('> [debug] `package.json` found, assuming `deploymentType` = `npm`')
       }
 
       deploymentType = 'npm'
     } else if (hasDockerfile) {
       if (debug) {
-        console.log('[debug] `Dockerfile` found, assuming `deploymentType` = `docker`')
+        console.log('> [debug] `Dockerfile` found, assuming `deploymentType` = `docker`')
       }
 
       deploymentType = 'docker'
     } else {
       if (debug) {
-        console.log('[debug] No manifest files found, assuming static deployment')
+        console.log('> [debug] No manifest files found, assuming static deployment')
       }
 
       isStatic = true
@@ -294,6 +365,7 @@ async function sync(token) {
 
   const {pkg: {now: pkgConfig = {}} = {}} = await readMetaData(path, {
     deploymentType,
+    deploymentName,
     isStatic,
     quiet: true
   })
@@ -323,6 +395,7 @@ async function sync(token) {
       error('Env key and value missing')
       return process.exit(1)
     }
+
     const [key, ...rest] = kv.split('=')
     let val
 
@@ -344,7 +417,7 @@ async function sync(token) {
       if ((key in process.env)) {
         console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
         // escape value if it begins with @
-        val = process.env[key].replace(/^\@/, '\\@')
+        val = process.env[key].replace(/^@/, '\\@')
       } else {
         error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`)
         return process.exit(1)
@@ -390,6 +463,8 @@ async function sync(token) {
     await now.create(path, {
       env,
       deploymentType,
+      deploymentName,
+      followSymlinks,
       forceNew,
       forceSync,
       forwardNpm: alwaysForwardNpm || forwardNpm,
@@ -437,7 +512,7 @@ async function sync(token) {
     now.close()
 
     // show build logs
-    printLogs(now.host)
+    printLogs(now.host, token)
   }
 
   if (now.syncAmount) {
@@ -474,17 +549,67 @@ async function sync(token) {
     now.close()
 
     // show build logs
-    printLogs(now.host)
+    printLogs(now.host, token)
   }
 }
 
-function printLogs(host) {
+const assignAlias = async (autoAlias, token, deployment) => {
+  const type = publicSuffixList.isValid(autoAlias) ? 'alias' : 'uid'
+
+  const aliases = new NowAlias(apiUrl, token, {debug})
+  const list = await aliases.ls()
+
+  let related
+
+  // Check if alias even exists
+  for (const alias of list) {
+    if (alias[type] === autoAlias) {
+      related = alias
+      break
+    }
+  }
+
+  // If alias doesn't exist
+  if (!related) {
+    // Check if the uid was actually an alias
+    if (type === 'uid') {
+      return assignAlias(`${autoAlias}.now.sh`, token, deployment)
+    }
+
+    // If not, throw an error
+    const withID = type === 'uid' ? 'with ID ' : ''
+    error(`Alias ${withID}"${autoAlias}" doesn't exist`)
+    return
+  }
+
+  console.log(`> Assigning alias ${chalk.bold.underline(related.alias)} to deployment...`)
+
+  // Assign alias
+  await aliases.set(String(deployment), String(related.alias))
+}
+
+function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
-  logger.on('close', () => {
+
+  logger.on('close', async () => {
+    for (const autoAlias of autoAliases) {
+      await assignAlias(autoAlias, token, host)
+    }
+
     if (!quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     }
+
+    if (gitRepo && gitRepo.cleanup) {
+      // Delete temporary directory that contains repository
+      gitRepo.cleanup()
+
+      if (debug) {
+        console.log(`> [debug] Removed temporary repo directory`)
+      }
+    }
+
     process.exit(0)
   })
 }

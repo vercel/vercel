@@ -1,25 +1,26 @@
 #!/usr/bin/env node
 
 // Packages
-import minimist from 'minimist'
-import chalk from 'chalk'
-import ms from 'ms'
-import table from 'text-table'
+const minimist = require('minimist')
+const chalk = require('chalk')
+const ms = require('ms')
+const table = require('text-table')
 
 // Ours
-import Now from '../lib'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'hard'],
+  boolean: ['help', 'debug', 'hard', 'yes'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
-    token: 't'
+    token: 't',
+    yes: 'y'
   }
 })
 
@@ -36,6 +37,7 @@ const help = () => {
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -y, --yes               Skip confirmation
 
   ${chalk.dim('Examples:')}
 
@@ -64,6 +66,7 @@ if (argv.help || ids.length === 0) {
 const debug = argv.debug
 const apiUrl = argv.url || 'https://api.zeit.co'
 const hard = argv.hard || false
+const skipConfirmation = argv.yes || false
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -78,7 +81,7 @@ function readConfirmation(matches) {
     const tbl = table(
       matches.map(depl => {
         const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
-        const url = chalk.underline(`https://${depl.url}`)
+        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
         return [depl.uid, url, time]
       }),
       {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
@@ -94,7 +97,7 @@ function readConfirmation(matches) {
       }
     }
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()
@@ -125,7 +128,7 @@ async function remove(token) {
   const matches = deployments.filter(d => {
     return ids.find(id => {
       // `url` should match the hostname of the deployment
-      let u = id.replace(/^https\:\/\//i, '')
+      let u = id.replace(/^https:\/\//i, '')
 
       if (u.indexOf('.') === -1) {
         // `.now.sh` domain is implied if just the subdomain is given
@@ -147,10 +150,13 @@ async function remove(token) {
   }
 
   try {
-    const confirmation = (await readConfirmation(matches)).toLowerCase()
-    if (confirmation !== 'y' && confirmation !== 'yes') {
-      console.log('\n> Aborted')
-      process.exit(0)
+    if (!skipConfirmation) {
+      const confirmation = (await readConfirmation(matches)).toLowerCase()
+
+      if (confirmation !== 'y' && confirmation !== 'yes') {
+        console.log('\n> Aborted')
+        process.exit(0)
+      }
     }
 
     const start = new Date()

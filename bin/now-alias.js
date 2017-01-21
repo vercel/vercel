@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
 // Packages
-import chalk from 'chalk'
-import minimist from 'minimist'
-import table from 'text-table'
-import ms from 'ms'
+const chalk = require('chalk')
+const minimist = require('minimist')
+const table = require('text-table')
+const ms = require('ms')
 
 // Ours
-import strlen from '../lib/strlen'
-import NowAlias from '../lib/alias'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {error} from '../lib/error'
-import toHost from '../lib/to-host'
-import readMetaData from '../lib/read-metadata'
+const strlen = require('../lib/strlen')
+const NowAlias = require('../lib/alias')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {error} = require('../lib/error')
+const toHost = require('../lib/to-host')
+const readMetaData = require('../lib/read-metadata')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -25,6 +25,7 @@ const argv = minimist(process.argv.slice(2), {
     token: 't'
   }
 })
+
 const subcommand = argv._[0]
 
 // options
@@ -120,8 +121,8 @@ async function run(token) {
   const args = argv._.slice(1)
 
   switch (subcommand) {
-    case 'list':
     case 'ls':
+    case 'list': {
       if (args.length !== 0) {
         error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
         return exit(1)
@@ -160,9 +161,9 @@ async function run(token) {
       }
 
       break
-
-    case 'remove':
+    }
     case 'rm':
+    case 'remove': {
       const _target = String(args[0])
       if (!_target) {
         const err = new Error('No alias id specified')
@@ -201,17 +202,17 @@ async function run(token) {
       }
 
       break
-
+    }
     case 'add':
-    case 'set':
+    case 'set': {
       if (args.length !== 2) {
         error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`)
         return exit(1)
       }
       await alias.set(String(args[0]), String(args[1]))
       break
-
-    default:
+    }
+    default: {
       if (argv._.length === 0) {
         await realias(alias)
         break
@@ -228,6 +229,7 @@ async function run(token) {
         help()
         exit(1)
       }
+    }
   }
 
   alias.close()
@@ -247,7 +249,7 @@ async function readConfirmation(alias, _alias) {
 
     process.stdout.write('> The following alias will be removed permanently\n')
     process.stdout.write('  ' + tbl + '\n')
-    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()

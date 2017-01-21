@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 // Packages
-import chalk from 'chalk'
-import minimist from 'minimist'
-import ms from 'ms'
-import table from 'text-table'
+const chalk = require('chalk')
+const minimist = require('minimist')
+const ms = require('ms')
+const table = require('text-table')
 
 // Ours
-import * as cfg from '../lib/cfg'
-import DomainRecords from '../lib/domain-records'
-import indent from '../lib/indent'
-import login from '../lib/login'
-import strlen from '../lib/strlen'
-import {handleError, error} from '../lib/error'
+const cfg = require('../lib/cfg')
+const DomainRecords = require('../lib/domain-records')
+const indent = require('../lib/indent')
+const login = require('../lib/login')
+const strlen = require('../lib/strlen')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config'],
@@ -24,13 +24,14 @@ const argv = minimist(process.argv.slice(2), {
     token: 't'
   }
 })
+
 const subcommand = argv._[0]
 
 // options
 const help = () => {
   console.log(`
   ${chalk.bold('𝚫 now dns ls')} [domain]
-  ${chalk.bold('𝚫 now dns add')} <domain> <name> <A | AAAA | ALIAS | CNAME | MX> <value> [mx_priority]
+  ${chalk.bold('𝚫 now dns add')} <domain> <name> <A | AAAA | ALIAS | CNAME | MX | TXT> <value> [mx_priority]
   ${chalk.bold('𝚫 now dns rm')} <id>
 
   ${chalk.dim('Options:')}
@@ -192,7 +193,7 @@ function readConfirmation(record, msg) {
     process.stdout.write(`> ${msg}`)
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()

@@ -1,14 +1,14 @@
 // Native
-import {join, resolve} from 'path'
+const {join, resolve} = require('path')
 
 // Packages
-import test from 'ava'
-import {asc as alpha} from 'alpha-sort'
-import {readFile} from 'fs-promise'
+const test = require('ava')
+const {asc: alpha} = require('alpha-sort')
+const {readFile} = require('fs-promise')
 
 // Ours
-import {npm as getNpmFiles_, docker as getDockerFiles} from '../lib/get-files'
-import hash from '../lib/hash'
+const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
+const hash = require('../lib/hash')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
@@ -41,6 +41,24 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
   t.is(base(files[0]), 'files-in-package-ignore/build/a/b/c/d.js')
   t.is(base(files[1]), 'files-in-package-ignore/build/a/e.js')
   t.is(base(files[2]), 'files-in-package-ignore/package.json')
+})
+
+test('`files` overrides `.gitignore`', async t => {
+  let files = await getNpmFiles(fixture('files-overrides-gitignore'))
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'files-overrides-gitignore/package.json')
+  t.is(base(files[1]), 'files-overrides-gitignore/test.js')
+  t.is(base(files[2]), 'files-overrides-gitignore/test.json')
+})
+
+test('`now.files` overrides `.npmignore`', async t => {
+  let files = await getNpmFiles(fixture('now-files-overrides-npmignore'))
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'now-files-overrides-npmignore/package.json')
+  t.is(base(files[1]), 'now-files-overrides-npmignore/test.js')
+  t.is(base(files[2]), 'now-files-overrides-npmignore/test.json')
 })
 
 test('simple', async t => {

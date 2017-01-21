@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
 // Packages
-import fs from 'fs-promise'
-import minimist from 'minimist'
-import chalk from 'chalk'
-import table from 'text-table'
-import ms from 'ms'
+const fs = require('fs-promise')
+const minimist = require('minimist')
+const chalk = require('chalk')
+const table = require('text-table')
+const ms = require('ms')
 
 // Ours
-import strlen from '../lib/strlen'
-import indent from '../lib/indent'
-import Now from '../lib'
-import login from '../lib/login'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
+const strlen = require('../lib/strlen')
+const indent = require('../lib/indent')
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -108,7 +108,7 @@ async function list(token) {
 
   const text = sorted.map(([name, deps]) => {
     const t = table(deps.map(({uid, url, created}) => {
-      const _url = chalk.underline(`https://${url}`)
+      const _url = url ? chalk.underline(`https://${url}`) : 'incomplete'
       const time = chalk.gray(ms(current - created) + ' ago')
       return [uid, _url, time]
     }), {align: ['l', 'r', 'l'], hsep: ' '.repeat(6), stringLength: strlen})

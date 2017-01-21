@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
 // Native
-import path from 'path'
+const path = require('path')
 
 // Packages
-import chalk from 'chalk'
-import table from 'text-table'
-import minimist from 'minimist'
-import fs from 'fs-promise'
-import ms from 'ms'
+const chalk = require('chalk')
+const table = require('text-table')
+const minimist = require('minimist')
+const fs = require('fs-promise')
+const ms = require('ms')
 
 // Ours
-import strlen from '../lib/strlen'
-import * as cfg from '../lib/cfg'
-import {handleError, error} from '../lib/error'
-import NowCerts from '../lib/certs'
-import login from '../lib/login'
+const strlen = require('../lib/strlen')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
+const NowCerts = require('../lib/certs')
+const login = require('../lib/login')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
@@ -108,7 +108,7 @@ if (argv.help || !subcommand) {
 
 function formatExpirationDate(date) {
   const diff = date - Date.now()
-  return diff < 0 ? chalk.gray(ms(new Date(-diff)) + ' ago') : chalk.gray('in ' + ms(new Date(diff)))
+  return diff < 0 ? chalk.gray(ms(-diff) + ' ago') : chalk.gray('in ' + ms(diff))
 }
 
 async function run(token) {
@@ -132,7 +132,7 @@ async function run(token) {
       list.sort((a, b) => {
         return a.cn.localeCompare(b.cn)
       })
-      const header = [['', 'id', 'cn', 'created', 'expiration'].map(s => chalk.dim(s))]
+      const header = [['', 'id', 'cn', 'created', 'expiration', 'auto-renew'].map(s => chalk.dim(s))]
       const out = table(header.concat(list.map(cert => {
         const cn = chalk.bold(cert.cn)
         const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago')
@@ -142,7 +142,8 @@ async function run(token) {
           cert.uid ? cert.uid : 'unknown',
           cn,
           time,
-          expiration
+          expiration,
+          cert.autoRenew ? 'yes' : 'no'
         ]
       })), {align: ['l', 'r', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
 
@@ -171,6 +172,10 @@ async function run(token) {
       cert = await certs.put(cn, crt, key, ca)
     } else { // Issue a standard certificate
       cert = await certs.create(cn)
+    }
+    if (!cert) {
+      // Cert is undefined and "Cert is already issued" has been printed to stdout
+      return exit(1)
     }
     const elapsed = ms(new Date() - start)
     console.log(`${chalk.cyan('> Success!')} Certificate entry ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
@@ -260,7 +265,7 @@ function readConfirmation(cert, msg) {
     process.stdout.write(`> ${msg}`)
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[yN] ')}`)
+    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin.on('data', d => {
       process.stdin.pause()
