@@ -87,6 +87,7 @@ test('hashes', async t => {
   const hashes = await hash(files)
   t.is(hashes.size, 3)
   const many = new Set(hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names)
+  t.is(many.size, 2)
   t.is(many.has(prefix + 'hashes/dei.png'), true)
   t.is(many.has(prefix + 'hashes/duplicate/dei.png'), true)
   t.is(hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0], prefix + 'hashes/index.js')
