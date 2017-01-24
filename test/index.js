@@ -4,7 +4,6 @@ const {join, resolve} = require('path')
 // Packages
 const test = require('ava')
 const {asc: alpha} = require('alpha-sort')
-const {readFile} = require('fs-promise')
 
 // Ours
 const hash = require('../lib/hash')
