@@ -165,3 +165,11 @@ test('prefix regression', async t => {
   t.is(base(files[0]), 'prefix-regression/package.json')
   t.is(base(files[1]), 'prefix-regression/woot.js')
 })
+
+test.only('support `now.json` files', async t => {
+  let files = await getNpmFiles(fixture('now-json'))
+  files = files.sort(alpha)
+  t.is(files.length, 2)
+  t.is(base(files[0]), 'now-json/b.js')
+  t.is(base(files[1]), 'now-json/package.json')
+})
