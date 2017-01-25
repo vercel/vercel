@@ -301,7 +301,7 @@ async function realias(alias) {
     quiet: true // `quiet`
   })
 
-  const target = nowConfig.alias
+  const target = nowConfig && nowConfig.alias
 
   // the user never intended to support aliases from the package
   if (!target) {

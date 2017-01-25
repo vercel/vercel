@@ -373,7 +373,7 @@ async function sync(token) {
   const now = new Now(apiUrl, token, {debug})
 
   // Merge `now.env` from package.json with `-e` arguments.
-  const pkgEnv = nowConfig.env
+  const pkgEnv = nowConfig && nowConfig.env
   const envs = [
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
     ...[].concat(argv.env || [])
