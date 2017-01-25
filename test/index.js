@@ -189,12 +189,12 @@ test('support `now.json` files with Dockerfile', async t => {
 })
 
 test('throws when both `now.json` and `package.json:now` exist', async t => {
-  let err
+  let e
   try {
     await readMetadata(fixture('now-json-throws'), {quiet: true, strict: false})
-  } catch (e) {
-    err = e
+  } catch (err) {
+    e = err
   }
-  t.is(err.name, 'Error')
-  t.pass(/refusing to proceed/i.test(err.message))
+  t.is(e.name, 'Error')
+  t.pass(/refusing to proceed/i.test(e.message))
 })
