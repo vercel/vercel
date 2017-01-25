@@ -196,5 +196,6 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
     e = err
   }
   t.is(e.name, 'Error')
-  t.pass(/refusing to proceed/i.test(e.message))
+  t.is(e.userError, true)
+  t.pass(/please ensure there\'s a single source of configuration/i.test(e.message))
 })
