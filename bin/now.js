@@ -13,6 +13,7 @@ const pkg = require('../package')
 
 // Support for keywords "async" and "await"
 require('async-to-gen/register')({
+  includes: /.*now(-cli)?\/(lib|bin).*/,
   excludes: null
 })
 
