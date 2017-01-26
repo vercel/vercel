@@ -296,13 +296,12 @@ function findAlias(alias, list) {
 
 async function realias(alias) {
   const path = process.cwd()
-  const {pkg, name} = await readMetaData(path, {
+  const {nowConfig, name} = await readMetaData(path, {
     deploymentType: 'npm', // hard coding settings…
     quiet: true // `quiet`
   })
 
-  const pkgConfig = pkg ? pkg.now || {} : {}
-  const target = pkgConfig.alias
+  const target = nowConfig && nowConfig.alias
 
   // the user never intended to support aliases from the package
   if (!target) {

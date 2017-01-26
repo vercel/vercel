@@ -4,25 +4,20 @@ const {join, resolve} = require('path')
 // Packages
 const test = require('ava')
 const {asc: alpha} = require('alpha-sort')
-const {readFile} = require('fs-promise')
 
 // Ours
-const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
 const hash = require('../lib/hash')
+const readMetadata = require('../lib/read-metadata')
+const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./test/_fixtures/${name}`)
 
-const readJSON = async file => {
-  const data = await readFile(file)
-  return JSON.parse(data)
-}
-
 // overload to force debugging
 const getNpmFiles = async dir => {
-  const pkg = await readJSON(resolve(dir, 'package.json'))
-  return getNpmFiles_(dir, pkg)
+  const {pkg, nowConfig, hasNowJson} = await readMetadata(dir, {quiet: true, strict: false})
+  return getNpmFiles_(dir, pkg, nowConfig, {hasNowJson})
 }
 
 test('`files`', async t => {
@@ -169,4 +164,38 @@ test('prefix regression', async t => {
   t.is(files.length, 2)
   t.is(base(files[0]), 'prefix-regression/package.json')
   t.is(base(files[1]), 'prefix-regression/woot.js')
+})
+
+test('support `now.json` files with package.json', async t => {
+  let files = await getNpmFiles(fixture('now-json'))
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'now-json/b.js')
+  t.is(base(files[1]), 'now-json/now.json')
+  t.is(base(files[2]), 'now-json/package.json')
+})
+
+test('support `now.json` files with Dockerfile', async t => {
+  const f = fixture('now-json-docker')
+  const {deploymentType, nowConfig, hasNowJson} = await readMetadata(f, {quiet: true, strict: false})
+  t.is(deploymentType, 'docker')
+
+  let files = await getDockerFiles(f, nowConfig, {hasNowJson})
+  files = files.sort(alpha)
+  t.is(files.length, 3)
+  t.is(base(files[0]), 'now-json-docker/Dockerfile')
+  t.is(base(files[1]), 'now-json-docker/b.js')
+  t.is(base(files[2]), 'now-json-docker/now.json')
+})
+
+test('throws when both `now.json` and `package.json:now` exist', async t => {
+  let e
+  try {
+    await readMetadata(fixture('now-json-throws'), {quiet: true, strict: false})
+  } catch (err) {
+    e = err
+  }
+  t.is(e.name, 'Error')
+  t.is(e.userError, true)
+  t.pass(/please ensure there's a single source of configuration/i.test(e.message))
 })
