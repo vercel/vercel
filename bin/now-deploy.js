@@ -363,7 +363,7 @@ async function sync(token) {
     }
   }
 
-  const {pkg: {now: pkgConfig = {}} = {}} = await readMetaData(path, {
+  const {nowConfig} = await readMetaData(path, {
     deploymentType,
     deploymentName,
     isStatic,
@@ -373,7 +373,7 @@ async function sync(token) {
   const now = new Now(apiUrl, token, {debug})
 
   // Merge `now.env` from package.json with `-e` arguments.
-  const pkgEnv = pkgConfig.env
+  const pkgEnv = nowConfig && nowConfig.env
   const envs = [
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
     ...[].concat(argv.env || [])
