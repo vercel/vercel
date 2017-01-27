@@ -15,7 +15,8 @@ const pathSep = process.platform === 'win32' ? '\\\\' : '/'
 // Support for keywords "async" and "await"
 require('async-to-gen/register')({
   includes: new RegExp(`.*now(-cli)?${pathSep}(lib|bin).*`),
-  excludes: null
+  excludes: null,
+  sourceMaps: false
 })
 
 // Throw an error if node version is too low
