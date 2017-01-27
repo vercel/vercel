@@ -11,9 +11,10 @@ const updateNotifier = require('update-notifier')
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
+const pathSep = process.platform === 'win32' ? '\\\\' : '/'
 // Support for keywords "async" and "await"
 require('async-to-gen/register')({
-  includes: /.*now(-cli)?\/(lib|bin).*/,
+  includes: new RegExp(`.*now(-cli)?${pathSep}(lib|bin).*`),
   excludes: null
 })
 
