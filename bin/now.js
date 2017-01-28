@@ -26,7 +26,7 @@ if (nodeVersion.major < 6) {
 }
 
 // Only check for updates in the npm version
-if (!process.pkg) {
+if (!process.pkg && pkg.dist) {
   updateNotifier({pkg}).notify()
 }
 
