@@ -301,10 +301,10 @@ async function realias(alias) {
     quiet: true // `quiet`
   })
 
-  const target = nowConfig && nowConfig.alias
+  const targets = nowConfig && nowConfig.alias
 
   // the user never intended to support aliases from the package
-  if (!target) {
+  if (!targets || !Array.isArray(targets)) {
     help()
     return exit(0)
   }
@@ -312,5 +312,7 @@ async function realias(alias) {
   // now try to find the last deployment
   const source = await alias.last(name)
 
-  await alias.set(source.url, target)
+  for (const target of targets) {
+    await alias.set(source.url, target)
+  }
 }
