@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-const {resolve} = require('path')
+const {resolve, join} = require('path')
 
 // Packages
 const Progress = require('progress')
@@ -98,7 +98,7 @@ const help = () => {
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
-    -a, --alias               Reassign an existing alias to the deployment
+    -a, --alias               Re-assign existing aliases to the deployment
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -168,7 +168,7 @@ const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
-const autoAliases = argv.alias ? flatten([argv.alias]) : []
+const autoAliases = typeof argv.alias === 'undefined' ? false : flatten([argv.alias])
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -263,7 +263,7 @@ async function sync(token) {
     }
   }
 
-  // Make sure that directory is not too big
+  // Make sure that directory is deployable
   await checkPath(path)
 
   if (!quiet) {
@@ -588,13 +588,52 @@ const assignAlias = async (autoAlias, token, deployment) => {
   await aliases.set(String(deployment), String(related.alias))
 }
 
+async function realias(token, host) {
+  const path = process.cwd()
+
+  const configFiles = {
+    pkg: join(path, 'package.json'),
+    nowJSON: join(path, 'now.json')
+  }
+
+  if (!fs.existsSync(configFiles.pkg) && !fs.existsSync(configFiles.nowJSON)) {
+    error(`Couldn't find a now.json or package.json file with an alias list in it`)
+    return
+  }
+
+  const {nowConfig} = await readMetaData(path, {
+    deploymentType: 'npm', // hard coding settings…
+    quiet: true // `quiet`
+  })
+
+  const targets = nowConfig && nowConfig.aliases
+
+  // the user never intended to support aliases from the package
+  if (!targets || !Array.isArray(targets)) {
+    help()
+    return exit(0)
+  }
+
+  for (const target of targets) {
+    await assignAlias(target, token, host)
+  }
+}
+
 function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
 
   logger.on('close', async () => {
-    for (const autoAlias of autoAliases) {
-      await assignAlias(autoAlias, token, host)
+    if (Array.isArray(autoAliases)) {
+      const aliasList = autoAliases.filter(item => item !== '')
+
+      if (aliasList.length > 0) {
+        for (const alias of aliasList) {
+          await assignAlias(alias, token, host)
+        }
+      } else {
+        await realias(token, host)
+      }
     }
 
     if (!quiet) {

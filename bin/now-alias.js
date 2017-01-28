@@ -13,7 +13,6 @@ const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const {error} = require('../lib/error')
 const toHost = require('../lib/to-host')
-const readMetaData = require('../lib/read-metadata')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -213,11 +212,6 @@ async function run(token) {
       break
     }
     default: {
-      if (argv._.length === 0) {
-        await realias(alias)
-        break
-      }
-
       if (argv._.length === 2) {
         await alias.set(String(argv._[0]), String(argv._[1]))
       } else if (argv._.length >= 3) {
@@ -292,27 +286,4 @@ function findAlias(alias, list) {
   })
 
   return _alias
-}
-
-async function realias(alias) {
-  const path = process.cwd()
-  const {nowConfig, name} = await readMetaData(path, {
-    deploymentType: 'npm', // hard coding settings…
-    quiet: true // `quiet`
-  })
-
-  const targets = nowConfig && nowConfig.aliases
-
-  // the user never intended to support aliases from the package
-  if (!targets || !Array.isArray(targets)) {
-    help()
-    return exit(0)
-  }
-
-  // now try to find the last deployment
-  const source = await alias.last(name)
-
-  for (const target of targets) {
-    await alias.set(source.url, target)
-  }
 }
