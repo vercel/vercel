@@ -30,9 +30,6 @@
       "async-to-gen/register"
     ]
   },
-  "greenkeeper": {
-    "emails": false
-  },
   "xo": {
     "esnext": true,
     "space": true,
