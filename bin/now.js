@@ -11,9 +11,12 @@ const updateNotifier = require('update-notifier')
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
+const pathSep = process.platform === 'win32' ? '\\\\' : '/'
 // Support for keywords "async" and "await"
 require('async-to-gen/register')({
-  excludes: null
+  includes: new RegExp(`.*now(-cli)?${pathSep}(lib|bin).*`),
+  excludes: null,
+  sourceMaps: false
 })
 
 // Throw an error if node version is too low
@@ -23,7 +26,7 @@ if (nodeVersion.major < 6) {
 }
 
 // Only check for updates in the npm version
-if (!process.pkg) {
+if (!process.pkg && pkg.dist) {
   updateNotifier({pkg}).notify()
 }
 

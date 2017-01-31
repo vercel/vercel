@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "3.0.1",
+  "version": "4.0.1",
   "description": "The command line interface for Now",
   "repository": "zeit/now-cli",
   "license": "MIT",
@@ -32,9 +32,6 @@
       "async-to-gen/register"
     ]
   },
-  "greenkeeper": {
-    "emails": false
-  },
   "xo": {
     "esnext": true,
     "space": true,
@@ -61,7 +58,7 @@
     "arr-flatten": "^1.0.1",
     "array-unique": "^0.3.2",
     "async-retry": "^0.2.1",
-    "async-to-gen": "^1.3.0",
+    "async-to-gen": "^1.3.2",
     "bytes": "^2.4.0",
     "chalk": "^1.1.3",
     "copy-paste": "^1.3.0",
@@ -72,7 +69,6 @@
     "email-validator": "^1.0.7",
     "fs-promise": "^1.0.0",
     "glob": "^7.1.1",
-    "graceful-fs": "^4.1.11",
     "ignore": "^3.2.0",
     "ini": "^1.3.4",
     "is-url": "^1.2.2",
@@ -84,9 +80,7 @@
     "progress": "^1.1.8",
     "psl": "^1.1.15",
     "resumer": "^0.0.0",
-    "semver-compare": "^1.0.0",
     "socket.io-client": "^1.7.2",
-    "spdy": "^3.4.4",
     "split-array": "^1.0.1",
     "text-table": "^0.2.0",
     "tmp-promise": "^1.0.3",
@@ -95,8 +89,6 @@
   "devDependencies": {
     "alpha-sort": "^2.0.0",
     "ava": "^0.17.0",
-    "del": "^2.2.2",
-    "estraverse-fb": "^1.3.1",
     "husky": "^0.13.1",
     "pkg": "^3.0.0-beta.22",
     "xo": "^0.17.1"
