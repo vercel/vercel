@@ -9,8 +9,9 @@
     "lib"
   ],
   "scripts": {
-    "precommit": "npm run test",
-    "test": "xo && ava",
+    "precommit": "npm run lint",
+    "lint": "xo",
+    "test": "npm run lint && ava",
     "pack": "pkg . --out-dir packed"
   },
   "pkg": {
