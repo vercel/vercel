@@ -225,14 +225,12 @@ async function run(token) {
 
       const start = new Date()
       const name = String(args[0])
-      const {uid, code, verified, verifyToken, created} = await domain.add(name, argv.force, argv.external)
+      const {uid, code, created, verified} = await domain.add(name, argv.force, argv.external)
       const elapsed = ms(new Date() - start)
-      if (created && verified) {
+      if (created) {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`)
       } else if (verified) {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} verified [${elapsed}]`)
-      } else if (verifyToken) {
-        console.log(`> Verification required: Please add the following TXT record on the external DNS server: _now.${name}: ${verifyToken}`)
       } else if (code === 'not_modified') {
         console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} already exists [${elapsed}]`)
       } else {
