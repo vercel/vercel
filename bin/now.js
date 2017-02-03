@@ -6,6 +6,7 @@ const {resolve} = require('path')
 // Packages
 const nodeVersion = require('node-version')
 const updateNotifier = require('update-notifier')
+const chalk = require('chalk')
 
 // Ours
 const {error} = require('../lib/error')
@@ -27,7 +28,13 @@ if (nodeVersion.major < 6) {
 
 // Only check for updates in the npm version
 if (!process.pkg && pkg.dist) {
-  updateNotifier({pkg}).notify()
+  const notifier = updateNotifier({pkg})
+  const update = notifier.update
+
+  let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
+  message += `Run ${chalk.magenta('npm i -g now')} to update!`
+
+  notifier.notify({message})
 }
 
 // This command will be run if no other sub command is specified
