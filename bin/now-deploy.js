@@ -98,7 +98,7 @@ const help = () => {
     -l, --links               Copy symlinks without resolving their target
     -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
-    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Will default to '.env'
+    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
     -a, --alias               Re-assign existing aliases to the deployment
