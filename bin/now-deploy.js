@@ -51,6 +51,7 @@ const argv = minimist(process.argv.slice(2), {
   ],
   alias: {
     env: 'e',
+    dotenv: 'E',
     help: 'h',
     config: 'c',
     debug: 'd',
