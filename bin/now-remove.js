@@ -111,7 +111,7 @@ Promise.resolve(argv.token || config.token || login(apiUrl))
   try {
     await remove(token)
   } catch (err) {
-    error(`Unknown error: ${err.stack}`)
+    error(`Unknown error: ${err}\n${err.stack}`)
     process.exit(1)
   }
 })

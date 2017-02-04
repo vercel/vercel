@@ -199,7 +199,7 @@ if (argv.h || argv.help) {
       process.exit(0)
     } else {
       sync(token).catch(err => {
-        error(`Unknown error: ${err.stack}`)
+        error(`Unknown error: ${err}\n${err.stack}`)
         process.exit(1)
       })
     }
@@ -210,7 +210,7 @@ if (argv.h || argv.help) {
   })
 } else {
   sync(argv.token || config.token).catch(err => {
-    error(`Unknown error: ${err.stack}`)
+    error(`Unknown error: ${err}\n${err.stack}`)
     process.exit(1)
   })
 }
@@ -474,7 +474,7 @@ async function sync(token) {
     })
   } catch (err) {
     if (debug) {
-      console.log(`> [debug] error: ${err.stack}`)
+      console.log(`> [debug] error: ${err}\n${err.stack}`)
     }
 
     handleError(err)

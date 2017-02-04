@@ -104,7 +104,7 @@ if (argv.help) {
       if (err.userError) {
         error(err.message)
       } else {
-        error(`Unknown error: ${err.stack}`)
+        error(`Unknown error: ${err}\n${err.stack}`)
       }
       exit(1)
     }
