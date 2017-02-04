@@ -623,6 +623,22 @@ function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
 
+  logger.on('error', async () => {
+    if (!quiet) {
+      console.log(`${chalk.cyan('> Deployment failed!')}`)
+    }
+
+    if (gitRepo && gitRepo.cleanup) {
+      // Delete temporary directory that contains repository
+      gitRepo.cleanup()
+
+      if (debug) {
+        console.log(`> [debug] Removed temporary repo directory`)
+      }
+    }
+    process.exit(1)
+  })
+
   logger.on('close', async () => {
     if (Array.isArray(autoAliases)) {
       const aliasList = autoAliases.filter(item => item !== '')
