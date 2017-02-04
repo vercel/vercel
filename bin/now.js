@@ -32,7 +32,8 @@ if (!process.pkg && pkg.dist) {
   const update = notifier.update
 
   let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
-  message += `Run ${chalk.magenta('npm i -g now')} to update!`
+  message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
+  message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
 
   notifier.notify({message})
 }
