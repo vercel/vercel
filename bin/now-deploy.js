@@ -12,6 +12,7 @@ const minimist = require('minimist')
 const ms = require('ms')
 const publicSuffixList = require('psl')
 const flatten = require('arr-flatten')
+const dotenv = require('dotenv')
 
 // Ours
 const copy = require('../lib/copy')
@@ -50,6 +51,7 @@ const argv = minimist(process.argv.slice(2), {
   ],
   alias: {
     env: 'e',
+    dotenv: 'E',
     help: 'h',
     config: 'c',
     debug: 'd',
@@ -96,6 +98,7 @@ const help = () => {
     -l, --links               Copy symlinks without resolving their target
     -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
     -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
+    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
     -a, --alias               Re-assign existing aliases to the deployment
@@ -372,9 +375,23 @@ async function sync(token) {
 
   const now = new Now(apiUrl, token, {debug})
 
+  let dotenvConfig
+  if (argv.dotenv) {
+    const dotenvFileName = typeof argv.dotenv === 'string' ? argv.dotenv : '.env'
+
+    if (!fs.existsSync(dotenvFileName)) {
+      error(`--dotenv flag is set but ${dotenvFileName} file is missing`)
+      return process.exit(1)
+    }
+
+    const dotenvFile = await fs.readFile(dotenvFileName)
+    dotenvConfig = dotenv.parse(dotenvFile)
+  }
+
   // Merge `now.env` from package.json with `-e` arguments.
   const pkgEnv = nowConfig && nowConfig.env
   const envs = [
+    ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
     ...[].concat(argv.env || [])
   ]
