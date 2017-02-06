@@ -40,6 +40,8 @@ function render(state) {
         element.setValue(substateValue)
       } else if (substateName === 'content') {
         element.setContent(substateValue)
+      } else {
+        element[substateName] = substateValue
       }
       return null
     })
