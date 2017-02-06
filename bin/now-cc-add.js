@@ -61,9 +61,12 @@ screen.key(['C-c', 'escape'], () => {
 
 blessed.text({
   parent: screen,
-  content: '',
+  content: 'Use the arrow keys to cycle between fields',
   top: 1,
-  left: 2
+  left: 2,
+  style: {
+    fg: 'gray'
+  }
 })
 
 const form = blessed.form({
