@@ -86,9 +86,9 @@ elements.cardDetailsLabel = blessed.text({
   content: 'CARD DETAILS'
 })
 
-elements.cardNameLabel = blessed.text({
+elements.cardNumberLabel = blessed.text({
   parent: elements.cardBox,
-  content: 'Name',
+  content: 'Number',
   top: 2
 })
 
@@ -102,7 +102,7 @@ blessed.text({
   left: 10
 })
 
-elements.numberInput = blessed.textbox({
+elements.cardNumberInput = blessed.textbox({
   parent: elements.cardBox,
   name: 'number',
   shrink: true,
@@ -130,12 +130,12 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
-elements.numberInput.on('keypress', function (ch, key) {
+elements.cardNumberInput.on('keypress', function (ch, key) {
   debug(key.full)
   if (NUMBERS.has(Number(key.ch))) {
     if (this.value.length === 19) {
       const value = this.value
-      updateState({numberInput: {value}}, {later: true})
+      updateState({cardNumberInput: {value}}, {later: true})
       return
     }
     if ([3, 8, 13].includes(this.value.length)) {
@@ -143,7 +143,7 @@ elements.numberInput.on('keypress', function (ch, key) {
       // we should move the cursor to the next group
 
       // we need to wait for the value to be updated
-      process.nextTick(() => updateState({numberInput: {value: this.value + ' '}}))
+      process.nextTick(() => updateState({cardNumberInput: {value: this.value + ' '}}))
     } else if ([4, 9, 14].includes(this.value.length)) {
       // this will happen when the user types the first
       // digit of a 4-digit group right after removing
@@ -152,7 +152,7 @@ elements.numberInput.on('keypress', function (ch, key) {
       // here we don't use `nextTick` because we want to update
       // the input before blessed inserts the digit that the
       // user just typed
-      updateState({numberInput: {value: this.value + ' '}})
+      updateState({cardNumberInput: {value: this.value + ' '}})
     }
   } else if (key.full === 'backspace') {
     // here werevert the space we added
@@ -162,13 +162,13 @@ elements.numberInput.on('keypress', function (ch, key) {
     if (this.value.slice(-1)[0] === ' ') {
       let value = this.value
       value = value.substr(0, value.length - 1)
-      updateState({numberInput: {value}})
+      updateState({cardNumberInput: {value}})
     }
   } else {
     const value = this.value
-    updateState({numberInput: {value}}, {later: true})
+    updateState({cardNumberInput: {value}}, {later: true})
   }
 })
 
 screen.render()
-elements.numberInput.focus()
+elements.cardNumberInput.focus()
