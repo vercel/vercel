@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Native
+const {resolve} = require('path')
+
 // Packages
 const chalk = require('chalk')
 const minimist = require('minimist')
@@ -300,6 +303,12 @@ async function run(token) {
       } else {
         console.log('No changes made')
       }
+
+      break
+    }
+
+    case 'add': {
+      require(resolve(__dirname, 'now-cc-add.js'))
 
       break
     }
