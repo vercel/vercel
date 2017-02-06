@@ -71,29 +71,48 @@ blessed.text({
 
 const form = blessed.form({
   parent: screen,
-  width: 40,
+  width: 90,
   height: 5,
   top: 3,
   left: 2
 })
 
+const cardBox = blessed.box({
+  parent: form
+})
+
+const cardDetailsLabel = blessed.text({
+  parent: cardBox,
+  content: 'CARD DETAILS'
+})
+
+const cardNameLabel = blessed.text({
+  parent: cardBox,
+  content: 'Name',
+  top: 2
+})
+
 blessed.text({
-  parent: form,
+  parent: cardBox,
   content: '**** **** **** ****',
   style: {
     fg: 'gray'
-  }
+  },
+  top: 2,
+  left: 10
 })
 
 const numberInput = blessed.textbox({
-  parent: form,
+  parent: cardBox,
   name: 'number',
   shrink: true,
   // width: 20,
   height: 1,
   inputOnFocus: true,
   keys: true,
-  vi: true
+  vi: true,
+  top: 2,
+  left: 10
 })
 blessedElements.numberInput = numberInput
 
