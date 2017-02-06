@@ -5,7 +5,7 @@ const blessed = require('blessed')
 const NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
 
 // Here we store a ref to each elements that's on the screen
-const blessedElements = {}
+const elements = {}
 
 let state = {}
 
@@ -27,8 +27,8 @@ function updateState(obj, {later = false} = {}) {
 // renders the current state of the application – similar
 // to React's
 function render(state) {
-  Object.keys(blessedElements).map(elementName => {
-    const element = blessedElements[elementName]
+  Object.keys(elements).map(elementName => {
+    const element = elements[elementName]
     Object.keys(state[elementName] || {}).map(substateName => {
       const substateValue = state[elementName][substateName]
       if (substateName === 'style') {
@@ -59,7 +59,7 @@ screen.key(['C-c', 'escape'], () => {
   return process.exit(0)
 })
 
-blessed.text({
+elements.instuctions = blessed.text({
   parent: screen,
   content: 'Use the arrow keys to cycle between fields',
   top: 1,
@@ -69,7 +69,7 @@ blessed.text({
   }
 })
 
-const form = blessed.form({
+elements.form = blessed.form({
   parent: screen,
   width: 90,
   height: 5,
@@ -77,23 +77,23 @@ const form = blessed.form({
   left: 2
 })
 
-const cardBox = blessed.box({
-  parent: form
+elements.cardBox = blessed.box({
+  parent: elements.form
 })
 
-const cardDetailsLabel = blessed.text({
-  parent: cardBox,
+elements.cardDetailsLabel = blessed.text({
+  parent: elements.cardBox,
   content: 'CARD DETAILS'
 })
 
-const cardNameLabel = blessed.text({
-  parent: cardBox,
+elements.cardNameLabel = blessed.text({
+  parent: elements.cardBox,
   content: 'Name',
   top: 2
 })
 
 blessed.text({
-  parent: cardBox,
+  parent: elements.cardBox,
   content: '**** **** **** ****',
   style: {
     fg: 'gray'
@@ -102,8 +102,8 @@ blessed.text({
   left: 10
 })
 
-const numberInput = blessed.textbox({
-  parent: cardBox,
+elements.numberInput = blessed.textbox({
+  parent: elements.cardBox,
   name: 'number',
   shrink: true,
   // width: 20,
@@ -114,7 +114,6 @@ const numberInput = blessed.textbox({
   top: 2,
   left: 10
 })
-blessedElements.numberInput = numberInput
 
 let debugText
 
@@ -131,21 +130,21 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
-numberInput.on('keypress', (ch, key) => {
+elements.numberInput.on('keypress', function (ch, key) {
   debug(key.full)
   if (NUMBERS.has(Number(key.ch))) {
-    if (numberInput.value.length === 19) {
-      const value = numberInput.value
+    if (this.value.length === 19) {
+      const value = this.value
       updateState({numberInput: {value}}, {later: true})
       return
     }
-    if ([3, 8, 13].includes(numberInput.value.length)) {
+    if ([3, 8, 13].includes(this.value.length)) {
       // when the user input the last number of a 4 digit group
       // we should move the cursor to the next group
 
       // we need to wait for the value to be updated
-      process.nextTick(() => updateState({numberInput: {value: numberInput.value + ' '}}))
-    } else if ([4, 9, 14].includes(numberInput.value.length)) {
+      process.nextTick(() => updateState({numberInput: {value: this.value + ' '}}))
+    } else if ([4, 9, 14].includes(this.value.length)) {
       // this will happen when the user types the first
       // digit of a 4-digit group right after removing
       // the first digit of the next group
@@ -153,23 +152,23 @@ numberInput.on('keypress', (ch, key) => {
       // here we don't use `nextTick` because we want to update
       // the input before blessed inserts the digit that the
       // user just typed
-      updateState({numberInput: {value: numberInput.value + ' '}})
+      updateState({numberInput: {value: this.value + ' '}})
     }
   } else if (key.full === 'backspace') {
     // here werevert the space we added
     // to jump between one one 4-digit
     // group to another
 
-    if (numberInput.value.slice(-1)[0] === ' ') {
-      let value = numberInput.value
+    if (this.value.slice(-1)[0] === ' ') {
+      let value = this.value
       value = value.substr(0, value.length - 1)
       updateState({numberInput: {value}})
     }
   } else {
-    const value = numberInput.value
+    const value = this.value
     updateState({numberInput: {value}}, {later: true})
   }
 })
 
 screen.render()
-numberInput.focus()
+elements.numberInput.focus()
