@@ -16,27 +16,33 @@ let state = {}
 // later: if true, the state will be rendered
 //        only at the next tick
 function updateState(obj, {later = false} = {}) {
-  state = Object.assign(state, obj)
+  const newState = Object.assign({}, state, obj)
   if (later) {
-    process.nextTick(() => render(state))
+    process.nextTick(() => {
+      render(state, newState)
+      state = newState
+    })
   } else {
-    render(state)
+    render(state, newState)
+    state = newState
   }
 }
 
 // renders the current state of the application – similar
 // to React's
-function render(state) {
+function render(oldState, newState) {
+  const futureState = Object.assign({}, oldState, newState)
   Object.keys(elements).map(elementName => {
     const element = elements[elementName]
-    Object.keys(state[elementName] || {}).map(substateName => {
-      const substateValue = state[elementName][substateName]
+    Object.keys(futureState[elementName] || {}).map(substateName => {
+      const substateValue = futureState[elementName][substateName]
       if (substateName === 'style') {
         for (const style in substateValue) { // eslint-disable-line guard-for-in
           element.style[style] = substateValue[style]
         }
       }
       if (substateName === 'value') {
+        debug(substateValue)
         element.setValue(substateValue)
       } else if (substateName === 'content') {
         element.setContent(substateValue)
@@ -47,6 +53,32 @@ function render(state) {
     })
     return null
   })
+
+  const {focus: oldFocus} = oldState.focus ? oldState : {focus: {}}
+  const {focus: newFocus} = newState
+  if (newFocus) {
+    if (newFocus.element && (newFocus.element !== oldFocus.element)) {
+      // TODO: why `form.focusNext()` doesn't work?
+      //       why `element.focus()` doesn't work
+      screen.focusPop()
+      screen.focusPush(newFocus.element)
+    }
+    if (newFocus.label && (newFocus.label !== oldFocus.label)) {
+      if (oldFocus.label) {
+        oldFocus.label.style.fg = 'gray'
+      }
+      newFocus.label.style.fg = '#fff'
+      newFocus.label.style.bold = true
+    }
+
+    if (newFocus.group && (newFocus.group !== oldFocus.group)) {
+      if (oldFocus.group) {
+        oldFocus.group.style.fg = 'gray'
+      }
+      newFocus.group.style.fg = '#fff'
+      newFocus.group.style.bold = true
+    }
+  }
   screen.render()
 }
 
@@ -91,7 +123,10 @@ elements.cardDetailsLabel = blessed.text({
 elements.cardNumberLabel = blessed.text({
   parent: elements.cardBox,
   content: 'Number',
-  top: 2
+  top: 2,
+  style: {
+    fg: 'gray'
+  }
 })
 
 blessed.text({
@@ -117,6 +152,38 @@ elements.cardNumberInput = blessed.textbox({
   left: 10
 })
 
+elements.nameLabel = blessed.text({
+  parent: elements.cardBox,
+  content: 'Name',
+  top: 4,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.namePlaceholder = blessed.text({
+  parent: elements.cardBox,
+  content: 'John Appleseed',
+  style: {
+    fg: 'gray'
+  },
+  top: 4,
+  left: 10
+})
+
+elements.nameInput = blessed.textbox({
+  parent: elements.cardBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 4,
+  left: 9
+})
+
 let debugText
 
 const debug = (...args) => {
@@ -132,8 +199,32 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
+// inside the callback of `input.on('keypress', callback)`,
+// the `this.value` will be an ond one – the keypress wasn't
+// applyed to it yet. so if we want to store the value of the
+// input + the keypress in the state, we need to wait for the
+// next tick
+function persistInputValue(input, inputName) {
+  process.nextTick(() => updateState({
+    [inputName]: {
+      value: input.value
+    }
+  }))
+}
+
+// returns 9 if the input is empty and it's losing focus
+// otherwise, 10
+// TODO: drop the `leaving` and auto detect the current focus
+function getLeft(input, {leaving = false} = {}) {
+  debug(input.value.length)
+  screen.render()
+  if (input.value.length === 0 && leaving) {
+    return 9
+  }
+  return 10
+}
+
 elements.cardNumberInput.on('keypress', function (ch, key) {
-  debug(key.full)
   if (NUMBERS.has(Number(key.ch))) {
     if (this.value.length === 19) {
       const value = this.value
@@ -155,6 +246,10 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
       // the input before blessed inserts the digit that the
       // user just typed
       updateState({cardNumberInput: {value: this.value + ' '}})
+    } else {
+      // if the keypress is valid and there's no modification
+      // to be made, we just persist the value
+      persistInputValue(this, 'cardNumberInput')
     }
   } else if (key.full === 'backspace') {
     // here werevert the space we added
@@ -165,12 +260,54 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
       let value = this.value
       value = value.substr(0, value.length - 1)
       updateState({cardNumberInput: {value}})
+    } else {
+      persistInputValue(this, 'cardNumberInput')
     }
+  } else if (key.full === 'down') {
+    updateState({
+      focus: {
+        element: elements.nameInput,
+        label: elements.nameLabel
+      },
+      cardNumberInput: {left: getLeft(this, {leaving: true})},
+      nameInput: {left: getLeft(elements.nameInput)}
+      // cardNumberInput:
+    })
   } else {
     const value = this.value
     updateState({cardNumberInput: {value}}, {later: true})
   }
 })
 
-screen.render()
-elements.cardNumberInput.focus()
+elements.nameInput.on('keypress', function (ch, key) {
+  if (key.full === 'up') {
+    updateState({
+      focus: {
+        element: elements.cardNumberInput,
+        label: elements.cardNumberLabel
+      },
+      cardNumberInput: {left: getLeft(elements.cardNumberInput)},
+      nameInput: {left: getLeft(this, {leaving: true})}
+    })
+  } else {
+    process.nextTick(() => {
+      let content = ''
+      if (this.value.length === 0) {
+        content = 'John Appleseed'
+      }
+      updateState({
+        namePlaceholder: {content}
+      })
+    })
+  }
+})
+
+// screen.render()
+// set the initial state and render it
+updateState({
+  focus: {
+    element: elements.cardNumberInput,
+    label: elements.cardNumberLabel,
+    group: elements.cardDetailsLabel
+  }
+})
