@@ -42,7 +42,6 @@ function render(oldState, newState) {
         }
       }
       if (substateName === 'value') {
-        debug(substateValue)
         element.setValue(substateValue)
       } else if (substateName === 'content') {
         element.setContent(substateValue)
@@ -184,9 +183,41 @@ elements.nameInput = blessed.textbox({
   left: 9
 })
 
+elements.ccvLabel = blessed.text({
+  parent: elements.cardBox,
+  content: 'CCV',
+  top: 6,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.ccvPlaceholder = blessed.text({
+  parent: elements.cardBox,
+  content: '***',
+  style: {
+    fg: 'gray'
+  },
+  top: 6,
+  left: 10
+})
+
+elements.ccvInput = blessed.textbox({
+  parent: elements.cardBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 6,
+  left: 9
+})
+
 let debugText
 
-const debug = (...args) => {
+const debug = (...args) => { // eslint-disable-line no-unused-vars
   if (debugText) {
     args = args.map(a => JSON.stringify(a))
     debugText.setContent(args.join('\n'))
@@ -290,6 +321,17 @@ elements.nameInput.on('keypress', function (ch, key) {
       cardNumberInput: {left: getLeft(elements.cardNumberInput)},
       nameInput: {left: getLeft(this)}
     })
+  } else if (key.full === 'down' || key.full === 'tab') {
+    updateState({
+      focus: {
+        element: elements.ccvInput,
+        label: elements.ccvLabel
+      },
+      // we override the value to prevent the `tab` keystroke
+      // from being added to the value
+      nameInput: {left: getLeft(this), value: this.value},
+      ccvInput: {left: getLeft(elements.ccvInput)}
+    }, {later: true})
   } else {
     process.nextTick(() => {
       let content = ''
@@ -299,6 +341,25 @@ elements.nameInput.on('keypress', function (ch, key) {
       updateState({
         namePlaceholder: {content}
       })
+    })
+  }
+})
+
+elements.ccvInput.on('keypress', function (ch, key) {
+  // TODO: detect the card type and modify the `4` here and
+  // the amount of `*` in the placeholder
+  if (NUMBERS.has(Number(key.ch)) && this.value.length === 4) {
+    const value = this.value
+    updateState({ccvInput: {value}}, {later: true})
+    return
+  } else if (key.full === 'up' || key.full === 'S-tab') {
+    updateState({
+      focus: {
+        element: elements.nameInput,
+        label: elements.nameLabel
+      },
+      nameInput: {left: getLeft(elements.nameInput)},
+      ccvInput: {left: getLeft(this)}
     })
   }
 })
