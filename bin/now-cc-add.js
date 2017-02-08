@@ -246,6 +246,16 @@ elements.expirationInput = blessed.textbox({
   left: 9
 })
 
+elements.addressBox = blessed.box({
+  parent: elements.form,
+  top: 11
+})
+
+elements.addressLabel = blessed.text({
+  parent: elements.addressBox,
+  content: 'ADDRESS'
+})
+
 let debugText
 
 const debug = (...args) => { // eslint-disable-line no-unused-vars
