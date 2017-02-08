@@ -94,7 +94,7 @@ screen.key(['C-c', 'escape'], () => {
 
 elements.instuctions = blessed.text({
   parent: screen,
-  content: 'Use the arrow keys or tab to cycle between fields',
+  content: 'Use the ↑↓ or tab to cycle between fields',
   top: 1,
   left: 2,
   style: {
@@ -253,7 +253,196 @@ elements.addressBox = blessed.box({
 
 elements.addressLabel = blessed.text({
   parent: elements.addressBox,
-  content: 'ADDRESS'
+  content: 'ADDRESS',
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.address1Label = blessed.text({
+  parent: elements.addressBox,
+  content: 'Line 1',
+  top: 2,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.address1Placeholder = blessed.text({
+  parent: elements.addressBox,
+  content: '1 Infinite Triangle',
+  style: {
+    fg: 'gray'
+  },
+  top: 2,
+  left: 10
+})
+
+elements.address1Input = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 2,
+  left: 9
+})
+
+elements.address2Label = blessed.text({
+  parent: elements.addressBox,
+  content: 'Line 2',
+  top: 4,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.address2 = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 4,
+  left: 9
+})
+//
+//
+elements.cityLabel = blessed.text({
+  parent: elements.addressBox,
+  content: 'City',
+  top: 6,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.cityPlaceholder = blessed.text({
+  parent: elements.addressBox,
+  content: 'San Francisco',
+  style: {
+    fg: 'gray'
+  },
+  top: 6,
+  left: 10
+})
+
+elements.cityInput = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 6,
+  left: 9
+})
+//
+//
+elements.stateLabel = blessed.text({
+  parent: elements.addressBox,
+  content: 'State',
+  top: 8,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.statePlaceholder = blessed.text({
+  parent: elements.addressBox,
+  content: 'California',
+  style: {
+    fg: 'gray'
+  },
+  top: 8,
+  left: 10
+})
+
+elements.stateInput = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 8,
+  left: 9
+})
+//
+//
+elements.zipLabel = blessed.text({
+  parent: elements.addressBox,
+  content: 'ZIP',
+  top: 10,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.zipPlaceholder = blessed.text({
+  parent: elements.addressBox,
+  content: '12345',
+  style: {
+    fg: 'gray'
+  },
+  top: 10,
+  left: 10
+})
+
+elements.zipInput = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 10,
+  left: 9
+})
+//
+//
+elements.countryLabel = blessed.text({
+  parent: elements.addressBox,
+  content: 'Country',
+  top: 11,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.countryPlaceholder = blessed.text({
+  parent: elements.addressBox,
+  content: 'United States',
+  style: {
+    fg: 'gray'
+  },
+  top: 11,
+  left: 10
+})
+
+elements.CountryInput = blessed.textbox({
+  parent: elements.addressBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 11,
+  left: 9
 })
 
 let debugText
