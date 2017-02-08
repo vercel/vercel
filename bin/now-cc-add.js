@@ -215,6 +215,38 @@ elements.ccvInput = blessed.textbox({
   left: 9
 })
 
+elements.expirationLabel = blessed.text({
+  parent: elements.cardBox,
+  content: 'Exp',
+  top: 8,
+  style: {
+    fg: 'gray'
+  }
+})
+
+elements.expirationPlaceholder = blessed.text({
+  parent: elements.cardBox,
+  content: 'mm / yy',
+  style: {
+    fg: 'gray'
+  },
+  top: 8,
+  left: 10
+})
+
+elements.expirationInput = blessed.textbox({
+  parent: elements.cardBox,
+  name: 'number',
+  shrink: true,
+  // width: 20,
+  height: 1,
+  inputOnFocus: true,
+  keys: true,
+  vi: true,
+  top: 8,
+  left: 9
+})
+
 let debugText
 
 const debug = (...args) => { // eslint-disable-line no-unused-vars
@@ -296,10 +328,10 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
   } else if (key.full === 'up' || key.full === 'S-tab') {
     updateState({
       focus: {
-        element: elements.ccvInput,
-        label: elements.ccvLabel
+        element: elements.expirationInput,
+        label: elements.expirationLabel
       },
-      ccvInput: {left: getLeft(elements.ccvInput)},
+      expirationInput: {left: getLeft(elements.expirationInput)},
       cardNumberInput: {left: getLeft(this)}
     })
   } else if (key.full === 'down' || key.full === 'tab') {
@@ -357,11 +389,7 @@ elements.nameInput.on('keypress', function (ch, key) {
 elements.ccvInput.on('keypress', function (ch, key) {
   // TODO: detect the card type and modify the `4` here and
   // the amount of `*` in the placeholder
-  if (NUMBERS.has(Number(key.ch)) && this.value.length === 4) {
-    const value = this.value
-    updateState({ccvInput: {value}}, {later: true})
-    return
-  } else if (key.full === 'up' || key.full === 'S-tab') {
+  if (key.full === 'up' || key.full === 'S-tab') {
     updateState({
       focus: {
         element: elements.nameInput,
@@ -373,14 +401,57 @@ elements.ccvInput.on('keypress', function (ch, key) {
   } else if (key.full === 'down' || key.full === 'tab') {
     updateState({
       focus: {
+        element: elements.expirationInput,
+        label: elements.expirationLabel
+      },
+      // we override the value to prevent the `tab` keystroke
+      // from being added to the value
+      ccvInput: {left: getLeft(this), value: this.value},
+      expirationInput: {left: getLeft(elements.expirationInput)}
+    }, {later: true})
+  } else if (key.full !== 'backspace' && (!NUMBERS.has(Number(key.ch)) || this.value.length > 3)) {
+    updateState({ccvInput: {value: this.value}}, {later: true})
+  }
+})
+
+elements.expirationInput.on('keypress', function (ch, key) {
+  debug(this.value)
+  if (NUMBERS.has(Number(key.ch)) && this.value.length < 7) {
+    if (this.value.length === 7) {
+      updateState({expirationInput: {value: this.value}}, {later: true})
+    } else if (this.value.length === 1) {
+      process.nextTick(() => updateState({expirationInput: {value: this.value + ' / '}}))
+    }
+  } else if (key.full === 'backspace') {
+    if (this.value.slice(-3) === ' / ') {
+      let value = this.value
+      value = value.substr(0, value.length - 3)
+      updateState({expirationInput: {value}})
+    } else {
+      persistInputValue(this, 'expirationInput')
+    }
+  } else if (key.full === 'up' || key.full === 'S-tab') {
+    updateState({
+      focus: {
+        element: elements.ccvInput,
+        label: elements.ccvLabel
+      },
+      ccvInput: {left: getLeft(elements.ccvInput)},
+      expirationInput: {left: getLeft(this)}
+    })
+  } else if (key.full === 'down' || key.full === 'tab') {
+    updateState({
+      focus: {
         element: elements.cardNumberInput,
         label: elements.cardNumberLabel
       },
       // we override the value to prevent the `tab` keystroke
       // from being added to the value
-      ccvInput: {left: getLeft(this), value: this.value},
+      expirationInput: {left: getLeft(this), value: this.value},
       cardNumberInput: {left: getLeft(elements.cardNumberInput)}
     }, {later: true})
+  } else {
+    updateState({expirationInput: {value: this.value}}, {later: true})
   }
 })
 
