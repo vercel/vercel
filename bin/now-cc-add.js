@@ -293,6 +293,15 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
     } else {
       persistInputValue(this, 'cardNumberInput')
     }
+  } else if (key.full === 'up' || key.full === 'S-tab') {
+    updateState({
+      focus: {
+        element: elements.ccvInput,
+        label: elements.ccvLabel
+      },
+      ccvInput: {left: getLeft(elements.ccvInput)},
+      cardNumberInput: {left: getLeft(this)}
+    })
   } else if (key.full === 'down' || key.full === 'tab') {
     updateState({
       focus: {
@@ -361,6 +370,17 @@ elements.ccvInput.on('keypress', function (ch, key) {
       nameInput: {left: getLeft(elements.nameInput)},
       ccvInput: {left: getLeft(this)}
     })
+  } else if (key.full === 'down' || key.full === 'tab') {
+    updateState({
+      focus: {
+        element: elements.cardNumberInput,
+        label: elements.cardNumberLabel
+      },
+      // we override the value to prevent the `tab` keystroke
+      // from being added to the value
+      ccvInput: {left: getLeft(this), value: this.value},
+      cardNumberInput: {left: getLeft(elements.cardNumberInput)}
+    }, {later: true})
   }
 })
 
