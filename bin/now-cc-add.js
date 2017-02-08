@@ -95,7 +95,7 @@ screen.key(['C-c', 'escape'], () => {
 
 elements.instuctions = blessed.text({
   parent: screen,
-  content: 'Use the arrow keys to cycle between fields',
+  content: 'Use the arrow keys or tab to cycle between fields',
   top: 1,
   left: 2,
   style: {
@@ -262,16 +262,18 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
     } else {
       persistInputValue(this, 'cardNumberInput')
     }
-  } else if (key.full === 'down') {
+  } else if (key.full === 'down' || key.full === 'tab') {
     updateState({
       focus: {
         element: elements.nameInput,
         label: elements.nameLabel
       },
-      cardNumberInput: {left: getLeft(this)},
+      // we override the value to prevent the `tab` keystroke
+      // from being added to the value
+      cardNumberInput: {left: getLeft(this), value: this.value},
       nameInput: {left: getLeft(elements.nameInput)}
       // cardNumberInput:
-    })
+    }, {later: true})
   } else {
     const value = this.value
     updateState({cardNumberInput: {value}}, {later: true})
@@ -279,7 +281,7 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
 })
 
 elements.nameInput.on('keypress', function (ch, key) {
-  if (key.full === 'up') {
+  if (key.full === 'up' || key.full === 'S-tab') {
     updateState({
       focus: {
         element: elements.cardNumberInput,
