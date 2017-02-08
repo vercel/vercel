@@ -217,8 +217,6 @@ function persistInputValue(input, inputName) {
 // // if `input` is focuses, it'll be assumed that it is
 // losing focus
 function getLeft(input) {
-  debug(input.value.length)
-  screen.render()
   if (input.value.length === 0 && screen.focused === input) {
     return 9
   }
