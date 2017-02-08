@@ -105,7 +105,6 @@ elements.instuctions = blessed.text({
 elements.form = blessed.form({
   parent: screen,
   width: 90,
-  height: 5,
   top: 3,
   left: 2
 })
