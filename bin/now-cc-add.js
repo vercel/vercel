@@ -214,11 +214,12 @@ function persistInputValue(input, inputName) {
 
 // returns 9 if the input is empty and it's losing focus
 // otherwise, 10
-// TODO: drop the `leaving` and auto detect the current focus
-function getLeft(input, {leaving = false} = {}) {
+// // if `input` is focuses, it'll be assumed that it is
+// losing focus
+function getLeft(input) {
   debug(input.value.length)
   screen.render()
-  if (input.value.length === 0 && leaving) {
+  if (input.value.length === 0 && screen.focused === input) {
     return 9
   }
   return 10
@@ -269,7 +270,7 @@ elements.cardNumberInput.on('keypress', function (ch, key) {
         element: elements.nameInput,
         label: elements.nameLabel
       },
-      cardNumberInput: {left: getLeft(this, {leaving: true})},
+      cardNumberInput: {left: getLeft(this)},
       nameInput: {left: getLeft(elements.nameInput)}
       // cardNumberInput:
     })
@@ -287,7 +288,7 @@ elements.nameInput.on('keypress', function (ch, key) {
         label: elements.cardNumberLabel
       },
       cardNumberInput: {left: getLeft(elements.cardNumberInput)},
-      nameInput: {left: getLeft(this, {leaving: true})}
+      nameInput: {left: getLeft(this)}
     })
   } else {
     process.nextTick(() => {
