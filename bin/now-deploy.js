@@ -603,7 +603,7 @@ function printLogs(host, token) {
           await assignAlias(alias, token, host, apiUrl, debug)
         }
       } else {
-        await reAlias(token, host, help, exit)
+        await reAlias(token, host, help, exit, apiUrl, debug)
       }
     }
 

@@ -13,6 +13,7 @@ const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const {error} = require('../lib/error')
 const toHost = require('../lib/to-host')
+const {reAlias} = require('../lib/re-alias')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -212,6 +213,11 @@ async function run(token) {
       break
     }
     default: {
+      if (argv._.length === 0) {
+        await reAlias(token, null, help, exit, apiUrl, debug, alias)
+        break
+      }
+
       if (argv._.length === 2) {
         await alias.set(String(argv._[0]), String(argv._[1]))
       } else if (argv._.length >= 3) {
