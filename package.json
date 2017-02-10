@@ -85,6 +85,7 @@
     "resumer": "^0.0.0",
     "socket.io-client": "^1.7.2",
     "split-array": "^1.0.1",
+    "strip-ansi": "3.0.1",
     "text-table": "^0.2.0",
     "tmp-promise": "^1.0.3",
     "update-notifier": "^1.0.3"
