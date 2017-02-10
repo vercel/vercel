@@ -145,8 +145,6 @@ async function remove(token) {
     })
   })
 
-  process.exit(0)
-
   if (matches.length === 0) {
     error(`Could not find any deployments matching ${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
     return process.exit(1)
