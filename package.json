@@ -45,6 +45,7 @@
       "import/no-dynamic-require": 0,
       "import/no-unresolved": 0,
       "max-depth": 0,
+      "max-params": 0,
       "no-use-before-define": 0,
       "complexity": 0,
       "no-control-regex": 0

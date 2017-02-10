@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-const {resolve, join} = require('path')
+const {resolve} = require('path')
 
 // Packages
 const Progress = require('progress')
@@ -10,7 +10,6 @@ const bytes = require('bytes')
 const chalk = require('chalk')
 const minimist = require('minimist')
 const ms = require('ms')
-const publicSuffixList = require('psl')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
 
@@ -27,7 +26,7 @@ const {handleError, error} = require('../lib/error')
 const {fromGit, isRepoPath, gitPathParts} = require('../lib/git')
 const readMetaData = require('../lib/read-metadata')
 const checkPath = require('../lib/utils/check-path')
-const NowAlias = require('../lib/alias')
+const {reAlias, assignAlias} = require('../lib/re-alias')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -575,72 +574,6 @@ async function sync(token) {
   }
 }
 
-const assignAlias = async (autoAlias, token, deployment) => {
-  const type = publicSuffixList.isValid(autoAlias) ? 'alias' : 'uid'
-
-  const aliases = new NowAlias(apiUrl, token, {debug})
-  const list = await aliases.ls()
-
-  let related
-
-  // Check if alias even exists
-  for (const alias of list) {
-    if (alias[type] === autoAlias) {
-      related = alias
-      break
-    }
-  }
-
-  // If alias doesn't exist
-  if (!related) {
-    // Check if the uid was actually an alias
-    if (type === 'uid') {
-      return assignAlias(`${autoAlias}.now.sh`, token, deployment)
-    }
-
-    // If not, throw an error
-    const withID = type === 'uid' ? 'with ID ' : ''
-    error(`Alias ${withID}"${autoAlias}" doesn't exist`)
-    return
-  }
-
-  console.log(`> Assigning alias ${chalk.bold.underline(related.alias)} to deployment...`)
-
-  // Assign alias
-  await aliases.set(String(deployment), String(related.alias))
-}
-
-async function realias(token, host) {
-  const path = process.cwd()
-
-  const configFiles = {
-    pkg: join(path, 'package.json'),
-    nowJSON: join(path, 'now.json')
-  }
-
-  if (!fs.existsSync(configFiles.pkg) && !fs.existsSync(configFiles.nowJSON)) {
-    error(`Couldn't find a now.json or package.json file with an alias list in it`)
-    return
-  }
-
-  const {nowConfig} = await readMetaData(path, {
-    deploymentType: 'npm', // hard coding settings…
-    quiet: true // `quiet`
-  })
-
-  const targets = nowConfig && nowConfig.aliases
-
-  // the user never intended to support aliases from the package
-  if (!targets || !Array.isArray(targets)) {
-    help()
-    return exit(0)
-  }
-
-  for (const target of targets) {
-    await assignAlias(target, token, host)
-  }
-}
-
 function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
@@ -667,10 +600,10 @@ function printLogs(host, token) {
 
       if (aliasList.length > 0) {
         for (const alias of aliasList) {
-          await assignAlias(alias, token, host)
+          await assignAlias(alias, token, host, apiUrl, debug)
         }
       } else {
-        await realias(token, host)
+        await reAlias(token, host, help, exit)
       }
     }
 
