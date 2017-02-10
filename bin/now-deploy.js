@@ -177,6 +177,11 @@ if (argv.config) {
   cfg.setConfigFile(argv.config)
 }
 
+if (Array.isArray(autoAliases)) {
+  console.log(`${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`)
+  console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n')
+}
+
 // Create a new deployment if user changed
 // the name or made _src public.
 // This should just work fine because it doesn't
