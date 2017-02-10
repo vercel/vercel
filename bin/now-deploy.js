@@ -100,7 +100,6 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
-    -a, --alias               Re-assign existing aliases to the deployment
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
