@@ -5,6 +5,7 @@ const minimist = require('minimist')
 const chalk = require('chalk')
 const ms = require('ms')
 const table = require('text-table')
+const isURL = require('is-url')
 
 // Ours
 const Now = require('../lib')
@@ -127,6 +128,11 @@ async function remove(token) {
 
   const matches = deployments.filter(d => {
     return ids.find(id => {
+      // Normalize URL by removing slash from the end
+      if (isURL(id) && id.slice(-1) === '/') {
+        id = id.slice(0, -1)
+      }
+
       // `url` should match the hostname of the deployment
       let u = id.replace(/^https:\/\//i, '')
 
@@ -138,6 +144,8 @@ async function remove(token) {
       return d.uid === id || d.name === id || d.url === u
     })
   })
+
+  process.exit(0)
 
   if (matches.length === 0) {
     error(`Could not find any deployments matching ${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
