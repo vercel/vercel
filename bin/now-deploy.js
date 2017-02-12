@@ -12,6 +12,7 @@ const minimist = require('minimist')
 const ms = require('ms')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
+const exit = require('../lib/utils/exit')
 
 // Ours
 const copy = require('../lib/copy')
@@ -147,14 +148,6 @@ if (path) {
 
 // If the current deployment is a repo
 const gitRepo = {}
-
-const exit = code => {
-  // we give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100)
-}
 
 // options
 let forceNew = argv.force
