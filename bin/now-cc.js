@@ -308,7 +308,7 @@ async function run(token) {
     }
 
     case 'add': {
-      require(resolve(__dirname, 'now-cc-add.js'))
+      require(resolve(__dirname, 'now-cc-add.js'))(creditCards)
 
       break
     }
