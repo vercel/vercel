@@ -12,7 +12,6 @@ const minimist = require('minimist')
 const ms = require('ms')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
-const exit = require('../lib/utils/exit')
 
 // Ours
 const copy = require('../lib/copy')
@@ -28,6 +27,7 @@ const {fromGit, isRepoPath, gitPathParts} = require('../lib/git')
 const readMetaData = require('../lib/read-metadata')
 const checkPath = require('../lib/utils/check-path')
 const {reAlias, assignAlias} = require('../lib/re-alias')
+const exit = require('../lib/utils/exit')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
