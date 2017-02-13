@@ -31,7 +31,7 @@ const subcommand = argv._[0]
 
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now cc')} <ls | add | rm | set-default>
+  ${chalk.bold('𝚫 now billing')} <ls | add | rm | set-default>
 
   ${chalk.dim('Options:')}
 
@@ -45,21 +45,21 @@ const help = () => {
 
   ${chalk.gray('–')} Lists all your credit cards:
 
-      ${chalk.cyan('$ now cc ls')}
+      ${chalk.cyan('$ now billing ls')}
 
   ${chalk.gray('–')} Adds a credit card (interactively):
 
-      ${chalk.cyan(`$ now cc add`)}
+      ${chalk.cyan(`$ now billing add`)}
 
   ${chalk.gray('–')} Removes a credit card:
 
-      ${chalk.cyan(`$ now cc rm <id>`)}
+      ${chalk.cyan(`$ now billing rm <id>`)}
 
       ${chalk.gray('–')} If the id is ommitted, you can choose interactively
 
   ${chalk.gray('–')} Selects your default credit card:
 
-      ${chalk.cyan(`$ now cc set-default <id>`)}
+      ${chalk.cyan(`$ now billing set-default <id>`)}
 
       ${chalk.gray('–')} If the id is ommitted, you can choose interactively
   `)
@@ -213,7 +213,7 @@ async function run(token) {
       }
 
       // TODO: check if the provided cardId (in case the user
-      // typed `now cc set-default <some-id>`) is valid
+      // typed `now billing set-default <some-id>`) is valid
       if (cardId) {
         const start = new Date()
         await creditCards.setDefault(cardId)
@@ -273,7 +273,7 @@ async function run(token) {
       }
 
       // TODO: check if the provided cardId (in case the user
-      // typed `now cc rm <some-id>`) is valid
+      // typed `now billing rm <some-id>`) is valid
       if (cardId) {
         const start = new Date()
         await creditCards.rm(cardId)
@@ -308,7 +308,7 @@ async function run(token) {
     }
 
     case 'add': {
-      require(resolve(__dirname, 'now-cc-add.js'))(creditCards)
+      require(resolve(__dirname, 'now-billing-add.js'))(creditCards)
 
       break
     }
