@@ -188,7 +188,7 @@ if (argv.h || argv.help) {
   help()
   exit(0)
 } else if (argv.v || argv.version) {
-  console.log(chalk.bold('𝚫 now'), version)
+  console.log(version)
   process.exit(0)
 } else if (!(argv.token || config.token) || shouldLogin) {
   login(apiUrl)
