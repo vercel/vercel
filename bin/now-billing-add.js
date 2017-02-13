@@ -4,7 +4,7 @@ const ansiEscapes = require('ansi-escapes')
 const chalk = require('chalk')
 const ccValidator = require('credit-card')
 
-const input = require('../lib/utils/input')
+const textInput = require('../lib/utils/input/text')
 const countries = require('../lib/utils/billing/country-list')
 const cardBrands = require('../lib/utils/billing/card-brands')
 const geocode = require('../lib/utils/billing/geocode')
@@ -117,7 +117,7 @@ module.exports = function (creditCards) {
       } else if (typeof piece === 'object') {
         let result
         try {
-          result = await input({
+          result = await textInput({
             label: '- ' + piece.label,
             initialValue: piece.initialValue || piece.value,
             placeholder: piece.placeholder,
