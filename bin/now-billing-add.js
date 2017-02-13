@@ -185,7 +185,7 @@ module.exports = function (creditCards) {
         address1: state.address1.value
       })
       stopSpinner()
-      console.log('\n')
+      console.log('') // new line
       success(`${state.cardNumber.brand} ending in ${res.last4} was added to your account`)
     } catch (err) {
       stopSpinner()
