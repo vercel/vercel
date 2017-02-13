@@ -7,7 +7,6 @@ const {resolve} = require('path')
 const chalk = require('chalk')
 const minimist = require('minimist')
 const ms = require('ms')
-const inquirer = require('inquirer')
 
 // Ours
 const login = require('../lib/login')
@@ -15,6 +14,7 @@ const cfg = require('../lib/cfg')
 const {error} = require('../lib/error')
 const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
+const listInput = require('../lib/utils/input/list')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -123,7 +123,7 @@ function buildInquirerChoices(cards) {
       value: card.id, // Will be used to identify the answer
       short: card.id // Will be displayed after the users answers
     }
-  }).reduce((prev, curr) => prev.concat(new inquirer.Separator(' '), curr), [])
+  })
 }
 
 async function run(token) {
@@ -188,28 +188,19 @@ async function run(token) {
         return exit(0)
       }
 
-      const ANSWER_NAME = 'now-cc-set-default'
       let cardId = args[0]
 
       if (cardId === undefined) {
-        const choices = buildInquirerChoices(cards)
-        choices.push(new inquirer.Separator())
-        choices.push({
-          name: 'Abort',
-          value: undefined
-        })
-
         const elapsed = ms(new Date() - start)
         const message = `Selecting a new default payment card from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`
-        const answer = await inquirer.prompt({
-          name: ANSWER_NAME,
-          type: 'list',
+        const choices = buildInquirerChoices(cards)
+
+        cardId = await listInput({
           message,
           choices,
-          pageSize: 15 // Show 15 lines without scrolling (~4 credit cards)
+          separator: true,
+          abort: 'end'
         })
-
-        cardId = answer[ANSWER_NAME]
       }
 
       // TODO: check if the provided cardId (in case the user
@@ -245,31 +236,19 @@ async function run(token) {
         return exit(0)
       }
 
-      const ANSWER_NAME = 'now-cc-rm'
       let cardId = args[0]
 
       if (cardId === undefined) {
-        const choices = buildInquirerChoices(cards)
-        const blankSeparator = choices.shift()
-
-        choices.unshift(new inquirer.Separator())
-        choices.unshift({
-          name: 'Abort',
-          value: undefined
-        })
-        choices.unshift(blankSeparator)
-
         const elapsed = ms(new Date() - start)
         const message = `Selecting a card to ${chalk.underline('remove')} from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`
-        const answer = await inquirer.prompt({
-          name: ANSWER_NAME,
-          type: 'list',
+        const choices = buildInquirerChoices(cards)
+
+        cardId = await listInput({
           message,
           choices,
-          pageSize: 15 // Show 15 lines without scrolling (~4 credit cards)
+          separator: true,
+          abort: 'start'
         })
-
-        cardId = answer[ANSWER_NAME]
       }
 
       // TODO: check if the provided cardId (in case the user
