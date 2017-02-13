@@ -372,9 +372,13 @@ async function sync(token) {
   const now = new Now(apiUrl, token, {debug})
 
   let dotenvConfig
-  const dotenvOption = argv.dotenv ? argv.dotenv : nowConfig.dotenv
-  if (dotenvOption) {
-    const dotenvFileName = typeof dotenvOption === 'string' ? dotenvOption : '.env'
+
+  if (argv.dotenv) {
+    if (nowConfig.dotenv) {
+      argv.dotenv = nowConfig.dotenv
+    }
+
+    const dotenvFileName = typeof argv.dotenv === 'string' ? argv.dotenv : '.env'
 
     if (!fs.existsSync(dotenvFileName)) {
       error(`--dotenv flag is set but ${dotenvFileName} file is missing`)
