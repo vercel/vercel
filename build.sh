@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 rm -rf build
-async-to-gen --out-dir build/bin bin 
-async-to-gen --out-dir build/lib lib
-async-to-gen --out-dir build/lib/utils lib/utils
-async-to-gen --out-dir build/lib/utils/input lib/utils/input
-async-to-gen --out-dir build/lib/utils/output lib/utils/output
-async-to-gen --out-dir build/lib/utils/billing lib/utils/billing
+mkdir -p build/{lib,bin}
+find lib/** -type d -exec mkdir -p build/{} \;
+find bin/** -type d -exec mkdir -p build/{} \;
+find lib/** -type f -exec async-to-gen --out-file build/{} {} \;
+find bin/** -type f -exec async-to-gen --out-file build/{} {} \;
 cp lib/utils/billing/*.json build/lib/utils/billing/
 cp package.json build/
