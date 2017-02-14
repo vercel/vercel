@@ -56,13 +56,13 @@ const help = () => {
 
       ${chalk.cyan(`$ now billing rm <id>`)}
 
-      ${chalk.gray('–')} If the id is ommitted, you can choose interactively
+      ${chalk.gray('–')} If the id is omitted, you can choose interactively
 
   ${chalk.gray('–')} Selects your default credit card:
 
       ${chalk.cyan(`$ now billing set-default <id>`)}
 
-      ${chalk.gray('–')} If the id is ommitted, you can choose interactively
+      ${chalk.gray('–')} If the id is omitted, you can choose interactively
   `)
 }
 
