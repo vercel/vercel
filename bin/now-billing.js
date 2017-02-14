@@ -38,7 +38,6 @@ const help = () => {
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
-    -f, --force             Skip DNS verification
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
   ${chalk.dim('Examples:')}
