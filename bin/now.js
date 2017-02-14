@@ -61,7 +61,9 @@ const commands = new Set([
   'secret',
   'secrets',
   'cc',
-  'billing'
+  'billing',
+  'upgrade',
+  'downgrade'
 ])
 
 const aliases = new Map([
@@ -72,7 +74,8 @@ const aliases = new Map([
   ['domain', 'domains'],
   ['cert', 'certs'],
   ['secret', 'secrets'],
-  ['cc', 'billing']
+  ['cc', 'billing'],
+  ['downgrade', 'upgrade']
 ])
 
 let cmd = defaultCommand
