@@ -12,16 +12,18 @@
     "precommit": "npm run lint",
     "lint": "xo",
     "test": "npm run lint && ava",
+    "prepublish": "build",
+    "build": "./build.sh",
     "pack": "pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
   },
   "pkg": {
     "scripts": [
-      "./bin/*",
-      "./lib/**/*"
+      "./build/bin/*",
+      "./build/lib/**/*"
     ]
   },
   "bin": {
-    "now": "./bin/now.js"
+    "now": "./build/bin/now.js"
   },
   "ava": {
     "failFast": true,
