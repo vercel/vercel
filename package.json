@@ -5,8 +5,7 @@
   "repository": "zeit/now-cli",
   "license": "MIT",
   "files": [
-    "bin",
-    "lib"
+    "build"
   ],
   "scripts": {
     "precommit": "npm run lint",
