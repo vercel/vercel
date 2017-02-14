@@ -7,10 +7,10 @@ const {resolve} = require('path')
 const nodeVersion = require('node-version')
 const updateNotifier = require('update-notifier')
 const chalk = require('chalk')
-const pkgUp = require('pkg-up')
 
 // Ours
 const {error} = require('../lib/error')
+const pkg = require('../lib/pkg')
 
 // Throw an error if node version is too low
 if (nodeVersion.major < 6) {
@@ -18,23 +18,18 @@ if (nodeVersion.major < 6) {
   process.exit(1)
 }
 
-pkgUp().then(packagePath => {
-  const pkg = require(packagePath)
+if (!process.pkg) {
+  const notifier = updateNotifier({pkg})
+  const update = notifier.update
 
-  // Only check for updates in the npm version
-  if (!process.pkg && pkg.dist) {
-    const notifier = updateNotifier({pkg})
-    const update = notifier.update
+  if (update) {
+    let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
+    message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
+    message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
 
-    if (update) {
-      let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
-      message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
-      message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
-
-      notifier.notify({message})
-    }
+    notifier.notify({message})
   }
-})
+}
 
 // This command will be run if no other sub command is specified
 const defaultCommand = 'deploy'

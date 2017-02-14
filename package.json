@@ -84,7 +84,6 @@
     "node-fetch": "1.6.3",
     "node-version": "1.0.0",
     "ora": "1.1.0",
-    "pkg-up": "1.0.0",
     "progress": "1.1.8",
     "psl": "1.1.16",
     "resumer": "0.0.0",
