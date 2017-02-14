@@ -11,17 +11,19 @@
   "scripts": {
     "precommit": "npm run lint",
     "lint": "xo",
-    "test": "npm run lint && ava",
-    "pack": "pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
+    "test": "npm run build && npm run lint && ava",
+    "prepublish": "npm run build",
+    "build": "./build.sh",
+    "pack": "npm run build && pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
   },
   "pkg": {
     "scripts": [
-      "./bin/*",
-      "./lib/**/*"
+      "./build/bin/*",
+      "./build/lib/**/*"
     ]
   },
   "bin": {
-    "now": "./bin/now.js"
+    "now": "./build/bin/now.js"
   },
   "ava": {
     "failFast": true,
@@ -55,7 +57,9 @@
     "node": ">=6.9.0"
   },
   "dependencies": {
+    "@google/maps": "0.3.1",
     "ansi-escapes": "1.4.0",
+    "ansi-regex": "^2.1.1",
     "arr-flatten": "1.0.1",
     "array-unique": "0.3.2",
     "async-retry": "0.2.1",
@@ -63,6 +67,7 @@
     "bytes": "2.4.0",
     "chalk": "1.1.3",
     "copy-paste": "1.3.0",
+    "credit-card": "^3.0.1",
     "cross-spawn": "5.0.1",
     "docker-file-parser": "0.1.0",
     "dotenv": "4.0.0",
@@ -73,6 +78,7 @@
     "glob": "7.1.1",
     "ignore": "3.2.2",
     "ini": "1.3.4",
+    "inquirer": "^2.0.0",
     "is-url": "1.2.2",
     "minimist": "1.2.0",
     "ms": "0.7.2",
@@ -84,6 +90,8 @@
     "resumer": "0.0.0",
     "socket.io-client": "1.7.2",
     "split-array": "1.0.1",
+    "strip-ansi": "3.0.1",
+    "stripe": "4.15.0",
     "text-table": "0.2.0",
     "tmp-promise": "1.0.3",
     "update-notifier": "2.0.0"

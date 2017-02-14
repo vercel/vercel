@@ -12,14 +12,6 @@ const chalk = require('chalk')
 const {error} = require('../lib/error')
 const pkg = require('../package')
 
-const pathSep = process.platform === 'win32' ? '\\\\' : '/'
-// Support for keywords "async" and "await"
-require('async-to-gen/register')({
-  includes: new RegExp(`.*now(-cli)?${pathSep}(lib|bin).*`),
-  excludes: null,
-  sourceMaps: false
-})
-
 // Throw an error if node version is too low
 if (nodeVersion.major < 6) {
   error('Now requires at least version 6 of Node. Please upgrade!')
@@ -59,7 +51,11 @@ const commands = new Set([
   'cert',
   'certs',
   'secret',
-  'secrets'
+  'secrets',
+  'cc',
+  'billing',
+  'upgrade',
+  'downgrade'
 ])
 
 const aliases = new Map([
@@ -69,7 +65,9 @@ const aliases = new Map([
   ['aliases', 'alias'],
   ['domain', 'domains'],
   ['cert', 'certs'],
-  ['secret', 'secrets']
+  ['secret', 'secrets'],
+  ['cc', 'billing'],
+  ['downgrade', 'upgrade']
 ])
 
 let cmd = defaultCommand

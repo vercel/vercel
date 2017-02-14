@@ -6,9 +6,9 @@ const test = require('ava')
 const {asc: alpha} = require('alpha-sort')
 
 // Ours
-const hash = require('../lib/hash')
-const readMetadata = require('../lib/read-metadata')
-const {npm: getNpmFiles_, docker: getDockerFiles} = require('../lib/get-files')
+const hash = require('../build/lib/hash')
+const readMetadata = require('../build/lib/read-metadata')
+const {npm: getNpmFiles_, docker: getDockerFiles} = require('../build/lib/get-files')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
