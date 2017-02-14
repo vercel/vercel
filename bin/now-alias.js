@@ -13,6 +13,8 @@ const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const {error} = require('../lib/error')
 const toHost = require('../lib/to-host')
+const {reAlias} = require('../lib/re-alias')
+const exit = require('../lib/utils/exit')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -80,14 +82,6 @@ const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
-}
-
-const exit = code => {
-  // we give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100)
 }
 
 if (argv.help) {
@@ -212,6 +206,11 @@ async function run(token) {
       break
     }
     default: {
+      if (argv._.length === 0) {
+        await reAlias(token, null, help, exit, apiUrl, debug, alias)
+        break
+      }
+
       if (argv._.length === 2) {
         await alias.set(String(argv._[0]), String(argv._[1]))
       } else if (argv._.length >= 3) {

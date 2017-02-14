@@ -16,6 +16,7 @@ const cfg = require('../lib/cfg')
 const {handleError, error} = require('../lib/error')
 const NowCerts = require('../lib/certs')
 const login = require('../lib/login')
+const exit = require('../lib/utils/exit')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
@@ -75,14 +76,6 @@ const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
-}
-
-const exit = code => {
-  // we give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100)
 }
 
 if (argv.help || !subcommand) {

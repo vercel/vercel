@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-const {resolve, join} = require('path')
+const {resolve} = require('path')
 
 // Packages
 const Progress = require('progress')
@@ -10,7 +10,6 @@ const bytes = require('bytes')
 const chalk = require('chalk')
 const minimist = require('minimist')
 const ms = require('ms')
-const publicSuffixList = require('psl')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
 
@@ -27,7 +26,8 @@ const {handleError, error} = require('../lib/error')
 const {fromGit, isRepoPath, gitPathParts} = require('../lib/git')
 const readMetaData = require('../lib/read-metadata')
 const checkPath = require('../lib/utils/check-path')
-const NowAlias = require('../lib/alias')
+const {reAlias, assignAlias} = require('../lib/re-alias')
+const exit = require('../lib/utils/exit')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -101,7 +101,6 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
-    -a, --alias               Re-assign existing aliases to the deployment
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -150,14 +149,6 @@ if (path) {
 // If the current deployment is a repo
 const gitRepo = {}
 
-const exit = code => {
-  // we give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100)
-}
-
 // options
 let forceNew = argv.force
 const debug = argv.debug
@@ -177,6 +168,11 @@ if (argv.config) {
   cfg.setConfigFile(argv.config)
 }
 
+if (Array.isArray(autoAliases)) {
+  console.log(`${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`)
+  console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n')
+}
+
 // Create a new deployment if user changed
 // the name or made _src public.
 // This should just work fine because it doesn't
@@ -192,7 +188,7 @@ if (argv.h || argv.help) {
   help()
   exit(0)
 } else if (argv.v || argv.version) {
-  console.log(chalk.bold('𝚫 now'), version)
+  console.log(version)
   process.exit(0)
 } else if (!(argv.token || config.token) || shouldLogin) {
   login(apiUrl)
@@ -376,8 +372,16 @@ async function sync(token) {
   const now = new Now(apiUrl, token, {debug})
 
   let dotenvConfig
+  let dotenvOption
+
   if (argv.dotenv) {
-    const dotenvFileName = typeof argv.dotenv === 'string' ? argv.dotenv : '.env'
+    dotenvOption = argv.dotenv
+  } else if (nowConfig && nowConfig.dotenv) {
+    dotenvOption = nowConfig.dotenv
+  }
+
+  if (dotenvOption) {
+    const dotenvFileName = typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
     if (!fs.existsSync(dotenvFileName)) {
       error(`--dotenv flag is set but ${dotenvFileName} file is missing`)
@@ -570,72 +574,6 @@ async function sync(token) {
   }
 }
 
-const assignAlias = async (autoAlias, token, deployment) => {
-  const type = publicSuffixList.isValid(autoAlias) ? 'alias' : 'uid'
-
-  const aliases = new NowAlias(apiUrl, token, {debug})
-  const list = await aliases.ls()
-
-  let related
-
-  // Check if alias even exists
-  for (const alias of list) {
-    if (alias[type] === autoAlias) {
-      related = alias
-      break
-    }
-  }
-
-  // If alias doesn't exist
-  if (!related) {
-    // Check if the uid was actually an alias
-    if (type === 'uid') {
-      return assignAlias(`${autoAlias}.now.sh`, token, deployment)
-    }
-
-    // If not, throw an error
-    const withID = type === 'uid' ? 'with ID ' : ''
-    error(`Alias ${withID}"${autoAlias}" doesn't exist`)
-    return
-  }
-
-  console.log(`> Assigning alias ${chalk.bold.underline(related.alias)} to deployment...`)
-
-  // Assign alias
-  await aliases.set(String(deployment), String(related.alias))
-}
-
-async function realias(token, host) {
-  const path = process.cwd()
-
-  const configFiles = {
-    pkg: join(path, 'package.json'),
-    nowJSON: join(path, 'now.json')
-  }
-
-  if (!fs.existsSync(configFiles.pkg) && !fs.existsSync(configFiles.nowJSON)) {
-    error(`Couldn't find a now.json or package.json file with an alias list in it`)
-    return
-  }
-
-  const {nowConfig} = await readMetaData(path, {
-    deploymentType: 'npm', // hard coding settings…
-    quiet: true // `quiet`
-  })
-
-  const targets = nowConfig && nowConfig.aliases
-
-  // the user never intended to support aliases from the package
-  if (!targets || !Array.isArray(targets)) {
-    help()
-    return exit(0)
-  }
-
-  for (const target of targets) {
-    await assignAlias(target, token, host)
-  }
-}
-
 function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
@@ -662,10 +600,10 @@ function printLogs(host, token) {
 
       if (aliasList.length > 0) {
         for (const alias of aliasList) {
-          await assignAlias(alias, token, host)
+          await assignAlias(alias, token, host, apiUrl, debug)
         }
       } else {
-        await realias(token, host)
+        await reAlias(token, host, help, exit, apiUrl, debug)
       }
     }
 
