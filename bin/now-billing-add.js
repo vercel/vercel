@@ -139,6 +139,10 @@ module.exports = function (creditCards) {
             process.stdout.write(
               `${chalk.cyan('✓')} ${piece.label}${result} ${brand}\n`
             )
+          } else if (key === 'ccv') {
+            process.stdout.write(
+              `${chalk.cyan('✓')} ${piece.label}${'*'.repeat(result.length)}\n`
+            )
           } else if (key === 'expDate') {
             let text = result.split(' / ')
             text = text[0] + chalk.gray(' / ') + text[1]
