@@ -16,6 +16,7 @@ const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
 const success = require('../lib/utils/output/success')
+const promptBool = require('../lib/utils/output/prompt-bool')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -206,6 +207,13 @@ async function run(token) {
       // TODO: check if the provided cardId (in case the user
       // typed `now billing set-default <some-id>`) is valid
       if (cardId) {
+        const label = `Are you sure that you to set this card as the default?`
+        const confirmation = await promptBool(label)
+        console.log('') // new line
+        if (!confirmation) {
+          console.log('Aborted')
+          break
+        }
         const start = new Date()
         await creditCards.setDefault(cardId)
 
@@ -252,6 +260,13 @@ async function run(token) {
       // TODO: check if the provided cardId (in case the user
       // typed `now billing rm <some-id>`) is valid
       if (cardId) {
+        const label = `Are you sure that you want to remove this card?`
+        const confirmation = await promptBool(label)
+        console.log('') // new line
+        if (!confirmation) {
+          console.log('Aborted')
+          break
+        }
         const start = new Date()
         await creditCards.rm(cardId)
 
