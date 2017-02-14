@@ -13,7 +13,8 @@
     "test": "npm run build && npm run lint && ava",
     "prepublish": "npm run build",
     "build": "./build.sh",
-    "pack": "npm run build && pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
+    "pack": "npm run build && npm run pkg",
+    "pkg": "pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
   },
   "pkg": {
     "scripts": [
