@@ -136,8 +136,9 @@ module.exports = function (creditCards) {
               state.ccv.placeholder = '#'.repeat(3)
             }
             brand = chalk.cyan(`[${brand}]`)
+            const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3]
             process.stdout.write(
-              `${chalk.cyan('✓')} ${piece.label}${result} ${brand}\n`
+              `${chalk.cyan('✓')} ${piece.label}${masked} ${brand}\n`
             )
           } else if (key === 'ccv') {
             process.stdout.write(
