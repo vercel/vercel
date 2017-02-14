@@ -15,6 +15,7 @@ const {error} = require('../lib/error')
 const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
+const success = require('../lib/utils/output/success')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -210,9 +211,7 @@ async function run(token) {
 
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
-        const text = `${chalk.cyan('Success!')} ${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
-
-        console.log(text)
+        success(`${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`)
       } else {
         console.log('No changes made')
       }
@@ -259,7 +258,7 @@ async function run(token) {
         const deletedCard = cards.cards.find(card => card.id === cardId)
         const remainingCards = cards.cards.filter(card => card.id !== cardId)
 
-        let text = `${chalk.cyan('Success!')} ${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
+        let text = `${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
         //  ${chalk.gray(`[${elapsed}]`)}
 
         if (cardId === cards.defaultCardId) {
@@ -277,7 +276,7 @@ async function run(token) {
 
         const elapsed = ms(new Date() - start)
         text += ` ${chalk.gray(`[${elapsed}]`)}`
-        console.log(text)
+        success(text)
       } else {
         console.log('No changes made')
       }
