@@ -73,17 +73,24 @@ const help = () => {
   console.log(`
   ${chalk.bold('𝚫 now')} [options] <command | path>
 
-  ${chalk.dim('Commands:')}
+  ${chalk.dim('Commands')}
 
-    deploy       [path]       Performs a deployment ${chalk.bold('(default)')}
-    ls | list    [app]        List deployments
-    rm | remove  [id]         Remove a deployment
-    ln | alias   [id] [url]   Configures aliases for deployments
-    domains      [name]       Manages your domain names
-    certs        [cmd]        Manages your SSL certificates
-    secrets      [name]       Manages your secret environment variables
-    dns          [name]       Manages your DNS records
-    help         [cmd]        Displays complete help for [cmd]
+    ${chalk.dim('Cloud')}
+
+      deploy               [path]       Performs a deployment ${chalk.bold('(default)')}
+      ls | list            [app]        List deployments
+      rm | remove          [id]         Remove a deployment
+      ln | alias           [id] [url]   Configures aliases for deployments
+      domains              [name]       Manages your domain names
+      certs                [cmd]        Manages your SSL certificates
+      secrets              [name]       Manages your secret environment variables
+      dns                  [name]       Manages your DNS records
+      help                 [cmd]        Displays complete help for [cmd]
+
+    ${chalk.dim('Administrative')}
+
+      billing | cc         [cmd]        Manages your credit cards and billing methods
+      upgrade | downgrade  [plan]       Upgrades or downgrades your plan
 
   ${chalk.dim('Options:')}
 
