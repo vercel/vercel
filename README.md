@@ -8,23 +8,7 @@ Realtime global deployments served over HTTP/2. You can find the FAQs [here](htt
 
 ## Usage
 
-Firstly, make sure to install the package globally:
-
-```bash
-npm install -g now
-```
-
-Run this command in your terminal:
-
-```bash
-now
-```
-
-For more examples, usage instructions and other commands run:
-
-```bash
-now help
-```
+Simply follow [this guide](https://zeit.co/now#get-started)!
 
 ### Options
 
