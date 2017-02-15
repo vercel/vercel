@@ -29,9 +29,6 @@
     "failFast": true,
     "files": [
       "test/*.js"
-    ],
-    "require": [
-      "async-to-gen/register"
     ]
   },
   "xo": {
