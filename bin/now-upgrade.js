@@ -155,7 +155,8 @@ async function run(token) {
   if (planId === undefined) {
     const elapsed = ms(new Date() - start)
 
-    const message = `Selecting a plan for your account ${chalk.gray(`[${elapsed}]`)}`
+    let message = `To manage this from the web UI, head to https://zeit.co/account\n`
+    message += `> Selecting a plan for your account ${chalk.gray(`[${elapsed}]`)}`
     const choices = buildInquirerChoices(currentPlan.id, currentPlan.until)
 
     planId = await listInput({
