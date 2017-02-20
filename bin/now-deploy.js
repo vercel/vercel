@@ -108,6 +108,8 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
+    --url ${chalk.underline('URL')}                 Zeit's API endpoint. Defaults to 'https://api.zeit.co'
+    --socket-url ${chalk.underline('URL')}          Now's realtime deployment socket status endpoint. Defaults to 'https://io.now.sh'
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -167,6 +169,7 @@ const followSymlinks = !argv.links
 const wantsPublic = argv.public
 const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
+const socketApiUrl = argv['socket-url'] || 'https://io.now.sh'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
 const autoAliases = typeof argv.alias === 'undefined' ? false : flatten([argv.alias])
@@ -583,7 +586,7 @@ async function sync(token) {
 
 function printLogs(host, token) {
   // log build
-  const logger = new Logger(host, {debug, quiet})
+  const logger = new Logger(host, {debug, quiet, socketApiUrl})
 
   logger.on('error', async () => {
     if (!quiet) {
