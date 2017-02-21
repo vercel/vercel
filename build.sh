@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 rm -rf build
 mkdir -p build/{lib,bin}
 find lib/** -type d -exec mkdir -p build/{} \;
