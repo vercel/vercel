@@ -66,7 +66,7 @@
     "copy-paste": "1.3.0",
     "credit-card": "^3.0.1",
     "cross-spawn": "5.0.1",
-    "docker-file-parser": "0.1.0",
+    "docker-file-parser": "1.0.1",
     "dotenv": "4.0.0",
     "download": "5.0.3",
     "email-prompt": "0.2.0",
