@@ -154,7 +154,7 @@ async function run(token) {
           address += `${card.address_state}, `
         }
 
-        // TODO: Stripe is returning a two digit code for the country,
+        // Stripe is returning a two digit code for the country,
         // but we want the full country name
         address += `${card.address_zip}. ${card.address_country}`
 
@@ -204,7 +204,7 @@ async function run(token) {
         })
       }
 
-      // TODO: check if the provided cardId (in case the user
+      // Check if the provided cardId (in case the user
       // typed `now billing set-default <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`
@@ -257,7 +257,7 @@ async function run(token) {
         })
       }
 
-      // TODO: check if the provided cardId (in case the user
+      // Shoud check if the provided cardId (in case the user
       // typed `now billing rm <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`
