@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+// Packages
 const ansiEscapes = require('ansi-escapes')
 const chalk = require('chalk')
 const ccValidator = require('credit-card')
 
+// Ours
 const textInput = require('../lib/utils/input/text')
 const countries = require('../lib/utils/billing/country-list')
 const cardBrands = require('../lib/utils/billing/card-brands')
