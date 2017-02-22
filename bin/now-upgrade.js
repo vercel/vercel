@@ -16,6 +16,7 @@ const code = require('../lib/utils/output/code')
 const error = require('../lib/utils/output/error')
 const success = require('../lib/utils/output/success')
 const cmd = require('../lib/utils/output/cmd')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -30,7 +31,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now upgrade')} [plan]
+  ${chalk.bold(`${logo} now upgrade`)} [plan]
 
   ${chalk.dim('Options:')}
 

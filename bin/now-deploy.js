@@ -28,6 +28,7 @@ const readMetaData = require('../lib/read-metadata')
 const checkPath = require('../lib/utils/check-path')
 const {reAlias, assignAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -71,7 +72,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now')} [options] <command | path>
+  ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands')}
 

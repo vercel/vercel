@@ -2,8 +2,10 @@ const path = require('path')
 const test = require('ava')
 const {spawn} = require('cross-spawn')
 
-const deployHelpMessage = '𝚫 now [options] <command | path>'
-const aliasHelpMessage = '𝚫 now alias <ls | set | rm> <deployment> <alias>'
+const logo = require('../lib/utils/output/logo')
+
+const deployHelpMessage = `${logo} now [options] <command | path>`
+const aliasHelpMessage = `${logo} now alias <ls | set | rm> <deployment> <alias>`
 
 test('"now help" prints deploy help message', async t => {
   const result = await now('help')

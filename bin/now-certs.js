@@ -17,6 +17,7 @@ const {handleError, error} = require('../lib/error')
 const NowCerts = require('../lib/certs')
 const login = require('../lib/login')
 const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
@@ -34,7 +35,7 @@ const subcommand = argv._[0]
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now certs')} <ls | create | renew | replace | rm> <cn>
+  ${chalk.bold(`${logo} now certs`)} <ls | create | renew | replace | rm> <cn>
 
   ${chalk.dim('Note:')}
 
