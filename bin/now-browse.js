@@ -11,6 +11,7 @@ const Now = require('../lib')
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const {handleError, error} = require('../lib/error')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -25,7 +26,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now browse')}
+  ${chalk.bold(`${logo} now browse`)}
 
   ${chalk.dim('Options:')}
 
