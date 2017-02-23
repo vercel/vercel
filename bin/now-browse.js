@@ -114,7 +114,9 @@ async function browse(token) {
 
   try {
     const url = `https://${latestDeploy.url}`
-    console.log(`opening your latest deployment url for ${chalk.bold(pkg.name)} in browser - ${chalk.underline(url)}`)
+
+    console.log(`Opening the latest deployment for ${chalk.bold(pkg.name)}...`)
+    console.log(`Here's the URL: ${chalk.underline(url)}`)
 
     opn(url)
     process.exit(0)
