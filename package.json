@@ -64,7 +64,7 @@
     "bytes": "2.4.0",
     "chalk": "1.1.3",
     "copy-paste": "1.3.0",
-    "credit-card": "^3.0.1",
+    "credit-card": "3.0.1",
     "cross-spawn": "5.0.1",
     "docker-file-parser": "1.0.1",
     "dotenv": "4.0.0",
