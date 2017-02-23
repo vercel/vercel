@@ -26,7 +26,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now browse`)}
+  ${chalk.bold(`${logo} now open`)}
 
   ${chalk.dim('Options:')}
 
@@ -37,9 +37,9 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Open latest deployment for current app
+  ${chalk.gray('–')} Open latest deployment for current project
 
-    ${chalk.cyan('$ now browse')}
+    ${chalk.cyan('$ now open')}
 
 `)
 }
@@ -64,7 +64,7 @@ const config = cfg.read()
 Promise.resolve(argv.token || config.token || login(apiUrl))
     .then(async token => {
       try {
-        await browse(token)
+        await open(token)
       } catch (err) {
         error(`Unknown error: ${err}\n${err.stack}`)
         process.exit(1)
@@ -75,7 +75,7 @@ Promise.resolve(argv.token || config.token || login(apiUrl))
       process.exit(1)
     })
 
-async function browse(token) {
+async function open(token) {
   const now = new Now(apiUrl, token, {debug})
 
   let deployments
