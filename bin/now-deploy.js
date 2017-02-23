@@ -86,6 +86,7 @@ const help = () => {
       certs                [cmd]        Manages your SSL certificates
       secrets              [name]       Manages your secret environment variables
       dns                  [name]       Manages your DNS records
+      open                              Open the latest deployment for the project
       help                 [cmd]        Displays complete help for [cmd]
 
     ${chalk.dim('Administrative')}
