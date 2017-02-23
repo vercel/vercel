@@ -15,6 +15,7 @@ const {error} = require('../lib/error')
 const toHost = require('../lib/to-host')
 const {reAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -32,7 +33,7 @@ const subcommand = argv._[0]
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now alias')} <ls | set | rm> <deployment> <alias>
+  ${chalk.bold(`${logo} now alias`)} <ls | set | rm> <deployment> <alias>
 
   ${chalk.dim('Options:')}
 

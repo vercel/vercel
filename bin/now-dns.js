@@ -14,6 +14,7 @@ const login = require('../lib/login')
 const strlen = require('../lib/strlen')
 const {handleError, error} = require('../lib/error')
 const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config'],
@@ -31,9 +32,9 @@ const subcommand = argv._[0]
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now dns ls')} [domain]
-  ${chalk.bold('𝚫 now dns add')} <domain> <name> <A | AAAA | ALIAS | CNAME | MX | TXT> <value> [mx_priority]
-  ${chalk.bold('𝚫 now dns rm')} <id>
+  ${chalk.bold(`${logo} now dns ls`)} [domain]
+  ${chalk.bold(`${logo} now dns add`)} <domain> <name> <A | AAAA | ALIAS | CNAME | MX | TXT> <value> [mx_priority]
+  ${chalk.bold(`${logo} now dns rm`)} <id>
 
   ${chalk.dim('Options:')}
 

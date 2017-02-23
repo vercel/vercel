@@ -17,6 +17,7 @@ const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
 const success = require('../lib/utils/output/success')
 const promptBool = require('../lib/utils/output/prompt-bool')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -33,7 +34,7 @@ const subcommand = argv._[0]
 
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now billing')} <ls | add | rm | set-default>
+  ${chalk.bold(`${logo} now billing`)} <ls | add | rm | set-default>
 
   ${chalk.dim('Options:')}
 

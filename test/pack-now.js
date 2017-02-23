@@ -2,6 +2,8 @@ const path = require('path')
 const crossSpawn = require('cross-spawn')
 const test = require('ava')
 
+const logo = require('../lib/utils/output/logo')
+
 test.serial('make binary', async t => {
   if (!process.env.CI) return // eslint-disable-line curly
   const result = await spawn('npm', ['run', 'pkg'])
@@ -15,7 +17,7 @@ const binary = {
 }[process.platform]
 
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
-const deployHelpMessage = '𝚫 now [options] <command | path>'
+const deployHelpMessage = `${logo} now [options] <command | path>`
 
 test.serial('packed "now help" prints deploy help message', async t => {
   if (!process.env.CI) return // eslint-disable-line curly

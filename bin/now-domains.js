@@ -14,6 +14,7 @@ const toHost = require('../lib/to-host')
 const strlen = require('../lib/strlen')
 const NowDomains = require('../lib/domains')
 const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -33,7 +34,7 @@ const subcommand = argv._[0]
 // options
 const help = () => {
   console.log(`
-  ${chalk.bold('𝚫 now domains')} <ls | add | rm> <domain>
+  ${chalk.bold(`${logo} now domains`)} <ls | add | rm> <domain>
 
   ${chalk.dim('Options:')}
 
