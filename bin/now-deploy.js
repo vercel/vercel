@@ -74,7 +74,7 @@ const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
-  ${chalk.dim('Commands')}
+  ${chalk.dim('Commands:')}
 
     ${chalk.dim('Cloud')}
 
