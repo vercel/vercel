@@ -54,7 +54,8 @@ const commands = new Set([
   'cc',
   'billing',
   'upgrade',
-  'downgrade'
+  'downgrade',
+  'browse'
 ])
 
 const aliases = new Map([
