@@ -10,7 +10,7 @@ const chalk = require('chalk')
 
 // Ours
 const {error} = require('../lib/error')
-const pkg = require('../pkg')
+const pkg = require('../lib/pkg')
 
 // Throw an error if node version is too low
 if (nodeVersion.major < 6) {
