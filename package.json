@@ -13,13 +13,12 @@
     "test": "npm run build && npm run lint && ava",
     "prepublish": "npm run build",
     "build": "./build.sh",
-    "pack": "npm run build && npm run pkg",
-    "pkg": "pkg . --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
+    "pack": "pkg bin/now.js --config package.json --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
   },
   "pkg": {
     "scripts": [
-      "./build/bin/*",
-      "./build/lib/**/*"
+      "bin/*",
+      "lib/**/*"
     ]
   },
   "bin": {
@@ -98,7 +97,7 @@
     "alpha-sort": "2.0.0",
     "ava": "0.18.2",
     "husky": "0.13.1",
-    "pkg": "3.0.0-beta.27",
+    "pkg": "3.0.0-beta.28",
     "xo": "0.17.1"
   }
 }

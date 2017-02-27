@@ -6,7 +6,7 @@ const logo = require('../lib/utils/output/logo')
 
 test.serial('make binary', async t => {
   if (!process.env.CI) return // eslint-disable-line curly
-  const result = await spawn('npm', ['run', 'pkg'])
+  const result = await spawn('npm', ['run', 'pack'])
   t.is(result.code, 0)
 })
 
