@@ -96,7 +96,7 @@
   "devDependencies": {
     "alpha-sort": "2.0.0",
     "ava": "0.18.2",
-    "husky": "0.13.1",
+    "husky": "0.13.2",
     "pkg": "3.0.0-beta.28",
     "xo": "0.17.1"
   }
