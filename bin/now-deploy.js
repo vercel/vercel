@@ -584,7 +584,7 @@ async function sync(token) {
 
 function printLogs(host, token) {
   // log build
-  const logger = new Logger(host, {debug, quiet})
+  const logger = new Logger(host, token, {debug, quiet})
 
   logger.on('error', async () => {
     if (!quiet) {
