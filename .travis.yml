@@ -1,4 +1,7 @@
 {
   "language": "node_js",
-  "node_js": "node"
+  "node_js": [
+    "6",
+    "node"
+  ]
 }
