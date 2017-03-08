@@ -18,12 +18,13 @@ const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug'],
+  boolean: ['help', 'debug', 'last'],
   alias: {
     help: 'h',
     config: 'c',
     debug: 'd',
-    token: 't'
+    token: 't',
+    last: 'l'
   }
 })
 
@@ -37,6 +38,7 @@ const help = () => {
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -l, --last              Output last deployment
 
   ${chalk.dim('Examples:')}
 
@@ -47,6 +49,10 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app')}
+
+  ${chalk.gray('–')} List last deployment for the app ${chalk.dim('`my-app`')}
+
+    ${chalk.cyan('$ now ls -l my-app')}
 
   ${chalk.dim('Alias:')} ls
 `)
@@ -89,6 +95,11 @@ async function list(token) {
 
   let deployments
   try {
+    if (argv.last) {
+      const last = await now.last(app)
+      console.log(last.url)
+      return
+    }
     deployments = await now.list(app)
   } catch (err) {
     handleError(err)
