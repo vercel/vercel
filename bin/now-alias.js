@@ -16,6 +16,7 @@ const toHost = require('../lib/to-host')
 const {reAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
+const readConfirmation = require('../lib/read-confirmation')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'rules'],
@@ -223,7 +224,7 @@ async function run(token) {
       }
 
       try {
-        const confirmation = (await readConfirmation(alias, _alias, _aliases)).toLowerCase()
+        const confirmation = (await confirmDeploymentRemoval(alias, _alias)).toLowerCase()
         if (confirmation !== 'y' && confirmation !== 'yes') {
           console.log('\n> Aborted')
           process.exit(0)
@@ -278,27 +279,20 @@ async function run(token) {
   alias.close()
 }
 
-async function readConfirmation(alias, _alias) {
+async function confirmDeploymentRemoval(alias, _alias) {
   const deploymentsList = await alias.list()
   const urls = new Map(deploymentsList.map(l => [l.uid, l.url]))
 
-  return new Promise(resolve => {
-    const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
-    const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`)
-    const tbl = table(
-      [[_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]],
-      {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
-    )
+  const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
+  const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`)
+  const tbl = table(
+    [[_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]],
+    {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
+  )
 
-    process.stdout.write('> The following alias will be removed permanently\n')
-    process.stdout.write('  ' + tbl + '\n')
-    process.stdout.write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
-
-    process.stdin.on('data', d => {
-      process.stdin.pause()
-      resolve(d.toString().trim())
-    }).resume()
-  })
+  const msg = '> The following alias will be removed permanently\n' +
+  `  ${tbl} \n`
+  return await readConfirmation(msg)
 }
 
 function findAlias(alias, list) {
