@@ -341,7 +341,11 @@ async function updatePathAlias(alias, aliasName, rules) {
   const start = new Date()
   const res = await alias.updatePathBasedroutes(String(aliasName), rules)
   const elapsed = ms(new Date() - start)
-  if (!res.error) {
+  if (res.error) {
+    const err = new Error(res.error.message)
+    err.userError = true
+    throw err
+  } else {
     console.log(`${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`)
   }
 }
