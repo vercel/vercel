@@ -29,6 +29,7 @@ const checkPath = require('../lib/utils/check-path')
 const {reAlias, assignAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
+const cmd = require('../lib/utils/output/cmd')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -587,9 +588,13 @@ function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
 
-  logger.on('error', async () => {
+  logger.on('error', async err => {
     if (!quiet) {
-      console.log(`${chalk.cyan('> Deployment failed!')}`)
+      if (err && err.type === 'BUILD_ERROR') {
+        error(`The build step of your project failed. To retry, run ${cmd('now --force')}.`)
+      } else {
+        error('Deployment failed')
+      }
     }
 
     if (gitRepo && gitRepo.cleanup) {
