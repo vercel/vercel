@@ -92,7 +92,7 @@ const help = () => {
 
     ${chalk.dim('Administrative')}
 
-      billing | cc         [cmd]        Manages your credit cards and billing methods
+      billing | cc                      Manages your credit cards and billing methods
       upgrade | downgrade  [plan]       Upgrades or downgrades your plan
 
   ${chalk.dim('Options:')}
