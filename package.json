@@ -83,7 +83,7 @@
     "opn": "4.0.2",
     "ora": "1.1.0",
     "progress": "1.1.8",
-    "psl": "1.1.16",
+    "psl": "1.1.17",
     "resumer": "0.0.0",
     "socket.io-client": "1.7.3",
     "split-array": "1.0.1",
