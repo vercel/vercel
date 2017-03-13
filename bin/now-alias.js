@@ -16,7 +16,7 @@ const toHost = require('../lib/to-host')
 const {reAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
-const readConfirmation = require('../lib/read-confirmation')
+const promptBool = require('../lib/utils/input/prompt-bool')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'rules'],
@@ -224,8 +224,8 @@ async function run(token) {
       }
 
       try {
-        const confirmation = (await confirmDeploymentRemoval(alias, _alias)).toLowerCase()
-        if (confirmation !== 'y' && confirmation !== 'yes') {
+        const confirmation = await confirmDeploymentRemoval(alias, _alias)
+        if (!confirmation) {
           console.log('\n> Aborted')
           process.exit(0)
         }
@@ -291,8 +291,8 @@ async function confirmDeploymentRemoval(alias, _alias) {
   )
 
   const msg = '> The following alias will be removed permanently\n' +
-  `  ${tbl} \n`
-  return await readConfirmation(msg)
+  `  ${tbl} \nAre you sure?`
+  return await promptBool(msg)
 }
 
 function findAlias(alias, list) {
