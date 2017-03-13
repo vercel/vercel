@@ -210,7 +210,6 @@ async function run(token) {
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`
         const confirmation = await promptBool(label)
-        console.log('') // new line
         if (!confirmation) {
           console.log('Aborted')
           break
@@ -263,7 +262,6 @@ async function run(token) {
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`
         const confirmation = await promptBool(label)
-        console.log('') // new line
         if (!confirmation) {
           console.log('Aborted')
           break
