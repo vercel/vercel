@@ -16,7 +16,7 @@ const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
 const success = require('../lib/utils/output/success')
-const promptBool = require('../lib/utils/output/prompt-bool')
+const promptBool = require('../lib/utils/input/prompt-bool')
 const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
@@ -210,7 +210,6 @@ async function run(token) {
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`
         const confirmation = await promptBool(label)
-        console.log('') // new line
         if (!confirmation) {
           console.log('Aborted')
           break
@@ -263,7 +262,6 @@ async function run(token) {
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`
         const confirmation = await promptBool(label)
-        console.log('') // new line
         if (!confirmation) {
           console.log('Aborted')
           break
