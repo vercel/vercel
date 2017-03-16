@@ -116,7 +116,7 @@ const help = () => {
 
     --npm                     Node.js application
     --docker                  Docker container
-    --static                  Static file hosting
+    --static ${chalk.underline('OPTIONS')} Static file hosting, optional options to be passed to 'serve'
 
   ${chalk.dim('Examples:')}
 
@@ -285,6 +285,7 @@ async function sync(token) {
   }
 
   let deploymentType
+  let staticOptions
 
   let hasPackage
   let hasDockerfile
@@ -305,6 +306,7 @@ async function sync(token) {
 
     deploymentType = 'npm'
     isStatic = true
+    staticOptions = argv.static
   } else {
     try {
       await fs.stat(resolve(path, 'package.json'))
@@ -376,6 +378,7 @@ async function sync(token) {
     deploymentType,
     deploymentName,
     isStatic,
+    staticOptions,
     quiet: true
   })
 
