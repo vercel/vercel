@@ -116,7 +116,7 @@ const help = () => {
 
     --npm                     Node.js application
     --docker                  Docker container
-    --static ${chalk.underline('OPTIONS')} Static file hosting, optional options to be passed to 'serve'
+    --static ${chalk.underline('OPTIONS')}    Static file hosting, options can be passed to 'serve' (e.g. '--single')
 
   ${chalk.dim('Examples:')}
 
