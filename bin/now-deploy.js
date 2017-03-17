@@ -290,6 +290,19 @@ async function sync(token) {
   let hasDockerfile
   let isStatic
 
+  let metaData
+  try {
+    metaData = await readMetaData(path, {
+      deploymentType,
+      deploymentName,
+      isStatic,
+      quiet: true
+    })
+  } catch (err) {
+    error(err.message)
+    process.exit(1)
+  }
+
   if (argv.docker) {
     if (debug) {
       console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
@@ -331,7 +344,7 @@ async function sync(token) {
       })()
     ])
 
-    if (hasPackage && hasDockerfile) {
+    if (hasPackage && hasDockerfile && !metaData.deploymentType) {
       if (debug) {
         console.log('[debug] multiple manifests found, disambiguating')
       }
@@ -372,13 +385,6 @@ async function sync(token) {
     }
   }
 
-  const {nowConfig} = await readMetaData(path, {
-    deploymentType,
-    deploymentName,
-    isStatic,
-    quiet: true
-  })
-
   const now = new Now(apiUrl, token, {debug})
 
   let dotenvConfig
@@ -386,8 +392,8 @@ async function sync(token) {
 
   if (argv.dotenv) {
     dotenvOption = argv.dotenv
-  } else if (nowConfig && nowConfig.dotenv) {
-    dotenvOption = nowConfig.dotenv
+  } else if (metaData.nowConfig && metaData.nowConfig.dotenv) {
+    dotenvOption = metaData.nowConfig.dotenv
   }
 
   if (dotenvOption) {
@@ -403,7 +409,7 @@ async function sync(token) {
   }
 
   // Merge `now.env` from package.json with `-e` arguments.
-  const pkgEnv = nowConfig && nowConfig.env
+  const pkgEnv = metaData.nowConfig && metaData.nowConfig.env
   const envs = [
     ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
