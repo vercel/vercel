@@ -28,7 +28,7 @@ module.exports = function (creditCards) {
     cardGroupLabel: `> ${chalk.bold('Enter your card details')}`,
 
     name: {
-      label: rightPad('Name'),
+      label: rightPad('Full Name'),
       placeholder: 'John Appleseed',
       validateValue: data => data.trim().length > 0
     },

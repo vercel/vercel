@@ -33,7 +33,9 @@ const subcommand = argv._[0]
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now dns ls`)} [domain]
-  ${chalk.bold(`${logo} now dns add`)} <domain> <name> <A | AAAA | ALIAS | CNAME | MX | TXT> <value> [mx_priority]
+  ${chalk.bold(`${logo} now dns add`)} <domain> <name> <A | AAAA | ALIAS | CNAME | TXT> <value>
+  ${chalk.bold(`${logo} now dns add`)} <domain> <name> MX <value> <mx_priority>
+  ${chalk.bold(`${logo} now dns add`)} <domain> <name> SRV <priority> <weight> <port> <target>
   ${chalk.bold(`${logo} now dns rm`)} <id>
 
   ${chalk.dim('Options:')}
@@ -117,7 +119,7 @@ async function run(token) {
             record.name,
             record.type,
             record.value,
-            record.mxPriority ? record.mxPriority : '',
+            record.mxPriority || record.priority || '',
             time
           ]
         })), {align: ['l', 'r', 'l', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
@@ -127,21 +129,14 @@ async function run(token) {
     console.log(`> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`)
     console.log(text.join(''))
   } else if (subcommand === 'add') {
-    const domain = args[0]
-    const name = args[1] === '@' ? '' : args[1]
-    const type = args[2]
-    const value = args[3]
-    const mxPriority = args[4]
-
-    if (!(args.length >= 4 && args.length <= 5) ||
-        (type === 'MX' ? !mxPriority : mxPriority)) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now dns add <domain> <name> <type> <value> [mx_priority]`')}`)
+    const param = parseAddArgs(args)
+    if (!param) {
+      error(`Invalid number of arguments. See: ${chalk.cyan('`now dns --help`')} for usage.`)
       return exit(1)
     }
-
-    const record = await domainRecords.create(domain, {name, type, value, mxPriority})
+    const record = await domainRecords.create(param.domain, param.data)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(`${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
       error(`Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`)
@@ -175,6 +170,68 @@ process.on('uncaughtException', err => {
   handleError(err)
   exit(1)
 })
+
+function parseAddArgs(args) {
+  if (!args || args.length < 4) {
+    return null
+  }
+
+  const domain = args[0]
+  const name = args[1] === '@' ? '' : args[1]
+  const type = args[2]
+  const value = args[3]
+
+  if (!(domain && typeof name === 'string' && type)) {
+    return null
+  }
+
+  if (type === 'MX') {
+    if (args.length !== 5) {
+      return null
+    }
+
+    return {
+      domain,
+      data: {
+        name,
+        type,
+        value,
+        mxPriority: args[4]
+      }
+    }
+  } else if (type === 'SRV') {
+    if (args.length !== 7) {
+      return null
+    }
+
+    return {
+      domain,
+      data: {
+        name,
+        type,
+        srv: {
+          priority: value,
+          weight: args[4],
+          port: args[5],
+          target: args[6]
+        }
+      }
+    }
+  }
+
+  if (args.length !== 4) {
+    return null
+  }
+
+  return {
+    domain,
+    data: {
+      name,
+      type,
+      value
+    }
+  }
+}
 
 function readConfirmation(record, msg) {
   return new Promise(resolve => {

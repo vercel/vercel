@@ -17,7 +17,7 @@ const dotenv = require('dotenv')
 const copy = require('../lib/copy')
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
-const {version} = require('../pkg')
+const {version} = require('../lib/pkg')
 const Logger = require('../lib/build-logger')
 const Now = require('../lib')
 const toHumanPath = require('../lib/utils/to-human-path')
@@ -29,6 +29,7 @@ const checkPath = require('../lib/utils/check-path')
 const {reAlias, assignAlias} = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
+const cmd = require('../lib/utils/output/cmd')
 
 const argv = minimist(process.argv.slice(2), {
   string: [
@@ -86,6 +87,7 @@ const help = () => {
       certs                [cmd]        Manages your SSL certificates
       secrets              [name]       Manages your secret environment variables
       dns                  [name]       Manages your DNS records
+      open                              Open the latest deployment for the project
       help                 [cmd]        Displays complete help for [cmd]
 
     ${chalk.dim('Administrative')}
@@ -592,9 +594,13 @@ function printLogs(host, token) {
   // log build
   const logger = new Logger(host, {debug, quiet})
 
-  logger.on('error', async () => {
+  logger.on('error', async err => {
     if (!quiet) {
-      console.log(`${chalk.cyan('> Deployment failed!')}`)
+      if (err && err.type === 'BUILD_ERROR') {
+        error(`The build step of your project failed. To retry, run ${cmd('now --force')}.`)
+      } else {
+        error('Deployment failed')
+      }
     }
 
     if (gitRepo && gitRepo.cleanup) {
