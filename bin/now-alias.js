@@ -1,345 +1,397 @@
 #!/usr/bin/env node
 
 // Packages
-const chalk = require('chalk')
-const minimist = require('minimist')
-const table = require('text-table')
-const ms = require('ms')
+const chalk = require("chalk");
+const minimist = require("minimist");
+const table = require("text-table");
+const ms = require("ms");
 
 // Ours
-const strlen = require('../lib/strlen')
-const NowAlias = require('../lib/alias')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
-const {error} = require('../lib/error')
-const toHost = require('../lib/to-host')
-const {reAlias} = require('../lib/re-alias')
-const exit = require('../lib/utils/exit')
-const logo = require('../lib/utils/output/logo')
-const promptBool = require('../lib/utils/input/prompt-bool')
+const strlen = require("../lib/strlen");
+const NowAlias = require("../lib/alias");
+const login = require("../lib/login");
+const cfg = require("../lib/cfg");
+const { error } = require("../lib/error");
+const toHost = require("../lib/to-host");
+const { reAlias } = require("../lib/re-alias");
+const exit = require("../lib/utils/exit");
+const logo = require("../lib/utils/output/logo");
+const promptBool = require("../lib/utils/input/prompt-bool");
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token', 'rules'],
-  boolean: ['help', 'debug'],
+  string: ["config", "token", "rules"],
+  boolean: ["help", "debug"],
   alias: {
-    help: 'h',
-    config: 'c',
-    rules: 'r',
-    debug: 'd',
-    token: 't'
+    help: "h",
+    config: "c",
+    rules: "r",
+    debug: "d",
+    token: "t"
   }
-})
+});
 
-const subcommand = argv._[0]
+const subcommand = argv._[0];
 
 // options
 const help = () => {
-  console.log(`
+  console.log(
+    `
   ${chalk.bold(`${logo} now alias`)} <ls | set | rm> <deployment> <alias>
 
-  ${chalk.dim('Options:')}
+  ${chalk.dim("Options:")}
 
     -h, --help                         Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}             Config file
-    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline('RULES_FILE')}  Rules file
+    -c ${chalk.bold.underline("FILE")}, --config=${chalk.bold.underline("FILE")}             Config file
+    -r ${chalk.bold.underline("RULES_FILE")}, --rules=${chalk.bold.underline("RULES_FILE")}  Rules file
     -d, --debug                        Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')}            Login token
+    -t ${chalk.bold.underline("TOKEN")}, --token=${chalk.bold.underline("TOKEN")}            Login token
 
-  ${chalk.dim('Examples:')}
+  ${chalk.dim("Examples:")}
 
-  ${chalk.gray('–')} Lists all your aliases:
+  ${chalk.gray("–")} Lists all your aliases:
 
-      ${chalk.cyan('$ now alias ls')}
+      ${chalk.cyan("$ now alias ls")}
 
-  ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
+  ${chalk.gray("–")} Adds a new alias to ${chalk.underline("my-api.now.sh")}:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.now.sh')}`)}
+      ${chalk.cyan(`$ now alias set ${chalk.underline("api-ownv3nc9f8.now.sh")} ${chalk.underline("my-api.now.sh")}`)}
 
-      The ${chalk.dim('`.now.sh`')} suffix can be ommited:
+      The ${chalk.dim("`.now.sh`")} suffix can be ommited:
 
-      ${chalk.cyan('$ now alias set api-ownv3nc9f8 my-api')}
+      ${chalk.cyan("$ now alias set api-ownv3nc9f8 my-api")}
 
       The deployment id can be used as the source:
 
-      ${chalk.cyan('$ now alias set deploymentId my-alias')}
+      ${chalk.cyan("$ now alias set deploymentId my-alias")}
 
       Custom domains work as alias targets:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.com')}`)}
+      ${chalk.cyan(`$ now alias set ${chalk.underline("api-ownv3nc9f8.now.sh")} ${chalk.underline("my-api.com")}`)}
 
-      ${chalk.dim('–')} The subcommand ${chalk.dim('`set`')} is the default and can be skipped.
-      ${chalk.dim('–')} ${chalk.dim('`http(s)://`')} in the URLs is unneeded / ignored.
+      ${chalk.dim("–")} The subcommand ${chalk.dim("`set`")} is the default and can be skipped.
+      ${chalk.dim("–")} ${chalk.dim("`http(s)://`")} in the URLs is unneeded / ignored.
 
-  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline('zeit.ninja')}:
+  ${chalk.gray("–")} Add and modify path based aliases for ${chalk.underline("zeit.ninja")}:
 
-      ${chalk.cyan(`$ now alias ${chalk.underline('zeit.ninja')} -r ${chalk.underline('rules.json')}`)}
+      ${chalk.cyan(`$ now alias ${chalk.underline("zeit.ninja")} -r ${chalk.underline("rules.json")}`)}
 
       Export effective routing rules:
 
-      ${chalk.cyan(`$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`)}
+      ${chalk.cyan(`$ now alias ls aliasId --json > ${chalk.underline("rules.json")}`)}
 
       ${chalk.cyan(`$ now alias ls zeit.ninja`)}
 
-  ${chalk.gray('–')} Removing an alias:
+  ${chalk.gray("–")} Removing an alias:
 
-      ${chalk.cyan('$ now alias rm aliasId')}
+      ${chalk.cyan("$ now alias rm aliasId")}
 
-      To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
+      To get the list of alias ids, use ${chalk.dim("`now alias ls`")}.
 
-  ${chalk.dim('Alias:')} ln
-`)
-}
+  ${chalk.dim("Alias:")} ln
+`
+  );
+};
 
 // options
-const debug = argv.debug
-const apiUrl = argv.url || 'https://api.zeit.co'
+const debug = argv.debug;
+const apiUrl = argv.url || "https://api.zeit.co";
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config)
+  cfg.setConfigFile(argv.config);
 }
 
 if (argv.help) {
-  help()
-  exit(0)
+  help();
+  exit(0);
 } else {
-  const config = cfg.read()
+  const config = cfg.read();
 
   Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
-    try {
-      await run(token)
-    } catch (err) {
-      if (err.userError) {
-        error(err.message)
-      } else {
-        error(`Unknown error: ${err}\n${err.stack}`)
+    .then(async token => {
+      try {
+        await run(token);
+      } catch (err) {
+        if (err.userError) {
+          error(err.message);
+        } else {
+          error(`Unknown error: ${err}\n${err.stack}`);
+        }
+        exit(1);
       }
-      exit(1)
-    }
-  })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`)
-    exit(1)
-  })
+    })
+    .catch(e => {
+      error(`Authentication error – ${e.message}`);
+      exit(1);
+    });
 }
 
 async function run(token) {
-  const alias = new NowAlias(apiUrl, token, {debug})
-  const args = argv._.slice(1)
+  const alias = new NowAlias(apiUrl, token, { debug });
+  const args = argv._.slice(1);
 
   switch (subcommand) {
-    case 'ls':
-    case 'list': {
+    case "ls":
+    case "list": {
       if (args.length === 1) {
-        const list = await alias.listAliases()
-        const item = list.find(e => e.uid === argv._[1] || e.alias === argv._[1])
+        const list = await alias.listAliases();
+        const item = list.find(
+          e => e.uid === argv._[1] || e.alias === argv._[1]
+        );
         if (!item || !item.rules) {
-          error(`Could not match path alias for: ${argv._[1]}`)
-          return exit(1)
+          error(`Could not match path alias for: ${argv._[1]}`);
+          return exit(1);
         }
 
         if (argv.json) {
-          console.log(JSON.stringify({rules: item.rules}, null, 2))
+          console.log(JSON.stringify({ rules: item.rules }, null, 2));
         } else {
-          const header = [['', 'pathname', 'method', 'dest'].map(s => chalk.dim(s))]
-          const text = list.length === 0 ? null : table(header.concat(item.rules.map(rule => {
-            return [
-              '',
-              rule.pathname ? rule.pathname : '',
-              rule.method ? rule.method : '*',
-              rule.dest
-            ]
-          })), {align: ['l', 'l', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
+          const header = [
+            ["", "pathname", "method", "dest"].map(s => chalk.dim(s))
+          ];
+          const text = list.length === 0
+            ? null
+            : table(
+                header.concat(
+                  item.rules.map(rule => {
+                    return [
+                      "",
+                      rule.pathname ? rule.pathname : "",
+                      rule.method ? rule.method : "*",
+                      rule.dest
+                    ];
+                  })
+                ),
+                {
+                  align: ["l", "l", "l", "l"],
+                  hsep: " ".repeat(2),
+                  stringLength: strlen
+                }
+              );
 
-          console.log(text)
+          console.log(text);
         }
-        break
+        break;
       } else if (args.length !== 0) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
-        return exit(1)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias ls`")}`
+        );
+        return exit(1);
       }
 
-      const start_ = new Date()
-      const list = await alias.list()
-      const urls = new Map(list.map(l => [l.uid, l.url]))
-      const aliases = await alias.ls()
-      aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
-      const current = new Date()
+      const start_ = new Date();
+      const list = await alias.list();
+      const urls = new Map(list.map(l => [l.uid, l.url]));
+      const aliases = await alias.ls();
+      aliases.sort((a, b) => new Date(b.created) - new Date(a.created));
+      const current = new Date();
 
-      const header = [['', 'id', 'source', 'url', 'created'].map(s => chalk.dim(s))]
-      const text = list.length === 0 ? null : table(header.concat(aliases.map(_alias => {
-        const _url = chalk.underline(`https://${_alias.alias}`)
-        const target = _alias.deploymentId
-        let _sourceUrl
-        if (urls.get(target)) {
-          _sourceUrl = chalk.underline(`https://${urls.get(target)}`)
-        } else if (_alias.rules) {
-          _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
-        } else {
-          _sourceUrl = chalk.gray('<null>')
-        }
+      const header = [
+        ["", "id", "source", "url", "created"].map(s => chalk.dim(s))
+      ];
+      const text = list.length === 0
+        ? null
+        : table(
+            header.concat(
+              aliases.map(_alias => {
+                const _url = chalk.underline(`https://${_alias.alias}`);
+                const target = _alias.deploymentId;
+                let _sourceUrl;
+                if (urls.get(target)) {
+                  _sourceUrl = chalk.underline(`https://${urls.get(target)}`);
+                } else if (_alias.rules) {
+                  _sourceUrl = chalk.gray(
+                    `[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? "s" : ""}]`
+                  );
+                } else {
+                  _sourceUrl = chalk.gray("<null>");
+                }
 
-        const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago')
-        return [
-          '',
-          // we default to `''` because some early aliases didn't
-          // have an uid associated
-          _alias.uid === null ? '' : _alias.uid,
-          _sourceUrl,
-          _url,
-          time
-        ]
-      })), {align: ['l', 'r', 'l', 'l'], hsep: ' '.repeat(2), stringLength: strlen})
+                const time = chalk.gray(
+                  ms(current - new Date(_alias.created)) + " ago"
+                );
+                return [
+                  "",
+                  // we default to `''` because some early aliases didn't
+                  // have an uid associated
+                  _alias.uid === null ? "" : _alias.uid,
+                  _sourceUrl,
+                  _url,
+                  time
+                ];
+              })
+            ),
+            {
+              align: ["l", "r", "l", "l"],
+              hsep: " ".repeat(2),
+              stringLength: strlen
+            }
+          );
 
-      const elapsed_ = ms(new Date() - start_)
-      console.log(`> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)}`)
+      const elapsed_ = ms(new Date() - start_);
+      console.log(
+        `> ${aliases.length} alias${aliases.length === 1 ? "" : "es"} found ${chalk.gray(`[${elapsed_}]`)}`
+      );
 
       if (text) {
-        console.log('\n' + text + '\n')
+        console.log("\n" + text + "\n");
       }
 
-      break
+      break;
     }
-    case 'rm':
-    case 'remove': {
-      const _target = String(args[0])
+    case "rm":
+    case "remove": {
+      const _target = String(args[0]);
       if (!_target) {
-        const err = new Error('No alias id specified')
-        err.userError = true
-        throw err
+        const err = new Error("No alias id specified");
+        err.userError = true;
+        throw err;
       }
 
       if (args.length !== 1) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`)
-        return exit(1)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias rm <id>`")}`
+        );
+        return exit(1);
       }
 
-      const _aliases = await alias.ls()
-      const _alias = findAlias(_target, _aliases)
+      const _aliases = await alias.ls();
+      const _alias = findAlias(_target, _aliases);
 
       if (!_alias) {
-        const err = new Error(`Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`)
-        err.userError = true
-        throw err
+        const err = new Error(
+          `Alias not found by "${_target}". Run ${chalk.dim("`now alias ls`")} to see your aliases.`
+        );
+        err.userError = true;
+        throw err;
       }
 
       try {
-        const confirmation = await confirmDeploymentRemoval(alias, _alias)
+        const confirmation = await confirmDeploymentRemoval(alias, _alias);
         if (!confirmation) {
-          console.log('\n> Aborted')
-          process.exit(0)
+          console.log("\n> Aborted");
+          process.exit(0);
         }
 
-        const start = new Date()
-        await alias.rm(_alias)
-        const elapsed = ms(new Date() - start)
-        console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`)
+        const start = new Date();
+        await alias.rm(_alias);
+        const elapsed = ms(new Date() - start);
+        console.log(
+          `${chalk.cyan("> Success!")} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`
+        );
       } catch (err) {
-        error(err)
-        exit(1)
+        error(err);
+        exit(1);
       }
 
-      break
+      break;
     }
-    case 'add':
-    case 'set': {
+    case "add":
+    case "set": {
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules)
-        break
+        await updatePathAlias(alias, argv._[0], argv.rules);
+        break;
       }
       if (args.length !== 2) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`)
-        return exit(1)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias set <id> <domain>`")}`
+        );
+        return exit(1);
       }
-      await alias.set(String(args[0]), String(args[1]))
-      break
+      await alias.set(String(args[0]), String(args[1]));
+      break;
     }
     default: {
       if (argv._.length === 0) {
-        await reAlias(token, null, help, exit, apiUrl, debug, alias)
-        break
+        await reAlias(token, null, help, exit, apiUrl, debug, alias);
+        break;
       }
 
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules)
+        await updatePathAlias(alias, argv._[0], argv.rules);
       } else if (argv._.length === 2) {
-        await alias.set(String(argv._[0]), String(argv._[1]))
+        await alias.set(String(argv._[0]), String(argv._[1]));
       } else if (argv._.length >= 3) {
-        error('Invalid number of arguments')
-        help()
-        exit(1)
+        error("Invalid number of arguments");
+        help();
+        exit(1);
       } else {
-        error('Please specify a valid subcommand: ls | set | rm')
-        help()
-        exit(1)
+        error("Please specify a valid subcommand: ls | set | rm");
+        help();
+        exit(1);
       }
     }
   }
 
-  alias.close()
+  alias.close();
 }
 
 async function confirmDeploymentRemoval(alias, _alias) {
-  const deploymentsList = await alias.list()
-  const urls = new Map(deploymentsList.map(l => [l.uid, l.url]))
+  const deploymentsList = await alias.list();
+  const urls = new Map(deploymentsList.map(l => [l.uid, l.url]));
 
-  const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
-  const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`)
+  const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + " ago");
+  const _sourceUrl = chalk.underline(
+    `https://${urls.get(_alias.deploymentId)}`
+  );
   const tbl = table(
-    [[_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]],
-    {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
-  )
+    [
+      [_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]
+    ],
+    { align: ["l", "r", "l"], hsep: " ".repeat(6) }
+  );
 
-  const msg = '> The following alias will be removed permanently\n' +
-  `  ${tbl} \nAre you sure?`
-  return await promptBool(msg)
+  const msg = "> The following alias will be removed permanently\n" +
+    `  ${tbl} \nAre you sure?`;
+  return await promptBool(msg);
 }
 
 function findAlias(alias, list) {
-  let key
-  let val
+  let key;
+  let val;
 
   if (/\./.test(alias)) {
-    val = toHost(alias)
-    key = 'alias'
+    val = toHost(alias);
+    key = "alias";
   } else {
-    val = alias
-    key = 'uid'
+    val = alias;
+    key = "uid";
   }
 
   const _alias = list.find(d => {
     if (d[key] === val) {
       if (debug) {
-        console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`)
+        console.log(`> [debug] matched alias ${d.uid} by ${key} ${val}`);
       }
 
-      return true
+      return true;
     }
 
     // match prefix
     if (`${val}.now.sh` === d.alias) {
       if (debug) {
-        console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`)
+        console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`);
       }
 
-      return true
+      return true;
     }
 
-    return false
-  })
+    return false;
+  });
 
-  return _alias
+  return _alias;
 }
 
 async function updatePathAlias(alias, aliasName, rules) {
-  const start = new Date()
-  const res = await alias.updatePathBasedroutes(String(aliasName), rules)
-  const elapsed = ms(new Date() - start)
+  const start = new Date();
+  const res = await alias.updatePathBasedroutes(String(aliasName), rules);
+  const elapsed = ms(new Date() - start);
   if (res.error) {
-    const err = new Error(res.error.message)
-    err.userError = true
-    throw err
+    const err = new Error(res.error.message);
+    err.userError = true;
+    throw err;
   } else {
-    console.log(`${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`)
+    console.log(
+      `${chalk.cyan("> Success!")} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`
+    );
   }
 }

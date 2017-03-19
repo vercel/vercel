@@ -1,184 +1,202 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist')
-const chalk = require('chalk')
-const ms = require('ms')
-const table = require('text-table')
-const isURL = require('is-url')
+const minimist = require("minimist");
+const chalk = require("chalk");
+const ms = require("ms");
+const table = require("text-table");
+const isURL = require("is-url");
 
 // Ours
-const Now = require('../lib')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
-const {handleError, error} = require('../lib/error')
-const logo = require('../lib/utils/output/logo')
+const Now = require("../lib");
+const login = require("../lib/login");
+const cfg = require("../lib/cfg");
+const { handleError, error } = require("../lib/error");
+const logo = require("../lib/utils/output/logo");
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token'],
-  boolean: ['help', 'debug', 'hard', 'yes'],
+  string: ["config", "token"],
+  boolean: ["help", "debug", "hard", "yes"],
   alias: {
-    help: 'h',
-    config: 'c',
-    debug: 'd',
-    token: 't',
-    yes: 'y'
+    help: "h",
+    config: "c",
+    debug: "d",
+    token: "t",
+    yes: "y"
   }
-})
+});
 
-const ids = argv._
+const ids = argv._;
 
 // options
 const help = () => {
-  console.log(`
+  console.log(
+    `
   ${chalk.bold(`${logo} now remove`)} deploymentId|deploymentName [...deploymentId|deploymentName]
 
-  ${chalk.dim('Options:')}
+  ${chalk.dim("Options:")}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline("FILE")}, --config=${chalk.bold.underline("FILE")}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline("TOKEN")}, --token=${chalk.bold.underline("TOKEN")} Login token
     -y, --yes               Skip confirmation
 
-  ${chalk.dim('Examples:')}
+  ${chalk.dim("Examples:")}
 
-  ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim('`deploymentId`')}:
+  ${chalk.gray("–")} Remove a deployment identified by ${chalk.dim("`deploymentId`")}:
 
-    ${chalk.cyan('$ now rm deploymentId')}
+    ${chalk.cyan("$ now rm deploymentId")}
 
-  ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}:
+  ${chalk.gray("–")} Remove all deployments with name ${chalk.dim("`my-app`")}:
 
-    ${chalk.cyan('$ now rm my-app')}
+    ${chalk.cyan("$ now rm my-app")}
 
-  ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim('`eyWt6zuSdeus`')} and ${chalk.dim('`uWHoA9RQ1d1o`')}:
+  ${chalk.gray("–")} Remove two deployments with IDs ${chalk.dim("`eyWt6zuSdeus`")} and ${chalk.dim("`uWHoA9RQ1d1o`")}:
 
-    ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
+    ${chalk.cyan("$ now rm eyWt6zuSdeus uWHoA9RQ1d1o")}
 
-  ${chalk.dim('Alias:')} rm
-`)
-}
+  ${chalk.dim("Alias:")} rm
+`
+  );
+};
 
 if (argv.help || ids.length === 0) {
-  help()
-  process.exit(0)
+  help();
+  process.exit(0);
 }
 
 // options
-const debug = argv.debug
-const apiUrl = argv.url || 'https://api.zeit.co'
-const hard = argv.hard || false
-const skipConfirmation = argv.yes || false
+const debug = argv.debug;
+const apiUrl = argv.url || "https://api.zeit.co";
+const hard = argv.hard || false;
+const skipConfirmation = argv.yes || false;
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config)
+  cfg.setConfigFile(argv.config);
 }
 
-const config = cfg.read()
+const config = cfg.read();
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
-    process.stdout.write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`)
+    process.stdout.write(
+      `> The following deployment${matches.length === 1 ? "" : "s"} will be removed permanently:\n`
+    );
 
     const tbl = table(
       matches.map(depl => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
-        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
-        return [depl.uid, url, time]
+        const time = chalk.gray(ms(new Date() - depl.created) + " ago");
+        const url = depl.url ? chalk.underline(`https://${depl.url}`) : "";
+        return [depl.uid, url, time];
       }),
-      {align: ['l', 'r', 'l'], hsep: ' '.repeat(6)}
-    )
-    process.stdout.write(tbl + '\n')
+      { align: ["l", "r", "l"], hsep: " ".repeat(6) }
+    );
+    process.stdout.write(tbl + "\n");
 
     for (const depl of matches) {
       for (const alias of depl.aliases) {
         process.stdout.write(
-          `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
-          `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
-        )
+          `> ${chalk.yellow("Warning!")} Deployment ${chalk.bold(depl.uid)} ` +
+            `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
+        );
       }
     }
 
-    process.stdout.write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
+    process.stdout.write(
+      `${chalk.bold.red("> Are you sure?")} ${chalk.gray("[y/N] ")}`
+    );
 
-    process.stdin.on('data', d => {
-      process.stdin.pause()
-      resolve(d.toString().trim())
-    }).resume()
-  })
+    process.stdin
+      .on("data", d => {
+        process.stdin.pause();
+        resolve(d.toString().trim());
+      })
+      .resume();
+  });
 }
 
 Promise.resolve(argv.token || config.token || login(apiUrl))
-.then(async token => {
-  try {
-    await remove(token)
-  } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`)
-    process.exit(1)
-  }
-})
-.catch(e => {
-  error(`Authentication error – ${e.message}`)
-  process.exit(1)
-})
+  .then(async token => {
+    try {
+      await remove(token);
+    } catch (err) {
+      error(`Unknown error: ${err}\n${err.stack}`);
+      process.exit(1);
+    }
+  })
+  .catch(e => {
+    error(`Authentication error – ${e.message}`);
+    process.exit(1);
+  });
 
 async function remove(token) {
-  const now = new Now(apiUrl, token, {debug})
+  const now = new Now(apiUrl, token, { debug });
 
-  const deployments = await now.list()
+  const deployments = await now.list();
 
   const matches = deployments.filter(d => {
     return ids.find(id => {
       // Normalize URL by removing slash from the end
-      if (isURL(id) && id.slice(-1) === '/') {
-        id = id.slice(0, -1)
+      if (isURL(id) && id.slice(-1) === "/") {
+        id = id.slice(0, -1);
       }
 
       // `url` should match the hostname of the deployment
-      let u = id.replace(/^https:\/\//i, '')
+      let u = id.replace(/^https:\/\//i, "");
 
-      if (u.indexOf('.') === -1) {
+      if (u.indexOf(".") === -1) {
         // `.now.sh` domain is implied if just the subdomain is given
-        u += '.now.sh'
+        u += ".now.sh";
       }
 
-      return d.uid === id || d.name === id || d.url === u
-    })
-  })
+      return d.uid === id || d.name === id || d.url === u;
+    });
+  });
 
   if (matches.length === 0) {
-    error(`Could not find any deployments matching ${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
-    return process.exit(1)
+    error(
+      `Could not find any deployments matching ${ids
+        .map(id => chalk.bold(`"${id}"`))
+        .join(", ")}. Run ${chalk.dim(`\`now ls\``)} to list.`
+    );
+    return process.exit(1);
   }
 
-  const aliases = await Promise.all(matches.map(depl => now.listAliases(depl.uid)))
+  const aliases = await Promise.all(
+    matches.map(depl => now.listAliases(depl.uid))
+  );
   for (let i = 0; i < matches.length; i++) {
-    matches[i].aliases = aliases[i]
+    matches[i].aliases = aliases[i];
   }
 
   try {
     if (!skipConfirmation) {
-      const confirmation = (await readConfirmation(matches)).toLowerCase()
+      const confirmation = (await readConfirmation(matches)).toLowerCase();
 
-      if (confirmation !== 'y' && confirmation !== 'yes') {
-        console.log('\n> Aborted')
-        process.exit(0)
+      if (confirmation !== "y" && confirmation !== "yes") {
+        console.log("\n> Aborted");
+        process.exit(0);
       }
     }
 
-    const start = new Date()
+    const start = new Date();
 
-    await Promise.all(matches.map(depl => now.remove(depl.uid, {hard})))
+    await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })));
 
-    const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`)
-    console.log(table(matches.map(depl => {
-      return [`Deployment ${chalk.bold(depl.uid)} removed`]
-    })))
+    const elapsed = ms(new Date() - start);
+    console.log(`${chalk.cyan("> Success!")} [${elapsed}]`);
+    console.log(
+      table(
+        matches.map(depl => {
+          return [`Deployment ${chalk.bold(depl.uid)} removed`];
+        })
+      )
+    );
   } catch (err) {
-    handleError(err)
-    process.exit(1)
+    handleError(err);
+    process.exit(1);
   }
 
-  now.close()
+  now.close();
 }
