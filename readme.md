@@ -7,7 +7,7 @@ Realtime global deployments served over HTTP/2. You can find the FAQs [here](htt
 
 ## Usage
 
-Simply follow [this guide](https://zeit.co/now#get-started)! Then run this command to see a list of all commands:
+Simply follow [this guide](https://zeit.co/docs#getting-started)! Then run this command to see a list of all commands:
 
 ```bash
 now help
