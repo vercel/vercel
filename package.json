@@ -8,9 +8,8 @@
     "build"
   ],
   "scripts": {
-    "precommit": "npm run lint",
-    "lint": "xo",
-    "test": "npm run build && npm run lint && ava",
+    "precommit": "lint-staged",
+    "test": "npm run build && ava",
     "prepublish": "npm run build",
     "build": "./build.sh",
     "pack": "pkg bin/now.js --config package.json --out-dir packed -t node7-alpine-x64,node7-linux-x64,node7-macos-x64,node7-win-x64"
@@ -30,24 +29,11 @@
       "test/*.js"
     ]
   },
-  "xo": {
-    "esnext": true,
-    "space": true,
-    "semicolon": false,
-    "ignores": [
-      "packed/**",
-      "test/_fixtures/**"
-    ],
-    "rules": {
-      "import/no-unassigned-import": 0,
-      "import/no-dynamic-require": 0,
-      "import/no-unresolved": 0,
-      "max-depth": 0,
-      "max-params": 0,
-      "no-use-before-define": 0,
-      "complexity": 0,
-      "no-control-regex": 0
-    }
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "engines": {
     "node": ">=6.9.0"
@@ -97,7 +83,7 @@
     "alpha-sort": "2.0.0",
     "ava": "0.18.2",
     "husky": "0.13.3-0",
-    "pkg": "3.0.0-beta.29",
-    "xo": "0.18.0"
+    "lint-staged": "3.4.0",
+    "pkg": "3.0.0-beta.29"
   }
 }
