@@ -283,7 +283,12 @@ async function sync(token) {
   }
 
   // Make sure that directory is deployable
-  await checkPath(path);
+  try {
+    await checkPath(path);
+  } catch (err) {
+    error(err);
+    return;
+  }
 
   if (!quiet) {
     if (gitRepo.main) {
