@@ -58,7 +58,7 @@ const help = () => {
   );
 };
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
@@ -67,7 +67,7 @@ if (argv.config) {
 }
 
 const exit = code => {
-  // we give stdout some time to flush out
+  // We give stdout some time to flush out
   // because there's a node bug where
   // stdout writes are asynchronous
   // https://github.com/nodejs/node/issues/6456

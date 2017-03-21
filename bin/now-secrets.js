@@ -29,7 +29,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const subcommand = argv._[0];
 
-// options
+// Options
 const help = () => {
   console.log(
     `
@@ -74,7 +74,7 @@ const help = () => {
   );
 };
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 

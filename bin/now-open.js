@@ -53,7 +53,7 @@ if (argv.help) {
 
 const app = argv._[0];
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 

@@ -17,7 +17,7 @@ const prefix = join(__dirname, '_fixtures') + '/';
 const base = path => path.replace(prefix, '');
 const fixture = name => resolve(`./test/_fixtures/${name}`);
 
-// overload to force debugging
+// Overload to force debugging
 const getNpmFiles = async dir => {
   const { pkg, nowConfig, hasNowJson } = await readMetadata(dir, {
     quiet: true,

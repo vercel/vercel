@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "precommit": "lint-staged",
-    "lint": "eslint lib/* bin/*",
+    "lint": "xo",
     "test": "npm run build && npm run lint && ava",
     "prepublish": "npm run build",
     "build": "./build.sh",
@@ -30,20 +30,14 @@
       "test/*.js"
     ]
   },
-  "eslintConfig": {
-    "parserOptions": {
-      "ecmaVersion": 8
-    },
-    "extends": "eslint:recommended",
-    "env": {
-      "node": true,
-      "es6": true
-    },
-    "rules": {
-      "no-console": 0,
-      "no-empty": 0,
-      "no-control-regex": 0
-    }
+  "xo": {
+    "space": true,
+    "ignores": [
+      "test/_fixtures/**"
+    ],
+    "extends": [
+      "prettier"
+    ]
   },
   "lint-staged": {
     "*.js": [
@@ -99,9 +93,10 @@
   "devDependencies": {
     "alpha-sort": "2.0.0",
     "ava": "0.18.2",
-    "eslint": "3.18.0",
+    "eslint-config-prettier": "1.5.0",
     "husky": "0.13.3-0",
     "lint-staged": "3.4.0",
-    "pkg": "3.0.0-beta.29"
+    "pkg": "3.0.0-beta.29",
+    "xo": "0.18.0"
   }
 }

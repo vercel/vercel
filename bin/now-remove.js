@@ -28,7 +28,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const ids = argv._;
 
-// options
+// Options
 const help = () => {
   console.log(
     `
@@ -66,7 +66,7 @@ if (argv.help || ids.length === 0) {
   process.exit(0);
 }
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 const hard = argv.hard || false;

@@ -31,7 +31,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const subcommand = argv._[0];
 
-// options
+// Options
 const help = () => {
   console.log(
     `
@@ -99,7 +99,7 @@ const help = () => {
   );
 };
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
@@ -319,7 +319,7 @@ function findDomain(val, list) {
       return true;
     }
 
-    // match prefix
+    // Match prefix
     if (d.name === toHost(val)) {
       if (debug) {
         console.log(`> [debug] matched domain ${d.uid} by name ${d.name}`);

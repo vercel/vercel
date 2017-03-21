@@ -32,7 +32,7 @@ const argv = minimist(process.argv.slice(2), {
 
 const subcommand = argv._[0];
 
-// options
+// Options
 const help = () => {
   console.log(
     `
@@ -92,7 +92,7 @@ const help = () => {
   );
 };
 
-// options
+// Options
 const debug = argv.debug;
 const apiUrl = argv.url || 'https://api.zeit.co';
 
@@ -211,7 +211,7 @@ async function run(token) {
                 );
                 return [
                   '',
-                  // we default to `''` because some early aliases didn't
+                  // We default to `''` because some early aliases didn't
                   // have an uid associated
                   _alias.uid === null ? '' : _alias.uid,
                   _sourceUrl,
@@ -342,7 +342,9 @@ async function confirmDeploymentRemoval(alias, _alias) {
 
   const msg = '> The following alias will be removed permanently\n' +
     `  ${tbl} \nAre you sure?`;
-  return await promptBool(msg);
+
+  const prompted = await promptBool(msg);
+  return prompted;
 }
 
 function findAlias(alias, list) {
@@ -366,7 +368,7 @@ function findAlias(alias, list) {
       return true;
     }
 
-    // match prefix
+    // Match prefix
     if (`${val}.now.sh` === d.alias) {
       if (debug) {
         console.log(`> [debug] matched alias ${d.uid} by url ${d.host}`);

@@ -117,6 +117,7 @@ module.exports = function(creditCards) {
       } else if (typeof piece === 'object') {
         let result;
         try {
+          /* eslint-disable no-await-in-loop */
           result = await textInput({
             label: '- ' + piece.label,
             initialValue: piece.initialValue || piece.value,
@@ -126,7 +127,9 @@ module.exports = function(creditCards) {
             validateValue: piece.validateValue,
             autoComplete: piece.autoComplete
           });
+
           piece.value = result;
+
           if (key === 'cardNumber') {
             let brand = cardBrands[ccValidator.determineCardType(result)];
             piece.brand = brand;
@@ -178,7 +181,7 @@ module.exports = function(creditCards) {
         }
       }
     }
-    console.log(''); // new line
+    console.log(''); // New line
     const stopSpinner = wait('Saving card');
 
     try {

@@ -146,7 +146,7 @@ const help = () => {
 let path = argv._[0];
 
 if (path) {
-  // if path is relative: resolve
+  // If path is relative: resolve
   // if path is absolute: clear up strange `/` etc
   path = resolve(process.cwd(), path);
 } else {
@@ -156,7 +156,7 @@ if (path) {
 // If the current deployment is a repo
 const gitRepo = {};
 
-// options
+// Options
 let forceNew = argv.force;
 const debug = argv.debug;
 const clipboard = !argv['no-clipboard'];
@@ -483,7 +483,7 @@ async function sync(token) {
           console.log(
             `> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`
           );
-          // escape value if it begins with @
+          // Escape value if it begins with @
           val = process.env[key].replace(/^@/, '\\@');
         } else {
           error(
@@ -585,10 +585,10 @@ async function sync(token) {
       console.log('> Initializing…');
     }
 
-    // close http2 agent
+    // Close http2 agent
     now.close();
 
-    // show build logs
+    // Show build logs
     printLogs(now.host, token);
   };
 
@@ -624,16 +624,16 @@ async function sync(token) {
       console.log(`> Initializing…`);
     }
 
-    // close http2 agent
+    // Close http2 agent
     now.close();
 
-    // show build logs
+    // Show build logs
     printLogs(now.host, token);
   }
 }
 
 function printLogs(host, token) {
-  // log build
+  // Log build
   const logger = new Logger(host, { debug, quiet });
 
   logger.on('error', async err => {
@@ -663,9 +663,13 @@ function printLogs(host, token) {
       const aliasList = autoAliases.filter(item => item !== '');
 
       if (aliasList.length > 0) {
+        const assignments = [];
+
         for (const alias of aliasList) {
-          await assignAlias(alias, token, host, apiUrl, debug);
+          assignments.push(assignAlias(alias, token, host, apiUrl, debug));
         }
+
+        await Promise.all(assignments);
       } else {
         await reAlias(token, host, help, exit, apiUrl, debug);
       }
