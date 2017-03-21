@@ -1,29 +1,29 @@
 #!/usr/bin/env node
 
 // Packages
-const fs = require("fs-promise");
-const minimist = require("minimist");
-const chalk = require("chalk");
-const table = require("text-table");
-const ms = require("ms");
+const fs = require('fs-promise');
+const minimist = require('minimist');
+const chalk = require('chalk');
+const table = require('text-table');
+const ms = require('ms');
 
 // Ours
-const strlen = require("../lib/strlen");
-const indent = require("../lib/indent");
-const Now = require("../lib");
-const login = require("../lib/login");
-const cfg = require("../lib/cfg");
-const { handleError, error } = require("../lib/error");
-const logo = require("../lib/utils/output/logo");
+const strlen = require('../lib/strlen');
+const indent = require('../lib/indent');
+const Now = require('../lib');
+const login = require('../lib/login');
+const cfg = require('../lib/cfg');
+const { handleError, error } = require('../lib/error');
+const logo = require('../lib/utils/output/logo');
 
 const argv = minimist(process.argv.slice(2), {
-  string: ["config", "token"],
-  boolean: ["help", "debug"],
+  string: ['config', 'token'],
+  boolean: ['help', 'debug'],
   alias: {
-    help: "h",
-    config: "c",
-    debug: "d",
-    token: "t"
+    help: 'h',
+    config: 'c',
+    debug: 'd',
+    token: 't'
   }
 });
 
@@ -32,24 +32,24 @@ const help = () => {
     `
   ${chalk.bold(`${logo} now list`)} [app]
 
-  ${chalk.dim("Options:")}
+  ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline("FILE")}, --config=${chalk.bold.underline("FILE")}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline("TOKEN")}, --token=${chalk.bold.underline("TOKEN")} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
-  ${chalk.dim("Examples:")}
+  ${chalk.dim('Examples:')}
 
-  ${chalk.gray("–")} List all deployments
+  ${chalk.gray('–')} List all deployments
 
-    ${chalk.cyan("$ now ls")}
+    ${chalk.cyan('$ now ls')}
 
-  ${chalk.gray("–")} List all deployments for the app ${chalk.dim("`my-app`")}
+  ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
-    ${chalk.cyan("$ now ls my-app")}
+    ${chalk.cyan('$ now ls my-app')}
 
-  ${chalk.dim("Alias:")} ls
+  ${chalk.dim('Alias:')} ls
 `
   );
 };
@@ -63,7 +63,7 @@ const app = argv._[0];
 
 // options
 const debug = argv.debug;
-const apiUrl = argv.url || "https://api.zeit.co";
+const apiUrl = argv.url || 'https://api.zeit.co';
 
 if (argv.config) {
   cfg.setConfigFile(argv.config);
@@ -113,30 +113,30 @@ async function list(token) {
     .map(([name, deps]) => {
       const t = table(
         deps.map(({ uid, url, created }) => {
-          const _url = url ? chalk.underline(`https://${url}`) : "incomplete";
-          const time = chalk.gray(ms(current - created) + " ago");
+          const _url = url ? chalk.underline(`https://${url}`) : 'incomplete';
+          const time = chalk.gray(ms(current - created) + ' ago');
           return [uid, _url, time];
         }),
-        { align: ["l", "r", "l"], hsep: " ".repeat(6), stringLength: strlen }
+        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6), stringLength: strlen }
       );
-      return chalk.bold(name) + "\n\n" + indent(t, 2);
+      return chalk.bold(name) + '\n\n' + indent(t, 2);
     })
-    .join("\n\n");
+    .join('\n\n');
 
   const elapsed = ms(new Date() - start);
   console.log(
-    `> ${deployments.length} deployment${deployments.length === 1 ? "" : "s"} found ${chalk.gray(`[${elapsed}]`)}`
+    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
   );
 
   if (text) {
-    console.log("\n" + text + "\n");
+    console.log('\n' + text + '\n');
   }
 }
 
 async function sort(apps) {
   let pkg;
   try {
-    const json = await fs.readFile("package.json");
+    const json = await fs.readFile('package.json');
     pkg = JSON.parse(json);
   } catch (err) {
     pkg = {};

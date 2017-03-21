@@ -1,32 +1,32 @@
 #!/usr/bin/env node
 
 // Native
-const { resolve } = require("path");
+const { resolve } = require('path');
 
 // Packages
-const chalk = require("chalk");
-const minimist = require("minimist");
-const ms = require("ms");
+const chalk = require('chalk');
+const minimist = require('minimist');
+const ms = require('ms');
 
 // Ours
-const login = require("../lib/login");
-const cfg = require("../lib/cfg");
-const { error } = require("../lib/error");
-const NowCreditCards = require("../lib/credit-cards");
-const indent = require("../lib/indent");
-const listInput = require("../lib/utils/input/list");
-const success = require("../lib/utils/output/success");
-const promptBool = require("../lib/utils/input/prompt-bool");
-const logo = require("../lib/utils/output/logo");
+const login = require('../lib/login');
+const cfg = require('../lib/cfg');
+const { error } = require('../lib/error');
+const NowCreditCards = require('../lib/credit-cards');
+const indent = require('../lib/indent');
+const listInput = require('../lib/utils/input/list');
+const success = require('../lib/utils/output/success');
+const promptBool = require('../lib/utils/input/prompt-bool');
+const logo = require('../lib/utils/output/logo');
 
 const argv = minimist(process.argv.slice(2), {
-  string: ["config", "token"],
-  boolean: ["help", "debug"],
+  string: ['config', 'token'],
+  boolean: ['help', 'debug'],
   alias: {
-    help: "h",
-    config: "c",
-    debug: "d",
-    token: "t"
+    help: 'h',
+    config: 'c',
+    debug: 'd',
+    token: 't'
   }
 });
 
@@ -37,41 +37,41 @@ const help = () => {
     `
   ${chalk.bold(`${logo} now billing`)} <ls | add | rm | set-default>
 
-  ${chalk.dim("Options:")}
+  ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline("FILE")}, --config=${chalk.bold.underline("FILE")}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline("TOKEN")}, --token=${chalk.bold.underline("TOKEN")} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
 
-  ${chalk.dim("Examples:")}
+  ${chalk.dim('Examples:')}
 
-  ${chalk.gray("–")} Lists all your credit cards:
+  ${chalk.gray('–')} Lists all your credit cards:
 
-      ${chalk.cyan("$ now billing ls")}
+      ${chalk.cyan('$ now billing ls')}
 
-  ${chalk.gray("–")} Adds a credit card (interactively):
+  ${chalk.gray('–')} Adds a credit card (interactively):
 
       ${chalk.cyan(`$ now billing add`)}
 
-  ${chalk.gray("–")} Removes a credit card:
+  ${chalk.gray('–')} Removes a credit card:
 
       ${chalk.cyan(`$ now billing rm <id>`)}
 
-      ${chalk.gray("–")} If the id is omitted, you can choose interactively
+      ${chalk.gray('–')} If the id is omitted, you can choose interactively
 
-  ${chalk.gray("–")} Selects your default credit card:
+  ${chalk.gray('–')} Selects your default credit card:
 
       ${chalk.cyan(`$ now billing set-default <id>`)}
 
-      ${chalk.gray("–")} If the id is omitted, you can choose interactively
+      ${chalk.gray('–')} If the id is omitted, you can choose interactively
   `
   );
 };
 
 // options
 const debug = argv.debug;
-const apiUrl = argv.url || "https://api.zeit.co";
+const apiUrl = argv.url || 'https://api.zeit.co';
 
 if (argv.config) {
   cfg.setConfigFile(argv.config);
@@ -114,15 +114,15 @@ if (argv.help || !subcommand) {
 function buildInquirerChoices(cards) {
   return cards.cards.map(card => {
     const _default = card.id === cards.defaultCardId
-      ? " " + chalk.bold("(default)")
-      : "";
+      ? ' ' + chalk.bold('(default)')
+      : '';
     const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`;
-    const number = `${chalk.gray("#### ").repeat(3)}${card.last4}`;
+    const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`;
     const str = [
       id,
       indent(card.name, 2),
       indent(`${card.brand} ${number}`, 2)
-    ].join("\n");
+    ].join('\n');
 
     return {
       name: str, // Will be displayed by Inquirer
@@ -138,22 +138,22 @@ async function run(token) {
   const args = argv._.slice(1);
 
   switch (subcommand) {
-    case "ls":
-    case "list": {
+    case 'ls':
+    case 'list': {
       const cards = await creditCards.ls();
       const text = cards.cards
         .map(card => {
           const _default = card.id === cards.defaultCardId
-            ? " " + chalk.bold("(default)")
-            : "";
-          const id = `${chalk.gray("-")} ${chalk.cyan(`ID: ${card.id}`)}${_default}`;
-          const number = `${chalk.gray("#### ").repeat(3)}${card.last4}`;
+            ? ' ' + chalk.bold('(default)')
+            : '';
+          const id = `${chalk.gray('-')} ${chalk.cyan(`ID: ${card.id}`)}${_default}`;
+          const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`;
           let address = card.address_line1;
 
           if (card.address_line2) {
             address += `, ${card.address_line2}.`;
           } else {
-            address += ".";
+            address += '.';
           }
 
           address += `\n${card.address_city}, `;
@@ -171,13 +171,13 @@ async function run(token) {
             indent(card.name, 2),
             indent(`${card.brand} ${number}`, 2),
             indent(address, 2)
-          ].join("\n");
+          ].join('\n');
         })
-        .join("\n\n");
+        .join('\n\n');
 
       const elapsed = ms(new Date() - start);
       console.log(
-        `> ${cards.cards.length} card${cards.cards.length === 1 ? "" : "s"} found ${chalk.gray(`[${elapsed}]`)}`
+        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
       );
       if (text) {
         console.log(`\n${text}\n`);
@@ -186,9 +186,9 @@ async function run(token) {
       break;
     }
 
-    case "set-default": {
+    case 'set-default': {
       if (args.length > 1) {
-        error("Invalid number of arguments");
+        error('Invalid number of arguments');
         return exit(1);
       }
 
@@ -196,7 +196,7 @@ async function run(token) {
       const cards = await creditCards.ls();
 
       if (cards.cards.length === 0) {
-        error("You have no credit cards to choose from");
+        error('You have no credit cards to choose from');
         return exit(0);
       }
 
@@ -211,7 +211,7 @@ async function run(token) {
           message,
           choices,
           separator: true,
-          abort: "end"
+          abort: 'end'
         });
       }
 
@@ -221,7 +221,7 @@ async function run(token) {
         const label = `Are you sure that you to set this card as the default?`;
         const confirmation = await promptBool(label);
         if (!confirmation) {
-          console.log("Aborted");
+          console.log('Aborted');
           break;
         }
         const start = new Date();
@@ -233,16 +233,16 @@ async function run(token) {
           `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
         );
       } else {
-        console.log("No changes made");
+        console.log('No changes made');
       }
 
       break;
     }
 
-    case "rm":
-    case "remove": {
+    case 'rm':
+    case 'remove': {
       if (args.length > 1) {
-        error("Invalid number of arguments");
+        error('Invalid number of arguments');
         return exit(1);
       }
 
@@ -250,7 +250,7 @@ async function run(token) {
       const cards = await creditCards.ls();
 
       if (cards.cards.length === 0) {
-        error("You have no credit cards to choose from to delete");
+        error('You have no credit cards to choose from to delete');
         return exit(0);
       }
 
@@ -258,14 +258,14 @@ async function run(token) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start);
-        const message = `Selecting a card to ${chalk.underline("remove")} from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`;
+        const message = `Selecting a card to ${chalk.underline('remove')} from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
         cardId = await listInput({
           message,
           choices,
           separator: true,
-          abort: "start"
+          abort: 'start'
         });
       }
 
@@ -275,7 +275,7 @@ async function run(token) {
         const label = `Are you sure that you want to remove this card?`;
         const confirmation = await promptBool(label);
         if (!confirmation) {
-          console.log("Aborted");
+          console.log('Aborted');
           break;
         }
         const start = new Date();
@@ -290,7 +290,7 @@ async function run(token) {
         if (cardId === cards.defaultCardId) {
           if (remainingCards.length === 0) {
             // The user deleted the last card in their account
-            text += `\n${chalk.yellow("Warning!")} You have no default card`;
+            text += `\n${chalk.yellow('Warning!')} You have no default card`;
           } else {
             // We can't guess the current default card – let's ask the API
             const cards = await creditCards.ls();
@@ -306,20 +306,20 @@ async function run(token) {
         text += ` ${chalk.gray(`[${elapsed}]`)}`;
         success(text);
       } else {
-        console.log("No changes made");
+        console.log('No changes made');
       }
 
       break;
     }
 
-    case "add": {
-      require(resolve(__dirname, "now-billing-add.js"))(creditCards);
+    case 'add': {
+      require(resolve(__dirname, 'now-billing-add.js'))(creditCards);
 
       break;
     }
 
     default:
-      error("Please specify a valid subcommand: ls | add | rm | set-default");
+      error('Please specify a valid subcommand: ls | add | rm | set-default');
       help();
       exit(1);
   }

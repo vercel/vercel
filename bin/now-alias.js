@@ -1,32 +1,32 @@
 #!/usr/bin/env node
 
 // Packages
-const chalk = require("chalk");
-const minimist = require("minimist");
-const table = require("text-table");
-const ms = require("ms");
+const chalk = require('chalk');
+const minimist = require('minimist');
+const table = require('text-table');
+const ms = require('ms');
 
 // Ours
-const strlen = require("../lib/strlen");
-const NowAlias = require("../lib/alias");
-const login = require("../lib/login");
-const cfg = require("../lib/cfg");
-const { error } = require("../lib/error");
-const toHost = require("../lib/to-host");
-const { reAlias } = require("../lib/re-alias");
-const exit = require("../lib/utils/exit");
-const logo = require("../lib/utils/output/logo");
-const promptBool = require("../lib/utils/input/prompt-bool");
+const strlen = require('../lib/strlen');
+const NowAlias = require('../lib/alias');
+const login = require('../lib/login');
+const cfg = require('../lib/cfg');
+const { error } = require('../lib/error');
+const toHost = require('../lib/to-host');
+const { reAlias } = require('../lib/re-alias');
+const exit = require('../lib/utils/exit');
+const logo = require('../lib/utils/output/logo');
+const promptBool = require('../lib/utils/input/prompt-bool');
 
 const argv = minimist(process.argv.slice(2), {
-  string: ["config", "token", "rules"],
-  boolean: ["help", "debug"],
+  string: ['config', 'token', 'rules'],
+  boolean: ['help', 'debug'],
   alias: {
-    help: "h",
-    config: "c",
-    rules: "r",
-    debug: "d",
-    token: "t"
+    help: 'h',
+    config: 'c',
+    rules: 'r',
+    debug: 'd',
+    token: 't'
   }
 });
 
@@ -38,63 +38,63 @@ const help = () => {
     `
   ${chalk.bold(`${logo} now alias`)} <ls | set | rm> <deployment> <alias>
 
-  ${chalk.dim("Options:")}
+  ${chalk.dim('Options:')}
 
     -h, --help                         Output usage information
-    -c ${chalk.bold.underline("FILE")}, --config=${chalk.bold.underline("FILE")}             Config file
-    -r ${chalk.bold.underline("RULES_FILE")}, --rules=${chalk.bold.underline("RULES_FILE")}  Rules file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}             Config file
+    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline('RULES_FILE')}  Rules file
     -d, --debug                        Debug mode [off]
-    -t ${chalk.bold.underline("TOKEN")}, --token=${chalk.bold.underline("TOKEN")}            Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')}            Login token
 
-  ${chalk.dim("Examples:")}
+  ${chalk.dim('Examples:')}
 
-  ${chalk.gray("–")} Lists all your aliases:
+  ${chalk.gray('–')} Lists all your aliases:
 
-      ${chalk.cyan("$ now alias ls")}
+      ${chalk.cyan('$ now alias ls')}
 
-  ${chalk.gray("–")} Adds a new alias to ${chalk.underline("my-api.now.sh")}:
+  ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline("api-ownv3nc9f8.now.sh")} ${chalk.underline("my-api.now.sh")}`)}
+      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.now.sh')}`)}
 
-      The ${chalk.dim("`.now.sh`")} suffix can be ommited:
+      The ${chalk.dim('`.now.sh`')} suffix can be ommited:
 
-      ${chalk.cyan("$ now alias set api-ownv3nc9f8 my-api")}
+      ${chalk.cyan('$ now alias set api-ownv3nc9f8 my-api')}
 
       The deployment id can be used as the source:
 
-      ${chalk.cyan("$ now alias set deploymentId my-alias")}
+      ${chalk.cyan('$ now alias set deploymentId my-alias')}
 
       Custom domains work as alias targets:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline("api-ownv3nc9f8.now.sh")} ${chalk.underline("my-api.com")}`)}
+      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.com')}`)}
 
-      ${chalk.dim("–")} The subcommand ${chalk.dim("`set`")} is the default and can be skipped.
-      ${chalk.dim("–")} ${chalk.dim("`http(s)://`")} in the URLs is unneeded / ignored.
+      ${chalk.dim('–')} The subcommand ${chalk.dim('`set`')} is the default and can be skipped.
+      ${chalk.dim('–')} ${chalk.dim('`http(s)://`')} in the URLs is unneeded / ignored.
 
-  ${chalk.gray("–")} Add and modify path based aliases for ${chalk.underline("zeit.ninja")}:
+  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline('zeit.ninja')}:
 
-      ${chalk.cyan(`$ now alias ${chalk.underline("zeit.ninja")} -r ${chalk.underline("rules.json")}`)}
+      ${chalk.cyan(`$ now alias ${chalk.underline('zeit.ninja')} -r ${chalk.underline('rules.json')}`)}
 
       Export effective routing rules:
 
-      ${chalk.cyan(`$ now alias ls aliasId --json > ${chalk.underline("rules.json")}`)}
+      ${chalk.cyan(`$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`)}
 
       ${chalk.cyan(`$ now alias ls zeit.ninja`)}
 
-  ${chalk.gray("–")} Removing an alias:
+  ${chalk.gray('–')} Removing an alias:
 
-      ${chalk.cyan("$ now alias rm aliasId")}
+      ${chalk.cyan('$ now alias rm aliasId')}
 
-      To get the list of alias ids, use ${chalk.dim("`now alias ls`")}.
+      To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
 
-  ${chalk.dim("Alias:")} ln
+  ${chalk.dim('Alias:')} ln
 `
   );
 };
 
 // options
 const debug = argv.debug;
-const apiUrl = argv.url || "https://api.zeit.co";
+const apiUrl = argv.url || 'https://api.zeit.co';
 
 if (argv.config) {
   cfg.setConfigFile(argv.config);
@@ -130,8 +130,8 @@ async function run(token) {
   const args = argv._.slice(1);
 
   switch (subcommand) {
-    case "ls":
-    case "list": {
+    case 'ls':
+    case 'list': {
       if (args.length === 1) {
         const list = await alias.listAliases();
         const item = list.find(
@@ -146,7 +146,7 @@ async function run(token) {
           console.log(JSON.stringify({ rules: item.rules }, null, 2));
         } else {
           const header = [
-            ["", "pathname", "method", "dest"].map(s => chalk.dim(s))
+            ['', 'pathname', 'method', 'dest'].map(s => chalk.dim(s))
           ];
           const text = list.length === 0
             ? null
@@ -154,16 +154,16 @@ async function run(token) {
                 header.concat(
                   item.rules.map(rule => {
                     return [
-                      "",
-                      rule.pathname ? rule.pathname : "",
-                      rule.method ? rule.method : "*",
+                      '',
+                      rule.pathname ? rule.pathname : '',
+                      rule.method ? rule.method : '*',
                       rule.dest
                     ];
                   })
                 ),
                 {
-                  align: ["l", "l", "l", "l"],
-                  hsep: " ".repeat(2),
+                  align: ['l', 'l', 'l', 'l'],
+                  hsep: ' '.repeat(2),
                   stringLength: strlen
                 }
               );
@@ -173,7 +173,7 @@ async function run(token) {
         break;
       } else if (args.length !== 0) {
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias ls`")}`
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`
         );
         return exit(1);
       }
@@ -186,7 +186,7 @@ async function run(token) {
       const current = new Date();
 
       const header = [
-        ["", "id", "source", "url", "created"].map(s => chalk.dim(s))
+        ['', 'id', 'source', 'url', 'created'].map(s => chalk.dim(s))
       ];
       const text = list.length === 0
         ? null
@@ -200,20 +200,20 @@ async function run(token) {
                   _sourceUrl = chalk.underline(`https://${urls.get(target)}`);
                 } else if (_alias.rules) {
                   _sourceUrl = chalk.gray(
-                    `[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? "s" : ""}]`
+                    `[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`
                   );
                 } else {
-                  _sourceUrl = chalk.gray("<null>");
+                  _sourceUrl = chalk.gray('<null>');
                 }
 
                 const time = chalk.gray(
-                  ms(current - new Date(_alias.created)) + " ago"
+                  ms(current - new Date(_alias.created)) + ' ago'
                 );
                 return [
-                  "",
+                  '',
                   // we default to `''` because some early aliases didn't
                   // have an uid associated
-                  _alias.uid === null ? "" : _alias.uid,
+                  _alias.uid === null ? '' : _alias.uid,
                   _sourceUrl,
                   _url,
                   time
@@ -221,35 +221,35 @@ async function run(token) {
               })
             ),
             {
-              align: ["l", "r", "l", "l"],
-              hsep: " ".repeat(2),
+              align: ['l', 'r', 'l', 'l'],
+              hsep: ' '.repeat(2),
               stringLength: strlen
             }
           );
 
       const elapsed_ = ms(new Date() - start_);
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1 ? "" : "es"} found ${chalk.gray(`[${elapsed_}]`)}`
+        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)}`
       );
 
       if (text) {
-        console.log("\n" + text + "\n");
+        console.log('\n' + text + '\n');
       }
 
       break;
     }
-    case "rm":
-    case "remove": {
+    case 'rm':
+    case 'remove': {
       const _target = String(args[0]);
       if (!_target) {
-        const err = new Error("No alias id specified");
+        const err = new Error('No alias id specified');
         err.userError = true;
         throw err;
       }
 
       if (args.length !== 1) {
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias rm <id>`")}`
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`
         );
         return exit(1);
       }
@@ -259,7 +259,7 @@ async function run(token) {
 
       if (!_alias) {
         const err = new Error(
-          `Alias not found by "${_target}". Run ${chalk.dim("`now alias ls`")} to see your aliases.`
+          `Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`
         );
         err.userError = true;
         throw err;
@@ -268,7 +268,7 @@ async function run(token) {
       try {
         const confirmation = await confirmDeploymentRemoval(alias, _alias);
         if (!confirmation) {
-          console.log("\n> Aborted");
+          console.log('\n> Aborted');
           process.exit(0);
         }
 
@@ -276,7 +276,7 @@ async function run(token) {
         await alias.rm(_alias);
         const elapsed = ms(new Date() - start);
         console.log(
-          `${chalk.cyan("> Success!")} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`
+          `${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`
         );
       } catch (err) {
         error(err);
@@ -285,15 +285,15 @@ async function run(token) {
 
       break;
     }
-    case "add":
-    case "set": {
+    case 'add':
+    case 'set': {
       if (argv.rules) {
         await updatePathAlias(alias, argv._[0], argv.rules);
         break;
       }
       if (args.length !== 2) {
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan("`now alias set <id> <domain>`")}`
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`
         );
         return exit(1);
       }
@@ -311,11 +311,11 @@ async function run(token) {
       } else if (argv._.length === 2) {
         await alias.set(String(argv._[0]), String(argv._[1]));
       } else if (argv._.length >= 3) {
-        error("Invalid number of arguments");
+        error('Invalid number of arguments');
         help();
         exit(1);
       } else {
-        error("Please specify a valid subcommand: ls | set | rm");
+        error('Please specify a valid subcommand: ls | set | rm');
         help();
         exit(1);
       }
@@ -329,7 +329,7 @@ async function confirmDeploymentRemoval(alias, _alias) {
   const deploymentsList = await alias.list();
   const urls = new Map(deploymentsList.map(l => [l.uid, l.url]));
 
-  const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + " ago");
+  const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago');
   const _sourceUrl = chalk.underline(
     `https://${urls.get(_alias.deploymentId)}`
   );
@@ -337,10 +337,10 @@ async function confirmDeploymentRemoval(alias, _alias) {
     [
       [_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]
     ],
-    { align: ["l", "r", "l"], hsep: " ".repeat(6) }
+    { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
   );
 
-  const msg = "> The following alias will be removed permanently\n" +
+  const msg = '> The following alias will be removed permanently\n' +
     `  ${tbl} \nAre you sure?`;
   return await promptBool(msg);
 }
@@ -351,10 +351,10 @@ function findAlias(alias, list) {
 
   if (/\./.test(alias)) {
     val = toHost(alias);
-    key = "alias";
+    key = 'alias';
   } else {
     val = alias;
-    key = "uid";
+    key = 'uid';
   }
 
   const _alias = list.find(d => {
@@ -391,7 +391,7 @@ async function updatePathAlias(alias, aliasName, rules) {
     throw err;
   } else {
     console.log(
-      `${chalk.cyan("> Success!")} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`
+      `${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`
     );
   }
 }

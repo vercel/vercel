@@ -1,68 +1,68 @@
 #!/usr/bin/env node
 
 // Native
-const { resolve } = require("path");
+const { resolve } = require('path');
 
 // Packages
-const Progress = require("progress");
-const fs = require("fs-promise");
-const bytes = require("bytes");
-const chalk = require("chalk");
-const minimist = require("minimist");
-const ms = require("ms");
-const flatten = require("arr-flatten");
-const dotenv = require("dotenv");
+const Progress = require('progress');
+const fs = require('fs-promise');
+const bytes = require('bytes');
+const chalk = require('chalk');
+const minimist = require('minimist');
+const ms = require('ms');
+const flatten = require('arr-flatten');
+const dotenv = require('dotenv');
 
 // Ours
-const copy = require("../lib/copy");
-const login = require("../lib/login");
-const cfg = require("../lib/cfg");
-const { version } = require("../lib/pkg");
-const Logger = require("../lib/build-logger");
-const Now = require("../lib");
-const toHumanPath = require("../lib/utils/to-human-path");
-const promptOptions = require("../lib/utils/prompt-options");
-const { handleError, error } = require("../lib/error");
-const { fromGit, isRepoPath, gitPathParts } = require("../lib/git");
-const readMetaData = require("../lib/read-metadata");
-const checkPath = require("../lib/utils/check-path");
-const { reAlias, assignAlias } = require("../lib/re-alias");
-const exit = require("../lib/utils/exit");
-const logo = require("../lib/utils/output/logo");
-const cmd = require("../lib/utils/output/cmd");
+const copy = require('../lib/copy');
+const login = require('../lib/login');
+const cfg = require('../lib/cfg');
+const { version } = require('../lib/pkg');
+const Logger = require('../lib/build-logger');
+const Now = require('../lib');
+const toHumanPath = require('../lib/utils/to-human-path');
+const promptOptions = require('../lib/utils/prompt-options');
+const { handleError, error } = require('../lib/error');
+const { fromGit, isRepoPath, gitPathParts } = require('../lib/git');
+const readMetaData = require('../lib/read-metadata');
+const checkPath = require('../lib/utils/check-path');
+const { reAlias, assignAlias } = require('../lib/re-alias');
+const exit = require('../lib/utils/exit');
+const logo = require('../lib/utils/output/logo');
+const cmd = require('../lib/utils/output/cmd');
 
 const argv = minimist(process.argv.slice(2), {
-  string: ["config", "token", "name", "alias"],
+  string: ['config', 'token', 'name', 'alias'],
   boolean: [
-    "help",
-    "version",
-    "debug",
-    "force",
-    "links",
-    "login",
-    "no-clipboard",
-    "forward-npm",
-    "docker",
-    "npm",
-    "static"
+    'help',
+    'version',
+    'debug',
+    'force',
+    'links',
+    'login',
+    'no-clipboard',
+    'forward-npm',
+    'docker',
+    'npm',
+    'static'
   ],
   alias: {
-    env: "e",
-    dotenv: "E",
-    help: "h",
-    config: "c",
-    debug: "d",
-    version: "v",
-    force: "f",
-    token: "t",
-    forceSync: "F",
-    links: "l",
-    login: "L",
-    public: "p",
-    "no-clipboard": "C",
-    "forward-npm": "N",
-    name: "n",
-    alias: "a"
+    env: 'e',
+    dotenv: 'E',
+    help: 'h',
+    config: 'c',
+    debug: 'd',
+    version: 'v',
+    force: 'f',
+    token: 't',
+    forceSync: 'F',
+    links: 'l',
+    login: 'L',
+    public: 'p',
+    'no-clipboard': 'C',
+    'forward-npm': 'N',
+    name: 'n',
+    alias: 'a'
   }
 });
 
@@ -71,11 +71,11 @@ const help = () => {
     `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
-  ${chalk.dim("Commands:")}
+  ${chalk.dim('Commands:')}
 
-    ${chalk.dim("Cloud")}
+    ${chalk.dim('Cloud')}
 
-      deploy               [path]       Performs a deployment ${chalk.bold("(default)")}
+      deploy               [path]       Performs a deployment ${chalk.bold('(default)')}
       ls | list            [app]        List deployments
       rm | remove          [id]         Remove a deployment
       ln | alias           [id] [url]   Configures aliases for deployments
@@ -86,59 +86,59 @@ const help = () => {
       open                              Open the latest deployment for the project
       help                 [cmd]        Displays complete help for [cmd]
 
-    ${chalk.dim("Administrative")}
+    ${chalk.dim('Administrative')}
 
       billing | cc         [cmd]        Manages your credit cards and billing methods
       upgrade | downgrade  [plan]       Upgrades or downgrades your plan
 
-  ${chalk.dim("Options:")}
+  ${chalk.dim('Options:')}
 
     -h, --help                Output usage information
     -v, --version             Output the version number
     -n, --name                Set the name of the deployment
-    -c ${chalk.underline("FILE")}, --config=${chalk.underline("FILE")}    Config file
+    -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    Config file
     -d, --debug               Debug mode [off]
     -f, --force               Force a new deployment even if nothing has changed
-    -t ${chalk.underline("TOKEN")}, --token=${chalk.underline("TOKEN")}   Login token
+    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   Login token
     -L, --login               Configure login
     -l, --links               Copy symlinks without resolving their target
-    -p, --public              Deployment is public (${chalk.dim("`/_src`")} is exposed) [on for oss, off for premium]
-    -e, --env                 Include an env var (e.g.: ${chalk.dim("`-e KEY=value`")}). Can appear many times.
-    -E ${chalk.underline("FILE")}, --dotenv=${chalk.underline("FILE")}    Include env vars from .env file. Defaults to '.env'
+    -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
+    -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
+    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
 
-  ${chalk.dim("Enforcable Types (when both package.json and Dockerfile exist):")}
+  ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
     --npm                     Node.js application
     --docker                  Docker container
     --static                  Static file hosting
 
-  ${chalk.dim("Examples:")}
+  ${chalk.dim('Examples:')}
 
-  ${chalk.gray("–")} Deploys the current directory
+  ${chalk.gray('–')} Deploys the current directory
 
-    ${chalk.cyan("$ now")}
+    ${chalk.cyan('$ now')}
 
-  ${chalk.gray("–")} Deploys a custom path ${chalk.dim("`/usr/src/project`")}
+  ${chalk.gray('–')} Deploys a custom path ${chalk.dim('`/usr/src/project`')}
 
-    ${chalk.cyan("$ now /usr/src/project")}
+    ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray("–")} Deploys a GitHub repository
+  ${chalk.gray('–')} Deploys a GitHub repository
 
-    ${chalk.cyan("$ now user/repo#ref")}
+    ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray("–")} Deploys a GitHub, GitLab or Bitbucket repo using its URL
+  ${chalk.gray('–')} Deploys a GitHub, GitLab or Bitbucket repo using its URL
 
-    ${chalk.cyan("$ now https://gitlab.com/user/repo")}
+    ${chalk.cyan('$ now https://gitlab.com/user/repo')}
 
-  ${chalk.gray("–")} Deploys with ENV vars
+  ${chalk.gray('–')} Deploys with ENV vars
 
-    ${chalk.cyan("$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password")}
+    ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
-  ${chalk.gray("–")} Displays comprehensive help for the subcommand ${chalk.dim("`list`")}
+  ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
 
-    ${chalk.cyan("$ now help list")}
+    ${chalk.cyan('$ now help list')}
 `
   );
 };
@@ -159,17 +159,17 @@ const gitRepo = {};
 // options
 let forceNew = argv.force;
 const debug = argv.debug;
-const clipboard = !argv["no-clipboard"];
-const forwardNpm = argv["forward-npm"];
+const clipboard = !argv['no-clipboard'];
+const forwardNpm = argv['forward-npm'];
 const forceSync = argv.forceSync;
 const shouldLogin = argv.login;
 const followSymlinks = !argv.links;
 const wantsPublic = argv.public;
 const deploymentName = argv.name || false;
-const apiUrl = argv.url || "https://api.zeit.co";
+const apiUrl = argv.url || 'https://api.zeit.co';
 const isTTY = process.stdout.isTTY;
 const quiet = !isTTY;
-const autoAliases = typeof argv.alias === "undefined"
+const autoAliases = typeof argv.alias === 'undefined'
   ? false
   : flatten([argv.alias]);
 
@@ -179,9 +179,9 @@ if (argv.config) {
 
 if (Array.isArray(autoAliases)) {
   console.log(
-    `${chalk.red("Deprecated!")} The option ${chalk.grey("--alias")} will be removed soon.`
+    `${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`
   );
-  console.log("Read more about the new way here: http://bit.ly/2l2v5Fg\n");
+  console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n');
 }
 
 // Create a new deployment if user changed
@@ -205,7 +205,7 @@ if (argv.h || argv.help) {
   login(apiUrl)
     .then(token => {
       if (shouldLogin) {
-        console.log("> Logged in successfully. Token saved in ~/.now.json");
+        console.log('> Logged in successfully. Token saved in ~/.now.json');
         process.exit(0);
       } else {
         sync(token).catch(err => {
@@ -241,7 +241,7 @@ async function sync(token) {
   } catch (err) {
     let repo;
 
-    if (isValidRepo && isValidRepo !== "no-valid-url") {
+    if (isValidRepo && isValidRepo !== 'no-valid-url') {
       const gitParts = gitPathParts(rawPath);
       Object.assign(gitRepo, gitParts);
 
@@ -268,12 +268,12 @@ async function sync(token) {
       // Set global variable for deleting tmp dir later
       // once the deployment has finished
       Object.assign(gitRepo, repo);
-    } else if (isValidRepo === "no-valid-url") {
+    } else if (isValidRepo === 'no-valid-url') {
       stopDeployment(
         `This URL is neither a valid repository from GitHub, nor from GitLab.`
       );
     } else if (isValidRepo) {
-      const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : "";
+      const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : '';
       stopDeployment(
         `There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`
       );
@@ -287,7 +287,7 @@ async function sync(token) {
 
   if (!quiet) {
     if (gitRepo.main) {
-      const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : "";
+      const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : '';
       console.log(
         `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` +
           gitRef
@@ -308,19 +308,19 @@ async function sync(token) {
       console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``);
     }
 
-    deploymentType = "docker";
+    deploymentType = 'docker';
   } else if (argv.npm) {
-    deploymentType = "npm";
+    deploymentType = 'npm';
   } else if (argv.static) {
     if (debug) {
       console.log(`> [debug] Forcing static deployment`);
     }
 
-    deploymentType = "npm";
+    deploymentType = 'npm';
     isStatic = true;
   } else {
     try {
-      await fs.stat(resolve(path, "package.json"));
+      await fs.stat(resolve(path, 'package.json'));
     } catch (err) {
       hasPackage = true;
     }
@@ -328,7 +328,7 @@ async function sync(token) {
     [hasPackage, hasDockerfile] = await Promise.all([
       await (async () => {
         try {
-          await fs.stat(resolve(path, "package.json"));
+          await fs.stat(resolve(path, 'package.json'));
         } catch (err) {
           return false;
         }
@@ -336,7 +336,7 @@ async function sync(token) {
       })(),
       await (async () => {
         try {
-          await fs.stat(resolve(path, "Dockerfile"));
+          await fs.stat(resolve(path, 'Dockerfile'));
         } catch (err) {
           return false;
         }
@@ -346,22 +346,22 @@ async function sync(token) {
 
     if (hasPackage && hasDockerfile) {
       if (debug) {
-        console.log("[debug] multiple manifests found, disambiguating");
+        console.log('[debug] multiple manifests found, disambiguating');
       }
 
       if (isTTY) {
         try {
           console.log(
-            `> Two manifests found. Press [${chalk.bold("n")}] to deploy or re-run with --flag`
+            `> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`
           );
           deploymentType = await promptOptions([
             [
-              "npm",
-              `${chalk.bold("package.json")}\t${chalk.gray("   --npm")} `
+              'npm',
+              `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `
             ],
             [
-              "docker",
-              `${chalk.bold("Dockerfile")}\t${chalk.gray("--docker")} `
+              'docker',
+              `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `
             ]
           ]);
         } catch (err) {
@@ -370,30 +370,30 @@ async function sync(token) {
         }
       } else {
         error(
-          "Ambiguous deployment (`package.json` and `Dockerfile` found). " +
-            "Please supply `--npm` or `--docker` to disambiguate."
+          'Ambiguous deployment (`package.json` and `Dockerfile` found). ' +
+            'Please supply `--npm` or `--docker` to disambiguate.'
         );
       }
     } else if (hasPackage) {
       if (debug) {
         console.log(
-          "> [debug] `package.json` found, assuming `deploymentType` = `npm`"
+          '> [debug] `package.json` found, assuming `deploymentType` = `npm`'
         );
       }
 
-      deploymentType = "npm";
+      deploymentType = 'npm';
     } else if (hasDockerfile) {
       if (debug) {
         console.log(
-          "> [debug] `Dockerfile` found, assuming `deploymentType` = `docker`"
+          '> [debug] `Dockerfile` found, assuming `deploymentType` = `docker`'
         );
       }
 
-      deploymentType = "docker";
+      deploymentType = 'docker';
     } else {
       if (debug) {
         console.log(
-          "> [debug] No manifest files found, assuming static deployment"
+          '> [debug] No manifest files found, assuming static deployment'
         );
       }
 
@@ -420,9 +420,9 @@ async function sync(token) {
   }
 
   if (dotenvOption) {
-    const dotenvFileName = typeof dotenvOption === "string"
+    const dotenvFileName = typeof dotenvOption === 'string'
       ? dotenvOption
-      : ".env";
+      : '.env';
 
     if (!fs.existsSync(dotenvFileName)) {
       error(`--dotenv flag is set but ${dotenvFileName} file is missing`);
@@ -454,21 +454,21 @@ async function sync(token) {
 
   const env_ = await Promise.all(
     envs.map(async kv => {
-      if (typeof kv !== "string") {
-        error("Env key and value missing");
+      if (typeof kv !== 'string') {
+        error('Env key and value missing');
         return process.exit(1);
       }
 
-      const [key, ...rest] = kv.split("=");
+      const [key, ...rest] = kv.split('=');
       let val;
 
       if (rest.length > 0) {
-        val = rest.join("=");
+        val = rest.join('=');
       }
 
       if (/[^A-z0-9_]/i.test(key)) {
         error(
-          `Invalid ${chalk.dim("-e")} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`
+          `Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`
         );
         return process.exit(1);
       }
@@ -484,7 +484,7 @@ async function sync(token) {
             `> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`
           );
           // escape value if it begins with @
-          val = process.env[key].replace(/^@/, "\\@");
+          val = process.env[key].replace(/^@/, '\\@');
         } else {
           error(
             `No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`
@@ -493,11 +493,11 @@ async function sync(token) {
         }
       }
 
-      if (val[0] === "@") {
+      if (val[0] === '@') {
         const uidOrName = val.substr(1);
         const secrets = await findSecret(uidOrName);
         if (secrets.length === 0) {
-          if (uidOrName === "") {
+          if (uidOrName === '') {
             error(
               `Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`
             );
@@ -517,7 +517,7 @@ async function sync(token) {
         val = { uid: secrets[0].uid };
       }
 
-      return [key, typeof val === "string" ? val.replace(/^\\@/, "@") : val];
+      return [key, typeof val === 'string' ? val.replace(/^\\@/, '@') : val];
     })
   );
 
@@ -525,7 +525,7 @@ async function sync(token) {
   env_.filter(v => Boolean(v)).forEach(([key, val]) => {
     if (key in env) {
       console.log(
-        `> ${chalk.yellow("NOTE:")} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`
+        `> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`
       );
     }
 
@@ -562,11 +562,11 @@ async function sync(token) {
       try {
         await copy(url);
         console.log(
-          `${chalk.cyan("> Ready!")} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`
+          `${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`
         );
       } catch (err) {
         console.log(
-          `${chalk.cyan("> Ready!")} ${chalk.bold(url)} [${elapsed}]`
+          `${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`
         );
       }
     } else {
@@ -582,7 +582,7 @@ async function sync(token) {
     if (!quiet) {
       const elapsedU = ms(new Date() - startU);
       console.log(`> Sync complete (${bytes(now.syncAmount)}) [${elapsedU}] `);
-      console.log("> Initializing…");
+      console.log('> Initializing…');
     }
 
     // close http2 agent
@@ -593,29 +593,29 @@ async function sync(token) {
   };
 
   if (now.syncAmount) {
-    const bar = new Progress("> Upload [:bar] :percent :etas", {
+    const bar = new Progress('> Upload [:bar] :percent :etas', {
       width: 20,
-      complete: "=",
-      incomplete: "",
+      complete: '=',
+      incomplete: '',
       total: now.syncAmount
     });
 
     now.upload();
 
-    now.on("upload", ({ names, data }) => {
+    now.on('upload', ({ names, data }) => {
       const amount = data.length;
       if (debug) {
         console.log(
-          `> [debug] Uploaded: ${names.join(" ")} (${bytes(data.length)})`
+          `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
         );
       }
       bar.tick(amount);
     });
 
-    now.on("complete", complete);
+    now.on('complete', complete);
 
-    now.on("error", err => {
-      error("Upload failed");
+    now.on('error', err => {
+      error('Upload failed');
       handleError(err);
       process.exit(1);
     });
@@ -636,14 +636,14 @@ function printLogs(host, token) {
   // log build
   const logger = new Logger(host, { debug, quiet });
 
-  logger.on("error", async err => {
+  logger.on('error', async err => {
     if (!quiet) {
-      if (err && err.type === "BUILD_ERROR") {
+      if (err && err.type === 'BUILD_ERROR') {
         error(
-          `The build step of your project failed. To retry, run ${cmd("now --force")}.`
+          `The build step of your project failed. To retry, run ${cmd('now --force')}.`
         );
       } else {
-        error("Deployment failed");
+        error('Deployment failed');
       }
     }
 
@@ -658,9 +658,9 @@ function printLogs(host, token) {
     process.exit(1);
   });
 
-  logger.on("close", async () => {
+  logger.on('close', async () => {
     if (Array.isArray(autoAliases)) {
-      const aliasList = autoAliases.filter(item => item !== "");
+      const aliasList = autoAliases.filter(item => item !== '');
 
       if (aliasList.length > 0) {
         for (const alias of aliasList) {
@@ -672,7 +672,7 @@ function printLogs(host, token) {
     }
 
     if (!quiet) {
-      console.log(`${chalk.cyan("> Deployment complete!")}`);
+      console.log(`${chalk.cyan('> Deployment complete!')}`);
     }
 
     if (gitRepo && gitRepo.cleanup) {
