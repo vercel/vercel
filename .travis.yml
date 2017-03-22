@@ -4,6 +4,7 @@
     "6",
     "node"
   ],
+  "before_deploy": "npm run pack",
   "deploy": {
     "provider": "releases",
     "api_key": {
