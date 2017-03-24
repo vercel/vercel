@@ -93,7 +93,7 @@
     "alpha-sort": "2.0.0",
     "ava": "0.18.2",
     "eslint-config-prettier": "1.5.0",
-    "husky": "0.13.3-0",
+    "husky": "0.13.3",
     "lint-staged": "3.4.0",
     "pkg": "3.0.0-beta.29",
     "xo": "0.18.0"
