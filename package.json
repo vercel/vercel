@@ -34,9 +34,7 @@
     "ignores": [
       "test/_fixtures/**"
     ],
-    "extends": [
-      "prettier"
-    ]
+    "extends": "prettier"
   },
   "lint-staged": {
     "*.js": [
