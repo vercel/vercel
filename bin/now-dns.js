@@ -208,7 +208,7 @@ function parseAddArgs(args) {
   }
 
   const domain = args[0];
-  const name = args[1] === '@' ? '' : args[1];
+  const name = args[1] === '@' ? '' : args[1].toString();
   const type = args[2];
   const value = args[3];
 
