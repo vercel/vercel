@@ -76,7 +76,7 @@
     "node-version": "1.0.0",
     "opn": "4.0.2",
     "ora": "1.2.0",
-    "progress": "1.1.8",
+    "progress": "2.0.0",
     "psl": "1.1.18",
     "resumer": "0.0.0",
     "socket.io-client": "1.7.3",
