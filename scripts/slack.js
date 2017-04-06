@@ -11,12 +11,12 @@ const TOKEN = process.env.SLACKUP_TOKEN
 const CHANNEL = process.env.SLACKUP_CHANNEL
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 
-// skip if not on a zeit repo
+// Skip if not on a zeit repo
 if (!/^zeit\//.test(REPO)) {
   process.exit(0)
 }
 
-// skip if it's a build from a pull request
+// Skip if it's a build from a pull request
 if (process.env.TRAVIS_PULL_REQUEST !== 'false') {
   process.exit(0)
 }
