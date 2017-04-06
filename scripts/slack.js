@@ -16,11 +16,6 @@ if (!/^zeit\//.test(REPO)) {
   process.exit(0)
 }
 
-// Skip if it's a build from a pull request
-if (process.env.TRAVIS_PULL_REQUEST !== 'false') {
-  process.exit(0)
-}
-
 if (!TOKEN) {
   console.log('$SLACKUP_TOKEN not found')
   process.exit(0)
