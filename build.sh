@@ -10,6 +10,6 @@ chmod +x build/bin/now.js
 cp lib/utils/billing/*.json build/lib/utils/billing/
 
 # CI
-mkdir scripts/build
-node_modules/.bin/async-to-gen --out-file scripts/build/slack.js scripts/slack.js
-chmod +x scripts/build/slack.js
+mkdir build/scripts
+node_modules/.bin/async-to-gen --out-file build/scripts/slack.js scripts/slack.js
+chmod +x build/scripts/slack.js
