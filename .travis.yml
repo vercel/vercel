@@ -16,5 +16,10 @@
     "on": {
       "tags": true
     }
-  }
+  },
+  "after_success": [
+    'npm install --global slackup',
+    'npm run pack',
+    './build/scripts/slack.js'
+  ]
 }
