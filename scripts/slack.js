@@ -11,7 +11,7 @@ const apiKey = process.env.SLACK_API_KEY
 const channel = process.env.SLACK_CHANNEL
 const githubToken = process.env.GITHUB_API_KEY
 const currentNodeVersion = process.env.TRAVIS_NODE_VERSION
-const regex = /^7\.*/
+const regex = /^(node|7)\.*/
 
 // Skip if not on a zeit repo
 if (!/^zeit\//.test(repo)) {
