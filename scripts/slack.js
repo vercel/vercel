@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const slackup = require('slackup')
-
 const fetch = require('node-fetch')
 
 const repo = process.env.TRAVIS_REPO_SLUG
