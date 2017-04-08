@@ -20,6 +20,6 @@
   "after_success": [
     'npm install --global slackup',
     'npm run pack',
-    './scripts/slack.js'
+    './scripts/build/slack.js'
   ]
 }
