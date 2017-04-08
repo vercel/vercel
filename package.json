@@ -32,7 +32,8 @@
   },
   "xo": {
     "ignores": [
-      "test/_fixtures/**"
+      "test/_fixtures/**",
+      "scripts/build/**"
     ],
     "extends": "prettier"
   },

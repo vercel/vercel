@@ -49,7 +49,7 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
   }))
 .then(async res => {
   if (regex.test(currentNodeVersion)) {
-    const msg = `:package: Here are the binaries for the branch *${branch}* of *${repo}* (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>):`
+    const message = `:package: Here are the binaries for the branch *${branch}* of *${repo}* (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>):`
 
     const binaries = [
       `${__dirname}/../packed/now-macos`,
@@ -58,7 +58,7 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
       ]
 
     try {
-      await slackup({apiKey, channel, type: 'message', message: msg})
+      await slackup({apiKey, channel, type: 'message', message})
       await slackup({apiKey, channel, type: 'file', filePath: binaries[0]})
       await slackup({apiKey, channel, type: 'file', filePath: binaries[1]})
       await slackup({apiKey, channel, type: 'file', filePath: binaries[2]})
