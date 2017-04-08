@@ -65,7 +65,8 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
       console.log(`Couldn't send messages/files to Slack`, err)
     }
   } else {
-    console.log(`Skipping unwanted node version (${currentNodeVersion})`)
+    const message = `:white_check_mark: Build succeded on Node ${currentNodeVersion} (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>)`
+    await slackup({apiKey, channel, type: 'message', message})
   }
 })
 .catch(console.error)
