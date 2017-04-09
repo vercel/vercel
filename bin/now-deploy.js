@@ -606,7 +606,9 @@ async function sync(token) {
   const plan = await planPromise;
 
   if (plan.id === 'oss') {
-    info(`You are on the OSS plan, which means your code will be made public.`);
+    info(
+      `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+    );
 
     let proceed;
     try {
@@ -624,7 +626,7 @@ async function sync(token) {
       const stopSpinner = wait('Canceling deployment');
       now.remove(now.id, { hard: true });
       stopSpinner();
-      info('Your depoyment was cancelled and no files were uploaded.');
+      info('Deployment aborted. No files were synced.');
       info(`You can upgrade by running ${cmd('now upgrade')}.`);
       return exit();
     }
