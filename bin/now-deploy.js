@@ -12,6 +12,7 @@ const minimist = require('minimist');
 const ms = require('ms');
 const flatten = require('arr-flatten');
 const dotenv = require('dotenv');
+const { eraseLines } = require('ansi-escapes');
 
 // Ours
 const copy = require('../lib/copy');
@@ -30,6 +31,10 @@ const { reAlias, assignAlias } = require('../lib/re-alias');
 const exit = require('../lib/utils/exit');
 const logo = require('../lib/utils/output/logo');
 const cmd = require('../lib/utils/output/cmd');
+const info = require('../lib/utils/output/info');
+const wait = require('../lib/utils/output/wait');
+const NowPlans = require('../lib/plans');
+const promptBool = require('../lib/utils/input/prompt-bool');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'name', 'alias'],
@@ -228,6 +233,8 @@ if (argv.h || argv.help) {
 async function sync(token) {
   const start = Date.now();
   const rawPath = argv._[0];
+
+  const planPromise = new NowPlans(apiUrl, token, { debug }).getCurrent();
 
   const stopDeployment = msg => {
     error(msg);
@@ -596,6 +603,35 @@ async function sync(token) {
     // Show build logs
     printLogs(now.host, token);
   };
+
+  const plan = await planPromise;
+
+  if (plan.id === 'oss') {
+    info(
+      `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+    );
+
+    let proceed;
+    try {
+      const label = 'Are you sure you want to proceed with the deployment?';
+      proceed = await promptBool(label, { trailing: eraseLines(2) });
+    } catch (err) {
+      if (err.message === 'USER_ABORT') {
+        proceed = false;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!proceed) {
+      const stopSpinner = wait('Canceling deployment');
+      now.remove(now.id, { hard: true });
+      stopSpinner();
+      info('Deployment aborted. No files were synced.');
+      info(`You can upgrade by running ${cmd('now upgrade')}.`);
+      return exit();
+    }
+  }
 
   if (now.syncAmount) {
     const bar = new Progress('> Upload [:bar] :percent :etas', {
