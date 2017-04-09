@@ -12,6 +12,7 @@ const minimist = require('minimist');
 const ms = require('ms');
 const flatten = require('arr-flatten');
 const dotenv = require('dotenv');
+const { eraseLines } = require('ansi-escapes');
 
 // Ours
 const copy = require('../lib/copy');
@@ -613,7 +614,7 @@ async function sync(token) {
     let proceed;
     try {
       const label = 'Are you sure you want to proceed with the deployment?';
-      proceed = await promptBool(label);
+      proceed = await promptBool(label, { trailing: eraseLines(2) });
     } catch (err) {
       if (err.message === 'USER_ABORT') {
         proceed = false;
