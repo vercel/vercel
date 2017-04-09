@@ -233,6 +233,8 @@ async function sync(token) {
   const start = Date.now();
   const rawPath = argv._[0];
 
+  const planPromise = new NowPlans(apiUrl, token, { debug }).getCurrent();
+
   const stopDeployment = msg => {
     error(msg);
     process.exit(1);
@@ -293,8 +295,6 @@ async function sync(token) {
     error(err);
     return;
   }
-
-  const planPromise = new NowPlans(apiUrl, token, { debug }).getCurrent();
 
   if (!quiet) {
     if (gitRepo.main) {
