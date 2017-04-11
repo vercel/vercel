@@ -89,7 +89,7 @@
     "update-notifier": "2.1.0"
   },
   "devDependencies": {
-    "alpha-sort": "2.0.0",
+    "alpha-sort": "2.0.1",
     "ava": "0.18.2",
     "eslint-config-prettier": "1.5.0",
     "husky": "0.13.3",
