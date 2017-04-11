@@ -92,6 +92,12 @@ if (index > -1) {
   cmd = aliases.get(cmd) || cmd;
 }
 
+// Don't throw a useless error message when running `now help help`
+// rather show the general help and be useful
+if (cmd === 'help') {
+  cmd = 'deploy';
+}
+
 const bin = resolve(__dirname, 'now-' + cmd + '.js');
 
 // Prepare process.argv for subcommand
