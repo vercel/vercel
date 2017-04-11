@@ -83,20 +83,20 @@
     "socket.io-client": "1.7.3",
     "split-array": "1.0.1",
     "strip-ansi": "3.0.1",
-    "stripe": "4.17.0",
+    "stripe": "4.17.1",
     "text-table": "0.2.0",
     "tmp-promise": "1.0.3",
     "update-notifier": "2.1.0"
   },
   "devDependencies": {
-    "alpha-sort": "2.0.0",
-    "ava": "0.18.2",
-    "eslint-config-prettier": "1.5.0",
+    "alpha-sort": "2.0.1",
+    "ava": "0.19.1",
+    "eslint-config-prettier": "1.6.0",
     "husky": "0.13.3",
     "lint-staged": "3.4.0",
     "pkg": "3.0.0-beta.29",
     "prettier": "0.22.0",
     "slackup": "1.2.0",
-    "xo": "0.19.0"
+    "xo": "0.18.1"
   }
 }
