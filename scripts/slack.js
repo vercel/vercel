@@ -70,7 +70,7 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
           const message = `:white_check_mark: Build succeded on Node ${currentNodeVersion} (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>)`;
           await slackup({ apiKey, channel, type: 'message', message });
         },
-        3000
+        10000
       );
     }
   })
