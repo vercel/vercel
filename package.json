@@ -96,7 +96,7 @@
     "lint-staged": "3.4.0",
     "pkg": "3.0.0-beta.29",
     "prettier": "1.1.0",
-    "slackup": "2.0.0",
+    "slackup": "2.0.1",
     "xo": "0.18.1"
   }
 }
