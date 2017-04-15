@@ -74,7 +74,6 @@
     "minimist": "1.2.0",
     "ms": "1.0.0",
     "node-fetch": "1.6.3",
-    "node-version": "1.0.0",
     "opn": "4.0.2",
     "ora": "1.2.0",
     "progress": "2.0.0",

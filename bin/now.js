@@ -1,24 +1,14 @@
 #!/usr/bin/env node
 
 // Native
-const path = require('path');
+const { resolve } = require('path');
 
 // Packages
-const nodeVersion = require('node-version');
 const updateNotifier = require('update-notifier');
 const chalk = require('chalk');
 
 // Ours
-const errorHandlers = require('../lib/error');
 const pkg = require('../lib/pkg');
-
-// Throw an error if node version is too low
-if (nodeVersion.major < 6) {
-  errorHandlers.error(
-    'Now requires at least version 6 of Node. Please upgrade!'
-  );
-  process.exit(1);
-}
 
 if (!process.pkg) {
   const notifier = updateNotifier({ pkg });
@@ -100,7 +90,7 @@ if (cmd === 'help') {
   cmd = 'deploy';
 }
 
-const bin = path.resolve(__dirname, 'now-' + cmd + '.js');
+const bin = resolve(__dirname, 'now-' + cmd + '.js');
 
 // Prepare process.argv for subcommand
 process.argv = process.argv.slice(0, 2).concat(args);
