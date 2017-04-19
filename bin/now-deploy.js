@@ -607,29 +607,36 @@ async function sync(token) {
   const plan = await planPromise;
 
   if (plan.id === 'oss') {
-    info(
-      `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
-    );
+    if (isTTY) {
+      info(
+        `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+      );
 
-    let proceed;
-    try {
-      const label = 'Are you sure you want to proceed with the deployment?';
-      proceed = await promptBool(label, { trailing: eraseLines(2) });
-    } catch (err) {
-      if (err.message === 'USER_ABORT') {
-        proceed = false;
-      } else {
-        throw err;
+      let proceed;
+      try {
+        const label = 'Are you sure you want to proceed with the deployment?';
+        proceed = await promptBool(label, { trailing: eraseLines(2) });
+      } catch (err) {
+        if (err.message === 'USER_ABORT') {
+          proceed = false;
+        } else {
+          throw err;
+        }
       }
-    }
 
-    if (!proceed) {
-      const stopSpinner = wait('Canceling deployment');
-      now.remove(now.id, { hard: true });
-      stopSpinner();
-      info('Deployment aborted. No files were synced.');
-      info(`You can upgrade by running ${cmd('now upgrade')}.`);
-      return exit();
+      if (!proceed) {
+        const stopSpinner = wait('Canceling deployment');
+        now.remove(now.id, { hard: true });
+        stopSpinner();
+        info('Deployment aborted. No files were synced.');
+        info(`You can upgrade by running ${cmd('now upgrade')}.`);
+        return exit();
+      }
+    } else if (!wantsPublic) {
+      let msg = '\nYou are on the OSS plan. Your code will be made public.';
+      msg += ' If you agree with that, please run again with --public.';
+      console.log(msg);
+      return exit(1);
     }
   }
 
