@@ -626,7 +626,7 @@ async function sync(token) {
 
       if (!proceed) {
         const stopSpinner = wait('Canceling deployment');
-        now.remove(now.id, { hard: true });
+        await now.remove(now.id, { hard: true });
         stopSpinner();
         info('Deployment aborted. No files were synced.');
         info(`You can upgrade by running ${cmd('now upgrade')}.`);
