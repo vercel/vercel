@@ -141,6 +141,10 @@ const help = () => {
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
 
+  ${chalk.gray('–')} Deploys with ENV vars from a .env file
+
+    ${chalk.cyan('$ sed \'s/^/-e /\' .env | xargs now')}
+
   ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
 
     ${chalk.cyan('$ now help list')}
