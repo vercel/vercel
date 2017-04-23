@@ -4,12 +4,10 @@
 const fs = require('fs-promise');
 const minimist = require('minimist');
 const chalk = require('chalk');
-const table = require('text-table');
 const ms = require('ms');
+const printf = require('printf');
 
 // Ours
-const strlen = require('../lib/strlen');
-const indent = require('../lib/indent');
 const Now = require('../lib');
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
@@ -18,7 +16,7 @@ const logo = require('../lib/utils/output/logo');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug'],
+  boolean: ['help', 'debug', 'all'],
   alias: {
     help: 'h',
     config: 'c',
@@ -104,36 +102,105 @@ async function list(token) {
 
   const apps = new Map();
 
+  if (argv.all && !app) {
+    console.log('> You must define app when using `--all`');
+    process.exit(1);
+  }
+  if (argv.all) {
+    await Promise.all(
+      deployments.map(async ({ uid }, i) => {
+        deployments[i].instances = await now.listInstances(uid);
+      })
+    );
+  }
+
   for (const dep of deployments) {
     const deps = apps.get(dep.name) || [];
     apps.set(dep.name, deps.concat(dep));
   }
 
   const sorted = await sort([...apps]);
-  const current = Date.now();
 
-  const text = sorted
-    .map(([name, deps]) => {
-      const t = table(
-        deps.map(({ uid, url, created }) => {
-          const _url = url ? chalk.underline(`https://${url}`) : 'incomplete';
-          const time = chalk.gray(ms(current - created) + ' ago');
-          return [uid, _url, time];
-        }),
-        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6), stringLength: strlen }
+  const urlLength = deployments.reduce(
+    (acc, i) => {
+      return Math.max(acc, (i.url && i.url.length) || 0);
+    },
+    0
+  ) + 5;
+  const timeNow = new Date();
+  console.log(
+    `> Fetched ${deployments.length} deployments ${chalk.grey('[' + ms(timeNow - start) + ']')}`
+  );
+
+  let shouldShowAllInfo = false;
+  for (const app of apps) {
+    shouldShowAllInfo = app[1].length > 5 ||
+      app.find(depl => {
+        return depl.scale && depl.scale.current > 1;
+      });
+    if (shouldShowAllInfo) {
+      break;
+    }
+  }
+  if (!argv.all && shouldShowAllInfo) {
+    console.log(
+      `> To expand list and see instances run ${chalk.cyan('`now ls --all [app]`')}`
+    );
+  }
+  console.log();
+  sorted.forEach(([name, deps]) => {
+    const listedDeployments = argv.all ? deps : deps.slice(0, 5);
+    console.log(
+      `${chalk.bold(name)} ${chalk.gray('(' + listedDeployments.length + ' of ' + deps.length + ' total)')}`
+    );
+    const urlSpec = `%-${urlLength}s`;
+    console.log(
+      printf(
+        ` ${chalk.grey(urlSpec + '  %8s    %-16s %8s')}`,
+        'url',
+        'inst #',
+        'state',
+        'age'
+      )
+    );
+    listedDeployments.forEach(dep => {
+      let state = dep.state;
+      let extraSpaceForState = 0;
+      if (state === null || typeof state === 'undefined') {
+        state = 'DEPLOYMENT_ERROR';
+      }
+      if (/ERROR/.test(state)) {
+        state = chalk.red(state);
+        extraSpaceForState = 10;
+      } else if (state === 'FROZEN') {
+        state = chalk.grey(state);
+        extraSpaceForState = 10;
+      }
+      console.log(
+        printf(
+          ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`,
+          chalk.underline(dep.url),
+          dep.scale.current,
+          state,
+          ms(timeNow - dep.created)
+        )
       );
-      return chalk.bold(name) + '\n\n' + indent(t, 2);
-    })
-    .join('\n\n');
+      if (Array.isArray(dep.instances) && dep.instances.length > 0) {
+        dep.instances.forEach(i => {
+          console.log(
+            printf(` %-${urlLength + 10}s`, ` - ${chalk.underline(i.url)}`)
+          );
+        });
+        console.log();
+      }
+    });
+    console.log();
+  });
 
   const elapsed = ms(new Date() - start);
   console.log(
     `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
   );
-
-  if (text) {
-    console.log('\n' + text + '\n');
-  }
 }
 
 async function sort(apps) {
