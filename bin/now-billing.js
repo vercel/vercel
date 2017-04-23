@@ -9,6 +9,7 @@ const minimist = require('minimist');
 const ms = require('ms');
 
 // Ours
+<<<<<<< HEAD
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
 const { error } = require('../lib/error');
@@ -18,6 +19,17 @@ const listInput = require('../lib/utils/input/list');
 const success = require('../lib/utils/output/success');
 const promptBool = require('../lib/utils/input/prompt-bool');
 const logo = require('../lib/utils/output/logo');
+=======
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {error} = require('../lib/error')
+const NowCreditCards = require('../lib/credit-cards')
+const indent = require('../lib/indent')
+const listInput = require('../lib/utils/input/list')
+const success = require('../lib/utils/output/success')
+const promptBool = require('../lib/utils/input/prompt-bool')
+const logo = require('../lib/utils/output/logo')
+>>>>>>> `prompt-bool` is an `input` util, not an `output` one
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],

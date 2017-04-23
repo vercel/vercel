@@ -9,6 +9,7 @@ const ms = require('ms');
 // Ours
 const strlen = require('../lib/strlen');
 const NowAlias = require('../lib/alias');
+const NowDomains = require('../lib/domains');
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
 const { error } = require('../lib/error');
@@ -130,6 +131,7 @@ if (argv.help) {
 
 async function run(token) {
   const alias = new NowAlias(apiUrl, token, { debug });
+  const domains = new NowDomains(apiUrl, token, { debug });
   const args = argv._.slice(1);
 
   switch (subcommand) {
@@ -291,7 +293,7 @@ async function run(token) {
     case 'add':
     case 'set': {
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules);
+        await updatePathAlias(alias, argv._[0], argv.rules, domains);
         break;
       }
       if (args.length !== 2) {
@@ -312,7 +314,7 @@ async function run(token) {
       if (argv.rules) {
         await updatePathAlias(alias, argv._[0], argv.rules);
       } else if (argv._.length === 2) {
-        await alias.set(String(argv._[0]), String(argv._[1]));
+        await alias.set(String(argv._[0]), String(argv._[1]), domains);
       } else if (argv._.length >= 3) {
         error('Invalid number of arguments');
         help();
@@ -325,6 +327,7 @@ async function run(token) {
     }
   }
 
+  domains.close()
   alias.close();
 }
 
@@ -385,9 +388,9 @@ function findAlias(alias, list) {
   return _alias;
 }
 
-async function updatePathAlias(alias, aliasName, rules) {
+async function updatePathAlias(alias, aliasName, rules, domains) {
   const start = new Date();
-  const res = await alias.updatePathBasedroutes(String(aliasName), rules);
+  const res = await alias.updatePathBasedroutes(String(aliasName), rules, domains);
   const elapsed = ms(new Date() - start);
   if (res.error) {
     const err = new Error(res.error.message);

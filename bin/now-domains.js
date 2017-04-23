@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Native
+const {resolve} = require('path')
+
 // Packages
 const chalk = require('chalk');
 const minimist = require('minimist');
@@ -264,6 +267,10 @@ async function run(token) {
           '> Verification required: Please rerun this command after some time'
         );
       }
+      break;
+    }
+    case 'buy': {
+      await require(resolve(__dirname, 'domains', 'buy.js'))(domain, args);
       break;
     }
     default:
