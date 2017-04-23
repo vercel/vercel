@@ -64,7 +64,7 @@ const aliases = new Map([
   ['secret', 'secrets'],
   ['cc', 'billing'],
   ['downgrade', 'upgrade'],
-  ['switch', 'teams switch']
+  ['switch', 'teams switch'],
   ['log', 'logs']
 ]);
 
