@@ -47,7 +47,9 @@ const commands = new Set([
   'billing',
   'upgrade',
   'downgrade',
-  'open'
+  'open',
+  'teams',
+  'switch'
 ]);
 
 const aliases = new Map([
@@ -59,11 +61,12 @@ const aliases = new Map([
   ['cert', 'certs'],
   ['secret', 'secrets'],
   ['cc', 'billing'],
-  ['downgrade', 'upgrade']
+  ['downgrade', 'upgrade'],
+  ['switch', 'teams switch']
 ]);
 
 let cmd = defaultCommand;
-const args = process.argv.slice(2);
+let args = process.argv.slice(2);
 const index = args.findIndex(a => commands.has(a));
 
 if (index > -1) {
@@ -82,6 +85,11 @@ if (index > -1) {
   }
 
   cmd = aliases.get(cmd) || cmd;
+  if (cmd.includes(' ')) {
+    const parts = cmd.split(' ');
+    cmd = parts.shift();
+    args = [].concat(parts, args);
+  }
 }
 
 // Don't throw a useless error message when running `now help help`

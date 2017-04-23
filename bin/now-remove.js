@@ -76,7 +76,24 @@ if (argv.config) {
   cfg.setConfigFile(argv.config);
 }
 
-const config = cfg.read();
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
+
+  let token;
+  try {
+    token = (await argv.token) || config.token || login(apiUrl);
+  } catch (err) {
+    error(`Authentication error – ${err.message}`);
+    process.exit(1);
+  }
+
+  try {
+    await remove(token);
+  } catch (err) {
+    error(`Unknown error: ${err}\n${err.stack}`);
+    process.exit(1);
+  }
+});
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
@@ -115,20 +132,6 @@ function readConfirmation(matches) {
       .resume();
   });
 }
-
-Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
-    try {
-      await remove(token);
-    } catch (err) {
-      error(`Unknown error: ${err}\n${err.stack}`);
-      process.exit(1);
-    }
-  })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`);
-    process.exit(1);
-  });
 
 async function remove(token) {
   const now = new Now(apiUrl, token, { debug });

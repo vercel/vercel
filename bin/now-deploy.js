@@ -35,6 +35,7 @@ const info = require('../lib/utils/output/info');
 const wait = require('../lib/utils/output/wait');
 const NowPlans = require('../lib/plans');
 const promptBool = require('../lib/utils/input/prompt-bool');
+const note = require('../lib/utils/output/note');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'name', 'alias'],
@@ -197,38 +198,42 @@ if (deploymentName || wantsPublic) {
   forceNew = true;
 }
 
-const config = cfg.read();
-const alwaysForwardNpm = config.forwardNpm;
+let alwaysForwardNpm;
 
-if (argv.h || argv.help) {
-  help();
-  exit(0);
-} else if (argv.v || argv.version) {
-  console.log(version);
-  process.exit(0);
-} else if (!(argv.token || config.token) || shouldLogin) {
-  login(apiUrl)
-    .then(token => {
-      if (shouldLogin) {
-        console.log('> Logged in successfully. Token saved in ~/.now.json');
-        process.exit(0);
-      } else {
-        sync(token).catch(err => {
-          error(`Unknown error: ${err}\n${err.stack}`);
-          process.exit(1);
-        });
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
+  alwaysForwardNpm = config.forwardNpm;
+
+  if (argv.h || argv.help) {
+    help();
+    exit(0);
+  } else if (argv.v || argv.version) {
+    console.log(version);
+    process.exit(0);
+  } else if (!(argv.token || config.token) || shouldLogin) {
+    let token;
+    try {
+      token = await login(apiUrl);
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
+      process.exit(1);
+    }
+    if (shouldLogin) {
+      console.log('> Logged in successfully. Token saved in ~/.now.json');
+      process.exit(0);
+    } else {
+      sync(token).catch(err => {
+        error(`Unknown error: ${err}\n${err.stack}`);
+        process.exit(1);
+      });
+    }
+  } else {
+    sync(argv.token || config.token).catch(err => {
+      error(`Unknown error: ${err}\n${err.stack}`);
       process.exit(1);
     });
-} else {
-  sync(argv.token || config.token).catch(err => {
-    error(`Unknown error: ${err}\n${err.stack}`);
-    process.exit(1);
-  });
-}
+  }
+});
 
 async function sync(token) {
   const start = Date.now();
@@ -536,9 +541,7 @@ async function sync(token) {
   const env = {};
   env_.filter(v => Boolean(v)).forEach(([key, val]) => {
     if (key in env) {
-      console.log(
-        `> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`
-      );
+      note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
     }
 
     env[key] = val;

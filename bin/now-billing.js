@@ -89,25 +89,27 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+    try {
+      await run(token);
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()

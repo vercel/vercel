@@ -16,6 +16,7 @@ const code = require('../lib/utils/output/code');
 const error = require('../lib/utils/output/error');
 const success = require('../lib/utils/output/success');
 const cmd = require('../lib/utils/output/cmd');
+const { tick } = require('../lib/utils/output/chars');
 const logo = require('../lib/utils/output/logo');
 
 const argv = minimist(process.argv.slice(2), {
@@ -78,25 +79,28 @@ if (argv.help) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run(token);
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
 function buildInquirerChoices(current, until) {
@@ -126,9 +130,9 @@ function buildInquirerChoices(current, until) {
     {
       name: [
         premiumTitle,
-        indent('✓ All code is private and secure', 2),
-        indent('✓ 1000 deploys per month | 50GB monthly bandwidth', 2),
-        indent('✓ 100GB storage | No filesize limit', 2)
+        indent(`${tick} All code is private and secure`, 2),
+        indent(`${tick} 1000 deploys per month | 50GB monthly bandwidth`, 2),
+        indent(`${tick} 100GB storage | No filesize limit`, 2)
       ].join('\n'),
       value: 'premium',
       short: 'premium $15/mo'

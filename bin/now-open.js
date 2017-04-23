@@ -61,21 +61,24 @@ if (argv.config) {
   cfg.setConfigFile(argv.config);
 }
 
-const config = cfg.read();
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
 
-Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
-    try {
-      await open(token);
-    } catch (err) {
-      error(`Unknown error: ${err}\n${err.stack}`);
-      process.exit(1);
-    }
-  })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`);
+  let token;
+  try {
+    token = argv.token || config.token || (await login(apiUrl));
+  } catch (err) {
+    error(`Authentication error – ${err.message}`);
     process.exit(1);
-  });
+  }
+
+  try {
+    await open(token);
+  } catch (err) {
+    error(`Unknown error: ${err}\n${err.stack}`);
+    process.exit(1);
+  }
+});
 
 async function open(token) {
   const now = new Now(apiUrl, token, { debug });
