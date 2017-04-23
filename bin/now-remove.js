@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist');
-const chalk = require('chalk');
-const ms = require('ms');
-const table = require('text-table');
-const isURL = require('is-url');
+const minimist = require('minimist')
+const chalk = require('chalk')
+const ms = require('ms')
+const table = require('text-table')
 
 // Ours
-const Now = require('../lib');
-const login = require('../lib/login');
-const cfg = require('../lib/cfg');
-const { handleError, error } = require('../lib/error');
-const logo = require('../lib/utils/output/logo');
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
+const logo = require('../lib/utils/output/logo')
+const {normalizeURL} = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -139,23 +139,10 @@ async function remove(token) {
   const deployments = await now.list();
 
   const matches = deployments.filter(d => {
-    return ids.find(id => {
-      // Normalize URL by removing slash from the end
-      if (isURL(id) && id.slice(-1) === '/') {
-        id = id.slice(0, -1);
-      }
-
-      // `url` should match the hostname of the deployment
-      let u = id.replace(/^https:\/\//i, '');
-
-      if (u.indexOf('.') === -1) {
-        // `.now.sh` domain is implied if just the subdomain is given
-        u += '.now.sh';
-      }
-
-      return d.uid === id || d.name === id || d.url === u;
-    });
-  });
+    return ids.some(id => {
+      return d.uid === id || d.name === id || d.url === normalizeURL(id)
+    })
+  })
 
   if (matches.length === 0) {
     error(

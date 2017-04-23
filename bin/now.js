@@ -49,7 +49,9 @@ const commands = new Set([
   'downgrade',
   'open',
   'teams',
-  'switch'
+  'switch',
+  'log',
+  'logs'
 ]);
 
 const aliases = new Map([
@@ -63,6 +65,7 @@ const aliases = new Map([
   ['cc', 'billing'],
   ['downgrade', 'upgrade'],
   ['switch', 'teams switch']
+  ['log', 'logs']
 ]);
 
 let cmd = defaultCommand;
