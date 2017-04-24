@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@google/maps": "0.3.1",
-    "ansi-escapes": "1.4.0",
+    "ansi-escapes": "2.0.0",
     "ansi-regex": "2.1.1",
     "arr-flatten": "1.0.3",
     "array-unique": "0.3.2",
