@@ -66,7 +66,6 @@ const apiUrl = argv.url || 'https://api.zeit.co';
 if (argv.config) {
   cfg.setConfigFile(argv.config);
 }
-const config = cfg.read();
 const limit = typeof argv.n === 'number' ? argv.n : 1000;
 const query = argv.query || '';
 const follow = argv.f;
@@ -92,17 +91,22 @@ if (maybeURL(deploymentIdOrURL)) {
   deploymentIdOrURL = normalizeURL(deploymentIdOrURL);
 }
 
-Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
+Promise.resolve()
+  .then(async () => {
+    const config = await cfg.read();
+
+    let token;
     try {
-      await printLogs(token);
+      token = argv.token || config.token || login(apiUrl);
     } catch (err) {
-      error(`Unknown error: ${err.stack}`);
+      error(`Authentication error – ${err.message}`);
       process.exit(1);
     }
+
+    await printLogs(token);
   })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`);
+  .catch(err => {
+    error(`Unknown error: ${err.stack}`);
     process.exit(1);
   });
 
@@ -163,18 +167,15 @@ async function printLogs(token) {
     if (init) {
       // Wait for other logs for a while
       // and sort them in the correct order
-      timer = setTimeout(
-        () => {
-          buf.sort((a, b) => compare(a.log, b.log));
-          const idx = buf.findIndex(b => b.log.id === log.id);
-          buf.slice(0, idx + 1).forEach(b => {
-            clearTimeout(b.timer);
-            onLog(b.log);
-          });
-          buf = buf.slice(idx + 1);
-        },
-        300
-      );
+      timer = setTimeout(() => {
+        buf.sort((a, b) => compare(a.log, b.log));
+        const idx = buf.findIndex(b => b.log.id === log.id);
+        buf.slice(0, idx + 1).forEach(b => {
+          clearTimeout(b.timer);
+          onLog(b.log);
+        });
+        buf = buf.slice(idx + 1);
+      }, 300);
     }
     buf.push({ log, timer });
   });
@@ -206,11 +207,13 @@ function printLog(log) {
   let data;
   const obj = log.object;
   if (log.type === 'request') {
-    data = `REQ "${obj.method} ${obj.uri} ${obj.protocol}"` +
+    data =
+      `REQ "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.remoteAddr} - ${obj.remoteUser || ''}` +
       ` "${obj.referer || ''}" "${obj.userAgent}"`;
   } else if (log.type === 'response') {
-    data = `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
+    data =
+      `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`;
   } else {
     data = obj
