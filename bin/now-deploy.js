@@ -13,9 +13,9 @@ const ms = require('ms');
 const flatten = require('arr-flatten');
 const dotenv = require('dotenv');
 const { eraseLines } = require('ansi-escapes');
+const { write: copy } = require('clipboardy');
 
 // Ours
-const copy = require('../lib/copy');
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
 const { version } = require('../lib/pkg');
