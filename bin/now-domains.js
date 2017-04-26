@@ -154,7 +154,7 @@ async function run(token) {
       domains.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
       const header = [
-        ['', 'id', 'dns', 'url', 'verified', 'created'].map(s => chalk.dim(s))
+        ['', 'id', 'dns', 'domain', 'verified', 'created'].map(s => chalk.dim(s))
       ];
       const out = domains.length === 0
         ? null
