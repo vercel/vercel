@@ -103,6 +103,24 @@ if (argv.help) {
   });
 }
 
+function getTeamMax() {
+  return 10;
+}
+
+function guessParams() {
+  if (Number.isInteger(scaleArg) && !optionalScaleArg) {
+    return {min: scaleArg, max: scaleArg}
+  } else if (Number.isInteger(scaleArg) && Number.isInteger(optionalScaleArg)) {
+    return {min: scaleArg, max: optionalScaleArg}
+  } else if (Number.isInteger(scaleArg) && optionalScaleArg === 'auto') {
+    return {min: scaleArg, max: 'auto'}
+  } else if (!scaleArg && !optionalScaleArg) {
+    return {min: 1, max: 'auto'}
+  }
+  help();
+  process.exit(1);
+}
+
 async function run(token) {
   const scale = new NowScale(apiUrl, token, { debug });
   const start = Date.now();
@@ -143,18 +161,11 @@ async function run(token) {
     return process.exit(1);
   }
 
-  const { min, max, auto: _auto } = Number.isInteger(scaleArg)
-    ? { min: scaleArg, max: scaleArg }
-    : argv;
+  const { min, max } = guessParams();
 
-  // Only send a `true` auto if it was specified, otherwise send null
-  const auto = _auto || null;
-  if (!Number.isInteger(min) && !Number.isInteger(max) && !auto) {
-    error(
-      'Please specify at least one of the following flags: --min <n>, --max <n>, --auto'
-    );
+  if (!(Number.isInteger(min) || min === 'auto') && !(Number.isInteger(max) || max === 'auto')) {
     help();
-    exit(1);
+    return exit(1);
   }
 
   const {
@@ -165,7 +176,9 @@ async function run(token) {
   if (
     max === currentMax &&
     min === currentMin &&
+    Number.isInteger(min) &&
     currentCurrent >= min &&
+    Number.isInteger(max) &&
     currentCurrent <= max
   ) {
     console.log(`> Done`);
@@ -185,27 +198,20 @@ async function run(token) {
     await scale.unfreeze(match);
   }
 
-  await scale.setScale(match.uid, { min, max, auto });
+  const {min: newMin, max: newMax } = await scale.setScale(match.uid, { min, max });
 
   const elapsed = ms(new Date() - start);
-
-  const t = table(
-    [
-      ['  min', chalk.bold(min)],
-      ['  max', chalk.bold(max)],
-      [' auto', chalk.bold(auto === null && min !== max ? '✔' : '✖')]
-    ],
-    { align: ['r', 'l'], hsep: ' '.repeat(2), stringLength: strlen }
-  );
 
   const currentReplicas = match.scale.current;
   console.log(
     `${chalk.cyan('> Configured scaling rules')} [${elapsed}]
 
 ${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})
-${t}
   `
   );
+  console.log(printf('%5s %s', 'min', chalk.bold(newMin)));
+  console.log(printf('%5s %s', 'max', chalk.bold(newMax)));
+  console.log(printf('%5s %s', 'auto', chalk.bold(newMin !== newMax ? '✔' : '✖')));
   await info(scale, match.url);
 
   scale.close();
