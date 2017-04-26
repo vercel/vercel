@@ -5,37 +5,76 @@ const listInput = require('../../lib/utils/input/list');
 const cfg = require('../../lib/cfg');
 const exit = require('../../lib/utils/exit');
 const success = require('../../lib/utils/output/success');
+const error = require('../../lib/utils/output/error');
+const param = require('../../lib/utils/output/param');
+
+async function updateCurrentTeam({ cfg, newTeam } = {}) {
+  delete newTeam.created;
+  delete newTeam.creator_id;
+  await cfg.merge({ currentTeam: newTeam });
+}
 
 module.exports = async function(teams, args) {
   let stopSpinner = wait('Fetching teams');
-  const list = await teams.ls();
+  const list = (await teams.ls()).teams;
   let { user, currentTeam } = await cfg.read();
+  const accountIsCurrent = !currentTeam;
   stopSpinner();
 
-  currentTeam = currentTeam || {
-    slug: user.username || user.email
-  };
-
-  if (args.length !== 0) {
-    return console.log(args);
+  if (accountIsCurrent) {
+    currentTeam = {
+      slug: user.username || user.email
+    };
   }
 
-  const choices = list.map(({ slug, name }) => ({
-    name: `${slug} (${name})`,
-    value: slug,
-    short: slug
-  }));
+  if (args.length !== 0) {
+    const desiredSlug = args[0];
+
+    const newTeam = list.find(team => team.slug === desiredSlug);
+    if (newTeam) {
+      await updateCurrentTeam({ cfg, newTeam });
+      success(`The team ${chalk.bold(newTeam.name)} is now active!`);
+      return exit();
+    }
+
+    error(`Could not find membership for team ${param(desiredSlug)}`);
+    return exit(1);
+  }
+
+  const choices = list.map(({ slug, name }) => {
+    name = `${slug} (${name})`;
+    if (slug === currentTeam.slug) {
+      name += ` ${chalk.bold('(current)')}`;
+    }
+
+    return {
+      name,
+      value: slug,
+      short: slug
+    };
+  });
+
+  const suffix = accountIsCurrent ? ` ${chalk.bold('(current)')}` : '';
 
   choices.unshift({
-    name: `${user.username} (${user.email})`,
+    name: `${user.username} (${user.email})${suffix}`,
     value: user.username,
     short: user.username
   });
 
+  // Let's bring the current team to the beginning of the list
+  if (!accountIsCurrent) {
+    const index = choices.findIndex(
+      choice => choice.value === currentTeam.slug
+    );
+    const choice = choices.splice(index, 1)[0];
+    choices.unshift(choice);
+  }
+
   let message;
 
   if (currentTeam) {
-    message = `Your current context is "${chalk.bold(currentTeam.slug)}" `;
+    message = `Switch to:`;
   }
 
   const choice = await listInput({
@@ -52,24 +91,22 @@ module.exports = async function(teams, args) {
 
   const newTeam = list.find(item => item.slug === choice);
 
+  // Switch to account
+  if (!newTeam) {
+    stopSpinner = wait('Saving');
+    await cfg.remove('currentTeam');
+    stopSpinner();
+    return success(`Your account (${chalk.bold(choice)}) is now active!`);
+  }
+
   if (newTeam.slug === currentTeam.slug) {
     console.log('No changes made');
     return exit();
   }
 
-  // The user selected his personal context
-  if (!newTeam) {
-    stopSpinner = wait('Saving');
-    await cfg.remove('currentTeam');
-    stopSpinner();
-    return success(
-      `Your personal context (${chalk.bold(choice)}) is now active!`
-    );
-  }
-
   stopSpinner = wait('Saving');
-  await cfg.merge({ currentTeam: newTeam });
+  await updateCurrentTeam({ cfg, newTeam });
   stopSpinner();
 
-  success(`The context ${chalk.bold(newTeam.name)} is now active!`);
+  success(`The team ${chalk.bold(newTeam.name)} is now active!`);
 };
