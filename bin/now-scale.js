@@ -165,6 +165,12 @@ async function run(token) {
 
   if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
     console.log(`> Deployment is currently in 0 replicas, preparing deployment for scaling...`)
+    if (match.scale.max < 1) {
+      await scale.setScale(match.uid, {
+        min: 0,
+        max: 1
+      });
+    }
     await scale.unfreeze(match);
   }
 
