@@ -51,7 +51,8 @@ const commands = new Set([
   'teams',
   'switch',
   'log',
-  'logs'
+  'logs',
+  'scale'
 ]);
 
 const aliases = new Map([
