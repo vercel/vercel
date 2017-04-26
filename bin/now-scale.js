@@ -17,6 +17,7 @@ const exit = require('../lib/utils/exit');
 const logo = require('../lib/utils/output/logo');
 const strlen = require('../lib/strlen');
 const info = require('../lib/scale-info');
+
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
   boolean: ['help', 'debug', 'auto'],
@@ -157,14 +158,25 @@ async function run(token) {
     exit(1);
   }
 
-  const { max: currentMax, min: currentMin, current: currentCurrent} = match.scale;
-  if (max === currentMax && min === currentMin && currentCurrent >= min && currentCurrent <= max) {
-    console.log(`> Done`)
-    return
+  const {
+    max: currentMax,
+    min: currentMin,
+    current: currentCurrent
+  } = match.scale;
+  if (
+    max === currentMax &&
+    min === currentMin &&
+    currentCurrent >= min &&
+    currentCurrent <= max
+  ) {
+    console.log(`> Done`);
+    return;
   }
 
   if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
-    console.log(`> Deployment is currently in 0 replicas, preparing deployment for scaling...`)
+    console.log(
+      `> Deployment is currently in 0 replicas, preparing deployment for scaling...`
+    );
     if (match.scale.max < 1) {
       await scale.setScale(match.uid, {
         min: 0,
@@ -220,12 +232,10 @@ async function list(scale) {
   }
 
   const timeNow = new Date();
-  const urlLength = deployments.reduce(
-    (acc, i) => {
+  const urlLength =
+    deployments.reduce((acc, i) => {
       return Math.max(acc, (i.url && i.url.length) || 0);
-    },
-    0
-  ) + 5;
+    }, 0) + 5;
 
   for (const app of apps) {
     const depls = argv.all ? app[1] : app[1].slice(0, 5);

@@ -1,4 +1,4 @@
-const {italic} = require('chalk')
+const { italic } = require('chalk');
 
 const error = require('../../lib/utils/output/error');
 const wait = require('../../lib/utils/output/wait');
@@ -11,44 +11,46 @@ const promptBool = require('../../lib/utils/input/prompt-bool');
 const eraseLines = require('../../lib/utils/output/erase-lines');
 const treatBuyError = require('../../lib/utils/domains/treat-buy-error');
 
-module.exports = async function (domains, args) {
-  const name = args[0]
+module.exports = async function(domains, args) {
+  const name = args[0];
 
   if (!name) {
-    return error(`Missing domain name. Run ${cmd('now domains help')}`)
+    return error(`Missing domain name. Run ${cmd('now domains help')}`);
   }
 
-  const nameParam = param(name)
-  let stopSpinner = wait(`Checking availability for ${nameParam}`)
+  const nameParam = param(name);
+  let stopSpinner = wait(`Checking availability for ${nameParam}`);
 
-  const price = await domains.price(name)
-  const available = await domains.status(name)
+  const price = await domains.price(name);
+  const available = await domains.status(name);
 
-  stopSpinner()
+  stopSpinner();
 
   if (!available) {
-    return error(`Domain ${nameParam} is ${italic('unavailable')}!`)
+    return error(`Domain ${nameParam} is ${italic('unavailable')}!`);
   }
 
-  info(`Domain ${nameParam} is ${italic('available')}!`)
-  const confirmation = await promptBool(`Buy now for \%${price}?`)
+  info(`Domain ${nameParam} is ${italic('available')}!`);
+  const confirmation = await promptBool(`Buy now for $${price}?`);
 
-  eraseLines(1)
+  eraseLines(1);
   if (!confirmation) {
-    return info('Aborted')
+    return info('Aborted');
   }
 
-  stopSpinner = wait('Purchasing')
-  let domain
+  stopSpinner = wait('Purchasing');
+  let domain;
   try {
-    domain = await domains.buy(name)
+    domain = await domains.buy(name);
   } catch (err) {
-    stopSpinner()
-    return treatBuyError(err)
+    stopSpinner();
+    return treatBuyError(err);
   }
 
-  stopSpinner()
-  console.log(domain)
-  success(`Domain purchased and created ${uid(domain.uid)}`)
-  info(`You may now use your domain as an alias to your deployments. Run ${cmd('now alias help')}`)
-}
+  stopSpinner();
+  console.log(domain);
+  success(`Domain purchased and created ${uid(domain.uid)}`);
+  info(
+    `You may now use your domain as an alias to your deployments. Run ${cmd('now alias help')}`
+  );
+};
