@@ -20,28 +20,27 @@ const info = require('../lib/scale-info');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'auto'],
-  number: ['min', 'max'],
-  alias: { help: 'h', config: 'c', debug: 'd', base64: 'b', token: 't' }
+  boolean: ['help', 'debug'],
+  alias: { help: 'h', config: 'c', debug: 'd', token: 't' }
 });
 
 let id = argv._[0];
 const scaleArg = argv._[1];
+const optionalScaleArg = argv._[2];
 
 // Options
 const help = () => {
   console.log(
     `
   ${chalk.bold(`${logo} now scale`)} ls
-  ${chalk.bold(`${logo} now scale`)} <url> [min and max scale]
+  ${chalk.bold(`${logo} now scale`)} <url>
+  ${chalk.bold(`${logo} now scale`)} <url> <min> [max]
 
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
     -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
     -d, --debug             Debug mode [off]
-    --min                   Minimum number of instances to be running at any given time
-    --min                   Maximum number of instances to be running at any given time
 
   ${chalk.dim('Examples:')}
 
@@ -51,19 +50,19 @@ const help = () => {
 
   ${chalk.gray('–')} Create an automatically scaling deployment:
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh --min 1 --max 5')}
+    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
 
   ${chalk.gray('–')} Create an automatically scaling deployment without specifying max:
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh --min 1 --auto')}
+    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
 
   ${chalk.gray('–')} Create an automatically scaling deployment without specifying min or max:
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh --auto')}
+    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
 
   ${chalk.gray('–')} Create an deployment that is always active and never "sleeps":
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh --min 1 --max 1')}
+    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
   `
   );
 };
