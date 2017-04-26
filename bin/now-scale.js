@@ -103,10 +103,6 @@ if (argv.help) {
   });
 }
 
-function getTeamMax() {
-  return 10;
-}
-
 function guessParams() {
   if (Number.isInteger(scaleArg) && !optionalScaleArg) {
     return {min: scaleArg, max: scaleArg}
