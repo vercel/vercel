@@ -19,8 +19,8 @@ const strlen = require('../lib/strlen');
 const info = require('../lib/scale-info');
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token'],
-  boolean: ['help', 'debug'],
+  string: [ 'config', 'token' ],
+  boolean: [ 'help', 'debug' ],
   alias: { help: 'h', config: 'c', debug: 'd', token: 't' }
 });
 
@@ -39,7 +39,9 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+      'FILE'
+    )}  Config file
     -d, --debug             Debug mode [off]
 
   ${chalk.dim('Examples:')}
@@ -52,15 +54,21 @@ const help = () => {
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
 
-  ${chalk.gray('–')} Create an automatically scaling deployment without specifying max:
+  ${chalk.gray(
+      '–'
+    )} Create an automatically scaling deployment without specifying max:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
 
-  ${chalk.gray('–')} Create an automatically scaling deployment without specifying min or max:
+  ${chalk.gray(
+      '–'
+    )} Create an automatically scaling deployment without specifying min or max:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
 
-  ${chalk.gray('–')} Create an deployment that is always active and never "sleeps":
+  ${chalk.gray(
+      '–'
+    )} Create an deployment that is always active and never "sleeps":
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
   `
@@ -105,13 +113,13 @@ if (argv.help) {
 
 function guessParams() {
   if (Number.isInteger(scaleArg) && !optionalScaleArg) {
-    return {min: scaleArg, max: scaleArg}
+    return { min: scaleArg, max: scaleArg };
   } else if (Number.isInteger(scaleArg) && Number.isInteger(optionalScaleArg)) {
-    return {min: scaleArg, max: optionalScaleArg}
+    return { min: scaleArg, max: optionalScaleArg };
   } else if (Number.isInteger(scaleArg) && optionalScaleArg === 'auto') {
-    return {min: scaleArg, max: 'auto'}
+    return { min: scaleArg, max: 'auto' };
   } else if (!scaleArg && !optionalScaleArg) {
-    return {min: 1, max: 'auto'}
+    return { min: 1, max: 'auto' };
   }
   help();
   process.exit(1);
@@ -159,7 +167,10 @@ async function run(token) {
 
   const { min, max } = guessParams();
 
-  if (!(Number.isInteger(min) || min === 'auto') && !(Number.isInteger(max) || max === 'auto')) {
+  if (
+    !(Number.isInteger(min) || min === 'auto') &&
+      !(Number.isInteger(max) || max === 'auto')
+  ) {
     help();
     return exit(1);
   }
@@ -171,11 +182,11 @@ async function run(token) {
   } = match.scale;
   if (
     max === currentMax &&
-    min === currentMin &&
-    Number.isInteger(min) &&
-    currentCurrent >= min &&
-    Number.isInteger(max) &&
-    currentCurrent <= max
+      min === currentMin &&
+      Number.isInteger(min) &&
+      currentCurrent >= min &&
+      Number.isInteger(max) &&
+      currentCurrent <= max
   ) {
     console.log(`> Done`);
     return;
@@ -186,15 +197,15 @@ async function run(token) {
       `> Deployment is currently in 0 replicas, preparing deployment for scaling...`
     );
     if (match.scale.max < 1) {
-      await scale.setScale(match.uid, {
-        min: 0,
-        max: 1
-      });
+      await scale.setScale(match.uid, { min: 0, max: 1 });
     }
     await scale.unfreeze(match);
   }
 
-  const {min: newMin, max: newMax } = await scale.setScale(match.uid, { min, max });
+  const { min: newMin, max: newMax } = await scale.setScale(match.uid, {
+    min,
+    max
+  });
 
   const elapsed = ms(new Date() - start);
 
@@ -202,12 +213,16 @@ async function run(token) {
   console.log(
     `${chalk.cyan('> Configured scaling rules')} [${elapsed}]
 
-${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})
+${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray(
+      'current'
+    )})
   `
   );
   console.log(printf('%5s %s', 'min', chalk.bold(newMin)));
   console.log(printf('%5s %s', 'max', chalk.bold(newMax)));
-  console.log(printf('%5s %s', 'auto', chalk.bold(newMin !== newMax ? '✔' : '✖')));
+  console.log(
+    printf('%5s %s', 'auto', chalk.bold(newMin !== newMax ? '✔' : '✖'))
+  );
   await info(scale, match.url);
 
   scale.close();
@@ -233,15 +248,19 @@ async function list(scale) {
   }
 
   const timeNow = new Date();
-  const urlLength =
-    deployments.reduce((acc, i) => {
-      return Math.max(acc, (i.url && i.url.length) || 0);
-    }, 0) + 5;
+  const urlLength = deployments.reduce(
+    (acc, i) => {
+      return Math.max(acc, i.url && i.url.length || 0);
+    },
+    0
+  ) + 5;
 
   for (const app of apps) {
     const depls = argv.all ? app[1] : app[1].slice(0, 5);
     console.log(
-      `${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`
+      `${chalk.bold(app[0])} ${chalk.gray(
+        '(' + depls.length + ' of ' + app[1].length + ' total)'
+      )}`
     );
     console.log();
     const urlSpec = `%-${urlLength}s`;
@@ -291,3 +310,4 @@ process.on('uncaughtException', err => {
   handleError(err);
   exit(1);
 });
+
