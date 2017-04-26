@@ -5,7 +5,6 @@ const chalk = require('chalk');
 const isURL = require('is-url');
 const minimist = require('minimist');
 const ms = require('ms');
-const table = require('text-table');
 const printf = require('printf');
 
 // Ours
@@ -15,7 +14,6 @@ const NowScale = require('../lib/scale');
 const login = require('../lib/login');
 const exit = require('../lib/utils/exit');
 const logo = require('../lib/utils/output/logo');
-const strlen = require('../lib/strlen');
 const info = require('../lib/scale-info');
 
 const argv = minimist(process.argv.slice(2), {
