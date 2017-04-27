@@ -97,7 +97,7 @@ if (argv.help || !subcommand) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       handleError(err);
       exit(1);
@@ -112,8 +112,8 @@ function formatExpirationDate(date) {
     : chalk.gray('in ' + ms(diff));
 }
 
-async function run(token) {
-  const certs = new NowCerts(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const certs = new NowCerts({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 

@@ -89,7 +89,7 @@ if (argv.help) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -115,8 +115,8 @@ function guessParams() {
   process.exit(1);
 }
 
-async function run(token) {
-  const scale = new NowScale(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const scale = new NowScale({apiUrl, token, debug, currentTeam });
   const start = Date.now();
 
   if (id === 'ls') {

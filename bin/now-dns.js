@@ -88,7 +88,7 @@ if (argv.help || !subcommand) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       handleError(err);
       exit(1);
@@ -96,8 +96,8 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run(token) {
-  const domainRecords = new DomainRecords(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const domainRecords = new DomainRecords({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 

@@ -91,7 +91,7 @@ if (argv.help) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -140,7 +140,7 @@ function buildInquirerChoices(current, until) {
   ];
 }
 
-async function run(token) {
+async function run({token, config: {currentTeam}}) {
   const args = argv._;
   if (args.length > 1) {
     error('Invalid number of arguments');
@@ -148,7 +148,7 @@ async function run(token) {
   }
 
   const start = new Date();
-  const plans = new NowPlans(apiUrl, token, { debug });
+  const plans = new NowPlans({ apiUrl, token, debug, currentTeam });
 
   let planId = args[0];
 

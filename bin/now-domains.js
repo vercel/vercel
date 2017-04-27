@@ -125,7 +125,7 @@ if (argv.help || !subcommand) {
       exit(1);
     }
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -137,8 +137,8 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run(token) {
-  const domain = new NowDomains(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const domain = new NowDomains({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
   switch (subcommand) {

@@ -17,7 +17,7 @@ const textInput = require('../../lib/utils/input/text');
 const exit = require('../../lib/utils/exit');
 const cfg = require('../../lib/cfg');
 
-function validateIdKeypress(data, value) {
+function validateSlugKeypress(data, value) {
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
   return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
@@ -26,10 +26,7 @@ function validateIdKeypress(data, value) {
 function gracefulExit() {
   console.log(); // Blank line
   note(
-    `We switched your ${chalk.bold('context')} to your new team\n  Run ${cmd('now switch')} to change it in the future.`
-  );
-  note(
-    `Your team will be kept as ${chalk.bold('inactive')} until you set up\n  a ${chalk.bold('payment method')} for it – run ${cmd('now billing add')} to add one!`
+    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd('now switch')} to change it in the future.`
   );
   return exit();
 }
@@ -39,7 +36,6 @@ const teamNamePrefix = rightPad('Team Name', 14);
 
 module.exports = async function(teams) {
   let slug;
-  let slugIsValid = true;
   let team;
   let elapsed;
   let stopSpinner;
@@ -52,9 +48,9 @@ module.exports = async function(teams) {
       // eslint-disable-next-line no-await-in-loop
       slug = await textInput({
         label: `- ${teamUrlPrefix}`,
-        validateKeypress: validateIdKeypress,
+        validateKeypress: validateSlugKeypress,
         initialValue: slug,
-        valid: slugIsValid,
+        valid: team,
         forceLowerCase: true
       });
     } catch (err) {
@@ -66,23 +62,23 @@ module.exports = async function(teams) {
     }
     elapsed = stamp();
     stopSpinner = wait(teamUrlPrefix + slug);
-    // eslint-disable-next-line no-await-in-loop
-    const res = await teams.add({ slug });
-    stopSpinner();
 
-    if (res.error) {
+    let res
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      res = await teams.create({ slug });
+      stopSpinner();
+      team = res
+    } catch (err) {
+      stopSpinner();
       eraseLines(2);
-      error(res.error.message);
-      slugIsValid = false;
-    } else {
-      slugIsValid = true;
-      team = res;
+      error(err.message)
     }
-  } while (!slugIsValid);
+  } while (!team);
 
   eraseLines(2);
   success(`Team created ${uid(team.id)} ${elapsed()}`);
-  console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + team.slug + '\n');
+  console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n');
 
   info('Pick a display name for your team');
   let name;
@@ -101,7 +97,7 @@ module.exports = async function(teams) {
   }
   elapsed = stamp();
   stopSpinner = wait(teamNamePrefix + name);
-  const res = await teams.setName({ id: team.id, name });
+  const res = await teams.edit({ id: team.id, name });
   stopSpinner();
 
   eraseLines(2);

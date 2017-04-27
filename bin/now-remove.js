@@ -88,7 +88,7 @@ Promise.resolve().then(async () => {
   }
 
   try {
-    await remove(token);
+    await remove({token, config});
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`);
     process.exit(1);
@@ -133,8 +133,8 @@ function readConfirmation(matches) {
   });
 }
 
-async function remove(token) {
-  const now = new Now(apiUrl, token, { debug });
+async function remove({token, config: {currentTeam}}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   const deployments = await now.list();
 

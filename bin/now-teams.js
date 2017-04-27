@@ -96,7 +96,7 @@ if (argv.help || !subcommand) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -108,8 +108,8 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run(token) {
-  const teams = new NowTeams(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
   switch (subcommand) {

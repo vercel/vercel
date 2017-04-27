@@ -222,24 +222,24 @@ Promise.resolve().then(async () => {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
       process.exit(0);
     } else {
-      sync(token).catch(err => {
+      sync({token, config}).catch(err => {
         error(`Unknown error: ${err}\n${err.stack}`);
         process.exit(1);
       });
     }
   } else {
-    sync(argv.token || config.token).catch(err => {
+    sync({token: argv.token || config.token, config}).catch(err => {
       error(`Unknown error: ${err}\n${err.stack}`);
       process.exit(1);
     });
   }
 });
 
-async function sync(token) {
+async function sync({token, config: {currentTeam}}) {
   const start = Date.now();
   const rawPath = argv._[0];
 
-  const planPromise = new NowPlans(apiUrl, token, { debug }).getCurrent();
+  const planPromise = new NowPlans({apiUrl, token, debug, currentTeam }).getCurrent();
 
   const stopDeployment = msg => {
     error(msg);
@@ -425,7 +425,7 @@ async function sync(token) {
     quiet: true
   });
 
-  const now = new Now(apiUrl, token, { debug });
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   let dotenvConfig;
   let dotenvOption;
@@ -604,7 +604,7 @@ async function sync(token) {
     now.close();
 
     // Show build logs
-    printLogs(now.host, token);
+    printLogs(now.host, token, currentTeam);
   };
 
   const plan = await planPromise;
@@ -679,11 +679,11 @@ async function sync(token) {
     now.close();
 
     // Show build logs
-    printLogs(now.host, token);
+    printLogs(now.host, token, currentTeam);
   }
 }
 
-function printLogs(host, token) {
+function printLogs(host, token, currentTeam) {
   // Log build
   const logger = new Logger(host, token, { debug, quiet });
 
@@ -717,7 +717,7 @@ function printLogs(host, token) {
         const assignments = [];
 
         for (const alias of aliasList) {
-          assignments.push(assignAlias(alias, token, host, apiUrl, debug));
+          assignments.push(assignAlias(alias, token, host, apiUrl, debug, currentTeam));
         }
 
         await Promise.all(assignments);

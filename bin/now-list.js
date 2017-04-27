@@ -79,15 +79,15 @@ Promise.resolve().then(async () => {
   }
 
   try {
-    await list(token);
+    await list({token, config});
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`);
     process.exit(1);
   }
 });
 
-async function list(token) {
-  const now = new Now(apiUrl, token, { debug });
+async function list({token, config: {currentTeam}}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
   const start = new Date();
 
   let deployments;

@@ -103,20 +103,20 @@ Promise.resolve()
       process.exit(1);
     }
 
-    await printLogs(token);
+    await printLogs({token, config});
   })
   .catch(err => {
     error(`Unknown error: ${err.stack}`);
     process.exit(1);
   });
 
-async function printLogs(token) {
+async function printLogs({token, config: {currentTeam}}) {
   let buf = [];
   let init = false;
   let lastLog;
 
   if (!follow) {
-    onLogs(await fetchLogs(token, { since, until }));
+    onLogs(await fetchLogs({token, currentTeam, since, until }));
     return;
   }
 
@@ -150,7 +150,7 @@ async function printLogs(token) {
     // For the case socket reconnected
     const _since = lastLog ? lastLog.serial : since;
 
-    fetchLogs(token, { since: _since }).then(logs => {
+    fetchLogs({token, currentTeam, since: _since }).then(logs => {
       init = true;
       const m = {};
       logs.concat(buf.map(b => b.log)).forEach(l => {
@@ -232,8 +232,8 @@ function printLog(log) {
   });
 }
 
-async function fetchLogs(token, { since, until } = {}) {
-  const now = new Now(apiUrl, token, { debug });
+async function fetchLogs({token, currentTeam, since, until } = {}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   let logs;
   try {

@@ -73,15 +73,15 @@ Promise.resolve().then(async () => {
   }
 
   try {
-    await open(token);
+    await open({token, currentTeam});
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`);
     process.exit(1);
   }
 });
 
-async function open(token) {
-  const now = new Now(apiUrl, token, { debug });
+async function open({token, config: {currentTeam}}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   let deployments;
   try {

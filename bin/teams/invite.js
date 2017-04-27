@@ -14,6 +14,7 @@ const rightPad = require('../../lib/utils/output/right-pad');
 const textInput = require('../../lib/utils/input/text');
 const eraseLines = require('../../lib/utils/output/erase-lines');
 const success = require('../../lib/utils/output/success');
+const error = require('../../lib/utils/output/error');
 
 function validateEmail(data) {
   return regexes.email.test(data.trim()) || data.length === 0;
@@ -84,7 +85,7 @@ module.exports = async function(
         const stopSpinner = wait(email);
         const elapsed = stamp();
         // eslint-disable-next-line no-await-in-loop
-        await teams.inviteUser({ teamSlug: currentTeam.slug, email });
+        await teams.inviteUser({ teamId: currentTeam.id, email });
         stopSpinner();
         console.log(`${chalk.cyan(tick)} ${email} ${elapsed()}`);
       } else {
@@ -96,6 +97,7 @@ module.exports = async function(
 
   const inviteUserPrefix = rightPad('Invite User', 14);
   const emails = [];
+  let hasError = false
   let email;
   do {
     email = '';
@@ -116,12 +118,30 @@ module.exports = async function(
     if (email) {
       elapsed = stamp();
       stopSpinner = wait(inviteUserPrefix + email);
-      // eslint-disable-next-line no-await-in-loop
-      await teams.inviteUser({ teamId: 123, email });
-      stopSpinner();
-      email = `${email} ${elapsed()}`;
-      emails.push(email);
-      console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await teams.inviteUser({ teamId: currentTeam.id, email });
+        stopSpinner();
+        email = `${email} ${elapsed()}`;
+        emails.push(email);
+        console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+        if (hasError) {
+          hasError = false
+          eraseLines(emails.length + 2);
+          info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`);
+          for (const email of emails) {
+            console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+          }
+        }
+      } catch (err) {
+        stopSpinner()
+        eraseLines(emails.length + 2);
+        error(err.message)
+        hasError = true
+        for (const email of emails) {
+          console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+        }
+      }
     }
   } while (email !== '');
 

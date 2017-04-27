@@ -98,7 +98,7 @@ if (argv.help || !subcommand) {
     }
 
     try {
-      await run(token);
+      await run({token, config});
     } catch (err) {
       handleError(err);
       exit(1);
@@ -106,8 +106,8 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run(token) {
-  const secrets = new NowSecrets(apiUrl, token, { debug });
+async function run({token, config: {currentTeam}}) {
+  const secrets = new NowSecrets({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
