@@ -103,7 +103,7 @@ async function list({token, config: {currentTeam}}) {
   const apps = new Map();
 
   if (argv.all && !app) {
-    console.log('> You must define app when using `--all`');
+    console.log('> You must define an app when using `--all`');
     process.exit(1);
   }
   if (argv.all) {
