@@ -56,8 +56,12 @@ module.exports = async function(teams, args) {
 
   const suffix = accountIsCurrent ? ` ${chalk.bold('(current)')}` : '';
 
+  const userEntryName = user.username ?
+    `${user.username} (${user.email})${suffix}` :
+    user.email
+
   choices.unshift({
-    name: `${user.username} (${user.email})${suffix}`,
+    name: userEntryName,
     value: user.username,
     short: user.username
   });
