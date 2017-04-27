@@ -86,7 +86,7 @@ Promise.resolve().then(async () => {
   }
 });
 
-async function list({token, config: {currentTeam}}) {
+async function list({token, config: {currentTeam, user}}) {
   const now = new Now({apiUrl, token, debug, currentTeam });
   const start = new Date();
 
@@ -129,7 +129,11 @@ async function list({token, config: {currentTeam}}) {
   ) + 5;
   const timeNow = new Date();
   console.log(
-    `> Fetched ${deployments.length} deployments ${chalk.grey('[' + ms(timeNow - start) + ']')}`
+    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    } ${chalk.grey('[' + ms(timeNow - start) + ']')}`
   );
 
   let shouldShowAllInfo = false;
@@ -196,11 +200,6 @@ async function list({token, config: {currentTeam}}) {
     });
     console.log();
   });
-
-  const elapsed = ms(new Date() - start);
-  console.log(
-    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
-  );
 }
 
 async function sort(apps) {

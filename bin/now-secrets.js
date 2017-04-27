@@ -106,7 +106,7 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run({token, config: {currentTeam}}) {
+async function run({token, config: {currentTeam, user}}) {
   const secrets = new NowSecrets({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -123,7 +123,11 @@ async function run({token, config: {currentTeam}}) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${list.length} secret${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${list.length} secret${list.length === 1 ? '' : 's'} found under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      } ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -229,7 +233,11 @@ async function run({token, config: {currentTeam}}) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added (${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }) ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }

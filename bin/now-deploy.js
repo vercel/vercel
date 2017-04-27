@@ -235,7 +235,7 @@ Promise.resolve().then(async () => {
   }
 });
 
-async function sync({token, config: {currentTeam}}) {
+async function sync({token, config: {currentTeam, user}}) {
   const start = Date.now();
   const rawPath = argv._[0];
 
@@ -306,11 +306,18 @@ async function sync({token, config: {currentTeam}}) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : '';
       console.log(
-        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` +
-          gitRef
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
     } else {
-      console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`);
+      console.log(`> Deploying ${chalk.bold(toHumanPath(path))} under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }`);
     }
   }
 
@@ -609,10 +616,14 @@ async function sync({token, config: {currentTeam}}) {
 
   const plan = await planPromise;
 
-  if (plan.id === 'oss') {
+  if (plan.id !== 'oss') {
     if (isTTY) {
       info(
-        `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+        `${
+          chalk.bold(
+            (currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`
+          )
+        } on the OSS plan. Your code will be made ${chalk.bold('public')}.`
       );
 
       let proceed;

@@ -9,6 +9,7 @@ const fatalError = require('../../lib/utils/fatal-error');
 const cmd = require('../../lib/utils/output/cmd');
 const info = require('../../lib/utils/output/info');
 const stamp = require('../../lib/utils/output/stamp');
+const param = require('../../lib/utils/output/param');
 const { tick } = require('../../lib/utils/output/chars');
 const rightPad = require('../../lib/utils/output/right-pad');
 const textInput = require('../../lib/utils/input/text');
@@ -72,8 +73,8 @@ module.exports = async function(
   domains.push(user.email.split('@')[1]);
 
   if (!currentTeam) {
-    let err = `You're currently under the user context "${chalk.bold('sjobs')}"\n`;
-    err += `${chalk.gray('>')} Run ${cmd('now switch')} to switch to a team.`;
+    let err = `You can't run this command under ${param(user.username || user.email)}.\n`;
+    err += `${chalk.gray('>')} Run ${cmd('now switch')} to choose to a team.`;
     return fatalError(err);
   }
 

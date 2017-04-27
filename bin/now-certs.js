@@ -112,7 +112,7 @@ function formatExpirationDate(date) {
     : chalk.gray('in ' + ms(diff));
 }
 
-async function run({token, config: {currentTeam}}) {
+async function run({token, config: {currentTeam, user}}) {
   const certs = new NowCerts({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -129,7 +129,11 @@ async function run({token, config: {currentTeam}}) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }`
     );
 
     if (list.length > 0) {
@@ -212,7 +216,7 @@ async function run({token, config: {currentTeam}}) {
       return exit(1);
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -243,7 +247,7 @@ async function run({token, config: {currentTeam}}) {
     const key = readX509File(argv.key);
     const ca = argv.ca ? readX509File(argv.ca) : '';
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -269,7 +273,7 @@ async function run({token, config: {currentTeam}}) {
       return exit(1);
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -330,14 +334,18 @@ function readX509File(file) {
   return fs.readFileSync(path.resolve(file), 'utf8');
 }
 
-async function getCertIdCn(certs, idOrCn) {
+async function getCertIdCn(certs, idOrCn, currentTeam, user) {
   const list = await certs.ls();
   const thecert = list.filter(cert => {
     return cert.uid === idOrCn || cert.cn === idOrCn;
   })[0];
 
   if (!thecert) {
-    error(`No certificate found by id or cn "${idOrCn}"`);
+    error(`No certificate found by id or cn "${idOrCn}" under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`);
     return null;
   }
 

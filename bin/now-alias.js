@@ -129,7 +129,7 @@ if (argv.help) {
   });
 }
 
-async function run({token, config: {currentTeam}}) {
+async function run({token, config: {currentTeam, user}}) {
   const alias = new NowAlias({apiUrl, token, debug, currentTeam });
   const domains = new NowDomains({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
@@ -234,7 +234,11 @@ async function run({token, config: {currentTeam}}) {
 
       const elapsed_ = ms(new Date() - start_);
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)}`
+        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
 
       if (text) {
@@ -264,7 +268,11 @@ async function run({token, config: {currentTeam}}) {
 
       if (!_alias) {
         const err = new Error(
-          `Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`
+          `Alias not found by "${_target}" under ${
+            chalk.bold(
+              (currentTeam && currentTeam.slug) || user.username || user.email
+            )
+          }. Run ${chalk.dim('`now alias ls`')} to see your aliases.`
         );
         err.userError = true;
         throw err;

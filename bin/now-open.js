@@ -80,7 +80,7 @@ Promise.resolve().then(async () => {
   }
 });
 
-async function open({token, config: {currentTeam}}) {
+async function open({token, config: {currentTeam, user}}) {
   const now = new Now({apiUrl, token, debug, currentTeam });
 
   let deployments;
@@ -114,7 +114,11 @@ async function open({token, config: {currentTeam}}) {
   );
 
   if (typeof currentProjectDeployments === 'undefined') {
-    console.log(`no deployments found for ${chalk.bold(pkg.name)}`);
+    console.log(`No deployments found for ${chalk.bold(pkg.name)} under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`);
     process.exit(0);
   }
 
@@ -124,7 +128,11 @@ async function open({token, config: {currentTeam}}) {
   try {
     const url = `https://${latestDeploy.url}`;
 
-    console.log(`Opening the latest deployment for ${chalk.bold(pkg.name)}...`);
+    console.log(`Opening the latest deployment for ${chalk.bold(pkg.name)}... under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`);
     console.log(`Here's the URL: ${chalk.underline(url)}`);
 
     opn(url);

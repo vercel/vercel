@@ -19,10 +19,14 @@ function expDateMiddleware(data) {
   return data;
 }
 
-module.exports = function(creditCards) {
+module.exports = function({creditCards, currentTeam, user}) {
   const state = {
     error: undefined,
-    cardGroupLabel: `> ${chalk.bold('Enter your card details')}`,
+    cardGroupLabel: `> ${chalk.bold(`Enter your card details for ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`)}`,
 
     name: {
       label: rightPad('Full Name', 12),
@@ -195,7 +199,11 @@ module.exports = function(creditCards) {
       });
       stopSpinner();
       success(
-        `${state.cardNumber.brand} ending in ${res.last4} was added to your account`
+        `${state.cardNumber.brand} ending in ${res.last4} was added to ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
     } catch (err) {
       stopSpinner();

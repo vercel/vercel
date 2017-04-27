@@ -1,4 +1,4 @@
-const { italic } = require('chalk');
+const { italic, bold } = require('chalk');
 
 const error = require('../../lib/utils/output/error');
 const wait = require('../../lib/utils/output/wait');
@@ -11,7 +11,7 @@ const promptBool = require('../../lib/utils/input/prompt-bool');
 const eraseLines = require('../../lib/utils/output/erase-lines');
 const treatBuyError = require('../../lib/utils/domains/treat-buy-error');
 
-module.exports = async function(domains, args) {
+module.exports = async function({domains, args, currentTeam, user}) {
   const name = args[0];
 
   if (!name) {
@@ -31,7 +31,11 @@ module.exports = async function(domains, args) {
   }
 
   info(`Domain ${nameParam} is ${italic('available')}!`);
-  const confirmation = await promptBool(`Buy now for $${price}?`);
+  const confirmation = await promptBool(`Buy now for ${bold(`$${price}`)} (${
+    bold(
+      (currentTeam && currentTeam.slug) || user.username || user.email
+    )
+  })?`);
 
   eraseLines(1);
   if (!confirmation) {

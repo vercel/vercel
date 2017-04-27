@@ -96,7 +96,7 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run({token, config: {currentTeam}}) {
+async function run({token, config: {currentTeam, user}}) {
   const domainRecords = new DomainRecords({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -148,7 +148,11 @@ async function run({token, config: {currentTeam}}) {
       }
     });
     console.log(
-      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }`
     );
     console.log(text.join(''));
   } else if (subcommand === 'add') {
@@ -162,7 +166,11 @@ async function run({token, config: {currentTeam}}) {
     const record = await domainRecords.create(param.domain, param.data);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)} (${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      })`
     );
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
@@ -180,7 +188,7 @@ async function run({token, config: {currentTeam}}) {
 
     const yes = await readConfirmation(
       record,
-      'The following record will be removed permanently\n'
+      'The following record will be removed permanently \n'
     );
     if (!yes) {
       error('User abort');

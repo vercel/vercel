@@ -137,7 +137,7 @@ if (argv.help || !subcommand) {
   });
 }
 
-async function run({token, config: {currentTeam}}) {
+async function run({token, config: {currentTeam, user}}) {
   const domain = new NowDomains({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
@@ -178,7 +178,11 @@ async function run({token, config: {currentTeam}}) {
 
       const elapsed_ = ms(new Date() - start_);
       console.log(
-        `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed_}]`)}`
+        `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        } ${chalk.gray(`[${elapsed_}]`)}`
       );
 
       if (out) {
@@ -270,7 +274,7 @@ async function run({token, config: {currentTeam}}) {
       break;
     }
     case 'buy': {
-      await require(resolve(__dirname, 'domains', 'buy.js'))(domain, args);
+      await require(resolve(__dirname, 'domains', 'buy.js'))({domains: domain, args, currentTeam, user});
       break;
     }
     default:
