@@ -73,7 +73,7 @@ Promise.resolve().then(async () => {
   }
 
   try {
-    await open({token, currentTeam});
+    await open({token, config});
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`);
     process.exit(1);
