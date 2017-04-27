@@ -144,7 +144,7 @@ async function list({token, config: {currentTeam}}) {
   }
   if (!argv.all && shouldShowAllInfo) {
     console.log(
-      `> To expand list and see instances run ${chalk.cyan('`now ls --all [app]`')}`
+      `> To expand the list and see instances run ${chalk.cyan('`now ls --all [app]`')}`
     );
   }
   console.log();
