@@ -162,7 +162,7 @@ async function run({token, config: {currentTeam, user}}) {
             header.concat(
               domains.map(domain => {
                 const ns = domain.isExternal ? 'external' : 'zeit.world';
-                const url = chalk.underline(domain.name);
+                const url = chalk.bold(domain.name);
                 const time = chalk.gray(
                   ms(current - new Date(domain.created)) + ' ago'
                 );
