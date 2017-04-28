@@ -185,8 +185,11 @@ async function run({token, config: {currentTeam, user}}) {
   if (planId === undefined) {
     const elapsed = ms(new Date() - start);
 
-    let message = `To manage this from the web UI, head to https://zeit.co/account\n`;
-    message += `> Select a plan for ${
+    let message = `For more info, please head to https://zeit.co`;
+    message = currentTeam ?
+      `${message}/${currentTeam.slug}/settings/plan` :
+      `${message}/account/plan`
+    message += `\n> Select a plan for ${
       bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )
