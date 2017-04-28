@@ -616,7 +616,7 @@ async function sync({token, config: {currentTeam, user}}) {
 
   const plan = await planPromise;
 
-  if (plan.id !== 'oss') {
+  if (plan.id === 'oss') {
     if (isTTY) {
       info(
         `${
