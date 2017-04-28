@@ -88,7 +88,12 @@ try {
 }
 
 if (maybeURL(deploymentIdOrURL)) {
-  deploymentIdOrURL = normalizeURL(deploymentIdOrURL);
+  const normalizedURL = normalizeURL(deploymentIdOrURL);
+  if (normalizedURL.includes('/')) {
+    error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`);
+    process.exit(1);
+  }
+  deploymentIdOrURL = normalizedURL;
 }
 
 Promise.resolve()
@@ -103,20 +108,20 @@ Promise.resolve()
       process.exit(1);
     }
 
-    await printLogs({token, config});
+    await printLogs({ token, config });
   })
   .catch(err => {
     error(`Unknown error: ${err.stack}`);
     process.exit(1);
   });
 
-async function printLogs({token, config: {currentTeam}}) {
+async function printLogs({ token, config: { currentTeam } }) {
   let buf = [];
   let init = false;
   let lastLog;
 
   if (!follow) {
-    onLogs(await fetchLogs({token, currentTeam, since, until }));
+    onLogs(await fetchLogs({ token, currentTeam, since, until }));
     return;
   }
 
@@ -150,7 +155,7 @@ async function printLogs({token, config: {currentTeam}}) {
     // For the case socket reconnected
     const _since = lastLog ? lastLog.serial : since;
 
-    fetchLogs({token, currentTeam, since: _since }).then(logs => {
+    fetchLogs({ token, currentTeam, since: _since }).then(logs => {
       init = true;
       const m = {};
       logs.concat(buf.map(b => b.log)).forEach(l => {
@@ -232,8 +237,8 @@ function printLog(log) {
   });
 }
 
-async function fetchLogs({token, currentTeam, since, until } = {}) {
-  const now = new Now({apiUrl, token, debug, currentTeam });
+async function fetchLogs({ token, currentTeam, since, until } = {}) {
+  const now = new Now({ apiUrl, token, debug, currentTeam });
 
   let logs;
   try {
