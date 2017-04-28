@@ -62,7 +62,7 @@
     "cross-spawn": "5.1.0",
     "docker-file-parser": "1.0.1",
     "dotenv": "4.0.0",
-    "download": "5.0.3",
+    "download": "6.0.0",
     "email-prompt": "0.2.0",
     "email-validator": "1.0.7",
     "fs-promise": "2.0.2",
