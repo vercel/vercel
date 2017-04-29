@@ -5,6 +5,7 @@ const listInput = require('../../lib/utils/input/list');
 const cfg = require('../../lib/cfg');
 const exit = require('../../lib/utils/exit');
 const success = require('../../lib/utils/output/success');
+const info = require('../../lib/utils/output/info');
 const error = require('../../lib/utils/output/error');
 const param = require('../../lib/utils/output/param');
 
@@ -67,7 +68,7 @@ module.exports = async function(teams, args) {
 
   choices.unshift({
     name: userEntryName,
-    value: user.username,
+    value: user.email,
     short: user.username
   });
 
@@ -94,7 +95,7 @@ module.exports = async function(teams, args) {
 
   // Abort
   if (!choice) {
-    console.log('No changes made');
+    info('No changes made');
     return exit();
   }
 
@@ -102,6 +103,10 @@ module.exports = async function(teams, args) {
 
   // Switch to account
   if (!newTeam) {
+    if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
+      info('No changes made')
+      return exit()
+    }
     stopSpinner = wait('Saving');
     await cfg.remove('currentTeam');
     stopSpinner();
@@ -109,7 +114,7 @@ module.exports = async function(teams, args) {
   }
 
   if (newTeam.slug === currentTeam.slug) {
-    console.log('No changes made');
+    info('No changes made')
     return exit();
   }
 
