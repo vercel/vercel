@@ -142,7 +142,13 @@ async function run({token, config: {currentTeam, user}}) {
   switch (subcommand) {
     case 'ls':
     case 'list': {
-      const cards = await creditCards.ls();
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return
+      }
       const text = cards.cards
         .map(card => {
           const _default = card.id === cards.defaultCardId
@@ -199,7 +205,14 @@ async function run({token, config: {currentTeam, user}}) {
       }
 
       const start = new Date();
-      const cards = await creditCards.ls();
+
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return
+      }
 
       if (cards.cards.length === 0) {
         error('You have no credit cards to choose from');
@@ -257,7 +270,13 @@ async function run({token, config: {currentTeam, user}}) {
       }
 
       const start = new Date();
-      const cards = await creditCards.ls();
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return 
+      }
 
       if (cards.cards.length === 0) {
         error(`You have no credit cards to choose from to delete under ${
