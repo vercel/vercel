@@ -310,7 +310,7 @@ async function run({token, config: {currentTeam, user}}) {
         );
         return exit(1);
       }
-      await alias.set(String(args[0]), String(args[1]));
+      await alias.set(String(args[0]), String(args[1]), currentTeam, user);
       break;
     }
     default: {
@@ -320,9 +320,9 @@ async function run({token, config: {currentTeam, user}}) {
       }
 
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules);
+        await updatePathAlias(alias, argv._[0], argv.rules, domains);
       } else if (argv._.length === 2) {
-        await alias.set(String(argv._[0]), String(argv._[1]), domains);
+        await alias.set(String(argv._[0]), String(argv._[1]), domains, currentTeam, user);
       } else if (argv._.length >= 3) {
         error('Invalid number of arguments');
         help();
