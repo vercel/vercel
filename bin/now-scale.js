@@ -89,7 +89,7 @@ if (argv.help) {
     }
 
     try {
-      await run({token, config});
+      await run({ token, config });
     } catch (err) {
       if (err.userError) {
         error(err.message);
@@ -115,8 +115,8 @@ function guessParams() {
   process.exit(1);
 }
 
-async function run({token, config: {currentTeam}}) {
-  const scale = new NowScale({apiUrl, token, debug, currentTeam });
+async function run({ token, config: { currentTeam } }) {
+  const scale = new NowScale({ apiUrl, token, debug, currentTeam });
   const start = Date.now();
 
   if (id === 'ls') {
@@ -200,17 +200,16 @@ async function run({token, config: {currentTeam}}) {
   const elapsed = ms(new Date() - start);
 
   const currentReplicas = match.scale.current;
-  console.log(
-    `${chalk.cyan('> Configured scaling rules')} [${elapsed}]
-
-${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})
-  `
+  const log = console.log;
+  log(`> ${chalk.cyan('Success!')} Configured scaling rules [${elapsed}]`);
+  log();
+  log(
+    `${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
   );
-  console.log(printf('%5s %s', 'min', chalk.bold(newMin)));
-  console.log(printf('%5s %s', 'max', chalk.bold(newMax)));
-  console.log(
-    printf('%5s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔'))
-  );
+  log(printf('%6s %s', 'min', chalk.bold(newMin)));
+  log(printf('%6s %s', 'max', chalk.bold(newMax)));
+  log(printf('%6s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔')));
+  log();
   await info(scale, match.url);
 
   scale.close();
