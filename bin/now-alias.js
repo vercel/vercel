@@ -357,7 +357,9 @@ async function confirmDeploymentRemoval(alias, _alias) {
   const msg = '> The following alias will be removed permanently\n' +
     `  ${tbl} \nAre you sure?`;
 
-  return promptBool(msg);
+  return promptBool(msg, {
+    trailing: '\n'
+  });
 }
 
 function findAlias(alias, list) {

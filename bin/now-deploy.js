@@ -629,7 +629,7 @@ async function sync({token, config: {currentTeam, user}}) {
       let proceed;
       try {
         const label = 'Are you sure you want to proceed with the deployment?';
-        proceed = await promptBool(label, { trailing: eraseLines(2) });
+        proceed = await promptBool(label, { trailing: eraseLines(1) });
       } catch (err) {
         if (err.message === 'USER_ABORT') {
           proceed = false;

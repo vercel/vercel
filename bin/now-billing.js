@@ -242,7 +242,9 @@ async function run({token, config: {currentTeam, user}}) {
       // typed `now billing set-default <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
-        const confirmation = await promptBool(label);
+        const confirmation = await promptBool(label, {
+          trailing: '\n'
+        });
         if (!confirmation) {
           console.log('Aborted');
           break;
@@ -275,7 +277,7 @@ async function run({token, config: {currentTeam, user}}) {
         cards = await creditCards.ls();
       } catch (err) {
         error(err.message)
-        return 
+        return
       }
 
       if (cards.cards.length === 0) {
