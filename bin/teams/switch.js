@@ -36,7 +36,12 @@ module.exports = async function(teams, args) {
       success(`The team ${chalk.bold(newTeam.name)} is now active!`);
       return exit();
     }
-
+    if (desiredSlug === user.username) {
+      stopSpinner = wait('Saving');
+      await cfg.remove('currentTeam');
+      stopSpinner();
+      return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`);
+    }
     error(`Could not find membership for team ${param(desiredSlug)}`);
     return exit(1);
   }
