@@ -26,11 +26,11 @@ module.exports = async function({domains, args, currentTeam, user}) {
 
   stopSpinner();
 
-  if (!available) {
-    return error(`Domain ${nameParam} is ${italic('unavailable')}!`);
+  if (! available) {
+    return error(`The domain ${nameParam} is ${italic('unavailable')}!`);
   }
 
-  info(`Domain ${nameParam} is ${italic('available')}!`);
+  info(`The domain ${nameParam} is ${italic('available')}!`);
   const confirmation = await promptBool(`Buy now for ${bold(`$${price}`)} (${
     bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
