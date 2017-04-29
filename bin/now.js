@@ -48,6 +48,7 @@ const commands = new Set([
   'upgrade',
   'downgrade',
   'open',
+  'team',
   'teams',
   'switch',
   'log',
@@ -65,6 +66,7 @@ const aliases = new Map([
   ['secret', 'secrets'],
   ['cc', 'billing'],
   ['downgrade', 'upgrade'],
+  ['team', 'teams'],
   ['switch', 'teams switch'],
   ['log', 'logs']
 ]);
