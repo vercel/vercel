@@ -252,14 +252,9 @@ async function sync(token) {
       const gitParts = gitPathParts(rawPath);
       Object.assign(gitRepo, gitParts);
 
-      const searchMessage = setTimeout(
-        () => {
-          console.log(
-            `> Didn't find directory. Searching on ${gitRepo.type}...`
-          );
-        },
-        500
-      );
+      const searchMessage = setTimeout(() => {
+        console.log(`> Didn't find directory. Searching on ${gitRepo.type}...`);
+      }, 500);
 
       try {
         repo = await fromGit(rawPath, debug);
@@ -719,7 +714,7 @@ function printLogs(host, token) {
 
         await Promise.all(assignments);
       } else {
-        await reAlias(token, host, help, exit, apiUrl, debug);
+        await reAlias(token, host, null, help, exit, apiUrl, debug);
       }
     }
 
