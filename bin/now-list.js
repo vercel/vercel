@@ -114,9 +114,11 @@ async function list({ token, config: { currentTeam, user } }) {
     const aliases = await now.listAliases();
 
     const item = aliases.find(e => e.uid === app || e.alias === app);
-    const match = await now.findDeployment(item.deploymentId);
-    if (match !== null && typeof match !== 'undefined') {
-      deployments = Array.of(match);
+    if (item) {
+      const match = await now.findDeployment(item.deploymentId);
+      if (match !== null && typeof match !== 'undefined') {
+        deployments = Array.of(match);
+      }
     }
   }
 
