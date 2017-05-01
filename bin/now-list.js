@@ -92,6 +92,10 @@ async function list({ token, config: { currentTeam, user } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const start = new Date();
 
+  if (argv.all && !app) {
+    console.log('> You must define an app when using `--all`');
+    process.exit(1);
+  }
   let deployments;
   try {
     deployments = await now.list(app);
@@ -100,14 +104,12 @@ async function list({ token, config: { currentTeam, user } }) {
     process.exit(1);
   }
 
+  deployments = Array.of(await now.findDeployment(app));
+
   now.close();
 
   const apps = new Map();
 
-  if (argv.all && !app) {
-    console.log('> You must define an app when using `--all`');
-    process.exit(1);
-  }
   if (argv.all) {
     await Promise.all(
       deployments.map(async ({ uid }, i) => {
