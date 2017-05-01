@@ -9,6 +9,7 @@ const ms = require('ms');
 // Ours
 const strlen = require('../lib/strlen');
 const NowAlias = require('../lib/alias');
+const NowDomains = require('../lib/domains');
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
 const { error } = require('../lib/error');
@@ -104,29 +105,33 @@ if (argv.help) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err}\n${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run({token, config});
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err}\n${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
-async function run(token) {
-  const alias = new NowAlias(apiUrl, token, { debug });
+async function run({token, config: {currentTeam, user}}) {
+  const alias = new NowAlias({apiUrl, token, debug, currentTeam });
+  const domains = new NowDomains({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
   switch (subcommand) {
@@ -229,7 +234,11 @@ async function run(token) {
 
       const elapsed_ = ms(new Date() - start_);
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)}`
+        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
 
       if (text) {
@@ -259,7 +268,11 @@ async function run(token) {
 
       if (!_alias) {
         const err = new Error(
-          `Alias not found by "${_target}". Run ${chalk.dim('`now alias ls`')} to see your aliases.`
+          `Alias not found by "${_target}" under ${
+            chalk.bold(
+              (currentTeam && currentTeam.slug) || user.username || user.email
+            )
+          }. Run ${chalk.dim('`now alias ls`')} to see your aliases.`
         );
         err.userError = true;
         throw err;
@@ -288,7 +301,7 @@ async function run(token) {
     case 'add':
     case 'set': {
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules);
+        await updatePathAlias(alias, argv._[0], argv.rules, domains);
         break;
       }
       if (args.length !== 2) {
@@ -297,7 +310,7 @@ async function run(token) {
         );
         return exit(1);
       }
-      await alias.set(String(args[0]), String(args[1]));
+      await alias.set(String(args[0]), String(args[1]), currentTeam, user);
       break;
     }
     default: {
@@ -307,9 +320,9 @@ async function run(token) {
       }
 
       if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules);
+        await updatePathAlias(alias, argv._[0], argv.rules, domains);
       } else if (argv._.length === 2) {
-        await alias.set(String(argv._[0]), String(argv._[1]));
+        await alias.set(String(argv._[0]), String(argv._[1]), domains, currentTeam, user);
       } else if (argv._.length >= 3) {
         error('Invalid number of arguments');
         help();
@@ -322,6 +335,7 @@ async function run(token) {
     }
   }
 
+  domains.close()
   alias.close();
 }
 
@@ -343,7 +357,9 @@ async function confirmDeploymentRemoval(alias, _alias) {
   const msg = '> The following alias will be removed permanently\n' +
     `  ${tbl} \nAre you sure?`;
 
-  return promptBool(msg);
+  return promptBool(msg, {
+    trailing: '\n'
+  });
 }
 
 function findAlias(alias, list) {
@@ -382,9 +398,9 @@ function findAlias(alias, list) {
   return _alias;
 }
 
-async function updatePathAlias(alias, aliasName, rules) {
+async function updatePathAlias(alias, aliasName, rules, domains) {
   const start = new Date();
-  const res = await alias.updatePathBasedroutes(String(aliasName), rules);
+  const res = await alias.updatePathBasedroutes(String(aliasName), rules, domains);
   const elapsed = ms(new Date() - start);
   if (res.error) {
     const err = new Error(res.error.message);

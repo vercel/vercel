@@ -35,6 +35,7 @@ const info = require('../lib/utils/output/info');
 const wait = require('../lib/utils/output/wait');
 const NowPlans = require('../lib/plans');
 const promptBool = require('../lib/utils/input/prompt-bool');
+const note = require('../lib/utils/output/note');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'name', 'alias'],
@@ -80,21 +81,24 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]       Performs a deployment ${chalk.bold('(default)')}
-      ls | list            [app]        List deployments
-      rm | remove          [id]         Remove a deployment
-      ln | alias           [id] [url]   Configures aliases for deployments
-      domains              [name]       Manages your domain names
-      certs                [cmd]        Manages your SSL certificates
-      secrets              [name]       Manages your secret environment variables
-      dns                  [name]       Manages your DNS records
-      open                              Open the latest deployment for the project
-      help                 [cmd]        Displays complete help for [cmd]
+      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      ls | list            [app]       List deployments
+      rm | remove          [id]        Remove a deployment
+      ln | alias           [id] [url]  Configures aliases for deployments
+      domains              [name]      Manages your domain names
+      certs                [cmd]       Manages your SSL certificates
+      secrets              [name]      Manages your secret environment variables
+      dns                  [name]      Manages your DNS records
+      logs                 [url]       Displays the logs for a deployment
+      scale                [args]      Scales the instance count of a deployment
+      help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Administrative')}
 
-      billing | cc         [cmd]        Manages your credit cards and billing methods
-      upgrade | downgrade  [plan]       Upgrades or downgrades your plan
+      billing | cc         [cmd]       Manages your credit cards and billing methods
+      upgrade | downgrade  [plan]      Upgrades or downgrades your plan
+      teams                [team]      Manages your teams
+      switch                           Switches between teams and your account
 
   ${chalk.dim('Options:')}
 
@@ -197,44 +201,48 @@ if (deploymentName || wantsPublic) {
   forceNew = true;
 }
 
-const config = cfg.read();
-const alwaysForwardNpm = config.forwardNpm;
+let alwaysForwardNpm;
 
-if (argv.h || argv.help) {
-  help();
-  exit(0);
-} else if (argv.v || argv.version) {
-  console.log(version);
-  process.exit(0);
-} else if (!(argv.token || config.token) || shouldLogin) {
-  login(apiUrl)
-    .then(token => {
-      if (shouldLogin) {
-        console.log('> Logged in successfully. Token saved in ~/.now.json');
-        process.exit(0);
-      } else {
-        sync(token).catch(err => {
-          error(`Unknown error: ${err}\n${err.stack}`);
-          process.exit(1);
-        });
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
+  alwaysForwardNpm = config.forwardNpm;
+
+  if (argv.h || argv.help) {
+    help();
+    exit(0);
+  } else if (argv.v || argv.version) {
+    console.log(version);
+    process.exit(0);
+  } else if (!(argv.token || config.token) || shouldLogin) {
+    let token;
+    try {
+      token = await login(apiUrl);
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
+      process.exit(1);
+    }
+    if (shouldLogin) {
+      console.log('> Logged in successfully. Token saved in ~/.now.json');
+      process.exit(0);
+    } else {
+      sync({token, config}).catch(err => {
+        error(`Unknown error: ${err}\n${err.stack}`);
+        process.exit(1);
+      });
+    }
+  } else {
+    sync({token: argv.token || config.token, config}).catch(err => {
+      error(`Unknown error: ${err}\n${err.stack}`);
       process.exit(1);
     });
-} else {
-  sync(argv.token || config.token).catch(err => {
-    error(`Unknown error: ${err}\n${err.stack}`);
-    process.exit(1);
-  });
-}
+  }
+});
 
-async function sync(token) {
+async function sync({token, config: {currentTeam, user}}) {
   const start = Date.now();
   const rawPath = argv._[0];
 
-  const planPromise = new NowPlans(apiUrl, token, { debug }).getCurrent();
+  const planPromise = new NowPlans({apiUrl, token, debug, currentTeam }).getCurrent();
 
   const stopDeployment = msg => {
     error(msg);
@@ -301,11 +309,18 @@ async function sync(token) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : '';
       console.log(
-        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}"` +
-          gitRef
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
     } else {
-      console.log(`> Deploying ${chalk.bold(toHumanPath(path))}`);
+      console.log(`> Deploying ${chalk.bold(toHumanPath(path))} under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }`);
     }
   }
 
@@ -420,7 +435,7 @@ async function sync(token) {
     quiet: true
   });
 
-  const now = new Now(apiUrl, token, { debug });
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   let dotenvConfig;
   let dotenvOption;
@@ -536,9 +551,7 @@ async function sync(token) {
   const env = {};
   env_.filter(v => Boolean(v)).forEach(([key, val]) => {
     if (key in env) {
-      console.log(
-        `> ${chalk.yellow('NOTE:')} Overriding duplicate env key ${chalk.bold(`"${key}"`)}`
-      );
+      note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
     }
 
     env[key] = val;
@@ -601,7 +614,7 @@ async function sync(token) {
     now.close();
 
     // Show build logs
-    printLogs(now.host, token);
+    printLogs(now.host, token, currentTeam);
   };
 
   const plan = await planPromise;
@@ -609,13 +622,17 @@ async function sync(token) {
   if (plan.id === 'oss') {
     if (isTTY) {
       info(
-        `You are on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+        `${
+          chalk.bold(
+            (currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`
+          )
+        } on the OSS plan. Your code will be made ${chalk.bold('public')}.`
       );
 
       let proceed;
       try {
         const label = 'Are you sure you want to proceed with the deployment?';
-        proceed = await promptBool(label, { trailing: eraseLines(2) });
+        proceed = await promptBool(label, { trailing: eraseLines(1) });
       } catch (err) {
         if (err.message === 'USER_ABORT') {
           proceed = false;
@@ -676,11 +693,11 @@ async function sync(token) {
     now.close();
 
     // Show build logs
-    printLogs(now.host, token);
+    printLogs(now.host, token, currentTeam);
   }
 }
 
-function printLogs(host, token) {
+function printLogs(host, token, currentTeam) {
   // Log build
   const logger = new Logger(host, token, { debug, quiet });
 
@@ -714,7 +731,7 @@ function printLogs(host, token) {
         const assignments = [];
 
         for (const alias of aliasList) {
-          assignments.push(assignAlias(alias, token, host, apiUrl, debug));
+          assignments.push(assignAlias(alias, token, host, apiUrl, debug, currentTeam));
         }
 
         await Promise.all(assignments);

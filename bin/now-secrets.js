@@ -86,25 +86,28 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        handleError(err);
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run({token, config});
+    } catch (err) {
+      handleError(err);
+      exit(1);
+    }
+  });
 }
 
-async function run(token) {
-  const secrets = new NowSecrets(apiUrl, token, { debug });
+async function run({token, config: {currentTeam, user}}) {
+  const secrets = new NowSecrets({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -120,7 +123,11 @@ async function run(token) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${list.length} secret${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${list.length} secret${list.length === 1 ? '' : 's'} found under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      } ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -226,7 +233,11 @@ async function run(token) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added (${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }) ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }

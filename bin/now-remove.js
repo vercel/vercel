@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist');
-const chalk = require('chalk');
-const ms = require('ms');
-const table = require('text-table');
-const isURL = require('is-url');
+const minimist = require('minimist')
+const chalk = require('chalk')
+const ms = require('ms')
+const table = require('text-table')
 
 // Ours
-const Now = require('../lib');
-const login = require('../lib/login');
-const cfg = require('../lib/cfg');
-const { handleError, error } = require('../lib/error');
-const logo = require('../lib/utils/output/logo');
+const Now = require('../lib')
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const {handleError, error} = require('../lib/error')
+const logo = require('../lib/utils/output/logo')
+const {normalizeURL} = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -76,7 +76,24 @@ if (argv.config) {
   cfg.setConfigFile(argv.config);
 }
 
-const config = cfg.read();
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
+
+  let token;
+  try {
+    token = (await argv.token) || config.token || login(apiUrl);
+  } catch (err) {
+    error(`Authentication error – ${err.message}`);
+    process.exit(1);
+  }
+
+  try {
+    await remove({token, config});
+  } catch (err) {
+    error(`Unknown error: ${err}\n${err.stack}`);
+    process.exit(1);
+  }
+});
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
@@ -116,43 +133,16 @@ function readConfirmation(matches) {
   });
 }
 
-Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
-    try {
-      await remove(token);
-    } catch (err) {
-      error(`Unknown error: ${err}\n${err.stack}`);
-      process.exit(1);
-    }
-  })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`);
-    process.exit(1);
-  });
-
-async function remove(token) {
-  const now = new Now(apiUrl, token, { debug });
+async function remove({token, config: {currentTeam}}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   const deployments = await now.list();
 
   const matches = deployments.filter(d => {
-    return ids.find(id => {
-      // Normalize URL by removing slash from the end
-      if (isURL(id) && id.slice(-1) === '/') {
-        id = id.slice(0, -1);
-      }
-
-      // `url` should match the hostname of the deployment
-      let u = id.replace(/^https:\/\//i, '');
-
-      if (u.indexOf('.') === -1) {
-        // `.now.sh` domain is implied if just the subdomain is given
-        u += '.now.sh';
-      }
-
-      return d.uid === id || d.name === id || d.url === u;
-    });
-  });
+    return ids.some(id => {
+      return d.uid === id || d.name === id || d.url === normalizeURL(id)
+    })
+  })
 
   if (matches.length === 0) {
     error(

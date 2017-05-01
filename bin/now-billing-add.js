@@ -12,29 +12,30 @@ const cardBrands = require('../lib/utils/billing/card-brands');
 const geocode = require('../lib/utils/billing/geocode');
 const success = require('../lib/utils/output/success');
 const wait = require('../lib/utils/output/wait');
-
-function rightPad(string, n = 12) {
-  n -= string.length;
-  return string + ' '.repeat(n > -1 ? n : 0);
-}
+const { tick } = require('../lib/utils/output/chars');
+const rightPad = require('../lib/utils/output/right-pad');
 
 function expDateMiddleware(data) {
   return data;
 }
 
-module.exports = function(creditCards) {
+module.exports = function({creditCards, currentTeam, user}) {
   const state = {
     error: undefined,
-    cardGroupLabel: `> ${chalk.bold('Enter your card details')}`,
+    cardGroupLabel: `> ${chalk.bold(`Enter your card details for ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`)}`,
 
     name: {
-      label: rightPad('Full Name'),
+      label: rightPad('Full Name', 12),
       placeholder: 'John Appleseed',
       validateValue: data => data.trim().length > 0
     },
 
     cardNumber: {
-      label: rightPad('Number'),
+      label: rightPad('Number', 12),
       mask: 'cc',
       placeholder: '#### #### #### ####',
       validateKeypress: (data, value) => /\d/.test(data) && value.length < 19,
@@ -49,7 +50,7 @@ module.exports = function(creditCards) {
     },
 
     ccv: {
-      label: rightPad('CCV'),
+      label: rightPad('CCV', 12),
       mask: 'ccv',
       placeholder: '###',
       validateValue: data => {
@@ -59,7 +60,7 @@ module.exports = function(creditCards) {
     },
 
     expDate: {
-      label: rightPad('Exp. Date'),
+      label: rightPad('Exp. Date', 12),
       mask: 'expDate',
       placeholder: 'mm / yyyy',
       middleware: expDateMiddleware,
@@ -69,7 +70,7 @@ module.exports = function(creditCards) {
     addressGroupLabel: `\n> ${chalk.bold('Enter your billing address')}`,
 
     country: {
-      label: rightPad('Country'),
+      label: rightPad('Country', 12),
       async autoComplete(value) {
         for (const country in countries) {
           if (!Object.hasOwnProperty.call(countries, country)) {
@@ -85,23 +86,23 @@ module.exports = function(creditCards) {
     },
 
     zipCode: {
-      label: rightPad('ZIP'),
+      label: rightPad('ZIP', 12),
       validadeKeypress: data => data.trim().length > 0,
       validateValue: data => data.trim().length > 0
     },
 
     state: {
-      label: rightPad('State'),
+      label: rightPad('State', 12),
       validateValue: data => data.trim().length > 0
     },
 
     city: {
-      label: rightPad('City'),
+      label: rightPad('City', 12),
       validateValue: data => data.trim().length > 0
     },
 
     address1: {
-      label: rightPad('Address'),
+      label: rightPad('Address', 12),
       validateValue: data => data.trim().length > 0
     }
   };
@@ -141,16 +142,16 @@ module.exports = function(creditCards) {
             brand = chalk.cyan(`[${brand}]`);
             const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3];
             process.stdout.write(
-              `${chalk.cyan('✓')} ${piece.label}${masked} ${brand}\n`
+              `${chalk.cyan(tick)} ${piece.label}${masked} ${brand}\n`
             );
           } else if (key === 'ccv') {
             process.stdout.write(
-              `${chalk.cyan('✓')} ${piece.label}${'*'.repeat(result.length)}\n`
+              `${chalk.cyan(tick)} ${piece.label}${'*'.repeat(result.length)}\n`
             );
           } else if (key === 'expDate') {
             let text = result.split(' / ');
             text = text[0] + chalk.gray(' / ') + text[1];
-            process.stdout.write(`${chalk.cyan('✓')} ${piece.label}${text}\n`);
+            process.stdout.write(`${chalk.cyan(tick)} ${piece.label}${text}\n`);
           } else if (key === 'zipCode') {
             const stopSpinner = wait(piece.label + result);
             const addressInfo = await geocode({
@@ -165,11 +166,11 @@ module.exports = function(creditCards) {
             }
             stopSpinner();
             process.stdout.write(
-              `${chalk.cyan('✓')} ${piece.label}${result}\n`
+              `${chalk.cyan(tick)} ${piece.label}${result}\n`
             );
           } else {
             process.stdout.write(
-              `${chalk.cyan('✓')} ${piece.label}${result}\n`
+              `${chalk.cyan(tick)} ${piece.label}${result}\n`
             );
           }
         } catch (err) {
@@ -198,7 +199,11 @@ module.exports = function(creditCards) {
       });
       stopSpinner();
       success(
-        `${state.cardNumber.brand} ending in ${res.last4} was added to your account`
+        `${state.cardNumber.brand} ending in ${res.last4} was added to ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`
       );
     } catch (err) {
       stopSpinner();

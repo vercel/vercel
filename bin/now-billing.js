@@ -89,25 +89,27 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+    try {
+      await run({token, config});
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()
@@ -132,15 +134,21 @@ function buildInquirerChoices(cards) {
   });
 }
 
-async function run(token) {
+async function run({token, config: {currentTeam, user}}) {
   const start = new Date();
-  const creditCards = new NowCreditCards(apiUrl, token, { debug });
+  const creditCards = new NowCreditCards({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
   switch (subcommand) {
     case 'ls':
     case 'list': {
-      const cards = await creditCards.ls();
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return
+      }
       const text = cards.cards
         .map(card => {
           const _default = card.id === cards.defaultCardId
@@ -177,7 +185,11 @@ async function run(token) {
 
       const elapsed = ms(new Date() - start);
       console.log(
-        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        } ${chalk.gray(`[${elapsed}]`)}`
       );
       if (text) {
         console.log(`\n${text}\n`);
@@ -193,7 +205,14 @@ async function run(token) {
       }
 
       const start = new Date();
-      const cards = await creditCards.ls();
+
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return
+      }
 
       if (cards.cards.length === 0) {
         error('You have no credit cards to choose from');
@@ -204,7 +223,11 @@ async function run(token) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start);
-        const message = `Selecting a new default payment card from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`;
+        const message = `Selecting a new default payment card for ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        } ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
         cardId = await listInput({
@@ -219,7 +242,9 @@ async function run(token) {
       // typed `now billing set-default <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
-        const confirmation = await promptBool(label);
+        const confirmation = await promptBool(label, {
+          trailing: '\n'
+        });
         if (!confirmation) {
           console.log('Aborted');
           break;
@@ -247,10 +272,20 @@ async function run(token) {
       }
 
       const start = new Date();
-      const cards = await creditCards.ls();
+      let cards
+      try {
+        cards = await creditCards.ls();
+      } catch (err) {
+        error(err.message)
+        return
+      }
 
       if (cards.cards.length === 0) {
-        error('You have no credit cards to choose from to delete');
+        error(`You have no credit cards to choose from to delete under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        }`);
         return exit(0);
       }
 
@@ -258,7 +293,11 @@ async function run(token) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start);
-        const message = `Selecting a card to ${chalk.underline('remove')} from ${cards.cards.length} total ${chalk.gray(`[${elapsed}]`)}`;
+        const message = `Selecting a card to ${chalk.underline('remove')} under ${
+          chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )
+        } ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
         cardId = await listInput({
@@ -298,7 +337,11 @@ async function run(token) {
               card => card.id === cards.defaultCardId
             );
 
-            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default`;
+            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default for ${
+              chalk.bold(
+                (currentTeam && currentTeam.slug) || user.username || user.email
+              )
+            }`;
           }
         }
 
@@ -313,7 +356,7 @@ async function run(token) {
     }
 
     case 'add': {
-      require(resolve(__dirname, 'now-billing-add.js'))(creditCards);
+      require(resolve(__dirname, 'now-billing-add.js'))({creditCards, currentTeam, user});
 
       break;
     }

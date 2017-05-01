@@ -9,9 +9,11 @@ const table = require('text-table');
 const minimist = require('minimist');
 const fs = require('fs-promise');
 const ms = require('ms');
+const printf = require('printf');
+require('epipebomb')();
+const supportsColor = require('supports-color');
 
 // Ours
-const strlen = require('../lib/strlen');
 const cfg = require('../lib/cfg');
 const { handleError, error } = require('../lib/error');
 const NowCerts = require('../lib/certs');
@@ -22,12 +24,7 @@ const logo = require('../lib/utils/output/logo');
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
   boolean: ['help', 'debug'],
-  alias: {
-    help: 'h',
-    config: 'c',
-    debug: 'd',
-    token: 't'
-  }
+  alias: { help: 'h', config: 'c', debug: 'd', token: 't' }
 });
 
 const subcommand = argv._[0];
@@ -85,21 +82,24 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        handleError(err);
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run({ token, config });
+    } catch (err) {
+      handleError(err);
+      exit(1);
+    }
+  });
 }
 
 function formatExpirationDate(date) {
@@ -109,8 +109,8 @@ function formatExpirationDate(date) {
     : chalk.gray('in ' + ms(diff));
 }
 
-async function run(token) {
-  const certs = new NowCerts(apiUrl, token, { debug });
+async function run({ token, config: { currentTeam, user } }) {
+  const certs = new NowCerts({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -126,7 +126,7 @@ async function run(token) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
     );
 
     if (list.length > 0) {
@@ -134,36 +134,37 @@ async function run(token) {
       list.sort((a, b) => {
         return a.cn.localeCompare(b.cn);
       });
-      const header = [
-        ['', 'id', 'cn', 'created', 'expiration', 'auto-renew'].map(s =>
-          chalk.dim(s))
-      ];
-      const out = table(
-        header.concat(
-          list.map(cert => {
-            const cn = chalk.bold(cert.cn);
-            const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
-            const expiration = formatExpirationDate(new Date(cert.expiration));
-            return [
-              '',
-              cert.uid ? cert.uid : 'unknown',
-              cn,
-              time,
-              expiration,
-              cert.autoRenew ? 'yes' : 'no'
-            ];
-          })
-        ),
-        {
-          align: ['l', 'r', 'l', 'l', 'l'],
-          hsep: ' '.repeat(2),
-          stringLength: strlen
-        }
+
+      const maxCnLength =
+        list.reduce((acc, i) => {
+          return Math.max(acc, (i.cn && i.cn.length) || 0);
+        }, 0) + 1;
+
+      console.log(
+        chalk.dim(
+          printf(
+            `  %-${maxCnLength}s %-8s  %-10s  %-10s`,
+            'cn',
+            'created',
+            'expiration',
+            'auto-renew'
+          )
+        )
       );
 
-      if (out) {
-        console.log('\n' + out + '\n');
-      }
+      list.forEach(cert => {
+        const cn = chalk.bold(cert.cn);
+        const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
+        const expiration = formatExpirationDate(new Date(cert.expiration));
+        const autoRenew = cert.autoRenew ? 'yes' : 'no';
+        let spec;
+        if (supportsColor) {
+          spec = `  %-${maxCnLength + 9}s %-18s  %-20s  %-20s\n`;
+        } else {
+          spec = `  %-${maxCnLength}s %-8s  %-10s  %-10s\n`;
+        }
+        process.stdout.write(printf(spec, cn, time, expiration, autoRenew));
+      });
     }
   } else if (subcommand === 'create') {
     if (args.length !== 1) {
@@ -209,7 +210,7 @@ async function run(token) {
       return exit(1);
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -240,7 +241,7 @@ async function run(token) {
     const key = readX509File(argv.key);
     const ca = argv.ca ? readX509File(argv.ca) : '';
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -266,7 +267,7 @@ async function run(token) {
       return exit(1);
     }
 
-    const cert = await getCertIdCn(certs, args[0]);
+    const cert = await getCertIdCn(certs, args[0], currentTeam, user);
     if (!cert) {
       return exit(1);
     }
@@ -327,14 +328,16 @@ function readX509File(file) {
   return fs.readFileSync(path.resolve(file), 'utf8');
 }
 
-async function getCertIdCn(certs, idOrCn) {
+async function getCertIdCn(certs, idOrCn, currentTeam, user) {
   const list = await certs.ls();
   const thecert = list.filter(cert => {
     return cert.uid === idOrCn || cert.cn === idOrCn;
   })[0];
 
   if (!thecert) {
-    error(`No certificate found by id or cn "${idOrCn}"`);
+    error(
+      `No certificate found by id or cn "${idOrCn}" under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+    );
     return null;
   }
 
