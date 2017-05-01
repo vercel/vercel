@@ -104,8 +104,20 @@ async function list({ token, config: { currentTeam, user } }) {
     process.exit(1);
   }
 
-  if (!deployments) {
-    deployments = Array.of(await now.findDeployment(app));
+  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+    const match = await now.findDeployment(app);
+    if (match !== null && typeof match !== 'undefined') {
+      deployments = Array.of(match);
+    }
+  }
+  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+    const aliases = await now.listAliases();
+
+    const item = aliases.find(e => e.uid === app || e.alias === app);
+    const match = await now.findDeployment(item.deploymentId);
+    if (match !== null && typeof match !== 'undefined') {
+      deployments = Array.of(match);
+    }
   }
 
   now.close();
