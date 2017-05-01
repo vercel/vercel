@@ -104,7 +104,9 @@ async function list({ token, config: { currentTeam, user } }) {
     process.exit(1);
   }
 
-  deployments = Array.of(await now.findDeployment(app));
+  if (!deployments) {
+    deployments = Array.of(await now.findDeployment(app));
+  }
 
   now.close();
 
