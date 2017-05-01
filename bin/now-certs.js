@@ -11,6 +11,7 @@ const fs = require('fs-promise');
 const ms = require('ms');
 const printf = require('printf');
 require('epipebomb')();
+const supportsColor = require('supports-color');
 
 // Ours
 const cfg = require('../lib/cfg');
@@ -156,15 +157,13 @@ async function run({ token, config: { currentTeam, user } }) {
         const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
         const expiration = formatExpirationDate(new Date(cert.expiration));
         const autoRenew = cert.autoRenew ? 'yes' : 'no';
-        process.stdout.write(
-          printf(
-            `  %-${maxCnLength + 9}s %-18s  %-20s  %-20s\n`,
-            cn,
-            time,
-            expiration,
-            autoRenew
-          )
-        );
+        let spec;
+        if (supportsColor) {
+          spec = `  %-${maxCnLength + 9}s %-18s  %-20s  %-20s\n`;
+        } else {
+          spec = `  %-${maxCnLength}s %-8s  %-10s  %-10s\n`;
+        }
+        process.stdout.write(printf(spec, cn, time, expiration, autoRenew));
       });
     }
   } else if (subcommand === 'create') {
