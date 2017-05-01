@@ -7,6 +7,7 @@ const minimist = require('minimist');
 const ms = require('ms');
 const printf = require('printf');
 require('epipebomb')();
+const supportsColor = require('supports-color');
 
 // Ours
 const cfg = require('../lib/cfg');
@@ -261,9 +262,15 @@ async function list(scale) {
     );
     for (const instance of depls) {
       if (instance.scale.current > 0) {
+        let spec;
+        if (supportsColor) {
+          spec = ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`;
+        } else {
+          spec = ` %-${urlLength + 1}s %8s %8s %8s %8s %8s`;
+        }
         console.log(
           printf(
-            ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`,
+            spec,
             chalk.underline(instance.url),
             instance.scale.current,
             instance.scale.min,
@@ -273,9 +280,15 @@ async function list(scale) {
           )
         );
       } else {
+        let spec;
+        if (supportsColor) {
+          spec = ` %-${urlLength + 10}s ${chalk.gray('%8s %8s %8s %8s %8s')}`;
+        } else {
+          spec = ` %-${urlLength + 1}s ${chalk.gray('%8s %8s %8s %8s %8s')}`;
+        }
         console.log(
           printf(
-            ` %-${urlLength + 10}s ${chalk.gray('%8s %8s %8s %8s %8s')}`,
+            spec,
             chalk.underline(instance.url),
             instance.scale.current,
             instance.scale.min,
