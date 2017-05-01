@@ -7,6 +7,7 @@ const chalk = require('chalk');
 const ms = require('ms');
 const printf = require('printf');
 require('epipebomb')();
+const supportsColor = require('supports-color');
 
 // Ours
 const Now = require('../lib');
@@ -176,9 +177,16 @@ async function list({ token, config: { currentTeam, user } }) {
         state = chalk.grey(state);
         extraSpaceForState = 10;
       }
+      let spec;
+      if (supportsColor) {
+        spec = ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`;
+      } else {
+        spec = ` %-${urlLength + 1}s %8s    %-${16}s %8s`;
+      }
+
       console.log(
         printf(
-          ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`,
+          spec,
           chalk.underline(dep.url),
           dep.scale.current,
           state,
