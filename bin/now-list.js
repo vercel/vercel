@@ -6,6 +6,7 @@ const minimist = require('minimist');
 const chalk = require('chalk');
 const ms = require('ms');
 const printf = require('printf');
+require('epipebomb')();
 
 // Ours
 const Now = require('../lib');
@@ -79,15 +80,15 @@ Promise.resolve().then(async () => {
   }
 
   try {
-    await list({token, config});
+    await list({ token, config });
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`);
     process.exit(1);
   }
 });
 
-async function list({token, config: {currentTeam, user}}) {
-  const now = new Now({apiUrl, token, debug, currentTeam });
+async function list({ token, config: { currentTeam, user } }) {
+  const now = new Now({ apiUrl, token, debug, currentTeam });
   const start = new Date();
 
   let deployments;
@@ -121,24 +122,19 @@ async function list({token, config: {currentTeam, user}}) {
 
   const sorted = await sort([...apps]);
 
-  const urlLength = deployments.reduce(
-    (acc, i) => {
+  const urlLength =
+    deployments.reduce((acc, i) => {
       return Math.max(acc, (i.url && i.url.length) || 0);
-    },
-    0
-  ) + 5;
+    }, 0) + 5;
   const timeNow = new Date();
   console.log(
-    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found under ${
-      chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )
-    } ${chalk.grey('[' + ms(timeNow - start) + ']')}`
+    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
   );
 
   let shouldShowAllInfo = false;
   for (const app of apps) {
-    shouldShowAllInfo = app[1].length > 5 ||
+    shouldShowAllInfo =
+      app[1].length > 5 ||
       app.find(depl => {
         return depl.scale && depl.scale.current > 1;
       });

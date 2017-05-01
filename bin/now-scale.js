@@ -6,6 +6,7 @@ const isURL = require('is-url');
 const minimist = require('minimist');
 const ms = require('ms');
 const printf = require('printf');
+require('epipebomb')();
 
 // Ours
 const cfg = require('../lib/cfg');

@@ -9,9 +9,10 @@ const table = require('text-table');
 const minimist = require('minimist');
 const fs = require('fs-promise');
 const ms = require('ms');
+const printf = require('printf');
+require('epipebomb')();
 
 // Ours
-const strlen = require('../lib/strlen');
 const cfg = require('../lib/cfg');
 const { handleError, error } = require('../lib/error');
 const NowCerts = require('../lib/certs');
@@ -22,12 +23,7 @@ const logo = require('../lib/utils/output/logo');
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token', 'crt', 'key', 'ca'],
   boolean: ['help', 'debug'],
-  alias: {
-    help: 'h',
-    config: 'c',
-    debug: 'd',
-    token: 't'
-  }
+  alias: { help: 'h', config: 'c', debug: 'd', token: 't' }
 });
 
 const subcommand = argv._[0];
@@ -97,7 +93,7 @@ if (argv.help || !subcommand) {
     }
 
     try {
-      await run({token, config});
+      await run({ token, config });
     } catch (err) {
       handleError(err);
       exit(1);
@@ -112,8 +108,8 @@ function formatExpirationDate(date) {
     : chalk.gray('in ' + ms(diff));
 }
 
-async function run({token, config: {currentTeam, user}}) {
-  const certs = new NowCerts({apiUrl, token, debug, currentTeam });
+async function run({ token, config: { currentTeam, user } }) {
+  const certs = new NowCerts({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -129,11 +125,7 @@ async function run({token, config: {currentTeam, user}}) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${
-        chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )
-      }`
+      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
     );
 
     if (list.length > 0) {
@@ -141,36 +133,39 @@ async function run({token, config: {currentTeam, user}}) {
       list.sort((a, b) => {
         return a.cn.localeCompare(b.cn);
       });
-      const header = [
-        ['', 'id', 'cn', 'created', 'expiration', 'auto-renew'].map(s =>
-          chalk.dim(s))
-      ];
-      const out = table(
-        header.concat(
-          list.map(cert => {
-            const cn = chalk.bold(cert.cn);
-            const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
-            const expiration = formatExpirationDate(new Date(cert.expiration));
-            return [
-              '',
-              cert.uid ? cert.uid : 'unknown',
-              cn,
-              time,
-              expiration,
-              cert.autoRenew ? 'yes' : 'no'
-            ];
-          })
-        ),
-        {
-          align: ['l', 'r', 'l', 'l', 'l'],
-          hsep: ' '.repeat(2),
-          stringLength: strlen
-        }
+
+      const maxCnLength =
+        list.reduce((acc, i) => {
+          return Math.max(acc, (i.cn && i.cn.length) || 0);
+        }, 0) + 1;
+
+      console.log(
+        chalk.dim(
+          printf(
+            `  %-${maxCnLength}s %-8s  %-10s  %-10s`,
+            'cn',
+            'created',
+            'expiration',
+            'auto-renew'
+          )
+        )
       );
 
-      if (out) {
-        console.log('\n' + out + '\n');
-      }
+      list.forEach(cert => {
+        const cn = chalk.bold(cert.cn);
+        const time = chalk.gray(ms(cur - new Date(cert.created)) + ' ago');
+        const expiration = formatExpirationDate(new Date(cert.expiration));
+        const autoRenew = cert.autoRenew ? 'yes' : 'no';
+        process.stdout.write(
+          printf(
+            `  %-${maxCnLength + 9}s %-18s  %-20s  %-20s\n`,
+            cn,
+            time,
+            expiration,
+            autoRenew
+          )
+        );
+      });
     }
   } else if (subcommand === 'create') {
     if (args.length !== 1) {
@@ -341,11 +336,9 @@ async function getCertIdCn(certs, idOrCn, currentTeam, user) {
   })[0];
 
   if (!thecert) {
-    error(`No certificate found by id or cn "${idOrCn}" under ${
-      chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )
-    }`);
+    error(
+      `No certificate found by id or cn "${idOrCn}" under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+    );
     return null;
   }
 
