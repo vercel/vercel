@@ -5,7 +5,10 @@ const test = require('ava');
 const logo = require('../lib/utils/output/logo');
 
 test.serial('make binary', async t => {
-  if (!process.env.CI) return; // eslint-disable-line curly
+  if (!process.env.CI) {
+    t.true(true);
+    return;
+  }
   const result = await spawn('npm', ['run', 'pack']);
   t.is(result.code, 0);
 });
@@ -20,7 +23,10 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 
 test.serial('packed "now help" prints deploy help message', async t => {
-  if (!process.env.CI) return; // eslint-disable-line curly
+  if (!process.env.CI) {
+    t.true(true);
+    return;
+  }
   const result = await spawn(binaryPath, ['help']);
 
   t.is(result.code, 0);
