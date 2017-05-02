@@ -76,25 +76,28 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        handleError(err);
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run({token, config});
+    } catch (err) {
+      handleError(err);
+      exit(1);
+    }
+  });
 }
 
-async function run(token) {
-  const domainRecords = new DomainRecords(apiUrl, token, { debug });
+async function run({token, config: {currentTeam, user}}) {
+  const domainRecords = new DomainRecords({apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -145,7 +148,11 @@ async function run(token) {
       }
     });
     console.log(
-      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)}`
+      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      }`
     );
     console.log(text.join(''));
   } else if (subcommand === 'add') {
@@ -159,7 +166,11 @@ async function run(token) {
     const record = await domainRecords.create(param.domain, param.data);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)} (${
+        chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )
+      })`
     );
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
@@ -177,7 +188,7 @@ async function run(token) {
 
     const yes = await readConfirmation(
       record,
-      'The following record will be removed permanently\n'
+      'The following record will be removed permanently \n'
     );
     if (!yes) {
       error('User abort');

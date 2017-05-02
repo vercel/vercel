@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Native
+const { resolve } = require('path');
+
 // Packages
 const chalk = require('chalk');
 const minimist = require('minimist');
@@ -35,7 +38,7 @@ const subcommand = argv._[0];
 const help = () => {
   console.log(
     `
-  ${chalk.bold(`${logo} now domains`)} <ls | add | rm> <domain>
+  ${chalk.bold(`${logo} now domains`)} <ls | add | rm | buy> <domain>
 
   ${chalk.dim('Options:')}
 
@@ -52,9 +55,13 @@ const help = () => {
 
       ${chalk.cyan('$ now domains ls')}
 
+  ${chalk.gray('–')} Buy a new domain:
+
+      ${chalk.cyan(`$ now domains buy ${chalk.underline('domain-name.com')}`)}
+
   ${chalk.gray('–')} Adds a domain name:
 
-      ${chalk.cyan(`$ now domains add ${chalk.underline('my-app.com')}`)}
+      ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
 
       Make sure the domain's DNS nameservers are at least 2 of these:
 
@@ -111,29 +118,31 @@ if (argv.help || !subcommand) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err}\n${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+    try {
+      await run({ token, config });
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err}\n${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
-async function run(token) {
-  const domain = new NowDomains(apiUrl, token, { debug });
+async function run({ token, config: { currentTeam, user } }) {
+  const domain = new NowDomains({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
 
   switch (subcommand) {
@@ -149,7 +158,9 @@ async function run(token) {
       domains.sort((a, b) => new Date(b.created) - new Date(a.created));
       const current = new Date();
       const header = [
-        ['', 'id', 'dns', 'url', 'verified', 'created'].map(s => chalk.dim(s))
+        ['', 'id', 'dns', 'domain', 'verified', 'created'].map(s =>
+          chalk.dim(s)
+        )
       ];
       const out = domains.length === 0
         ? null
@@ -157,7 +168,7 @@ async function run(token) {
             header.concat(
               domains.map(domain => {
                 const ns = domain.isExternal ? 'external' : 'zeit.world';
-                const url = chalk.underline(`https://${domain.name}`);
+                const url = chalk.bold(domain.name);
                 const time = chalk.gray(
                   ms(current - new Date(domain.created)) + ' ago'
                 );
@@ -173,7 +184,7 @@ async function run(token) {
 
       const elapsed_ = ms(new Date() - start_);
       console.log(
-        `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed_}]`)}`
+        `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed_}]`)}`
       );
 
       if (out) {
@@ -262,6 +273,15 @@ async function run(token) {
           '> Verification required: Please rerun this command after some time'
         );
       }
+      break;
+    }
+    case 'buy': {
+      await require(resolve(__dirname, 'domains', 'buy.js'))({
+        domains: domain,
+        args,
+        currentTeam,
+        user
+      });
       break;
     }
     default:

@@ -139,15 +139,6 @@ test('ignore nested `node_modules` with .npmignore **', async t => {
   t.is(base(files[1]), 'nested-node_modules/package.json');
 });
 
-test('include `main` even if not in files', async t => {
-  let files = await getNpmFiles(fixture('always-include-main'));
-  files = files.sort(alpha);
-  t.is(files.length, 3);
-  t.is(base(files[0]), 'always-include-main/a.js');
-  t.is(base(files[1]), 'always-include-main/package.json');
-  t.is(base(files[2]), 'always-include-main/woot.js');
-});
-
 test('support whitelisting with .npmignore and !', async t => {
   let files = await getNpmFiles(fixture('negation'));
   files = files.sort(alpha);

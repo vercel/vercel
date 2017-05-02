@@ -61,24 +61,27 @@ if (argv.config) {
   cfg.setConfigFile(argv.config);
 }
 
-const config = cfg.read();
+Promise.resolve().then(async () => {
+  const config = await cfg.read();
 
-Promise.resolve(argv.token || config.token || login(apiUrl))
-  .then(async token => {
-    try {
-      await open(token);
-    } catch (err) {
-      error(`Unknown error: ${err}\n${err.stack}`);
-      process.exit(1);
-    }
-  })
-  .catch(e => {
-    error(`Authentication error – ${e.message}`);
+  let token;
+  try {
+    token = argv.token || config.token || (await login(apiUrl));
+  } catch (err) {
+    error(`Authentication error – ${err.message}`);
     process.exit(1);
-  });
+  }
 
-async function open(token) {
-  const now = new Now(apiUrl, token, { debug });
+  try {
+    await open({token, config});
+  } catch (err) {
+    error(`Unknown error: ${err}\n${err.stack}`);
+    process.exit(1);
+  }
+});
+
+async function open({token, config: {currentTeam, user}}) {
+  const now = new Now({apiUrl, token, debug, currentTeam });
 
   let deployments;
   try {
@@ -111,7 +114,11 @@ async function open(token) {
   );
 
   if (typeof currentProjectDeployments === 'undefined') {
-    console.log(`no deployments found for ${chalk.bold(pkg.name)}`);
+    console.log(`No deployments found for ${chalk.bold(pkg.name)} under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`);
     process.exit(0);
   }
 
@@ -121,7 +128,11 @@ async function open(token) {
   try {
     const url = `https://${latestDeploy.url}`;
 
-    console.log(`Opening the latest deployment for ${chalk.bold(pkg.name)}...`);
+    console.log(`Opening the latest deployment for ${chalk.bold(pkg.name)}... under ${
+      chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    }`);
     console.log(`Here's the URL: ${chalk.underline(url)}`);
 
     opn(url);

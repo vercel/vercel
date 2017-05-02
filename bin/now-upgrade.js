@@ -4,7 +4,6 @@
 const chalk = require('chalk');
 const minimist = require('minimist');
 const ms = require('ms');
-const stripAnsi = require('strip-ansi');
 
 // Ours
 const login = require('../lib/login');
@@ -17,6 +16,8 @@ const error = require('../lib/utils/output/error');
 const success = require('../lib/utils/output/success');
 const cmd = require('../lib/utils/output/cmd');
 const logo = require('../lib/utils/output/logo');
+
+const {bold} = chalk
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -78,25 +79,28 @@ if (argv.help) {
   help();
   exit(0);
 } else {
-  const config = cfg.read();
+  Promise.resolve().then(async () => {
+    const config = await cfg.read();
 
-  Promise.resolve(argv.token || config.token || login(apiUrl))
-    .then(async token => {
-      try {
-        await run(token);
-      } catch (err) {
-        if (err.userError) {
-          error(err.message);
-        } else {
-          error(`Unknown error: ${err.stack}`);
-        }
-        exit(1);
-      }
-    })
-    .catch(e => {
-      error(`Authentication error – ${e.message}`);
+    let token;
+    try {
+      token = argv.token || config.token || (await login(apiUrl));
+    } catch (err) {
+      error(`Authentication error – ${err.message}`);
       exit(1);
-    });
+    }
+
+    try {
+      await run({token, config});
+    } catch (err) {
+      if (err.userError) {
+        error(err.message);
+      } else {
+        error(`Unknown error: ${err.stack}`);
+      }
+      exit(1);
+    }
+  });
 }
 
 function buildInquirerChoices(current, until) {
@@ -106,37 +110,60 @@ function buildInquirerChoices(current, until) {
   } else {
     until = '';
   }
-  const ossTitle = current === 'oss'
-    ? `oss FREE ${' '.repeat(28)} (current)`
-    : 'oss FREE';
-  const premiumTitle = current === 'premium'
-    ? `premium $15/mo ${' '.repeat(24 - stripAnsi(until).length)} (current${until})`
-    : 'premium $15/mo';
+
+  const currentText = bold('(current)')
+  let ossName = `OSS ${bold('FREE')}`
+  let premiumName = `Premium ${bold('$15')}`
+  let proName = `Pro ${bold('$50')}`
+  let advancedName = `Advanced ${bold('$200')}`
+
+  switch (current) {
+    case 'oss': {
+      ossName += indent(currentText, 6)
+      break
+    }
+    case 'premium': {
+      premiumName += indent(currentText, 3)
+      break
+    }
+    case 'pro': {
+      proName += indent(currentText, 7)
+      break
+    }
+    case 'advanced': {
+      advancedName += indent(currentText, 1)
+      break
+    }
+    default: {
+      ossName += indent(currentText, 6)
+    }
+  }
+
   return [
     {
-      name: [
-        ossTitle,
-        indent('✓ All code is public and open-source', 2),
-        indent('✓ 20 deploys per month | 1GB monthly bandwidth', 2),
-        indent('✓ 1GB FREE storage | 1MB size limit per file', 2)
-      ].join('\n'),
+      name: ossName,
       value: 'oss',
-      short: 'oss FREE'
+      short: `OSS ${bold('FREE')}`
     },
     {
-      name: [
-        premiumTitle,
-        indent('✓ All code is private and secure', 2),
-        indent('✓ 1000 deploys per month | 50GB monthly bandwidth', 2),
-        indent('✓ 100GB storage | No filesize limit', 2)
-      ].join('\n'),
+      name: premiumName,
       value: 'premium',
-      short: 'premium $15/mo'
-    }
+      short: `Premium ${bold('$15')}`
+    },
+    {
+      name: proName,
+      value: 'pro',
+      short: `Pro ${bold('$50')}`
+    },
+    {
+      name: advancedName,
+      value: 'advanced',
+      short: `Advanced ${bold('$200')}`
+    },
   ];
 }
 
-async function run(token) {
+async function run({token, config: {currentTeam, user}}) {
   const args = argv._;
   if (args.length > 1) {
     error('Invalid number of arguments');
@@ -144,11 +171,11 @@ async function run(token) {
   }
 
   const start = new Date();
-  const plans = new NowPlans(apiUrl, token, { debug });
+  const plans = new NowPlans({ apiUrl, token, debug, currentTeam });
 
   let planId = args[0];
 
-  if (![undefined, 'oss', 'premium'].includes(planId)) {
+  if (![undefined, 'oss', 'premium', 'pro', 'advanced'].includes(planId)) {
     error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`);
     return exit(1);
   }
@@ -158,14 +185,21 @@ async function run(token) {
   if (planId === undefined) {
     const elapsed = ms(new Date() - start);
 
-    let message = `To manage this from the web UI, head to https://zeit.co/account\n`;
-    message += `> Selecting a plan for your account ${chalk.gray(`[${elapsed}]`)}`;
+    let message = `For more info, please head to https://zeit.co`;
+    message = currentTeam ?
+      `${message}/${currentTeam.slug}/settings/plan` :
+      `${message}/account/plan`
+    message += `\n> Select a plan for ${
+      bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )
+    } ${chalk.gray(`[${elapsed}]`)}`;
     const choices = buildInquirerChoices(currentPlan.id, currentPlan.until);
 
     planId = await listInput({
       message,
       choices,
-      separator: true,
+      separator: false,
       abort: 'end'
     });
   }
@@ -182,38 +216,27 @@ async function run(token) {
   try {
     newPlan = await plans.set(planId);
   } catch (err) {
-    let errorBody;
-    if (err.res && err.res.status === 400) {
-      errorBody = err.res.json();
-    } else {
-      const message = 'A network error has occurred. Please retry.';
-      errorBody = { message };
-    }
-
-    const _err = (await errorBody).error;
-    const { code, message } = _err;
-
-    if (code === 'customer_not_found' || code === 'source_not_found') {
+    if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
       error(
         `You have no payment methods available. Run ${cmd('now billing add')} to add one`
       );
     } else {
-      error(`An unknow error occured. Please try again later ${message}`);
+      error(`An unknow error occured. Please try again later ${err.message}`);
     }
     plans.close();
     return;
   }
 
-  if (currentPlan.until && newPlan.id === 'premium') {
+  if (currentPlan.until && newPlan.id !== 'oss') {
     success(
-      `The cancelation has been undone. You're back on the ${chalk.bold('Premium plan')}`
+      `The cancelation has been undone. You're back on the ${chalk.bold(`${newPlan.name} plan`)}`
     );
   } else if (newPlan.until) {
     success(
-      `Your plan will be switched to OSS in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
+      `Your plan will be switched to ${chalk.bold(newPlan.name)} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
     );
   } else {
-    success(`You're now on the ${chalk.bold('Premium plan')}`);
+    success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`);
   }
 
   plans.close();
