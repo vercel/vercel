@@ -728,7 +728,7 @@ function printLogs(host, token, currentTeam) {
 
         await Promise.all(assignments);
       } else {
-        await reAlias(token, host, help, exit, apiUrl, debug);
+        await reAlias(token, host, null, help, exit, apiUrl, debug);
       }
     }
 

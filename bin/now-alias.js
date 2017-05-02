@@ -315,7 +315,21 @@ async function run({token, config: {currentTeam, user}}) {
     }
     default: {
       if (argv._.length === 0) {
-        await reAlias(token, null, help, exit, apiUrl, debug, alias);
+        await reAlias(token, null, null, help, exit, apiUrl, debug, alias);
+        break;
+      }
+
+      if (argv._.length === 1) {
+        await reAlias(
+          token,
+          null,
+          String(argv._[0]),
+          help,
+          exit,
+          apiUrl,
+          debug,
+          alias
+        );
         break;
       }
 
@@ -354,7 +368,8 @@ async function confirmDeploymentRemoval(alias, _alias) {
     { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
   );
 
-  const msg = '> The following alias will be removed permanently\n' +
+  const msg =
+    '> The following alias will be removed permanently\n' +
     `  ${tbl} \nAre you sure?`;
 
   return promptBool(msg, {
