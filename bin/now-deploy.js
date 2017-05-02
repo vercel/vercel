@@ -606,7 +606,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    printLogs(now.host, token, currentTeam)
+    printLogs(now.host, token, currentTeam, user)
   }
 
   const plan = await planPromise
@@ -681,11 +681,11 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    printLogs(now.host, token, currentTeam)
+    printLogs(now.host, token, currentTeam, user)
   }
 }
 
-function printLogs(host, token, currentTeam) {
+function printLogs(host, token, currentTeam, user) {
   // Log build
   const logger = new Logger(host, token, { debug, quiet })
 
@@ -726,7 +726,17 @@ function printLogs(host, token, currentTeam) {
 
         await Promise.all(assignments)
       } else {
-        await reAlias(token, host, null, help, exit, apiUrl, debug, currentTeam, user)
+        await reAlias(
+          token,
+          host,
+          null,
+          help,
+          exit,
+          apiUrl,
+          debug,
+          currentTeam,
+          user
+        )
       }
     }
 
