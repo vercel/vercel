@@ -1,32 +1,28 @@
 #!/usr/bin/env node
 
 // Packages
-const ansiEscapes = require('ansi-escapes');
-const chalk = require('chalk');
-const ccValidator = require('credit-card');
+const ansiEscapes = require('ansi-escapes')
+const chalk = require('chalk')
+const ccValidator = require('credit-card')
 
 // Ours
-const textInput = require('../lib/utils/input/text');
-const countries = require('../lib/utils/billing/country-list');
-const cardBrands = require('../lib/utils/billing/card-brands');
-const geocode = require('../lib/utils/billing/geocode');
-const success = require('../lib/utils/output/success');
-const wait = require('../lib/utils/output/wait');
-const { tick } = require('../lib/utils/output/chars');
-const rightPad = require('../lib/utils/output/right-pad');
+const textInput = require('../lib/utils/input/text')
+const countries = require('../lib/utils/billing/country-list')
+const cardBrands = require('../lib/utils/billing/card-brands')
+const geocode = require('../lib/utils/billing/geocode')
+const success = require('../lib/utils/output/success')
+const wait = require('../lib/utils/output/wait')
+const { tick } = require('../lib/utils/output/chars')
+const rightPad = require('../lib/utils/output/right-pad')
 
 function expDateMiddleware(data) {
-  return data;
+  return data
 }
 
-module.exports = function({creditCards, currentTeam, user}) {
+module.exports = function({ creditCards, currentTeam, user }) {
   const state = {
     error: undefined,
-    cardGroupLabel: `> ${chalk.bold(`Enter your card details for ${
-      chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )
-    }`)}`,
+    cardGroupLabel: `> ${chalk.bold(`Enter your card details for ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)}`,
 
     name: {
       label: rightPad('Full Name', 12),
@@ -40,12 +36,12 @@ module.exports = function({creditCards, currentTeam, user}) {
       placeholder: '#### #### #### ####',
       validateKeypress: (data, value) => /\d/.test(data) && value.length < 19,
       validateValue: data => {
-        data = data.replace(/ /g, '');
-        const type = ccValidator.determineCardType(data);
+        data = data.replace(/ /g, '')
+        const type = ccValidator.determineCardType(data)
         if (!type) {
-          return false;
+          return false
         }
-        return ccValidator.isValidCardNumber(data, type);
+        return ccValidator.isValidCardNumber(data, type)
       }
     },
 
@@ -54,8 +50,8 @@ module.exports = function({creditCards, currentTeam, user}) {
       mask: 'ccv',
       placeholder: '###',
       validateValue: data => {
-        const brand = state.cardNumber.brand.toLowerCase();
-        return ccValidator.doesCvvMatchType(data, brand);
+        const brand = state.cardNumber.brand.toLowerCase()
+        return ccValidator.doesCvvMatchType(data, brand)
       }
     },
 
@@ -74,13 +70,13 @@ module.exports = function({creditCards, currentTeam, user}) {
       async autoComplete(value) {
         for (const country in countries) {
           if (!Object.hasOwnProperty.call(countries, country)) {
-            continue;
+            continue
           }
           if (country.startsWith(value)) {
-            return country.substr(value.length);
+            return country.substr(value.length)
           }
         }
-        return false;
+        return false
       },
       validateValue: value => countries[value] !== undefined
     },
@@ -105,18 +101,18 @@ module.exports = function({creditCards, currentTeam, user}) {
       label: rightPad('Address', 12),
       validateValue: data => data.trim().length > 0
     }
-  };
+  }
 
   async function render() {
     for (const key in state) {
       if (!Object.hasOwnProperty.call(state, key)) {
-        continue;
+        continue
       }
-      const piece = state[key];
+      const piece = state[key]
       if (typeof piece === 'string') {
-        console.log(piece);
+        console.log(piece)
       } else if (typeof piece === 'object') {
-        let result;
+        let result
         try {
           /* eslint-disable no-await-in-loop */
           result = await textInput({
@@ -127,63 +123,63 @@ module.exports = function({creditCards, currentTeam, user}) {
             validateKeypress: piece.validateKeypress,
             validateValue: piece.validateValue,
             autoComplete: piece.autoComplete
-          });
+          })
 
-          piece.value = result;
+          piece.value = result
 
           if (key === 'cardNumber') {
-            let brand = cardBrands[ccValidator.determineCardType(result)];
-            piece.brand = brand;
+            let brand = cardBrands[ccValidator.determineCardType(result)]
+            piece.brand = brand
             if (brand === 'American Express') {
-              state.ccv.placeholder = '#'.repeat(4);
+              state.ccv.placeholder = '#'.repeat(4)
             } else {
-              state.ccv.placeholder = '#'.repeat(3);
+              state.ccv.placeholder = '#'.repeat(3)
             }
-            brand = chalk.cyan(`[${brand}]`);
-            const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3];
+            brand = chalk.cyan(`[${brand}]`)
+            const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3]
             process.stdout.write(
               `${chalk.cyan(tick)} ${piece.label}${masked} ${brand}\n`
-            );
+            )
           } else if (key === 'ccv') {
             process.stdout.write(
               `${chalk.cyan(tick)} ${piece.label}${'*'.repeat(result.length)}\n`
-            );
+            )
           } else if (key === 'expDate') {
-            let text = result.split(' / ');
-            text = text[0] + chalk.gray(' / ') + text[1];
-            process.stdout.write(`${chalk.cyan(tick)} ${piece.label}${text}\n`);
+            let text = result.split(' / ')
+            text = text[0] + chalk.gray(' / ') + text[1]
+            process.stdout.write(`${chalk.cyan(tick)} ${piece.label}${text}\n`)
           } else if (key === 'zipCode') {
-            const stopSpinner = wait(piece.label + result);
+            const stopSpinner = wait(piece.label + result)
             const addressInfo = await geocode({
               country: state.country.value,
               zipCode: result
-            });
+            })
             if (addressInfo.state) {
-              state.state.initialValue = addressInfo.state;
+              state.state.initialValue = addressInfo.state
             }
             if (addressInfo.city) {
-              state.city.initialValue = addressInfo.city;
+              state.city.initialValue = addressInfo.city
             }
-            stopSpinner();
+            stopSpinner()
             process.stdout.write(
               `${chalk.cyan(tick)} ${piece.label}${result}\n`
-            );
+            )
           } else {
             process.stdout.write(
               `${chalk.cyan(tick)} ${piece.label}${result}\n`
-            );
+            )
           }
         } catch (err) {
           if (err.message === 'USER_ABORT') {
-            process.exit(1);
+            process.exit(1)
           } else {
-            console.error(err);
+            console.error(err)
           }
         }
       }
     }
-    console.log(''); // New line
-    const stopSpinner = wait('Saving card');
+    console.log('') // New line
+    const stopSpinner = wait('Saving card')
 
     try {
       const res = await creditCards.add({
@@ -196,23 +192,19 @@ module.exports = function({creditCards, currentTeam, user}) {
         state: state.state.value,
         city: state.city.value,
         address1: state.address1.value
-      });
-      stopSpinner();
+      })
+      stopSpinner()
       success(
-        `${state.cardNumber.brand} ending in ${res.last4} was added to ${
-          chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )
-        }`
-      );
+        `${state.cardNumber.brand} ending in ${res.last4} was added to ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      )
     } catch (err) {
-      stopSpinner();
-      const linesToClear = state.error ? 13 : 12;
-      process.stdout.write(ansiEscapes.eraseLines(linesToClear));
-      state.error = `${chalk.red('> Error!')} ${err.message} Please make sure the info is correct`;
-      await render();
+      stopSpinner()
+      const linesToClear = state.error ? 13 : 12
+      process.stdout.write(ansiEscapes.eraseLines(linesToClear))
+      state.error = `${chalk.red('> Error!')} ${err.message} Please make sure the info is correct`
+      await render()
     }
   }
 
-  render().catch(console.error);
-};
+  render().catch(console.error)
+}

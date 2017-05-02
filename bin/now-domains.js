@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 
 // Native
-const { resolve } = require('path');
+const { resolve } = require('path')
 
 // Packages
-const chalk = require('chalk');
-const minimist = require('minimist');
-const table = require('text-table');
-const ms = require('ms');
+const chalk = require('chalk')
+const minimist = require('minimist')
+const table = require('text-table')
+const ms = require('ms')
 
 // Ours
-const login = require('../lib/login');
-const cfg = require('../lib/cfg');
-const { error } = require('../lib/error');
-const toHost = require('../lib/to-host');
-const strlen = require('../lib/strlen');
-const NowDomains = require('../lib/domains');
-const exit = require('../lib/utils/exit');
-const logo = require('../lib/utils/output/logo');
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const { error } = require('../lib/error')
+const toHost = require('../lib/to-host')
+const strlen = require('../lib/strlen')
+const NowDomains = require('../lib/domains')
+const exit = require('../lib/utils/exit')
+const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -30,9 +30,9 @@ const argv = minimist(process.argv.slice(2), {
     force: 'f',
     token: 't'
   }
-});
+})
 
-const subcommand = argv._[0];
+const subcommand = argv._[0]
 
 // Options
 const help = () => {
@@ -103,76 +103,76 @@ const help = () => {
 
       and follow the verification instructions if requested. Finally, rerun the same command after completing the verification step.
 `
-  );
-};
+  )
+}
 
 // Options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config);
+  cfg.setConfigFile(argv.config)
 }
 
 if (argv.help || !subcommand) {
-  help();
-  exit(0);
+  help()
+  exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read();
+    const config = await cfg.read()
 
-    let token;
+    let token
     try {
-      token = argv.token || config.token || (await login(apiUrl));
+      token = argv.token || config.token || (await login(apiUrl))
     } catch (err) {
-      error(`Authentication error – ${err.message}`);
-      exit(1);
+      error(`Authentication error – ${err.message}`)
+      exit(1)
     }
     try {
-      await run({ token, config });
+      await run({ token, config })
     } catch (err) {
       if (err.userError) {
-        error(err.message);
+        error(err.message)
       } else {
-        error(`Unknown error: ${err}\n${err.stack}`);
+        error(`Unknown error: ${err}\n${err.stack}`)
       }
-      exit(1);
+      exit(1)
     }
-  });
+  })
 }
 
 async function run({ token, config: { currentTeam, user } }) {
-  const domain = new NowDomains({ apiUrl, token, debug, currentTeam });
-  const args = argv._.slice(1);
+  const domain = new NowDomains({ apiUrl, token, debug, currentTeam })
+  const args = argv._.slice(1)
 
   switch (subcommand) {
     case 'ls':
     case 'list': {
       if (args.length !== 0) {
-        error('Invalid number of arguments');
-        return exit(1);
+        error('Invalid number of arguments')
+        return exit(1)
       }
 
-      const start_ = new Date();
-      const domains = await domain.ls();
-      domains.sort((a, b) => new Date(b.created) - new Date(a.created));
-      const current = new Date();
+      const start_ = new Date()
+      const domains = await domain.ls()
+      domains.sort((a, b) => new Date(b.created) - new Date(a.created))
+      const current = new Date()
       const header = [
         ['', 'id', 'dns', 'domain', 'verified', 'created'].map(s =>
           chalk.dim(s)
         )
-      ];
+      ]
       const out = domains.length === 0
         ? null
         : table(
             header.concat(
               domains.map(domain => {
-                const ns = domain.isExternal ? 'external' : 'zeit.world';
-                const url = chalk.bold(domain.name);
+                const ns = domain.isExternal ? 'external' : 'zeit.world'
+                const url = chalk.bold(domain.name)
                 const time = chalk.gray(
                   ms(current - new Date(domain.created)) + ' ago'
-                );
-                return ['', domain.uid, ns, url, domain.verified, time];
+                )
+                return ['', domain.uid, ns, url, domain.verified, time]
               })
             ),
             {
@@ -180,42 +180,42 @@ async function run({ token, config: { currentTeam, user } }) {
               hsep: ' '.repeat(2),
               stringLength: strlen
             }
-          );
+          )
 
-      const elapsed_ = ms(new Date() - start_);
+      const elapsed_ = ms(new Date() - start_)
       console.log(
         `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed_}]`)}`
-      );
+      )
 
       if (out) {
-        console.log('\n' + out + '\n');
+        console.log('\n' + out + '\n')
       }
 
-      break;
+      break
     }
     case 'rm':
     case 'remove': {
       if (args.length !== 1) {
-        error('Invalid number of arguments');
-        return exit(1);
+        error('Invalid number of arguments')
+        return exit(1)
       }
 
-      const _target = String(args[0]);
+      const _target = String(args[0])
       if (!_target) {
-        const err = new Error('No domain specified');
-        err.userError = true;
-        throw err;
+        const err = new Error('No domain specified')
+        err.userError = true
+        throw err
       }
 
-      const _domains = await domain.ls();
-      const _domain = findDomain(_target, _domains);
+      const _domains = await domain.ls()
+      const _domain = findDomain(_target, _domains)
 
       if (!_domain) {
         const err = new Error(
           `Domain not found by "${_target}". Run ${chalk.dim('`now domains ls`')} to see your domains.`
-        );
-        err.userError = true;
-        throw err;
+        )
+        err.userError = true
+        throw err
       }
 
       try {
@@ -223,57 +223,57 @@ async function run({ token, config: { currentTeam, user } }) {
           domain,
           _domain,
           _domains
-        )).toLowerCase();
+        )).toLowerCase()
         if (confirmation !== 'y' && confirmation !== 'yes') {
-          console.log('\n> Aborted');
-          process.exit(0);
+          console.log('\n> Aborted')
+          process.exit(0)
         }
 
-        const start = new Date();
-        await domain.rm(_domain.name);
-        const elapsed = ms(new Date() - start);
+        const start = new Date()
+        await domain.rm(_domain.name)
+        const elapsed = ms(new Date() - start)
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(_domain.uid)} removed [${elapsed}]`
-        );
+        )
       } catch (err) {
-        error(err);
-        exit(1);
+        error(err)
+        exit(1)
       }
-      break;
+      break
     }
     case 'add':
     case 'set': {
       if (args.length !== 1) {
-        error('Invalid number of arguments');
-        return exit(1);
+        error('Invalid number of arguments')
+        return exit(1)
       }
 
-      const start = new Date();
-      const name = String(args[0]);
+      const start = new Date()
+      const name = String(args[0])
       const { uid, code, created, verified } = await domain.add(
         name,
         argv.force,
         argv.external
-      );
-      const elapsed = ms(new Date() - start);
+      )
+      const elapsed = ms(new Date() - start)
       if (created) {
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`
-        );
+        )
       } else if (verified) {
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} verified [${elapsed}]`
-        );
+        )
       } else if (code === 'not_modified') {
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} already exists [${elapsed}]`
-        );
+        )
       } else {
         console.log(
           '> Verification required: Please rerun this command after some time'
-        );
+        )
       }
-      break;
+      break
     }
     case 'buy': {
       await require(resolve(__dirname, 'domains', 'buy.js'))({
@@ -281,73 +281,69 @@ async function run({ token, config: { currentTeam, user } }) {
         args,
         currentTeam,
         user
-      });
-      break;
+      })
+      break
     }
     default:
-      error('Please specify a valid subcommand: ls | add | rm');
-      help();
-      exit(1);
+      error('Please specify a valid subcommand: ls | add | rm')
+      help()
+      exit(1)
   }
 
-  domain.close();
+  domain.close()
 }
 
 async function readConfirmation(domain, _domain) {
   return new Promise(resolve => {
-    const time = chalk.gray(
-      ms(new Date() - new Date(_domain.created)) + ' ago'
-    );
+    const time = chalk.gray(ms(new Date() - new Date(_domain.created)) + ' ago')
     const tbl = table(
       [[_domain.uid, chalk.underline(`https://${_domain.name}`), time]],
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
+    )
 
-    process.stdout.write(
-      '> The following domain will be removed permanently\n'
-    );
-    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write('> The following domain will be removed permanently\n')
+    process.stdout.write('  ' + tbl + '\n')
 
     if (_domain.aliases.length > 0) {
       process.stdout.write(
         `> ${chalk.yellow('Warning!')} This domain's ` +
           `${chalk.bold(_domain.aliases.length + ' alias' + (_domain.aliases.length === 1 ? '' : 'es'))} ` +
           `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`
-      );
+      )
     }
 
     process.stdout.write(
       `  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
+    )
 
     process.stdin
       .on('data', d => {
-        process.stdin.pause();
-        resolve(d.toString().trim());
+        process.stdin.pause()
+        resolve(d.toString().trim())
       })
-      .resume();
-  });
+      .resume()
+  })
 }
 
 function findDomain(val, list) {
   return list.find(d => {
     if (d.uid === val) {
       if (debug) {
-        console.log(`> [debug] matched domain ${d.uid} by uid`);
+        console.log(`> [debug] matched domain ${d.uid} by uid`)
       }
 
-      return true;
+      return true
     }
 
     // Match prefix
     if (d.name === toHost(val)) {
       if (debug) {
-        console.log(`> [debug] matched domain ${d.uid} by name ${d.name}`);
+        console.log(`> [debug] matched domain ${d.uid} by name ${d.name}`)
       }
 
-      return true;
+      return true
     }
 
-    return false;
-  });
+    return false
+  })
 }

@@ -10,9 +10,9 @@ const table = require('text-table')
 const Now = require('../lib')
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
-const {handleError, error} = require('../lib/error')
+const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
-const {normalizeURL} = require('../lib/utils/url')
+const { normalizeURL } = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -24,9 +24,9 @@ const argv = minimist(process.argv.slice(2), {
     token: 't',
     yes: 'y'
   }
-});
+})
 
-const ids = argv._;
+const ids = argv._
 
 // Options
 const help = () => {
@@ -58,85 +58,85 @@ const help = () => {
 
   ${chalk.dim('Alias:')} rm
 `
-  );
-};
+  )
+}
 
 if (argv.help || ids.length === 0) {
-  help();
-  process.exit(0);
+  help()
+  process.exit(0)
 }
 
 // Options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
-const hard = argv.hard || false;
-const skipConfirmation = argv.yes || false;
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
+const hard = argv.hard || false
+const skipConfirmation = argv.yes || false
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config);
+  cfg.setConfigFile(argv.config)
 }
 
 Promise.resolve().then(async () => {
-  const config = await cfg.read();
+  const config = await cfg.read()
 
-  let token;
+  let token
   try {
-    token = (await argv.token) || config.token || login(apiUrl);
+    token = (await argv.token) || config.token || login(apiUrl)
   } catch (err) {
-    error(`Authentication error – ${err.message}`);
-    process.exit(1);
+    error(`Authentication error – ${err.message}`)
+    process.exit(1)
   }
 
   try {
-    await remove({token, config});
+    await remove({ token, config })
   } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`);
-    process.exit(1);
+    error(`Unknown error: ${err}\n${err.stack}`)
+    process.exit(1)
   }
-});
+})
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
     process.stdout.write(
       `> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`
-    );
+    )
 
     const tbl = table(
       matches.map(depl => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
-        const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return [depl.uid, url, time];
+        const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
+        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
+        return [depl.uid, url, time]
       }),
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
-    process.stdout.write(tbl + '\n');
+    )
+    process.stdout.write(tbl + '\n')
 
     for (const depl of matches) {
       for (const alias of depl.aliases) {
         process.stdout.write(
           `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
             `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
-        );
+        )
       }
     }
 
     process.stdout.write(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
+    )
 
     process.stdin
       .on('data', d => {
-        process.stdin.pause();
-        resolve(d.toString().trim());
+        process.stdin.pause()
+        resolve(d.toString().trim())
       })
-      .resume();
-  });
+      .resume()
+  })
 }
 
-async function remove({token, config: {currentTeam}}) {
-  const now = new Now({apiUrl, token, debug, currentTeam });
+async function remove({ token, config: { currentTeam } }) {
+  const now = new Now({ apiUrl, token, debug, currentTeam })
 
-  const deployments = await now.list();
+  const deployments = await now.list()
 
   const matches = deployments.filter(d => {
     return ids.some(id => {
@@ -149,44 +149,44 @@ async function remove({token, config: {currentTeam}}) {
       `Could not find any deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
-    );
-    return process.exit(1);
+    )
+    return process.exit(1)
   }
 
   const aliases = await Promise.all(
     matches.map(depl => now.listAliases(depl.uid))
-  );
+  )
   for (let i = 0; i < matches.length; i++) {
-    matches[i].aliases = aliases[i];
+    matches[i].aliases = aliases[i]
   }
 
   try {
     if (!skipConfirmation) {
-      const confirmation = (await readConfirmation(matches)).toLowerCase();
+      const confirmation = (await readConfirmation(matches)).toLowerCase()
 
       if (confirmation !== 'y' && confirmation !== 'yes') {
-        console.log('\n> Aborted');
-        process.exit(0);
+        console.log('\n> Aborted')
+        process.exit(0)
       }
     }
 
-    const start = new Date();
+    const start = new Date()
 
-    await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })));
+    await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })))
 
-    const elapsed = ms(new Date() - start);
-    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`);
+    const elapsed = ms(new Date() - start)
+    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`)
     console.log(
       table(
         matches.map(depl => {
-          return [`Deployment ${chalk.bold(depl.uid)} removed`];
+          return [`Deployment ${chalk.bold(depl.uid)} removed`]
         })
       )
-    );
+    )
   } catch (err) {
-    handleError(err);
-    process.exit(1);
+    handleError(err)
+    process.exit(1)
   }
 
-  now.close();
+  now.close()
 }
