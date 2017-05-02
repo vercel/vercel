@@ -309,11 +309,11 @@ async function sync({ token, config: { currentTeam, user } }) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
       console.log(
-        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || (user && (user.username || user.email)) || token)}`
       )
     } else {
       console.log(
-        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || (user && (user.username || user.email)) || token)}`
       )
     }
   }
