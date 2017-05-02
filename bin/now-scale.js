@@ -110,7 +110,10 @@ function guessParams() {
     return { min: scaleArg, max: optionalScaleArg }
   } else if (Number.isInteger(scaleArg) && optionalScaleArg === 'auto') {
     return { min: scaleArg, max: 'auto' }
-  } else if (!scaleArg && !optionalScaleArg) {
+  } else if (
+    (!scaleArg && !optionalScaleArg) ||
+    (scaleArg === 'auto' && !optionalScaleArg)
+  ) {
     return { min: 1, max: 'auto' }
   }
   help()
