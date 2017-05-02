@@ -1,0 +1,8 @@
+{
+  "staging": {
+    "alias": "bar.dev.com"
+  },
+  "production": {
+    "alias": "bar.com"
+  }
+}

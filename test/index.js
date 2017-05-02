@@ -196,6 +196,45 @@ test('support `now.json` files with Dockerfile', async t => {
   t.is(base(files[2]), 'now-json-docker/now.json');
 });
 
+test('support configurations', async t => {
+  const f = fixture('now-json');
+  const { nowConfig } = await readMetadata(f, { quiet: true, strict: false });
+
+  t.is(nowConfig.files.length, 1);
+});
+
+test.serial(
+  'support environment specific configurations in now.json',
+  async t => {
+    const oldEnv = process.env.NODE_ENV;
+
+    process.env.NODE_ENV = 'staging';
+
+    const f = fixture('now-json-env');
+    const { nowConfig } = await readMetadata(f, { quiet: true, strict: false });
+
+    t.is(nowConfig.alias, 'bar.dev.com');
+
+    process.env.NODE_ENV = oldEnv;
+  }
+);
+
+test.serial(
+  'support environment specific configurations in package.json',
+  async t => {
+    const oldEnv = process.env.NODE_ENV;
+
+    process.env.NODE_ENV = 'staging';
+
+    const f = fixture('package-json-env');
+    const { nowConfig } = await readMetadata(f, { quiet: true, strict: false });
+
+    t.is(nowConfig.alias, 'foo.dev.com');
+
+    process.env.NODE_ENV = oldEnv;
+  }
+);
+
 test('throws when both `now.json` and `package.json:now` exist', async t => {
   let e;
   try {
