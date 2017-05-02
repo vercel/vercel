@@ -13,9 +13,9 @@ const ms = require('ms');
 const flatten = require('arr-flatten');
 const dotenv = require('dotenv');
 const { eraseLines } = require('ansi-escapes');
+const { write: copy } = require('clipboardy');
 
 // Ours
-const copy = require('../lib/copy');
 const login = require('../lib/login');
 const cfg = require('../lib/cfg');
 const { version } = require('../lib/pkg');
@@ -225,24 +225,29 @@ Promise.resolve().then(async () => {
       console.log('> Logged in successfully. Token saved in ~/.now.json');
       process.exit(0);
     } else {
-      sync({token, config}).catch(err => {
+      sync({ token, config }).catch(err => {
         error(`Unknown error: ${err}\n${err.stack}`);
         process.exit(1);
       });
     }
   } else {
-    sync({token: argv.token || config.token, config}).catch(err => {
+    sync({ token: argv.token || config.token, config }).catch(err => {
       error(`Unknown error: ${err}\n${err.stack}`);
       process.exit(1);
     });
   }
 });
 
-async function sync({token, config: {currentTeam, user}}) {
+async function sync({ token, config: { currentTeam, user } }) {
   const start = Date.now();
   const rawPath = argv._[0];
 
-  const planPromise = new NowPlans({apiUrl, token, debug, currentTeam }).getCurrent();
+  const planPromise = new NowPlans({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  }).getCurrent();
 
   const stopDeployment = msg => {
     error(msg);
@@ -260,14 +265,9 @@ async function sync({token, config: {currentTeam, user}}) {
       const gitParts = gitPathParts(rawPath);
       Object.assign(gitRepo, gitParts);
 
-      const searchMessage = setTimeout(
-        () => {
-          console.log(
-            `> Didn't find directory. Searching on ${gitRepo.type}...`
-          );
-        },
-        500
-      );
+      const searchMessage = setTimeout(() => {
+        console.log(`> Didn't find directory. Searching on ${gitRepo.type}...`);
+      }, 500);
 
       try {
         repo = await fromGit(rawPath, debug);
@@ -309,18 +309,12 @@ async function sync({token, config: {currentTeam, user}}) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : '';
       console.log(
-        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${
-          chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )
-        }`
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
       );
     } else {
-      console.log(`> Deploying ${chalk.bold(toHumanPath(path))} under ${
-        chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )
-      }`);
+      console.log(
+        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      );
     }
   }
 
@@ -435,7 +429,7 @@ async function sync({token, config: {currentTeam, user}}) {
     quiet: true
   });
 
-  const now = new Now({apiUrl, token, debug, currentTeam });
+  const now = new Now({ apiUrl, token, debug, currentTeam });
 
   let dotenvConfig;
   let dotenvOption;
@@ -622,11 +616,7 @@ async function sync({token, config: {currentTeam, user}}) {
   if (plan.id === 'oss') {
     if (isTTY) {
       info(
-        `${
-          chalk.bold(
-            (currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`
-          )
-        } on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+        `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code will be made ${chalk.bold('public')}.`
       );
 
       let proceed;
@@ -731,7 +721,9 @@ function printLogs(host, token, currentTeam) {
         const assignments = [];
 
         for (const alias of aliasList) {
-          assignments.push(assignAlias(alias, token, host, apiUrl, debug, currentTeam));
+          assignments.push(
+            assignAlias(alias, token, host, apiUrl, debug, currentTeam)
+          );
         }
 
         await Promise.all(assignments);
