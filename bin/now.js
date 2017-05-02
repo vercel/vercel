@@ -53,7 +53,8 @@ const commands = new Set([
   'switch',
   'log',
   'logs',
-  'scale'
+  'scale',
+  'logout'
 ]);
 
 const aliases = new Map([
