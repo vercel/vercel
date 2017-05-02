@@ -117,6 +117,14 @@ function guessParams() {
   process.exit(1);
 }
 
+function isHostNameOrId(str) {
+  return (
+    /(https?:\/\/)?((?:(?=[a-z0-9-]{1,63}\.)(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\.)+[a-z]{2,63})/.test(
+      str
+    ) || str.length === 28
+  );
+}
+
 async function run({ token, config: { currentTeam } }) {
   const scale = new NowScale({ apiUrl, token, debug, currentTeam });
   const start = Date.now();
@@ -127,7 +135,7 @@ async function run({ token, config: { currentTeam } }) {
   } else if (id === 'info') {
     await info(scale);
     process.exit(0);
-  } else if (id) {
+  } else if (id && isHostNameOrId(id)) {
     // Normalize URL by removing slash from the end
     if (isURL(id) && id.slice(-1) === '/') {
       id = id.slice(0, -1);
