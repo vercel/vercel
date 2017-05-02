@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
 // Native
-const { resolve } = require('path');
+const { resolve } = require('path')
 
 // Packages
-const chalk = require('chalk');
-const minimist = require('minimist');
+const chalk = require('chalk')
+const minimist = require('minimist')
 
 // Ours
-const login = require('../lib/login');
-const cfg = require('../lib/cfg');
-const error = require('../lib/utils/output/error');
-const NowTeams = require('../lib/teams');
-const logo = require('../lib/utils/output/logo');
-const exit = require('../lib/utils/exit');
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const error = require('../lib/utils/output/error')
+const NowTeams = require('../lib/teams')
+const logo = require('../lib/utils/output/logo')
+const exit = require('../lib/utils/exit')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -25,9 +25,9 @@ const argv = minimist(process.argv.slice(2), {
     token: 't',
     switch: 'change'
   }
-});
+})
 
-const subcommand = argv._[0];
+const subcommand = argv._[0]
 
 const help = () => {
   console.log(
@@ -69,74 +69,74 @@ const help = () => {
 
       ${chalk.gray('–')} If the id is omitted, you can choose interactively
   `
-  );
-};
+  )
+}
 
 // Options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config);
+  cfg.setConfigFile(argv.config)
 }
 
 if (argv.help || !subcommand) {
-  help();
-  exit(0);
+  help()
+  exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read();
+    const config = await cfg.read()
 
-    let token;
+    let token
     try {
-      token = argv.token || config.token || (await login(apiUrl));
+      token = argv.token || config.token || (await login(apiUrl))
     } catch (err) {
-      error(`Authentication error – ${err.message}`);
-      exit(1);
+      error(`Authentication error – ${err.message}`)
+      exit(1)
     }
 
     try {
-      await run({token, config});
+      await run({ token, config })
     } catch (err) {
       if (err.userError) {
-        error(err.message);
+        error(err.message)
       } else {
-        error(`Unknown error: ${err.stack}`);
+        error(`Unknown error: ${err.stack}`)
       }
-      exit(1);
+      exit(1)
     }
-  });
+  })
 }
 
-async function run({token, config: {currentTeam}}) {
-  const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
-  const args = argv._.slice(1);
+async function run({ token, config: { currentTeam } }) {
+  const teams = new NowTeams({ apiUrl, token, debug, currentTeam })
+  const args = argv._.slice(1)
 
   switch (subcommand) {
     case 'switch':
     case 'change': {
-      await require(resolve(__dirname, 'teams', 'switch.js'))(teams, args);
-      break;
+      await require(resolve(__dirname, 'teams', 'switch.js'))(teams, args)
+      break
     }
     case 'add':
     case 'create': {
-      await require(resolve(__dirname, 'teams', 'add.js'))(teams);
-      break;
+      await require(resolve(__dirname, 'teams', 'add.js'))(teams)
+      break
     }
 
     case 'invite': {
-      await require(resolve(__dirname, 'teams', 'invite.js'))(teams, args);
-      break;
+      await require(resolve(__dirname, 'teams', 'invite.js'))(teams, args)
+      break
     }
 
     default: {
-      let code = 0;
+      let code = 0
       if (subcommand !== 'help') {
-        error('Please specify a valid subcommand: ls | add | rm | set-default');
-        code = 1;
+        error('Please specify a valid subcommand: ls | add | rm | set-default')
+        code = 1
       }
-      help();
-      exit(code);
+      help()
+      exit(code)
     }
   }
 }

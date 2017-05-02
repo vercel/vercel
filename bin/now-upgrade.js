@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 
 // Packages
-const chalk = require('chalk');
-const minimist = require('minimist');
-const ms = require('ms');
+const chalk = require('chalk')
+const minimist = require('minimist')
+const ms = require('ms')
 
 // Ours
-const login = require('../lib/login');
-const cfg = require('../lib/cfg');
-const NowPlans = require('../lib/plans');
-const indent = require('../lib/indent');
-const listInput = require('../lib/utils/input/list');
-const code = require('../lib/utils/output/code');
-const error = require('../lib/utils/output/error');
-const success = require('../lib/utils/output/success');
-const cmd = require('../lib/utils/output/cmd');
-const logo = require('../lib/utils/output/logo');
+const login = require('../lib/login')
+const cfg = require('../lib/cfg')
+const NowPlans = require('../lib/plans')
+const indent = require('../lib/indent')
+const listInput = require('../lib/utils/input/list')
+const code = require('../lib/utils/output/code')
+const error = require('../lib/utils/output/error')
+const success = require('../lib/utils/output/success')
+const cmd = require('../lib/utils/output/cmd')
+const logo = require('../lib/utils/output/logo')
 
-const {bold} = chalk
+const { bold } = chalk
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -28,7 +28,7 @@ const argv = minimist(process.argv.slice(2), {
     debug: 'd',
     token: 't'
   }
-});
+})
 
 const help = () => {
   console.log(
@@ -56,15 +56,15 @@ const help = () => {
 
       ${chalk.cyan(`$ now upgrade premium`)}
   `
-  );
-};
+  )
+}
 
 // Options
-const debug = argv.debug;
-const apiUrl = argv.url || 'https://api.zeit.co';
+const debug = argv.debug
+const apiUrl = argv.url || 'https://api.zeit.co'
 
 if (argv.config) {
-  cfg.setConfigFile(argv.config);
+  cfg.setConfigFile(argv.config)
 }
 
 const exit = code => {
@@ -72,43 +72,43 @@ const exit = code => {
   // because there's a node bug where
   // stdout writes are asynchronous
   // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100);
-};
+  setTimeout(() => process.exit(code || 0), 100)
+}
 
 if (argv.help) {
-  help();
-  exit(0);
+  help()
+  exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read();
+    const config = await cfg.read()
 
-    let token;
+    let token
     try {
-      token = argv.token || config.token || (await login(apiUrl));
+      token = argv.token || config.token || (await login(apiUrl))
     } catch (err) {
-      error(`Authentication error – ${err.message}`);
-      exit(1);
+      error(`Authentication error – ${err.message}`)
+      exit(1)
     }
 
     try {
-      await run({token, config});
+      await run({ token, config })
     } catch (err) {
       if (err.userError) {
-        error(err.message);
+        error(err.message)
       } else {
-        error(`Unknown error: ${err.stack}`);
+        error(`Unknown error: ${err.stack}`)
       }
-      exit(1);
+      exit(1)
     }
-  });
+  })
 }
 
 function buildInquirerChoices(current, until) {
   if (until) {
-    until = until.split(' ');
-    until = ' for ' + chalk.bold(until[0]) + ' more ' + until[1];
+    until = until.split(' ')
+    until = ' for ' + chalk.bold(until[0]) + ' more ' + until[1]
   } else {
-    until = '';
+    until = ''
   }
 
   const currentText = bold('(current)')
@@ -159,85 +159,81 @@ function buildInquirerChoices(current, until) {
       name: advancedName,
       value: 'advanced',
       short: `Advanced ${bold('$200')}`
-    },
-  ];
+    }
+  ]
 }
 
-async function run({token, config: {currentTeam, user}}) {
-  const args = argv._;
+async function run({ token, config: { currentTeam, user } }) {
+  const args = argv._
   if (args.length > 1) {
-    error('Invalid number of arguments');
-    return exit(1);
+    error('Invalid number of arguments')
+    return exit(1)
   }
 
-  const start = new Date();
-  const plans = new NowPlans({ apiUrl, token, debug, currentTeam });
+  const start = new Date()
+  const plans = new NowPlans({ apiUrl, token, debug, currentTeam })
 
-  let planId = args[0];
+  let planId = args[0]
 
   if (![undefined, 'oss', 'premium', 'pro', 'advanced'].includes(planId)) {
-    error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`);
-    return exit(1);
+    error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`)
+    return exit(1)
   }
 
-  const currentPlan = await plans.getCurrent();
+  const currentPlan = await plans.getCurrent()
 
   if (planId === undefined) {
-    const elapsed = ms(new Date() - start);
+    const elapsed = ms(new Date() - start)
 
-    let message = `For more info, please head to https://zeit.co`;
-    message = currentTeam ?
-      `${message}/${currentTeam.slug}/settings/plan` :
-      `${message}/account/plan`
-    message += `\n> Select a plan for ${
-      bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )
-    } ${chalk.gray(`[${elapsed}]`)}`;
-    const choices = buildInquirerChoices(currentPlan.id, currentPlan.until);
+    let message = `For more info, please head to https://zeit.co`
+    message = currentTeam
+      ? `${message}/${currentTeam.slug}/settings/plan`
+      : `${message}/account/plan`
+    message += `\n> Select a plan for ${bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+    const choices = buildInquirerChoices(currentPlan.id, currentPlan.until)
 
     planId = await listInput({
       message,
       choices,
       separator: false,
       abort: 'end'
-    });
+    })
   }
 
   if (
     planId === undefined ||
     (planId === currentPlan.id && currentPlan.until === undefined)
   ) {
-    return console.log('No changes made');
+    return console.log('No changes made')
   }
 
-  let newPlan;
+  let newPlan
 
   try {
-    newPlan = await plans.set(planId);
+    newPlan = await plans.set(planId)
   } catch (err) {
     if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
       error(
         `You have no payment methods available. Run ${cmd('now billing add')} to add one`
-      );
+      )
     } else {
-      error(`An unknow error occured. Please try again later ${err.message}`);
+      error(`An unknow error occured. Please try again later ${err.message}`)
     }
-    plans.close();
-    return;
+    plans.close()
+    return
   }
 
   if (currentPlan.until && newPlan.id !== 'oss') {
     success(
       `The cancelation has been undone. You're back on the ${chalk.bold(`${newPlan.name} plan`)}`
-    );
+    )
   } else if (newPlan.until) {
     success(
       `Your plan will be switched to ${chalk.bold(newPlan.name)} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
-    );
+    )
   } else {
-    success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`);
+    success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`)
   }
 
-  plans.close();
+  plans.close()
 }
