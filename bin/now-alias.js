@@ -302,7 +302,7 @@ async function run({ token, config: { currentTeam, user } }) {
         )
         return exit(1)
       }
-      await alias.set(String(args[0]), String(args[1]), currentTeam, user)
+      await alias.set(String(args[0]), String(args[1]), domains, currentTeam, user)
       break
     }
     default: {
