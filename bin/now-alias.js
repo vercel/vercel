@@ -307,7 +307,7 @@ async function run({ token, config: { currentTeam, user } }) {
     }
     default: {
       if (argv._.length === 0) {
-        await reAlias(token, null, null, help, exit, apiUrl, debug, alias)
+        await reAlias(token, null, null, help, exit, apiUrl, debug, alias, currentTeam, user)
         break
       }
 
@@ -320,7 +320,9 @@ async function run({ token, config: { currentTeam, user } }) {
           exit,
           apiUrl,
           debug,
-          alias
+          alias,
+          currentTeam,
+          user
         )
         break
       }

@@ -720,13 +720,13 @@ function printLogs(host, token, currentTeam) {
 
         for (const alias of aliasList) {
           assignments.push(
-            assignAlias(alias, token, host, apiUrl, debug, currentTeam)
+            assignAlias(alias, token, host, apiUrl, debug, currentTeam, user)
           )
         }
 
         await Promise.all(assignments)
       } else {
-        await reAlias(token, host, null, help, exit, apiUrl, debug)
+        await reAlias(token, host, null, help, exit, apiUrl, debug, currentTeam, user)
       }
     }
 
