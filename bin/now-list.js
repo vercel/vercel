@@ -15,6 +15,7 @@ const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
+const sort = require('../lib/sort-deployments');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -222,33 +223,4 @@ async function list({ token, config: { currentTeam, user } }) {
     })
     console.log()
   })
-}
-
-async function sort(apps) {
-  let pkg
-  try {
-    const json = await fs.readFile('package.json')
-    pkg = JSON.parse(json)
-  } catch (err) {
-    pkg = {}
-  }
-
-  return apps
-    .map(([name, deps]) => {
-      deps = deps.slice().sort((a, b) => {
-        return b.created - a.created
-      })
-      return [name, deps]
-    })
-    .sort(([nameA, depsA], [nameB, depsB]) => {
-      if (pkg.name === nameA) {
-        return -1
-      }
-
-      if (pkg.name === nameB) {
-        return 1
-      }
-
-      return depsB[0].created - depsA[0].created
-    })
 }

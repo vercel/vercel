@@ -17,6 +17,7 @@ const login = require('../lib/login')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
 const info = require('../lib/scale-info')
+const sort = require('../lib/sort-deployments');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -247,14 +248,16 @@ async function list(scale) {
     apps.set(dep.name, deps.concat(dep))
   }
 
-  const timeNow = new Date()
+  const sorted = await sort([...apps]);
+
+  const timeNow = new Date();
   const urlLength =
     deployments.reduce((acc, i) => {
       return Math.max(acc, (i.url && i.url.length) || 0)
     }, 0) + 5
 
-  for (const app of apps) {
-    const depls = argv.all ? app[1] : app[1].slice(0, 5)
+  for (const app of sorted) {
+    const depls = argv.all ? app[1] : app[1].slice(0, 5);
     console.log(
       `${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`
     )
