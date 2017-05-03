@@ -311,6 +311,11 @@ async function run({ token, config: { currentTeam, user } }) {
         break
       }
 
+      if (argv.rules) {
+        await updatePathAlias(alias, argv._[0], argv.rules, domains)
+        break;
+      }
+
       if (argv._.length === 1) {
         await reAlias(
           token,
@@ -325,10 +330,6 @@ async function run({ token, config: { currentTeam, user } }) {
           user
         )
         break
-      }
-
-      if (argv.rules) {
-        await updatePathAlias(alias, argv._[0], argv.rules, domains)
       } else if (argv._.length === 2) {
         await alias.set(
           String(argv._[0]),
