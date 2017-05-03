@@ -26,6 +26,7 @@ const promptOptions = require('../lib/utils/prompt-options')
 const { handleError, error } = require('../lib/error')
 const { fromGit, isRepoPath, gitPathParts } = require('../lib/git')
 const readMetaData = require('../lib/read-metadata')
+const { get: getUser } = require('../lib/user')
 const checkPath = require('../lib/utils/check-path')
 const { reAlias, assignAlias } = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
@@ -306,6 +307,12 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   if (!quiet) {
+    if (!user && token) {
+      if (debug) {
+        console.log(`> [debug] Fetching user (from --token)`)
+      }
+      user = await getUser({ token })
+    }
     const deployTarget = `${chalk.bold((currentTeam && currentTeam.slug) || (user && (user.username || user.email)) || token)}`
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
