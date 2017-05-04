@@ -5,6 +5,9 @@ const chalk = require('chalk')
 const minimist = require('minimist')
 const table = require('text-table')
 const ms = require('ms')
+const printf = require('printf')
+require('epipebomb')()
+const supportsColor = require('supports-color')
 
 // Ours
 const strlen = require('../lib/strlen')
@@ -32,6 +35,9 @@ const argv = minimist(process.argv.slice(2), {
 })
 
 const subcommand = argv._[0]
+
+const grayWidth = 10
+const underlineWidth = 11
 
 // Options
 const help = () => {
@@ -185,54 +191,66 @@ async function run({ token, config: { currentTeam, user } }) {
       const aliases = await alias.ls()
       aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
-
-      const header = [
-        ['', 'id', 'source', 'url', 'created'].map(s => chalk.dim(s))
-      ]
-      const text = list.length === 0
-        ? null
-        : table(
-            header.concat(
-              aliases.map(_alias => {
-                const _url = chalk.underline(`https://${_alias.alias}`)
-                const target = _alias.deploymentId
-                let _sourceUrl
-                if (urls.get(target)) {
-                  _sourceUrl = chalk.underline(`https://${urls.get(target)}`)
-                } else if (_alias.rules) {
-                  _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
-                } else {
-                  _sourceUrl = chalk.gray('<null>')
-                }
-
-                const time = chalk.gray(
-                  ms(current - new Date(_alias.created)) + ' ago'
-                )
-                return [
-                  '',
-                  // We default to `''` because some early aliases didn't
-                  // have an uid associated
-                  _alias.uid === null ? '' : _alias.uid,
-                  _sourceUrl,
-                  _url,
-                  time
-                ]
-              })
-            ),
-            {
-              align: ['l', 'r', 'l', 'l'],
-              hsep: ' '.repeat(2),
-              stringLength: strlen
-            }
+      const sourceUrlLength =
+        aliases.reduce((acc, i) => {
+          return Math.max(
+            acc,
+            (i.deploymentId && urls.get(i.deploymentId).length) || 0
           )
+        }, 0) + 5
+      const aliasLength =
+        aliases.reduce((acc, i) => {
+          return Math.max(acc, (i.alias && i.alias.length) || 0)
+        }, 0) + 5
+      const urlSpecHeader = `%-${sourceUrlLength}s`
+      const aliasSpecHeader = `%-${aliasLength}s`
 
       const elapsed_ = ms(new Date() - start_)
       console.log(`> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+      console.log()
 
-      if (text) {
-        console.log('\n' + text + '\n')
-      }
+      console.log(
+        printf(
+          `  ${chalk.dim(urlSpecHeader + ' ' + aliasSpecHeader + ' %6s')}`,
+          'source',
+          'url',
+          'age'
+        )
+      )
 
+      let text = ''
+      aliases.forEach(_alias => {
+        let urlSpec = sourceUrlLength + (supportsColor ? 7 : 0)
+        let aliasSpec = aliasLength + (supportsColor ? 7 : 0)
+        const _url = chalk.underline(`https://${_alias.alias}`)
+        const target = _alias.deploymentId
+        let _sourceUrl
+        if (urls.get(target)) {
+          _sourceUrl = chalk.underline(`https://${urls.get(target)}`)
+          if (supportsColor) {
+            urlSpec += grayWidth
+            aliasSpec += underlineWidth
+          }
+        } else if (_alias.rules) {
+          _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
+          if (supportsColor) {
+            urlSpec += underlineWidth
+            aliasSpec += underlineWidth
+          }
+        } else {
+          _sourceUrl = chalk.gray('<null>')
+        }
+
+        const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago')
+        text += printf(
+          `  %-${urlSpec}s %-${aliasSpec}s %6s\n`,
+          _sourceUrl,
+          _url,
+          time
+        )
+      })
+
+      console.log(text)
       break
     }
     case 'rm':
@@ -311,7 +329,6 @@ async function run({ token, config: { currentTeam, user } }) {
           currentTeam,
           user
         )
-        break
       }
 
       if (argv.rules) {
