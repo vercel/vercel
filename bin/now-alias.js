@@ -197,31 +197,44 @@ async function run({ token, config: { currentTeam, user } }) {
             acc,
             (i.deploymentId && urls.get(i.deploymentId).length) || 0
           )
-        }, 0) + 5
+        }, 0) + 9
       const aliasLength =
         aliases.reduce((acc, i) => {
           return Math.max(acc, (i.alias && i.alias.length) || 0)
-        }, 0) + 5
-      const urlSpecHeader = `%-${sourceUrlLength}s`
-      const aliasSpecHeader = `%-${aliasLength}s`
-
+        }, 0) + 8
       const elapsed_ = ms(new Date() - start_)
       console.log(`> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
       console.log()
 
-      console.log(
-        printf(
-          `  ${chalk.dim(urlSpecHeader + ' ' + aliasSpecHeader + ' %6s')}`,
-          'source',
-          'url',
-          'age'
+      if (supportsColor) {
+        const urlSpecHeader = `%-${sourceUrlLength + 1}s`
+        const aliasSpecHeader = `%-${aliasLength + 1}s`
+        console.log(
+          printf(
+            `  ${chalk.gray(urlSpecHeader + ' ' + aliasSpecHeader + '  %5s')}`,
+            'source',
+            'url',
+            'age'
+          )
         )
-      )
+      } else {
+        const urlSpecHeader = `%-${sourceUrlLength}s`
+        const aliasSpecHeader = `%-${aliasLength}s`
+        console.log(
+          printf(
+            `  ${urlSpecHeader} ${aliasSpecHeader} %5s`,
+            'source',
+            'url',
+            'age'
+          )
+        )
+      }
 
       let text = ''
       aliases.forEach(_alias => {
-        let urlSpec = sourceUrlLength + (supportsColor ? 7 : 0)
-        let aliasSpec = aliasLength + (supportsColor ? 7 : 0)
+        let urlSpec = sourceUrlLength
+        let aliasSpec = aliasLength
+        let ageSpec = 5
         const _url = chalk.underline(`https://${_alias.alias}`)
         const target = _alias.deploymentId
         let _sourceUrl
@@ -230,20 +243,22 @@ async function run({ token, config: { currentTeam, user } }) {
           if (supportsColor) {
             urlSpec += grayWidth
             aliasSpec += underlineWidth
+            ageSpec += grayWidth
           }
         } else if (_alias.rules) {
           _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
           if (supportsColor) {
             urlSpec += underlineWidth
             aliasSpec += underlineWidth
+            ageSpec += grayWidth
           }
         } else {
           _sourceUrl = chalk.gray('<null>')
         }
 
-        const time = chalk.gray(ms(current - new Date(_alias.created)) + ' ago')
+        const time = chalk.gray(ms(current - new Date(_alias.created)))
         text += printf(
-          `  %-${urlSpec}s %-${aliasSpec}s %6s\n`,
+          `  %-${urlSpec}s %-${aliasSpec}s %${ageSpec}s\n`,
           _sourceUrl,
           _url,
           time
