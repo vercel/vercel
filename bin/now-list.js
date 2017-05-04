@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 // Packages
-const fs = require('fs-promise')
 const minimist = require('minimist')
 const chalk = require('chalk')
 const ms = require('ms')
@@ -15,6 +14,7 @@ const login = require('../lib/login')
 const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
+const sort = require('../lib/sort-deployments')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -28,8 +28,7 @@ const argv = minimist(process.argv.slice(2), {
 })
 
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now list`)} [app]
 
   ${chalk.dim('Options:')}
@@ -50,8 +49,7 @@ const help = () => {
     ${chalk.cyan('$ now ls my-app')}
 
   ${chalk.dim('Alias:')} ls
-`
-  )
+`)
 }
 
 if (argv.help) {
@@ -146,9 +144,7 @@ async function list({ token, config: { currentTeam, user } }) {
       return Math.max(acc, (i.url && i.url.length) || 0)
     }, 0) + 5
   const timeNow = new Date()
-  console.log(
-    `> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
-  )
+  console.log(`> ${deployments.length} deployment${deployments.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.grey('[' + ms(timeNow - start) + ']')}`)
 
   let shouldShowAllInfo = false
   for (const app of apps) {
@@ -162,16 +158,12 @@ async function list({ token, config: { currentTeam, user } }) {
     }
   }
   if (!argv.all && shouldShowAllInfo) {
-    console.log(
-      `> To expand the list and see instances run ${chalk.cyan('`now ls --all [app]`')}`
-    )
+    console.log(`> To expand the list and see instances run ${chalk.cyan('`now ls --all [app]`')}`)
   }
   console.log()
   sorted.forEach(([name, deps]) => {
     const listedDeployments = argv.all ? deps : deps.slice(0, 5)
-    console.log(
-      `${chalk.bold(name)} ${chalk.gray('(' + listedDeployments.length + ' of ' + deps.length + ' total)')}`
-    )
+    console.log(`${chalk.bold(name)} ${chalk.gray('(' + listedDeployments.length + ' of ' + deps.length + ' total)')}`)
     const urlSpec = `%-${urlLength}s`
     console.log(
       printf(
@@ -222,33 +214,4 @@ async function list({ token, config: { currentTeam, user } }) {
     })
     console.log()
   })
-}
-
-async function sort(apps) {
-  let pkg
-  try {
-    const json = await fs.readFile('package.json')
-    pkg = JSON.parse(json)
-  } catch (err) {
-    pkg = {}
-  }
-
-  return apps
-    .map(([name, deps]) => {
-      deps = deps.slice().sort((a, b) => {
-        return b.created - a.created
-      })
-      return [name, deps]
-    })
-    .sort(([nameA, depsA], [nameB, depsB]) => {
-      if (pkg.name === nameA) {
-        return -1
-      }
-
-      if (pkg.name === nameB) {
-        return 1
-      }
-
-      return depsB[0].created - depsA[0].created
-    })
 }
