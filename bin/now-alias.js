@@ -238,19 +238,19 @@ async function run({ token, config: { currentTeam, user } }) {
         const _url = chalk.underline(`https://${_alias.alias}`)
         const target = _alias.deploymentId
         let _sourceUrl
+        if (supportsColor) {
+          aliasSpec += underlineWidth
+          ageSpec += grayWidth
+        }
         if (urls.get(target)) {
           _sourceUrl = chalk.underline(`https://${urls.get(target)}`)
           if (supportsColor) {
             urlSpec += grayWidth
-            aliasSpec += underlineWidth
-            ageSpec += grayWidth
           }
         } else if (_alias.rules) {
           _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
           if (supportsColor) {
             urlSpec += underlineWidth
-            aliasSpec += underlineWidth
-            ageSpec += grayWidth
           }
         } else {
           _sourceUrl = chalk.gray('<null>')
