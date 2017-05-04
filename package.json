@@ -67,7 +67,7 @@
     "credit-card": "3.0.1",
     "cross-spawn": "5.1.0",
     "dateformat": "2.0.0",
-    "docker-file-parser": "1.0.1",
+    "docker-file-parser": "1.0.2",
     "dotenv": "4.0.0",
     "download": "6.0.0",
     "email-prompt": "0.2.0",
