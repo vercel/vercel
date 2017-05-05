@@ -338,18 +338,17 @@ async function sync({ token, config: { currentTeam, user } }) {
     deploymentType = 'static'
   }
 
-  let isStatic = false
+  let meta
   await retry(
     async bail => {
       try {
-        const meta = await readMetaData(path, {
+        meta = await readMetaData(path, {
           deploymentType,
           deploymentName,
           quiet: true
         })
 
         nowConfig = meta.nowConfig
-        isStatic = meta.isStatic
 
         if (!deploymentType) {
           deploymentType = meta.type
@@ -521,18 +520,21 @@ async function sync({ token, config: { currentTeam, user } }) {
   })
 
   try {
-    await now.create(path, {
-      env,
-      deploymentType,
-      deploymentName,
-      followSymlinks,
-      forceNew,
-      forceSync,
-      forwardNpm: alwaysForwardNpm || forwardNpm,
-      quiet,
-      wantsPublic,
-      isStatic
-    })
+    await now.create(
+      path,
+      Object.assign(
+        {
+          env,
+          followSymlinks,
+          forceNew,
+          forceSync,
+          forwardNpm: alwaysForwardNpm || forwardNpm,
+          quiet,
+          wantsPublic
+        },
+        meta
+      )
+    )
   } catch (err) {
     if (debug) {
       console.log(`> [debug] error: ${err}\n${err.stack}`)
