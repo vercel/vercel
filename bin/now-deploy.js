@@ -98,6 +98,8 @@ const help = () => {
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
       teams                [team]      Manages your teams
       switch                           Switches between teams and your account
+      login                            Login into your account or creates a new one
+      logout                           Logout from your account
 
   ${chalk.dim('Options:')}
 

@@ -103,6 +103,8 @@ if (index > -1) {
 // rather show the general help and be useful
 if (cmd === 'help') {
   cmd = 'deploy'
+} else if (cmd === defaultCommand && args[0] === 'login') {
+  args[0] = '--login'
 }
 
 const bin = resolve(__dirname, 'now-' + cmd + '.js')
