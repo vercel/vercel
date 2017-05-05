@@ -12,6 +12,7 @@ const minimist = require('minimist')
 const ms = require('ms')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
+const retry = require('async-retry')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 
@@ -167,6 +168,7 @@ const gitRepo = {}
 
 // Options
 let forceNew = argv.force
+let deploymentName = argv.name
 const debug = argv.debug
 const clipboard = !argv['no-clipboard']
 const forwardNpm = argv['forward-npm']
@@ -174,7 +176,6 @@ const forceSync = argv.forceSync
 const shouldLogin = argv.login
 const followSymlinks = !argv.links
 const wantsPublic = argv.public
-const deploymentName = argv.name || false
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
@@ -191,51 +192,53 @@ if (Array.isArray(autoAliases)) {
   console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n')
 }
 
-// Create a new deployment if user changed
-// the name or made _src public.
-// This should just work fine because it doesn't
-// force a new sync, it just forces a new deployment.
+const stopDeployment = msg => {
+  error(msg)
+  process.exit(1)
+}
+
+// Create a new deployment if user changed the name or made `_src` public.
+// This works fine because it doesn't force a new sync,
+// it just forces a new deployment.
 if (deploymentName || wantsPublic) {
   forceNew = true
 }
 
 let alwaysForwardNpm
 
-Promise.resolve().then(async () => {
+async function main() {
   let config = await cfg.read({ token: argv.token })
   alwaysForwardNpm = config.forwardNpm
 
   if (argv.h || argv.help) {
     help()
-    exit(0)
+    return exit(0)
   } else if (argv.v || argv.version) {
     console.log(version)
-    process.exit(0)
-  } else if (!config.token || shouldLogin) {
-    let token
+    return exit(0)
+  }
+
+  let token = argv.token || config.token
+  if (!token || shouldLogin) {
     try {
       token = await login(apiUrl)
       config = await cfg.read()
     } catch (err) {
-      error(`Authentication error – ${err.message}`)
-      process.exit(1)
+      return stopDeployment(`Authentication error – ${err.message}`)
     }
     if (shouldLogin) {
       console.log('> Logged in successfully. Token saved in ~/.now.json')
-      process.exit(0)
-    } else {
-      sync({ token, config }).catch(err => {
-        error(`Unknown error: ${err}\n${err.stack}`)
-        process.exit(1)
-      })
+      return exit(0)
     }
-  } else {
-    sync({ token: argv.token || config.token, config }).catch(err => {
-      error(`Unknown error: ${err}\n${err.stack}`)
-      process.exit(1)
-    })
   }
-})
+
+  // If we got to here then `token` should be set
+  try {
+    await sync({ token, config })
+  } catch (err) {
+    return stopDeployment(`Unknown error: ${err}\n${err.stack}`)
+  }
+}
 
 async function sync({ token, config: { currentTeam, user } }) {
   const start = Date.now()
@@ -248,19 +251,23 @@ async function sync({ token, config: { currentTeam, user } }) {
     currentTeam
   }).getCurrent()
 
-  const stopDeployment = msg => {
-    error(msg)
-    process.exit(1)
-  }
-
-  const isValidRepo = isRepoPath(rawPath)
-
   try {
     await fs.stat(path)
   } catch (err) {
     let repo
+    let isValidRepo = false
 
-    if (isValidRepo && isValidRepo !== 'no-valid-url') {
+    try {
+      isValidRepo = isRepoPath(rawPath)
+    } catch (err) {
+      if (err.code === 'INVALID_URL') {
+        stopDeployment(err)
+      } else {
+        throw err
+      }
+    }
+
+    if (isValidRepo) {
       const gitParts = gitPathParts(rawPath)
       Object.assign(gitRepo, gitParts)
 
@@ -282,8 +289,6 @@ async function sync({ token, config: { currentTeam, user } }) {
       // Set global variable for deleting tmp dir later
       // once the deployment has finished
       Object.assign(gitRepo, repo)
-    } else if (isValidRepo === 'no-valid-url') {
-      stopDeployment(`This URL is neither a valid repository from GitHub, nor from GitLab.`)
     } else if (isValidRepo) {
       const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
       stopDeployment(`There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`)
@@ -309,12 +314,10 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
   }
 
+  let nowConfig
   let deploymentType
 
-  let hasPackage
-  let hasDockerfile
-  let isStatic
-
+  // CLI deployment type explicit overrides
   if (argv.docker) {
     if (debug) {
       console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
@@ -322,101 +325,89 @@ async function sync({ token, config: { currentTeam, user } }) {
 
     deploymentType = 'docker'
   } else if (argv.npm) {
+    if (debug) {
+      console.log(`> [debug] Forcing \`deploymentType\` = \`npm\``)
+    }
+
     deploymentType = 'npm'
   } else if (argv.static) {
     if (debug) {
-      console.log(`> [debug] Forcing static deployment`)
+      console.log(`> [debug] Forcing \`deploymentType\` = \`static\``)
     }
 
-    deploymentType = 'npm'
-    isStatic = true
-  } else {
-    try {
-      await fs.stat(resolve(path, 'package.json'))
-    } catch (err) {
-      hasPackage = true
-    }
-
-    ;[hasPackage, hasDockerfile] = await Promise.all([
-      await (async () => {
-        try {
-          await fs.stat(resolve(path, 'package.json'))
-        } catch (err) {
-          return false
-        }
-        return true
-      })(),
-      await (async () => {
-        try {
-          await fs.stat(resolve(path, 'Dockerfile'))
-        } catch (err) {
-          return false
-        }
-        return true
-      })()
-    ])
-
-    if (hasPackage && hasDockerfile) {
-      if (debug) {
-        console.log('[debug] multiple manifests found, disambiguating')
-      }
-
-      if (isTTY) {
-        try {
-          console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`)
-          deploymentType = await promptOptions([
-            [
-              'npm',
-              `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `
-            ],
-            [
-              'docker',
-              `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `
-            ]
-          ])
-        } catch (err) {
-          error(err.message)
-          process.exit(1)
-        }
-      } else {
-        error(
-          'Ambiguous deployment (`package.json` and `Dockerfile` found). ' +
-            'Please supply `--npm` or `--docker` to disambiguate.'
-        )
-      }
-    } else if (hasPackage) {
-      if (debug) {
-        console.log(
-          '> [debug] `package.json` found, assuming `deploymentType` = `npm`'
-        )
-      }
-
-      deploymentType = 'npm'
-    } else if (hasDockerfile) {
-      if (debug) {
-        console.log(
-          '> [debug] `Dockerfile` found, assuming `deploymentType` = `docker`'
-        )
-      }
-
-      deploymentType = 'docker'
-    } else {
-      if (debug) {
-        console.log(
-          '> [debug] No manifest files found, assuming static deployment'
-        )
-      }
-
-      isStatic = true
-    }
+    deploymentType = 'static'
   }
 
-  const { nowConfig } = await readMetaData(path, {
-    deploymentType,
-    deploymentName,
-    isStatic,
-    quiet: true
-  })
+  let meta
+  await retry(
+    async bail => {
+      try {
+        meta = await readMetaData(path, {
+          deploymentType,
+          deploymentName,
+          quiet: true
+        })
+
+        nowConfig = meta.nowConfig
+
+        if (!deploymentType) {
+          deploymentType = meta.type
+
+          if (debug) {
+            console.log(`> [debug] Detected \`deploymentType\` = \`${deploymentType}\``)
+          }
+        }
+
+        if (!deploymentName) {
+          deploymentName = meta.name
+
+          if (debug) {
+            console.log(`> [debug] Detected \`deploymentName\` = "${deploymentName}"`)
+          }
+        }
+      } catch (err) {
+        if (err.code === 'MULTIPLE_MANIFESTS') {
+          if (debug) {
+            console.log('> [debug] Multiple manifests found, disambiguating')
+          }
+
+          if (isTTY) {
+            console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`)
+            try {
+              deploymentType = await promptOptions([
+                [
+                  'npm',
+                  `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `
+                ],
+                [
+                  'docker',
+                  `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `
+                ]
+              ])
+            } catch (err) {
+              console.error(err)
+              return bail()
+            }
+
+            if (debug) {
+              console.log(`> [debug] Selected \`deploymentType\` = "${deploymentType}"`)
+            }
+
+            // Invoke async-retry and try again with the explicit deployment type
+            throw err
+          }
+        }
+
+        return stopDeployment(err)
+      }
+    },
+    {
+      retries: 1,
+      minTimeout: 0,
+      maxTimeout: 0,
+      onRetry: console.log
+    }
+  )
 
   const now = new Now({ apiUrl, token, debug, currentTeam })
 
@@ -529,18 +520,21 @@ async function sync({ token, config: { currentTeam, user } }) {
   })
 
   try {
-    await now.create(path, {
-      env,
-      deploymentType,
-      deploymentName,
-      followSymlinks,
-      forceNew,
-      forceSync,
-      forwardNpm: alwaysForwardNpm || forwardNpm,
-      quiet,
-      wantsPublic,
-      isStatic
-    })
+    await now.create(
+      path,
+      Object.assign(
+        {
+          env,
+          followSymlinks,
+          forceNew,
+          forceSync,
+          forwardNpm: alwaysForwardNpm || forwardNpm,
+          quiet,
+          wantsPublic
+        },
+        meta
+      )
+    )
   } catch (err) {
     if (debug) {
       console.log(`> [debug] error: ${err}\n${err.stack}`)
@@ -725,3 +719,5 @@ function printLogs(host, token, currentTeam, user) {
     process.exit(0)
   })
 }
+
+main()
