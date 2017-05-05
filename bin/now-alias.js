@@ -344,6 +344,7 @@ async function run({ token, config: { currentTeam, user } }) {
           currentTeam,
           user
         )
+        break
       }
 
       if (argv.rules) {
