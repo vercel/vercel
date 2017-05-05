@@ -34,7 +34,7 @@ function gracefulExit() {
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/')
 const teamNamePrefix = rightPad('Team Name', 14)
 
-module.exports = async function(teams) {
+module.exports = async function({teams, token}) {
   let slug
   let team
   let elapsed
@@ -118,7 +118,10 @@ module.exports = async function(teams) {
   await cfg.merge({ currentTeam: team })
   stopSpinner()
 
-  await require('./invite')(teams, [], {
+  await require('./invite')({
+    teams,
+    args: [],
+    token,
     introMsg: 'Invite your team mates! When done, press enter on an empty field',
     noopMsg: `You can invite team mates later by running ${cmd('now teams invite')}`
   })

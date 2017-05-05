@@ -60,12 +60,13 @@ function emailAutoComplete(value, teamSlug) {
   return false
 }
 
-module.exports = async function(
+module.exports = async function({
   teams,
   args,
-  { introMsg, noopMsg = 'No changes made' } = {}
-) {
-  const { user, currentTeam } = await cfg.read()
+  token,
+  introMsg, noopMsg = 'No changes made'
+} = {}) {
+  const { user, currentTeam } = await cfg.read({token})
 
   domains.push(user.email.split('@')[1])
 

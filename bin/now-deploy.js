@@ -200,7 +200,7 @@ if (deploymentName || wantsPublic) {
 let alwaysForwardNpm
 
 Promise.resolve().then(async () => {
-  let config = await cfg.read()
+  let config = await cfg.read({token: argv.token})
   alwaysForwardNpm = config.forwardNpm
 
   if (argv.h || argv.help) {
@@ -209,7 +209,7 @@ Promise.resolve().then(async () => {
   } else if (argv.v || argv.version) {
     console.log(version)
     process.exit(0)
-  } else if (!(argv.token || config.token) || shouldLogin) {
+  } else if (!config.token || shouldLogin) {
     let token
     try {
       token = await login(apiUrl)
