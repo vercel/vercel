@@ -6,12 +6,12 @@ const test = require('ava')
 const { asc: alpha } = require('alpha-sort')
 
 // Ours
-const hash = require('../build/lib/hash')
-const readMetadata = require('../build/lib/read-metadata')
+const hash = require('../lib/hash')
+const readMetadata = require('../lib/read-metadata')
 const {
   npm: getNpmFiles_,
   docker: getDockerFiles
-} = require('../build/lib/get-files')
+} = require('../lib/get-files')
 
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
@@ -211,4 +211,30 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
   t.pass(
     /please ensure there's a single source of configuration/i.test(e.message)
   )
+})
+
+test('throws when `package.json` and `Dockerfile` exist', async t => {
+  let e
+  try {
+    await readMetadata(fixture('multiple-manifests-throws'), {
+      quiet: true,
+      strict: false
+    })
+  } catch (err) {
+    e = err
+  }
+  t.is(e.userError, true)
+  t.is(e.code, 'MULTIPLE_MANIFESTS')
+  t.pass(/ambiguous deployment/i.test(e.message))
+})
+
+test('support `package.json:now.type` to bypass multiple manifests error', async t => {
+  const f = fixture('type-in-package-now-with-dockerfile')
+  const { type, nowConfig, hasNowJson } = await readMetadata(f, {
+    quiet: true,
+    strict: false
+  })
+  t.is(type, 'npm')
+  t.is(nowConfig.type, 'npm')
+  t.is(hasNowJson, false)
 })
