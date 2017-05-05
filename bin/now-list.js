@@ -68,7 +68,7 @@ if (argv.config) {
 }
 
 Promise.resolve().then(async () => {
-  const config = await cfg.read({token: argv.token})
+  const config = await cfg.read({ token: argv.token })
 
   let token
   try {

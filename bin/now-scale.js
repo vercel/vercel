@@ -17,7 +17,7 @@ const login = require('../lib/login')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
 const info = require('../lib/scale-info')
-const sort = require('../lib/sort-deployments');
+const sort = require('../lib/sort-deployments')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -31,8 +31,7 @@ const optionalScaleArg = argv._[2]
 
 // Options
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now scale`)} ls
   ${chalk.bold(`${logo} now scale`)} <url>
   ${chalk.bold(`${logo} now scale`)} <url> <min> [max]
@@ -64,8 +63,7 @@ const help = () => {
   ${chalk.gray('–')} Create an deployment that is always active and never "sleeps":
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
-  `
-  )
+  `)
 }
 
 // Options
@@ -81,7 +79,7 @@ if (argv.help) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {
@@ -197,9 +195,7 @@ async function run({ token, config: { currentTeam } }) {
   }
 
   if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
-    console.log(
-      `> Deployment is currently in 0 replicas, preparing deployment for scaling...`
-    )
+    console.log(`> Deployment is currently in 0 replicas, preparing deployment for scaling...`)
     if (match.scale.max < 1) {
       await scale.setScale(match.uid, { min: 0, max: 1 })
     }
@@ -217,9 +213,7 @@ async function run({ token, config: { currentTeam } }) {
   const log = console.log
   log(`> ${chalk.cyan('Success!')} Configured scaling rules [${elapsed}]`)
   log()
-  log(
-    `${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
-  )
+  log(`${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`)
   log(printf('%6s %s', 'min', chalk.bold(newMin)))
   log(printf('%6s %s', 'max', chalk.bold(newMax)))
   log(printf('%6s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔')))
@@ -248,19 +242,17 @@ async function list(scale) {
     apps.set(dep.name, deps.concat(dep))
   }
 
-  const sorted = await sort([...apps]);
+  const sorted = await sort([...apps])
 
-  const timeNow = new Date();
+  const timeNow = new Date()
   const urlLength =
     deployments.reduce((acc, i) => {
       return Math.max(acc, (i.url && i.url.length) || 0)
     }, 0) + 5
 
   for (const app of sorted) {
-    const depls = argv.all ? app[1] : app[1].slice(0, 5);
-    console.log(
-      `${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`
-    )
+    const depls = argv.all ? app[1] : app[1].slice(0, 5)
+    console.log(`${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`)
     console.log()
     const urlSpec = `%-${urlLength}s`
     console.log(

@@ -137,13 +137,11 @@ module.exports = function({ creditCards, currentTeam, user }) {
             }
             brand = chalk.cyan(`[${brand}]`)
             const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3]
-            process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${masked} ${brand}\n`
-            )
+            process.stdout
+              .write(`${chalk.cyan(tick)} ${piece.label}${masked} ${brand}\n`)
           } else if (key === 'ccv') {
-            process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${'*'.repeat(result.length)}\n`
-            )
+            process.stdout
+              .write(`${chalk.cyan(tick)} ${piece.label}${'*'.repeat(result.length)}\n`)
           } else if (key === 'expDate') {
             let text = result.split(' / ')
             text = text[0] + chalk.gray(' / ') + text[1]
@@ -161,13 +159,11 @@ module.exports = function({ creditCards, currentTeam, user }) {
               state.city.initialValue = addressInfo.city
             }
             stopSpinner()
-            process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${result}\n`
-            )
+            process.stdout
+              .write(`${chalk.cyan(tick)} ${piece.label}${result}\n`)
           } else {
-            process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${result}\n`
-            )
+            process.stdout
+              .write(`${chalk.cyan(tick)} ${piece.label}${result}\n`)
           }
         } catch (err) {
           if (err.message === 'USER_ABORT') {
@@ -194,9 +190,7 @@ module.exports = function({ creditCards, currentTeam, user }) {
         address1: state.address1.value
       })
       stopSpinner()
-      success(
-        `${state.cardNumber.brand} ending in ${res.last4} was added to ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
-      )
+      success(`${state.cardNumber.brand} ending in ${res.last4} was added to ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
     } catch (err) {
       stopSpinner()
       const linesToClear = state.error ? 13 : 12

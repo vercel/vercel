@@ -36,8 +36,7 @@ const subcommand = argv._[0]
 
 // Options
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now domains`)} <ls | add | rm | buy> <domain>
 
   ${chalk.dim('Options:')}
@@ -102,8 +101,7 @@ const help = () => {
       ${chalk.cyan('$ now domain add -e my-app.com')}
 
       and follow the verification instructions if requested. Finally, rerun the same command after completing the verification step.
-`
-  )
+`)
 }
 
 // Options
@@ -119,7 +117,7 @@ if (argv.help || !subcommand) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {
@@ -183,9 +181,7 @@ async function run({ token, config: { currentTeam, user } }) {
           )
 
       const elapsed_ = ms(new Date() - start_)
-      console.log(
-        `> ${domains.length} domain${domains.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed_}]`)}`
-      )
+      console.log(`> ${domains.length} domain${domains.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed_}]`)}`)
 
       if (out) {
         console.log('\n' + out + '\n')
@@ -232,9 +228,7 @@ async function run({ token, config: { currentTeam, user } }) {
         const start = new Date()
         await domain.rm(_domain.name)
         const elapsed = ms(new Date() - start)
-        console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(_domain.uid)} removed [${elapsed}]`
-        )
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(_domain.uid)} removed [${elapsed}]`)
       } catch (err) {
         error(err)
         exit(1)
@@ -257,17 +251,11 @@ async function run({ token, config: { currentTeam, user } }) {
       )
       const elapsed = ms(new Date() - start)
       if (created) {
-        console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`
-        )
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} added [${elapsed}]`)
       } else if (verified) {
-        console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} verified [${elapsed}]`
-        )
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} verified [${elapsed}]`)
       } else if (code === 'not_modified') {
-        console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} already exists [${elapsed}]`
-        )
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(name))} ${chalk.dim(`(${uid})`)} already exists [${elapsed}]`)
       } else {
         console.log(
           '> Verification required: Please rerun this command after some time'
@@ -312,9 +300,8 @@ async function readConfirmation(domain, _domain) {
       )
     }
 
-    process.stdout.write(
-      `  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    )
+    process.stdout
+      .write(`  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin
       .on('data', d => {

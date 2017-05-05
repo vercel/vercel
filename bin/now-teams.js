@@ -30,8 +30,7 @@ const argv = minimist(process.argv.slice(2), {
 const subcommand = argv._[0]
 
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now teams`)} <add | ls | rm | invite>
 
   ${chalk.dim('Options:')}
@@ -68,8 +67,7 @@ const help = () => {
       ${chalk.cyan(`$ now teams rm <id>`)}
 
       ${chalk.gray('–')} If the id is omitted, you can choose interactively
-  `
-  )
+  `)
 }
 
 // Options
@@ -85,7 +83,7 @@ if (argv.help || !subcommand) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {
@@ -115,17 +113,25 @@ async function run({ token, config: { currentTeam } }) {
   switch (subcommand) {
     case 'switch':
     case 'change': {
-      await require(resolve(__dirname, 'teams', 'switch.js'))({teams, args, token})
+      await require(resolve(__dirname, 'teams', 'switch.js'))({
+        teams,
+        args,
+        token
+      })
       break
     }
     case 'add':
     case 'create': {
-      await require(resolve(__dirname, 'teams', 'add.js'))({teams, token})
+      await require(resolve(__dirname, 'teams', 'add.js'))({ teams, token })
       break
     }
 
     case 'invite': {
-      await require(resolve(__dirname, 'teams', 'invite.js'))({teams, args, token})
+      await require(resolve(__dirname, 'teams', 'invite.js'))({
+        teams,
+        args,
+        token
+      })
       break
     }
 

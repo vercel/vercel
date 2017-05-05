@@ -30,8 +30,7 @@ const ids = argv._
 
 // Options
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now remove`)} deploymentId|deploymentName [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
@@ -57,8 +56,7 @@ const help = () => {
     ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
 
   ${chalk.dim('Alias:')} rm
-`
-  )
+`)
 }
 
 if (argv.help || ids.length === 0) {
@@ -77,7 +75,7 @@ if (argv.config) {
 }
 
 Promise.resolve().then(async () => {
-  const config = await cfg.read({token: argv.token})
+  const config = await cfg.read({ token: argv.token })
 
   let token
   try {
@@ -97,9 +95,8 @@ Promise.resolve().then(async () => {
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
-    process.stdout.write(
-      `> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`
-    )
+    process.stdout
+      .write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`)
 
     const tbl = table(
       matches.map(depl => {
@@ -120,9 +117,8 @@ function readConfirmation(matches) {
       }
     }
 
-    process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    )
+    process.stdout
+      .write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin
       .on('data', d => {
@@ -145,11 +141,9 @@ async function remove({ token, config: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    error(
-      `Could not find any deployments matching ${ids
-        .map(id => chalk.bold(`"${id}"`))
-        .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
-    )
+    error(`Could not find any deployments matching ${ids
+      .map(id => chalk.bold(`"${id}"`))
+      .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
     return process.exit(1)
   }
 

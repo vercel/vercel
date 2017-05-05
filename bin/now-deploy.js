@@ -202,7 +202,7 @@ if (deploymentName || wantsPublic) {
 let alwaysForwardNpm
 
 Promise.resolve().then(async () => {
-  let config = await cfg.read({token: argv.token})
+  let config = await cfg.read({ token: argv.token })
   alwaysForwardNpm = config.forwardNpm
 
   if (argv.h || argv.help) {

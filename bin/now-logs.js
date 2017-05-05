@@ -29,8 +29,7 @@ const argv = minimist(process.argv.slice(2), {
 let deploymentIdOrURL = argv._[0]
 
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now logs`)} <deploymentId|url>
 
   ${chalk.dim('Options:')}
@@ -51,8 +50,7 @@ const help = () => {
   ${chalk.gray('–')} Print logs for the deployment ${chalk.dim('`deploymentId`')}
 
     ${chalk.cyan('$ now logs deploymentId')}
-`
-  )
+`)
 }
 
 if (argv.help || !deploymentIdOrURL) {
@@ -98,7 +96,7 @@ if (maybeURL(deploymentIdOrURL)) {
 
 Promise.resolve()
   .then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {

@@ -33,8 +33,7 @@ const argv = minimist(process.argv.slice(2), {
 const subcommand = argv._[0]
 
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now billing`)} <ls | add | rm | set-default>
 
   ${chalk.dim('Options:')}
@@ -65,8 +64,7 @@ const help = () => {
       ${chalk.cyan(`$ now billing set-default <id>`)}
 
       ${chalk.gray('–')} If the id is omitted, you can choose interactively
-  `
-  )
+  `)
 }
 
 // Options
@@ -90,7 +88,7 @@ if (argv.help || !subcommand) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {
@@ -184,9 +182,7 @@ async function run({ token, config: { currentTeam, user } }) {
         .join('\n\n')
 
       const elapsed = ms(new Date() - start)
-      console.log(
-        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
-      )
+      console.log(`> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`)
       if (text) {
         console.log(`\n${text}\n`)
       }
@@ -246,9 +242,7 @@ async function run({ token, config: { currentTeam, user } }) {
 
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
-        success(
-          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
-        )
+        success(`${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`)
       } else {
         console.log('No changes made')
       }
@@ -273,9 +267,7 @@ async function run({ token, config: { currentTeam, user } }) {
       }
 
       if (cards.cards.length === 0) {
-        error(
-          `You have no credit cards to choose from to delete under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
-        )
+        error(`You have no credit cards to choose from to delete under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
         return exit(0)
       }
 

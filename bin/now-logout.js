@@ -20,8 +20,7 @@ const argv = minimist(process.argv.slice(2), {
 })
 
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now logout`)}
 
   ${chalk.dim('Options:')}
@@ -34,8 +33,7 @@ const help = () => {
   ${chalk.gray('–')} Logout from the CLI:
 
     ${chalk.cyan('$ now logout')}
-`
-  )
+`)
 }
 
 if (argv.help) {

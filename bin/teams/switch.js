@@ -15,10 +15,10 @@ async function updateCurrentTeam({ cfg, newTeam } = {}) {
   await cfg.merge({ currentTeam: newTeam })
 }
 
-module.exports = async function({teams, args, token}) {
+module.exports = async function({ teams, args, token }) {
   let stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
-  let { user, currentTeam } = await cfg.read({token})
+  let { user, currentTeam } = await cfg.read({ token })
   const accountIsCurrent = !currentTeam
   stopSpinner()
 

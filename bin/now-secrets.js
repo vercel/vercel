@@ -31,8 +31,7 @@ const subcommand = argv._[0]
 
 // Options
 const help = () => {
-  console.log(
-    `
+  console.log(`
   ${chalk.bold(`${logo} now secrets`)} <ls | add | rename | rm> <secret>
 
   ${chalk.dim('Options:')}
@@ -70,8 +69,7 @@ const help = () => {
   ${chalk.gray('–')} Removes a secret:
 
     ${chalk.cyan(`$ now secrets rm my-secret`)}
-`
-  )
+`)
 }
 
 // Options
@@ -87,7 +85,7 @@ if (argv.help || !subcommand) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read({token: argv.token})
+    const config = await cfg.read({ token: argv.token })
 
     let token
     try {
@@ -113,18 +111,14 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
-      error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
-      )
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`)
       return exit(1)
     }
 
     const list = await secrets.ls()
     const elapsed = ms(new Date() - start)
 
-    console.log(
-      `> ${list.length} secret${list.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
-    )
+    console.log(`> ${list.length} secret${list.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`)
 
     if (list.length > 0) {
       const cur = Date.now()
@@ -156,9 +150,7 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret rm <id | name>`')}`
-      )
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now secret rm <id | name>`')}`)
       return exit(1)
     }
     const list = await secrets.ls()
@@ -179,38 +171,28 @@ async function run({ token, config: { currentTeam, user } }) {
 
     const secret = await secrets.rm(args[0])
     const elapsed = ms(new Date() - start)
-    console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.name)} ${chalk.gray(`(${secret.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
-    )
+    console.log(`${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.name)} ${chalk.gray(`(${secret.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`)
     return secrets.close()
   }
 
   if (subcommand === 'rename') {
     if (args.length !== 2) {
-      error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret rename <old-name> <new-name>`')}`
-      )
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now secret rename <old-name> <new-name>`')}`)
       return exit(1)
     }
     const secret = await secrets.rename(args[0], args[1])
     const elapsed = ms(new Date() - start)
-    console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.oldName)} ${chalk.gray(`(${secret.uid})`)} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`
-    )
+    console.log(`${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.oldName)} ${chalk.gray(`(${secret.uid})`)} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`)
     return secrets.close()
   }
 
   if (subcommand === 'add' || subcommand === 'set') {
     if (args.length !== 2) {
-      error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret add <name> <value>`')}`
-      )
+      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now secret add <name> <value>`')}`)
 
       if (args.length > 2) {
         const example = chalk.cyan(`$ now secret add ${args[0]}`)
-        console.log(
-          `> If your secret has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
-        )
+        console.log(`> If your secret has spaces, make sure to wrap it in quotes. Example: \n  ${example} `)
       }
 
       return exit(1)
@@ -228,9 +210,7 @@ async function run({ token, config: { currentTeam, user } }) {
     const secret = await secrets.add(name, value)
     const elapsed = ms(new Date() - start)
 
-    console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}) ${chalk.gray(`[${elapsed}]`)}`
-    )
+    console.log(`${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}) ${chalk.gray(`[${elapsed}]`)}`)
     return secrets.close()
   }
 
@@ -255,9 +235,8 @@ function readConfirmation(secret) {
     process.stdout.write('> The following secret will be removed permanently\n')
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    )
+    process.stdout
+      .write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
 
     process.stdin
       .on('data', d => {
