@@ -85,11 +85,11 @@ if (argv.help || !subcommand) {
   exit(0)
 } else {
   Promise.resolve().then(async () => {
-    const config = await cfg.read()
+    const config = await cfg.read({token: argv.token})
 
     let token
     try {
-      token = argv.token || config.token || (await login(apiUrl))
+      token = config.token || (await login(apiUrl))
     } catch (err) {
       error(`Authentication error – ${err.message}`)
       exit(1)
@@ -115,17 +115,17 @@ async function run({ token, config: { currentTeam } }) {
   switch (subcommand) {
     case 'switch':
     case 'change': {
-      await require(resolve(__dirname, 'teams', 'switch.js'))(teams, args)
+      await require(resolve(__dirname, 'teams', 'switch.js'))({teams, args, token})
       break
     }
     case 'add':
     case 'create': {
-      await require(resolve(__dirname, 'teams', 'add.js'))(teams)
+      await require(resolve(__dirname, 'teams', 'add.js'))({teams, token})
       break
     }
 
     case 'invite': {
-      await require(resolve(__dirname, 'teams', 'invite.js'))(teams, args)
+      await require(resolve(__dirname, 'teams', 'invite.js'))({teams, args, token})
       break
     }
 

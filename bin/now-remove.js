@@ -77,11 +77,11 @@ if (argv.config) {
 }
 
 Promise.resolve().then(async () => {
-  const config = await cfg.read()
+  const config = await cfg.read({token: argv.token})
 
   let token
   try {
-    token = (await argv.token) || config.token || login(apiUrl)
+    token = config.token || login(apiUrl)
   } catch (err) {
     error(`Authentication error – ${err.message}`)
     process.exit(1)
