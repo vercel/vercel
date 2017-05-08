@@ -70,7 +70,7 @@
     "docker-file-parser": "1.0.2",
     "dotenv": "4.0.0",
     "download": "6.0.0",
-    "email-prompt": "0.2.0",
+    "email-prompt": "0.3.0",
     "email-validator": "1.0.7",
     "epipebomb": "1.0.0",
     "fs-promise": "2.0.3",
