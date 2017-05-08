@@ -90,7 +90,7 @@
     "psl": "1.1.18",
     "resumer": "0.0.0",
     "single-line-log": "1.1.2",
-    "socket.io-client": "1.7.4",
+    "socket.io-client": "2.0.0",
     "split-array": "1.0.1",
     "strip-ansi": "3.0.1",
     "stripe": "4.18.0",
