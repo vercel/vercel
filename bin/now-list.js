@@ -18,7 +18,7 @@ const sort = require('../lib/sort-deployments')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'all'],
+  boolean: ['help', 'debug', 'all', 'ready'],
   alias: {
     help: 'h',
     config: 'c',
@@ -47,6 +47,10 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app')}
+
+  ${chalk.gray('-')} List all deployments with READY state
+
+    ${chalk.cyan('$ now ls --ready')}
 
   ${chalk.dim('Alias:')} ls
 `)
@@ -163,6 +167,14 @@ async function list({ token, config: { currentTeam, user } }) {
   console.log()
   sorted.forEach(([name, deps]) => {
     const listedDeployments = argv.all ? deps : deps.slice(0, 5)
+    if (argv.ready) {
+      const someReady = listedDeployments.reduce((previous, current) => {
+        return previous || current.state === 'READY'
+      }, false)
+      if (!someReady) {
+        return
+      }
+    }
     console.log(`${chalk.bold(name)} ${chalk.gray('(' + listedDeployments.length + ' of ' + deps.length + ' total)')}`)
     const urlSpec = `%-${urlLength}s`
     console.log(
@@ -179,6 +191,9 @@ async function list({ token, config: { currentTeam, user } }) {
       let extraSpaceForState = 0
       if (state === null || typeof state === 'undefined') {
         state = 'DEPLOYMENT_ERROR'
+      }
+      if (argv.ready && state !== 'READY') {
+        return
       }
       if (/ERROR/.test(state)) {
         state = chalk.red(state)
