@@ -166,6 +166,10 @@ async function run({ token, config: { currentTeam } }) {
     error(`Could not find any deployments matching ${id}`)
     return process.exit(1)
   }
+  if (match.type === 'STATIC') {
+    error(`Could not scale static deployment: ${id}`)
+    return process.exit(1)
+  }
 
   const { min, max } = guessParams()
 
