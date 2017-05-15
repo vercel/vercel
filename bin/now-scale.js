@@ -267,7 +267,26 @@ async function list(scale) {
       )
     )
     for (const instance of depls) {
-      if (instance.scale.current > 0) {
+      if (!instance.scale) {
+        let spec
+        if (supportsColor) {
+          spec = ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`
+        } else {
+          spec = ` %-${urlLength + 1}s %8s %8s %8s %8s %8s`
+        }
+        const infinite = '∞'
+        console.log(
+          printf(
+            spec,
+            chalk.underline(instance.url),
+            infinite,
+            1,
+            infinite,
+            '✔',
+            ms(timeNow - instance.created)
+          )
+        )
+      } else if (instance.scale.current > 0) {
         let spec
         if (supportsColor) {
           spec = ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`
