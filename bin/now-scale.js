@@ -167,7 +167,7 @@ async function run({ token, config: { currentTeam } }) {
     return process.exit(1)
   }
   if (match.type === 'STATIC') {
-    console.log(`Could not scale static deployment: ${id}`)
+    error(`Could not scale static deployment: ${id}`)
     return process.exit(1)
   }
 
