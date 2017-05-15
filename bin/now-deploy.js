@@ -348,7 +348,7 @@ async function sync({ token, config: { currentTeam, user } }) {
 
   let meta
   await retry(
-    async bail => {
+    async () => {
       try {
         meta = await readMetaData(path, {
           deploymentType,
@@ -399,8 +399,13 @@ async function sync({ token, config: { currentTeam, user } }) {
                 ]
               ])
             } catch (err) {
-              console.error(err)
-              return bail()
+              if (err.code === 'USER_ABORT') {
+                if (debug) {
+                  console.log(`> [debug] Got Ctrl+C, aborting`)
+                }
+                return exit(1)
+              }
+              throw err
             }
 
             if (debug) {
@@ -412,9 +417,9 @@ async function sync({ token, config: { currentTeam, user } }) {
             // Invoke async-retry and try again with the explicit deployment type
             throw err
           }
+        } else {
+          return stopDeployment(err)
         }
-
-        return stopDeployment(err)
       }
     },
     {
