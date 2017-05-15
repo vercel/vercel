@@ -188,7 +188,9 @@ if (argv.config) {
 }
 
 if (Array.isArray(autoAliases)) {
-  console.log(`${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`)
+  console.log(
+    `${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`
+  )
   console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n')
 }
 
@@ -291,7 +293,9 @@ async function sync({ token, config: { currentTeam, user } }) {
       Object.assign(gitRepo, repo)
     } else if (isValidRepo) {
       const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
-      stopDeployment(`There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`)
+      stopDeployment(
+        `There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`
+      )
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
     }
@@ -308,9 +312,13 @@ async function sync({ token, config: { currentTeam, user } }) {
   if (!quiet) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
-      console.log(`> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+      console.log(
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      )
     } else {
-      console.log(`> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+      console.log(
+        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      )
     }
   }
 
@@ -354,7 +362,9 @@ async function sync({ token, config: { currentTeam, user } }) {
           deploymentType = meta.type
 
           if (debug) {
-            console.log(`> [debug] Detected \`deploymentType\` = \`${deploymentType}\``)
+            console.log(
+              `> [debug] Detected \`deploymentType\` = \`${deploymentType}\``
+            )
           }
         }
 
@@ -362,7 +372,9 @@ async function sync({ token, config: { currentTeam, user } }) {
           deploymentName = meta.name
 
           if (debug) {
-            console.log(`> [debug] Detected \`deploymentName\` = "${deploymentName}"`)
+            console.log(
+              `> [debug] Detected \`deploymentName\` = "${deploymentName}"`
+            )
           }
         }
       } catch (err) {
@@ -372,7 +384,9 @@ async function sync({ token, config: { currentTeam, user } }) {
           }
 
           if (isTTY) {
-            console.log(`> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`)
+            console.log(
+              `> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`
+            )
             try {
               deploymentType = await promptOptions([
                 [
@@ -390,7 +404,9 @@ async function sync({ token, config: { currentTeam, user } }) {
             }
 
             if (debug) {
-              console.log(`> [debug] Selected \`deploymentType\` = "${deploymentType}"`)
+              console.log(
+                `> [debug] Selected \`deploymentType\` = "${deploymentType}"`
+              )
             }
 
             // Invoke async-retry and try again with the explicit deployment type
@@ -468,7 +484,9 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
 
       if (/[^A-z0-9_]/i.test(key)) {
-        error(`Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`)
+        error(
+          `Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`
+        )
         return process.exit(1)
       }
 
@@ -479,11 +497,15 @@ async function sync({ token, config: { currentTeam, user } }) {
 
       if (val === undefined) {
         if (key in process.env) {
-          console.log(`> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`)
+          console.log(
+            `> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`
+          )
           // Escape value if it begins with @
           val = process.env[key].replace(/^@/, '\\@')
         } else {
-          error(`No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`)
+          error(
+            `No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`
+          )
           return process.exit(1)
         }
       }
@@ -493,13 +515,19 @@ async function sync({ token, config: { currentTeam, user } }) {
         const secrets = await findSecret(uidOrName)
         if (secrets.length === 0) {
           if (uidOrName === '') {
-            error(`Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`)
+            error(
+              `Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`
+            )
           } else {
-            error(`No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`)
+            error(
+              `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`
+            )
           }
           return process.exit(1)
         } else if (secrets.length > 1) {
-          error(`Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`)
+          error(
+            `Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`
+          )
           return process.exit(1)
         }
 
@@ -551,7 +579,9 @@ async function sync({ token, config: { currentTeam, user } }) {
     if (clipboard) {
       try {
         await copy(url)
-        console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`)
+        console.log(
+          `${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`
+        )
       } catch (err) {
         console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`)
       }
@@ -575,14 +605,20 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    printLogs(now.host, token, currentTeam, user)
+    if (deploymentType === 'static') {
+      console.log(`${chalk.cyan('> Deployment complete!')}`)
+    } else {
+      printLogs(now.host, token, currentTeam, user)
+    }
   }
 
   const plan = await planPromise
 
   if (plan.id === 'oss') {
     if (isTTY) {
-      info(`${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code will be made ${chalk.bold('public')}.`)
+      info(
+        `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+      )
 
       let proceed
       try {
@@ -625,7 +661,9 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.on('upload', ({ names, data }) => {
       const amount = data.length
       if (debug) {
-        console.log(`> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
+        console.log(
+          `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
+        )
       }
       bar.tick(amount)
     })
@@ -646,7 +684,11 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    printLogs(now.host, token, currentTeam, user)
+    if (deploymentType === 'static') {
+      console.log(`${chalk.cyan('> Deployment complete!')}`)
+    } else {
+      printLogs(now.host, token, currentTeam, user)
+    }
   }
 }
 
@@ -657,7 +699,9 @@ function printLogs(host, token, currentTeam, user) {
   logger.on('error', async err => {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
-        error(`The build step of your project failed. To retry, run ${cmd('now --force')}.`)
+        error(
+          `The build step of your project failed. To retry, run ${cmd('now --force')}.`
+        )
       } else {
         error('Deployment failed')
       }
