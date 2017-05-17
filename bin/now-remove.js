@@ -95,8 +95,9 @@ Promise.resolve().then(async () => {
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
-    process.stdout
-      .write(`> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`)
+    process.stdout.write(
+      `> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`
+    )
 
     const tbl = table(
       matches.map(depl => {
@@ -117,8 +118,9 @@ function readConfirmation(matches) {
       }
     }
 
-    process.stdout
-      .write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
+    process.stdout.write(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    )
 
     process.stdin
       .on('data', d => {
@@ -141,9 +143,11 @@ async function remove({ token, config: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    error(`Could not find any deployments matching ${ids
-      .map(id => chalk.bold(`"${id}"`))
-      .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`)
+    error(
+      `Could not find any deployments matching ${ids
+        .map(id => chalk.bold(`"${id}"`))
+        .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
+    )
     return process.exit(1)
   }
 

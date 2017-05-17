@@ -182,7 +182,9 @@ async function run({ token, config: { currentTeam, user } }) {
         .join('\n\n')
 
       const elapsed = ms(new Date() - start)
-      console.log(`> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`)
+      console.log(
+        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+      )
       if (text) {
         console.log(`\n${text}\n`)
       }
@@ -242,7 +244,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
-        success(`${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`)
+        success(
+          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+        )
       } else {
         console.log('No changes made')
       }
@@ -267,7 +271,9 @@ async function run({ token, config: { currentTeam, user } }) {
       }
 
       if (cards.cards.length === 0) {
-        error(`You have no credit cards to choose from to delete under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+        error(
+          `You have no credit cards to choose from to delete under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        )
         return exit(0)
       }
 

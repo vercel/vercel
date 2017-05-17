@@ -199,7 +199,9 @@ async function run({ token, config: { currentTeam } }) {
   }
 
   if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
-    console.log(`> Deployment is currently in 0 replicas, preparing deployment for scaling...`)
+    console.log(
+      `> Deployment is currently in 0 replicas, preparing deployment for scaling...`
+    )
     if (match.scale.max < 1) {
       await scale.setScale(match.uid, { min: 0, max: 1 })
     }
@@ -217,7 +219,9 @@ async function run({ token, config: { currentTeam } }) {
   const log = console.log
   log(`> ${chalk.cyan('Success!')} Configured scaling rules [${elapsed}]`)
   log()
-  log(`${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`)
+  log(
+    `${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
+  )
   log(printf('%6s %s', 'min', chalk.bold(newMin)))
   log(printf('%6s %s', 'max', chalk.bold(newMax)))
   log(printf('%6s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔')))
@@ -256,7 +260,9 @@ async function list(scale) {
 
   for (const app of sorted) {
     const depls = argv.all ? app[1] : app[1].slice(0, 5)
-    console.log(`${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`)
+    console.log(
+      `${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`
+    )
     console.log()
     const urlSpec = `%-${urlLength}s`
     console.log(

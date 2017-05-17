@@ -25,7 +25,9 @@ function validateSlugKeypress(data, value) {
 
 function gracefulExit() {
   console.log() // Blank line
-  note(`Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd('now switch')} to change it in the future.`)
+  note(
+    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd('now switch')} to change it in the future.`
+  )
   return exit()
 }
 
@@ -38,7 +40,9 @@ module.exports = async function({ teams, token }) {
   let elapsed
   let stopSpinner
 
-  info(`Pick a team identifier for its url (e.g.: ${chalk.cyan('`zeit.co/acme`')})`)
+  info(
+    `Pick a team identifier for its url (e.g.: ${chalk.cyan('`zeit.co/acme`')})`
+  )
   do {
     try {
       // eslint-disable-next-line no-await-in-loop

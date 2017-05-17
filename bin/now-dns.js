@@ -101,7 +101,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length > 1) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now dns ls [domain]`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now dns ls [domain]`')}`
+      )
       return exit(1)
     }
 
@@ -149,20 +151,28 @@ async function run({ token, config: { currentTeam, user } }) {
         text.push(`\n\n${chalk.bold(domain)}\n${indent(out, 2)}`)
       }
     })
-    console.log(`> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+    console.log(
+      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+    )
     console.log(text.join(''))
   } else if (subcommand === 'add') {
     const param = parseAddArgs(args)
     if (!param) {
-      error(`Invalid number of arguments. See: ${chalk.cyan('`now dns --help`')} for usage.`)
+      error(
+        `Invalid number of arguments. See: ${chalk.cyan('`now dns --help`')} for usage.`
+      )
       return exit(1)
     }
     const record = await domainRecords.create(param.domain, param.data)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)} (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)})`)
+    console.log(
+      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)} (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)})`
+    )
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`
+      )
       return exit(1)
     }
 
@@ -183,7 +193,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
     await domainRecords.delete(record.domain, record.id)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(
+      `${chalk.cyan('> Success!')} Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(`[${elapsed}]`)}`
+    )
   } else {
     error('Please specify a valid subcommand: ls | add | rm')
     help()
@@ -268,7 +280,9 @@ function readConfirmation(record, msg) {
       [
         [
           record.id,
-          chalk.bold(`${record.name.length > 0 ? record.name + '.' : ''}${record.domain} ${record.type} ${record.value} ${record.mxPriority ? record.mxPriority : ''}`),
+          chalk.bold(
+            `${record.name.length > 0 ? record.name + '.' : ''}${record.domain} ${record.type} ${record.value} ${record.mxPriority ? record.mxPriority : ''}`
+          ),
           time
         ]
       ],
@@ -278,8 +292,9 @@ function readConfirmation(record, msg) {
     process.stdout.write(`> ${msg}`)
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout
-      .write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
+    process.stdout.write(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    )
 
     process.stdin
       .on('data', d => {
