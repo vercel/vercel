@@ -124,13 +124,18 @@ async function run({ token, config: { currentTeam, user } }) {
               const time = chalk.gray(
                 ms(cur - new Date(Number(record.created))) + ' ago'
               )
+              const aux = (() => {
+                if (record.mxPriority !== undefined) return record.mxPriority
+                if (record.priority !== undefined) return record.priority
+                return ''
+              })()
               return [
                 '',
                 record.id,
                 record.name,
                 record.type,
                 record.value,
-                record.mxPriority || record.priority || '',
+                aux,
                 time
               ]
             })
