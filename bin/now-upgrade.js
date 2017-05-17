@@ -211,7 +211,9 @@ async function run({ token, config: { currentTeam, user } }) {
     newPlan = await plans.set(planId)
   } catch (err) {
     if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
-      error(`You have no payment methods available. Run ${cmd('now billing add')} to add one`)
+      error(
+        `You have no payment methods available. Run ${cmd('now billing add')} to add one`
+      )
     } else {
       error(`An unknow error occured. Please try again later ${err.message}`)
     }
@@ -220,9 +222,13 @@ async function run({ token, config: { currentTeam, user } }) {
   }
 
   if (currentPlan.until && newPlan.id !== 'oss') {
-    success(`The cancelation has been undone. You're back on the ${chalk.bold(`${newPlan.name} plan`)}`)
+    success(
+      `The cancelation has been undone. You're back on the ${chalk.bold(`${newPlan.name} plan`)}`
+    )
   } else if (newPlan.until) {
-    success(`Your plan will be switched to ${chalk.bold(newPlan.name)} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`)
+    success(
+      `Your plan will be switched to ${chalk.bold(newPlan.name)} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
+    )
   } else {
     success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`)
   }

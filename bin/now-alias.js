@@ -181,7 +181,9 @@ async function run({ token, config: { currentTeam, user } }) {
         }
         break
       } else if (args.length !== 0) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`
+        )
         return exit(1)
       }
 
@@ -203,7 +205,9 @@ async function run({ token, config: { currentTeam, user } }) {
           return Math.max(acc, (i.alias && i.alias.length) || 0)
         }, 0) + 8
       const elapsed_ = ms(new Date() - start_)
-      console.log(`> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+      console.log(
+        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      )
       console.log()
 
       if (supportsColor) {
@@ -248,7 +252,9 @@ async function run({ token, config: { currentTeam, user } }) {
             urlSpec += grayWidth
           }
         } else if (_alias.rules) {
-          _sourceUrl = chalk.gray(`[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`)
+          _sourceUrl = chalk.gray(
+            `[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`
+          )
           if (supportsColor) {
             urlSpec += underlineWidth
           }
@@ -278,7 +284,9 @@ async function run({ token, config: { currentTeam, user } }) {
       }
 
       if (args.length !== 1) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`
+        )
         return exit(1)
       }
 
@@ -303,7 +311,9 @@ async function run({ token, config: { currentTeam, user } }) {
         const start = new Date()
         await alias.rm(_alias)
         const elapsed = ms(new Date() - start)
-        console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`)
+        console.log(
+          `${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`
+        )
       } catch (err) {
         error(err)
         exit(1)
@@ -318,7 +328,9 @@ async function run({ token, config: { currentTeam, user } }) {
         break
       }
       if (args.length !== 2) {
-        error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`)
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`
+        )
         return exit(1)
       }
       await alias.set(
@@ -461,6 +473,8 @@ async function updatePathAlias(alias, aliasName, rules, domains) {
     err.userError = true
     throw err
   } else {
-    console.log(`${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`)
+    console.log(
+      `${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`
+    )
   }
 }
