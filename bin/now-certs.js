@@ -114,14 +114,18 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
+      )
       return exit(1)
     }
 
     const list = await certs.ls()
     const elapsed = ms(new Date() - start)
 
-    console.log(`> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+    console.log(
+      `> ${list.length} certificate${list.length === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+    )
 
     if (list.length > 0) {
       const cur = Date.now()
@@ -162,7 +166,9 @@ async function run({ token, config: { currentTeam, user } }) {
     }
   } else if (subcommand === 'create') {
     if (args.length !== 1) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs create <cn>`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now certs create <cn>`')}`
+      )
       return exit(1)
     }
     const cn = args[0]
@@ -171,7 +177,9 @@ async function run({ token, config: { currentTeam, user } }) {
     if (argv.crt || argv.key || argv.ca) {
       // Issue a custom certificate
       if (!argv.crt || !argv.key) {
-        error(`Missing required arguments for a custom certificate entry. Usage: ${chalk.cyan('`now certs create --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`)
+        error(
+          `Missing required arguments for a custom certificate entry. Usage: ${chalk.cyan('`now certs create --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`
+        )
         return exit(1)
       }
 
@@ -189,10 +197,14 @@ async function run({ token, config: { currentTeam, user } }) {
       return exit(1)
     }
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Certificate entry ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(
+      `${chalk.cyan('> Success!')} Certificate entry ${chalk.bold(cn)} ${chalk.gray(`(${cert.uid})`)} created ${chalk.gray(`[${elapsed}]`)}`
+    )
   } else if (subcommand === 'renew') {
     if (args.length !== 1) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs renew <id | cn>`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now certs renew <id | cn>`')}`
+      )
       return exit(1)
     }
 
@@ -212,10 +224,14 @@ async function run({ token, config: { currentTeam, user } }) {
 
     await certs.renew(cert.cn)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} renewed ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(
+      `${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} renewed ${chalk.gray(`[${elapsed}]`)}`
+    )
   } else if (subcommand === 'replace') {
     if (!argv.crt || !argv.key) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`')}`
+      )
       return exit(1)
     }
 
@@ -238,10 +254,14 @@ async function run({ token, config: { currentTeam, user } }) {
 
     await certs.put(cert.cn, crt, key, ca)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} replaced ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(
+      `${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} replaced ${chalk.gray(`[${elapsed}]`)}`
+    )
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs rm <id | cn>`')}`)
+      error(
+        `Invalid number of arguments. Usage: ${chalk.cyan('`now certs rm <id | cn>`')}`
+      )
       return exit(1)
     }
 
@@ -260,7 +280,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
     await certs.delete(cert.cn)
     const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`)
+    console.log(
+      `${chalk.cyan('> Success!')} Certificate ${chalk.bold(cert.cn)} ${chalk.gray(`(${cert.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
+    )
   } else {
     error(
       'Please specify a valid subcommand: ls | create | renew | replace | rm'
@@ -287,8 +309,9 @@ function readConfirmation(cert, msg) {
     process.stdout.write(`> ${msg}`)
     process.stdout.write('  ' + tbl + '\n')
 
-    process.stdout
-      .write(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
+    process.stdout.write(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    )
 
     process.stdin
       .on('data', d => {
@@ -310,7 +333,9 @@ async function getCertIdCn(certs, idOrCn, currentTeam, user) {
   })[0]
 
   if (!thecert) {
-    error(`No certificate found by id or cn "${idOrCn}" under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+    error(
+      `No certificate found by id or cn "${idOrCn}" under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+    )
     return null
   }
 

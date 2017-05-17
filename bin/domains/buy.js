@@ -30,11 +30,15 @@ module.exports = async function({ domains, args, currentTeam, user }) {
   stopSpinner()
 
   if (!available) {
-    return error(`The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`)
+    return error(
+      `The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`
+    )
   }
 
   info(`The domain ${nameParam} is ${italic('available')}! ${elapsed()}`)
-  const confirmation = await promptBool(`Buy now for ${bold(`$${price}`)} (${bold((currentTeam && currentTeam.slug) || user.username || user.email)})?`)
+  const confirmation = await promptBool(
+    `Buy now for ${bold(`$${price}`)} (${bold((currentTeam && currentTeam.slug) || user.username || user.email)})?`
+  )
 
   eraseLines(1)
   if (!confirmation) {
@@ -54,5 +58,7 @@ module.exports = async function({ domains, args, currentTeam, user }) {
   stopSpinner()
 
   success(`Domain purchased and created ${uid(domain.uid)} ${elapsed()}`)
-  info(`You may now use your domain as an alias to your deployments. Run ${cmd('now alias help')}`)
+  info(
+    `You may now use your domain as an alias to your deployments. Run ${cmd('now alias help')}`
+  )
 }
