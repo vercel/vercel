@@ -166,10 +166,6 @@ async function run({ token, config: { currentTeam } }) {
     error(`Could not find any deployments matching ${id}`)
     return process.exit(1)
   }
-  if (match.type === 'STATIC') {
-    error(`Could not scale static deployment: ${id}`)
-    return process.exit(1)
-  }
 
   const { min, max } = guessParams()
 
@@ -179,6 +175,15 @@ async function run({ token, config: { currentTeam } }) {
   ) {
     help()
     return exit(1)
+  }
+
+  if (match.type === 'STATIC') {
+    if (min === 0 && max === 0) {
+      error("Static deployments can't be FROZEN. Use `now rm` to remove")
+      return process.exit(1)
+    }
+    console.log('> Static deployments are automatically scaled!')
+    return process.exit(0)
   }
 
   const {
