@@ -12,7 +12,6 @@ const minimist = require('minimist')
 const ms = require('ms')
 const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
-const retry = require('async-retry')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 
@@ -195,7 +194,7 @@ if (Array.isArray(autoAliases)) {
 }
 
 const stopDeployment = msg => {
-  error(msg)
+  handleError(msg)
   process.exit(1)
 }
 
@@ -238,7 +237,7 @@ async function main() {
   try {
     await sync({ token, config })
   } catch (err) {
-    return stopDeployment(`Unknown error: ${err}\n${err.stack}`)
+    return stopDeployment(err)
   }
 }
 
@@ -322,7 +321,6 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
   }
 
-  let nowConfig
   let deploymentType
 
   // CLI deployment type explicit overrides
@@ -347,88 +345,12 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   let meta
-  await retry(
-    async () => {
-      try {
-        meta = await readMetaData(path, {
-          deploymentType,
-          deploymentName,
-          quiet: true
-        })
-
-        nowConfig = meta.nowConfig
-
-        if (!deploymentType) {
-          deploymentType = meta.type
-
-          if (debug) {
-            console.log(
-              `> [debug] Detected \`deploymentType\` = \`${deploymentType}\``
-            )
-          }
-        }
-
-        if (!deploymentName) {
-          deploymentName = meta.name
-
-          if (debug) {
-            console.log(
-              `> [debug] Detected \`deploymentName\` = "${deploymentName}"`
-            )
-          }
-        }
-      } catch (err) {
-        if (err.code === 'MULTIPLE_MANIFESTS') {
-          if (debug) {
-            console.log('> [debug] Multiple manifests found, disambiguating')
-          }
-
-          if (isTTY) {
-            console.log(
-              `> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`
-            )
-            try {
-              deploymentType = await promptOptions([
-                [
-                  'npm',
-                  `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `
-                ],
-                [
-                  'docker',
-                  `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `
-                ]
-              ])
-            } catch (err) {
-              if (err.code === 'USER_ABORT') {
-                if (debug) {
-                  console.log(`> [debug] Got Ctrl+C, aborting`)
-                }
-                return exit(1)
-              }
-              throw err
-            }
-
-            if (debug) {
-              console.log(
-                `> [debug] Selected \`deploymentType\` = "${deploymentType}"`
-              )
-            }
-
-            // Invoke async-retry and try again with the explicit deployment type
-            throw err
-          }
-        } else {
-          return stopDeployment(err)
-        }
-      }
-    },
-    {
-      retries: 1,
-      minTimeout: 0,
-      maxTimeout: 0,
-      onRetry: console.log
-    }
-  )
+  ;({ meta, deploymentName, deploymentType } = await readMeta(
+    path,
+    deploymentName,
+    deploymentType
+  ))
+  const nowConfig = meta.nowConfig
 
   const now = new Now({ apiUrl, token, debug, currentTeam })
 
@@ -573,8 +495,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       console.log(`> [debug] error: ${err}\n${err.stack}`)
     }
 
-    handleError(err)
-    process.exit(1)
+    return stopDeployment(err)
   }
 
   const { url } = now
@@ -646,10 +567,10 @@ async function sync({ token, config: { currentTeam, user } }) {
         return exit()
       }
     } else if (!wantsPublic) {
-      let msg = '\nYou are on the OSS plan. Your code will be made public.'
-      msg += ' If you agree with that, please run again with --public.'
-      console.log(msg)
-      return exit(1)
+      const msg =
+        '\nYou are on the OSS plan. Your code will be made public.' +
+        ' If you agree with that, please run again with --public.'
+      return stopDeployment(msg)
     }
   }
 
@@ -677,8 +598,7 @@ async function sync({ token, config: { currentTeam, user } }) {
 
     now.on('error', err => {
       error('Upload failed')
-      handleError(err)
-      process.exit(1)
+      return stopDeployment(err)
     })
   } else {
     if (!quiet) {
@@ -694,6 +614,66 @@ async function sync({ token, config: { currentTeam, user } }) {
     } else {
       printLogs(now.host, token, currentTeam, user)
     }
+  }
+}
+
+async function readMeta(path, deploymentName, deploymentType) {
+  try {
+    const meta = await readMetaData(path, {
+      deploymentType,
+      deploymentName,
+      quiet: true
+    })
+
+    if (!deploymentType) {
+      deploymentType = meta.type
+
+      if (debug) {
+        console.log(
+          `> [debug] Detected \`deploymentType\` = \`${deploymentType}\``
+        )
+      }
+    }
+
+    if (!deploymentName) {
+      deploymentName = meta.name
+
+      if (debug) {
+        console.log(
+          `> [debug] Detected \`deploymentName\` = "${deploymentName}"`
+        )
+      }
+    }
+
+    return {
+      meta,
+      deploymentName,
+      deploymentType
+    }
+  } catch (err) {
+    if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
+      if (debug) {
+        console.log('> [debug] Multiple manifests found, disambiguating')
+      }
+
+      console.log(
+        `> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`
+      )
+
+      deploymentType = await promptOptions([
+        ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+        ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+      ])
+
+      if (debug) {
+        console.log(
+          `> [debug] Selected \`deploymentType\` = "${deploymentType}"`
+        )
+      }
+
+      return readMeta(path, deploymentName, deploymentType)
+    }
+    throw err
   }
 }
 
