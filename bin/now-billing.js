@@ -17,6 +17,7 @@ const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
 const success = require('../lib/utils/output/success')
 const promptBool = require('../lib/utils/input/prompt-bool')
+const info = require('../lib/utils/output/info')
 const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
@@ -236,7 +237,7 @@ async function run({ token, config: { currentTeam, user } }) {
           trailing: '\n'
         })
         if (!confirmation) {
-          console.log('Aborted')
+          info('Aborted')
           break
         }
         const start = new Date()

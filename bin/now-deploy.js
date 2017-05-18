@@ -550,17 +550,10 @@ async function sync({ token, config: { currentTeam, user } }) {
         `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code will be made ${chalk.bold('public')}.`
       )
 
-      let proceed
-      try {
-        const label = 'Are you sure you want to proceed with the deployment?'
-        proceed = await promptBool(label, { trailing: eraseLines(1) })
-      } catch (err) {
-        if (err.message === 'USER_ABORT') {
-          proceed = false
-        } else {
-          throw err
-        }
-      }
+      const proceed = await promptBool(
+        'Are you sure you want to proceed with the deployment?',
+        { trailing: eraseLines(1) }
+      )
 
       if (!proceed) {
         const stopSpinner = wait('Canceling deployment')
