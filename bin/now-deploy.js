@@ -227,10 +227,14 @@ async function main() {
     } catch (err) {
       return stopDeployment(`Authentication error – ${err.message}`)
     }
-    if (shouldLogin) {
-      console.log('> Logged in successfully. Token saved in ~/.now.json')
-      return exit(0)
-    }
+
+    console.log(
+      `> Logged in successfully. Token saved to ${chalk.bold('~/.now.json')}.`
+    )
+    console.log(
+      `> Run ${cmd('now')} to deploy the current directory, or ${cmd('now --help')} for usage info.\n`
+    )
+    return exit(0)
   }
 
   // If we got to here then `token` should be set
