@@ -272,12 +272,22 @@ async function run({ token, config: { currentTeam, user } }) {
       break
     }
     case 'buy': {
-      await require(resolve(__dirname, 'domains', 'buy.js'))({
-        domains: domain,
-        args,
-        currentTeam,
-        user
-      })
+      try {
+        await require(resolve(__dirname, 'domains', 'buy.js'))({
+          domains: domain,
+          args,
+          currentTeam,
+          user
+        })
+      } catch (err) {
+        if (err.message === 'USER_ABORT') {
+          // Move the prompt to a newline before exiting
+          console.log()
+          process.exit(1)
+        } else {
+          throw err
+        }
+      }
       break
     }
     default:
