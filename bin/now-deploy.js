@@ -579,12 +579,17 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   if (now.syncAmount) {
-    const bar = new Progress('> Upload [:bar] :percent :etas', {
-      width: 20,
-      complete: '=',
-      incomplete: '',
-      total: now.syncAmount
-    })
+    const size = bytes(now.syncAmount)
+    const files = `${now.fileCount} file${now.fileCount > 1 && 's'}`
+    const bar = new Progress(
+      `> Upload [:bar] :percent :etas (${size}) [${files}]`,
+      {
+        width: 20,
+        complete: '=',
+        incomplete: '',
+        total: now.syncAmount
+      }
+    )
 
     now.upload()
 
