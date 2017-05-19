@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Packages
-const fs = require('fs-promise')
+const fs = require('fs-extra')
 const minimist = require('minimist')
 const chalk = require('chalk')
 const opn = require('opn')
