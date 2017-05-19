@@ -5,7 +5,7 @@ const { resolve } = require('path')
 
 // Packages
 const Progress = require('progress')
-const fs = require('fs-promise')
+const fs = require('fs-extra')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const minimist = require('minimist')
