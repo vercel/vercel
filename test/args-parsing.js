@@ -71,7 +71,7 @@ test('"now alias --help" is the same as "now --help alias"', async t => {
  */
 function now(...args) {
   return new Promise((resolve, reject) => {
-    const command = path.resolve(__dirname, '../build/bin/now.js')
+    const command = path.resolve(__dirname, '../bin/now.js')
     const now = spawn(command, args)
 
     let stdout = ''
