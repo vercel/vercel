@@ -1,6 +1,7 @@
 {
   "name": "now",
   "version": "5.3.1",
+  "private": true,
   "scripts": {
     "precommit": "xo --quiet && lint-staged",
     "lint": "xo",
