@@ -4,7 +4,9 @@
 [![XO code style](https://img.shields.io/badge/code_style-XO-5ed9c7.svg)](https://github.com/sindresorhus/xo)
 [![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat)
 
-Realtime global deployments served over HTTP/2. You can find the FAQs [here](https://zeit.co/now#frequently-asked-questions).
+Realtime global deployments served over HTTP/2.
+
+You can find the FAQs [here](https://zeit.co/now#frequently-asked-questions). If you're looking for the code behind the [npm package](https://www.npmjs.com/package/now) named "now", [this](https://github.com/zeit/now-cli-proxy) is what you're searching for. Have fun with `now`!
 
 ## Usage
 
