@@ -6,7 +6,7 @@
     "precommit": "xo --quiet && lint-staged",
     "lint": "xo --quiet",
     "test": "npm run lint && ava",
-    "pack": "pkg bin/now.js --config package.json --out-dir packed"
+    "pack": "pkg bin/now.js -c package.json -o packed/now"
   },
   "pkg": {
     "scripts": [
