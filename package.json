@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "precommit": "xo --quiet && lint-staged",
-    "lint": "xo",
+    "lint": "xo --quiet",
     "test": "npm run lint && ava",
     "pack": "pkg bin/now.js --config package.json --out-dir packed"
   },
