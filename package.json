@@ -5,9 +5,7 @@
   "scripts": {
     "precommit": "xo --quiet && lint-staged",
     "lint": "xo",
-    "test": "npm run build && npm run lint && ava",
-    "prepublish": "npm run build",
-    "build": "./build.sh",
+    "test": "npm run lint && ava",
     "pack": "pkg bin/now.js --config package.json --out-dir packed"
   },
   "pkg": {
@@ -23,7 +21,7 @@
     ]
   },
   "bin": {
-    "now": "./build/bin/now.js"
+    "now": "./bin/now.js"
   },
   "ava": {
     "failFast": true,
@@ -33,8 +31,7 @@
   },
   "xo": {
     "ignores": [
-      "test/_fixtures/**",
-      "scripts/build/**"
+      "test/_fixtures/**"
     ],
     "extends": "prettier"
   },
@@ -52,7 +49,6 @@
     "arr-flatten": "1.0.3",
     "array-unique": "0.3.2",
     "async-retry": "0.3.0",
-    "async-to-gen": "1.3.3",
     "bytes": "2.5.0",
     "chalk": "1.1.3",
     "clipboardy": "1.1.2",
