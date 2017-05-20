@@ -547,7 +547,7 @@ async function sync({ token, config: { currentTeam, user } }) {
   if (plan.id === 'oss') {
     if (isTTY) {
       info(
-        `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code will be made ${chalk.bold('public')}.`
+        `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code and logs will be made ${chalk.bold('public')}.`
       )
 
       let proceed
