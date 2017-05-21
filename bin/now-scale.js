@@ -139,8 +139,11 @@ async function run({ token, config: { currentTeam } }) {
     process.exit(0)
   } else if (id && isHostNameOrId(id)) {
     // Normalize URL by removing slash from the end
-    if (isURL(id) && id.slice(-1) === '/') {
-      id = id.slice(0, -1)
+    if (isURL(id)) {
+      id = id.replace(/^https:\/\//i, '')
+      if (id.slice(-1) === '/') {
+        id = id.slice(0, -1)
+      }
     }
   } else {
     error('Please specify a deployment: now scale <id|url>')
@@ -150,7 +153,7 @@ async function run({ token, config: { currentTeam } }) {
 
   const deployments = await scale.list()
 
-  const match = deployments.find(d => {
+  let match = deployments.find(d => {
     // `url` should match the hostname of the deployment
     let u = id.replace(/^https:\/\//i, '')
 
@@ -162,8 +165,18 @@ async function run({ token, config: { currentTeam } }) {
   })
 
   if (!match) {
-    error(`Could not find any deployments matching ${id}`)
-    return process.exit(1)
+    // Maybe it's an alias
+    const aliasDeployment = (await scale.listAliases()).find(
+      e => e.alias === id
+    )
+    if (!aliasDeployment) {
+      error(`Could not find any deployments matching ${id}`)
+      return process.exit(1)
+    }
+    console.dir({ d: aliasDeployment })
+    match = deployments.find(d => {
+      return d.uid === aliasDeployment.deploymentId
+    })
   }
 
   const { min, max } = guessParams()
