@@ -111,6 +111,7 @@ async function run({ token, config: { currentTeam } }) {
   const args = argv._.slice(1)
 
   switch (subcommand) {
+    case 'list':
     case 'ls': {
       await require(resolve(__dirname, 'teams', 'list.js'))({
         teams,
