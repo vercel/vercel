@@ -173,7 +173,6 @@ async function run({ token, config: { currentTeam } }) {
       error(`Could not find any deployments matching ${id}`)
       return process.exit(1)
     }
-    console.dir({ d: aliasDeployment })
     match = deployments.find(d => {
       return d.uid === aliasDeployment.deploymentId
     })
