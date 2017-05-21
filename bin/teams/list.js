@@ -4,6 +4,8 @@ const wait = require('../../lib/utils/output/wait')
 const cfg = require('../../lib/cfg')
 const info = require('../../lib/utils/output/info')
 const error = require('../../lib/utils/output/error')
+const { tick: tickChar } = require('../../lib/utils/output/chars')
+const table = require('../../lib/utils/output/table')
 
 module.exports = async function({ teams, token }) {
   const stopSpinner = wait('Fetching teams')
@@ -19,26 +21,17 @@ module.exports = async function({ teams, token }) {
   }
 
   const teamList = list.map(({ slug, name }) => {
-    name = `${slug} (${name})`
-    if (slug === currentTeam.slug) {
-      name += ` ${chalk.bold('(current)')}`
-    }
-
     return {
       name,
-      value: slug
+      value: slug,
+      current: slug === currentTeam.slug ? tickChar : ''
     }
   })
 
-  const suffix = accountIsCurrent ? ` ${chalk.bold('(current)')}` : ''
-
-  const userEntryName = user.username
-    ? `${user.username} (${user.email})${suffix}`
-    : user.email
-
   teamList.unshift({
-    name: userEntryName,
-    value: user.username
+    name: user.username || user.email,
+    value: user.username,
+    current: (accountIsCurrent && tickChar) || ''
   })
 
   // Let's bring the current team to the beginning of the list
@@ -60,5 +53,10 @@ module.exports = async function({ teams, token }) {
 
   info(`${chalk.bold(count)} team${count > 1 ? 's' : ''} found`)
   console.log()
-  teamList.forEach(team => console.log(team.name))
+
+  table(
+    ['id', 'email / name', 'current?'],
+    teamList.map(team => [team.value, team.name, team.current]),
+    5
+  )
 }
