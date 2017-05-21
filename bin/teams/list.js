@@ -2,8 +2,8 @@ const chalk = require('chalk')
 
 const wait = require('../../lib/utils/output/wait')
 const cfg = require('../../lib/cfg')
-const info = require('../../lib/utils/output/info');
-const error = require('../../lib/utils/output/error');
+const info = require('../../lib/utils/output/info')
+const error = require('../../lib/utils/output/error')
 
 module.exports = async function({ teams, token }) {
   const stopSpinner = wait('Fetching teams')
@@ -43,17 +43,19 @@ module.exports = async function({ teams, token }) {
 
   // Let's bring the current team to the beginning of the list
   if (!accountIsCurrent) {
-    const index = teamList.findIndex(choice => choice.value === currentTeam.slug)
+    const index = teamList.findIndex(
+      choice => choice.value === currentTeam.slug
+    )
     const choice = teamList.splice(index, 1)[0]
     teamList.unshift(choice)
   }
 
   // Printing
-  const count = teamList.length;
+  const count = teamList.length
   if (!count) {
     // Maybe should not happen
     error(`No team found`)
-    return;
+    return
   }
 
   info(`${chalk.bold(count)} team${count > 1 ? 's' : ''} found`)
