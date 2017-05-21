@@ -158,7 +158,6 @@ async function run({ token, config: { currentTeam } }) {
       // `.now.sh` domain is implied if just the subdomain is given
       u += '.now.sh'
     }
-
     return d.uid === id || d.name === id || d.url === u
   })
 
@@ -199,7 +198,7 @@ async function run({ token, config: { currentTeam } }) {
     Number.isInteger(max) &&
     currentCurrent <= max
   ) {
-    console.log(`> Done`)
+    console.log(chalk.cyan(`> Success`))
     return
   }
 
