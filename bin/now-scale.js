@@ -198,7 +198,8 @@ async function run({ token, config: { currentTeam } }) {
     Number.isInteger(max) &&
     currentCurrent <= max
   ) {
-    console.log(chalk.cyan(`> Success`))
+    // Nothing to do, let's print the rules
+    printScaleingRules(match.url, currentCurrent, min, max)
     return
   }
 
@@ -220,19 +221,24 @@ async function run({ token, config: { currentTeam } }) {
   const elapsed = ms(new Date() - start)
 
   const currentReplicas = match.scale.current
-  const log = console.log
-  log(`> ${chalk.cyan('Success!')} Configured scaling rules [${elapsed}]`)
-  log()
-  log(
-    `${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
-  )
-  log(printf('%6s %s', 'min', chalk.bold(newMin)))
-  log(printf('%6s %s', 'max', chalk.bold(newMax)))
-  log(printf('%6s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔')))
-  log()
+  printScaleingRules(match.url, currentReplicas, newMin, newMax, elapsed)
   await info(scale, match.url)
 
   scale.close()
+}
+function printScaleingRules(url, currentReplicas, min, max, elapsed) {
+  const log = console.log
+  log(
+    `> ${chalk.cyan('Success!')} Configured scaling rules ${elapsed ? '[' + elapsed + ']' : ''}`
+  )
+  log()
+  log(
+    `${chalk.bold(url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
+  )
+  log(printf('%6s %s', 'min', chalk.bold(min)))
+  log(printf('%6s %s', 'max', chalk.bold(max)))
+  log(printf('%6s %s', 'auto', chalk.bold(min === max ? '✖' : '✔')))
+  log()
 }
 
 async function list(scale) {
