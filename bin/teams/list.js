@@ -55,8 +55,8 @@ module.exports = async function({ teams, token }) {
   console.log()
 
   table(
-    ['id', 'email / name', 'current?'],
-    teamList.map(team => [team.value, team.name, team.current]),
-    5
+    ['', 'id', 'email / name'],
+    teamList.map(team => [team.current, team.value, team.name]),
+    [1, 5]
   )
 }
