@@ -29,8 +29,8 @@ module.exports = async function({ teams, token }) {
   })
 
   teamList.unshift({
-    name: user.username || user.email,
-    value: user.username,
+    name: user.email,
+    value: user.username || user.email,
     current: (accountIsCurrent && tickChar) || ''
   })
 
