@@ -1,5 +1,5 @@
 {
-  "name": "now-cli",
+  "name": "now",
   "version": "6.0.0",
   "private": true,
   "scripts": {
