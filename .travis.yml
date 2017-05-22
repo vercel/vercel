@@ -20,7 +20,7 @@
       "tags": true
     }
   },
-  "after_success": [
+  "after_script": [
     'npm install --global slackup',
     'npm run pack',
     './scripts/slack.js'
