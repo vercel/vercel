@@ -14,35 +14,31 @@ const targetWin32 = path.join(__dirname, 'now.exe')
 const target = process.platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
 
+const packagePath = path.join(__dirname, '..', '..', 'package.json')
+const packageJSON = require(packagePath)
+
 const platformToName = {
   darwin: 'now-macos',
   linux: 'now-linux',
   win32: 'now-win.exe'
 }
 
-const getLatest = async () => {
-  const res = await fetch('https://now-cli-latest.zeit.sh')
-
-  if (res.status !== 200) {
-    throw new Error(res.statusText)
-  }
-
-  return res.json()
-}
-
 async function main() {
   info('Retrieving the latest CLI version...')
 
-  const latest = await getLatest()
+  const downloadURL = `https://api.github.com/repos/zeit/now-cli/releases/tags/${packageJSON.version}`
+  const responseLatest = await fetch(downloadURL)
+  const latest = await responseLatest.json()
+
   const name = platformToName[process.platform]
-  const asset = latest.assets.filter(a => a.name === name)[0]
+  const asset = latest.assets.find(a => a.name === name)
 
   info('For the sources, check out: https://github.com/zeit/now-cli')
 
   // Print an empty line
   console.log('')
 
-  enableProgress('Downloading now CLI ' + latest.tag)
+  enableProgress('Downloading now CLI ' + packageJSON.version)
   showProgress(0)
 
   const { url } = asset
