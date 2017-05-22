@@ -28,7 +28,8 @@
     "now": "download/dist/now"
   },
   "files": [
-    "download"
+    "download/dist",
+    "download/postinstall.js"
   ],
   "ava": {
     "failFast": true,
