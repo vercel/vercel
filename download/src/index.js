@@ -15,7 +15,7 @@ const target = process.platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
 
 const packagePath = path.join(__dirname, '..', '..', 'package.json')
-const packageJSON = require(packagePath)
+const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
 const platformToName = {
   darwin: 'now-macos',
