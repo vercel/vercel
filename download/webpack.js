@@ -8,10 +8,10 @@ module.exports = {
     __filename: false
   },
   entry: [
-    './index.js'
+    './src/index.js'
   ],
   output: {
-    path: path.join(__dirname, '../dist'),
+    path: path.join(__dirname, 'dist'),
     filename: 'download.js'
   },
   module: {

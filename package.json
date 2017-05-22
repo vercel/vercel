@@ -3,9 +3,9 @@
   "version": "6.0.0",
   "private": true,
   "scripts": {
-    "postinstall": "node postinstall.js",
+    "postinstall": "node download/postinstall.js",
     "precommit": "xo --quiet && lint-staged",
-    "prepublish": "in-install || (npm run webpack && node placeholder.js)",
+    "prepublish": "in-install || (npm run webpack && node download/placeholder.js)",
     "lint": "xo --quiet",
     "test": "npm run lint && ava",
     "pack": "pkg bin/now.js -c package.json -o packed/now",
@@ -24,11 +24,10 @@
     ]
   },
   "bin": {
-    "now": "dist/now"
+    "now": "download/dist/now"
   },
   "files": [
-    "dist",
-    "postinstall.js"
+    "download"
   ],
   "ava": {
     "failFast": true,
@@ -49,7 +48,6 @@
       "git add"
     ]
   },
-  "dependencies": {},
   "devDependencies": {
     "@google/maps": "0.3.1",
     "alpha-sort": "2.0.1",

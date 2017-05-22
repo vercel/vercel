@@ -4,8 +4,7 @@
 var path = require('path')
 var fs = require('fs')
 
-var dist = path.join(__dirname, 'dist')
-var now = path.join(dist, 'now')
+var now = path.join(__dirname, 'dist', 'now')
 
 fs.writeFileSync(
   now,
