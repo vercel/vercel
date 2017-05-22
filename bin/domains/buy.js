@@ -24,7 +24,7 @@ module.exports = async function({ domains, args, currentTeam, user }) {
   elapsed = stamp()
   let stopSpinner = wait(`Checking availability for ${nameParam}`)
 
-  const price = await domains.price(name)
+  const { price, period } = await domains.price(name)
   const available = await domains.status(name)
 
   stopSpinner()
@@ -34,10 +34,10 @@ module.exports = async function({ domains, args, currentTeam, user }) {
       `The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`
     )
   }
-
+  const periodMsg = `${period}yr${period > 1 ? 's' : ''}, `
   info(`The domain ${nameParam} is ${italic('available')}! ${elapsed()}`)
   const confirmation = await promptBool(
-    `Buy now for ${bold(`$${price}`)} (${bold((currentTeam && currentTeam.slug) || user.username || user.email)})?`
+    `Buy now for ${bold(`$${price}`)} (${bold(periodMsg + (currentTeam && currentTeam.slug) || user.username || user.email)})?`
   )
 
   eraseLines(1)
