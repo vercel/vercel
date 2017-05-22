@@ -47,7 +47,6 @@ const commands = new Set([
   'billing',
   'upgrade',
   'downgrade',
-  'open',
   'team',
   'teams',
   'switch',
