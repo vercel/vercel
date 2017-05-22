@@ -24,7 +24,17 @@ module.exports = async function({ domains, args, currentTeam, user }) {
   elapsed = stamp()
   let stopSpinner = wait(`Checking availability for ${nameParam}`)
 
-  const { price, period } = await domains.price(name)
+  let price
+  let period
+  try {
+    const json = await domains.price(name)
+    price = json.price
+    period = json.period
+  } catch (err) {
+    stopSpinner()
+    return error(err.message)
+  }
+
   const available = await domains.status(name)
 
   stopSpinner()
