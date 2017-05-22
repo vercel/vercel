@@ -544,7 +544,7 @@ async function sync({ token, config: { currentTeam, user } }) {
 
   const plan = await planPromise
 
-  if (plan.id === 'oss') {
+  if (plan.id === 'oss' && !wantsPublic) {
     if (isTTY) {
       info(
         `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code and logs will be made ${chalk.bold('public')}.`
@@ -562,7 +562,9 @@ async function sync({ token, config: { currentTeam, user } }) {
         }
       }
 
-      if (!proceed) {
+      if (proceed) {
+        note(`You can use ${cmd('now --public')} to skip this prompt`)
+      } else {
         const stopSpinner = wait('Canceling deployment')
         await now.remove(now.id, { hard: true })
         stopSpinner()
@@ -572,7 +574,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
     } else if (!wantsPublic) {
       const msg =
-        '\nYou are on the OSS plan. Your code will be made public.' +
+        '\nYou are on the OSS plan. Your code and logs will be made public.' +
         ' If you agree with that, please run again with --public.'
       return stopDeployment(msg)
     }
