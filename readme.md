@@ -4,7 +4,9 @@
 [![XO code style](https://img.shields.io/badge/code_style-XO-5ed9c7.svg)](https://github.com/sindresorhus/xo)
 [![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat)
 
-This is the command line interface for [now](https://zeit.co/now): Realtime global deployments served over HTTP/2. If you're looking for the code behind the [npm package](https://www.npmjs.com/package/now) named "now", [this](https://github.com/zeit/now-cli-proxy) is the right place.
+This is the command line interface for [now](https://zeit.co/now): Realtime global deployments served over HTTP/2.
+
+It's also a special kind of package. When you install it using `npm install -g now`, it will automatically select the latest version of the [pkg](https://github.com/zeit/pkg)-ed `now` binary from [here](https://github.com/zeit/now-cli/releases) and place it on your device.
 
 ## Usage
 
@@ -13,6 +15,14 @@ Simply follow [this guide](https://zeit.co/docs#getting-started)! Then run this 
 ```bash
 now help
 ```
+
+## Why Do We Ship a `pkg`-ed Binary?
+
+- Simpler installation for non-Node users like those deploying [static files](https://zeit.co/blog/unlimited-static) or [Dockerfile](https://zeit.co/blog/now-dockerfile)s.
+- Consistency across platforms and installation mechanisms (`npm`, `brew`, manual scripts)
+- Parsing and evaluation optimizations: faster bootup time
+- Easier installation in automation environments (like CI systems)
+- Increased safety by providing a unified signature mechanism for releases
 
 ## Caught a Bug?
 
