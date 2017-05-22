@@ -24,6 +24,12 @@ const platformToName = {
 }
 
 async function main() {
+  fs.writeFileSync(
+    now,
+    '#!/usr/bin/env node\n' +
+      'console.log("\'Now\' binary downloading was interrupted. Please reinstall!")\n'
+  )
+
   info('Retrieving the latest CLI version...')
 
   const downloadURL = `https://api.github.com/repos/zeit/now-cli/releases/tags/${packageJSON.version}`
