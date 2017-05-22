@@ -18,6 +18,7 @@ const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
 const info = require('../lib/scale-info')
 const sort = require('../lib/sort-deployments')
+const success = require('../lib/utils/output/success')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -139,8 +140,11 @@ async function run({ token, config: { currentTeam } }) {
     process.exit(0)
   } else if (id && isHostNameOrId(id)) {
     // Normalize URL by removing slash from the end
-    if (isURL(id) && id.slice(-1) === '/') {
-      id = id.slice(0, -1)
+    if (isURL(id)) {
+      id = id.replace(/^https:\/\//i, '')
+      if (id.slice(-1) === '/') {
+        id = id.slice(0, -1)
+      }
     }
   } else {
     error('Please specify a deployment: now scale <id|url>')
@@ -150,7 +154,7 @@ async function run({ token, config: { currentTeam } }) {
 
   const deployments = await scale.list()
 
-  const match = deployments.find(d => {
+  let match = deployments.find(d => {
     // `url` should match the hostname of the deployment
     let u = id.replace(/^https:\/\//i, '')
 
@@ -158,13 +162,21 @@ async function run({ token, config: { currentTeam } }) {
       // `.now.sh` domain is implied if just the subdomain is given
       u += '.now.sh'
     }
-
     return d.uid === id || d.name === id || d.url === u
   })
 
   if (!match) {
-    error(`Could not find any deployments matching ${id}`)
-    return process.exit(1)
+    // Maybe it's an alias
+    const aliasDeployment = (await scale.listAliases()).find(
+      e => e.alias === id
+    )
+    if (!aliasDeployment) {
+      error(`Could not find any deployments matching ${id}`)
+      return process.exit(1)
+    }
+    match = deployments.find(d => {
+      return d.uid === aliasDeployment.deploymentId
+    })
   }
 
   const { min, max } = guessParams()
@@ -199,7 +211,8 @@ async function run({ token, config: { currentTeam } }) {
     Number.isInteger(max) &&
     currentCurrent <= max
   ) {
-    console.log(`> Done`)
+    // Nothing to do, let's print the rules
+    printScaleingRules(match.url, currentCurrent, min, max)
     return
   }
 
@@ -221,19 +234,24 @@ async function run({ token, config: { currentTeam } }) {
   const elapsed = ms(new Date() - start)
 
   const currentReplicas = match.scale.current
-  const log = console.log
-  log(`> ${chalk.cyan('Success!')} Configured scaling rules [${elapsed}]`)
-  log()
-  log(
-    `${chalk.bold(match.url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
-  )
-  log(printf('%6s %s', 'min', chalk.bold(newMin)))
-  log(printf('%6s %s', 'max', chalk.bold(newMax)))
-  log(printf('%6s %s', 'auto', chalk.bold(newMin === newMax ? '✖' : '✔')))
-  log()
+  printScaleingRules(match.url, currentReplicas, newMin, newMax, elapsed)
   await info(scale, match.url)
 
   scale.close()
+}
+function printScaleingRules(url, currentReplicas, min, max, elapsed) {
+  const log = console.log
+  success(
+    `Configured scaling rules ${chalk.gray(elapsed ? '[' + elapsed + ']' : '')}`
+  )
+  log()
+  log(
+    `${chalk.bold(url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
+  )
+  log(printf('%6s %s', 'min', chalk.bold(min)))
+  log(printf('%6s %s', 'max', chalk.bold(max)))
+  log(printf('%6s %s', 'auto', chalk.bold(min === max ? '✖' : '✔')))
+  log()
 }
 
 async function list(scale) {

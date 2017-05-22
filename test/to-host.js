@@ -1,5 +1,5 @@
 const test = require('ava')
-const toHost = require('../build/lib/to-host')
+const toHost = require('../lib/to-host')
 
 test('simple', t => {
   t.is(toHost('zeit.co'), 'zeit.co')
