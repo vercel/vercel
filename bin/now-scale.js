@@ -18,6 +18,7 @@ const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
 const info = require('../lib/scale-info')
 const sort = require('../lib/sort-deployments')
+const success = require('../lib/utils/output/success')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -240,8 +241,8 @@ async function run({ token, config: { currentTeam } }) {
 }
 function printScaleingRules(url, currentReplicas, min, max, elapsed) {
   const log = console.log
-  log(
-    `> ${chalk.cyan('Success!')} Configured scaling rules ${elapsed ? '[' + elapsed + ']' : ''}`
+  success(
+    `Configured scaling rules ${chalk.gray(elapsed ? '[' + elapsed + ']' : '')}`
   )
   log()
   log(
