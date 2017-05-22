@@ -1,6 +1,6 @@
 {
   "name": "now-cli",
-  "version": "5.3.3",
+  "version": "6.0.0",
   "private": true,
   "scripts": {
     "precommit": "xo --quiet && lint-staged",
@@ -71,7 +71,6 @@
     "minimist": "1.2.0",
     "ms": "2.0.0",
     "node-fetch": "1.6.3",
-    "opn": "5.0.0",
     "ora": "1.2.0",
     "printf": "0.2.5",
     "progress": "2.0.0",
