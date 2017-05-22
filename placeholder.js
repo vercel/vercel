@@ -1,3 +1,5 @@
+/* eslint-disable no-var */
+
 // Native
 var path = require('path')
 var fs = require('fs')
