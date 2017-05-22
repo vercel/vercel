@@ -1,8 +1,11 @@
+/* eslint-disable unicorn/no-process-exit */
+
 // Native
 import fs from 'fs'
 import path from 'path'
 
 // Packages
+import onDeath from 'death'
 import fetch from 'node-fetch'
 
 // Utilities
@@ -27,8 +30,18 @@ async function main() {
   fs.writeFileSync(
     now,
     '#!/usr/bin/env node\n' +
-      'console.log("\'Now\' binary downloading was interrupted. Please reinstall!")\n'
+      'console.log("Please wait until \'now\' installation completes!")\n'
   )
+
+  onDeath(() => {
+    fs.writeFileSync(
+      now,
+      '#!/usr/bin/env node\n' +
+        'console.log("The \'now\' installation did not complete successfully.")\n' +
+        'console.log("Please run \'npm i -g now\' to reinstall!")\n'
+    )
+    process.exit();
+  })
 
   info('Retrieving the latest CLI version...')
 
@@ -100,7 +113,5 @@ async function main() {
 
 main().catch(err => {
   console.error(err)
-
-  // eslint-disable-next-line unicorn/no-process-exit
   process.exit(2)
 })
