@@ -41,7 +41,7 @@ async function main() {
   enableProgress('Downloading now CLI ' + packageJSON.version)
   showProgress(0)
 
-  const { url } = asset
+  const url = asset.browser_download_url
   const resp = await fetch(url)
 
   if (resp.status !== 200) {
