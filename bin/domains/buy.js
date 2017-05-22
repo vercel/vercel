@@ -34,10 +34,12 @@ module.exports = async function({ domains, args, currentTeam, user }) {
       `The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`
     )
   }
-  const periodMsg = `${period}yr${period > 1 ? 's' : ''}, `
-  info(`The domain ${nameParam} is ${italic('available')}! ${elapsed()}`)
+  const periodMsg = `${period}yr${period > 1 ? 's' : ''}`
+  info(
+    `The domain ${nameParam} is ${italic('available')} to buy under ${bold((currentTeam && currentTeam.slug) || user.username || user.email)}! ${elapsed()}`
+  )
   const confirmation = await promptBool(
-    `Buy now for ${bold(`$${price}`)} (${bold(periodMsg + (currentTeam && currentTeam.slug) || user.username || user.email)})?`
+    `Buy now for ${bold(`$${price}`)} (${periodMsg})?`
   )
 
   eraseLines(1)
