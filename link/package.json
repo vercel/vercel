@@ -1,0 +1,6 @@
+{
+  "name": "now",
+  "bin": {
+    "now": "link.js"
+  }
+}
