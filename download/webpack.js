@@ -8,7 +8,7 @@ module.exports = {
     __filename: false
   },
   entry: [
-    './lib/index.js'
+    './src/index.js'
   ],
   output: {
     path: path.join(__dirname, 'dist'),
