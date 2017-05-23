@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "node download/postinstall.js",
     "precommit": "xo --quiet && lint-staged",
-    "prepublish": "in-install || (npm run webpack && node download/placeholder.js)",
+    "prepublish": "in-install || (npm run webpack && cp /dev/null download/dist/now)",
     "lint": "xo --quiet",
     "test": "npm run lint && ava",
     "pack": "pkg bin/now.js -c package.json -o packed/now",
@@ -70,6 +70,7 @@
     "credit-card": "3.0.1",
     "cross-spawn": "5.1.0",
     "dateformat": "2.0.0",
+    "death": "1.1.0",
     "docker-file-parser": "1.0.2",
     "dotenv": "4.0.0",
     "download": "6.1.0",
