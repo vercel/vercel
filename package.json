@@ -8,6 +8,7 @@
     "postinstall": "node download/install.js",
     "precommit": "xo --quiet && lint-staged",
     "prepublish": "in-install || (npm run webpack && cp /dev/null download/dist/now)",
+    "link": "cd link && npm link",
     "lint": "xo --quiet",
     "test": "npm run lint && ava",
     "pack": "pkg bin/now.js -c package.json -o packed/now",
