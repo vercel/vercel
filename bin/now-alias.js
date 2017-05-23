@@ -19,6 +19,7 @@ const { error } = require('../lib/error')
 const toHost = require('../lib/to-host')
 const { reAlias } = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
+const info = require('../lib/utils/output/info')
 const logo = require('../lib/utils/output/logo')
 const promptBool = require('../lib/utils/input/prompt-bool')
 
@@ -304,8 +305,8 @@ async function run({ token, config: { currentTeam, user } }) {
       try {
         const confirmation = await confirmDeploymentRemoval(alias, _alias)
         if (!confirmation) {
-          console.log('\n> Aborted')
-          process.exit(0)
+          info('Aborted')
+          return process.exit(0)
         }
 
         const start = new Date()

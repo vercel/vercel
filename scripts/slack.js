@@ -51,9 +51,9 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
       const message = `:package: Here are the binaries for the branch *${branch}* of *${repo}* (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>):`
 
       const binaries = [
-        `${__dirname}/../../packed/now-macos`,
-        `${__dirname}/../../packed/now-linux`,
-        `${__dirname}/../../packed/now-win.exe`
+        `${__dirname}/../packed/now-macos`,
+        `${__dirname}/../packed/now-linux`,
+        `${__dirname}/../packed/now-win.exe`
       ]
 
       try {

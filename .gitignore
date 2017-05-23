@@ -1,5 +1,6 @@
 # build output
 packed
+download/dist
 
 # dependencies
 node_modules
