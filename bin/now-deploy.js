@@ -22,7 +22,6 @@ const { version } = require('../lib/pkg')
 const Logger = require('../lib/build-logger')
 const Now = require('../lib')
 const toHumanPath = require('../lib/utils/to-human-path')
-const promptOptions = require('../lib/utils/prompt-options')
 const { handleError, error } = require('../lib/error')
 const { fromGit, isRepoPath, gitPathParts } = require('../lib/git')
 const readMetaData = require('../lib/read-metadata')
@@ -35,6 +34,7 @@ const info = require('../lib/utils/output/info')
 const wait = require('../lib/utils/output/wait')
 const NowPlans = require('../lib/plans')
 const promptBool = require('../lib/utils/input/prompt-bool')
+const promptOptions = require('../lib/utils/input/prompt-options')
 const note = require('../lib/utils/output/note')
 
 const argv = minimist(process.argv.slice(2), {
@@ -550,17 +550,10 @@ async function sync({ token, config: { currentTeam, user } }) {
         `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code and logs will be made ${chalk.bold('public')}.`
       )
 
-      let proceed
-      try {
-        const label = 'Are you sure you want to proceed with the deployment?'
-        proceed = await promptBool(label, { trailing: eraseLines(1) })
-      } catch (err) {
-        if (err.message === 'USER_ABORT') {
-          proceed = false
-        } else {
-          throw err
-        }
-      }
+      const proceed = await promptBool(
+        'Are you sure you want to proceed with the deployment?',
+        { trailing: eraseLines(1) }
+      )
 
       if (proceed) {
         note(`You can use ${cmd('now --public')} to skip this prompt`)
