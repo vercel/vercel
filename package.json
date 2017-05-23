@@ -5,7 +5,7 @@
   "repository": "zeit/now-cli",
   "license": "MIT",
   "scripts": {
-    "postinstall": "node download/postinstall.js",
+    "postinstall": "node download/install.js",
     "precommit": "xo --quiet && lint-staged",
     "prepublish": "in-install || (npm run webpack && cp /dev/null download/dist/now)",
     "lint": "xo --quiet",
@@ -30,7 +30,7 @@
   },
   "files": [
     "download/dist",
-    "download/postinstall.js"
+    "download/install.js"
   ],
   "ava": {
     "failFast": true,
