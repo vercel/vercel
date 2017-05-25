@@ -71,6 +71,6 @@ module.exports = async function({ domains, args, currentTeam, user }) {
 
   success(`Domain purchased and created ${uid(domain.uid)} ${elapsed()}`)
   info(
-    `You may now use your domain as an alias to your deployments. Run ${cmd('now alias help')}`
+    `You may now use your domain as an alias to your deployments. Run ${cmd('now alias --help')}`
   )
 }
