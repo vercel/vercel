@@ -524,11 +524,11 @@ async function sync({ token, config: { currentTeam, user } }) {
 
   const startU = new Date()
 
-  const complete = ({ fileCount }) => {
+  const complete = ({ syncCount }) => {
     if (!quiet) {
       const elapsedU = ms(new Date() - startU)
       console.log(
-        `> Synced ${fileCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
+        `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
       )
       console.log('> Initializing…')
     }
@@ -576,10 +576,15 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   if (now.syncAmount) {
+    if (debug && now.syncFileCount !== now.fileCount) {
+      console.log(
+        `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+      )
+    }
     const size = bytes(now.syncAmount)
-    const fileCount = `${now.fileCount} file${now.fileCount > 1 && 's'}`
+    const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1 && 's'}`
     const bar = new Progress(
-      `> Upload [:bar] :percent :etas (${size}) [${fileCount}]`,
+      `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
       {
         width: 20,
         complete: '=',
@@ -601,7 +606,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       bar.tick(amount)
     })
 
-    now.on('complete', () => complete({ fileCount }))
+    now.on('complete', () => complete({ syncCount }))
 
     now.on('error', err => {
       error('Upload failed')
