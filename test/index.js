@@ -213,21 +213,6 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
   )
 })
 
-test('throws when `package.json` and `Dockerfile` exist', async t => {
-  let e
-  try {
-    await readMetadata(fixture('multiple-manifests-throws'), {
-      quiet: true,
-      strict: false
-    })
-  } catch (err) {
-    e = err
-  }
-  t.is(e.userError, true)
-  t.is(e.code, 'MULTIPLE_MANIFESTS')
-  t.pass(/ambiguous deployment/i.test(e.message))
-})
-
 test('support `package.json:now.type` to bypass multiple manifests error', async t => {
   const f = fixture('type-in-package-now-with-dockerfile')
   const { type, nowConfig, hasNowJson } = await readMetadata(f, {
