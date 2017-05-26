@@ -73,6 +73,7 @@
     "cross-spawn": "5.1.0",
     "dateformat": "2.0.0",
     "death": "1.1.0",
+    "deployment-type": "1.0.1",
     "docker-file-parser": "1.0.2",
     "dotenv": "4.0.0",
     "download": "6.2.0",
@@ -112,8 +113,5 @@
     "update-notifier": "2.1.0",
     "webpack": "2.6.1",
     "xo": "0.18.2"
-  },
-  "dependencies": {
-    "deployment-type": "1.0.1"
   }
 }
