@@ -53,8 +53,7 @@ const commands = new Set([
   'log',
   'logs',
   'scale',
-  'logout',
-  'whoami'
+  'logout'
 ])
 
 const aliases = new Map([
