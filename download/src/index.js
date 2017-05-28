@@ -30,7 +30,7 @@ async function main() {
   fs.writeFileSync(
     now,
     '#!/usr/bin/env node\n' +
-      'console.log("Please wait until \'now\' installation completes!")\n'
+      'console.log("Please wait until the \'now\' installation completes!")\n'
   )
 
   onDeath(() => {
