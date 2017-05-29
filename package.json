@@ -88,7 +88,7 @@
     "ini": "1.3.4",
     "inquirer": "3.0.6",
     "is-url": "1.2.2",
-    "lint-staged": "3.5.0",
+    "lint-staged": "3.5.1",
     "lodash.range": "3.2.0",
     "minimist": "1.2.0",
     "ms": "2.0.0",
