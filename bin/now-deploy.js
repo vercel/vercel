@@ -582,7 +582,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       )
     }
     const size = bytes(now.syncAmount)
-    const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1 && 's'}`
+    const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1 ? 's' : ''}`
     const bar = new Progress(
       `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
       {
