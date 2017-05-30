@@ -537,10 +537,12 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    if (deploymentType === 'static') {
-      console.log(`${chalk.cyan('> Deployment complete!')}`)
-    } else {
-      printLogs(now.host, token, currentTeam, user)
+    if (!quiet) {
+      if (deploymentType === 'static') {
+        console.log(`${chalk.cyan('> Deployment complete!')}`)
+      } else {
+        printLogs(now.host, token, currentTeam, user)
+      }
     }
   }
 
@@ -621,10 +623,12 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    if (deploymentType === 'static') {
-      console.log(`${chalk.cyan('> Deployment complete!')}`)
-    } else {
-      printLogs(now.host, token, currentTeam, user)
+    if (!quiet) {
+      if (deploymentType === 'static') {
+        console.log(`${chalk.cyan('> Deployment complete!')}`)
+      } else {
+        printLogs(now.host, token, currentTeam, user)
+      }
     }
   }
 }
@@ -712,6 +716,7 @@ function printLogs(host, token, currentTeam, user) {
         console.log(`> [debug] Removed temporary repo directory`)
       }
     }
+
     process.exit(1)
   })
 
