@@ -7,20 +7,34 @@ const { resolve } = require('path')
 const updateNotifier = require('update-notifier')
 const chalk = require('chalk')
 
-// Ours
+// Check if the current path exists and throw and error
+// if the user is trying to deploy a non-existing path!
+// This needs to be done exactly in this place, because
+// the utility imports are taking advantage of it
+try {
+  process.cwd()
+} catch (err) {
+  if (err.code === 'ENOENT' && err.syscall === 'uv_cwd') {
+    console.log(`Current path doesn't exist!`)
+  } else {
+    console.log(err)
+  }
+
+  process.exit(1)
+}
+
+// Utilities
 const pkg = require('../lib/pkg')
 
-if (!process.pkg) {
-  const notifier = updateNotifier({ pkg })
-  const update = notifier.update
+const notifier = updateNotifier({ pkg })
+const update = notifier.update
 
-  if (update) {
-    let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
-    message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
-    message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+if (update) {
+  let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
+  message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
+  message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
 
-    notifier.notify({ message })
-  }
+  notifier.notify({ message })
 }
 
 // This command will be run if no other sub command is specified
