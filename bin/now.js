@@ -1,13 +1,30 @@
 #!/usr/bin/env node
 
 // Native
+const fs = require('fs-extra')
 const { resolve } = require('path')
 
 // Packages
 const updateNotifier = require('update-notifier')
 const chalk = require('chalk')
 
-// Ours
+// Check if the current path exists and throw and error
+// if the user is trying to deploy a non-existing path!
+// This needs to be done exactly in this place, because
+// the utility imports are taking advantage of it
+try {
+  process.cwd()
+} catch (err) {
+  if (err.code === 'ENOENT' && err.syscall === 'uv_cwd') {
+    console.log(`Current path doesn't exist!`)
+  } else {
+    console.log(err)
+  }
+
+  process.exit(1)
+}
+
+// Utilities
 const pkg = require('../lib/pkg')
 
 if (!process.pkg) {
