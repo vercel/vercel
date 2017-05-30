@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 // Native
-const fs = require('fs-extra')
 const { resolve } = require('path')
 
 // Packages
