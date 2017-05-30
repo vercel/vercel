@@ -6,6 +6,7 @@ const { resolve } = require('path')
 // Packages
 const updateNotifier = require('update-notifier')
 const chalk = require('chalk')
+const globalPackages = require('global-packages')
 
 // Check if the current path exists and throw and error
 // if the user is trying to deploy a non-existing path!
@@ -25,17 +26,6 @@ try {
 
 // Utilities
 const pkg = require('../lib/pkg')
-
-const notifier = updateNotifier({ pkg })
-const update = notifier.update
-
-if (update) {
-  let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
-  message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
-  message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
-
-  notifier.notify({ message })
-}
 
 // This command will be run if no other sub command is specified
 const defaultCommand = 'deploy'
@@ -126,6 +116,23 @@ const bin = resolve(__dirname, 'now-' + cmd + '.js')
 // Prepare process.argv for subcommand
 process.argv = process.argv.slice(0, 2).concat(args)
 
-// Load sub command
-// With custom parameter to make "pkg" happy
-require(bin, 'may-exclude')
+globalPackages().then(list => {
+  const hasNow = list.find(item => item.name === 'now')
+
+  if (hasNow && !hasNow.linked) {
+    const notifier = updateNotifier({ pkg })
+    const update = notifier.update
+
+    if (update) {
+      let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
+      message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
+      message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+
+      notifier.notify({ message })
+    }
+  }
+
+  // Load sub command
+  // With custom parameter to make "pkg" happy
+  require(bin, 'may-exclude')
+})
