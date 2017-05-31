@@ -20,9 +20,10 @@ now help
 
 - Simpler installation for non-Node users like those deploying [static files](https://zeit.co/blog/unlimited-static) or [Dockerfiles](https://zeit.co/blog/now-dockerfile).
 - Consistency across platforms and installation mechanisms (`npm`, `brew`, manual scripts)
-- Parsing and evaluation optimizations: faster bootup time
+- Parsing and evaluation optimizations: Faster bootup time
 - Easier installation in automation environments (like CI systems)
 - Increased safety by providing a unified signature mechanism for releases
+- We're able to select our own Node version of choice and can take advantage of the latest features
 
 ## Caught a Bug?
 
