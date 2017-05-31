@@ -18,7 +18,7 @@ now help
 
 ## Why Ship a `pkg`-ed Binary?
 
-- Simpler installation for non-Node users like those deploying [static files](https://zeit.co/blog/unlimited-static) or [Dockerfile](https://zeit.co/blog/now-dockerfile)s.
+- Simpler installation for non-Node users like those deploying [static files](https://zeit.co/blog/unlimited-static) or [Dockerfiles](https://zeit.co/blog/now-dockerfile).
 - Consistency across platforms and installation mechanisms (`npm`, `brew`, manual scripts)
 - Parsing and evaluation optimizations: faster bootup time
 - Easier installation in automation environments (like CI systems)
