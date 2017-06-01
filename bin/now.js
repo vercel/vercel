@@ -26,7 +26,7 @@ try {
 // Utilities
 const pkg = require('../lib/pkg')
 
-if (pkg._npmPkg) {
+if (!process.pkg) {
   const notifier = updateNotifier({ pkg })
   const update = notifier.update
 
