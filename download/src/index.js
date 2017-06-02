@@ -69,20 +69,21 @@ async function main() {
     resp.body.on('data', chunk => {
       bytesRead += chunk.length
       showProgress(100 * bytesRead / size)
+    }).on('error', error => {
+      disableProgress()
+      reject(error)
     })
 
     resp.body.pipe(ws)
 
-    ws
-      .on('close', () => {
-        showProgress(100)
-        disableProgress()
-        resolve()
-      })
-      .on('error', error => {
-        disableProgress()
-        reject(error)
-      })
+    ws.on('close', () => {
+      showProgress(100)
+      disableProgress()
+      resolve()
+    }).on('error', error => {
+      disableProgress()
+      reject(error)
+    })
   })
 
   fs.renameSync(partial, target)
