@@ -26,14 +26,19 @@ try {
 // Utilities
 const pkg = require('../lib/pkg')
 
-if (!process.pkg) {
+if (process.pkg) {
   const notifier = updateNotifier({ pkg })
   const update = notifier.update
 
   if (update) {
     let message = `Update available! ${chalk.red(update.current)} → ${chalk.green(update.latest)} \n`
-    message += `Run ${chalk.magenta('npm i -g now')} to update!\n`
-    message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+    message += `${chalk.magenta('Changelog:')} https://github.com/zeit/now-cli/releases/tag/${update.latest}\n`
+
+    if (pkg._npmPkg) {
+      message += `Run ${chalk.magenta('npm i -g now')} to update!`
+    } else {
+      message += `Please download binaries from https://zeit.co/download`
+    }
 
     notifier.notify({ message })
   }
