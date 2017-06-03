@@ -38,7 +38,7 @@ const promptOptions = require('../lib/utils/input/prompt-options')
 const note = require('../lib/utils/output/note')
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token', 'name', 'alias'],
+  string: ['config', 'token', 'name', 'alias', 'session-affinity'],
   boolean: [
     'help',
     'version',
@@ -67,6 +67,7 @@ const argv = minimist(process.argv.slice(2), {
     public: 'p',
     'no-clipboard': 'C',
     'forward-npm': 'N',
+    'session-affinity': 'S',
     name: 'n',
     alias: 'a'
   }
@@ -117,6 +118,7 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
+    --session-affinity        Session affinity, \`ip\` (default) or \`random\` to control session affinity.
 
   ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
 
@@ -168,6 +170,7 @@ const gitRepo = {}
 // Options
 let forceNew = argv.force
 let deploymentName = argv.name
+let sessionAffinity = argv['session-affinity']
 const debug = argv.debug
 const clipboard = !argv['no-clipboard']
 const forwardNpm = argv['forward-npm']
@@ -349,10 +352,11 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   let meta
-  ;({ meta, deploymentName, deploymentType } = await readMeta(
+  ;({ meta, deploymentName, deploymentType, sessionAffinity } = await readMeta(
     path,
     deploymentName,
-    deploymentType
+    deploymentType,
+    sessionAffinity
   ))
   const nowConfig = meta.nowConfig
 
@@ -489,7 +493,8 @@ async function sync({ token, config: { currentTeam, user } }) {
           forceSync,
           forwardNpm: alwaysForwardNpm || forwardNpm,
           quiet,
-          wantsPublic
+          wantsPublic,
+          sessionAffinity
         },
         meta
       )
@@ -633,12 +638,13 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 }
 
-async function readMeta(path, deploymentName, deploymentType) {
+async function readMeta(path, deploymentName, deploymentType, sessionAffinity) {
   try {
     const meta = await readMetaData(path, {
       deploymentType,
       deploymentName,
-      quiet: true
+      quiet: true,
+      sessionAffinity
     })
 
     if (!deploymentType) {
@@ -664,7 +670,8 @@ async function readMeta(path, deploymentName, deploymentType) {
     return {
       meta,
       deploymentName,
-      deploymentType
+      deploymentType,
+      sessionAffinity
     }
   } catch (err) {
     if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
