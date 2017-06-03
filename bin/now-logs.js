@@ -11,7 +11,7 @@ const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
 const { compare, deserialize } = require('../lib/logs')
-const { maybeURL, normalizeURL } = require('../lib/utils/url')
+const { maybeURL, normalizeURL, parseInstanceURL } = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'query', 'since', 'token', 'until'],
@@ -85,13 +85,16 @@ try {
   process.exit(1)
 }
 
+let instanceId
+
 if (maybeURL(deploymentIdOrURL)) {
   const normalizedURL = normalizeURL(deploymentIdOrURL)
   if (normalizedURL.includes('/')) {
     error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`)
     process.exit(1)
   }
-  deploymentIdOrURL = normalizedURL
+
+  ;[deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL)
 }
 
 Promise.resolve()
@@ -127,6 +130,7 @@ async function printLogs({ token, config: { currentTeam } }) {
   const q = qs.stringify({
     deploymentId: isURL ? '' : deploymentIdOrURL,
     host: isURL ? deploymentIdOrURL : '',
+    instanceId,
     types: types.join(','),
     query
   })
@@ -241,6 +245,7 @@ async function fetchLogs({ token, currentTeam, since, until } = {}) {
   let logs
   try {
     logs = await now.logs(deploymentIdOrURL, {
+      instanceId,
       types,
       limit,
       query,
