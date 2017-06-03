@@ -16,7 +16,7 @@ const { normalizeURL } = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'hard', 'yes'],
+  boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
   alias: {
     help: 'h',
     config: 'c',
@@ -46,6 +46,7 @@ const help = () => {
     'TOKEN'
   )} Login token
     -y, --yes               Skip confirmation
+    --safe                  Skip deployments with an active alias
 
   ${chalk.dim('Examples:')}
 
@@ -121,8 +122,12 @@ function readConfirmation(matches) {
     )
     process.stdout.write(tbl + '\n')
 
-    for (const depl of matches) {
+    for (const [index, depl] of matches.entries()) {
       for (const alias of depl.aliases) {
+        if (argv.safe) {
+          delete matches[index]
+          continue
+        }
         process.stdout.write(
           `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
             `is an alias for ${chalk.underline(
