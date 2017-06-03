@@ -52,6 +52,11 @@
       "git add"
     ]
   },
+  "greenkeeper": {
+    "ignore": [
+      "socket.io-client"
+    ]
+  },
   "devDependencies": {
     "@google/maps": "0.3.1",
     "alpha-sort": "2.0.1",
