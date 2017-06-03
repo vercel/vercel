@@ -5,7 +5,7 @@
   ],
   "script": [
     "npm run test",
-    "./node_modules/.bin/prettier --single-quote --no-semi --write  `find ./lib -name '*.js'` `find ./bin -name '*.js'` ; echo 'checking if prettier changed something' ; git diff-index --name-only HEAD ; git diff-index --quiet HEAD && echo 'ok' || (echo 'pretier modified contents, please run prettier locally and add changes. exitting...' && exit 1)"
+    "./node_modules/.bin/prettier --single-quote --no-semi --write  `find ./lib -name '*.js'` `find ./bin -name '*.js'` ; echo 'checking if prettier changed something' ; git diff-index --name-only HEAD ; git diff HEAD ; git diff-index --quiet HEAD && echo 'ok' || (echo 'pretier modified contents, please run prettier locally and add changes. exitting...' && exit 1)"
   ],
   "before_deploy": "npm run pack",
   "deploy": {

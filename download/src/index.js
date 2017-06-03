@@ -17,7 +17,7 @@ const targetWin32 = path.join(__dirname, 'now.exe')
 const target = process.platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
 
-const packagePath = path.join(__dirname, '..', '..', 'package.json')
+const packagePath = path.join(__dirname, '../../package.json')
 const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
 const platformToName = {
@@ -43,15 +43,6 @@ async function main() {
     process.exit();
   })
 
-  info('Retrieving the latest CLI version...')
-
-  const downloadURL = `https://api.github.com/repos/zeit/now-cli/releases/tags/${packageJSON.version}`
-  const responseLatest = await fetch(downloadURL)
-  const latest = await responseLatest.json()
-
-  const name = platformToName[process.platform]
-  const asset = latest.assets.find(a => a.name === name)
-
   info('For the sources, check out: https://github.com/zeit/now-cli')
 
   // Print an empty line
@@ -60,7 +51,8 @@ async function main() {
   enableProgress('Downloading now CLI ' + packageJSON.version)
   showProgress(0)
 
-  const url = asset.browser_download_url
+  const name = platformToName[process.platform]
+  const url = `https://github.com/zeit/now-cli/releases/download/${packageJSON.version}/${name}`
   const resp = await fetch(url)
 
   if (resp.status !== 200) {
@@ -77,20 +69,21 @@ async function main() {
     resp.body.on('data', chunk => {
       bytesRead += chunk.length
       showProgress(100 * bytesRead / size)
+    }).on('error', error => {
+      disableProgress()
+      reject(error)
     })
 
     resp.body.pipe(ws)
 
-    ws
-      .on('close', () => {
-        showProgress(100)
-        disableProgress()
-        resolve()
-      })
-      .on('error', error => {
-        disableProgress()
-        reject(error)
-      })
+    ws.on('close', () => {
+      showProgress(100)
+      disableProgress()
+      resolve()
+    }).on('error', error => {
+      disableProgress()
+      reject(error)
+    })
   })
 
   fs.renameSync(partial, target)
