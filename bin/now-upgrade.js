@@ -37,9 +37,13 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} Login token
 
   ${chalk.dim('Examples:')}
 
@@ -47,7 +51,9 @@ const help = () => {
 
       ${chalk.cyan('$ now upgrade')}
 
-      ${chalk.yellow('NOTE:')} ${chalk.gray('Make sure you have a payment method, or add one:')}
+      ${chalk.yellow('NOTE:')} ${chalk.gray(
+    'Make sure you have a payment method, or add one:'
+  )}
 
       ${chalk.cyan(`$ now billing add`)}
 
@@ -187,7 +193,9 @@ async function run({ token, config: { currentTeam, user } }) {
     message = currentTeam
       ? `${message}/${currentTeam.slug}/settings/plan`
       : `${message}/account/plan`
-    message += `\n> Select a plan for ${bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+    message += `\n> Select a plan for ${bold(
+      (currentTeam && currentTeam.slug) || user.username || user.email
+    )} ${chalk.gray(`[${elapsed}]`)}`
     const choices = buildInquirerChoices(currentPlan.id, currentPlan.until)
 
     planId = await listInput({
@@ -212,7 +220,9 @@ async function run({ token, config: { currentTeam, user } }) {
   } catch (err) {
     if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
       error(
-        `You have no payment methods available. Run ${cmd('now billing add')} to add one`
+        `You have no payment methods available. Run ${cmd(
+          'now billing add'
+        )} to add one`
       )
     } else {
       error(`An unknow error occured. Please try again later ${err.message}`)
@@ -223,11 +233,15 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (currentPlan.until && newPlan.id !== 'oss') {
     success(
-      `The cancelation has been undone. You're back on the ${chalk.bold(`${newPlan.name} plan`)}`
+      `The cancelation has been undone. You're back on the ${chalk.bold(
+        `${newPlan.name} plan`
+      )}`
     )
   } else if (newPlan.until) {
     success(
-      `Your plan will be switched to ${chalk.bold(newPlan.name)} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
+      `Your plan will be switched to ${chalk.bold(
+        newPlan.name
+      )} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
     )
   } else {
     success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`)

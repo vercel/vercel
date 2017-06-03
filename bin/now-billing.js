@@ -40,9 +40,13 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} Login token
 
   ${chalk.dim('Examples:')}
 
@@ -153,7 +157,9 @@ async function run({ token, config: { currentTeam, user } }) {
           const _default = card.id === cards.defaultCardId
             ? ' ' + chalk.bold('(default)')
             : ''
-          const id = `${chalk.gray('-')} ${chalk.cyan(`ID: ${card.id}`)}${_default}`
+          const id = `${chalk.gray('-')} ${chalk.cyan(
+            `ID: ${card.id}`
+          )}${_default}`
           const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
           let address = card.address_line1
 
@@ -184,7 +190,11 @@ async function run({ token, config: { currentTeam, user } }) {
 
       const elapsed = ms(new Date() - start)
       console.log(
-        `> ${cards.cards.length} card${cards.cards.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+        `> ${cards.cards.length} card${cards.cards.length === 1
+          ? ''
+          : 's'} found under ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )} ${chalk.gray(`[${elapsed}]`)}`
       )
       if (text) {
         console.log(`\n${text}\n`)
@@ -218,7 +228,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start)
-        const message = `Selecting a new default payment card for ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+        const message = `Selecting a new default payment card for ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )} ${chalk.gray(`[${elapsed}]`)}`
         const choices = buildInquirerChoices(cards)
 
         cardId = await listInput({
@@ -246,7 +258,9 @@ async function run({ token, config: { currentTeam, user } }) {
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
         success(
-          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(
+            `[${elapsed}]`
+          )}`
         )
       } else {
         console.log('No changes made')
@@ -273,7 +287,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (cards.cards.length === 0) {
         error(
-          `You have no credit cards to choose from to delete under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+          `You have no credit cards to choose from to delete under ${chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )}`
         )
         return exit(0)
       }
@@ -282,7 +298,11 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start)
-        const message = `Selecting a card to ${chalk.underline('remove')} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+        const message = `Selecting a card to ${chalk.underline(
+          'remove'
+        )} under ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )} ${chalk.gray(`[${elapsed}]`)}`
         const choices = buildInquirerChoices(cards)
 
         cardId = await listInput({
@@ -322,7 +342,9 @@ async function run({ token, config: { currentTeam, user } }) {
               card => card.id === cards.defaultCardId
             )
 
-            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default for ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default for ${chalk.bold(
+              (currentTeam && currentTeam.slug) || user.username || user.email
+            )}`
           }
         }
 

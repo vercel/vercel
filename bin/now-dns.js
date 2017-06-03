@@ -33,17 +33,25 @@ const subcommand = argv._[0]
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now dns ls`)} [domain]
-  ${chalk.bold(`${logo} now dns add`)} <domain> <name> <A | AAAA | ALIAS | CNAME | TXT> <value>
+  ${chalk.bold(
+    `${logo} now dns add`
+  )} <domain> <name> <A | AAAA | ALIAS | CNAME | TXT> <value>
   ${chalk.bold(`${logo} now dns add`)} <domain> <name> MX <value> <mx_priority>
-  ${chalk.bold(`${logo} now dns add`)} <domain> <name> SRV <priority> <weight> <port> <target>
+  ${chalk.bold(
+    `${logo} now dns add`
+  )} <domain> <name> SRV <priority> <weight> <port> <target>
   ${chalk.bold(`${logo} now dns rm`)} <id>
 
   ${chalk.dim('Options:')}
 
     -h, --help              output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  config file
     -d, --debug             debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} login token
 
   ${chalk.dim('Examples:')}
 
@@ -53,12 +61,16 @@ const help = () => {
 
   ${chalk.gray('–')} Add an A record for a subdomain
 
-      ${chalk.cyan('$ now dns add <YOUR DOMAIN> <SUBDOMAIN NAME> A <RECORD VALUE>')}
+      ${chalk.cyan(
+        '$ now dns add <YOUR DOMAIN> <SUBDOMAIN NAME> A <RECORD VALUE>'
+      )}
       ${chalk.cyan('$ now dns add zeit.rocks api A 198.51.100.100')}
 
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
-      ${chalk.cyan('$ now dns add <YOUR DOMAIN> @ MX <RECORD VALUE> <PRIORITY>')}
+      ${chalk.cyan(
+        '$ now dns add <YOUR DOMAIN> @ MX <RECORD VALUE> <PRIORITY>'
+      )}
       ${chalk.cyan('$ now dns add zeit.rocks @ MX mail.zeit.rocks 10')}
 `)
 }
@@ -102,7 +114,9 @@ async function run({ token, config: { currentTeam, user } }) {
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length > 1) {
       error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now dns ls [domain]`')}`
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now dns ls [domain]`'
+        )}`
       )
       return exit(1)
     }
@@ -152,21 +166,33 @@ async function run({ token, config: { currentTeam, user } }) {
       }
     })
     console.log(
-      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(
+        `[${elapsed}]`
+      )} under ${chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )}`
     )
     console.log(text.join(''))
   } else if (subcommand === 'add') {
     const param = parseAddArgs(args)
     if (!param) {
       error(
-        `Invalid number of arguments. See: ${chalk.cyan('`now dns --help`')} for usage.`
+        `Invalid number of arguments. See: ${chalk.cyan(
+          '`now dns --help`'
+        )} for usage.`
       )
       return exit(1)
     }
     const record = await domainRecords.create(param.domain, param.data)
     const elapsed = ms(new Date() - start)
     console.log(
-      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(param.domain)} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(`[${elapsed}]`)} (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)})`
+      `${chalk.cyan('> Success!')} A new DNS record for domain ${chalk.bold(
+        param.domain
+      )} ${chalk.gray(`(${record.uid})`)} created ${chalk.gray(
+        `[${elapsed}]`
+      )} (${chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )})`
     )
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
@@ -194,7 +220,9 @@ async function run({ token, config: { currentTeam, user } }) {
     await domainRecords.delete(record.domain, record.id)
     const elapsed = ms(new Date() - start)
     console.log(
-      `${chalk.cyan('> Success!')} Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Record ${chalk.gray(
+        `${record.id}`
+      )} removed ${chalk.gray(`[${elapsed}]`)}`
     )
   } else {
     error('Please specify a valid subcommand: ls | add | rm')
@@ -281,7 +309,11 @@ function readConfirmation(record, msg) {
         [
           record.id,
           chalk.bold(
-            `${record.name.length > 0 ? record.name + '.' : ''}${record.domain} ${record.type} ${record.value} ${record.mxPriority ? record.mxPriority : ''}`
+            `${record.name.length > 0
+              ? record.name + '.'
+              : ''}${record.domain} ${record.type} ${record.value} ${record.mxPriority
+              ? record.mxPriority
+              : ''}`
           ),
           time
         ]

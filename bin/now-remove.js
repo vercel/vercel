@@ -31,19 +31,27 @@ const ids = argv._
 // Options
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now remove`)} deploymentId|deploymentName [...deploymentId|deploymentName]
+  ${chalk.bold(
+    `${logo} now remove`
+  )} deploymentId|deploymentName [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} Login token
     -y, --yes               Skip confirmation
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim('`deploymentId`')}:
+  ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim(
+    '`deploymentId`'
+  )}:
 
     ${chalk.cyan('$ now rm deploymentId')}
 
@@ -51,7 +59,9 @@ const help = () => {
 
     ${chalk.cyan('$ now rm my-app')}
 
-  ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim('`eyWt6zuSdeus`')} and ${chalk.dim('`uWHoA9RQ1d1o`')}:
+  ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim(
+    '`eyWt6zuSdeus`'
+  )} and ${chalk.dim('`uWHoA9RQ1d1o`')}:
 
     ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
 
@@ -96,7 +106,9 @@ Promise.resolve().then(async () => {
 function readConfirmation(matches) {
   return new Promise(resolve => {
     process.stdout.write(
-      `> The following deployment${matches.length === 1 ? '' : 's'} will be removed permanently:\n`
+      `> The following deployment${matches.length === 1
+        ? ''
+        : 's'} will be removed permanently:\n`
     )
 
     const tbl = table(
@@ -113,7 +125,9 @@ function readConfirmation(matches) {
       for (const alias of depl.aliases) {
         process.stdout.write(
           `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
-            `is an alias for ${chalk.underline(`https://${alias.alias}`)} and will be removed.\n`
+            `is an alias for ${chalk.underline(
+              `https://${alias.alias}`
+            )} and will be removed.\n`
         )
       }
     }

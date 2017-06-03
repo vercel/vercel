@@ -36,18 +36,30 @@ const help = () => {
 
     -h, --help              output usage information
     -a, --all               include access logs
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  config file
     -d, --debug             debug mode [off]
     -f                      wait for additional data [off]
     -n ${chalk.bold.underline('NUMBER')}               number of logs [1000]
-    -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline('QUERY')} search query
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} login token
-    --since=${chalk.bold.underline('SINCE')}           only return logs after date (ISO 8601)
-    --until=${chalk.bold.underline('UNTIL')}           only return logs before date (ISO 8601), ignored if the f option is enbled.
+    -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
+    'QUERY'
+  )} search query
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} login token
+    --since=${chalk.bold.underline(
+      'SINCE'
+    )}           only return logs after date (ISO 8601)
+    --until=${chalk.bold.underline(
+      'UNTIL'
+    )}           only return logs before date (ISO 8601), ignored if the f option is enbled.
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Print logs for the deployment ${chalk.dim('`deploymentId`')}
+  ${chalk.gray('–')} Print logs for the deployment ${chalk.dim(
+    '`deploymentId`'
+  )}
 
     ${chalk.cyan('$ now logs deploymentId')}
 `)

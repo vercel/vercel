@@ -26,7 +26,9 @@ function validateSlugKeypress(data, value) {
 function gracefulExit() {
   console.log() // Blank line
   note(
-    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd('now switch')} to change it in the future.`
+    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd(
+      'now switch'
+    )} to change it in the future.`
   )
   return exit()
 }
@@ -122,8 +124,11 @@ module.exports = async function({ teams, token }) {
     teams,
     args: [],
     token,
-    introMsg: 'Invite your team mates! When done, press enter on an empty field',
-    noopMsg: `You can invite team mates later by running ${cmd('now teams invite')}`
+    introMsg:
+      'Invite your team mates! When done, press enter on an empty field',
+    noopMsg: `You can invite team mates later by running ${cmd(
+      'now teams invite'
+    )}`
   })
 
   gracefulExit()
