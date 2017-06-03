@@ -40,7 +40,9 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
 
   ${chalk.dim('Examples:')}
@@ -53,15 +55,21 @@ const help = () => {
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
 
-  ${chalk.gray('–')} Create an automatically scaling deployment without specifying max:
+  ${chalk.gray(
+    '–'
+  )} Create an automatically scaling deployment without specifying max:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
 
-  ${chalk.gray('–')} Create an automatically scaling deployment without specifying min or max:
+  ${chalk.gray(
+    '–'
+  )} Create an automatically scaling deployment without specifying min or max:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
 
-  ${chalk.gray('–')} Create an deployment that is always active and never "sleeps":
+  ${chalk.gray(
+    '–'
+  )} Create an deployment that is always active and never "sleeps":
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
   `)
@@ -246,7 +254,9 @@ function printScaleingRules(url, currentReplicas, min, max, elapsed) {
   )
   log()
   log(
-    `${chalk.bold(url)} (${chalk.gray(currentReplicas)} ${chalk.gray('current')})`
+    `${chalk.bold(url)} (${chalk.gray(currentReplicas)} ${chalk.gray(
+      'current'
+    )})`
   )
   log(printf('%6s %s', 'min', chalk.bold(min)))
   log(printf('%6s %s', 'max', chalk.bold(max)))
@@ -284,7 +294,9 @@ async function list(scale) {
   for (const app of sorted) {
     const depls = argv.all ? app[1] : app[1].slice(0, 5)
     console.log(
-      `${chalk.bold(app[0])} ${chalk.gray('(' + depls.length + ' of ' + app[1].length + ' total)')}`
+      `${chalk.bold(app[0])} ${chalk.gray(
+        '(' + depls.length + ' of ' + app[1].length + ' total)'
+      )}`
     )
     console.log()
     const urlSpec = `%-${urlLength}s`

@@ -22,7 +22,11 @@ function expDateMiddleware(data) {
 module.exports = function({ creditCards, currentTeam, user }) {
   const state = {
     error: undefined,
-    cardGroupLabel: `> ${chalk.bold(`Enter your card details for ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)}`,
+    cardGroupLabel: `> ${chalk.bold(
+      `Enter your card details for ${chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )}`
+    )}`,
 
     name: {
       label: rightPad('Full Name', 12),
@@ -195,13 +199,18 @@ module.exports = function({ creditCards, currentTeam, user }) {
       })
       stopSpinner()
       success(
-        `${state.cardNumber.brand} ending in ${res.last4} was added to ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `${state.cardNumber
+          .brand} ending in ${res.last4} was added to ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )}`
       )
     } catch (err) {
       stopSpinner()
       const linesToClear = state.error ? 13 : 12
       process.stdout.write(ansiEscapes.eraseLines(linesToClear))
-      state.error = `${chalk.red('> Error!')} ${err.message} Please make sure the info is correct`
+      state.error = `${chalk.red(
+        '> Error!'
+      )} ${err.message} Please make sure the info is correct`
       await render()
     }
   }

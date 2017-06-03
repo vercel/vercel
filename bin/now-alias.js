@@ -48,10 +48,16 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                         Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}             Config file
-    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline('RULES_FILE')}  Rules file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}             Config file
+    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline(
+    'RULES_FILE'
+  )}  Rules file
     -d, --debug                        Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')}            Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )}            Login token
 
   ${chalk.dim('Examples:')}
 
@@ -61,7 +67,11 @@ const help = () => {
 
   ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.now.sh')}`)}
+      ${chalk.cyan(
+        `$ now alias set ${chalk.underline(
+          'api-ownv3nc9f8.now.sh'
+        )} ${chalk.underline('my-api.now.sh')}`
+      )}
 
       The ${chalk.dim('`.now.sh`')} suffix can be ommited:
 
@@ -73,18 +83,34 @@ const help = () => {
 
       Custom domains work as alias targets:
 
-      ${chalk.cyan(`$ now alias set ${chalk.underline('api-ownv3nc9f8.now.sh')} ${chalk.underline('my-api.com')}`)}
+      ${chalk.cyan(
+        `$ now alias set ${chalk.underline(
+          'api-ownv3nc9f8.now.sh'
+        )} ${chalk.underline('my-api.com')}`
+      )}
 
-      ${chalk.dim('–')} The subcommand ${chalk.dim('`set`')} is the default and can be skipped.
-      ${chalk.dim('–')} ${chalk.dim('`http(s)://`')} in the URLs is unneeded / ignored.
+      ${chalk.dim('–')} The subcommand ${chalk.dim(
+    '`set`'
+  )} is the default and can be skipped.
+      ${chalk.dim('–')} ${chalk.dim(
+    '`http(s)://`'
+  )} in the URLs is unneeded / ignored.
 
-  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline('zeit.ninja')}:
+  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline(
+    'zeit.ninja'
+  )}:
 
-      ${chalk.cyan(`$ now alias ${chalk.underline('zeit.ninja')} -r ${chalk.underline('rules.json')}`)}
+      ${chalk.cyan(
+        `$ now alias ${chalk.underline('zeit.ninja')} -r ${chalk.underline(
+          'rules.json'
+        )}`
+      )}
 
       Export effective routing rules:
 
-      ${chalk.cyan(`$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`)}
+      ${chalk.cyan(
+        `$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`
+      )}
 
       ${chalk.cyan(`$ now alias ls zeit.ninja`)}
 
@@ -207,7 +233,11 @@ async function run({ token, config: { currentTeam, user } }) {
         }, 0) + 8
       const elapsed_ = ms(new Date() - start_)
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1 ? '' : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `> ${aliases.length} alias${aliases.length === 1
+          ? ''
+          : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )}`
       )
       console.log()
 
@@ -254,7 +284,9 @@ async function run({ token, config: { currentTeam, user } }) {
           }
         } else if (_alias.rules) {
           _sourceUrl = chalk.gray(
-            `[${_alias.rules.length} custom rule${_alias.rules.length > 1 ? 's' : ''}]`
+            `[${_alias.rules.length} custom rule${_alias.rules.length > 1
+              ? 's'
+              : ''}]`
           )
           if (supportsColor) {
             urlSpec += underlineWidth
@@ -286,7 +318,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (args.length !== 1) {
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <id>`')}`
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now alias rm <id>`'
+          )}`
         )
         return exit(1)
       }
@@ -296,7 +330,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (!_alias) {
         const err = new Error(
-          `Alias not found by "${_target}" under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}. Run ${chalk.dim('`now alias ls`')} to see your aliases.`
+          `Alias not found by "${_target}" under ${chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )}. Run ${chalk.dim('`now alias ls`')} to see your aliases.`
         )
         err.userError = true
         throw err
@@ -313,7 +349,9 @@ async function run({ token, config: { currentTeam, user } }) {
         await alias.rm(_alias)
         const elapsed = ms(new Date() - start)
         console.log(
-          `${chalk.cyan('> Success!')} Alias ${chalk.bold(_alias.uid)} removed [${elapsed}]`
+          `${chalk.cyan('> Success!')} Alias ${chalk.bold(
+            _alias.uid
+          )} removed [${elapsed}]`
         )
       } catch (err) {
         error(err)
@@ -330,7 +368,9 @@ async function run({ token, config: { currentTeam, user } }) {
       }
       if (args.length !== 2) {
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan('`now alias set <id> <domain>`')}`
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now alias set <id> <domain>`'
+          )}`
         )
         return exit(1)
       }
@@ -475,7 +515,11 @@ async function updatePathAlias(alias, aliasName, rules, domains) {
     throw err
   } else {
     console.log(
-      `${chalk.cyan('> Success!')} ${res.ruleCount} rules configured for ${chalk.underline(res.alias)} [${elapsed}]`
+      `${chalk.cyan(
+        '> Success!'
+      )} ${res.ruleCount} rules configured for ${chalk.underline(
+        res.alias
+      )} [${elapsed}]`
     )
   }
 }

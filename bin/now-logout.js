@@ -26,7 +26,9 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  config file
 
   ${chalk.dim('Examples:')}
 

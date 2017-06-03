@@ -68,7 +68,9 @@ module.exports = async function(
   domains.push(user.email.split('@')[1])
 
   if (!currentTeam) {
-    let err = `You can't run this command under ${param(user.username || user.email)}.\n`
+    let err = `You can't run this command under ${param(
+      user.username || user.email
+    )}.\n`
     err += `${chalk.gray('>')} Run ${cmd('now switch')} to choose to a team.`
     return fatalError(err)
   }

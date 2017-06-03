@@ -36,9 +36,13 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} Login token
 
   ${chalk.dim('Examples:')}
 
@@ -52,7 +56,9 @@ const help = () => {
 
       ${chalk.gray('–')} If the id is omitted, you can choose interactively
 
-      ${chalk.yellow('NOTE:')} When you switch, everything you add, list or remove will be scoped that team!
+      ${chalk.yellow(
+        'NOTE:'
+      )} When you switch, everything you add, list or remove will be scoped that team!
 
   ${chalk.gray('–')} Invite new members (interactively):
 

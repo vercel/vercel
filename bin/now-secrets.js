@@ -38,9 +38,13 @@ const help = () => {
 
     -h, --help              Output usage information
     -b, --base64            Treat value as base64-encoded
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline('FILE')}  Config file
+    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    'FILE'
+  )}  Config file
     -d, --debug             Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')} Login token
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )} Login token
 
   ${chalk.dim('Examples:')}
 
@@ -52,15 +56,21 @@ const help = () => {
 
     ${chalk.cyan('$ now secrets add my-secret "my value"')}
 
-    ${chalk.gray('–')} Once added, a secret's value can't be retrieved in plaintext anymore
-    ${chalk.gray('–')} If the secret's value is more than one word, wrap it in quotes
+    ${chalk.gray(
+      '–'
+    )} Once added, a secret's value can't be retrieved in plaintext anymore
+    ${chalk.gray(
+      '–'
+    )} If the secret's value is more than one word, wrap it in quotes
     ${chalk.gray('–')} Actually, when in doubt, wrap your value in quotes
 
   ${chalk.gray('–')} Exposes a secret as an env variable:
 
     ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
 
-    Notice the ${chalk.cyan.bold('`@`')} symbol which makes the value a secret reference.
+    Notice the ${chalk.cyan.bold(
+      '`@`'
+    )} symbol which makes the value a secret reference.
 
   ${chalk.gray('–')} Renames a secret:
 
@@ -121,7 +131,11 @@ async function run({ token, config: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `> ${list.length} secret${list.length === 1 ? '' : 's'} found under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${list.length} secret${list.length === 1
+        ? ''
+        : 's'} found under ${chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )} ${chalk.gray(`[${elapsed}]`)}`
     )
 
     if (list.length > 0) {
@@ -155,7 +169,9 @@ async function run({ token, config: { currentTeam, user } }) {
   if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
       error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret rm <id | name>`')}`
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now secret rm <id | name>`'
+        )}`
       )
       return exit(1)
     }
@@ -178,7 +194,9 @@ async function run({ token, config: { currentTeam, user } }) {
     const secret = await secrets.rm(args[0])
     const elapsed = ms(new Date() - start)
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.name)} ${chalk.gray(`(${secret.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+        secret.name
+      )} ${chalk.gray(`(${secret.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
     )
     return secrets.close()
   }
@@ -186,14 +204,20 @@ async function run({ token, config: { currentTeam, user } }) {
   if (subcommand === 'rename') {
     if (args.length !== 2) {
       error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret rename <old-name> <new-name>`')}`
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now secret rename <old-name> <new-name>`'
+        )}`
       )
       return exit(1)
     }
     const secret = await secrets.rename(args[0], args[1])
     const elapsed = ms(new Date() - start)
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(secret.oldName)} ${chalk.gray(`(${secret.uid})`)} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+        secret.oldName
+      )} ${chalk.gray(`(${secret.uid})`)} renamed to ${chalk.bold(
+        args[1]
+      )} ${chalk.gray(`[${elapsed}]`)}`
     )
     return secrets.close()
   }
@@ -201,7 +225,9 @@ async function run({ token, config: { currentTeam, user } }) {
   if (subcommand === 'add' || subcommand === 'set') {
     if (args.length !== 2) {
       error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret add <name> <value>`')}`
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now secret add <name> <value>`'
+        )}`
       )
 
       if (args.length > 2) {
@@ -227,7 +253,11 @@ async function run({ token, config: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(name.toLowerCase())} ${chalk.gray(`(${secret.uid})`)} added (${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}) ${chalk.gray(`[${elapsed}]`)}`
+      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+        name.toLowerCase()
+      )} ${chalk.gray(`(${secret.uid})`)} added (${chalk.bold(
+        (currentTeam && currentTeam.slug) || user.username || user.email
+      )}) ${chalk.gray(`[${elapsed}]`)}`
     )
     return secrets.close()
   }

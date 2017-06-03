@@ -81,7 +81,9 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       ls | list            [app]       List deployments
       rm | remove          [id]        Remove a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
@@ -107,20 +109,32 @@ const help = () => {
     -h, --help                Output usage information
     -v, --version             Output the version number
     -n, --name                Set the name of the deployment
-    -c ${chalk.underline('FILE')}, --config=${chalk.underline('FILE')}    Config file
+    -c ${chalk.underline('FILE')}, --config=${chalk.underline(
+    'FILE'
+  )}    Config file
     -d, --debug               Debug mode [off]
     -f, --force               Force a new deployment even if nothing has changed
-    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline('TOKEN')}   Login token
+    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
+    'TOKEN'
+  )}   Login token
     -L, --login               Configure login
     -l, --links               Copy symlinks without resolving their target
-    -p, --public              Deployment is public (${chalk.dim('`/_src`')} is exposed) [on for oss, off for premium]
-    -e, --env                 Include an env var (e.g.: ${chalk.dim('`-e KEY=value`')}). Can appear many times.
-    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline('FILE')}    Include env vars from .env file. Defaults to '.env'
+    -p, --public              Deployment is public (${chalk.dim(
+      '`/_src`'
+    )} is exposed) [on for oss, off for premium]
+    -e, --env                 Include an env var (e.g.: ${chalk.dim(
+      '`-e KEY=value`'
+    )}). Can appear many times.
+    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
+    'FILE'
+  )}    Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard        Do not attempt to copy URL to clipboard
     -N, --forward-npm         Forward login information to install private npm modules
     --session-affinity        Session affinity, \`ip\` (default) or \`random\` to control session affinity.
 
-  ${chalk.dim('Enforcable Types (when both package.json and Dockerfile exist):')}
+  ${chalk.dim(
+    'Enforcable Types (when both package.json and Dockerfile exist):'
+  )}
 
     --npm                     Node.js application
     --docker                  Docker container
@@ -146,9 +160,13 @@ const help = () => {
 
   ${chalk.gray('–')} Deploys with ENV vars
 
-    ${chalk.cyan('$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password')}
+    ${chalk.cyan(
+      '$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password'
+    )}
 
-  ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim('`list`')}
+  ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim(
+    '`list`'
+  )}
 
     ${chalk.cyan('$ now help list')}
 `)
@@ -191,7 +209,9 @@ if (argv.config) {
 
 if (Array.isArray(autoAliases)) {
   console.log(
-    `${chalk.red('Deprecated!')} The option ${chalk.grey('--alias')} will be removed soon.`
+    `${chalk.red('Deprecated!')} The option ${chalk.grey(
+      '--alias'
+    )} will be removed soon.`
   )
   console.log('Read more about the new way here: http://bit.ly/2l2v5Fg\n')
 }
@@ -235,7 +255,9 @@ async function main() {
       `> Logged in successfully. Token saved to ${chalk.bold('~/.now.json')}.`
     )
     console.log(
-      `> Run ${cmd('now')} to deploy the current directory, or ${cmd('now --help')} for usage info.\n`
+      `> Run ${cmd('now')} to deploy the current directory, or ${cmd(
+        'now --help'
+      )} for usage info.\n`
     )
     return exit(0)
   }
@@ -300,7 +322,9 @@ async function sync({ token, config: { currentTeam, user } }) {
     } else if (isValidRepo) {
       const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
       stopDeployment(
-        `There's no repository named "${chalk.bold(gitRepo.main)}" ${gitRef}on ${gitRepo.type}`
+        `There's no repository named "${chalk.bold(
+          gitRepo.main
+        )}" ${gitRef}on ${gitRepo.type}`
       )
     } else {
       stopDeployment(`Could not read directory ${chalk.bold(path)}`)
@@ -319,11 +343,17 @@ async function sync({ token, config: { currentTeam, user } }) {
     if (gitRepo.main) {
       const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
       console.log(
-        `> Deploying ${gitRepo.type} repository "${chalk.bold(gitRepo.main)}" ${gitRef} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `> Deploying ${gitRepo.type} repository "${chalk.bold(
+          gitRepo.main
+        )}" ${gitRef} under ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )}`
       )
     } else {
       console.log(
-        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`
+        `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+          (currentTeam && currentTeam.slug) || user.username || user.email
+        )}`
       )
     }
   }
@@ -420,7 +450,9 @@ async function sync({ token, config: { currentTeam, user } }) {
 
       if (/[^A-z0-9_]/i.test(key)) {
         error(
-          `Invalid ${chalk.dim('-e')} key ${chalk.bold(`"${chalk.bold(key)}"`)}. Only letters, digits and underscores are allowed.`
+          `Invalid ${chalk.dim('-e')} key ${chalk.bold(
+            `"${chalk.bold(key)}"`
+          )}. Only letters, digits and underscores are allowed.`
         )
         return process.exit(1)
       }
@@ -433,13 +465,17 @@ async function sync({ token, config: { currentTeam, user } }) {
       if (val === undefined) {
         if (key in process.env) {
           console.log(
-            `> Reading ${chalk.bold(`"${chalk.bold(key)}"`)} from your env (as no value was specified)`
+            `> Reading ${chalk.bold(
+              `"${chalk.bold(key)}"`
+            )} from your env (as no value was specified)`
           )
           // Escape value if it begins with @
           val = process.env[key].replace(/^@/, '\\@')
         } else {
           error(
-            `No value specified for env ${chalk.bold(`"${chalk.bold(key)}"`)} and it was not found in your env.`
+            `No value specified for env ${chalk.bold(
+              `"${chalk.bold(key)}"`
+            )} and it was not found in your env.`
           )
           return process.exit(1)
         }
@@ -451,7 +487,9 @@ async function sync({ token, config: { currentTeam, user } }) {
         if (secrets.length === 0) {
           if (uidOrName === '') {
             error(
-              `Empty reference provided for env key ${chalk.bold(`"${chalk.bold(key)}"`)}`
+              `Empty reference provided for env key ${chalk.bold(
+                `"${chalk.bold(key)}"`
+              )}`
             )
           } else {
             error(
@@ -461,7 +499,9 @@ async function sync({ token, config: { currentTeam, user } }) {
           return process.exit(1)
         } else if (secrets.length > 1) {
           error(
-            `Ambiguous secret ${chalk.bold(`"${uidOrName}"`)} (matches ${chalk.bold(secrets.length)} secrets)`
+            `Ambiguous secret ${chalk.bold(
+              `"${uidOrName}"`
+            )} (matches ${chalk.bold(secrets.length)} secrets)`
           )
           return process.exit(1)
         }
@@ -515,7 +555,9 @@ async function sync({ token, config: { currentTeam, user } }) {
       try {
         await copy(url)
         console.log(
-          `${chalk.cyan('> Ready!')} ${chalk.bold(url)} (copied to clipboard) [${elapsed}]`
+          `${chalk.cyan('> Ready!')} ${chalk.bold(
+            url
+          )} (copied to clipboard) [${elapsed}]`
         )
       } catch (err) {
         console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`)
@@ -556,7 +598,12 @@ async function sync({ token, config: { currentTeam, user } }) {
   if (plan.id === 'oss' && !wantsPublic) {
     if (isTTY) {
       info(
-        `${chalk.bold((currentTeam && `${currentTeam.slug} is`) || `You (${user.username || user.email}) are`)} on the OSS plan. Your code and logs will be made ${chalk.bold('public')}.`
+        `${chalk.bold(
+          (currentTeam && `${currentTeam.slug} is`) ||
+            `You (${user.username || user.email}) are`
+        )} on the OSS plan. Your code and logs will be made ${chalk.bold(
+          'public'
+        )}.`
       )
 
       const proceed = await promptBool(
@@ -589,7 +636,9 @@ async function sync({ token, config: { currentTeam, user } }) {
       )
     }
     const size = bytes(now.syncAmount)
-    const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1 ? 's' : ''}`
+    const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+      ? 's'
+      : ''}`
     const bar = new Progress(
       `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
       {
@@ -680,7 +729,9 @@ async function readMeta(path, deploymentName, deploymentType, sessionAffinity) {
       }
 
       console.log(
-        `> Two manifests found. Press [${chalk.bold('n')}] to deploy or re-run with --flag`
+        `> Two manifests found. Press [${chalk.bold(
+          'n'
+        )}] to deploy or re-run with --flag`
       )
 
       deploymentType = await promptOptions([
@@ -708,7 +759,9 @@ function printLogs(host, token, currentTeam, user) {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
         error(
-          `The build step of your project failed. To retry, run ${cmd('now --force')}.`
+          `The build step of your project failed. To retry, run ${cmd(
+            'now --force'
+          )}.`
         )
       } else {
         error('Deployment failed')
