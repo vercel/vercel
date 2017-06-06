@@ -114,7 +114,7 @@
     "supports-color": "3.2.3",
     "text-table": "0.2.0",
     "tmp-promise": "1.0.3",
-    "update-notifier": "2.1.0",
+    "update-notifier": "2.2.0",
     "webpack": "2.6.1",
     "xo": "0.18.2"
   }
