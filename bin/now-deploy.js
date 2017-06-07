@@ -232,7 +232,9 @@ const envFields = async list => {
     })
   }
 
-  console.log('> Please enter the values for the following environment variables:')
+  console.log(
+    '> Please enter the values for the following environment variables:'
+  )
   const answers = await inquirer.prompt(questions)
 
   for (const answer in answers) {
