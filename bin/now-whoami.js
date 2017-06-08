@@ -12,7 +12,7 @@ const logo = require('../lib/utils/output/logo')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
-  boolean: ['help', 'debug', 'all'],
+  boolean: ['help', 'debug', 'team'],
   alias: {
     help: 'h',
     config: 'c',
@@ -35,12 +35,17 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )} Login token
+    --team                  Show the team name [off]
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Show the current team context
+  ${chalk.gray('–')} Show the current user
 
     ${chalk.cyan('$ now whoami')}
+
+  ${chalk.gray('–')} Show the current team context
+
+    ${chalk.cyan('$ now whoami --team')}
 `)
 }
 
@@ -66,7 +71,13 @@ async function whoami() {
     process.stdout.write('> ')
   }
 
-  const { user } = config
+  const { user, currentTeam } = config
+
+  if (argv.team && currentTeam) {
+    console.log(currentTeam.slug)
+    return
+  }
+
   const name = user.username || user.email
   console.log(name)
 }
