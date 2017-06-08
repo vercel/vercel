@@ -66,7 +66,7 @@
     "array-unique": "0.3.2",
     "async-retry": "1.1.1",
     "ava": "0.19.1",
-    "babel-core": "6.24.1",
+    "babel-core": "6.25.0",
     "babel-loader": "7.0.0",
     "babel-plugin-transform-async-to-generator": "6.24.1",
     "babel-plugin-transform-runtime": "6.23.0",
