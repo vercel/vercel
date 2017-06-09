@@ -447,7 +447,7 @@ async function sync({ token, config: { currentTeam, user } }) {
   // Merge `now.env` from package.json with `-e` arguments.
   const pkgEnv = nowConfig && nowConfig.env
 
-  if (Array.isArray(nowConfig.env)) {
+  if (pkgEnv && Array.isArray(nowConfig.env)) {
     nowConfig.env = await envFields(nowConfig.env)
   }
 
