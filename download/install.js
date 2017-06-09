@@ -9,6 +9,7 @@ var src = path.join(__dirname, 'src')
 
 // Don't install when developing locally
 if (fs.existsSync(src)) {
+  // eslint-disable-next-line unicorn/no-process-exit
   process.exit(0)
 }
 
