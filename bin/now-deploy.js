@@ -451,8 +451,6 @@ async function sync({ token, config: { currentTeam, user } }) {
     nowConfig.env = await envFields(nowConfig.env)
   }
 
-  console.log(nowConfig.env)
-
   const envs = [
     ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
