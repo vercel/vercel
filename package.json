@@ -58,7 +58,7 @@
     ]
   },
   "devDependencies": {
-    "@google/maps": "0.3.1",
+    "@google/maps": "0.4.0",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "2.0.0",
     "ansi-regex": "2.1.1",
@@ -66,7 +66,7 @@
     "array-unique": "0.3.2",
     "async-retry": "1.1.1",
     "ava": "0.19.1",
-    "babel-core": "6.24.1",
+    "babel-core": "6.25.0",
     "babel-loader": "7.0.0",
     "babel-plugin-transform-async-to-generator": "6.24.1",
     "babel-plugin-transform-runtime": "6.23.0",
@@ -100,7 +100,7 @@
     "node-fetch": "1.7.1",
     "ora": "1.2.0",
     "pkg": "4.0.0",
-    "prettier": "1.4.2",
+    "prettier": "1.4.4",
     "printf": "0.2.5",
     "progress": "2.0.0",
     "psl": "1.1.18",
