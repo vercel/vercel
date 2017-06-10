@@ -447,17 +447,21 @@ async function sync({ token, config: { currentTeam, user } }) {
     dotenvConfig = dotenv.parse(dotenvFile)
   }
 
-  // Merge `now.env` from package.json with `-e` arguments.
   const pkgEnv = nowConfig && nowConfig.env
+  const argEnv = [].concat(argv.env || [])
 
   if (pkgEnv && Array.isArray(nowConfig.env)) {
-    nowConfig.env = await envFields(nowConfig.env)
+    const defined = argEnv.join()
+    const askFor = nowConfig.env.filter(item => !defined.includes(`${item}=`))
+
+    nowConfig.env = await envFields(askFor)
   }
 
+  // Merge `now.env` from package.json with `-e` arguments
   const envs = [
     ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
-    ...[].concat(argv.env || [])
+    ...argEnv
   ]
 
   let secrets
