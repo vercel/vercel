@@ -6,18 +6,20 @@ const { resolve } = require('path')
 // Packages
 const chalk = require('chalk')
 const minimist = require('minimist')
-const table = require('text-table')
 const ms = require('ms')
+const psl = require('psl')
+const table = require('text-table')
 
 // Ours
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
-const { error } = require('../lib/error')
-const toHost = require('../lib/to-host')
-const strlen = require('../lib/strlen')
 const NowDomains = require('../lib/domains')
+const cfg = require('../lib/cfg')
 const exit = require('../lib/utils/exit')
+const login = require('../lib/login')
 const logo = require('../lib/utils/output/logo')
+const promptBool = require('../lib/utils/input/prompt-bool')
+const strlen = require('../lib/strlen')
+const toHost = require('../lib/to-host')
+const { error } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -283,9 +285,25 @@ async function run({ token, config: { currentTeam, user } }) {
         error('Invalid number of arguments')
         return exit(1)
       }
+      const name = String(args[0])
+
+      const parsedDomain = psl.parse(name)
+      if (parsedDomain.subdomain) {
+        const msg =
+          `You are adding "${name}" as a domain name which seems to contain a subdomain part "${parsedDomain.subdomain}".\n` +
+          '  This is probably wrong unless you really know what you are doing.\n' +
+          `  To add the root domain instead please run: ${chalk.cyan(
+            'now domain add ' +
+              (argv.external ? '-e ' : '') +
+              parsedDomain.domain
+          )}\n` +
+          `  Continue adding "${name}" as a domain name?`
+        if (!await promptBool(msg)) {
+          return exit(1)
+        }
+      }
 
       const start = new Date()
-      const name = String(args[0])
       const { uid, code, created, verified } = await domain.add(
         name,
         argv.force,
