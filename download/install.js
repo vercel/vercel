@@ -13,18 +13,4 @@ if (fs.existsSync(src)) {
   process.exit(0)
 }
 
-var download = path.join(dist, 'download.js')
-
-try {
-  fs.mkdirSync(dist)
-} catch (err) {
-  if (err.code !== 'EEXIST') {
-    throw err
-  }
-}
-
-fs.closeSync(
-  fs.openSync(download, 'a')
-)
-
-require(download)
+require(path.join(dist, 'download.js'))
