@@ -12,7 +12,8 @@
     "lint": "xo --quiet",
     "test": "npm run lint && ava",
     "pack": "pkg bin/now.js -c package.json -o packed/now",
-    "webpack": "webpack --context download --config download/webpack.js"
+    "webpack": "webpack --context download --config download/webpack.js",
+    "clean": "rm -rf node_modules link/node_modules download/dist"
   },
   "pkg": {
     "scripts": [
