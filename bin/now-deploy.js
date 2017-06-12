@@ -14,6 +14,7 @@ const flatten = require('arr-flatten')
 const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
+const inquirer = require('inquirer')
 
 // Ours
 const login = require('../lib/login')
@@ -221,6 +222,37 @@ const stopDeployment = msg => {
   process.exit(1)
 }
 
+const envFields = async list => {
+  const questions = []
+
+  for (const field of list) {
+    questions.push({
+      name: field,
+      message: field
+    })
+  }
+
+  // eslint-disable-next-line import/no-unassigned-import
+  require('../lib/utils/input/patch-inquirer')
+
+  info('Please enter the values for the following environment variables:')
+  const answers = await inquirer.prompt(questions)
+
+  for (const answer in answers) {
+    if (!{}.hasOwnProperty.call(answers, answer)) {
+      continue
+    }
+
+    const content = answers[answer]
+
+    if (content === '') {
+      stopDeployment(`Enter a value for ${answer}`)
+    }
+  }
+
+  return answers
+}
+
 // Create a new deployment if user changed the name or made `_src` public.
 // This works fine because it doesn't force a new sync,
 // it just forces a new deployment.
@@ -415,12 +447,21 @@ async function sync({ token, config: { currentTeam, user } }) {
     dotenvConfig = dotenv.parse(dotenvFile)
   }
 
-  // Merge `now.env` from package.json with `-e` arguments.
   const pkgEnv = nowConfig && nowConfig.env
+  const argEnv = [].concat(argv.env || [])
+
+  if (pkgEnv && Array.isArray(nowConfig.env)) {
+    const defined = argEnv.join()
+    const askFor = nowConfig.env.filter(item => !defined.includes(`${item}=`))
+
+    nowConfig.env = await envFields(askFor)
+  }
+
+  // Merge `now.env` from package.json with `-e` arguments
   const envs = [
     ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
     ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
-    ...[].concat(argv.env || [])
+    ...argEnv
   ]
 
   let secrets
