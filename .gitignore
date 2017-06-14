@@ -7,3 +7,6 @@ node_modules
 
 # logs
 npm-debug.log
+
+# editor settings
+.vscode
