@@ -122,12 +122,8 @@ function readConfirmation(matches) {
     )
     process.stdout.write(tbl + '\n')
 
-    for (const [index, depl] of matches.entries()) {
+    for (const depl of matches) {
       for (const alias of depl.aliases) {
-        if (argv.safe) {
-          delete matches[index]
-          continue
-        }
         process.stdout.write(
           `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
             `is an alias for ${chalk.underline(
@@ -155,26 +151,34 @@ async function remove({ token, config: { currentTeam } }) {
 
   const deployments = await now.list()
 
-  const matches = deployments.filter(d => {
+  let matches = deployments.filter(d => {
     return ids.some(id => {
       return d.uid === id || d.name === id || d.url === normalizeURL(id)
     })
   })
 
+  const aliases = await Promise.all(
+    matches.map(depl => now.listAliases(depl.uid))
+  )
+
+  matches = matches.filter((match, i) => {
+    if (argv.safe && aliases[i].length > 0) {
+      return false
+    }
+
+    match.aliases = aliases[i]
+    return true
+  })
+
   if (matches.length === 0) {
     error(
-      `Could not find any deployments matching ${ids
+      `Could not find ${argv.safe
+        ? 'unaliased'
+        : 'any'} deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
     )
     return process.exit(1)
-  }
-
-  const aliases = await Promise.all(
-    matches.map(depl => now.listAliases(depl.uid))
-  )
-  for (let i = 0; i < matches.length; i++) {
-    matches[i].aliases = aliases[i]
   }
 
   try {
