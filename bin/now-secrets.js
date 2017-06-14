@@ -140,20 +140,19 @@ async function run({ token, config: { currentTeam, user } }) {
 
     if (list.length > 0) {
       const cur = Date.now()
-      const header = [['', 'id', 'name', 'created'].map(s => chalk.dim(s))]
+      const header = [['', 'name', 'created'].map(s => chalk.dim(s))]
       const out = table(
         header.concat(
           list.map(secret => {
             return [
               '',
-              secret.uid,
               chalk.bold(secret.name),
               chalk.gray(ms(cur - new Date(secret.created)) + ' ago')
             ]
           })
         ),
         {
-          align: ['l', 'r', 'l', 'l'],
+          align: ['l', 'l', 'l'],
           hsep: ' '.repeat(2),
           stringLength: strlen
         }
@@ -170,15 +169,13 @@ async function run({ token, config: { currentTeam, user } }) {
     if (args.length !== 1) {
       error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now secret rm <id | name>`'
+          '`now secret rm <name>`'
         )}`
       )
       return exit(1)
     }
     const list = await secrets.ls()
-    const theSecret = list.filter(secret => {
-      return secret.uid === args[0] || secret.name === args[0]
-    })[0]
+    const theSecret = list.find(secret => secret.name === args[0])
 
     if (theSecret) {
       const yes = await readConfirmation(theSecret)
@@ -187,7 +184,7 @@ async function run({ token, config: { currentTeam, user } }) {
         return exit(0)
       }
     } else {
-      error(`No secret found by id or name "${args[0]}"`)
+      error(`No secret found by name "${args[0]}"`)
       return exit(1)
     }
 
@@ -196,7 +193,7 @@ async function run({ token, config: { currentTeam, user } }) {
     console.log(
       `${chalk.cyan('> Success!')} Secret ${chalk.bold(
         secret.name
-      )} ${chalk.gray(`(${secret.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
+      )} removed ${chalk.gray(`[${elapsed}]`)}`
     )
     return secrets.close()
   }
@@ -215,9 +212,7 @@ async function run({ token, config: { currentTeam, user } }) {
     console.log(
       `${chalk.cyan('> Success!')} Secret ${chalk.bold(
         secret.oldName
-      )} ${chalk.gray(`(${secret.uid})`)} renamed to ${chalk.bold(
-        args[1]
-      )} ${chalk.gray(`[${elapsed}]`)}`
+      )} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`
     )
     return secrets.close()
   }
@@ -249,13 +244,13 @@ async function run({ token, config: { currentTeam, user } }) {
       value = value_
     }
 
-    const secret = await secrets.add(name, value)
+    await secrets.add(name, value)
     const elapsed = ms(new Date() - start)
 
     console.log(
       `${chalk.cyan('> Success!')} Secret ${chalk.bold(
         name.toLowerCase()
-      )} ${chalk.gray(`(${secret.uid})`)} added (${chalk.bold(
+      )} added (${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )}) ${chalk.gray(`[${elapsed}]`)}`
     )
@@ -275,8 +270,8 @@ process.on('uncaughtException', err => {
 function readConfirmation(secret) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(secret.created)) + ' ago')
-    const tbl = table([[secret.uid, chalk.bold(secret.name), time]], {
-      align: ['l', 'r', 'l'],
+    const tbl = table([[chalk.bold(secret.name), time]], {
+      align: ['r', 'l'],
       hsep: ' '.repeat(6)
     })
 
