@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-const { resolve } = require('path')
+const { resolve, basename } = require('path')
 
 // Packages
 const Progress = require('progress')
@@ -263,6 +263,11 @@ if (deploymentName || wantsPublic) {
 let alwaysForwardNpm
 
 async function main() {
+  if (!fs.existsSync(path)) {
+    error(`The specified directory "${basename(path)}" doesn't exist.`)
+    process.exit(1)
+  }
+
   let config = await cfg.read({ token: argv.token })
   alwaysForwardNpm = config.forwardNpm
 
