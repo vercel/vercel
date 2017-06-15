@@ -76,13 +76,34 @@ module.exports = function({ creditCards, currentTeam, user }) {
           if (!Object.hasOwnProperty.call(countries, country)) {
             continue
           }
+
           if (country.startsWith(value)) {
             return country.substr(value.length)
           }
+
+          const lowercaseCountry = country.toLowerCase()
+          const lowercaseValue = value.toLowerCase()
+
+          if (lowercaseCountry.startsWith(lowercaseValue)) {
+            return lowercaseCountry.substr(value.length)
+          }
         }
+
         return false
       },
-      validateValue: value => countries[value] !== undefined
+      validateValue: value => {
+        for (const country in countries) {
+          if (!Object.hasOwnProperty.call(countries, country)) {
+            continue
+          }
+
+          if (country.toLowerCase() === value.toLowerCase()) {
+            return true
+          }
+        }
+
+        return false
+      }
     },
 
     zipCode: {
@@ -134,11 +155,13 @@ module.exports = function({ creditCards, currentTeam, user }) {
           if (key === 'cardNumber') {
             let brand = cardBrands[ccValidator.determineCardType(result)]
             piece.brand = brand
+
             if (brand === 'American Express') {
               state.ccv.placeholder = '#'.repeat(4)
             } else {
               state.ccv.placeholder = '#'.repeat(3)
             }
+
             brand = chalk.cyan(`[${brand}]`)
             const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3]
             process.stdout.write(
