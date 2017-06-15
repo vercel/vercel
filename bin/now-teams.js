@@ -52,9 +52,12 @@ const help = () => {
 
   ${chalk.gray('–')} Switch to a team:
 
-      ${chalk.cyan(`$ now switch <id>`)}
+      ${chalk.cyan(`$ now switch <slug>`)}
 
-      ${chalk.gray('–')} If the id is omitted, you can choose interactively
+      ${chalk.gray(
+        '–'
+      )} If your team's url is 'zeit.co/teams/name', 'name' is the slug
+      ${chalk.gray('–')} If the slug is omitted, you can choose interactively
 
       ${chalk.yellow(
         'NOTE:'
