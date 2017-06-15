@@ -43,7 +43,7 @@ async function main() {
     process.exit();
   })
 
-  info('For the sources, check out: https://github.com/zeit/now-cli')
+  info('For the source code, check out: https://github.com/zeit/now-cli')
 
   // Print an empty line
   console.log('')
