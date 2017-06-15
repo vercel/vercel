@@ -54,10 +54,7 @@ const help = () => {
 
       ${chalk.cyan(`$ now switch <slug>`)}
 
-      ${chalk.gray(
-        '–'
-      )} Ex. if your team's url is 'zeit.com/foobarbaz', then 'foobarbaz' is the slug
-
+      ${chalk.gray('–')} If your team's url is 'zeit.co/teams/name', 'name' is the slug
       ${chalk.gray('–')} If the slug is omitted, you can choose interactively
 
       ${chalk.yellow(
