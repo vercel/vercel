@@ -10,7 +10,8 @@ import fetch from 'node-fetch'
 
 // Utilities
 import plusxSync from './chmod'
-import { disableProgress, enableProgress, info, showProgress } from './log'
+import { disableProgress, enableProgress, info,
+  showProgress, warn } from './log'
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
@@ -27,11 +28,20 @@ const platformToName = {
 }
 
 async function main() {
-  fs.writeFileSync(
-    now,
-    '#!/usr/bin/env node\n' +
-      'console.log("Please wait until the \'now\' installation completes!")\n'
-  )
+  try {
+    fs.writeFileSync(
+      now,
+      '#!/usr/bin/env node\n' +
+        'console.log("Please wait until the \'now\' installation completes!")\n'
+    )
+  } catch (err) {
+    if (err.code === 'EACCES') {
+      warn('Please run installation again with --unsafe-perm option.')
+      info('Example: npm i -g now --unsafe-perm');
+      process.exit();
+    }
+    throw err;
+  }
 
   onDeath(() => {
     fs.writeFileSync(
