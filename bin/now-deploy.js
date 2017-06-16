@@ -263,11 +263,6 @@ if (deploymentName || wantsPublic) {
 let alwaysForwardNpm
 
 async function main() {
-  if (!fs.existsSync(path)) {
-    error(`The specified directory "${basename(path)}" doesn't exist.`)
-    process.exit(1)
-  }
-
   let config = await cfg.read({ token: argv.token })
   alwaysForwardNpm = config.forwardNpm
 
@@ -364,7 +359,8 @@ async function sync({ token, config: { currentTeam, user } }) {
         )}" ${gitRef}on ${gitRepo.type}`
       )
     } else {
-      stopDeployment(`Could not read directory ${chalk.bold(path)}`)
+      error(`The specified directory "${basename(path)}" doesn't exist.`)
+      process.exit(1)
     }
   }
 
