@@ -1,12 +1,13 @@
 // Packages
 import assert from 'assert'
+import chalk from 'chalk'
 import Progress from 'progress'
 
 let bar
 
 export function enableProgress(text) {
   assert(!bar)
-  // OLD: text += ' '.repeat(28 - text.length);
+
   bar = new Progress(`> ${text} [:bar] :percent`, {
     stream: process.stdout,
     width: 20,
@@ -18,6 +19,10 @@ export function enableProgress(text) {
 
 export function info(text) {
   console.log(`> ${text}`)
+}
+
+export function warn(text) {
+  console.log(chalk.red('> Warning!'), text)
 }
 
 export function showProgress(percentage) {

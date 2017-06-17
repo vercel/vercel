@@ -1,11 +1,12 @@
+// Native
 const path = require('path')
-const webpack = require('webpack')
 
 module.exports = {
   target: 'node',
   node: {
     __dirname: false,
-    __filename: false
+    __filename: false,
+    process: false
   },
   entry: [
     './src/index.js'
@@ -29,12 +30,5 @@ module.exports = {
         ]
       }
     } ]
-  },
-  plugins: [
-    new webpack.DefinePlugin({
-      'process.env': {
-        NODE_ENV: JSON.stringify('production')
-      }
-    })
-  ]
+  }
 }
