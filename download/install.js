@@ -13,6 +13,4 @@ if (fs.existsSync(src)) {
   process.exit(0)
 }
 
-// Hack to force chalk display colors
-process.argv.push('--color');
 require(path.join(dist, 'download.js'))
