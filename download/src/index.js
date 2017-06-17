@@ -10,8 +10,7 @@ import fetch from 'node-fetch'
 
 // Utilities
 import plusxSync from './chmod'
-import { disableProgress, enableProgress, info,
-  showProgress, warn } from './log'
+import { disableProgress, enableProgress, info, showProgress, warn } from './log'
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
@@ -36,11 +35,13 @@ async function main() {
     )
   } catch (err) {
     if (err.code === 'EACCES') {
-      warn('Please run installation again with --unsafe-perm option.')
-      info('Example: npm i -g now --unsafe-perm');
-      process.exit();
+      warn('Please try installing now CLI again with the `--unsafe-perm` option.')
+      info('Example: `npm i -g --unsafe-perm now`')
+
+      process.exit()
     }
-    throw err;
+
+    throw err
   }
 
   onDeath(() => {
@@ -50,7 +51,7 @@ async function main() {
         'console.log("The \'now\' installation did not complete successfully.")\n' +
         'console.log("Please run \'npm i -g now\' to reinstall!")\n'
     )
-    process.exit();
+    process.exit()
   })
 
   info('For the source code, check out: https://github.com/zeit/now-cli')

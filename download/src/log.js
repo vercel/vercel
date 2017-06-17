@@ -7,6 +7,7 @@ let bar
 
 export function enableProgress(text) {
   assert(!bar)
+
   bar = new Progress(`> ${text} [:bar] :percent`, {
     stream: process.stdout,
     width: 20,
@@ -21,7 +22,7 @@ export function info(text) {
 }
 
 export function warn(text) {
-  console.log(`${chalk.red('> Warning!')} ${text}`)
+  console.log(chalk.red('> Warning!'), text)
 }
 
 export function showProgress(percentage) {
