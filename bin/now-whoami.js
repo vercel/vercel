@@ -71,4 +71,7 @@ async function whoami() {
   console.log(name)
 }
 
-whoami()
+whoami().catch(err => {
+  handleError(err)
+  process.exit(1)
+})

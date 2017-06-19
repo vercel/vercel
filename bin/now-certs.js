@@ -92,24 +92,29 @@ if (argv.help || !subcommand) {
   help()
   exit(0)
 } else {
-  Promise.resolve().then(async () => {
-    const config = await cfg.read({ token: argv.token })
+  Promise.resolve()
+    .then(async () => {
+      const config = await cfg.read({ token: argv.token })
 
-    let token
-    try {
-      token = config.token || (await login(apiUrl))
-    } catch (err) {
-      error(`Authentication error – ${err.message}`)
-      exit(1)
-    }
+      let token
+      try {
+        token = config.token || (await login(apiUrl))
+      } catch (err) {
+        error(`Authentication error – ${err.message}`)
+        exit(1)
+      }
 
-    try {
-      await run({ token, config })
-    } catch (err) {
+      try {
+        await run({ token, config })
+      } catch (err) {
+        handleError(err)
+        exit(1)
+      }
+    })
+    .catch(err => {
       handleError(err)
-      exit(1)
-    }
-  })
+      process.exit(1)
+    })
 }
 
 function formatExpirationDate(date) {

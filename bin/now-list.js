@@ -71,24 +71,29 @@ if (argv.config) {
   cfg.setConfigFile(argv.config)
 }
 
-Promise.resolve().then(async () => {
-  const config = await cfg.read({ token: argv.token })
+Promise.resolve()
+  .then(async () => {
+    const config = await cfg.read({ token: argv.token })
 
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    process.exit(1)
-  }
+    let token
+    try {
+      token = config.token || (await login(apiUrl))
+    } catch (err) {
+      error(`Authentication error – ${err.message}`)
+      process.exit(1)
+    }
 
-  try {
-    await list({ token, config })
-  } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`)
+    try {
+      await list({ token, config })
+    } catch (err) {
+      error(`Unknown error: ${err}\n${err.stack}`)
+      process.exit(1)
+    }
+  })
+  .catch(err => {
+    handleError(err)
     process.exit(1)
-  }
-})
+  })
 
 async function list({ token, config: { currentTeam, user } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })

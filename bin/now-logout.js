@@ -123,4 +123,7 @@ const logout = async () => {
   spinner.succeed('Logged out!')
 }
 
-logout()
+logout().catch(err => {
+  handleError(err)
+  process.exit(1)
+})
