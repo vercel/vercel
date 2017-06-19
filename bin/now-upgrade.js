@@ -16,6 +16,7 @@ const error = require('../lib/utils/output/error')
 const success = require('../lib/utils/output/success')
 const cmd = require('../lib/utils/output/cmd')
 const logo = require('../lib/utils/output/logo')
+const { handleError } = require('../lib/error')
 
 const { bold } = chalk
 

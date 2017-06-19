@@ -19,7 +19,7 @@ const logo = require('../lib/utils/output/logo')
 const promptBool = require('../lib/utils/input/prompt-bool')
 const strlen = require('../lib/strlen')
 const toHost = require('../lib/to-host')
-const { error } = require('../lib/error')
+const { handleError, error } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],

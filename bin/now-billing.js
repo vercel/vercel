@@ -11,7 +11,7 @@ const ms = require('ms')
 // Ours
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
-const { error } = require('../lib/error')
+const { handleError, error } = require('../lib/error')
 const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')

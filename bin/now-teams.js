@@ -14,6 +14,7 @@ const error = require('../lib/utils/output/error')
 const NowTeams = require('../lib/teams')
 const logo = require('../lib/utils/output/logo')
 const exit = require('../lib/utils/exit')
+const { handleError } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],

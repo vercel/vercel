@@ -277,7 +277,7 @@ async function main() {
     config = await cfg.read({ token: argv.token })
   } catch (err) {
     if (shouldLogin && err.userError) {
-      // we ignore user errors here, which means for example
+      // We ignore user errors here, which means for example
       // the token is mis-configured or revoked, if the user
       // is attempting to log in again
       config = {}
