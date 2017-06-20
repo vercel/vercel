@@ -85,24 +85,29 @@ if (argv.config) {
   cfg.setConfigFile(argv.config)
 }
 
-Promise.resolve().then(async () => {
-  const config = await cfg.read({ token: argv.token })
+Promise.resolve()
+  .then(async () => {
+    const config = await cfg.read({ token: argv.token })
 
-  let token
-  try {
-    token = config.token || login(apiUrl)
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    process.exit(1)
-  }
+    let token
+    try {
+      token = config.token || login(apiUrl)
+    } catch (err) {
+      error(`Authentication error – ${err.message}`)
+      process.exit(1)
+    }
 
-  try {
-    await remove({ token, config })
-  } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`)
+    try {
+      await remove({ token, config })
+    } catch (err) {
+      error(`Unknown error: ${err}\n${err.stack}`)
+      process.exit(1)
+    }
+  })
+  .catch(err => {
+    handleError(err)
     process.exit(1)
-  }
-})
+  })
 
 function readConfirmation(matches) {
   return new Promise(resolve => {

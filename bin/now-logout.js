@@ -9,6 +9,7 @@ const ora = require('ora')
 // Utilities
 const cfg = require('../lib/cfg')
 const logo = require('../lib/utils/output/logo')
+const { handleError } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config'],
@@ -123,4 +124,7 @@ const logout = async () => {
   spinner.succeed('Logged out!')
 }
 
-logout()
+logout().catch(err => {
+  handleError(err)
+  process.exit(1)
+})

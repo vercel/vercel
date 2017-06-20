@@ -15,7 +15,7 @@ const NowAlias = require('../lib/alias')
 const NowDomains = require('../lib/domains')
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
-const { error } = require('../lib/error')
+const { handleError, error } = require('../lib/error')
 const toHost = require('../lib/to-host')
 const { reAlias } = require('../lib/re-alias')
 const exit = require('../lib/utils/exit')
@@ -136,28 +136,33 @@ if (argv.help) {
   help()
   exit(0)
 } else {
-  Promise.resolve().then(async () => {
-    const config = await cfg.read({ token: argv.token })
+  Promise.resolve()
+    .then(async () => {
+      const config = await cfg.read({ token: argv.token })
 
-    let token
-    try {
-      token = config.token || (await login(apiUrl))
-    } catch (err) {
-      error(`Authentication error – ${err.message}`)
-      exit(1)
-    }
-
-    try {
-      await run({ token, config })
-    } catch (err) {
-      if (err.userError) {
-        error(err.message)
-      } else {
-        error(`Unknown error: ${err}\n${err.stack}`)
+      let token
+      try {
+        token = config.token || (await login(apiUrl))
+      } catch (err) {
+        error(`Authentication error – ${err.message}`)
+        exit(1)
       }
-      exit(1)
-    }
-  })
+
+      try {
+        await run({ token, config })
+      } catch (err) {
+        if (err.userError) {
+          error(err.message)
+        } else {
+          error(`Unknown error: ${err}\n${err.stack}`)
+        }
+        exit(1)
+      }
+    })
+    .catch(err => {
+      handleError(err)
+      process.exit(1)
+    })
 }
 
 async function run({ token, config: { currentTeam, user } }) {

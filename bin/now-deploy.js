@@ -263,15 +263,27 @@ if (deploymentName || wantsPublic) {
 let alwaysForwardNpm
 
 async function main() {
-  let config = await cfg.read({ token: argv.token })
-  alwaysForwardNpm = config.forwardNpm
-
   if (argv.h || argv.help) {
     help()
     return exit(0)
   } else if (argv.v || argv.version) {
     console.log(version)
     return exit(0)
+  }
+
+  let config
+
+  try {
+    config = await cfg.read({ token: argv.token })
+  } catch (err) {
+    if (shouldLogin && err.userError) {
+      // We ignore user errors here, which means for example
+      // the token is mis-configured or revoked, if the user
+      // is attempting to log in again
+      config = {}
+    } else {
+      throw err
+    }
   }
 
   let token = argv.token || config.token
@@ -293,6 +305,8 @@ async function main() {
     )
     return exit(0)
   }
+
+  alwaysForwardNpm = config.forwardNpm
 
   // If we got to here then `token` should be set
   try {
@@ -868,4 +882,7 @@ function printLogs(host, token, currentTeam, user) {
   })
 }
 
-main()
+main().catch(err => {
+  handleError(err, { debug })
+  process.exit(1)
+})

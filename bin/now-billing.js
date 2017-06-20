@@ -11,7 +11,7 @@ const ms = require('ms')
 // Ours
 const login = require('../lib/login')
 const cfg = require('../lib/cfg')
-const { error } = require('../lib/error')
+const { handleError, error } = require('../lib/error')
 const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
@@ -92,27 +92,32 @@ if (argv.help || !subcommand) {
   help()
   exit(0)
 } else {
-  Promise.resolve().then(async () => {
-    const config = await cfg.read({ token: argv.token })
+  Promise.resolve()
+    .then(async () => {
+      const config = await cfg.read({ token: argv.token })
 
-    let token
-    try {
-      token = config.token || (await login(apiUrl))
-    } catch (err) {
-      error(`Authentication error – ${err.message}`)
-      exit(1)
-    }
-    try {
-      await run({ token, config })
-    } catch (err) {
-      if (err.userError) {
-        error(err.message)
-      } else {
-        error(`Unknown error: ${err.stack}`)
+      let token
+      try {
+        token = config.token || (await login(apiUrl))
+      } catch (err) {
+        error(`Authentication error – ${err.message}`)
+        exit(1)
       }
-      exit(1)
-    }
-  })
+      try {
+        await run({ token, config })
+      } catch (err) {
+        if (err.userError) {
+          error(err.message)
+        } else {
+          error(`Unknown error: ${err.stack}`)
+        }
+        exit(1)
+      }
+    })
+    .catch(err => {
+      handleError(err)
+      process.exit(1)
+    })
 }
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()

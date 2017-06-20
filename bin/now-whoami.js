@@ -9,6 +9,7 @@ const cfg = require('../lib/cfg')
 const exit = require('../lib/utils/exit')
 const cmd = require('../lib/utils/output/cmd')
 const logo = require('../lib/utils/output/logo')
+const { handleError } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'token'],
@@ -71,4 +72,7 @@ async function whoami() {
   console.log(name)
 }
 
-whoami()
+whoami().catch(err => {
+  handleError(err)
+  process.exit(1)
+})

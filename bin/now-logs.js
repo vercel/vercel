@@ -124,7 +124,7 @@ Promise.resolve()
     await printLogs({ token, config })
   })
   .catch(err => {
-    error(`Unknown error: ${err.stack}`)
+    handleError(err)
     process.exit(1)
   })
 
