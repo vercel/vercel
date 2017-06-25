@@ -109,7 +109,7 @@
     "resumer": "0.0.0",
     "single-line-log": "1.1.2",
     "slackup": "2.0.1",
-    "socket.io-client": "2.0.3",
+    "socket.io-client": "1.7.4",
     "split-array": "1.0.1",
     "strip-ansi": "4.0.0",
     "stripe": "4.23.1",
