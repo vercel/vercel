@@ -91,7 +91,7 @@ Promise.resolve()
 
     let token
     try {
-      token = config.token || login(apiUrl)
+      token = config.token || (await login(apiUrl))
     } catch (err) {
       error(`Authentication error – ${err.message}`)
       process.exit(1)
