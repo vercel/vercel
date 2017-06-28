@@ -83,6 +83,13 @@ Promise.resolve()
       process.exit(1)
     }
 
+    if (!config.token) {
+      console.log(
+        `> Logged in successfully. Token saved to ${chalk.bold('~/.now.json')}.`
+      )
+      process.exit(0)
+    }
+
     try {
       await list({ token, config })
     } catch (err) {
