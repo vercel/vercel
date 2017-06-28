@@ -189,25 +189,26 @@ async function run({ token, config: { currentTeam, user } }) {
           const header = [
             ['', 'pathname', 'method', 'dest'].map(s => chalk.dim(s))
           ]
-          const text = list.length === 0
-            ? null
-            : table(
-                header.concat(
-                  item.rules.map(rule => {
-                    return [
-                      '',
-                      rule.pathname ? rule.pathname : '',
-                      rule.method ? rule.method : '*',
-                      rule.dest
-                    ]
-                  })
-                ),
-                {
-                  align: ['l', 'l', 'l', 'l'],
-                  hsep: ' '.repeat(2),
-                  stringLength: strlen
-                }
-              )
+          const text =
+            list.length === 0
+              ? null
+              : table(
+                  header.concat(
+                    item.rules.map(rule => {
+                      return [
+                        '',
+                        rule.pathname ? rule.pathname : '',
+                        rule.method ? rule.method : '*',
+                        rule.dest
+                      ]
+                    })
+                  ),
+                  {
+                    align: ['l', 'l', 'l', 'l'],
+                    hsep: ' '.repeat(2),
+                    stringLength: strlen
+                  }
+                )
 
           console.log(text)
         }

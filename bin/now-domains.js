@@ -197,25 +197,26 @@ async function run({ token, config: { currentTeam, user } }) {
       const header = [
         ['', 'domain', 'dns', 'verified', 'created'].map(s => chalk.dim(s))
       ]
-      const out = domains.length === 0
-        ? null
-        : table(
-            header.concat(
-              domains.map(domain => {
-                const ns = domain.isExternal ? 'external' : 'zeit.world'
-                const url = chalk.bold(domain.name)
-                const time = chalk.gray(
-                  ms(current - new Date(domain.created)) + ' ago'
-                )
-                return ['', url, ns, domain.verified, time]
-              })
-            ),
-            {
-              align: ['l', 'l', 'l', 'l', 'l'],
-              hsep: ' '.repeat(2),
-              stringLength: strlen
-            }
-          )
+      const out =
+        domains.length === 0
+          ? null
+          : table(
+              header.concat(
+                domains.map(domain => {
+                  const ns = domain.isExternal ? 'external' : 'zeit.world'
+                  const url = chalk.bold(domain.name)
+                  const time = chalk.gray(
+                    ms(current - new Date(domain.created)) + ' ago'
+                  )
+                  return ['', url, ns, domain.verified, time]
+                })
+              ),
+              {
+                align: ['l', 'l', 'l', 'l', 'l'],
+                hsep: ' '.repeat(2),
+                stringLength: strlen
+              }
+            )
 
       const elapsed_ = ms(new Date() - start_)
       console.log(

@@ -200,9 +200,8 @@ const wantsPublic = argv.public
 const apiUrl = argv.url || 'https://api.zeit.co'
 const isTTY = process.stdout.isTTY
 const quiet = !isTTY
-const autoAliases = typeof argv.alias === 'undefined'
-  ? false
-  : flatten([argv.alias])
+const autoAliases =
+  typeof argv.alias === 'undefined' ? false : flatten([argv.alias])
 
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -449,9 +448,8 @@ async function sync({ token, config: { currentTeam, user } }) {
   }
 
   if (dotenvOption) {
-    const dotenvFileName = typeof dotenvOption === 'string'
-      ? dotenvOption
-      : '.env'
+    const dotenvFileName =
+      typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
     if (!fs.existsSync(dotenvFileName)) {
       error(`--dotenv flag is set but ${dotenvFileName} file is missing`)

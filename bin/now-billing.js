@@ -123,9 +123,8 @@ if (argv.help || !subcommand) {
 // Builds a `choices` object that can be passesd to inquirer.prompt()
 function buildInquirerChoices(cards) {
   return cards.cards.map(card => {
-    const _default = card.id === cards.defaultCardId
-      ? ' ' + chalk.bold('(default)')
-      : ''
+    const _default =
+      card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
     const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
     const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
     const str = [
@@ -159,9 +158,8 @@ async function run({ token, config: { currentTeam, user } }) {
       }
       const text = cards.cards
         .map(card => {
-          const _default = card.id === cards.defaultCardId
-            ? ' ' + chalk.bold('(default)')
-            : ''
+          const _default =
+            card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${card.id}`
           )}${_default}`
