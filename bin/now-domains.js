@@ -263,8 +263,7 @@ async function run({ token, config: { currentTeam, user } }) {
       try {
         const confirmation = (await readConfirmation(
           domain,
-          _domain,
-          _domains
+          _domain
         )).toLowerCase()
         if (confirmation !== 'y' && confirmation !== 'yes') {
           console.log('\n> Aborted')
@@ -272,7 +271,7 @@ async function run({ token, config: { currentTeam, user } }) {
         }
 
         const start = new Date()
-        await domain.rm(_domain.name)
+        await domain.rm(_domain)
         const elapsed = ms(new Date() - start)
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(
@@ -379,6 +378,17 @@ async function readConfirmation(domain, _domain) {
               (_domain.aliases.length === 1 ? '' : 'es')
           )} ` +
           `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`
+      )
+    }
+    if (_domain.certs.length > 0) {
+      process.stdout.write(
+        `> ${chalk.yellow('Warning!')} This domain's ` +
+          `${chalk.bold(
+            _domain.certs.length +
+              ' certificate' +
+              (_domain.certs.length === 1 ? '' : 's')
+          )} ` +
+          `will be removed. Run ${chalk.dim('`now cert ls`')} to list.\n`
       )
     }
 
