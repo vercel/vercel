@@ -252,13 +252,6 @@ const envFields = async list => {
   return answers
 }
 
-// Create a new deployment if user changed the name or made `_src` public.
-// This works fine because it doesn't force a new sync,
-// it just forces a new deployment.
-if (deploymentName || wantsPublic) {
-  forceNew = true
-}
-
 let alwaysForwardNpm
 
 async function main() {
