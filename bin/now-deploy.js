@@ -187,7 +187,7 @@ if (path) {
 const gitRepo = {}
 
 // Options
-let forceNew = argv.force
+const forceNew = argv.force
 let deploymentName = argv.name
 let sessionAffinity = argv['session-affinity']
 const debug = argv.debug
