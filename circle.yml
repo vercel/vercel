@@ -2,18 +2,20 @@ machine:
   node:
     version: node
 
-test:
-  post:
+compile:
+  override:
     - npm run pack
     - cp packed/* $CIRCLE_ARTIFACTS
-    - node ./scripts/slack.js
 
 deployment:
-  release:
-    tag: /.*/
+  slack:
+    branch: /.*/
     commands:
-      ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r
-      $CIRCLE_PROJECT_REPONAME $CIRCLE_TAG packed
+      - node ./scripts/slack.js
+  release:
+    tag: /(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)/
+    commands:
+      - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` packed/
 
 dependencies:
   pre:
