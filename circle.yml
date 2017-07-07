@@ -7,6 +7,7 @@ deployment:
     branch: /.*/
     commands:
       - npm run pack
+      - cp packed/* $CIRCLE_ARTIFACTS
   release:
     tag: /.*/
     commands:
