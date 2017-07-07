@@ -263,8 +263,7 @@ async function run({ token, config: { currentTeam, user } }) {
       try {
         const confirmation = (await readConfirmation(
           domain,
-          _domain,
-          _domains
+          _domain
         )).toLowerCase()
         if (confirmation !== 'y' && confirmation !== 'yes') {
           console.log('\n> Aborted')
@@ -272,7 +271,7 @@ async function run({ token, config: { currentTeam, user } }) {
         }
 
         const start = new Date()
-        await domain.rm(_domain.name)
+        await domain.rm(_domain)
         const elapsed = ms(new Date() - start)
         console.log(
           `${chalk.cyan('> Success!')} Domain ${chalk.bold(
@@ -362,10 +361,10 @@ async function run({ token, config: { currentTeam, user } }) {
 async function readConfirmation(domain, _domain) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(_domain.created)) + ' ago')
-    const tbl = table(
-      [[_domain.uid, chalk.underline(`https://${_domain.name}`), time]],
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    )
+    const tbl = table([[chalk.underline(`https://${_domain.name}`), time]], {
+      align: ['r', 'l'],
+      hsep: ' '.repeat(6)
+    })
 
     process.stdout.write('> The following domain will be removed permanently\n')
     process.stdout.write('  ' + tbl + '\n')
@@ -378,12 +377,23 @@ async function readConfirmation(domain, _domain) {
               ' alias' +
               (_domain.aliases.length === 1 ? '' : 'es')
           )} ` +
-          `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`
+          `will be removed. Run ${chalk.dim('`now alias ls`')} to list them.\n`
+      )
+    }
+    if (_domain.certs.length > 0) {
+      process.stdout.write(
+        `> ${chalk.yellow('Warning!')} This domain's ` +
+          `${chalk.bold(
+            _domain.certs.length +
+              ' certificate' +
+              (_domain.certs.length === 1 ? '' : 's')
+          )} ` +
+          `will be removed. Run ${chalk.dim('`now cert ls`')} to list them.\n`
       )
     }
 
     process.stdout.write(
-      `  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
     )
 
     process.stdin
