@@ -361,10 +361,10 @@ async function run({ token, config: { currentTeam, user } }) {
 async function readConfirmation(domain, _domain) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(_domain.created)) + ' ago')
-    const tbl = table(
-      [[_domain.uid, chalk.underline(`https://${_domain.name}`), time]],
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    )
+    const tbl = table([[chalk.underline(`https://${_domain.name}`), time]], {
+      align: ['r', 'l'],
+      hsep: ' '.repeat(6)
+    })
 
     process.stdout.write('> The following domain will be removed permanently\n')
     process.stdout.write('  ' + tbl + '\n')
