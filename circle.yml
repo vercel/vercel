@@ -2,13 +2,13 @@ machine:
   node:
     version: node
 
+test:
+  post:
+    - npm run pack
+    - cp packed/* $CIRCLE_ARTIFACTS
+    - node ./scripts/slack.js
+
 deployment:
-  pack:
-    branch: /.*/
-    commands:
-      - npm run pack
-      - cp packed/* $CIRCLE_ARTIFACTS
-      - node ./scripts/slack.js
   release:
     tag: /.*/
     commands:
