@@ -1,6 +1,6 @@
 machine:
   node:
-    version: latest
+    version: node
 
 deployment:
   pack:
