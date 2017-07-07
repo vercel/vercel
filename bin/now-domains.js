@@ -393,7 +393,7 @@ async function readConfirmation(domain, _domain) {
     }
 
     process.stdout.write(
-      `  ${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
     )
 
     process.stdin
