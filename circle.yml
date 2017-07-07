@@ -1,0 +1,17 @@
+machine:
+  node:
+    version: 6.1.0
+
+deployment:
+  pack:
+    branch: /.*/
+    commands:
+      - npm run pack
+  release:
+    tag: /.*/
+    commands:
+      - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME packed/
+
+dependencies:
+  pre:
+    - go get github.com/tcnksm/ghr
