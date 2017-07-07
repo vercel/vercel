@@ -13,7 +13,7 @@ deployment:
     tag: /.*/
     commands:
       ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r
-      $CIRCLE_PROJECT_REPONAME $CIRCLE_TAG $CIRCLE_ARTIFACTS
+      $CIRCLE_PROJECT_REPONAME $CIRCLE_TAG packed
 
 dependencies:
   pre:
