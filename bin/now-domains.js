@@ -377,7 +377,7 @@ async function readConfirmation(domain, _domain) {
               ' alias' +
               (_domain.aliases.length === 1 ? '' : 'es')
           )} ` +
-          `will be removed. Run ${chalk.dim('`now alias ls`')} to list.\n`
+          `will be removed. Run ${chalk.dim('`now alias ls`')} to list them.\n`
       )
     }
     if (_domain.certs.length > 0) {
@@ -388,7 +388,7 @@ async function readConfirmation(domain, _domain) {
               ' certificate' +
               (_domain.certs.length === 1 ? '' : 's')
           )} ` +
-          `will be removed. Run ${chalk.dim('`now cert ls`')} to list.\n`
+          `will be removed. Run ${chalk.dim('`now cert ls`')} to list them.\n`
       )
     }
 
