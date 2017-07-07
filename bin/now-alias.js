@@ -276,7 +276,7 @@ async function run({ token, config: { currentTeam, user } }) {
         let urlSpec = sourceUrlLength
         let aliasSpec = aliasLength
         let ageSpec = 5
-        const _url = chalk.underline(`https://${_alias.alias}`)
+        const _url = chalk.underline(_alias.alias)
         const target = _alias.deploymentId
         let _sourceUrl
         if (supportsColor) {
@@ -284,7 +284,7 @@ async function run({ token, config: { currentTeam, user } }) {
           ageSpec += grayWidth
         }
         if (urls.get(target)) {
-          _sourceUrl = chalk.underline(`https://${urls.get(target)}`)
+          _sourceUrl = chalk.underline(urls.get(target))
           if (supportsColor) {
             urlSpec += grayWidth
           }
@@ -454,11 +454,9 @@ async function confirmDeploymentRemoval(alias, _alias) {
   const urls = new Map(deploymentsList.map(l => [l.uid, l.url]))
 
   const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
-  const _sourceUrl = chalk.underline(`https://${urls.get(_alias.deploymentId)}`)
+  const _sourceUrl = chalk.underline(urls.get(_alias.deploymentId))
   const tbl = table(
-    [
-      [_alias.uid, _sourceUrl, chalk.underline(`https://${_alias.alias}`), time]
-    ],
+    [[_alias.uid, _sourceUrl, chalk.underline(_alias.alias), time]],
     { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
   )
 
