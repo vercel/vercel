@@ -271,14 +271,14 @@ async function run({ token, config: { currentTeam, user } }) {
         let urlSpec = sourceUrlLength
         let aliasSpec = aliasLength
         let ageSpec = 5
-        const _url = chalk.underline(`https://${_alias.alias}`)
+        const _url = chalk.underline(_alias.alias)
         let _sourceUrl
         if (supportsColor) {
           aliasSpec += underlineWidth
           ageSpec += grayWidth
         }
         if (_alias.deployment) {
-          _sourceUrl = chalk.underline(`https://${_alias.deployment.url}`)
+          _sourceUrl = chalk.underline(_alias.deployment.url)
           if (supportsColor) {
             urlSpec += grayWidth
           }
@@ -453,7 +453,7 @@ async function confirmDeploymentRemoval(alias, _alias) {
       [
         _alias.uid,
         ...(_sourceUrl ? [_sourceUrl] : []),
-        chalk.underline(`https://${_alias.alias}`),
+        chalk.underline(_alias.alias),
         time
       ]
     ],
