@@ -3,7 +3,7 @@
 const slackup = require('slackup')
 const fetch = require('node-fetch')
 
-const {CIRCLE_PROJECT_USERNAME, CIRCLE_PROJECT_REPONAME} = process.env
+const { CIRCLE_PROJECT_USERNAME, CIRCLE_PROJECT_REPONAME } = process.env
 
 const repo = CIRCLE_PROJECT_USERNAME + '/' + CIRCLE_PROJECT_REPONAME
 const commit = process.env.CIRCLE_SHA1
@@ -47,7 +47,10 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
     authorUrl: res.author.html_url
   }))
   .then(async res => {
-    const message = `:package: Here are the binaries for the branch *${branch}* of *${repo}* (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(0, 7)}> by <${res.authorUrl}|${res.authorName}>):`
+    const message = `:package: Here are the binaries for the branch *${branch}* of *${repo}* (commit <https://github.com/${repo}/commit/${commit}|${commit.substr(
+      0,
+      7
+    )}> by <${res.authorUrl}|${res.authorName}>):`
 
     const binaries = [
       `${__dirname}/../packed/now-macos`,
@@ -63,4 +66,5 @@ fetch(`https://api.github.com/repos/${repo}/commits/${commit}`, opts)
     } catch (err) {
       console.log(`Couldn't send messages/files to Slack`, err)
     }
-  }).catch(console.error)
+  })
+  .catch(console.error)

@@ -221,17 +221,12 @@ async function run({ token, config: { currentTeam, user } }) {
       }
 
       const start_ = new Date()
-      const list = await alias.list()
-      const urls = new Map(list.map(l => [l.uid, l.url]))
       const aliases = await alias.ls()
       aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
       const sourceUrlLength =
         aliases.reduce((acc, i) => {
-          return Math.max(
-            acc,
-            (i.deploymentId && urls.get(i.deploymentId).length) || 0
-          )
+          return Math.max(acc, (i.deployment && i.deployment.url.length) || 0)
         }, 0) + 9
       const aliasLength =
         aliases.reduce((acc, i) => {
@@ -277,14 +272,13 @@ async function run({ token, config: { currentTeam, user } }) {
         let aliasSpec = aliasLength
         let ageSpec = 5
         const _url = chalk.underline(_alias.alias)
-        const target = _alias.deploymentId
         let _sourceUrl
         if (supportsColor) {
           aliasSpec += underlineWidth
           ageSpec += grayWidth
         }
-        if (urls.get(target)) {
-          _sourceUrl = chalk.underline(urls.get(target))
+        if (_alias.deployment) {
+          _sourceUrl = chalk.underline(_alias.deployment.url)
           if (supportsColor) {
             urlSpec += grayWidth
           }
@@ -450,14 +444,20 @@ async function run({ token, config: { currentTeam, user } }) {
 }
 
 async function confirmDeploymentRemoval(alias, _alias) {
-  const deploymentsList = await alias.list()
-  const urls = new Map(deploymentsList.map(l => [l.uid, l.url]))
-
   const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
-  const _sourceUrl = chalk.underline(urls.get(_alias.deploymentId))
+  const _sourceUrl = _alias.deployment
+    ? chalk.underline(_alias.deployment.url)
+    : null
   const tbl = table(
-    [[_alias.uid, _sourceUrl, chalk.underline(_alias.alias), time]],
-    { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    [
+      [
+        _alias.uid,
+        ...(_sourceUrl ? [_sourceUrl] : []),
+        chalk.underline(_alias.alias),
+        time
+      ]
+    ],
+    { hsep: ' '.repeat(6) }
   )
 
   const msg =
