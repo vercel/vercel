@@ -5,12 +5,12 @@ machine:
 compile:
   override:
     - npm run pack
-    - cp packed/* $CIRCLE_ARTIFACTS
 
 deployment:
-  slack:
+  default:
     branch: /.*/
     commands:
+      - cp packed/* $CIRCLE_ARTIFACTS
       - node ./scripts/slack.js
   release:
     tag: /(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)/
