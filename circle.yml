@@ -18,6 +18,6 @@ deployment:
       - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace $CIRCLE_TAG packed
 
 dependencies:
-  pre:
+  post:
     - go get github.com/tcnksm/ghr
     - npm install -g slackup
