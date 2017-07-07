@@ -8,6 +8,7 @@ deployment:
     commands:
       - npm run pack
       - cp packed/* $CIRCLE_ARTIFACTS
+      - node ./scripts/slack.js
   release:
     tag: /.*/
     commands:
@@ -16,3 +17,4 @@ deployment:
 dependencies:
   pre:
     - go get github.com/tcnksm/ghr
+    - npm install -g slackup
