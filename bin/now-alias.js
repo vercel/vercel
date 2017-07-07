@@ -446,7 +446,7 @@ async function run({ token, config: { currentTeam, user } }) {
 async function confirmDeploymentRemoval(alias, _alias) {
   const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
   const _sourceUrl = _alias.deployment
-    ? chalk.underline(`https://${_alias.deployment.url}`)
+    ? chalk.underline(_alias.deployment.url)
     : null
   const tbl = table(
     [
