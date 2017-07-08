@@ -5,12 +5,14 @@ machine:
 compile:
   override:
     - npm run pack
+  post:
+    - cp packed/* $CIRCLE_ARTIFACTS
 
 deployment:
   default:
     branch: /.*/
+    owner: zeit
     commands:
-      - cp packed/* $CIRCLE_ARTIFACTS
       - node ./scripts/slack.js
   release:
     tag: /.*/
