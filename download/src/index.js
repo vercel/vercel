@@ -3,6 +3,7 @@
 // Native
 import fs from 'fs'
 import path from 'path'
+import zlib from 'zlib'
 
 // Packages
 import onDeath from 'death'
@@ -63,8 +64,8 @@ async function main() {
   showProgress(0)
 
   const name = platformToName[process.platform]
-  const url = `https://github.com/zeit/now-cli/releases/download/${packageJSON.version}/${name}`
-  const resp = await fetch(url)
+  const url = `http://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
+  const resp = await fetch(url, { compress: false })
 
   if (resp.status !== 200) {
     disableProgress()
@@ -85,7 +86,8 @@ async function main() {
       reject(error)
     })
 
-    resp.body.pipe(ws)
+    const gunzip = zlib.createGunzip()
+    resp.body.pipe(gunzip).pipe(ws)
 
     ws.on('close', () => {
       showProgress(100)
