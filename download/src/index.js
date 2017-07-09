@@ -11,7 +11,13 @@ import fetch from 'node-fetch'
 
 // Utilities
 import plusxSync from './chmod'
-import { disableProgress, enableProgress, info, showProgress, warn } from './log'
+import {
+  disableProgress,
+  enableProgress,
+  info,
+  showProgress,
+  warn
+} from './log'
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
@@ -36,7 +42,9 @@ async function main() {
     )
   } catch (err) {
     if (err.code === 'EACCES') {
-      warn('Please try installing now CLI again with the `--unsafe-perm` option.')
+      warn(
+        'Please try installing now CLI again with the `--unsafe-perm` option.'
+      )
       info('Example: `npm i -g --unsafe-perm now`')
 
       process.exit()
@@ -64,7 +72,7 @@ async function main() {
   showProgress(0)
 
   const name = platformToName[process.platform]
-  const url = `http://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
+  const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
   const resp = await fetch(url, { compress: false })
 
   if (resp.status !== 200) {
@@ -78,25 +86,29 @@ async function main() {
   await new Promise((resolve, reject) => {
     let bytesRead = 0
 
-    resp.body.on('data', chunk => {
-      bytesRead += chunk.length
-      showProgress(100 * bytesRead / size)
-    }).on('error', error => {
-      disableProgress()
-      reject(error)
-    })
+    resp.body
+      .on('data', chunk => {
+        bytesRead += chunk.length
+        showProgress(100 * bytesRead / size)
+      })
+      .on('error', error => {
+        disableProgress()
+        reject(error)
+      })
 
     const gunzip = zlib.createGunzip()
     resp.body.pipe(gunzip).pipe(ws)
 
-    ws.on('close', () => {
-      showProgress(100)
-      disableProgress()
-      resolve()
-    }).on('error', error => {
-      disableProgress()
-      reject(error)
-    })
+    ws
+      .on('close', () => {
+        showProgress(100)
+        disableProgress()
+        resolve()
+      })
+      .on('error', error => {
+        disableProgress()
+        reject(error)
+      })
   })
 
   fs.renameSync(partial, target)
