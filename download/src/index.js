@@ -122,15 +122,20 @@ async function main() {
   fs.renameSync(partial, target)
 
   if (process.platform === 'win32') {
+    // Now.exe is executed only
+    fs.unlinkSync(now)
+    // Workaround for https://github.com/npm/cmd-shim/pull/25
+    const gitBashFile = path.join(process.env.APPDATA, 'npm/now')
     fs.writeFileSync(
-      now,
-      '#!/usr/bin/env node\n' +
-        'var chip = require("child_process")\n' +
-        'var args = process.argv.slice(2)\n' +
-        'var opts = { stdio: "inherit" }\n' +
-        'var r = chip.spawnSync(__dirname + "/now.exe", args, opts)\n' +
-        'if (r.error) throw r.error\n' +
-        'process.exit(r.status)\n'
+      gitBashFile,
+      '#!/bin/sh\n' +
+        'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+        '\n' +
+        'case `uname` in\n' +
+        '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+        'esac\n' +
+        '\n' +
+        fs.readFileSync(gitBashFile, 'utf8')
     )
   } else {
     plusxSync(now)
