@@ -36,7 +36,7 @@ export function disableProgress() {
   // It is auto-completed once it updates to 100
   // otherwise it outputs a blank line
   if (!bar.complete) {
-    bar.update(1)
+    bar.terminate()
   }
 
   bar = undefined
