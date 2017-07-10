@@ -19,6 +19,7 @@ import {
   warn
 } from './log'
 
+fetch.Promise = Promise
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
 const target = process.platform === 'win32' ? targetWin32 : now
