@@ -98,6 +98,13 @@ async function main() {
       })
 
     const gunzip = zlib.createGunzip()
+
+    gunzip
+      .on('error', error => {
+        disableProgress()
+        reject(error)
+      })
+
     resp.body.pipe(gunzip).pipe(ws)
 
     ws
