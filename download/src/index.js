@@ -8,6 +8,7 @@ import zlib from 'zlib'
 // Packages
 import onDeath from 'death'
 import fetch from 'node-fetch'
+import retry from 'async-retry'
 
 // Utilities
 import plusxSync from './chmod'
@@ -19,6 +20,8 @@ import {
   warn
 } from './log'
 
+fetch.Promise = Promise
+global.Promise = Promise
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
 const target = process.platform === 'win32' ? targetWin32 : now
@@ -68,61 +71,71 @@ async function main() {
   // Print an empty line
   console.log('')
 
-  enableProgress('Downloading now CLI ' + packageJSON.version)
-  showProgress(0)
+  await retry(async () => {
+    enableProgress('Downloading now CLI ' + packageJSON.version)
+    showProgress(0)
 
-  const name = platformToName[process.platform]
-  const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
-  const resp = await fetch(url, { compress: false })
+    try {
+      const name = platformToName[process.platform]
+      const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
+      const resp = await fetch(url, { compress: false })
 
-  if (resp.status !== 200) {
-    disableProgress()
-    throw new Error(resp.statusText + ' ' + url)
-  }
+      if (resp.status !== 200) {
+        throw new Error(resp.statusText + ' ' + url)
+      }
 
-  const size = resp.headers.get('content-length')
-  const ws = fs.createWriteStream(partial)
+      const size = resp.headers.get('content-length')
+      const ws = fs.createWriteStream(partial)
 
-  await new Promise((resolve, reject) => {
-    let bytesRead = 0
+      await new Promise((resolve, reject) => {
+        let bytesRead = 0
 
-    resp.body
-      .on('data', chunk => {
-        bytesRead += chunk.length
-        showProgress(100 * bytesRead / size)
+        resp.body
+          .on('error', reject)
+          .on('data', chunk => {
+            bytesRead += chunk.length
+            showProgress(100 * bytesRead / size)
+          })
+
+        const gunzip = zlib.createGunzip()
+
+        gunzip
+          .on('error', reject)
+
+        resp.body.pipe(gunzip).pipe(ws)
+
+        ws
+          .on('error', reject)
+          .on('close', () => {
+            showProgress(100)
+            resolve()
+          })
       })
-      .on('error', error => {
-        disableProgress()
-        reject(error)
-      })
-
-    const gunzip = zlib.createGunzip()
-    resp.body.pipe(gunzip).pipe(ws)
-
-    ws
-      .on('close', () => {
-        showProgress(100)
-        disableProgress()
-        resolve()
-      })
-      .on('error', error => {
-        disableProgress()
-        reject(error)
-      })
+    } finally {
+      disableProgress()
+    }
+  }, {
+    retries: 500,
+    onRetry: (err) => console.error(err)
   })
 
   fs.renameSync(partial, target)
 
   if (process.platform === 'win32') {
+    // Now.exe is executed only
+    fs.unlinkSync(now)
+    // Workaround for https://github.com/npm/cmd-shim/pull/25
+    const gitBashFile = path.join(process.env.APPDATA, 'npm/now')
     fs.writeFileSync(
-      now,
-      '#!/usr/bin/env node\n' +
-        'var chip = require("child_process")\n' +
-        'var args = process.argv.slice(2)\n' +
-        'var opts = { stdio: "inherit" }\n' +
-        'var r = chip.spawnSync(__dirname + "/now.exe", args, opts)\n' +
-        'if (r.error) throw r.error\n' +
-        'process.exit(r.status)\n'
+      gitBashFile,
+      '#!/bin/sh\n' +
+        'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+        '\n' +
+        'case `uname` in\n' +
+        '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+        'esac\n' +
+        '\n' +
+        fs.readFileSync(gitBashFile, 'utf8')
     )
   } else {
     plusxSync(now)
