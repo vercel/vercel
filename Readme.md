@@ -45,7 +45,7 @@ The output of the `now` command will be a unique url to the deployment. No need 
 To install the latest version:
 
 ```
-npm install -g now@preview
+npm install -g now@beta
 ```
 
 Note: while the API has been in production for over a year, the different
