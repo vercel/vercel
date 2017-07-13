@@ -58,13 +58,7 @@ produce the [pkg](https://github.com/zeit/pkg) binaries.
 
 Configuration of one or more provides is necessary via `login` commands is necessary. If no logins are active and `now`
 
-Global configuration is stored as `~/.now/config.json`. 
-
-Your default provider will be the first one you log in to. If you are logged into multiple providers and want to set 
-
-```
-now config set provider gcp
-```
+Global configuration is stored as `~/.now/config.json`. Your default provider will be the first one you log in to.
 
 ### Now.sh
 
@@ -206,11 +200,7 @@ Recommended, but not required, commands are:
   </tr>
 </table>
 
-The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type`:
-
-  - `nodejs`
-  - `go`
-  - `static`
+The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type` `nodejs`, and others are on the way!
 
 ## Philosophy
 
