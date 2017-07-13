@@ -1,0 +1,21 @@
+body {
+  background: #000;
+  color: #fff;
+}
+
+div {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+p {
+  font-size: 200px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: center;
+}
+
