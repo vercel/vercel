@@ -56,7 +56,7 @@ produce the [pkg](https://github.com/zeit/pkg) binaries.
 
 ## Setup
 
-Configuration of one or more provides is necessary via `login` commands is necessary. If no logins are active and `now`
+Configuration of one or more providers via `login` command is necessary. If no logins are active and `now`
 
 Global configuration is stored as `~/.now/config.json`. Your default provider will be the first one you log in to.
 
