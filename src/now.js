@@ -380,7 +380,7 @@ const handleRejection = err => {
   } else {
     console.error(error('An unexpected empty rejection occurred'))
   }
-  return 1
+  process.exit(1);
 }
 
 const handleUnexpected = err => {
@@ -388,7 +388,7 @@ const handleUnexpected = err => {
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
-  return 1
+  process.exit(1);
 }
 
 process.on('unhandledRejection', handleRejection)
