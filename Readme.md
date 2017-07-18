@@ -45,7 +45,7 @@ The output of the `now` command will be a unique url to the deployment. No need 
 To install the latest version:
 
 ```
-npm install -g now@preview
+npm install -g now@beta
 ```
 
 Note: while the API has been in production for over a year, the different
@@ -56,15 +56,9 @@ produce the [pkg](https://github.com/zeit/pkg) binaries.
 
 ## Setup
 
-Configuration of one or more provides is necessary via `login` commands is necessary. If no logins are active and `now`
+Configuration of one or more providers via `login` command is necessary. If no logins are active and `now`
 
-Global configuration is stored as `~/.now/config.json`. 
-
-Your default provider will be the first one you log in to. If you are logged into multiple providers and want to set 
-
-```
-now config set provider gcp
-```
+Global configuration is stored as `~/.now/config.json`. Your default provider will be the first one you log in to.
 
 ### Now.sh
 
@@ -172,11 +166,11 @@ The minimal set of commands that providers must supply are:
 
 <table>
   <tr>
-    <td><code>[]</code> / <code>deploy</code></td>
+    <td><code>[]</code> | <code>deploy</code></td>
     <td>the default command to launch a deployment</td>
   </tr>
   <tr>
-	<td><code>remove</code> / <code>rm</code></td>
+	<td><code>remove</code> | <code>rm</code></td>
 	<td>remove a deployment identified by its unique URL</td>
   </tr>
 </table>
@@ -185,32 +179,28 @@ Recommended, but not required, commands are:
 
 <table>
   <tr>
-    <td><code>logs</code> | <code>ln</code></td>
+    <td><code>alias</code> | <code>ln</code></td>
     <td>associates a URL with a permanent domain name</td>
   </tr>
   <tr>
-    <td><code>secrets</code> <code>ls</code> <code>rm</code> <code>add</code></td>
-    <td>associates a URL with a permanent domain name</td>
+    <td><code>secrets</code> <code>ls</code> | <code>rm</code> | <code>add</code></td>
+    <td>manage deployment secrets</td>
   </tr>
   <tr>
-  	<td><code>domains</code> <code>ls</code> / <code>add</code> / <code>rm</code></td>
+  	<td><code>domains</code> <code>ls</code> | <code>add</code> | <code>rm</code></td>
   	<td>manage domains</td>
   </tr>
   <tr>
-  	<td><code>dns</code> <code>ls</code> / <code>add</code> / <code>rm</code></td>
+  	<td><code>dns</code> <code>ls</code> | <code>add</code> | <code>rm</code></td>
   	<td>manage dns records</td>
   </tr>
   <tr>
-	<td><code>certs</code> <code>ls</code> / <code>add</code> / <code>rm</code></td>
+<td><code>certs</code> <code>ls</code> | <code>add</code> | 	<code>rm</code></td>
 	<td>manage certificates</td>
   </tr>
 </table>
 
-The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type`:
-
-  - `nodejs`
-  - `go`
-  - `static`
+The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type` `nodejs`, and others are on the way!
 
 ## Philosophy
 
