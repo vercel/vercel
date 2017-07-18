@@ -391,7 +391,7 @@ const handleUnexpected = err => {
   return 1
 }
 
-process.on('uncaughtRejection', handleRejection)
+process.on('unhandledRejection', handleRejection)
 process.on('uncaughtException', handleUnexpected)
 
 main(process.argv).then((code: number) => exit(code)).catch(handleUnexpected)
