@@ -1,6 +1,7 @@
 {
   "name": "now",
   "version": "8.0.0-beta.1",
+  "license": "Apache-2.0",
   "dependencies": {
     "ansi-escapes": "^2.0.0",
     "archiver": "^2.0.0",
