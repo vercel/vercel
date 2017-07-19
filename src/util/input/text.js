@@ -29,7 +29,6 @@ const textInput = ({
       // Some environments (e.g., cygwin) don't provide a tty
       const e = new Error('stdin lacks setRawMode support')
       e.userError = true
-      restore()
       reject(e)
     }
 
