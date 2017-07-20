@@ -6,6 +6,7 @@ const minimist = require('minimist')
 const { gray, bold } = require('chalk')
 const bytes = require('bytes')
 const uid = require('uid-promise')
+const retry = require('async-retry')
 const debug = require('debug')('now:aws:deploy')
 
 // ours
@@ -162,18 +163,36 @@ const deploy = async ({ config, authConfig, argv: argv_ }) => {
   const stopResourcesSpinner = wait('Creating API resources')
 
   debug('initializing lambda function')
-  const λ = await createFunction(lambda, {
-    Code: {
-      ZipFile: zipFile
+  const λ = await retry(
+    async bail => {
+      try {
+        return await createFunction(lambda, {
+          Code: {
+            ZipFile: zipFile
+          },
+          Runtime: 'nodejs6.10',
+          Description: desc.description,
+          FunctionName: deploymentId,
+          Handler: '__now_handler.handler',
+          Role: role.Role.Arn,
+          Timeout: 15,
+          MemorySize: 512
+        })
+      } catch (err) {
+        if (
+          err.retryable ||
+          // created role is not ready
+          err.code === 'InvalidParameterValueException'
+        ) {
+          debug('retrying creating function (%s)', err.message)
+          throw err
+        }
+
+        bail(err)
+      }
     },
-    Runtime: 'nodejs6.10',
-    Description: desc.description,
-    FunctionName: deploymentId,
-    Handler: '__now_handler.handler',
-    Role: role.Role.Arn,
-    Timeout: 15,
-    MemorySize: 512
-  })
+    { minTimeout: 2500, maxTimeout: 5000 }
+  )
 
   debug('initializing api gateway')
   const api = await createAPI(gateway, {
