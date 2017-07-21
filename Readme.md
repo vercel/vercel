@@ -56,9 +56,13 @@ produce the [pkg](https://github.com/zeit/pkg) binaries.
 
 ## Setup
 
-Configuration of one or more providers via `login` command is necessary. If no logins are active and `now`
+Configuration of one or more providers via `login` command is necessary.
 
-Global configuration is stored as `~/.now/config.json`. Your default provider will be the first one you log in to.
+Global configuration is stored as `~/.now/config.json`. Your default provider will be the first one you log in to. If you are logged into multiple providers and want to set default provider, run:
+
+```
+now config set defaultProvider gcp
+```
 
 ### Now.sh
 
@@ -85,7 +89,7 @@ to synchronize your credentials.
 Serverless deployments are provisioned by using:
 
 - Lambda functions λ
-	- A proxy is automatically used to bridge the API between 
+	- A proxy is automatically used to bridge the API between
 	  HTTP and lambda functions and retain a consistent interface
 - Certificate Manager
 - API Gateway
@@ -136,7 +140,7 @@ The v1 release of `now.json` includes the following specification:
 - `env` (optional). One of
   - `Object` a dictionary mapping the name of the environmental variable
     to expose to the deployment and its value.
-    If the value begins with `@`, it's considered a 
+    If the value begins with `@`, it's considered a
   - `Array` a list of suggested environmental variables that the project
     _might_ require to be deployed and function correctly
 - `regions` - `Array` of `String`
@@ -234,13 +238,13 @@ or framework are present, attempt to provide sane defaults.
 
 Examples of this is the presence of `Dockerfile` or `package.json`. When
 publishing a project it's recommended that the [`type`](#type) is strictly
-configured in [`now.json`](#now-json) to avoid 
+configured in [`now.json`](#now-json) to avoid
 
 ## Contributions and Roadmap
 
 #### Community
 
-All feedback and suggestions are welcome! 
+All feedback and suggestions are welcome!
 
 - 💬 Chat: Join us on [zeit.chat](https://zeit.chat) `#now-client`.
 - 📣 Stay up to date on new features and announcments on [@zeithq](https://twitter.com/zeithq).
@@ -284,4 +288,3 @@ npm run build
 
 Now is licensed under the Apache License, Version 2.0.
 See LICENSE for the full license text.
-
