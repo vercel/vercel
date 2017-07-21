@@ -25,8 +25,8 @@ const getToken = require('./util/get-access-token')
 const describeProject = require('../../describe-project')
 const copyToClipboard = require('../../util/copy-to-clipboard')
 const getFunctionHandler = require('./util/get-function-handler')
-
-const BUCKET_NAME = 'now-deployments'
+const generateBucketName = require('./util/generate-bucket-name')
+const { writeToConfigFile } = require('../../util/config-files')
 
 const deploy = async (ctx: {
   config: any,
@@ -122,6 +122,14 @@ const deploy = async (ctx: {
   const resourcesStart = Date.now()
   const stopResourcesSpinner = wait('Creating API resources')
 
+  if (!ctx.config.gcp) ctx.config.gcp = {}
+  if (!ctx.config.gcp.bucketName) {
+    ctx.config.gcp.bucketName = generateBucketName()
+    writeToConfigFile(ctx.config)
+  }
+
+  const { bucketName } = ctx.config.gcp
+
   debug('creating gcp storage bucket')
   const bucketRes = await fetch(
     `https://www.googleapis.com/storage/v1/b?project=${project.id}`,
@@ -132,7 +140,7 @@ const deploy = async (ctx: {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        name: BUCKET_NAME
+        name: bucketName
       })
     }
   )
@@ -151,7 +159,9 @@ const deploy = async (ctx: {
 
   debug('creating gcp storage file')
   const fileRes = await fetch(
-    `https://www.googleapis.com/upload/storage/v1/b/${BUCKET_NAME}/o?uploadType=media&name=${encodeURIComponent(
+    `https://www.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+      bucketName
+    )}/o?uploadType=media&name=${encodeURIComponent(
       zipFileName
     )}&project=${encodeURIComponent(project.id)}`,
     {
@@ -185,7 +195,9 @@ const deploy = async (ctx: {
         name: `projects/${project.id}/locations/${region}/functions/${deploymentId}`,
         timeout: '15s',
         availableMemoryMb: 512,
-        sourceArchiveUrl: `gs://${BUCKET_NAME}/${zipFileName}`,
+        sourceArchiveUrl: `gs://${encodeURIComponent(
+          bucketName
+        )}/${zipFileName}`,
         entryPoint: 'handler',
         httpsTrigger: {
           url: null
