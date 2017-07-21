@@ -78,7 +78,10 @@
       "git add"
     ]
   },
-  "eslintIgnore": ["src/providers/sh/legacy/**"],
+  "eslintIgnore": [
+    "src/providers/sh/legacy/**",
+    "out"
+  ],
   "eslintConfig": {
     "parserOptions": {
       "ecmaVersion": 8,
