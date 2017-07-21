@@ -28,7 +28,11 @@ const getFunctionHandler = require('./util/get-function-handler')
 
 const BUCKET_NAME = 'now-deployments'
 
-const deploy = async ctx => {
+const deploy = async (ctx: {
+  config: any,
+  authConfig: any,
+  argv: Array<string>
+}) => {
   const { argv: argv_ } = ctx
   const argv = minimist(argv_, {
     boolean: ['help'],
@@ -217,7 +221,7 @@ const deploy = async ctx => {
   do {
     if (!--retriesLeft) {
       console.error(
-        error('Could not determine status of the deployment: ' + url)
+        error('Could not determine status of the deployment: ' + String(url))
       )
       return 1
     } else {
@@ -277,7 +281,7 @@ const assertSuccessfulResponse = async res => {
       msg = `An API error was returned (${res.status}), but the error code could not be diagnosed`
     }
 
-    msg = body.error.message
+    if (body && body.error) msg = body.error.message
     throw new Error(msg)
   }
 }

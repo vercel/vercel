@@ -33,7 +33,7 @@ const exit = code => {
   process.exit(code)
 }
 
-const main = async argv_ => {
+const main = async (argv_): Promise<number> => {
   const argv = minimist(argv_, {
     boolean: ['help', 'version'],
     alias: {
@@ -248,7 +248,7 @@ const main = async argv_ => {
   let suppliedProvider = null
 
   // if the target is something like `aws`
-  if (targetOrSubcommand in providers) {
+  if (targetOrSubcommand && targetOrSubcommand in providers) {
     debug('user supplied a known provider')
     const targetPath = join(process.cwd(), targetOrSubcommand)
     const targetPathExists = await exists(targetPath)
@@ -267,6 +267,7 @@ const main = async argv_ => {
     targetOrSubcommand = argv._[3]
   }
 
+  // $FlowFixMe
   let { defaultProvider = null }: { defaultProvider: ?string } = config
 
   if (null === suppliedProvider) {
@@ -364,6 +365,7 @@ const main = async argv_ => {
         `An unexpected error occurred in provider ${subcommand}: ${err.stack}`
       )
     )
+    return 1
   }
 }
 
@@ -380,7 +382,7 @@ const handleRejection = err => {
   } else {
     console.error(error('An unexpected empty rejection occurred'))
   }
-  process.exit(1);
+  process.exit(1)
 }
 
 const handleUnexpected = err => {
@@ -388,7 +390,7 @@ const handleUnexpected = err => {
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
-  process.exit(1);
+  process.exit(1)
 }
 
 process.on('unhandledRejection', handleRejection)

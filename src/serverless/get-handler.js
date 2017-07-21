@@ -20,7 +20,10 @@ if (handler.indexOf(REQ_HANDLER_SYMBOL) < 0) {
   throw new Error('Missing symbol in `handler.js`: ' + REQ_HANDLER_SYMBOL)
 }
 
-const getHandler = ({ cmd, script }, fn: Function) =>
+const getHandler = (
+  { cmd, script }: { cmd: ?string, script: ?string },
+  fn: Function
+) =>
   handler
     .replace(CMD_SYMBOL, JSON.stringify(cmd))
     .replace(SCRIPT_SYMBOL, JSON.stringify(script))

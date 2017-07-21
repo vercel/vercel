@@ -1,4 +1,3 @@
-// @flow
 const start = new Date()
 
 const { createServer } = require('http')

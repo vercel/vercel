@@ -40,7 +40,15 @@ const IAM_POLICY_DOCUMENT = {
   ]
 }
 
-const deploy = async ({ config, authConfig, argv: argv_ }) => {
+const deploy = async ({
+  config,
+  authConfig,
+  argv: argv_
+}: {
+  config: any,
+  authConfig: any,
+  argv: Array<string>
+}) => {
   const argv = minimist(argv_, {
     boolean: ['help'],
     alias: {
@@ -72,7 +80,7 @@ const deploy = async ({ config, authConfig, argv: argv_ }) => {
     return 1
   }
 
-  let desc = null
+  let desc
 
   try {
     desc = await describeProject(resolved)

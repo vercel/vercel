@@ -1,4 +1,3 @@
-// @flow
 // theirs
 const { green, italic } = require('chalk')
 

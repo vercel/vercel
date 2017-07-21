@@ -19,7 +19,7 @@ const GITHUB_TEST_REGEX = /^(https?:\/\/)(www\.)?github\.com/
 // matches a github url pathname like: zeit/now/tree/master
 const URL_PATHNAME_REGEX = /^\/([\w-]+)\/([\w-]+)(\/tree\/(\w+))?$/
 
-const resolveGitHub = param => {
+const resolveGitHub = (param: string) => {
   // support simple `user/repo` syntax
   const match = param.match(DEPLOY_PARAM_REGEX)
   if (match) {
@@ -42,7 +42,7 @@ const resolveGitHubByURL = async (url: string) => {
       const res = await fetch(httpsUrl)
       if (res.ok) {
         debug('attempting github clone')
-        const { pathname } = parsed
+        const { pathname = '' } = parsed
         const match = pathname.match(URL_PATHNAME_REGEX)
         if (match) {
           const [, user, repo, , tree] = match
