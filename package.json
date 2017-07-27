@@ -106,6 +106,7 @@
     "printf": "0.2.5",
     "progress": "2.0.0",
     "psl": "1.1.19",
+    "qrcode-terminal": "^0.11.0",
     "resumer": "0.0.0",
     "single-line-log": "1.1.2",
     "slackup": "2.0.1",
