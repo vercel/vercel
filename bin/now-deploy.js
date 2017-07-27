@@ -15,6 +15,7 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
+const qrcode = require('qrcode-terminal')
 
 // Ours
 const login = require('../lib/login')
@@ -616,6 +617,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       } catch (err) {
         console.log(`${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`)
       }
+      qrcode.generate(url, {small: true})
     } else {
       console.log(`> ${url} [${elapsed}]`)
     }
