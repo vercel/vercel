@@ -187,7 +187,7 @@ if (path) {
 const gitRepo = {}
 
 // Options
-let forceNew = argv.force
+const forceNew = argv.force
 let deploymentName = argv.name
 let sessionAffinity = argv['session-affinity']
 const debug = argv.debug
@@ -250,13 +250,6 @@ const envFields = async list => {
   }
 
   return answers
-}
-
-// Create a new deployment if user changed the name or made `_src` public.
-// This works fine because it doesn't force a new sync,
-// it just forces a new deployment.
-if (deploymentName || wantsPublic) {
-  forceNew = true
 }
 
 let alwaysForwardNpm
