@@ -22,13 +22,15 @@ import {
 
 fetch.Promise = Promise
 global.Promise = Promise
+
+const packagePath = path.join(__dirname, '../../package.json')
+const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
 const target = process.platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
-
-const packagePath = path.join(__dirname, '../../package.json')
-const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+const backup = target + '.' + packageJSON.version + '.backup'
 
 const platformToName = {
   darwin: 'now-macos',
@@ -36,7 +38,7 @@ const platformToName = {
   win32: 'now-win.exe'
 }
 
-async function main() {
+async function download() {
   try {
     fs.writeFileSync(
       now,
@@ -85,6 +87,11 @@ async function main() {
       }
 
       const size = resp.headers.get('content-length')
+
+      if (!size) {
+        throw new Error('Not found (content-length is absent)')
+      }
+
       const ws = fs.createWriteStream(partial)
 
       await new Promise((resolve, reject) => {
@@ -120,6 +127,15 @@ async function main() {
   })
 
   fs.renameSync(partial, target)
+  fs.writeFileSync(backup, fs.readFileSync(target))
+}
+
+async function main() {
+  if (fs.existsSync(backup)) {
+    fs.writeFileSync(target, fs.readFileSync(backup))
+  } else {
+    await download()
+  }
 
   if (process.platform === 'win32') {
     // Now.exe is executed only
