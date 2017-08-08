@@ -3,6 +3,7 @@
 // Native
 import fs from 'fs'
 import path from 'path'
+import { spawnSync } from 'child_process'
 import zlib from 'zlib'
 
 // Packages
@@ -22,20 +23,30 @@ import {
 
 fetch.Promise = Promise
 global.Promise = Promise
+let { platform } = process
+if (detectAlpine()) platform = 'alpine'
 
 const packagePath = path.join(__dirname, '../../package.json')
 const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
-const target = process.platform === 'win32' ? targetWin32 : now
+const target = platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
 const backup = target + '.' + packageJSON.version + '.backup'
 
 const platformToName = {
+  alpine: 'now-alpine',
   darwin: 'now-macos',
   linux: 'now-linux',
   win32: 'now-win.exe'
+}
+
+function detectAlpine () {
+  if (platform !== 'linux') return false
+  // https://github.com/sass/node-sass/issues/1589#issuecomment-265292579
+  const ldd = spawnSync('ldd', [ process.execPath ]).stdout.toString()
+  return /\bmusl\b/.test(ldd)
 }
 
 async function download() {
@@ -78,7 +89,7 @@ async function download() {
     showProgress(0)
 
     try {
-      const name = platformToName[process.platform]
+      const name = platformToName[platform]
       const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
       const resp = await fetch(url, { compress: false })
 
@@ -137,7 +148,7 @@ async function main() {
     await download()
   }
 
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     // Now.exe is executed only
     fs.unlinkSync(now)
     // Workaround for https://github.com/npm/cmd-shim/pull/25
