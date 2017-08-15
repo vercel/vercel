@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/zeit/now.svg?branch=master)](https://travis-ci.org/zeit/now)
 [![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat/)
 
-## How it works
+## Usage
 
 Now enables instant immutable deployments to **any cloud provider**
 with a simple API that's scalable, intuitive and optimized for collaboration.
@@ -285,3 +285,28 @@ npm run build
   - Drag and drop deployments
 - Adding interoperabity between objects that live in different providers
 - Providing a Next.js and React powered dashboard that can be deployed anywhere
+
+## Why Ship a `pkg`-ed Binary?
+
+- Simpler installation for non-Node users like those deploying [static files](https://zeit.co/blog/unlimited-static) or [Dockerfiles](https://zeit.co/blog/now-dockerfile).
+- Consistency across platforms and installation mechanisms (`npm`, `brew` and manual scripts)
+- Parsing and evaluation optimizations lead to a faster bootup time
+- Easier installation in automation environments (like CI systems)
+- Increased safety by providing a unified signature mechanism for releases
+- We're able to select our own Node version of choice and can take advantage of the latest features
+
+## Caught a Bug?
+
+1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
+2. Link the package to the global module directory: `npm run link` (not `npm link`)
+3. You can now start using `now` from the command line!
+
+As always, you can use `npm test` to run the tests and see if your changes have broken anything.
+
+## Authors
+
+- Guillermo Rauch ([@rauchg](https://twitter.com/rauchg)) - [▲ZEIT](https://zeit.co)
+- Leo Lamprecht ([@notquiteleo](https://twitter.com/notquiteleo)) - [▲ZEIT](https://zeit.co)
+- Tony Kovanen ([@TonyKovanen](https://twitter.com/TonyKovanen)) - [▲ZEIT](https://zeit.co)
+- Olli Vanhoja ([@OVanhoja](https://twitter.com/OVanhoja)) - [▲ZEIT](https://zeit.co)
+- Naoyuki Kanezawa ([@nkzawa](https://twitter.com/nkzawa)) - [▲ZEIT](https://zeit.co)
