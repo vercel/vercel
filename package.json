@@ -5,9 +5,12 @@
   "scripts": {
     "test": "eslint .",
     "prepublish": "webpack",
-    "lint:staged": "lint-staged",
     "dev": "webpack -w",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "postinstall": "node download/install.js",
+    "prepublish": "in-install || (npm run prepare && cp /dev/null download/dist/now)",
+    "pack": "pkg dist/now.js -c package.json -o packed/now",
+    "prepare": "webpack --context download --config download/webpack.config.js"
   },
   "lint-staged": {
     "*.js": [
@@ -16,15 +19,28 @@
       "git add"
     ]
   },
-  "main": "./dist/now.js",
-  "files": [
-    "dist"
-  ],
   "bin": {
-    "now": "./dist/now.js"
+    "now": "download/dist/now"
+  },
+  "files": [
+    "download/dist",
+    "download/install.js"
+  ],
+  "pkg": {
+    "scripts": [
+      "bin/*",
+      "lib/**/*"
+    ],
+    "targets": [
+      "node7-alpine-x64",
+      "node7-linux-x64",
+      "node7-macos-x64",
+      "node7-win-x64"
+    ]
   },
   "eslintIgnore": [
     "src/providers/sh/legacy/**",
+    "download/**",
     "dist"
   ],
   "eslintConfig": {
@@ -63,6 +79,7 @@
     "ansi-escapes": "2.0.0",
     "archiver": "2.0.0",
     "array-unique": "0.3.2",
+    "assert": "1.4.1",
     "async-retry": "1.1.3",
     "aws-sdk": "2.98.0",
     "babel-core": "6.25.0",
@@ -76,6 +93,7 @@
     "chalk": "2.1.0",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
+    "death": "1.1.0",
     "debug": "3.0.0",
     "deployment-type": "1.0.1",
     "docker-file-parser": "1.0.2",
