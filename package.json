@@ -5,14 +5,13 @@
   "description": "The command line interface for Now",
   "scripts": {
     "test": "eslint .",
-    "prepublish": "webpack",
+    "prepublish": "in-install || (npm run prepare && cp /dev/null download/dist/now)",
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
-    "prepublish": "in-install || (npm run prepare && cp /dev/null download/dist/now)",
     "pack": "pkg dist/now.js -c package.json -o packed/now",
     "prepare": "webpack --context download --config download/webpack.config.js",
-    "link": "cd link && yarn link"
+    "link": "cd link && npm link"
   },
   "lint-staged": {
     "*.js": [
@@ -133,6 +132,7 @@
     "then-sleep": "1.0.1",
     "tmp-promise": "1.0.3",
     "uid-promise": "1.0.0",
+    "update-notifier": "2.2.0",
     "webpack": "3.5.4",
     "webpack-node-externals": "1.6.0"
   }

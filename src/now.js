@@ -2,14 +2,16 @@
 //@flow
 const start = Date.now()
 
-// theirs
+// Native
+const { join } = require('path')
+
+// Packages
 const debug = require('debug')('now:main')
 const { exists } = require('fs-extra-promise')
-const { join } = require('path')
 const mkdirp = require('mkdirp-promise')
 const minimist = require('minimist')
 
-// ours
+// Utilities
 const error = require('./util/output/error')
 const effect = require('./util/output/effect')
 const param = require('./util/output/param')
@@ -21,6 +23,7 @@ const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
 const providers = require('./providers')
 const configFiles = require('./util/config-files')
+const checkForUpdates = require('./util/updates')
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -34,6 +37,8 @@ const exit = code => {
 }
 
 const main = async (argv_): Promise<number> => {
+  await checkForUpdates()
+
   const argv = minimist(argv_, {
     boolean: ['help', 'version'],
     alias: {
