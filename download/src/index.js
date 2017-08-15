@@ -77,7 +77,7 @@ async function main() {
 
     try {
       const name = platformToName[process.platform]
-      const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
+      const url = `https://cdn.zeit.co/releases/now/${packageJSON.version}/${name}`
       const resp = await fetch(url, { compress: false })
 
       if (resp.status !== 200) {
