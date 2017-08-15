@@ -9,7 +9,7 @@
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
-    "pack": "pkg dist/now.js -c package.json -o packed/now",
+    "pack": "webpack && pkg dist/now.js -c package.json -o packed/now",
     "prepare": "webpack --context download --config download/webpack.config.js",
     "link": "cd link && npm link"
   },

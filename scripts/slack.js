@@ -3,12 +3,10 @@
 const slackup = require('slackup')
 const fetch = require('node-fetch')
 
-const { CIRCLE_PROJECT_USERNAME, CIRCLE_PROJECT_REPONAME } = process.env
-
-const repo = CIRCLE_PROJECT_USERNAME + '/' + CIRCLE_PROJECT_REPONAME
-const commit = process.env.CIRCLE_SHA1
-const branch = process.env.CIRCLE_BRANCH
-const apiKey = process.env.SLACK_TOKEN
+const repo = process.env.TRAVIS_REPO_SLUG
+const commit = process.env.TRAVIS_COMMIT
+const branch = process.env.TRAVIS_BRANCH
+const apiKey = process.env.SLACK_API_KEY
 const channel = process.env.SLACK_CHANNEL
 const githubToken = process.env.GITHUB_TOKEN
 
