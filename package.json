@@ -3,11 +3,10 @@
   "version": "8.0.0-beta.2",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "babel src/ -d dist/ && chmod +x dist/now.js",
-    "test": "eslint . && flow",
-    "prepublish": "yarn run test && yarn run build",
+    "test": "eslint . && gulp",
+    "prepublish": "gulp",
     "lint:staged": "lint-staged",
-    "dev": "yarn run build && ./dist/now.js",
+    "dev": "gulp watch",
     "precommit": "lint-staged"
   },
   "lint-staged": {
@@ -50,11 +49,6 @@
       "no-shadow": "error",
       "no-extra-semi": 0
     }
-  },
-  "babel": {
-    "presets": [
-      "flow"
-    ]
   },
   "ava": {
     "require": [
@@ -111,6 +105,8 @@
     "eslint": "4.4.1",
     "flow-bin": "0.52.0",
     "flow-remove-types": "1.2.1",
+    "gulp": "3.9.1",
+    "gulp-babel": "^7.0.0",
     "lint-staged": "4.0.3",
     "pre-commit": "1.2.2",
     "prettier": "1.5.3"
