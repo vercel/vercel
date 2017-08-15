@@ -1,9 +1,0 @@
-{
-  "name": "micro-example",
-  "dependencies": {
-    "micro": "latest"
-  },
-  "scripts": {
-    "start": "micro server"
-  }
-}
