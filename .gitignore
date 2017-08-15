@@ -2,7 +2,7 @@
 node_modules
 
 # build output
-out
+dist
 
 # logs
 npm-debug.log

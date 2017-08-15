@@ -3,11 +3,11 @@
   "version": "8.0.0-beta.2",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "babel src/ -d out/ && chmod +x out/now.js",
+    "build": "babel src/ -d dist/ && chmod +x dist/now.js",
     "test": "eslint . && flow",
     "prepublish": "yarn run test && yarn run build",
     "lint:staged": "lint-staged",
-    "dev": "yarn run build && ./out/now.js"
+    "dev": "yarn run build && ./dist/now.js"
   },
   "pre-commit": "lint:staged",
   "lint-staged": {
@@ -17,16 +17,16 @@
       "git add"
     ]
   },
-  "main": "./out/now.js",
+  "main": "./dist/now.js",
   "files": [
-    "out"
+    "dist"
   ],
   "bin": {
-    "now": "./out/now.js"
+    "now": "./dist/now.js"
   },
   "eslintIgnore": [
     "src/providers/sh/legacy/**",
-    "out"
+    "dist"
   ],
   "eslintConfig": {
     "parserOptions": {
