@@ -283,8 +283,3 @@ npm run build
   - Drag and drop deployments
 - Adding interoperabity between objects that live in different providers
 - Providing a Next.js and React powered dashboard that can be deployed anywhere
-
-## License
-
-Now is licensed under the Apache License, Version 2.0.
-See LICENSE for the full license text.
