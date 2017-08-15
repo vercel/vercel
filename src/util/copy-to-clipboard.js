@@ -1,3 +1,5 @@
+// @flow
+
 const { write } = require('clipboardy')
 
 const copyToClipboard = async (

@@ -1,3 +1,5 @@
+// @flow
+
 const aws = require('aws-sdk')
 
 const getAWS = authConfig => {

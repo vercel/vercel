@@ -3,7 +3,7 @@
   "version": "8.0.0-beta.2",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "eslint . && webpack",
+    "test": "eslint .",
     "prepublish": "webpack",
     "lint:staged": "lint-staged",
     "dev": "webpack -w",
@@ -34,7 +34,11 @@
     },
     "parser": "babel-eslint",
     "extends": [
-      "eslint:recommended"
+      "eslint:recommended",
+      "plugin:flowtype/recommended"
+    ],
+    "plugins": [
+      "flowtype"
     ],
     "env": {
       "es6": true,
@@ -102,6 +106,7 @@
     "babel-loader": "7.1.1",
     "babel-plugin-transform-flow-comments": "6.22.0",
     "eslint": "4.4.1",
+    "eslint-plugin-flowtype": "^2.35.0",
     "flow-babel-webpack-plugin": "1.1.0",
     "lint-staged": "4.0.3",
     "pre-commit": "1.2.2",
