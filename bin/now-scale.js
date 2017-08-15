@@ -47,7 +47,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Create an deployment with 3 instances, never sleeps:
+  ${chalk.gray('–')} Create a deployment with 3 instances, never sleeps:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 3')}
 
@@ -69,7 +69,7 @@ const help = () => {
 
   ${chalk.gray(
     '–'
-  )} Create an deployment that is always active and never "sleeps":
+  )} Create a deployment that is always active and never "sleeps":
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
   `)
