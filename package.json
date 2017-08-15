@@ -3,10 +3,10 @@
   "version": "8.0.0-beta.2",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "eslint . && gulp",
-    "prepublish": "gulp",
+    "test": "eslint . && webpack",
+    "prepublish": "webpack",
     "lint:staged": "lint-staged",
-    "dev": "gulp watch",
+    "dev": "webpack -w",
     "precommit": "lint-staged"
   },
   "lint-staged": {
@@ -99,16 +99,24 @@
   "devDependencies": {
     "ava": "0.22.0",
     "babel-cli": "6.24.1",
+    "babel-core": "^6.25.0",
     "babel-eslint": "7.2.3",
+    "babel-loader": "^7.1.1",
+    "babel-plugin-syntax-flow": "^6.18.0",
+    "babel-plugin-transform-flow-comments": "^6.22.0",
     "babel-preset-flow": "6.23.0",
     "babel-register": "6.24.1",
     "eslint": "4.4.1",
+    "flow-babel-webpack-plugin": "^1.1.0",
     "flow-bin": "0.52.0",
     "flow-remove-types": "1.2.1",
     "gulp": "3.9.1",
     "gulp-babel": "^7.0.0",
     "lint-staged": "4.0.3",
     "pre-commit": "1.2.2",
-    "prettier": "1.5.3"
+    "prettier": "1.5.3",
+    "shebang-loader": "^0.0.1",
+    "webpack": "^3.5.4",
+    "webpack-node-externals": "^1.6.0"
   }
 }

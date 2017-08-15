@@ -204,7 +204,7 @@ const envFields = async list => {
   }
 
   // eslint-disable-next-line import/no-unassigned-import
-  require('../../../lib/util/input/patch-inquirer')
+  require('../../../util/input/patch-inquirer')
 
   console.log(
     info('Please enter the values for the following environment variables:')
