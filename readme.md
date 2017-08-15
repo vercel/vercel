@@ -1,5 +1,7 @@
-
 ![now](https://github.com/zeit/art/blob/master/now-hosted/now-header.png?raw=true)
+
+[![Build Status](https://travis-ci.org/zeit/now.svg?branch=master)](https://travis-ci.org/zeit/now)
+[![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat/)
 
 ## How it works
 
