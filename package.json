@@ -7,9 +7,9 @@
     "test": "eslint . && flow",
     "prepublish": "yarn run test && yarn run build",
     "lint:staged": "lint-staged",
-    "dev": "yarn run build && ./dist/now.js"
+    "dev": "yarn run build && ./dist/now.js",
+    "precommit": "lint-staged"
   },
-  "pre-commit": "lint:staged",
   "lint-staged": {
     "*.js": [
       "eslint",
