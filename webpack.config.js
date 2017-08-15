@@ -7,7 +7,7 @@ module.exports = {
   target: 'node',
   externals: [nodeExternals()],
   output: {
-    filename: 'build.js',
+    filename: 'dist/now.js',
   },
   module: {
     loaders: [
