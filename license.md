@@ -1,4 +1,3 @@
-
                              Apache License
                        Version 2.0, January 2004
                     https://www.apache.org/licenses/
@@ -176,7 +175,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
 END OF TERMS AND CONDITIONS
 
-Copyright 2017 ZEIT, Inc.
+Copyright 2017 Zeit, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
