@@ -155,6 +155,16 @@ argparse@^1.0.7:
   dependencies:
     sprintf-js "~1.0.2"
 
+args@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/args/-/args-3.0.4.tgz#8f98de16f14547e061ba8ccec82d7f660195c583"
+  dependencies:
+    camelcase "4.1.0"
+    chalk "2.0.1"
+    minimist "1.2.0"
+    pkginfo "0.4.0"
+    string-similarity "1.2.0"
+
 arr-diff@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/arr-diff/-/arr-diff-2.0.0.tgz#8f3b827f955a8bd669697e4a4256ac3ceae356cf"
@@ -924,13 +934,13 @@ callsites@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/callsites/-/callsites-0.2.0.tgz#afab96262910a7f33c19a5775825c69f34e350ca"
 
+camelcase@4.1.0, camelcase@^4.0.0, camelcase@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-4.1.0.tgz#d545635be1e33c542649c69173e5de6acfae34dd"
+
 camelcase@^1.0.2:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-1.2.1.tgz#9bb5304d2e0b56698b2c758b08a3eaa9daa58a39"
-
-camelcase@^4.0.0, camelcase@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-4.1.0.tgz#d545635be1e33c542649c69173e5de6acfae34dd"
 
 capture-stack-trace@^1.0.0:
   version "1.0.0"
@@ -965,6 +975,14 @@ chalk@1.1.3, chalk@^1.0.0, chalk@^1.1.0, chalk@^1.1.1, chalk@^1.1.3:
     has-ansi "^2.0.0"
     strip-ansi "^3.0.0"
     supports-color "^2.0.0"
+
+chalk@2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-2.0.1.tgz#dbec49436d2ae15f536114e76d14656cdbc0f44d"
+  dependencies:
+    ansi-styles "^3.1.0"
+    escape-string-regexp "^1.0.5"
+    supports-color "^4.0.0"
 
 chalk@2.1.0, chalk@^2.0.0, chalk@^2.0.1:
   version "2.1.0"
@@ -1946,6 +1964,14 @@ forever-agent@~0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/forever-agent/-/forever-agent-0.6.1.tgz#fbc71f0c41adeb37f96c577ad1ed42d8fdacca91"
 
+form-data@^2.1.2:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/form-data/-/form-data-2.2.0.tgz#9a5e3b9295f980b2623cf64fa238b14cebca707b"
+  dependencies:
+    asynckit "^0.4.0"
+    combined-stream "^1.0.5"
+    mime-types "^2.1.12"
+
 form-data@~2.1.1:
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/form-data/-/form-data-2.1.4.tgz#33c183acf193276ecaa98143a69e94bfee1750d1"
@@ -2729,7 +2755,7 @@ lodash.merge@^4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.0.tgz#69884ba144ac33fe699737a6086deffadd0f89c5"
 
-lodash@^4.0.0, lodash@^4.14.0, lodash@^4.15.0, lodash@^4.17.4, lodash@^4.2.0, lodash@^4.3.0, lodash@^4.8.0:
+lodash@^4.0.0, lodash@^4.13.1, lodash@^4.14.0, lodash@^4.15.0, lodash@^4.17.4, lodash@^4.2.0, lodash@^4.3.0, lodash@^4.8.0:
   version "4.17.4"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.4.tgz#78203a4d1c328ae1d86dca6460e369b57f4055ae"
 
@@ -2883,7 +2909,7 @@ natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
 
-node-fetch@1.7.2:
+node-fetch@1.7.2, node-fetch@^1.6.3:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-1.7.2.tgz#c54e9aac57e432875233525f3c891c4159ffefd7"
   dependencies:
@@ -3259,6 +3285,10 @@ pkg-dir@^2.0.0:
   resolved "https://registry.yarnpkg.com/pkg-dir/-/pkg-dir-2.0.0.tgz#f6d5d1109e19d63edf428e0bd57e12777615334b"
   dependencies:
     find-up "^2.1.0"
+
+pkginfo@0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/pkginfo/-/pkginfo-0.4.0.tgz#349dbb7ffd38081fcadc0853df687f0c7744cd65"
 
 pluralize@^4.0.0:
   version "4.0.0"
@@ -3666,6 +3696,14 @@ signal-exit@^3.0.0, signal-exit@^3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.2.tgz#b5fdc08f1287ea1178628e415e25132b73646c6d"
 
+slackup@2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/slackup/-/slackup-2.2.0.tgz#7908379f884b8f2b2a8c382cb409755ec29568e3"
+  dependencies:
+    args "^3.0.4"
+    form-data "^2.1.2"
+    node-fetch "^1.6.3"
+
 slash@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/slash/-/slash-1.0.0.tgz#c41f2f6c39fc16d1cd17ad4b5d896114ae470d55"
@@ -3817,6 +3855,12 @@ stream-to-promise@^1.0.4:
   dependencies:
     bluebird "~3.0.6"
     stream-to-array "~2.3.0"
+
+string-similarity@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/string-similarity/-/string-similarity-1.2.0.tgz#d75153cb383846318b7a39a8d9292bb4db4e9c30"
+  dependencies:
+    lodash "^4.13.1"
 
 string-width@^1.0.1, string-width@^1.0.2:
   version "1.0.2"
