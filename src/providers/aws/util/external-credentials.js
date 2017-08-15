@@ -3,7 +3,7 @@ const { join: joinPath } = require('path')
 const { homedir } = require('os')
 
 // theirs
-const { readFile, exists: fileExists } = require('fs.promised')
+const { readFile, exists: fileExists } = require('fs-extra-promise')
 const debug = require('debug')('now:aws:util:external-credentials')
 
 const AWS_CREDENTIALS_FILE_PATH = joinPath(homedir(), '.aws', 'credentials')

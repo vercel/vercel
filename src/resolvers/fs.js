@@ -1,4 +1,4 @@
-const { exists } = require('fs.promised')
+const { exists } = require('fs-extra-promise')
 const { resolve } = require('path')
 
 const fsResolver = async (param, { cwd = process.cwd() } = {}) => {

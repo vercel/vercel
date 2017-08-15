@@ -4,7 +4,7 @@ const start = Date.now()
 
 // theirs
 const debug = require('debug')('now:main')
-const { exists } = require('fs.promised')
+const { exists } = require('fs-extra-promise')
 const { join } = require('path')
 const mkdirp = require('mkdirp-promise')
 const minimist = require('minimist')

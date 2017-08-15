@@ -1,6 +1,6 @@
 const { tmpdir } = require('os')
 const { join } = require('path')
-const { mkdir, stat, link, exists, readdir } = require('fs.promised')
+const { mkdir, stat, link, exists, readdir } = require('fs-extra-promise')
 const uid = require('uid-promise')
 const { exec: exec_ } = require('child_process')
 const { toBuffer } = require('convert-stream')
