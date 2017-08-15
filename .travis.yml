@@ -3,7 +3,11 @@
   "node_js": [
     "node"
   ],
-  "before_deploy": "npm run pack",
+  "after_success": [
+    'npm install -g slackup',
+    'npm run pack',
+    './scripts/slack.js'
+  ],
   "deploy": {
     "provider": "releases",
     "api_key": {
@@ -15,10 +19,5 @@
     "on": {
       "tags": true
     }
-  },
-  "after_success": [
-    'npm install --global slackup',
-    'npm run pack',
-    './scripts/slack.js'
-  ]
+  }
 }
