@@ -14,19 +14,9 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: [/node_modules/],
-        use: {
-          loader: 'babel-loader',
-          options: {
-            plugins: ['transform-flow-comments']
-          }
-        }
-      },
-      {
-        test: /\.js$/,
-        exclude: [/node_modules/],
-        loader: 'shebang-loader'
+        loaders: ['shebang-loader', 'babel-loader']
       }
-    ],
+    ]
   },
   plugins: [
     new FlowBabelWebpackPlugin()
