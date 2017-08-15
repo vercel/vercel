@@ -1,6 +1,6 @@
 // @flow
 
-// theirs
+// Packages
 const ms = require('ms')
 const fetch = require('node-fetch')
 const minimist = require('minimist')
@@ -10,7 +10,7 @@ const bytes = require('bytes')
 const sleep = require('then-sleep')
 const debug = require('debug')('now:gcp:deploy')
 
-// ours
+// Utilities
 const ok = require('../../util/output/ok')
 const info = require('../../util/output/info')
 const wait = require('../../util/output/wait')
@@ -228,7 +228,7 @@ const deploy = async (ctx: {
 
   let retriesLeft = 10
   let status
-  let url
+  let url = ''
 
   do {
     if (!--retriesLeft) {

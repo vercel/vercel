@@ -1,8 +1,9 @@
 // @flow
 
+// Packages
 const aws = require('aws-sdk')
 
-const getAWS = authConfig => {
+const getAWS = (authConfig: Object) => {
   const { credentials } = authConfig
   const awsCredentials: Object = credentials.find(c => c.provider === 'aws')
 
