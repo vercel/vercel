@@ -10,7 +10,8 @@
     "postinstall": "node download/install.js",
     "prepublish": "in-install || (npm run prepare && cp /dev/null download/dist/now)",
     "pack": "pkg dist/now.js -c package.json -o packed/now",
-    "prepare": "webpack --context download --config download/webpack.config.js"
+    "prepare": "webpack --context download --config download/webpack.config.js",
+    "link": "cd link && yarn link"
   },
   "lint-staged": {
     "*.js": [

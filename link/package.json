@@ -1,0 +1,9 @@
+{
+  "name": "now",
+  "license": "MIT",
+  "description": "The command line interface for Now",
+  "repository": "zeit/now",
+  "bin": {
+    "now": "link.js"
+  }
+}
