@@ -2,6 +2,65 @@
   "name": "now",
   "version": "8.0.0-beta.2",
   "license": "Apache-2.0",
+  "scripts": {
+    "build": "babel src/ -d out/ && chmod +x out/now.js",
+    "test": "eslint . && flow",
+    "prepublish": "yarn run test && yarn run build",
+    "lint:staged": "lint-staged",
+    "dev": "yarn run build && ./out/now.js"
+  },
+  "pre-commit": "lint:staged",
+  "lint-staged": {
+    "*.js": [
+      "eslint",
+      "prettier --write --single-quote --no-semi",
+      "git add"
+    ]
+  },
+  "main": "./out/now.js",
+  "files": [
+    "out"
+  ],
+  "bin": {
+    "now": "./out/now.js"
+  },
+  "eslintIgnore": [
+    "src/providers/sh/legacy/**",
+    "out"
+  ],
+  "eslintConfig": {
+    "parserOptions": {
+      "ecmaVersion": 8,
+      "sourceType": "script"
+    },
+    "parser": "babel-eslint",
+    "extends": [
+      "eslint:recommended"
+    ],
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "rules": {
+      "func-names": [
+        "error",
+        "as-needed"
+      ],
+      "no-console": 0,
+      "no-shadow": "error",
+      "no-extra-semi": 0
+    }
+  },
+  "babel": {
+    "presets": [
+      "flow"
+    ]
+  },
+  "ava": {
+    "require": [
+      "babel-register"
+    ]
+  },
   "dependencies": {
     "ansi-escapes": "2.0.0",
     "archiver": "2.0.0",
@@ -43,13 +102,6 @@
     "tmp-promise": "1.0.3",
     "uid-promise": "1.0.0"
   },
-  "main": "./out/now.js",
-  "files": [
-    "out"
-  ],
-  "bin": {
-    "now": "./out/now.js"
-  },
   "devDependencies": {
     "ava": "0.20.0",
     "babel-cli": "6.24.1",
@@ -62,57 +114,5 @@
     "lint-staged": "4.0.1",
     "pre-commit": "1.2.2",
     "prettier": "1.5.2"
-  },
-  "scripts": {
-    "build": "babel src/ -d out/ && chmod +x out/now.js",
-    "test": "eslint . && flow",
-    "prepublish": "yarn run test && yarn run build",
-    "lint:staged": "lint-staged",
-    "dev": "yarn run build && ./out/now.js"
-  },
-  "pre-commit": "lint:staged",
-  "lint-staged": {
-    "*.js": [
-      "eslint",
-      "prettier --write --single-quote --no-semi",
-      "git add"
-    ]
-  },
-  "eslintIgnore": [
-    "src/providers/sh/legacy/**",
-    "out"
-  ],
-  "eslintConfig": {
-    "parserOptions": {
-      "ecmaVersion": 8,
-      "sourceType": "script"
-    },
-    "parser": "babel-eslint",
-    "extends": [
-      "eslint:recommended"
-    ],
-    "env": {
-      "es6": true,
-      "node": true
-    },
-    "rules": {
-      "func-names": [
-        "error",
-        "as-needed"
-      ],
-      "no-console": 0,
-      "no-shadow": "error",
-      "no-extra-semi": 0
-    }
-  },
-  "babel": {
-    "presets": [
-      "flow"
-    ]
-  },
-  "ava": {
-    "require": [
-      "babel-register"
-    ]
   }
 }
