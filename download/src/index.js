@@ -9,6 +9,7 @@ import zlib from 'zlib'
 import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
+import ProxyAgent from 'https-proxy-agent'
 
 // Utilities
 import plusxSync from './chmod'
@@ -76,9 +77,15 @@ async function main() {
     showProgress(0)
 
     try {
+      const proxyAddress = process.env.https_proxy 
+        || process.env.HTTPS_PROXY 
+        || process.env.http_proxy 
+        || process.env.HTTP_PROXY
+      const proxyAgent = proxyAddress ? new ProxyAgent(proxyAddress) : undefined
+
       const name = platformToName[process.platform]
       const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
-      const resp = await fetch(url, { compress: false })
+      const resp = await fetch(url, { compress: false, agent: proxyAgent })
 
       if (resp.status !== 200) {
         throw new Error(resp.statusText + ' ' + url)
