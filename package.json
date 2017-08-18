@@ -6,12 +6,12 @@
   "repository": "zeit/now",
   "scripts": {
     "test": "eslint .",
-    "prepublish": "in-install || (npm run prepare && cp /dev/null download/dist/now)",
+    "prepublishOnly": "npm run build-download && cp /dev/null download/dist/now",
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
     "pack": "webpack && pkg dist/now.js -c package.json -o packed/now",
-    "prepare": "webpack --context download --config download/webpack.config.js",
+    "build-download": "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link"
   },
   "lint-staged": {
@@ -110,7 +110,6 @@
     "fs-extra-promise": "1.0.1",
     "glob": "7.1.2",
     "ignore": "3.3.3",
-    "in-publish": "2.0.0",
     "ini": "1.3.4",
     "inquirer": "3.2.2",
     "is-url": "1.2.2",
