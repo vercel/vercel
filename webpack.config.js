@@ -5,6 +5,10 @@ const nodeExternals = require('webpack-node-externals')
 module.exports = {
   entry: './src/now.js',
   target: 'node',
+  node: {
+    __dirname: true,
+    __filename: true
+  },
   externals: [nodeExternals()],
   output: {
     filename: 'dist/now.js',
