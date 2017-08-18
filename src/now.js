@@ -7,7 +7,7 @@ const { join } = require('path')
 
 // Packages
 const debug = require('debug')('now:main')
-const { existsSync } = require('fs-extra-promise')
+const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 

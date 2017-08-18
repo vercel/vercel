@@ -5,7 +5,7 @@ const { exec: exec_ } = require('child_process')
 const exec = require('util').promisify(exec_)
 
 // Packages
-const { mkdir, stat, link, existsSync, readdir } = require('fs-extra-promise')
+const { mkdir, stat, link, existsSync, readdir } = require('fs-extra')
 const uid = require('uid-promise')
 const { toBuffer } = require('convert-stream')
 const archiver = require('archiver')

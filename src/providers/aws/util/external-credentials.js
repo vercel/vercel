@@ -3,7 +3,7 @@ const { join: joinPath } = require('path')
 const { homedir } = require('os')
 
 // theirs
-const { readFile, exists: fileExists } = require('fs-extra-promise')
+const { readFile, existsSync } = require('fs-extra')
 const debug = require('debug')('now:aws:util:external-credentials')
 
 const AWS_CREDENTIALS_FILE_PATH = joinPath(homedir(), '.aws', 'credentials')
@@ -16,7 +16,7 @@ const SECRET_ACCESS_KEY_REGEX = /^aws_secret_access_key(\s+)?=(\s+)?(.*)$/m
 async function hasExternalCredentials() {
   let found = false
   try {
-    found = await fileExists(AWS_CREDENTIALS_FILE_PATH)
+    found = existsSync(AWS_CREDENTIALS_FILE_PATH)
   } catch (err) {
     // if this happens, we're fine:
     // 1. if the user is trying to login, let's just fallback to the manual

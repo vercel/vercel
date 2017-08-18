@@ -2,7 +2,7 @@
 const { join, basename } = require('path')
 
 // Packages
-const { existsSync, stat, readFile } = require('fs-extra-promise')
+const { existsSync, stat, readFile } = require('fs-extra')
 
 const describeProject = async path => {
   let nowJSON = null

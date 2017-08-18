@@ -2,7 +2,7 @@
 const { resolve } = require('path')
 
 // Packages
-const { existsSync } = require('fs-extra-promise')
+const { existsSync } = require('fs-extra')
 
 const fsResolver = async (param, { cwd = process.cwd() } = {}) => {
   const resolved = resolve(cwd, param)
