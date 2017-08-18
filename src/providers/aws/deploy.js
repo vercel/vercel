@@ -2,7 +2,7 @@
 
 // theirs
 const ms = require('ms')
-const minimist = require('minimist')
+const mri = require('mri')
 const { gray, bold } = require('chalk')
 const bytes = require('bytes')
 const uid = require('uid-promise')
@@ -49,7 +49,7 @@ const deploy = async ({
   authConfig: any,
   argv: Array<string>
 }) => {
-  const argv = minimist(argv_, {
+  const argv = mri(argv_, {
     boolean: ['help'],
     alias: {
       help: 'h'

@@ -9,7 +9,7 @@ const { join } = require('path')
 const debug = require('debug')('now:main')
 const { exists } = require('fs-extra-promise')
 const mkdirp = require('mkdirp-promise')
-const minimist = require('minimist')
+const mri = require('mri')
 
 // Utilities
 const error = require('./util/output/error')
@@ -39,7 +39,7 @@ const exit = code => {
 const main = async (argv_): Promise<number> => {
   await checkForUpdates()
 
-  const argv = minimist(argv_, {
+  const argv = mri(argv_, {
     boolean: ['help', 'version'],
     alias: {
       help: 'h',

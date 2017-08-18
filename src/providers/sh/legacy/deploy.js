@@ -8,7 +8,7 @@ const Progress = require('progress')
 const fs = require('fs-extra')
 const bytes = require('bytes')
 const chalk = require('chalk')
-const minimist = require('minimist')
+const mri = require('mri')
 const ms = require('ms')
 const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
@@ -32,7 +32,7 @@ const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('./prompt-options')
 const note = require('../../../util/output/note')
 
-const minimistOpts = {
+const mriOpts = {
   string: ['config', 'token', 'name', 'alias', 'session-affinity'],
   boolean: [
     'help',
@@ -227,7 +227,7 @@ const envFields = async list => {
 }
 
 async function main(ctx) {
-  argv = minimist(ctx.argv.slice(2), minimistOpts)
+  argv = mri(ctx.argv.slice(2), mriOpts)
 
   // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
   // we should fix this ASAP

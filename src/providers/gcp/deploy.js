@@ -3,7 +3,7 @@
 // Packages
 const ms = require('ms')
 const fetch = require('node-fetch')
-const minimist = require('minimist')
+const mri = require('mri')
 const { gray, bold } = require('chalk')
 const uid = require('uid-promise')
 const bytes = require('bytes')
@@ -34,7 +34,7 @@ const deploy = async (ctx: {
   argv: Array<string>
 }) => {
   const { argv: argv_ } = ctx
-  const argv = minimist(argv_, {
+  const argv = mri(argv_, {
     boolean: ['help'],
     alias: {
       help: 'h'
