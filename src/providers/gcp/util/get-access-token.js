@@ -26,6 +26,8 @@ const getAccessToken = async ctx => {
 
   if (credentialsIndex === -1) {
     console.log(error(`You're not logged in! Run ${cmd('now gcp login')}.`))
+    process.exit(1)
+
     return
   }
 
