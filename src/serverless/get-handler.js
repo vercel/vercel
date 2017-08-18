@@ -1,7 +1,9 @@
 // @flow
 const { readFileSync } = require('fs')
-const { join } = require('path')
-const handler = readFileSync(join(__dirname, 'handler.js')).toString()
+
+// This needs to be relative because it otherwise
+// doesn't work when `webpack`-ed
+const handler = readFileSync('handler.js').toString()
 
 // symbols to replace in the meta-source
 const CMD_SYMBOL = '/*NOW_CMD*/'
