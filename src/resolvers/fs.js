@@ -1,9 +1,12 @@
-const { exists } = require('fs-extra-promise')
+// Native
 const { resolve } = require('path')
+
+// Packages
+const { existsSync } = require('fs-extra-promise')
 
 const fsResolver = async (param, { cwd = process.cwd() } = {}) => {
   const resolved = resolve(cwd, param)
-  if (await exists(resolved)) {
+  if (existsSync(resolved)) {
     return resolved
   } else {
     return null

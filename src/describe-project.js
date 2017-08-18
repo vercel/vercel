@@ -1,5 +1,8 @@
+// Native
 const { join, basename } = require('path')
-const { exists, stat, readFile } = require('fs-extra-promise')
+
+// Packages
+const { existsSync, stat, readFile } = require('fs-extra-promise')
 
 const describeProject = async path => {
   let nowJSON = null
@@ -14,13 +17,13 @@ const describeProject = async path => {
 
   const nowJSONPath = join(path, 'now.json')
 
-  if (await exists(nowJSONPath)) {
+  if (existsSync(nowJSONPath)) {
     nowJSON = JSON.parse(await readFile(nowJSONPath))
   }
 
   const packageJSONPath = join(path, 'package.json')
 
-  if (await exists(packageJSONPath)) {
+  if (existsSync(packageJSONPath)) {
     packageJSON = JSON.parse(await readFile(packageJSONPath))
   }
 
@@ -42,7 +45,7 @@ const describeProject = async path => {
 
   // npm has a convention that `npm start`, if not defined,
   // will invoke `node server.js`
-  const hasServerJSFile = await exists(join(path, 'server.js'))
+  const hasServerJSFile = existsSync(join(path, 'server.js'))
 
   // we support explicit definition of nodejs as a type, or we
   // guess it based on `package.json` or
@@ -67,7 +70,7 @@ const describeProject = async path => {
       type: nowJSON.type,
       nowJSON
     }
-  } else if (await exists(join(path, 'main.go'))) {
+  } else if (existsSync(join(path, 'main.go'))) {
     return {
       name: getName(path, nowJSON),
       description: getDescription(nowJSON),

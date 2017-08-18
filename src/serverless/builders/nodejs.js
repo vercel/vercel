@@ -1,12 +1,15 @@
+// Native
 const { tmpdir } = require('os')
 const { join } = require('path')
-const { mkdir, stat, link, exists, readdir } = require('fs-extra-promise')
-const uid = require('uid-promise')
 const { exec: exec_ } = require('child_process')
+const exec = require('util').promisify(exec_)
+
+// Packages
+const { mkdir, stat, link, existsSync, readdir } = require('fs-extra-promise')
+const uid = require('uid-promise')
 const { toBuffer } = require('convert-stream')
 const archiver = require('archiver')
 const debug = require('debug')('now:serverless:builders:nodejs')
-const exec = require('util').promisify(exec_)
 
 const nodejsBuilder = async (dir, desc, { overrides = {} } = {}) => {
   const files = await readdir(dir)
@@ -32,9 +35,9 @@ const nodejsBuilder = async (dir, desc, { overrides = {} } = {}) => {
   if (desc.packageJSON) {
     let buildCommand = ''
 
-    if (await exists(join(targetPath, 'package-lock.json'))) {
+    if (existsSync(join(targetPath, 'package-lock.json'))) {
       buildCommand = 'npm install'
-    } else if (await exists(join(targetPath, 'yarn.lock'))) {
+    } else if (existsSync(join(targetPath, 'yarn.lock'))) {
       buildCommand = 'yarn install'
     } else {
       buildCommand = 'npm install'

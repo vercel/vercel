@@ -7,7 +7,7 @@ const { join } = require('path')
 
 // Packages
 const debug = require('debug')('now:main')
-const { exists } = require('fs-extra-promise')
+const { existsSync } = require('fs-extra-promise')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 
@@ -63,7 +63,7 @@ const main = async (argv_): Promise<number> => {
   let nowDirExists
 
   try {
-    nowDirExists = await exists(NOW_DIR)
+    nowDirExists = existsSync(NOW_DIR)
   } catch (err) {
     console.error(
       error(
@@ -92,7 +92,7 @@ const main = async (argv_): Promise<number> => {
   let configExists
 
   try {
-    configExists = await exists(NOW_CONFIG_PATH)
+    configExists = existsSync(NOW_CONFIG_PATH)
   } catch (err) {
     console.error(
       error(
@@ -151,7 +151,7 @@ const main = async (argv_): Promise<number> => {
   let authConfigExists
 
   try {
-    authConfigExists = await exists(NOW_AUTH_CONFIG_PATH)
+    authConfigExists = existsSync(NOW_AUTH_CONFIG_PATH)
   } catch (err) {
     console.error(
       error(
@@ -281,7 +281,7 @@ const main = async (argv_): Promise<number> => {
   if (targetOrSubcommand && targetOrSubcommand in providers) {
     debug('user supplied a known provider')
     const targetPath = join(process.cwd(), targetOrSubcommand)
-    const targetPathExists = await exists(targetPath)
+    const targetPathExists = existsSync(targetPath)
 
     if (targetPathExists) {
       console.error(
@@ -339,7 +339,7 @@ const main = async (argv_): Promise<number> => {
   // we check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand)
-    const targetPathExists = await exists(targetPath)
+    const targetPathExists = existsSync(targetPath)
 
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
