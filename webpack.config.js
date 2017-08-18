@@ -1,14 +1,11 @@
 // Packages
-const FlowBabelWebpackPlugin = require('flow-babel-webpack-plugin')
 const nodeExternals = require('webpack-node-externals')
+const FlowBabelWebpackPlugin = require('flow-babel-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
   entry: './src/now.js',
   target: 'node',
-  node: {
-    __dirname: true,
-    __filename: true
-  },
   externals: [nodeExternals()],
   output: {
     filename: 'dist/now.js',
@@ -23,6 +20,9 @@ module.exports = {
     ]
   },
   plugins: [
-    new FlowBabelWebpackPlugin()
+    new FlowBabelWebpackPlugin(),
+    new CopyWebpackPlugin([
+      { from: 'src/serverless/handler.js', to: 'dist/handler.js' }
+    ])
   ]
 }

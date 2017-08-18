@@ -95,6 +95,7 @@
     "chalk": "2.1.0",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
+    "copy-webpack-plugin": "4.0.1",
     "death": "1.1.0",
     "debug": "3.0.0",
     "deployment-type": "1.0.1",
