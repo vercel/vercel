@@ -205,7 +205,9 @@ const login = async ctx => {
 
   let verificationToken
   let securityCode
+
   stopSpinner = wait('Sending you an email')
+
   try {
     const data = await getVerificationData({ apiUrl, email })
     verificationToken = data.token
@@ -218,10 +220,12 @@ const login = async ctx => {
 
   stopSpinner()
 
-  // prettier-ignore
+  // Clear up `Sending email` success message
+  process.stdout.write(eraseLines(2))
+
   console.log(info(
     `We sent an email to ${highlight(email)}. Please follow the steps provided`,
-    `  in it and make sure the security code matches ${highlight(securityCode)}.`
+    `  inside it and make sure the security code matches ${highlight(securityCode)}.`
   ))
 
   stopSpinner = wait('Waiting for your confirmation')
@@ -245,7 +249,7 @@ const login = async ctx => {
   }
 
   stopSpinner()
-  console.log(ok('Email confirmed.'))
+  console.log(ok('Email confirmed'))
 
   stopSpinner = wait('Feching your personal details')
   let user
@@ -274,7 +278,7 @@ const login = async ctx => {
   writeToConfigFile(ctx.config)
 
   stopSpinner()
-  console.log(ok('Fetched your personal details.'))
+  console.log(ok('Fetched your personal details'))
 
   console.log(
     ready(
