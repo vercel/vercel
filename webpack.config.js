@@ -7,8 +7,11 @@ module.exports = {
   entry: './src/now.js',
   target: 'node',
   externals: [nodeExternals()],
+  node: {
+    __dirname: false
+  },
   output: {
-    filename: 'dist/now.js',
+    filename: 'dist/now.js'
   },
   module: {
     loaders: [

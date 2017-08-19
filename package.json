@@ -30,8 +30,7 @@
   ],
   "pkg": {
     "scripts": [
-      "bin/*",
-      "lib/**/*"
+      "dist/*"
     ],
     "targets": [
       "node7-alpine-x64",
@@ -93,6 +92,7 @@
     "babel-preset-es2015": "6.24.1",
     "bytes": "2.5.0",
     "chalk": "2.1.0",
+    "child-process-promise": "2.2.1",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
     "copy-webpack-plugin": "4.0.1",

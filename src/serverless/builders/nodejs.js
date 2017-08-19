@@ -1,8 +1,7 @@
 // Native
 const { tmpdir } = require('os')
 const { join } = require('path')
-const { exec: exec_ } = require('child_process')
-const exec = require('util').promisify(exec_)
+const { exec } = require('child-process-promise')
 
 // Packages
 const { mkdir, stat, link, existsSync, readdir } = require('fs-extra')

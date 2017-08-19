@@ -1,9 +1,11 @@
 // @flow
-const { readFileSync } = require('fs')
 
-// This needs to be relative because it otherwise
-// doesn't work when `webpack`-ed
-const handler = readFileSync('handler.js').toString()
+// Native
+const { readFileSync } = require('fs-extra')
+const { join } = require('path')
+
+// Utilities
+const handler = readFileSync(join(__dirname, 'handler.js')).toString()
 
 // symbols to replace in the meta-source
 const CMD_SYMBOL = '/*NOW_CMD*/'
