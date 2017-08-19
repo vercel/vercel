@@ -14,6 +14,9 @@
     "build-download": "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link"
   },
+  "publishConfig": {
+    "tag": "beta"
+  },
   "lint-staged": {
     "*.js": [
       "eslint",
