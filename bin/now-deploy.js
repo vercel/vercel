@@ -724,7 +724,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    if (deploymentType === 'static' && !queit) {
+    if (deploymentType === 'static' && !quiet) {
       console.log(`${chalk.cyan('> Deployment complete!')}`)
     } else {
       printLogs(now.host, token, currentTeam, user)
