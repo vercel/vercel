@@ -724,12 +724,10 @@ async function sync({ token, config: { currentTeam, user } }) {
     now.close()
 
     // Show build logs
-    if (!quiet) {
-      if (deploymentType === 'static') {
-        console.log(`${chalk.cyan('> Deployment complete!')}`)
-      } else {
-        printLogs(now.host, token, currentTeam, user)
-      }
+    if (deploymentType === 'static' && !quiet) {
+      console.log(`${chalk.cyan('> Deployment complete!')}`)
+    } else {
+      printLogs(now.host, token, currentTeam, user)
     }
   }
 }
