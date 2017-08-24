@@ -3,12 +3,14 @@
 // Native
 import fs from 'fs'
 import path from 'path'
+import { spawnSync } from 'child_process'
 import zlib from 'zlib'
 
 // Packages
 import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
+import which from 'which'
 
 // Utilities
 import plusxSync from './chmod'
@@ -22,21 +24,42 @@ import {
 
 fetch.Promise = Promise
 global.Promise = Promise
-const now = path.join(__dirname, 'now')
-const targetWin32 = path.join(__dirname, 'now.exe')
-const target = process.platform === 'win32' ? targetWin32 : now
-const partial = target + '.partial'
+let { platform } = process
+if (detectAlpine()) platform = 'alpine'
 
 const packagePath = path.join(__dirname, '../../package.json')
 const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
+const now = path.join(__dirname, 'now')
+const targetWin32 = path.join(__dirname, 'now.exe')
+const target = platform === 'win32' ? targetWin32 : now
+const partial = target + '.partial'
+const backup = target + '.' + packageJSON.version + '.backup'
+
+function whichPromise (name) {
+  return new Promise((resolve, reject) => {
+    which(name, (error, result) => {
+      if (error) return reject(error)
+      resolve(result)
+    })
+  })
+}
+
 const platformToName = {
+  alpine: 'now-alpine',
   darwin: 'now-macos',
   linux: 'now-linux',
   win32: 'now-win.exe'
 }
 
-async function main() {
+function detectAlpine () {
+  if (platform !== 'linux') return false
+  // https://github.com/sass/node-sass/issues/1589#issuecomment-265292579
+  const ldd = spawnSync('ldd', [ process.execPath ]).stdout.toString()
+  return /\bmusl\b/.test(ldd)
+}
+
+async function download() {
   try {
     fs.writeFileSync(
       now,
@@ -76,7 +99,7 @@ async function main() {
     showProgress(0)
 
     try {
-      const name = platformToName[process.platform]
+      const name = platformToName[platform]
       const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
       const resp = await fetch(url, { compress: false })
 
@@ -85,6 +108,11 @@ async function main() {
       }
 
       const size = resp.headers.get('content-length')
+
+      if (!size) {
+        throw new Error('Not found (content-length is absent)')
+      }
+
       const ws = fs.createWriteStream(partial)
 
       await new Promise((resolve, reject) => {
@@ -120,23 +148,40 @@ async function main() {
   })
 
   fs.renameSync(partial, target)
+  fs.writeFileSync(backup, fs.readFileSync(target))
+}
 
-  if (process.platform === 'win32') {
+async function main() {
+  if (fs.existsSync(backup)) {
+    fs.writeFileSync(target, fs.readFileSync(backup))
+  } else {
+    await download()
+  }
+
+  if (platform === 'win32') {
     // Now.exe is executed only
     fs.unlinkSync(now)
-    // Workaround for https://github.com/npm/cmd-shim/pull/25
-    const gitBashFile = path.join(process.env.APPDATA, 'npm/now')
-    fs.writeFileSync(
-      gitBashFile,
-      '#!/bin/sh\n' +
-        'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
-        '\n' +
-        'case `uname` in\n' +
-        '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
-        'esac\n' +
-        '\n' +
-        fs.readFileSync(gitBashFile, 'utf8')
-    )
+    try {
+      // Workaround for https://github.com/npm/cmd-shim/pull/25
+      const globalPath = path.dirname(await whichPromise('npm'))
+      const gitBashFile = path.join(globalPath, 'now')
+      fs.writeFileSync(
+        gitBashFile,
+        '#!/bin/sh\n' +
+          'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+          '\n' +
+          'case `uname` in\n' +
+          '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+          'esac\n' +
+          '\n' +
+          fs.readFileSync(gitBashFile, 'utf8')
+      )
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        // Not a problem. only git cmd will not work
+        console.error(err)
+      }
+    }
   } else {
     plusxSync(now)
   }
