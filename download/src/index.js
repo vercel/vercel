@@ -9,6 +9,7 @@ import zlib from 'zlib'
 import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
+import which from 'which'
 
 // Utilities
 import plusxSync from './chmod'
@@ -29,6 +30,15 @@ const partial = target + '.partial'
 
 const packagePath = path.join(__dirname, '../../package.json')
 const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+
+function whichPromise (name) {
+  return new Promise((resolve, reject) => {
+    which(name, (error, result) => {
+      if (error) return reject(error)
+      resolve(result)
+    })
+  })
+}
 
 const platformToName = {
   darwin: 'now-macos',
@@ -124,19 +134,27 @@ async function main() {
   if (process.platform === 'win32') {
     // Now.exe is executed only
     fs.unlinkSync(now)
-    // Workaround for https://github.com/npm/cmd-shim/pull/25
-    const gitBashFile = path.join(process.env.APPDATA, 'npm/now')
-    fs.writeFileSync(
-      gitBashFile,
-      '#!/bin/sh\n' +
-        'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
-        '\n' +
-        'case `uname` in\n' +
-        '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
-        'esac\n' +
-        '\n' +
-        fs.readFileSync(gitBashFile, 'utf8')
-    )
+    try {
+      // Workaround for https://github.com/npm/cmd-shim/pull/25
+      const globalPath = path.dirname(await whichPromise('npm'))
+      const gitBashFile = path.join(globalPath, 'now')
+      fs.writeFileSync(
+        gitBashFile,
+        '#!/bin/sh\n' +
+          'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+          '\n' +
+          'case `uname` in\n' +
+          '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+          'esac\n' +
+          '\n' +
+          fs.readFileSync(gitBashFile, 'utf8')
+      )
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        // Not a problem. only git cmd will not work
+        console.error(err)
+      }
+    }
   } else {
     plusxSync(now)
   }
