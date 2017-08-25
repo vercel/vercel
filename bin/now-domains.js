@@ -22,10 +22,11 @@ const toHost = require('../lib/to-host')
 const { handleError, error } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['token'],
+  string: ['coupon', 'token'],
   boolean: ['help', 'debug', 'external', 'force'],
   alias: {
     help: 'h',
+    coupon: 'c',
     debug: 'd',
     external: 'e',
     force: 'f',
@@ -337,7 +338,8 @@ async function run({ token, config: { currentTeam, user } }) {
         domains: domain,
         args,
         currentTeam,
-        user
+        user,
+        coupon: argv.coupon
       })
       break
     }
