@@ -19,7 +19,7 @@ function expDateMiddleware(data) {
   return data
 }
 
-module.exports = async function({ creditCards, currentTeam, user }) {
+module.exports = async function({ creditCards, currentTeam, user, clear = false }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
@@ -221,6 +221,10 @@ module.exports = async function({ creditCards, currentTeam, user }) {
         address1: state.address1.value
       })
       stopSpinner()
+      if (clear) {
+        const linesToClear = state.error ? 15 : 14
+        process.stdout.write(ansiEscapes.eraseLines(linesToClear))
+      }
       success(
         `${state.cardNumber
           .brand} ending in ${res.last4} was added to ${chalk.bold(
