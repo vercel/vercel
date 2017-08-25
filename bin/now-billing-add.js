@@ -19,7 +19,7 @@ function expDateMiddleware(data) {
   return data
 }
 
-module.exports = function({ creditCards, currentTeam, user }) {
+module.exports = async function({ creditCards, currentTeam, user }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
@@ -238,5 +238,9 @@ module.exports = function({ creditCards, currentTeam, user }) {
     }
   }
 
-  render().catch(console.error)
+  try {
+    await render()
+  } catch (err) {
+    console.erorr(err)
+  }
 }
