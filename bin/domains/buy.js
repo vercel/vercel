@@ -71,7 +71,7 @@ module.exports = async function({ domains, args, currentTeam, user }) {
 
   stopSpinner()
 
-  success(`Domain purchased and created ${uid(domain.uid)} ${elapsed()}`)
+  success(`Domain ${nameParam} purchased ${elapsed()}`)
   info(
     `You may now use your domain as an alias to your deployments. Run ${cmd(
       'now alias --help'
