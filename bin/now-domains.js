@@ -22,11 +22,11 @@ const toHost = require('../lib/to-host')
 const { handleError, error } = require('../lib/error')
 
 const argv = minimist(process.argv.slice(2), {
-  string: ['config', 'token'],
+  string: ['coupon', 'token'],
   boolean: ['help', 'debug', 'external', 'force'],
   alias: {
     help: 'h',
-    config: 'c',
+    coupon: 'c',
     debug: 'd',
     external: 'e',
     force: 'f',
@@ -44,9 +44,6 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
-    'FILE'
-  )}  Config file
     -d, --debug             Debug mode [off]
     -e, --external          Use external DNS server
     -f, --force             Skip DNS verification
@@ -141,10 +138,6 @@ const help = () => {
 // Options
 const debug = argv.debug
 const apiUrl = argv.url || 'https://api.zeit.co'
-
-if (argv.config) {
-  cfg.setConfigFile(argv.config)
-}
 
 if (argv.help || !subcommand) {
   help()
@@ -345,7 +338,8 @@ async function run({ token, config: { currentTeam, user } }) {
         domains: domain,
         args,
         currentTeam,
-        user
+        user,
+        coupon: argv.coupon
       })
       break
     }

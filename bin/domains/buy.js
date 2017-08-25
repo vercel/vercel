@@ -5,14 +5,14 @@ const wait = require('../../lib/utils/output/wait')
 const cmd = require('../../lib/utils/output/cmd')
 const param = require('../../lib/utils/output/param')
 const info = require('../../lib/utils/output/info')
-const uid = require('../../lib/utils/output/uid')
 const success = require('../../lib/utils/output/success')
 const stamp = require('../../lib/utils/output/stamp')
 const promptBool = require('../../lib/utils/input/prompt-bool')
 const eraseLines = require('../../lib/utils/output/erase-lines')
 const treatBuyError = require('../../lib/utils/domains/treat-buy-error')
+const NowCreditCards = require('../../lib/credit-cards')
 
-module.exports = async function({ domains, args, currentTeam, user }) {
+module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   const name = args[0]
   let elapsed
 
@@ -21,14 +21,54 @@ module.exports = async function({ domains, args, currentTeam, user }) {
   }
 
   const nameParam = param(name)
-  elapsed = stamp()
-  let stopSpinner = wait(`Checking availability for ${nameParam}`)
+  let stopSpinner
 
   let price
   let period
+  let validCoupon
   try {
+    if (coupon) {
+      stopSpinner = wait(`Validating coupon ${param(coupon)}`)
+      const creditCards = new NowCreditCards({
+        apiUrl: domains._agent._url,
+        token: domains._token,
+        debug: domains._debug,
+        currentTeam
+      })
+      const [couponInfo, { cards }] = await Promise.all([
+        domains.coupon(coupon),
+        creditCards.ls()
+      ])
+      stopSpinner()
+
+      if (!couponInfo.isValid) {
+        return error(`The coupon ${param(coupon)} is invalid`)
+      }
+
+      if (!couponInfo.canBeUsed) {
+        return error(`The coupon ${param(coupon)} has already been used`)
+      }
+
+      validCoupon = true
+
+      if (cards.length === 0) {
+        info(
+          'You have no credit cards on file. Please add one in order to claim your free domain'
+        )
+        info(`Your card will ${bold('not')} be charged`)
+
+        await require('../now-billing-add')({
+          creditCards,
+          currentTeam,
+          user,
+          clear: true
+        })
+      }
+    }
+    elapsed = stamp()
+    stopSpinner = wait(`Checking availability for ${nameParam}`)
     const json = await domains.price(name)
-    price = json.price
+    price = validCoupon ? 0 : json.price
     period = json.period
   } catch (err) {
     stopSpinner()
@@ -61,9 +101,8 @@ module.exports = async function({ domains, args, currentTeam, user }) {
 
   stopSpinner = wait('Purchasing')
   elapsed = stamp()
-  let domain
   try {
-    domain = await domains.buy(name)
+    await domains.buy({ name, coupon })
   } catch (err) {
     stopSpinner()
     return treatBuyError(err)
@@ -71,7 +110,7 @@ module.exports = async function({ domains, args, currentTeam, user }) {
 
   stopSpinner()
 
-  success(`Domain purchased and created ${uid(domain.uid)} ${elapsed()}`)
+  success(`Domain ${nameParam} purchased ${elapsed()}`)
   info(
     `You may now use your domain as an alias to your deployments. Run ${cmd(
       'now alias --help'
