@@ -229,7 +229,7 @@ module.exports = function({ creditCards, currentTeam, user }) {
       )
     } catch (err) {
       stopSpinner()
-      const linesToClear = state.error ? 13 : 12
+      const linesToClear = state.error ? 15 : 14
       process.stdout.write(ansiEscapes.eraseLines(linesToClear))
       state.error = `${chalk.red(
         '> Error!'
