@@ -10,7 +10,7 @@ It's also a special kind of package. When you install it using `npm install -g n
 
 ## Usage
 
-Simply follow [this guide](https://zeit.co/docs/getting-started/installing-now)! Then run this command to see a list of all commands:
+Simply follow [this guide](https://zeit.co/download#command-line)! Then run this command to see a list of all commands:
 
 ```bash
 now help
