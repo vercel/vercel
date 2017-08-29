@@ -15,14 +15,15 @@ const { maybeURL, normalizeURL, parseInstanceURL } = require('../lib/utils/url')
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config', 'query', 'since', 'token', 'until'],
-  boolean: ['help', 'all', 'debug', 'f'],
+  boolean: ['help', 'all', 'debug', 'f', 'raw'],
   alias: {
     help: 'h',
     all: 'a',
     config: 'c',
     debug: 'd',
     token: 't',
-    query: 'q'
+    query: 'q',
+    raw: 'r'
   }
 })
 
@@ -40,6 +41,7 @@ const help = () => {
     'FILE'
   )}  config file
     -d, --debug             debug mode [off]
+    -r, --raw               'ish, suppresses date and pretty space in log object [off]
     -f                      wait for additional data [off]
     -n ${chalk.bold.underline('NUMBER')}               number of logs [1000]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
@@ -72,6 +74,7 @@ if (argv.help || !deploymentIdOrURL) {
 
 // Options
 const debug = argv.debug
+const raw = argv.raw
 const apiUrl = argv.url || 'https://api.zeit.co'
 if (argv.config) {
   cfg.setConfigFile(argv.config)
@@ -234,6 +237,10 @@ function printLog(log) {
     data =
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`
+  } else if (raw && obj) {
+    data = JSON.stringify(obj, null, 0)
+    console.log(data)
+    return
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
