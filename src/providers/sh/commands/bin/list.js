@@ -63,7 +63,9 @@ const main = async ctx => {
     }
   })
 
-  app = argv._[1]
+  argv._ = argv._.slice(1)
+
+  app = argv._[0]
   debug = argv.debug
   apiUrl = argv.apiUrl || 'https://api.zeit.co'
 
