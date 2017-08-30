@@ -26,7 +26,6 @@ const promptBool = require('../lib/utils/input/prompt-bool')
 const grayWidth = 10
 const underlineWidth = 11
 
-// Options
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now alias`)} <ls | set | rm> <deployment> <alias>
@@ -111,11 +110,10 @@ const help = () => {
 }
 
 // Options
-const debug = false
-const apiUrl = 'https://api.zeit.co'
-
 let argv
 let subcommand
+let debug
+let apiUrl
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
@@ -132,6 +130,9 @@ const main = async ctx => {
 
   argv._ = argv._.slice(1)
   subcommand = argv._[0]
+
+  debug = argv.debug
+  apiUrl = argv.apiUrl || 'https://api.zeit.co'
 
   if (argv.help) {
     help()

@@ -16,8 +16,6 @@ const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
 const sort = require('../lib/sort-deployments')
 
-let argv
-
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now list`)} [app]
@@ -47,10 +45,11 @@ const help = () => {
 `)
 }
 
-const debug = false
-const apiUrl = 'https://api.zeit.co'
-
+// Options
 let app
+let argv
+let debug
+let apiUrl
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
@@ -65,6 +64,8 @@ const main = async ctx => {
   })
 
   app = argv._[1]
+  debug = argv.debug
+  apiUrl = argv.apiUrl || 'https://api.zeit.co'
 
   if (argv.help) {
     help()

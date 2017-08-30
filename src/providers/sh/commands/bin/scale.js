@@ -20,11 +20,6 @@ const info = require('../lib/scale-info')
 const sort = require('../lib/sort-deployments')
 const success = require('../lib/utils/output/success')
 
-let id
-let scaleArg
-let optionalScaleArg
-
-// Options
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now scale`)} ls
@@ -70,10 +65,13 @@ const help = () => {
 }
 
 // Options
-const debug = false
-const apiUrl = 'https://api.zeit.co'
-
 let argv
+let debug
+let apiUrl
+
+let id
+let scaleArg
+let optionalScaleArg
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
@@ -87,6 +85,8 @@ const main = async ctx => {
   id = argv._[0]
   scaleArg = argv._[1]
   optionalScaleArg = argv._[2]
+  apiUrl = argv.url || 'https://api.zeit.co'
+  debug = argv.debug
 
   if (argv.help) {
     help()
