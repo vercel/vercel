@@ -1,6 +1,16 @@
 module.exports = {
   title: 'now.sh',
-  subcommands: new Set(['login', 'deploy', 'ls', 'list', 'alias', 'scale', 'certs', 'dns', 'domains']),
+  subcommands: new Set([
+    'login',
+    'deploy',
+    'ls',
+    'list',
+    'alias',
+    'scale',
+    'certs',
+    'dns',
+    'domains'
+  ]),
   get deploy() {
     return require('./deploy')
   },
