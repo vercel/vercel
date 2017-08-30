@@ -9,7 +9,9 @@ module.exports = {
     'scale',
     'certs',
     'dns',
-    'domains'
+    'domains',
+    'rm',
+    'remove'
   ]),
   get deploy() {
     return require('./deploy')
@@ -37,5 +39,11 @@ module.exports = {
   },
   get domains() {
     return require('./commands/bin/domains')
+  },
+  get rm() {
+    return require('./commands/bin/remove')
+  },
+  get remove() {
+    return require('./commands/bin/remove')
   }
 }
