@@ -11,7 +11,9 @@ module.exports = {
     'dns',
     'domains',
     'rm',
-    'remove'
+    'remove',
+    'whoami',
+    'secrets'
   ]),
   get deploy() {
     return require('./deploy')
@@ -45,5 +47,11 @@ module.exports = {
   },
   get remove() {
     return require('./commands/bin/remove')
+  },
+  get whoami() {
+    return require('./commands/bin/whoami')
+  },
+  get secrets() {
+    return require('./commands/bin/secrets')
   }
 }
