@@ -6,5 +6,8 @@ module.exports = {
   },
   get login() {
     return require('./login')
+  },
+  get ls() {
+    return require('./commands/bin/list')
   }
 }
