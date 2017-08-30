@@ -140,6 +140,7 @@
     "uid-promise": "1.0.0",
     "update-notifier": "2.2.0",
     "webpack": "3.5.5",
-    "webpack-node-externals": "1.6.0"
+    "webpack-node-externals": "1.6.0",
+    "which-promise": "1.0.0"
   }
 }
