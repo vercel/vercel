@@ -78,6 +78,7 @@
     ]
   },
   "devDependencies": {
+    "@google/maps": "0.4.3",
     "ansi-escapes": "2.0.0",
     "archiver": "2.0.0",
     "arr-flatten": "1.1.0",
@@ -97,6 +98,7 @@
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
     "copy-webpack-plugin": "4.0.1",
+    "credit-card": "3.0.1",
     "dateformat": "2.0.0",
     "death": "1.1.0",
     "debug": "3.0.0",

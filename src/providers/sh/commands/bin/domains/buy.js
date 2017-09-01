@@ -13,6 +13,7 @@ const promptBool = require('../../lib/utils/input/prompt-bool')
 const eraseLines = require('../../lib/utils/output/erase-lines')
 const treatBuyError = require('../../lib/utils/domains/treat-buy-error')
 const NowCreditCards = require('../../lib/credit-cards')
+const addBilling = require('../billing/add')
 
 module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   const name = args[0]
@@ -59,7 +60,7 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
         )
         info(`Your card will ${bold('not')} be charged`)
 
-        await require('../now-billing-add')({
+        await addBilling({
           creditCards,
           currentTeam,
           user,
