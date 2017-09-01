@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 //@flow
-const start = Date.now()
 
 // Native
 const { join } = require('path')
@@ -30,11 +29,6 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 
 const GLOBAL_COMMANDS = new Set(['help'])
-
-const exit = code => {
-  debug('finished in', Date.now() - start)
-  process.exit(code)
-}
 
 const main = async (argv_): Promise<number> => {
   await checkForUpdates()
@@ -419,4 +413,6 @@ const handleUnexpected = err => {
 process.on('unhandledRejection', handleRejection)
 process.on('uncaughtException', handleUnexpected)
 
-main(process.argv).then((code: number) => exit(code)).catch(handleUnexpected)
+// Don't use `.then` here. We need to shutdown gracefully, otherwise
+// sub commands waiting for further data won't work (like `logs` and `logout`)!
+main(process.argv).catch(handleUnexpected)

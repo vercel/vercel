@@ -138,6 +138,7 @@
     "socket.io-client": "1.7.4",
     "split-array": "1.0.1",
     "strip-ansi": "4.0.0",
+    "stripe": "4.24.1",
     "tar-fs": "1.15.3",
     "then-sleep": "1.0.1",
     "tmp-promise": "1.0.3",

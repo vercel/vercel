@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-// Native
-const { resolve } = require('path')
-
 // Packages
 const chalk = require('chalk')
 const minimist = require('minimist')
@@ -20,6 +17,7 @@ const promptBool = require('../lib/utils/input/prompt-bool')
 const strlen = require('../lib/strlen')
 const toHost = require('../lib/to-host')
 const { handleError, error } = require('../lib/error')
+const buy = require('./domains/buy')
 
 const help = () => {
   console.log(`
@@ -343,7 +341,7 @@ async function run({ token, config: { currentTeam, user } }) {
       break
     }
     case 'buy': {
-      await require(resolve(__dirname, 'domains', 'buy.js'))({
+      await buy({
         domains: domain,
         args,
         currentTeam,
