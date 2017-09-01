@@ -57,7 +57,7 @@ for (const subcommand of mainCommands) {
   for (const handler of handlers) {
     Object.defineProperty(details, handler, {
       get() {
-        return require(`./commands/bin/${subcommand}`)
+        return require(`./commands/${subcommand}`)
       }
     })
   }
