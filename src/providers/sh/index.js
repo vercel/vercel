@@ -1,73 +1,70 @@
-module.exports = {
+const mainCommands = new Set([
+  'help',
+  'list',
+  'remove',
+  'alias',
+  'domains',
+  'dns',
+  'certs',
+  'secrets',
+  'billing',
+  'upgrade',
+  'teams',
+  'logs',
+  'scale',
+  'logout',
+  'whoami'
+])
+
+const aliases = {
+  list: ['ls'],
+  remove: ['rm'],
+  alias: ['ln', 'aliases'],
+  domains: ['domain'],
+  certs: ['cert'],
+  secrets: ['secret'],
+  billing: ['cc'],
+  upgrade: ['downgrade'],
+  teams: ['team', 'switch'],
+  logs: ['log']
+}
+
+const subcommands = new Set(mainCommands)
+
+// Add aliases to available sub commands
+for (const alias in aliases) {
+  const items = aliases[alias]
+
+  for (const item of items) {
+    subcommands.add(item)
+  }
+}
+
+const list = {
   title: 'now.sh',
-  subcommands: new Set([
-    'login',
-    'deploy',
-    'ls',
-    'list',
-    'alias',
-    'scale',
-    'certs',
-    'dns',
-    'domains',
-    'rm',
-    'remove',
-    'whoami',
-    'secrets',
-    'logs',
-    'upgrade',
-    'teams',
-    'switch'
-  ]),
+  subcommands,
   get deploy() {
     return require('./deploy')
   },
   get login() {
     return require('./login')
-  },
-  get ls() {
-    return require('./commands/bin/list')
-  },
-  get list() {
-    return require('./commands/bin/list')
-  },
-  get alias() {
-    return require('./commands/bin/alias')
-  },
-  get scale() {
-    return require('./commands/bin/scale')
-  },
-  get certs() {
-    return require('./commands/bin/certs')
-  },
-  get dns() {
-    return require('./commands/bin/dns')
-  },
-  get domains() {
-    return require('./commands/bin/domains')
-  },
-  get rm() {
-    return require('./commands/bin/remove')
-  },
-  get remove() {
-    return require('./commands/bin/remove')
-  },
-  get whoami() {
-    return require('./commands/bin/whoami')
-  },
-  get secrets() {
-    return require('./commands/bin/secrets')
-  },
-  get logs() {
-    return require('./commands/bin/logs')
-  },
-  get upgrade() {
-    return require('./commands/bin/upgrade')
-  },
-  get teams() {
-    return require('./commands/bin/teams')
-  },
-  get switch() {
-    return require('./commands/bin/teams')
   }
 }
+
+for (const subcommand of mainCommands) {
+  let handlers = [subcommand]
+
+  if (aliases[subcommand]) {
+    handlers = handlers.concat(aliases[subcommand])
+  }
+
+  for (const handler of handlers) {
+    Object.defineProperty(list, handler, {
+      get() {
+        return require(`./commands/bin/${subcommand}`)
+      }
+    })
+  }
+}
+
+module.exports = list
