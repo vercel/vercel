@@ -13,7 +13,8 @@ module.exports = {
     'rm',
     'remove',
     'whoami',
-    'secrets'
+    'secrets',
+    'logs'
   ]),
   get deploy() {
     return require('./deploy')
@@ -53,5 +54,8 @@ module.exports = {
   },
   get secrets() {
     return require('./commands/bin/secrets')
+  },
+  get logs() {
+    return require('./commands/bin/logs')
   }
 }
