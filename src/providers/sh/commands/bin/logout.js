@@ -7,9 +7,14 @@ const fetch = require('node-fetch')
 const ora = require('ora')
 
 // Utilities
-const cfg = require('../lib/cfg')
 const logo = require('../lib/utils/output/logo')
 const { handleError } = require('../lib/error')
+const {
+  readConfigFile,
+  writeToConfigFile,
+  readAuthConfigFile,
+  writeToAuthConfigFile
+} = require('../../../../util/config-files')
 
 const help = () => {
   console.log(`
@@ -36,20 +41,14 @@ let endpoint
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config'],
     boolean: ['help'],
     alias: {
-      help: 'h',
-      config: 'c'
+      help: 'h'
     }
   })
 
   apiUrl = argv.url || 'https://api.zeit.co'
   endpoint = apiUrl + '/www/user/tokens/'
-
-  if (argv.config) {
-    cfg.setConfigFile(argv.config)
-  }
 
   if (argv.help) {
     help()
@@ -109,10 +108,24 @@ const logout = async () => {
     text: 'Logging out...'
   }).start()
 
-  const config = await cfg.read()
+  const configContent = JSON.parse(readConfigFile())
+
+
+  if (configContent.sh) {
+    delete configContent.sh
+  }
+
+  const authContent = JSON.parse(readAuthConfigFile())
+  const {credentials} = authContent
+  const related = credentials.find(item => item.provider === 'sh')
+  const index = credentials.indexOf(related)
+
+  credentials.splice(index, 1)
+  authContent.credentials = credentials
 
   try {
-    await cfg.removeFile()
+    await writeToConfigFile(configContent)
+    await writeToAuthConfigFile(authContent)
   } catch (err) {
     spinner.fail(`Couldn't remove config while logging out`)
     process.exit(1)
@@ -121,7 +134,7 @@ const logout = async () => {
   let tokenId
 
   try {
-    tokenId = await getTokenId(argv.token || config.token)
+    tokenId = await getTokenId(argv.token || related.token)
   } catch (err) {
     spinner.fail('Not able to get token id on logout')
     process.exit(1)
@@ -132,7 +145,7 @@ const logout = async () => {
   }
 
   try {
-    await revokeToken(argv.token || config.token, tokenId)
+    await revokeToken(argv.token || related.token, tokenId)
   } catch (err) {
     spinner.fail('Could not revoke token on logout')
     process.exit(1)
