@@ -1,4 +1,4 @@
-const error = require('../output/error')
+const error = require('../../../../util/output/error')
 
 module.exports = function(err) {
   switch (err.code) {

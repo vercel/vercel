@@ -9,9 +9,9 @@ const table = require('text-table')
 
 // Utilities
 const NowDomains = require('../util/domains')
-const exit = require('../util/etc/exit')
-const logo = require('../util/etc/output/logo')
-const promptBool = require('../util/etc/input/prompt-bool')
+const exit = require('../../../util/exit')
+const logo = require('../../../util/output/logo')
+const promptBool = require('../../../util/input/prompt-bool')
 const strlen = require('../util/strlen')
 const toHost = require('../util/to-host')
 const { handleError, error } = require('../util/error')

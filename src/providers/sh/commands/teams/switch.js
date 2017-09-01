@@ -2,14 +2,14 @@
 const chalk = require('chalk')
 
 // Utilities
-const wait = require('../../util/etc/output/wait')
-const listInput = require('../../util/etc/input/list')
+const wait = require('../../../../util/output/wait')
+const listInput = require('../../../../util/input/list')
 const cfg = require('../../util/cfg')
-const exit = require('../../util/etc/exit')
-const success = require('../../util/etc/output/success')
-const info = require('../../util/etc/output/info')
-const error = require('../../util/etc/output/error')
-const param = require('../../util/etc/output/param')
+const exit = require('../../../../util/exit')
+const success = require('../../../../util/output/success')
+const info = require('../../../../util/output/info')
+const error = require('../../../../util/output/error')
+const param = require('../../../../util/output/param')
 
 async function updateCurrentTeam({ cfg, newTeam } = {}) {
   delete newTeam.created

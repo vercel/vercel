@@ -8,7 +8,7 @@ const chalk = require('chalk')
 const Now = require('.')
 const isZeitWorld = require('./is-zeit-world')
 const { DNS_VERIFICATION_ERROR } = require('./errors')
-const cmd = require('./etc/output/param')
+const cmd = require('../../../util/output/param')
 
 const domainRegex = /^((?=[a-z0-9-]{1,63}\.)(xn--)?[a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,63}$/
 

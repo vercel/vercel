@@ -11,7 +11,7 @@ const supportsColor = require('supports-color')
 // Utilities
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
-const logo = require('../util/etc/output/logo')
+const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
 const getWelcome = require('../../../get-welcome')
 const providers = require('../../')

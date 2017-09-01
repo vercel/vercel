@@ -12,9 +12,9 @@ const io = require('socket.io-client')
 // Utilities
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
-const logo = require('../util/etc/output/logo')
+const logo = require('../../../util/output/logo')
 const { compare, deserialize } = require('../util/logs')
-const { maybeURL, normalizeURL, parseInstanceURL } = require('../util/etc/url')
+const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
 const getWelcome = require('../../../get-welcome')
 const providers = require('../../')
 

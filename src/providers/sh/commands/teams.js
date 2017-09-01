@@ -5,10 +5,10 @@ const chalk = require('chalk')
 const minimist = require('minimist')
 
 // Utilities
-const error = require('../util/etc/output/error')
+const error = require('../../../util/output/error')
 const NowTeams = require('../util/teams')
-const logo = require('../util/etc/output/logo')
-const exit = require('../util/etc/exit')
+const logo = require('../../../util/output/logo')
+const exit = require('../../../util/exit')
 const { handleError } = require('../util/error')
 const list = require('./teams/list')
 const add = require('./teams/add')

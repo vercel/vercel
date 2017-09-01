@@ -6,14 +6,14 @@ const chalk = require('chalk')
 const ccValidator = require('credit-card')
 
 // Utilities
-const textInput = require('../../util/etc/input/text')
-const countries = require('../../util/etc/billing/country-list')
-const cardBrands = require('../../util/etc/billing/card-brands')
-const geocode = require('../../util/etc/billing/geocode')
-const success = require('../../util/etc/output/success')
-const wait = require('../../util/etc/output/wait')
-const { tick } = require('../../util/etc/output/chars')
-const rightPad = require('../../util/etc/output/right-pad')
+const textInput = require('../../../../util/input/text')
+const countries = require('../../util/billing/country-list')
+const cardBrands = require('../../util/billing/card-brands')
+const geocode = require('../../util/billing/geocode')
+const success = require('../../../../util/output/success')
+const wait = require('../../../../util/output/wait')
+const { tick } = require('../../../../util/output/chars')
+const rightPad = require('../../../../util/output/right-pad')
 
 function expDateMiddleware(data) {
   return data

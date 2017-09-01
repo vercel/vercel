@@ -2,12 +2,12 @@
 const chalk = require('chalk')
 
 // Utilities
-const wait = require('../../util/etc/output/wait')
+const wait = require('../../../../util/output/wait')
 const cfg = require('../../util/cfg')
-const info = require('../../util/etc/output/info')
-const error = require('../../util/etc/output/error')
-const { tick: tickChar } = require('../../util/etc/output/chars')
-const table = require('../../util/etc/output/table')
+const info = require('../../../../util/output/info')
+const error = require('../../../../util/output/error')
+const { tick: tickChar } = require('../../../../util/output/chars')
+const table = require('../../../../util/output/table')
 
 module.exports = async function({ teams, token }) {
   const stopSpinner = wait('Fetching teams')

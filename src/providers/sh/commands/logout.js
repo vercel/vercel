@@ -7,7 +7,7 @@ const fetch = require('node-fetch')
 const ora = require('ora')
 
 // Utilities
-const logo = require('../util/etc/output/logo')
+const logo = require('../../../util/output/logo')
 const { handleError } = require('../util/error')
 const {
   readConfigFile,

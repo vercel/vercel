@@ -9,8 +9,8 @@ const table = require('text-table')
 // Utilities
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
-const logo = require('../util/etc/output/logo')
-const { normalizeURL } = require('../util/etc/url')
+const logo = require('../../../util/output/logo')
+const { normalizeURL } = require('../../../util/url')
 const getWelcome = require('../../../get-welcome')
 const providers = require('../../')
 

@@ -5,7 +5,7 @@ const minimist = require('minimist')
 const chalk = require('chalk')
 
 // Utilities
-const logo = require('../util/etc/output/logo')
+const logo = require('../../../util/output/logo')
 const { handleError } = require('../util/error')
 const getWelcome = require('../../../get-welcome')
 const providers = require('../../')

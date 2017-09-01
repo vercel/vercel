@@ -16,8 +16,8 @@ const supportsColor = require('supports-color')
 // Utilities
 const { handleError, error } = require('../util/error')
 const NowCerts = require('../util/certs')
-const exit = require('../util/etc/exit')
-const logo = require('../util/etc/output/logo')
+const exit = require('../../../util/exit')
+const logo = require('../../../util/output/logo')
 const getWelcome = require('../../../get-welcome')
 const providers = require('../../')
 

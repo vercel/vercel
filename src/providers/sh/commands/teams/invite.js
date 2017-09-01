@@ -2,20 +2,20 @@
 const chalk = require('chalk')
 
 // Utilities
-const regexes = require('../../util/etc/input/regexes')
-const wait = require('../../util/etc/output/wait')
+const regexes = require('../../../../util/input/regexes')
+const wait = require('../../../../util/output/wait')
 const cfg = require('../../util/cfg')
-const fatalError = require('../../util/etc/fatal-error')
-const cmd = require('../../util/etc/output/cmd')
-const info = require('../../util/etc/output/info')
-const stamp = require('../../util/etc/output/stamp')
-const param = require('../../util/etc/output/param')
-const { tick } = require('../../util/etc/output/chars')
-const rightPad = require('../../util/etc/output/right-pad')
-const textInput = require('../../util/etc/input/text')
-const eraseLines = require('../../util/etc/output/erase-lines')
-const success = require('../../util/etc/output/success')
-const error = require('../../util/etc/output/error')
+const fatalError = require('../../../../util/fatal-error')
+const cmd = require('../../../../util/output/cmd')
+const info = require('../../../../util/output/info')
+const stamp = require('../../../../util/output/stamp')
+const param = require('../../../../util/output/param')
+const { tick } = require('../../../../util/output/chars')
+const rightPad = require('../../../../util/output/right-pad')
+const textInput = require('../../../../util/input/text')
+const eraseLines = require('../../../../util/output/erase-lines')
+const success = require('../../../../util/output/success')
+const error = require('../../../../util/output/error')
 
 function validateEmail(data) {
   return regexes.email.test(data.trim()) || data.length === 0
