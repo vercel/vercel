@@ -83,6 +83,8 @@ const main = async ctx => {
     }
   })
 
+  console.log(ctx)
+
   argv._ = argv._.slice(1)
   deploymentIdOrURL = argv._[0]
 

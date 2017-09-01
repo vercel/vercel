@@ -29,7 +29,12 @@ const aliases = {
   logs: ['log']
 }
 
-const subcommands = new Set(mainCommands)
+const specialCommands = [
+  'deploy',
+  'login'
+]
+
+const subcommands = new Set([...specialCommands, ...Array.from(mainCommands)])
 
 // Add aliases to available sub commands
 for (const alias in aliases) {
