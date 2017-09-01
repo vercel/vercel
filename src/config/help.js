@@ -18,7 +18,7 @@ const help = () =>
 
     ${cmd('now config set defaultProvider aws')}
 
-  For more information: ${link('https://github.com/zeit/now')}.
+  For more information: ${link('https://github.com/zeit/now-cli')}.
 `
   )
 

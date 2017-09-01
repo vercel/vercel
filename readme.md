@@ -1,6 +1,6 @@
 ![now](https://github.com/zeit/art/blob/master/now-hosted/now-header.png?raw=true)
 
-[![Build Status](https://travis-ci.org/zeit/now.svg?branch=master)](https://travis-ci.org/zeit/now)
+[![Build Status](https://travis-ci.org/zeit/now-cli.svg?branch=master)](https://travis-ci.org/zeit/now-cli)
 [![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat/)
 
 ## Usage
@@ -40,7 +40,7 @@ The output of the `now` command will be a unique url to the deployment. No need 
 - **Single command setup**: `now [provider] login`
 - **Secure**. All deployments are served over SSL
 - **Dynamic and Static**. Deploy popular runtimes or static websites
-- **Remote fs support**. Deploy any github project with `now project/repo`, gitlab with `gitlab://`. [PRs welcome](https://github.com/zeit/now/pulls)!
+- **Remote fs support**. Deploy any github project with `now project/repo`, gitlab with `gitlab://`. [PRs welcome](https://github.com/zeit/now-cli/pulls)!
 
 ## Installation
 
@@ -260,7 +260,7 @@ all interactions in our community.
 To get started contributing, make sure you're running `node` `8.x.x`. Clone this repository:
 
 ```
-git clone https://github.com/zeit/now
+git clone https://github.com/zeit/now-cli
 ```
 
 To test the [`pkg`](https://github.com/zeit/pkg) binary distribution, run:

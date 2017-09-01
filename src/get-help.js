@@ -40,7 +40,7 @@ const getHelp = (currentProvider, providers) =>
 
     ${cmd('now [provider] [subcommand] help')}
 
-  For more information: ${link('https://github.com/zeit/now')}.
+  For more information: ${link('https://github.com/zeit/now-cli')}.
 `
 
 module.exports = getHelp

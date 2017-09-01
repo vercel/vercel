@@ -2,7 +2,7 @@
   "name": "now",
   "license": "Apache-2.0",
   "description": "The command line interface for Now",
-  "repository": "zeit/now",
+  "repository": "zeit/now-cli",
   "bin": {
     "now": "link.js"
   }

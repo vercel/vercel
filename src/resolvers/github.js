@@ -10,13 +10,13 @@ const { createGunzip } = require('zlib')
 const { join } = require('path')
 const debug = require('debug')('now:resolvers:github')
 
-// matches a parameter that can be `now`d like zeit/now#master
+// matches a parameter that can be `now`d like zeit/now-cli#master
 const DEPLOY_PARAM_REGEX = /^([\w-]+)\/([\w-]+)(#\w+)?$/
 
 // matches whether the parameter could be a github url
 const GITHUB_TEST_REGEX = /^(https?:\/\/)(www\.)?github\.com/
 
-// matches a github url pathname like: zeit/now/tree/master
+// matches a github url pathname like: zeit/now-cli/tree/master
 const URL_PATHNAME_REGEX = /^\/([\w-]+)\/([\w-]+)(\/tree\/(\w+))?$/
 
 const resolveGitHub = (param: string) => {

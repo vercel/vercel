@@ -34,7 +34,7 @@ const getWelcome = (currentProvider, providers) =>
   Hope you enjoy Now! Check out these other resources:
 
     ${li(`Run ${cmd('now help')} for more info and examples`)}
-    ${li(link('https://github.com/zeit/now'))}
+    ${li(link('https://github.com/zeit/now-cli'))}
 `
 
 module.exports = getWelcome
