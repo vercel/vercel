@@ -11,7 +11,7 @@
   "deploy": {
     "provider": "releases",
     "api_key": {
-      "secure": "Jcx5t9pqCdJMZT1+yBPvGOrinDFCnejx1ar1NWA+cGEWtjNxSyU+4G4kUdiK1GDLNiUB4ufja8w35uhLD0411vRhoRePyhmgKYmEh996uYb8/J05cn/vJo4epg8cg6EmeKvCCh0aAQW8R9aS9yM+BHZcjlxkVB9Eb6rfkCpZqcRPQrM+hJgg8YUTzgafkke0aN93lNiqG2HPea9LiVI8cshWMmJY4yP9Bb+XIOyhEtiHtNGUzb3bV+2co4KOubCMPxm3cBi/94ALIzrYezyqFEukQe5SKTT/io4+dnc6eAwG2LI4Rr6Qyx9PiNwatAc+w6KQgCI9srLH3ca/kqCYV0DDJ7Cfjs+sixzS+ouc6T6mnE93sg6+HB2EOQHb8QwDXd42LoLxgoDAx6e5XBIiqVRiIsG6Z8ugK47olV9YVqkzYrFlvluA3Df7KwnlWjPwG2Q+xMl00CDqluB/XsvK2qdYtYrADytHJkMkdaSoLxyA2c52xOmKk44qC+BYNc3PsuE593ALvRwzTFyKwAzDDkoCStC2yCbjbWjZ+EseTWozpd+gXlFuH/jBXdhquiilXBZFCmPm54nK1k9JrwNHZkX4rVUEisi/UEL4qjXT4fbGhaYPckUK3IjOPQUOBXZhx+EkbwR2NSgeXW+8vIR1plco+5AZGXBAKYqGQS5C4lc="
+      "secure": "ff5V20LO5B8nwguQYtmb3Es/WHBP6GYFo0yOaiw7d1GrmeVFyZauQ7CQgI41toEuYnPlDxd+CQACXjARKLGzJbz80bIPuHZ07GevrmhEgYVHq4DuWAiQnuVf0CJKehDUAKUtR+c8giMQK9tE7O+M+yBciiC9UEKYRCmfyQPXOnEU+cRWNaL0PH2hnlz1AIgScdLblAqdJbVUjHQ+eT2yYeKx2qR09pxu9MDwYLCfpWsLa+8PAcS4MHyuU7mqF27Y484Ab/X3kwNDhnzanyG9YhgHcCeNTZULDQUAJh7Pdf5uQvsfrcgNh1IzY+xvxmYPo2YavkGoDraPBqV46L7FP7KZX3pyh+crR1J+915pE96yHcV3+o40OgSuvW1jw7JCnVkkefryrABFlu7Dez7vd2mlUE+YXcnWhOEp12KUC2izfvm+hvQOqlA+I4VmCWHCA4peM93upQ3QCRhfB18L7JjoGo9/UvUF7wtm/1urMRSU3pWfcNRUtAg497gUUEbA9zVpLya+fQ2QdDe13L/03lYOz78NtDrzSIaWDfJTFrYSpgzwqmSwsTuismxP4NUV0aVEnpL9M+iKBxT0aLWeOIylGsnO5Ido7A+6SGqh8qqeNI84VRKZheOLV6GAqM5zvPDPeFdijRFNbP1n+rW+eepv2uCU8Km38FfhV1Qp85k="
     },
     "file_glob": true,
     "file": "packed/*",
