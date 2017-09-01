@@ -13,13 +13,13 @@ const printf = require('printf')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
-// Ours
-const cfg = require('../lib/cfg')
+// Utilities
 const { handleError, error } = require('../lib/error')
 const NowCerts = require('../lib/certs')
-const login = require('../lib/login')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -79,10 +79,19 @@ let subcommand
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token', 'crt', 'key', 'ca'],
+    string: ['token', 'crt', 'key', 'ca'],
     boolean: ['help', 'debug'],
-    alias: { help: 'h', config: 'c', debug: 'd', token: 't' }
+    alias: {
+      help: 'h',
+      debug: 'd',
+      token: 't'
+    }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
 
@@ -95,18 +104,11 @@ const main = async ctx => {
     exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     handleError(err)
     exit(1)
@@ -129,7 +131,7 @@ function formatExpirationDate(date) {
     : chalk.gray('in ' + ms(diff))
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, sh: { currentTeam, user } }) {
   const certs = new NowCerts({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
   const start = Date.now()

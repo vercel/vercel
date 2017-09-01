@@ -16,6 +16,7 @@ const uid = require('../../lib/utils/output/uid')
 const textInput = require('../../lib/utils/input/text')
 const exit = require('../../lib/utils/exit')
 const cfg = require('../../lib/cfg')
+const invite = require('./invite')
 
 function validateSlugKeypress(data, value) {
   // TODO: the `value` here should contain the current value + the keypress
@@ -120,7 +121,7 @@ module.exports = async function({ teams, token }) {
   await cfg.merge({ currentTeam: team })
   stopSpinner()
 
-  await require('./invite')({
+  await invite({
     teams,
     args: [],
     token,

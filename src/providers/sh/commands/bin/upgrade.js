@@ -6,8 +6,6 @@ const minimist = require('minimist')
 const ms = require('ms')
 
 // Utilities
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const NowPlans = require('../lib/plans')
 const indent = require('../lib/indent')
 const listInput = require('../lib/utils/input/list')
@@ -17,6 +15,8 @@ const success = require('../lib/utils/output/success')
 const cmd = require('../lib/utils/output/cmd')
 const logo = require('../lib/utils/output/logo')
 const { handleError } = require('../lib/error')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const { bold } = chalk
 
@@ -67,49 +67,42 @@ let apiUrl
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't'
     }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
 
   debug = argv.debug
   apiUrl = argv.url || 'https://api.zeit.co'
 
-  if (argv.config) {
-    cfg.setConfigFile(argv.config)
-  }
-
   if (argv.help) {
     help()
     exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-
-  let token
-
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     if (err.userError) {
       error(err.message)
     } else {
       error(`Unknown error: ${err.stack}`)
     }
+
     exit(1)
   }
 }
@@ -183,7 +176,7 @@ function buildInquirerChoices(current, until) {
   ]
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, sh: { currentTeam, user } }) {
   const args = argv._
   if (args.length > 1) {
     error('Invalid number of arguments')

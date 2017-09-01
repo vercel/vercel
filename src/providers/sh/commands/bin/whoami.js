@@ -4,12 +4,11 @@
 const minimist = require('minimist')
 const chalk = require('chalk')
 
-// Ours
-const cfg = require('../lib/cfg')
-const exit = require('../lib/utils/exit')
-const cmd = require('../lib/utils/output/cmd')
+// Utilities
 const logo = require('../lib/utils/output/logo')
 const { handleError } = require('../lib/error')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -39,22 +38,26 @@ let argv
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't'
     }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   if (argv.help) {
     help()
     process.exit(0)
   }
 
-  await whoami()
+  await whoami(ctx.config.sh)
 }
 
 module.exports = async ctx => {
@@ -66,20 +69,11 @@ module.exports = async ctx => {
   }
 }
 
-async function whoami() {
-  const config = await cfg.read({ token: argv.token })
-  if (!config || !config.token) {
-    console.log(
-      `> Not currently logged in! Please run ${cmd('now --login')}.\n`
-    )
-    return exit(1)
-  }
-
+async function whoami({user}) {
   if (process.stdout.isTTY) {
     process.stdout.write('> ')
   }
 
-  const { user } = config
   const name = user.username || user.email
   console.log(name)
 }

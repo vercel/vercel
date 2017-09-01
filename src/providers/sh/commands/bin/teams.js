@@ -5,8 +5,6 @@ const chalk = require('chalk')
 const minimist = require('minimist')
 
 // Utilities
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const error = require('../lib/utils/output/error')
 const NowTeams = require('../lib/teams')
 const logo = require('../lib/utils/output/logo')
@@ -16,6 +14,8 @@ const list = require('./teams/list')
 const add = require('./teams/add')
 const change = require('./teams/switch')
 const invite = require('./teams/invite')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -74,23 +74,23 @@ let subcommand
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't',
       switch: 'change'
     }
   })
 
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
+
   debug = argv.debug
   apiUrl = argv.url || 'https://api.zeit.co'
-
-  if (argv.config) {
-    cfg.setConfigFile(argv.config)
-  }
 
   const isSwitch = argv._[0] && argv._[0] === 'switch'
 
@@ -106,24 +106,18 @@ const main = async ctx => {
     exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-  let token
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
-
-  try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     if (err.userError) {
       error(err.message)
     } else {
       error(`Unknown error: ${err.stack}`)
     }
+
     exit(1)
   }
 }
@@ -137,7 +131,7 @@ module.exports = async ctx => {
   }
 }
 
-async function run({ token, config: { currentTeam } }) {
+async function run({ token, sh: { currentTeam } }) {
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam })
   const args = argv._
 

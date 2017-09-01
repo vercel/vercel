@@ -11,12 +11,12 @@ const io = require('socket.io-client')
 
 // Utilities
 const Now = require('../lib')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
 const { compare, deserialize } = require('../lib/logs')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../lib/utils/url')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -71,19 +71,21 @@ let instanceId
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'query', 'since', 'token', 'until'],
+    string: ['query', 'since', 'token', 'until'],
     boolean: ['help', 'all', 'debug', 'f'],
     alias: {
       help: 'h',
       all: 'a',
-      config: 'c',
       debug: 'd',
       token: 't',
       query: 'q'
     }
   })
 
-  console.log(ctx)
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
   deploymentIdOrURL = argv._[0]
@@ -120,26 +122,15 @@ const main = async ctx => {
   debug = argv.debug
   apiUrl = argv.url || 'https://api.zeit.co'
 
-  if (argv.config) {
-    cfg.setConfigFile(argv.config)
-  }
-
   limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
 
-  const config = await cfg.read({ token: argv.token })
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    process.exit(1)
-  }
-
-  await printLogs({ token, config })
+  await printLogs({ token, sh })
 }
 
 module.exports = async ctx => {
@@ -151,7 +142,7 @@ module.exports = async ctx => {
   }
 }
 
-async function printLogs({ token, config: { currentTeam } }) {
+async function printLogs({ token, sh: { currentTeam } }) {
   let buf = []
   let init = false
   let lastLog

@@ -6,8 +6,6 @@ const minimist = require('minimist')
 const ms = require('ms')
 
 // Utilities
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const NowCreditCards = require('../lib/credit-cards')
 const indent = require('../lib/indent')
@@ -17,6 +15,8 @@ const promptBool = require('../lib/utils/input/prompt-bool')
 const info = require('../lib/utils/output/info')
 const logo = require('../lib/utils/output/logo')
 const addBilling = require('./billing/add')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -72,15 +72,19 @@ let subcommand
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't'
     }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
 
@@ -88,33 +92,23 @@ const main = async ctx => {
   apiUrl = argv.url || 'https://api.zeit.co'
   subcommand = argv._[0]
 
-  if (argv.config) {
-    cfg.setConfigFile(argv.config)
-  }
-
   if (argv.help || !subcommand) {
     help()
     exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-  let token
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
-
-  try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     if (err.userError) {
       error(err.message)
     } else {
       error(`Unknown error: ${err.stack}`)
     }
+
     exit(1)
   }
 }
@@ -149,7 +143,7 @@ function buildInquirerChoices(cards) {
   })
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, sh: { currentTeam, user } }) {
   const start = new Date()
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)

@@ -8,11 +8,11 @@ const table = require('text-table')
 
 // Ours
 const Now = require('../lib')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
 const { normalizeURL } = require('../lib/utils/url')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -65,16 +65,20 @@ let ids
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't',
       yes: 'y'
     }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
 
@@ -89,18 +93,11 @@ const main = async ctx => {
     process.exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    process.exit(1)
-  }
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await remove({ token, config })
+    await remove({ token, sh })
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`)
     process.exit(1)
@@ -158,7 +155,7 @@ function readConfirmation(matches) {
   })
 }
 
-async function remove({ token, config: { currentTeam } }) {
+async function remove({ token, sh: { currentTeam } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
 
   const deployments = await now.list()

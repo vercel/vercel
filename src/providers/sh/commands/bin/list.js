@@ -10,11 +10,11 @@ const supportsColor = require('supports-color')
 
 // Ours
 const Now = require('../lib')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
 const sort = require('../lib/sort-deployments')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -53,15 +53,19 @@ let apiUrl
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['config', 'token'],
+    string: ['token'],
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',
-      config: 'c',
       debug: 'd',
       token: 't'
     }
   })
+
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
 
   argv._ = argv._.slice(1)
 
@@ -74,25 +78,11 @@ const main = async ctx => {
     process.exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    process.exit(1)
-  }
-
-  if (!config.token) {
-    console.log(
-      `> Logged in successfully. Token saved to ${chalk.bold('~/.now.json')}.`
-    )
-    process.exit(0)
-  }
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await list({ token, config })
+    await list({ token, sh })
   } catch (err) {
     error(`Unknown error: ${err}\n${err.stack}`)
     process.exit(1)
@@ -108,7 +98,7 @@ module.exports = async ctx => {
   }
 }
 
-async function list({ token, config: { currentTeam, user } }) {
+async function list({ token, sh: { currentTeam, user } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
   const start = new Date()
 

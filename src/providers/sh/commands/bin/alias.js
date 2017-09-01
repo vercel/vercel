@@ -9,12 +9,10 @@ const printf = require('printf')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
-// Ours
+// Utilities
 const strlen = require('../lib/strlen')
 const NowAlias = require('../lib/alias')
 const NowDomains = require('../lib/domains')
-const login = require('../lib/login')
-const cfg = require('../lib/cfg')
 const { handleError, error } = require('../lib/error')
 const toHost = require('../lib/to-host')
 const { reAlias } = require('../lib/re-alias')
@@ -22,6 +20,8 @@ const exit = require('../lib/utils/exit')
 const info = require('../lib/utils/output/info')
 const logo = require('../lib/utils/output/logo')
 const promptBool = require('../lib/utils/input/prompt-bool')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const grayWidth = 10
 const underlineWidth = 11
@@ -128,6 +128,11 @@ const main = async ctx => {
     }
   })
 
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
+
   argv._ = argv._.slice(1)
   subcommand = argv._[0]
 
@@ -139,24 +144,18 @@ const main = async ctx => {
     process.exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
-
-  let token
-  try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     if (err.userError) {
       error(err.message)
     } else {
       error(`Unknown error: ${err}\n${err.stack}`)
     }
+
     exit(1)
   }
 }
@@ -170,7 +169,7 @@ module.exports = async ctx => {
   }
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, sh: { currentTeam, user } }) {
   const alias = new NowAlias({ apiUrl, token, debug, currentTeam })
   const domains = new NowDomains({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)

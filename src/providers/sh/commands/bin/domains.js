@@ -9,15 +9,15 @@ const table = require('text-table')
 
 // Ours
 const NowDomains = require('../lib/domains')
-const cfg = require('../lib/cfg')
 const exit = require('../lib/utils/exit')
-const login = require('../lib/login')
 const logo = require('../lib/utils/output/logo')
 const promptBool = require('../lib/utils/input/prompt-bool')
 const strlen = require('../lib/strlen')
 const toHost = require('../lib/to-host')
 const { handleError, error } = require('../lib/error')
 const buy = require('./domains/buy')
+const getWelcome = require('../../../../get-welcome')
+const providers = require('../../../')
 
 const help = () => {
   console.log(`
@@ -137,6 +137,11 @@ const main = async ctx => {
     }
   })
 
+  if (!ctx.authConfig.credentials.length) {
+    console.log(getWelcome('sh', providers))
+    return 0
+  }
+
   argv._ = argv._.slice(1)
 
   debug = argv.debug
@@ -148,23 +153,18 @@ const main = async ctx => {
     exit(0)
   }
 
-  const config = await cfg.read({ token: argv.token })
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
-  let token
   try {
-    token = config.token || (await login(apiUrl))
-  } catch (err) {
-    error(`Authentication error – ${err.message}`)
-    exit(1)
-  }
-  try {
-    await run({ token, config })
+    await run({ token, sh })
   } catch (err) {
     if (err.userError) {
       error(err.message)
     } else {
       error(`Unknown error: ${err}\n${err.stack}`)
     }
+
     exit(1)
   }
 }
@@ -178,7 +178,7 @@ module.exports = async ctx => {
   }
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, sh: { currentTeam, user } }) {
   const domain = new NowDomains({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
 
