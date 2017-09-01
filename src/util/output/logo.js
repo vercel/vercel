@@ -1,3 +1,1 @@
-const logo = () => (process.platform === 'win32' ? 'Δ' : '𝚫')
-
-module.exports = logo
+module.exports = process.platform === 'win32' ? 'Δ' : '𝚫'
