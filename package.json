@@ -1,0 +1,153 @@
+{
+  "name": "now",
+  "version": "8.0.0-beta.8",
+  "license": "Apache-2.0",
+  "description": "The command line interface for Now",
+  "repository": "zeit/now",
+  "scripts": {
+    "test": "eslint .",
+    "prepublishOnly": "npm run build-download && cp /dev/null download/dist/now",
+    "dev": "webpack -w",
+    "precommit": "lint-staged",
+    "postinstall": "node download/install.js",
+    "pack": "webpack && pkg dist/now.js -c package.json -o packed/now",
+    "build-download": "webpack --context download --config download/webpack.config.js",
+    "link": "webpack && cd link && npm link"
+  },
+  "publishConfig": {
+    "tag": "beta"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint",
+      "prettier --write --single-quote --no-semi",
+      "git add"
+    ]
+  },
+  "bin": {
+    "now": "download/dist/now"
+  },
+  "files": [
+    "download/dist",
+    "download/install.js"
+  ],
+  "pkg": {
+    "scripts": [
+      "dist/*"
+    ],
+    "targets": [
+      "node7-alpine-x64",
+      "node7-linux-x64",
+      "node7-macos-x64",
+      "node7-win-x64"
+    ]
+  },
+  "eslintIgnore": [
+    "src/providers/sh/legacy/**",
+    "download/**",
+    "dist"
+  ],
+  "eslintConfig": {
+    "parserOptions": {
+      "ecmaVersion": 8,
+      "sourceType": "script"
+    },
+    "parser": "babel-eslint",
+    "extends": [
+      "eslint:recommended",
+      "plugin:flowtype/recommended"
+    ],
+    "plugins": [
+      "flowtype"
+    ],
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "rules": {
+      "func-names": 0,
+      "no-console": 0,
+      "no-shadow": 0,
+      "no-extra-semi": 0,
+      "no-empty": 0
+    }
+  },
+  "babel": {
+    "plugins": [
+      "transform-flow-comments"
+    ]
+  },
+  "devDependencies": {
+    "@google/maps": "0.4.3",
+    "ansi-escapes": "2.0.0",
+    "archiver": "2.0.0",
+    "arr-flatten": "1.1.0",
+    "array-unique": "0.3.2",
+    "async-retry": "1.1.3",
+    "aws-sdk": "2.100.0",
+    "babel-core": "6.26.0",
+    "babel-eslint": "7.2.3",
+    "babel-loader": "7.1.2",
+    "babel-plugin-transform-async-to-generator": "6.24.1",
+    "babel-plugin-transform-flow-comments": "6.22.0",
+    "babel-plugin-transform-runtime": "6.23.0",
+    "babel-preset-es2015": "6.24.1",
+    "bytes": "2.5.0",
+    "chalk": "2.1.0",
+    "child-process-promise": "2.2.1",
+    "clipboardy": "1.1.4",
+    "convert-stream": "1.0.2",
+    "copy-webpack-plugin": "4.0.1",
+    "credit-card": "3.0.1",
+    "dateformat": "2.0.0",
+    "death": "1.1.0",
+    "debug": "3.0.0",
+    "deployment-type": "1.0.1",
+    "docker-file-parser": "1.0.2",
+    "dotenv": "4.0.0",
+    "download": "6.2.5",
+    "email-prompt": "0.3.1",
+    "email-validator": "1.1.1",
+    "epipebomb": "1.0.0",
+    "eslint": "4.4.1",
+    "eslint-plugin-flowtype": "2.35.0",
+    "flow-babel-webpack-plugin": "1.1.0",
+    "fs-extra": "4.0.1",
+    "glob": "7.1.2",
+    "ignore": "3.3.3",
+    "ini": "1.3.4",
+    "inquirer": "3.2.2",
+    "is-url": "1.2.2",
+    "lint-staged": "4.0.3",
+    "lodash.range": "3.2.0",
+    "mkdirp-promise": "5.0.1",
+    "mri": "1.1.0",
+    "ms": "2.0.0",
+    "node-fetch": "1.7.2",
+    "opn": "5.1.0",
+    "ora": "1.3.0",
+    "pipe-streams-to-promise": "0.2.0",
+    "pkg": "4.2.3",
+    "pre-commit": "1.2.2",
+    "prettier": "1.5.3",
+    "printf": "0.2.5",
+    "progress": "2.0.0",
+    "psl": "1.1.20",
+    "resumer": "0.0.0",
+    "shebang-loader": "0.0.1",
+    "single-line-log": "1.1.2",
+    "slackup": "2.2.1",
+    "socket.io-client": "1.7.4",
+    "split-array": "1.0.1",
+    "strip-ansi": "4.0.0",
+    "stripe": "4.24.1",
+    "tar-fs": "1.15.3",
+    "then-sleep": "1.0.1",
+    "tmp-promise": "1.0.3",
+    "uid-promise": "1.0.0",
+    "update-notifier": "2.2.0",
+    "webpack": "3.5.5",
+    "webpack-node-externals": "1.6.0",
+    "which-promise": "1.0.0"
+  }
+}

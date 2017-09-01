@@ -1,0 +1,9 @@
+# dependencies
+node_modules
+
+# build output
+dist
+packed
+
+# logs
+npm-debug.log

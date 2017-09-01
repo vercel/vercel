@@ -1,0 +1,23 @@
+{
+  "language": "node_js",
+  "node_js": [
+    "node"
+  ],
+  "after_success": [
+    'npm install -g slackup',
+    'npm run pack',
+    './scripts/slack.js'
+  ],
+  "deploy": {
+    "provider": "releases",
+    "api_key": {
+      "secure": "Jcx5t9pqCdJMZT1+yBPvGOrinDFCnejx1ar1NWA+cGEWtjNxSyU+4G4kUdiK1GDLNiUB4ufja8w35uhLD0411vRhoRePyhmgKYmEh996uYb8/J05cn/vJo4epg8cg6EmeKvCCh0aAQW8R9aS9yM+BHZcjlxkVB9Eb6rfkCpZqcRPQrM+hJgg8YUTzgafkke0aN93lNiqG2HPea9LiVI8cshWMmJY4yP9Bb+XIOyhEtiHtNGUzb3bV+2co4KOubCMPxm3cBi/94ALIzrYezyqFEukQe5SKTT/io4+dnc6eAwG2LI4Rr6Qyx9PiNwatAc+w6KQgCI9srLH3ca/kqCYV0DDJ7Cfjs+sixzS+ouc6T6mnE93sg6+HB2EOQHb8QwDXd42LoLxgoDAx6e5XBIiqVRiIsG6Z8ugK47olV9YVqkzYrFlvluA3Df7KwnlWjPwG2Q+xMl00CDqluB/XsvK2qdYtYrADytHJkMkdaSoLxyA2c52xOmKk44qC+BYNc3PsuE593ALvRwzTFyKwAzDDkoCStC2yCbjbWjZ+EseTWozpd+gXlFuH/jBXdhquiilXBZFCmPm54nK1k9JrwNHZkX4rVUEisi/UEL4qjXT4fbGhaYPckUK3IjOPQUOBXZhx+EkbwR2NSgeXW+8vIR1plco+5AZGXBAKYqGQS5C4lc="
+    },
+    "file_glob": true,
+    "file": "packed/*",
+    "skip_cleanup": true,
+    "on": {
+      "tags": true
+    }
+  }
+}
