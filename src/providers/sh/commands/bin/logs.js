@@ -250,7 +250,7 @@ function printLog(log) {
     data =
       `REQ "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.remoteAddr} - ${obj.remoteUser || ''}` +
-      ` "${obj.referer || ''}" "${obj.userAgent}"`
+      ` "${obj.referer || ''}" "${obj.userAgent || ''}"`
   } else if (log.type === 'response') {
     data =
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
