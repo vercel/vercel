@@ -10,26 +10,26 @@ const ms = require('ms')
 const { validate: validateEmail } = require('email-validator')
 
 // ours
-const { version } = require('./util/pkg')
-const ua = require('./util/ua')
-const error = require('../../util/output/error')
-const aborted = require('../../util/output/aborted')
-const wait = require('../../util/output/wait')
-const highlight = require('../../util/output/highlight')
-const info = require('../../util/output/info')
-const ok = require('../../util/output/ok')
-const cmd = require('../../util/output/cmd')
-const ready = require('../../util/output/ready')
-const param = require('../../util/output/param')
-const eraseLines = require('../../util/output/erase-lines')
-const sleep = require('../../util/sleep')
-const getUser = require('./util/get-user')
+const { version } = require('../../util/pkg')
+const ua = require('../../util/ua')
+const error = require('../../../../util/output/error')
+const aborted = require('../../../../util/output/aborted')
+const wait = require('../../../../util/output/wait')
+const highlight = require('../../../../util/output/highlight')
+const info = require('../../../../util/output/info')
+const ok = require('../../../../util/output/ok')
+const cmd = require('../../../../util/output/cmd')
+const ready = require('../../../../util/output/ready')
+const param = require('../../../../util/output/param')
+const eraseLines = require('../../../../util/output/erase-lines')
+const sleep = require('../../../../util/sleep')
+const getUser = require('../../util/get-user')
 const {
   writeToAuthConfigFile,
   writeToConfigFile
-} = require('../../util/config-files')
-const getNowDir = require('../../get-now-dir')
-const hp = require('../../util/humanize-path')
+} = require('../../../../util/config-files')
+const getNowDir = require('../../../../get-now-dir')
+const hp = require('../../../../util/humanize-path')
 
 // POSTs to /now/registration – either creates an account or performs a login
 // returns {token, securityCode}

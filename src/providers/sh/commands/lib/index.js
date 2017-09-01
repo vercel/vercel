@@ -22,7 +22,7 @@ const {
   npm: getNpmFiles,
   docker: getDockerFiles
 } = require('./get-files')
-const ua = require('./ua')
+const ua = require('../../util/ua')
 const hash = require('./hash')
 const Agent = require('./agent')
 const toHost = require('./to-host')

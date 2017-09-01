@@ -1,4 +1,5 @@
 const mainCommands = new Set([
+  'deploy',
   'help',
   'list',
   'remove',
@@ -12,13 +13,9 @@ const mainCommands = new Set([
   'teams',
   'logs',
   'scale',
+  'login',
   'logout',
   'whoami'
-])
-
-const specialCommands = new Set([
-  'deploy',
-  'login'
 ])
 
 const aliases = {
@@ -34,10 +31,7 @@ const aliases = {
   logs: ['log']
 }
 
-const subcommands = new Set([
-  ...Array.from(mainCommands),
-  ...Array.from(specialCommands)
-])
+const subcommands = new Set(mainCommands)
 
 // Add aliases to available sub commands
 for (const alias in aliases) {
@@ -48,15 +42,9 @@ for (const alias in aliases) {
   }
 }
 
-const list = {
+const details = {
   title: 'now.sh',
-  subcommands,
-  get deploy() {
-    return require('./deploy')
-  },
-  get login() {
-    return require('./login')
-  }
+  subcommands
 }
 
 for (const subcommand of mainCommands) {
@@ -67,7 +55,7 @@ for (const subcommand of mainCommands) {
   }
 
   for (const handler of handlers) {
-    Object.defineProperty(list, handler, {
+    Object.defineProperty(details, handler, {
       get() {
         return require(`./commands/bin/${subcommand}`)
       }
@@ -75,4 +63,4 @@ for (const subcommand of mainCommands) {
   }
 }
 
-module.exports = list
+module.exports = details

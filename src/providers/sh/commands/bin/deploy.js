@@ -16,21 +16,21 @@ const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 
 // Ours
-const Logger = require('./build-logger')
-const Now = require('./now.js')
-const toHumanPath = require('../../../util/humanize-path')
-const { handleError, error } = require('./error')
-const { fromGit, isRepoPath, gitPathParts } = require('./git')
-const readMetaData = require('./read-metadata')
-const checkPath = require('./check-path')
-const logo = require('../../../util/output/logo')
-const cmd = require('../../../util/output/cmd')
-const info = require('../../../util/output/info')
-const wait = require('../../../util/output/wait')
-const NowPlans = require('./plans')
-const promptBool = require('../../../util/input/prompt-bool')
-const promptOptions = require('./prompt-options')
-const note = require('../../../util/output/note')
+const Logger = require('../lib/build-logger')
+const Now = require('../lib')
+const toHumanPath = require('../../../../util/humanize-path')
+const { handleError, error } = require('../lib/error')
+const { fromGit, isRepoPath, gitPathParts } = require('../lib/git')
+const readMetaData = require('../lib/read-metadata')
+const checkPath = require('../lib/check-path')
+const logo = require('../../../../util/output/logo')
+const cmd = require('../../../../util/output/cmd')
+const info = require('../../../../util/output/info')
+const wait = require('../../../../util/output/wait')
+const NowPlans = require('../lib/plans')
+const promptBool = require('../../../../util/input/prompt-bool')
+const promptOptions = require('../lib/prompt-options')
+const note = require('../../../../util/output/note')
 
 const mriOpts = {
   string: ['config', 'token', 'name', 'alias', 'session-affinity'],
@@ -204,7 +204,7 @@ const envFields = async list => {
   }
 
   // eslint-disable-next-line import/no-unassigned-import
-  require('../../../util/input/patch-inquirer')
+  require('../../../../util/input/patch-inquirer')
 
   console.log(
     info('Please enter the values for the following environment variables:')
