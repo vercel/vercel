@@ -8,7 +8,7 @@ const printf = require('printf')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
-// Ours
+// Utilities
 const Now = require('../lib')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')

@@ -7,7 +7,7 @@ const ms = require('ms')
 const psl = require('psl')
 const table = require('text-table')
 
-// Ours
+// Utilities
 const NowDomains = require('../lib/domains')
 const exit = require('../lib/utils/exit')
 const logo = require('../lib/utils/output/logo')

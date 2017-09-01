@@ -9,7 +9,7 @@ const printf = require('printf')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
-// Ours
+// Utilities
 const { handleError, error } = require('../lib/error')
 const NowScale = require('../lib/scale')
 const exit = require('../lib/utils/exit')

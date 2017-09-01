@@ -6,7 +6,7 @@ const minimist = require('minimist')
 const ms = require('ms')
 const table = require('text-table')
 
-// Ours
+// Utilities
 const DomainRecords = require('../lib/domain-records')
 const indent = require('../lib/indent')
 const strlen = require('../lib/strlen')

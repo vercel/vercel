@@ -6,7 +6,7 @@ const chalk = require('chalk')
 const ms = require('ms')
 const table = require('text-table')
 
-// Ours
+// Utilities
 const Now = require('../lib')
 const { handleError, error } = require('../lib/error')
 const logo = require('../lib/utils/output/logo')
