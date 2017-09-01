@@ -16,6 +16,11 @@ const mainCommands = new Set([
   'whoami'
 ])
 
+const specialCommands = new Set([
+  'deploy',
+  'login'
+])
+
 const aliases = {
   list: ['ls'],
   remove: ['rm'],
@@ -29,12 +34,10 @@ const aliases = {
   logs: ['log']
 }
 
-const specialCommands = [
-  'deploy',
-  'login'
-]
-
-const subcommands = new Set([...specialCommands, ...Array.from(mainCommands)])
+const subcommands = new Set([
+  ...Array.from(mainCommands),
+  ...Array.from(specialCommands)
+])
 
 // Add aliases to available sub commands
 for (const alias in aliases) {
