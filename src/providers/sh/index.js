@@ -14,7 +14,10 @@ module.exports = {
     'remove',
     'whoami',
     'secrets',
-    'logs'
+    'logs',
+    'upgrade',
+    'teams',
+    'switch'
   ]),
   get deploy() {
     return require('./deploy')
@@ -57,5 +60,14 @@ module.exports = {
   },
   get logs() {
     return require('./commands/bin/logs')
+  },
+  get upgrade() {
+    return require('./commands/bin/upgrade')
+  },
+  get teams() {
+    return require('./commands/bin/teams')
+  },
+  get switch() {
+    return require('./commands/bin/teams')
   }
 }
