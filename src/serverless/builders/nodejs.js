@@ -4,7 +4,7 @@ const { join } = require('path')
 const { exec } = require('child-process-promise')
 
 // Packages
-const { mkdir, stat, link, existsSync, readdir } = require('fs-extra')
+const { mkdir, stat, copy, existsSync, readdir } = require('fs-extra')
 const uid = require('uid-promise')
 const { toBuffer } = require('convert-stream')
 const archiver = require('archiver')
@@ -23,8 +23,8 @@ const nodejsBuilder = async (dir, desc, { overrides = {} } = {}) => {
     files
       .filter(name => name !== 'node_modules' && !(name in overrides))
       .map(file => {
-        debug('making hard link for %s', file)
-        return link(join(dir, file), join(targetPath, file))
+        debug('making copy for %s', file)
+        return copy(join(dir, file), join(targetPath, file))
       })
   )
 
