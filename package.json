@@ -43,8 +43,7 @@
     ]
   },
   "eslintIgnore": [
-    "src/providers/sh/legacy/**",
-    "download/**",
+    "download",
     "dist"
   ],
   "eslintConfig": {
