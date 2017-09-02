@@ -4,7 +4,6 @@ const chalk = require('chalk')
 // Utilities
 const regexes = require('../../../../util/input/regexes')
 const wait = require('../../../../util/output/wait')
-const cfg = require('../../util/cfg')
 const fatalError = require('../../../../util/fatal-error')
 const cmd = require('../../../../util/output/cmd')
 const info = require('../../../../util/output/info')
@@ -17,7 +16,7 @@ const eraseLines = require('../../../../util/output/erase-lines')
 const success = require('../../../../util/output/success')
 const error = require('../../../../util/output/error')
 
-function validateEmail(data) {
+const validateEmail = data => {
   return regexes.email.test(data.trim()) || data.length === 0
 }
 
@@ -38,7 +37,7 @@ const domains = Array.from(
   ])
 )
 
-function emailAutoComplete(value, teamSlug) {
+const emailAutoComplete = (value, teamSlug) => {
   const parts = value.split('@')
 
   if (parts.length === 2 && parts[1].length > 0) {
@@ -61,9 +60,9 @@ function emailAutoComplete(value, teamSlug) {
 }
 
 module.exports = async function(
-  { teams, args, token, introMsg, noopMsg = 'No changes made' } = {}
+  { teams, args, config, introMsg, noopMsg = 'No changes made' } = {}
 ) {
-  const { user, currentTeam } = await cfg.read({ token })
+  const { user, currentTeam } = config.sh
 
   domains.push(user.email.split('@')[1])
 

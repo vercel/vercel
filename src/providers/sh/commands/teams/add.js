@@ -15,16 +15,16 @@ const note = require('../../../../util/output/note')
 const uid = require('../../../../util/output/uid')
 const textInput = require('../../../../util/input/text')
 const exit = require('../../../../util/exit')
-const cfg = require('../../util/cfg')
 const invite = require('./invite')
+const {writeToConfigFile} = require('../../../../util/config-files')
 
-function validateSlugKeypress(data, value) {
+const validateSlugKeypress = (data, value) => {
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
   return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data)
 }
 
-function gracefulExit() {
+const gracefulExit = () => {
   console.log() // Blank line
   note(
     `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd(
@@ -37,7 +37,7 @@ function gracefulExit() {
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/')
 const teamNamePrefix = rightPad('Team Name', 14)
 
-module.exports = async function({ teams, token }) {
+module.exports = async function({ teams, config }) {
   let slug
   let team
   let elapsed
@@ -118,13 +118,18 @@ module.exports = async function({ teams, token }) {
   console.log(chalk.cyan(`${tick} `) + teamNamePrefix + team.name + '\n')
 
   stopSpinner = wait('Saving')
-  await cfg.merge({ currentTeam: team })
+
+  // Update config file
+  const configCopy = Object.assign({}, config)
+  configCopy.sh.currentTeam = team
+  writeToConfigFile(configCopy)
+
   stopSpinner()
 
   await invite({
     teams,
     args: [],
-    token,
+    config,
     introMsg:
       'Invite your team mates! When done, press enter on an empty field',
     noopMsg: `You can invite team mates later by running ${cmd(

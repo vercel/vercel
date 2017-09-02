@@ -3,17 +3,17 @@ const chalk = require('chalk')
 
 // Utilities
 const wait = require('../../../../util/output/wait')
-const cfg = require('../../util/cfg')
 const info = require('../../../../util/output/info')
 const error = require('../../../../util/output/error')
 const { tick: tickChar } = require('../../../../util/output/chars')
 const table = require('../../../../util/output/table')
 
-module.exports = async function({ teams, token }) {
+module.exports = async function({ teams, config }) {
   const stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
-  let { user, currentTeam } = await cfg.read({ token })
+  let { user, currentTeam } = config.sh
   const accountIsCurrent = !currentTeam
+
   stopSpinner()
 
   if (accountIsCurrent) {

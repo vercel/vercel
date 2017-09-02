@@ -141,7 +141,7 @@ async function run({ token, config }) {
     case 'ls': {
       await list({
         teams,
-        token
+        config
       })
       break
     }
@@ -164,7 +164,7 @@ async function run({ token, config }) {
       await invite({
         teams,
         args,
-        token
+        config
       })
       break
     }
