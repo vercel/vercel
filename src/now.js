@@ -12,7 +12,6 @@ const mri = require('mri')
 
 // Utilities
 const error = require('./util/output/error')
-const effect = require('./util/output/effect')
 const param = require('./util/output/param')
 const getHelp = require('./get-help')
 const getWelcome = require('./get-welcome')
@@ -81,8 +80,6 @@ const main = async (argv_): Promise<number> => {
     }
   }
 
-  let initConfig = false
-  let initAuthConfig = false
   let configExists
 
   try {
@@ -129,7 +126,6 @@ const main = async (argv_): Promise<number> => {
     config = getDefaultCfg()
     try {
       configFiles.writeToConfigFile(config)
-      initConfig = true
     } catch (err) {
       console.error(
         error(
@@ -219,9 +215,9 @@ const main = async (argv_): Promise<number> => {
     }
   } else {
     authConfig = getDefaultAuthCfg()
+
     try {
       configFiles.writeToAuthConfigFile(authConfig)
-      initAuthConfig = true
     } catch (err) {
       console.error(
         error(
@@ -232,16 +228,6 @@ const main = async (argv_): Promise<number> => {
       )
       return 1
     }
-  }
-
-  if (initConfig || initAuthConfig) {
-    console.log(
-      effect(
-        `Initialized default config in "${initConfig && initAuthConfig
-          ? hp(NOW_DIR)
-          : hp(initConfig ? NOW_CONFIG_PATH : NOW_AUTH_CONFIG_PATH)}"`
-      )
-    )
   }
 
   // the context object to supply to the providers or the commands
