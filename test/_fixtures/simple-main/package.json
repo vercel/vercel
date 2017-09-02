@@ -1,0 +1,7 @@
+{
+  "name": "simple-with-main",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./index.js",
+  "dependencies": {}
+}
