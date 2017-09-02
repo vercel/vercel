@@ -23,6 +23,7 @@ const getNpmFiles = async dir => {
     quiet: true,
     strict: false
   })
+
   return getNpmFiles_(dir, pkg, nowConfig, { hasNowJson })
 }
 
@@ -38,6 +39,7 @@ test('`files`', async t => {
 test('`files` + `.*.swp` + `.npmignore`', async t => {
   let files = await getNpmFiles(fixture('files-in-package-ignore'))
   files = files.sort(alpha)
+
   t.is(files.length, 3)
   t.is(base(files[0]), 'files-in-package-ignore/build/a/b/c/d.js')
   t.is(base(files[1]), 'files-in-package-ignore/build/a/e.js')
@@ -47,15 +49,16 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
 test('`files` overrides `.gitignore`', async t => {
   let files = await getNpmFiles(fixture('files-overrides-gitignore'))
   files = files.sort(alpha)
-  t.is(files.length, 3)
+
+  t.is(files.length, 2)
   t.is(base(files[0]), 'files-overrides-gitignore/package.json')
   t.is(base(files[1]), 'files-overrides-gitignore/test.js')
-  t.is(base(files[2]), 'files-overrides-gitignore/test.json')
 })
 
 test('`now.files` overrides `.npmignore`', async t => {
   let files = await getNpmFiles(fixture('now-files-overrides-npmignore'))
   files = files.sort(alpha)
+
   t.is(files.length, 3)
   t.is(base(files[0]), 'now-files-overrides-npmignore/package.json')
   t.is(base(files[1]), 'now-files-overrides-npmignore/test.js')
@@ -65,6 +68,7 @@ test('`now.files` overrides `.npmignore`', async t => {
 test('simple', async t => {
   let files = await getNpmFiles(fixture('simple'))
   files = files.sort(alpha)
+
   t.is(files.length, 5)
   t.is(base(files[0]), 'simple/bin/test')
   t.is(base(files[1]), 'simple/index.js')
