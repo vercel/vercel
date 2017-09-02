@@ -1,4 +1,4 @@
-![now](https://github.com/zeit/art/blob/03c6da0aa9d7ed6ddda45019ba740ea2ca0831d3/now-cli/repo-banner.png?raw=true)
+![now](https://github.com/zeit/art/blob/a7867d60f54a41127023a8740a221921df309d24/now-cli/repo-banner.png?raw=true)
 
 [![Build Status](https://travis-ci.org/zeit/now-cli.svg?branch=master)](https://travis-ci.org/zeit/now-cli)
 [![Slack Channel](http://zeit-slackin.now.sh/badge.svg)](https://zeit.chat/)
