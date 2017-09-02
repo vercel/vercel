@@ -5,14 +5,12 @@ const path = require('path')
 const crossSpawn = require('cross-spawn')
 const test = require('ava')
 
-// Utilities
-const logo = require('../src/util/output/logo')
-
 test.serial('make binary', async t => {
   if (!process.env.CI) {
     t.true(true)
     return
   }
+
   const result = await spawn('npm', ['run', 'pack'])
   t.is(result.code, 0)
 })
@@ -24,19 +22,19 @@ const binary = {
 }[process.platform]
 
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
-const deployHelpMessage = `${logo} now [options] <command | path>`
+const deployHelpMessage = `To deploy, run in any directory of your choosing`
 
 test.serial('packed "now help" prints deploy help message', async t => {
   if (!process.env.CI) {
     t.true(true)
     return
   }
-  const result = await spawn(binaryPath, ['help'])
 
-  t.is(result.code, 0)
-  const stdout = result.stdout.split('\n')
+  const {stdout, code} = await spawn(binaryPath, ['help'])
+
+  t.is(code, 0)
   t.true(stdout.length > 1)
-  t.true(stdout[1].includes(deployHelpMessage))
+  t.true(stdout.includes(deployHelpMessage))
 })
 
 function spawn(command, args) {
