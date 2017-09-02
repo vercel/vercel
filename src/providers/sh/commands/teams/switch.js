@@ -4,24 +4,33 @@ const chalk = require('chalk')
 // Utilities
 const wait = require('../../../../util/output/wait')
 const listInput = require('../../../../util/input/list')
-const cfg = require('../../util/cfg')
 const exit = require('../../../../util/exit')
 const success = require('../../../../util/output/success')
 const info = require('../../../../util/output/info')
 const error = require('../../../../util/output/error')
 const param = require('../../../../util/output/param')
+const {writeToConfigFile} = require('../../../../util/config-files')
 
-async function updateCurrentTeam({ cfg, newTeam } = {}) {
-  delete newTeam.created
-  delete newTeam.creator_id
-  await cfg.merge({ currentTeam: newTeam })
+const updateCurrentTeam = async (config, newTeam) => {
+  if (newTeam) {
+    delete newTeam.created
+    delete newTeam.creator_id
+
+    config.sh.currentTeam = newTeam
+  } else {
+    delete config.sh.currentTeam
+  }
+
+  writeToConfigFile(config)
 }
 
-module.exports = async function({ teams, args, token }) {
+module.exports = async function({ teams, args, config }) {
   let stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
-  let { user, currentTeam } = await cfg.read({ token })
+
+  let { user, currentTeam } = config.sh
   const accountIsCurrent = !currentTeam
+
   stopSpinner()
 
   if (accountIsCurrent) {
@@ -32,19 +41,22 @@ module.exports = async function({ teams, args, token }) {
 
   if (args.length !== 0) {
     const desiredSlug = args[0]
-
     const newTeam = list.find(team => team.slug === desiredSlug)
+
     if (newTeam) {
-      await updateCurrentTeam({ cfg, newTeam })
+      await updateCurrentTeam(config, newTeam)
       success(`The team ${chalk.bold(newTeam.name)} is now active!`)
       return exit()
     }
+
     if (desiredSlug === user.username) {
       stopSpinner = wait('Saving')
-      await cfg.remove('currentTeam')
+      await updateCurrentTeam(config)
+
       stopSpinner()
       return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
     }
+
     error(`Could not find membership for team ${param(desiredSlug)}`)
     return exit(1)
   }
@@ -107,8 +119,10 @@ module.exports = async function({ teams, args, token }) {
       info('No changes made')
       return exit()
     }
+
     stopSpinner = wait('Saving')
-    await cfg.remove('currentTeam')
+    await updateCurrentTeam(config)
+
     stopSpinner()
     return success(`Your account (${chalk.bold(choice)}) is now active!`)
   }
@@ -119,8 +133,8 @@ module.exports = async function({ teams, args, token }) {
   }
 
   stopSpinner = wait('Saving')
-  await updateCurrentTeam({ cfg, newTeam })
-  stopSpinner()
+  await updateCurrentTeam(config, newTeam)
 
+  stopSpinner()
   success(`The team ${chalk.bold(newTeam.name)} is now active!`)
 }

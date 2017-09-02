@@ -106,11 +106,11 @@ const main = async ctx => {
     exit(0)
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {authConfig: { credentials }, config} = ctx
   const {token} = argv.token || credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, sh })
+    await run({ token, config })
   } catch (err) {
     if (err.userError) {
       error(err.message)
@@ -131,7 +131,8 @@ module.exports = async ctx => {
   }
 }
 
-async function run({ token, sh: { currentTeam } }) {
+async function run({ token, config }) {
+  const {currentTeam} = config.sh
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam })
   const args = argv._
 
@@ -149,7 +150,7 @@ async function run({ token, sh: { currentTeam } }) {
       await change({
         teams,
         args,
-        token
+        config
       })
       break
     }
