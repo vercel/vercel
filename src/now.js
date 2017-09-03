@@ -13,7 +13,6 @@ const mri = require('mri')
 // Utilities
 const error = require('./util/output/error')
 const param = require('./util/output/param')
-const getHelp = require('./get-help')
 const getWelcome = require('./get-welcome')
 const getNowDir = require('./get-now-dir')
 const getDefaultCfg = require('./get-default-cfg')
@@ -349,8 +348,8 @@ const main = async (argv_): Promise<number> => {
   }
 
   if (subcommand === 'help') {
-    console.log(getHelp(defaultProvider, providers))
-    return 0
+    subcommand = argv._[3] || 'deploy'
+    ctx.argv.push('-h')
   }
 
   try {
