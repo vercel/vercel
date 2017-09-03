@@ -122,7 +122,7 @@ const main = async (argv_) => {
       return
     }
   } else {
-    config = getDefaultCfg()
+    config = await getDefaultCfg()
     try {
       configFiles.writeToConfigFile(config)
     } catch (err) {
@@ -213,7 +213,7 @@ const main = async (argv_) => {
       return
     }
   } else {
-    authConfig = getDefaultAuthCfg()
+    authConfig = await getDefaultAuthCfg()
 
     try {
       configFiles.writeToAuthConfigFile(authConfig)
