@@ -6,7 +6,7 @@ const fetch = require('node-fetch')
 const repo = process.env.TRAVIS_REPO_SLUG
 const commit = process.env.TRAVIS_COMMIT
 const branch = process.env.TRAVIS_BRANCH
-const apiKey = process.env.SLACK_API_KEY
+const apiKey = process.env.SLACK_TOKEN
 const channel = process.env.SLACK_CHANNEL
 const githubToken = process.env.GITHUB_TOKEN
 
@@ -17,12 +17,12 @@ if (!/^zeit\//.test(repo)) {
 }
 
 if (!apiKey) {
-  console.log('$SLACKUP_TOKEN not found')
+  console.log('$SLACK_TOKEN not found')
   process.exit(0)
 }
 
 if (!channel) {
-  console.log('$SLACKUP_CHANNEL not found')
+  console.log('$SLACK_CHANNEL not found')
   process.exit(0)
 }
 
