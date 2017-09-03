@@ -5,6 +5,9 @@ const path = require('path')
 const crossSpawn = require('cross-spawn')
 const test = require('ava')
 
+// Utilities
+const logo = require('../src/util/output/logo')
+
 test.serial('make binary', async t => {
   if (!process.env.CI) {
     t.true(true)
@@ -22,7 +25,7 @@ const binary = {
 }[process.platform]
 
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
-const deployHelpMessage = `To deploy, run in any directory of your choosing`
+const deployHelpMessage = `${logo} now [options] <command | path>`
 
 test.serial('packed "now help" prints deploy help message', async t => {
   if (!process.env.CI) {
@@ -37,24 +40,22 @@ test.serial('packed "now help" prints deploy help message', async t => {
   t.true(stdout.includes(deployHelpMessage))
 })
 
-function spawn(command, args) {
-  return new Promise((resolve, reject) => {
-    const child = crossSpawn.spawn(command, args)
+const spawn = (command, args) => new Promise((resolve, reject) => {
+  const child = crossSpawn.spawn(command, args)
 
-    let stdout = ''
-    child.stdout.on('data', data => {
-      stdout += data
-    })
+  let stdout = ''
+  child.stdout.on('data', data => {
+    stdout += data
+  })
 
-    child.on('error', err => {
-      reject(err)
-    })
+  child.on('error', err => {
+    reject(err)
+  })
 
-    child.on('close', code => {
-      resolve({
-        code,
-        stdout
-      })
+  child.on('close', code => {
+    resolve({
+      code,
+      stdout
     })
   })
-}
+})
