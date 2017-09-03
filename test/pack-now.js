@@ -8,16 +8,6 @@ const test = require('ava')
 // Utilities
 const logo = require('../src/util/output/logo')
 
-test.serial('make binary', async t => {
-  if (!process.env.CI) {
-    t.true(true)
-    return
-  }
-
-  const result = await spawn('npm', ['run', 'pack'])
-  t.is(result.code, 0)
-})
-
 const binary = {
   darwin: 'now-macos',
   linux: 'now-linux',

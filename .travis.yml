@@ -3,9 +3,11 @@
   "node_js": [
     "node"
   ],
+  "before_script": [
+    "yarn run pack"
+  ],
   "after_success": [
-    'npm install -g slackup',
-    'npm run pack',
+    'yarn global add slackup',
     './scripts/slack.js'
   ],
   "deploy": {
