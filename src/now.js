@@ -242,7 +242,7 @@ const main = async (argv_) => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = chalk.grey(join('~', basename(NOW_DIR)))
-    console.log(info(`Your credentials and configuration were migrated to ${directory}.`))
+    console.log(info(`Your credentials and configuration were migrated to ${directory}`))
   }
 
   // the context object to supply to the providers or the commands
