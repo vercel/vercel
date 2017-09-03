@@ -162,7 +162,7 @@ directory upon first running.
 There, two files can be found:
 
 - `config.json`
-- `credentials.json`
+- `auth.json`
 
 ## Implementation notes
 

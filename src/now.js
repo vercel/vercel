@@ -2,17 +2,19 @@
 //@flow
 
 // Native
-const { join } = require('path')
+const { join, basename } = require('path')
 
 // Packages
 const debug = require('debug')('now:main')
 const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
+const chalk = require('chalk')
 
 // Utilities
 const error = require('./util/output/error')
 const param = require('./util/output/param')
+const info = require('./util/output/info')
 const getWelcome = require('./get-welcome')
 const getNowDir = require('./get-now-dir')
 const getDefaultCfg = require('./get-default-cfg')
@@ -79,6 +81,7 @@ const main = async (argv_) => {
     }
   }
 
+  let migrated = false
   let configExists
 
   try {
@@ -122,7 +125,11 @@ const main = async (argv_) => {
       return
     }
   } else {
-    config = getDefaultCfg()
+    const results = await getDefaultCfg()
+
+    config = results.config
+    migrated = results.migrated
+
     try {
       configFiles.writeToConfigFile(config)
     } catch (err) {
@@ -213,7 +220,10 @@ const main = async (argv_) => {
       return
     }
   } else {
-    authConfig = getDefaultAuthCfg()
+    const results = await getDefaultAuthCfg()
+
+    authConfig = results.config
+    migrated = results.migrated
 
     try {
       configFiles.writeToAuthConfigFile(authConfig)
@@ -227,6 +237,12 @@ const main = async (argv_) => {
       )
       return
     }
+  }
+
+  // Let the user know we migrated the config
+  if (migrated) {
+    const directory = chalk.grey(join('~', basename(NOW_DIR)))
+    console.log(info(`Your credentials and configuration were migrated to ${directory}`))
   }
 
   // the context object to supply to the providers or the commands
