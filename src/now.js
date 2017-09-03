@@ -305,13 +305,6 @@ const main = async (argv_): Promise<number> => {
     }
   }
 
-  // we special case help because it's a generic command with
-  // information about all providers
-  if (!suppliedProvider && argv.help) {
-    console.log(getHelp(defaultProvider, providers))
-    return 0
-  }
-
   const provider: Object = providers[suppliedProvider || defaultProvider]
 
   let subcommand

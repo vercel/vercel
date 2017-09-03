@@ -70,7 +70,7 @@ const mriOpts = {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo()} now`)} [options] <command | path>
+  ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
 
@@ -98,6 +98,10 @@ const help = () => {
       switch                           Switches between teams and your account
       login                            Login into your account or creates a new one
       logout                           Logout from your account
+
+    ${chalk.dim('Providers')}
+
+      sh, aws, gcp         [cmd]       Deploy using a different provider
 
   ${chalk.dim('Options:')}
 

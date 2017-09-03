@@ -88,7 +88,7 @@ const main = async ctx => {
   skipConfirmation = argv.yes || false
   ids = argv._
 
-  if (argv.help || ids.length === 0) {
+  if (argv.help || ids.length === 0 || ids[0] === 'help') {
     help()
     process.exit(0)
   }

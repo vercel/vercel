@@ -90,7 +90,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
   deploymentIdOrURL = argv._[0]
 
-  if (argv.help || !deploymentIdOrURL) {
+  if (argv.help || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help()
     process.exit(0)
   }

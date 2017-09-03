@@ -73,7 +73,7 @@ const main = async ctx => {
   debug = argv.debug
   apiUrl = argv.apiUrl || 'https://api.zeit.co'
 
-  if (argv.help) {
+  if (argv.help || app === 'help') {
     help()
     process.exit(0)
   }

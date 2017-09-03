@@ -50,7 +50,9 @@ const main = async ctx => {
   apiUrl = argv.url || 'https://api.zeit.co'
   endpoint = apiUrl + '/www/user/tokens/'
 
-  if (argv.help) {
+  argv._ = argv._.slice(1)
+
+  if (argv.help || argv._[0] === 'help') {
     help()
     process.exit(0)
   }

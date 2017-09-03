@@ -86,7 +86,7 @@ const main = async ctx => {
   debug = argv.debug
   apiUrl = argv.url || 'https://api.zeit.co'
 
-  if (argv.help) {
+  if (argv.help || argv._[0] === 'help') {
     help()
     exit(0)
   }

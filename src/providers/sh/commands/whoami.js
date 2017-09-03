@@ -47,12 +47,14 @@ const main = async ctx => {
     }
   })
 
+  argv._ = argv._.slice(1)
+
   if (!ctx.authConfig.credentials.length) {
     console.log(getWelcome('sh', providers))
     return 0
   }
 
-  if (argv.help) {
+  if (argv.help || argv._[0] === 'help') {
     help()
     process.exit(0)
   }
