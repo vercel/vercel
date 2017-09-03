@@ -6,6 +6,8 @@ const { homedir } = require('os')
 const { readJSON } = require('fs-extra')
 
 module.exports = async () => {
+  let migrated = false
+
   const config = {
     _: 'This is your Now config file. See `now config help`. More: https://git.io/v5ECz'
   }
@@ -17,7 +19,8 @@ module.exports = async () => {
     delete sh.token
 
     Object.assign(config, { sh })
+    migrated = true
   } catch (err) {}
 
-  return config
+  return {config, migrated}
 }

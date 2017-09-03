@@ -6,6 +6,8 @@ const { homedir } = require('os')
 const { readJSON } = require('fs-extra')
 
 module.exports = async () => {
+  let migrated = false
+
   const config = {
     _: 'This is your Now credentials file. DON\'T SHARE! More: https://git.io/v5ECz',
     credentials: []
@@ -18,7 +20,9 @@ module.exports = async () => {
       provider: 'sh',
       token
     })
+
+    migrated = true
   } catch (err) {}
 
-  return config
+  return {config, migrated}
 }

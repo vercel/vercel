@@ -1,7 +1,10 @@
+// Packages
+const { gray, bold } = require('chalk')
+
+// Utilities
 const cmd = require('./util/output/cmd')
 const li = require('./util/output/list-item')
 const link = require('./util/output/link')
-const { gray, bold } = require('chalk')
 
 // prettier-disable
 const getWelcome = (currentProvider, providers) =>
