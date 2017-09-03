@@ -28,7 +28,7 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 
 const GLOBAL_COMMANDS = new Set(['help'])
 
-const main = async (argv_): Promise<number> => {
+const main = async (argv_) => {
   await checkForUpdates()
 
   const argv = mri(argv_, {
@@ -64,7 +64,7 @@ const main = async (argv_): Promise<number> => {
           err.message
       )
     )
-    return 1
+    return
   }
 
   if (!nowDirExists) {
@@ -91,7 +91,7 @@ const main = async (argv_): Promise<number> => {
           err.message
       )
     )
-    return 1
+    return
   }
 
   let config
@@ -107,7 +107,7 @@ const main = async (argv_): Promise<number> => {
             err.message
         )
       )
-      return 1
+      return
     }
 
     try {
@@ -119,7 +119,7 @@ const main = async (argv_): Promise<number> => {
             err.message
         )
       )
-      return 1
+      return
     }
   } else {
     config = getDefaultCfg()
@@ -133,7 +133,7 @@ const main = async (argv_): Promise<number> => {
             err.message
         )
       )
-      return 1
+      return
     }
   }
 
@@ -149,7 +149,7 @@ const main = async (argv_): Promise<number> => {
           err.message
       )
     )
-    return 1
+    return
   }
 
   let authConfig = null
@@ -165,7 +165,7 @@ const main = async (argv_): Promise<number> => {
             err.message
         )
       )
-      return 1
+      return
     }
 
     try {
@@ -178,7 +178,7 @@ const main = async (argv_): Promise<number> => {
               'No `credentials` list found inside'
           )
         )
-        return 1
+        return
       }
 
       for (const [i, { provider }] of authConfig.credentials.entries()) {
@@ -189,7 +189,7 @@ const main = async (argv_): Promise<number> => {
                 `Missing \`provider\` key in entry with index ${i}`
             )
           )
-          return 1
+          return
         }
 
         if (!(provider in providers)) {
@@ -199,7 +199,7 @@ const main = async (argv_): Promise<number> => {
                 `Unknown provider "${provider}"`
             )
           )
-          return 1
+          return
         }
       }
     } catch (err) {
@@ -210,7 +210,7 @@ const main = async (argv_): Promise<number> => {
           )}": ` + err.message
         )
       )
-      return 1
+      return
     }
   } else {
     authConfig = getDefaultAuthCfg()
@@ -225,7 +225,7 @@ const main = async (argv_): Promise<number> => {
             err.message
         )
       )
-      return 1
+      return
     }
   }
 
@@ -250,7 +250,7 @@ const main = async (argv_): Promise<number> => {
           `An unexpected error occurred in config ${subcommand}: ${err.stack}`
         )
       )
-      return 1
+      return
     }
   }
 
@@ -269,7 +269,7 @@ const main = async (argv_): Promise<number> => {
             'Both a directory and a provider are known'
         )
       )
-      return 1
+      return
     }
 
     suppliedProvider = targetOrSubcommand
@@ -299,12 +299,13 @@ const main = async (argv_): Promise<number> => {
               `"${NOW_CONFIG_PATH}" is not a valid provider`
           )
         )
-        return 1
+        return
       }
     }
   }
 
-  const provider: Object = providers[suppliedProvider || defaultProvider]
+  const providerName = suppliedProvider || defaultProvider
+  const provider: Object = providers[providerName]
 
   let subcommand
 
@@ -324,7 +325,7 @@ const main = async (argv_): Promise<number> => {
             'Both a directory and a subcommand are known'
         )
       )
-      return 1
+      return
     }
 
     if (subcommandExists) {
@@ -353,14 +354,17 @@ const main = async (argv_): Promise<number> => {
   }
 
   try {
-    return provider[subcommand](ctx)
+    await provider[subcommand](ctx)
   } catch (err) {
     console.error(
       error(
         `An unexpected error occurred in provider ${subcommand}: ${err.stack}`
       )
     )
-    return 1
+  }
+
+  if (providerName === 'gcp') {
+    process.exit()
   }
 }
 

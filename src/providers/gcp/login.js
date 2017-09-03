@@ -57,220 +57,219 @@ const serverListen = ({ server, port }) => {
   })
 }
 
-function login(ctx) {
-  return new Promise(async resolve => {
-    let credentialsIndex = ctx.authConfig.credentials.findIndex(
-      cred => cred.provider === 'gcp'
-    )
+const login = ctx => new Promise(async resolve => {
+  let credentialsIndex = ctx.authConfig.credentials.findIndex(
+    cred => cred.provider === 'gcp'
+  )
 
-    if (credentialsIndex !== -1) {
-      // the user is already logged into gcp
-      let yes
-      try {
-        yes = await promptBool(
-          info(
-            `You already have GCP credentials – this will replace them.`,
-            `  Do you want to continue?`
-          )
+  if (credentialsIndex !== -1) {
+    // the user is already logged into gcp
+    let yes
+    try {
+      yes = await promptBool(
+        info(
+          `You already have GCP credentials – this will replace them.`,
+          `  Do you want to continue?`
         )
-      } catch (err) {
-        // promptBool only `reject`s upon user abort
-        // let's set it to false just to make it clear
-        yes = false
-      }
-
-      if (!yes) {
-        console.log(aborted('No changes made.'))
-        resolve(0)
-      }
+      )
+    } catch (err) {
+      // promptBool only `reject`s upon user abort
+      // let's set it to false just to make it clear
+      yes = false
     }
 
-    const ports = [...PORTS]
-    const server = createServer(async function handleRequest(req, res) {
-      const { query: { error: _error, code } } = parseUrl(req.url, true)
+    if (!yes) {
+      console.log(aborted('No changes made.'))
+      return
+    }
+  }
 
-      if (!_error && !code) {
-        // the browser requesting the favicon etc
-        res.end('')
-        return
+  const ports = [...PORTS]
+  const server = createServer(async function handleRequest(req, res) {
+    const { query: { error: _error, code } } = parseUrl(req.url, true)
+
+    if (!_error && !code) {
+      // the browser requesting the favicon etc
+      res.end('')
+      return
+    }
+
+    res.setHeader('content-type', 'text/html')
+    res.end(
+      `<meta charset="UTF-8">` +
+        `<h2>That's it – you can now return to your terminal!</h2>`
+    )
+
+    if (_error) {
+      // the user didn't give us permission
+      console.log(aborted(`No changes made.`))
+      return
+    }
+
+    if (code) {
+      // that's right after the user gave us permission
+      // let's exchange the authorization code for an access + refresh codes
+
+      const body = formUrlEncode({
+        code,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        redirect_uri: `http://${req.headers.host}`,
+        grant_type: GRANT_TYPE
+      })
+
+      const opts = {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'content-length': body.length // just in case
+        },
+        body: body
       }
 
-      res.setHeader('content-type', 'text/html')
-      res.end(
-        `<meta charset="UTF-8">` +
-          `<h2>That's it – you can now return to your terminal!</h2>`
-      )
+      let accessToken
+      let expiresIn
+      let refreshToken
+      let response
 
-      if (_error) {
-        // the user didn't give us permission
-        console.log(aborted(`No changes made.`))
-        return resolve(1)
-      }
-
-      if (code) {
-        // that's right after the user gave us permission
-        // let's exchange the authorization code for an access + refresh codes
-
-        const body = formUrlEncode({
-          code,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-          redirect_uri: `http://${req.headers.host}`,
-          grant_type: GRANT_TYPE
-        })
-
-        const opts = {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-            'content-length': body.length // just in case
-          },
-          body: body
-        }
-
-        let accessToken
-        let expiresIn
-        let refreshToken
-        let response
-
-        try {
-          response = await fetch(TOKEN_URL, opts)
-          if (response.status !== 200) {
-            debug(
-              `HTTP ${response.status} when trying to exchange the authorization code`,
-              await response.text()
-            )
-            console.log(
-              error(
-                `Got unexpected status code from Google: ${response.status}`
-              )
-            )
-            return resolve(1)
-          }
-        } catch (err) {
+      try {
+        response = await fetch(TOKEN_URL, opts)
+        if (response.status !== 200) {
           debug(
-            'unexpected error occurred while making the request to exchange the authorization code',
-            err.message
-          )
-          console.log(
-            error(
-              'Unexpected error occurred while authenthing with Google',
-              err.stack
-            )
-          )
-          return resolve(1)
-        }
-
-        try {
-          const json = await response.json()
-          accessToken = json.access_token
-          expiresIn = json.expires_in
-          refreshToken = json.refresh_token
-        } catch (err) {
-          debug(
-            'unexpected error occurred while parsing the JSON from the exchange request',
-            err.stack,
-            'got',
+            `HTTP ${response.status} when trying to exchange the authorization code`,
             await response.text()
           )
           console.log(
             error(
-              'Unexpected error occurred while parsing the JSON response from Google',
-              err.message
+              `Got unexpected status code from Google: ${response.status}`
             )
           )
-          resolve(1)
+          return
         }
-
-        const now = new Date()
-        // `expires_in` is 3600 seconds
-        const expiresAt = now.setSeconds(now.getSeconds() + expiresIn)
-        ctx = saveCredentials({
-          ctx,
-          accessToken,
-          expiresAt,
-          refreshToken,
-          credentialsIndex
-        })
-
-        const projects = await listProjects(ctx)
-        const message = 'Select a project:'
-        const choices = projects.map(project => {
-          return {
-            name: `${project.name} (${project.projectId})`,
-            value: project.projectId,
-            short: project.name
-          }
-        })
-
-        const projectId = await promptList({
-          message,
-          choices,
-          separator: false
-        })
-
-        const { projectId: id, name } = projects.find(
-          p => p.projectId === projectId
+      } catch (err) {
+        debug(
+          'unexpected error occurred while making the request to exchange the authorization code',
+          err.message
         )
-
-        credentialsIndex = ctx.authConfig.credentials.findIndex(
-          cred => cred.provider === 'gcp'
-        )
-        ctx.authConfig.credentials[credentialsIndex].project = {
-          id,
-          name
-        }
-
-        writeToAuthConfigFile(ctx.authConfig)
-
         console.log(
-          ready(
-            `Credentials and project saved in ${param(humanize(getNowDir()))}.`
+          error(
+            'Unexpected error occurred while authenthing with Google',
+            err.stack
           )
         )
-        resolve(1)
+        return
       }
-    })
 
-    let shouldRetry = true
-    let portToTry = ports.shift()
-
-    while (shouldRetry) {
       try {
-        await serverListen({ server, port: portToTry })
-        shouldRetry = false // done, listening
+        const json = await response.json()
+        accessToken = json.access_token
+        expiresIn = json.expires_in
+        refreshToken = json.refresh_token
       } catch (err) {
-        if (ports.length) {
-          // let's try again
-          portToTry = ports.shift()
-        } else {
-          // we're out of ports to try
-          shouldRetry = false
-        }
+        debug(
+          'unexpected error occurred while parsing the JSON from the exchange request',
+          err.stack,
+          'got',
+          await response.text()
+        )
+        console.log(
+          error(
+            'Unexpected error occurred while parsing the JSON response from Google',
+            err.message
+          )
+        )
+        return
       }
-    }
 
-    if (!server.listening) {
+      const now = new Date()
+      // `expires_in` is 3600 seconds
+      const expiresAt = now.setSeconds(now.getSeconds() + expiresIn)
+      ctx = saveCredentials({
+        ctx,
+        accessToken,
+        expiresAt,
+        refreshToken,
+        credentialsIndex
+      })
+
+      const projects = await listProjects(ctx)
+      const message = 'Select a project:'
+      const choices = projects.map(project => {
+        return {
+          name: `${project.name} (${project.projectId})`,
+          value: project.projectId,
+          short: project.name
+        }
+      })
+
+      const projectId = await promptList({
+        message,
+        choices,
+        separator: false
+      })
+
+      const { projectId: id, name } = projects.find(
+        p => p.projectId === projectId
+      )
+
+      credentialsIndex = ctx.authConfig.credentials.findIndex(
+        cred => cred.provider === 'gcp'
+      )
+      ctx.authConfig.credentials[credentialsIndex].project = {
+        id,
+        name
+      }
+
+      writeToAuthConfigFile(ctx.authConfig)
+
       console.log(
-        error(
-          `Make sure you have one of the following TCP ports available:`,
-          `  ${PORTS.join(', ').replace()}`
+        ready(
+          `Credentials and project saved in ${param(humanize(getNowDir()))}.`
         )
       )
-      return resolve(1)
     }
 
-    const query = {
-      client_id: CLIENT_ID,
-      redirect_uri: `http://localhost:${portToTry}`,
-      response_type: RESPONSE_TYPE,
-      scope: SCOPES.join(' '),
-      access_type: ACCESS_TYPE,
-      prompt: PROMPT_CONSENT
-    }
-
-    opn(USER_URL + '?' + encodeQuery(query))
+    resolve()
   })
-}
+
+  let shouldRetry = true
+  let portToTry = ports.shift()
+
+  while (shouldRetry) {
+    try {
+      await serverListen({ server, port: portToTry })
+      shouldRetry = false // done, listening
+    } catch (err) {
+      if (ports.length) {
+        // let's try again
+        portToTry = ports.shift()
+      } else {
+        // we're out of ports to try
+        shouldRetry = false
+      }
+    }
+  }
+
+  if (!server.listening) {
+    console.log(
+      error(
+        `Make sure you have one of the following TCP ports available:`,
+        `  ${PORTS.join(', ').replace()}`
+      )
+    )
+    return
+  }
+
+  const query = {
+    client_id: CLIENT_ID,
+    redirect_uri: `http://localhost:${portToTry}`,
+    response_type: RESPONSE_TYPE,
+    scope: SCOPES.join(' '),
+    access_type: ACCESS_TYPE,
+    prompt: PROMPT_CONSENT
+  }
+
+  opn(USER_URL + '?' + encodeQuery(query))
+})
 
 module.exports = login
