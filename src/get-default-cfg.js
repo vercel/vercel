@@ -7,7 +7,7 @@ const { readJSON } = require('fs-extra')
 
 module.exports = async () => {
   const config = {
-    _: 'This is your Now config file. See `now config help`. More: https://git.io/v7dds'
+    _: 'This is your Now config file. See `now config help`. More: https://git.io/v5ECz'
   }
 
   try {

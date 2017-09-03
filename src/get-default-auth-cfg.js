@@ -7,7 +7,7 @@ const { readJSON } = require('fs-extra')
 
 module.exports = async () => {
   const config = {
-    _: 'This is your Now credentials file. DON\'T SHARE! More: https://git.io/v7dds',
+    _: 'This is your Now credentials file. DON\'T SHARE! More: https://git.io/v5ECz',
     credentials: []
   }
 
