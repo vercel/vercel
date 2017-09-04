@@ -364,7 +364,7 @@ const main = async (argv_) => {
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider
-  if (!authConfig.credentials.length && !ctx.argv.includes('-h')) {
+  if (!authConfig.credentials.length && !ctx.argv.includes('-h') && !ctx.argv.includes('-t')) {
     console.log(info(`No existing credentials found. Please log in:`))
 
     subcommand = 'login'
