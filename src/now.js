@@ -364,9 +364,13 @@ const main = async (argv_) => {
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider
-  if (!authConfig.credentials.length) {
+  if (!authConfig.credentials.length && !ctx.argv.includes('-h')) {
     subcommand = 'login'
-    ctx.argv.push('login')
+    ctx.argv[2] = 'login'
+
+    // Ensure that sub commands lead to login as well, if
+    // no credentials are defined
+    ctx.argv = ctx.argv.splice(0, 3)
   }
 
   try {
