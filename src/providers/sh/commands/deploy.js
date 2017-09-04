@@ -268,8 +268,8 @@ async function main(ctx) {
   }
 
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const { authConfig: { credentials }, config: { sh } } = ctx
+  const { token } = argv.token || credentials.find(item => item.provider === 'sh')
   const config = sh
 
   alwaysForwardNpm = config.forwardNpm
