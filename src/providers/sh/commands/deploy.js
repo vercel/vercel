@@ -262,11 +262,11 @@ async function main(ctx) {
   apiUrl = argv.url || 'https://api.zeit.co'
   isTTY = process.stdout.isTTY
   quiet = !isTTY
+
   if (argv.h || argv.help) {
     help()
     return 0
   }
-
 
   const { authConfig: { credentials }, config: { sh } } = ctx
   const { token } = argv.token || credentials.find(item => item.provider === 'sh')
