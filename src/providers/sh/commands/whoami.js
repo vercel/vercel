@@ -7,8 +7,6 @@ const chalk = require('chalk')
 // Utilities
 const logo = require('../../../util/output/logo')
 const { handleError } = require('../util/error')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const help = () => {
   console.log(`
@@ -48,11 +46,6 @@ const main = async ctx => {
   })
 
   argv._ = argv._.slice(1)
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   if (argv.help || argv._[0] === 'help') {
     help()

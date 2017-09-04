@@ -15,8 +15,6 @@ const success = require('../../../util/output/success')
 const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
 const { handleError } = require('../util/error')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const { bold } = chalk
 
@@ -75,11 +73,6 @@ const main = async ctx => {
       token: 't'
     }
   })
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   argv._ = argv._.slice(1)
 

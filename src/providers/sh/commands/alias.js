@@ -20,8 +20,6 @@ const exit = require('../../../util/exit')
 const info = require('../../../util/output/info')
 const logo = require('../../../util/output/logo')
 const promptBool = require('../../../util/input/prompt-bool')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const grayWidth = 10
 const underlineWidth = 11
@@ -127,11 +125,6 @@ const main = async ctx => {
       token: 't'
     }
   })
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   argv._ = argv._.slice(1)
   subcommand = argv._[0]

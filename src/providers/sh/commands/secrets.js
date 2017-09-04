@@ -12,8 +12,6 @@ const { handleError, error } = require('../util/error')
 const NowSecrets = require('../util/secrets')
 const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const help = () => {
   console.log(`
@@ -84,11 +82,6 @@ const main = async ctx => {
       token: 't'
     }
   })
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   argv._ = argv._.slice(1)
 

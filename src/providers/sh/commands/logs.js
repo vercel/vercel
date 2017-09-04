@@ -15,8 +15,6 @@ const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const { compare, deserialize } = require('../util/logs')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const help = () => {
   console.log(`
@@ -81,11 +79,6 @@ const main = async ctx => {
       query: 'q'
     }
   })
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   argv._ = argv._.slice(1)
   deploymentIdOrURL = argv._[0]

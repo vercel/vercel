@@ -33,7 +33,7 @@ const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 
 const mriOpts = {
-  string: ['config', 'token', 'name', 'alias', 'session-affinity'],
+  string: ['token', 'name', 'alias', 'session-affinity'],
   boolean: [
     'help',
     'version',
@@ -51,7 +51,6 @@ const mriOpts = {
     env: 'e',
     dotenv: 'E',
     help: 'h',
-    config: 'c',
     debug: 'd',
     version: 'v',
     force: 'f',
@@ -268,25 +267,12 @@ async function main(ctx) {
     return 0
   }
 
-  let { token } =
-    ctx.authConfig.credentials.find(c => c.provider === 'sh') || {}
 
-  if (!token) {
-    // node file sh [...]
-    const sh = argv[2] === 'sh'
-    const _cmd = `now ${sh ? 'sh ' : ''}login`
-    console.log(error(`You're not logged in! Please run ${cmd(_cmd)}`))
-    return 1
-  }
-
-  const config = ctx.config.sh
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const config = sh
 
   alwaysForwardNpm = config.forwardNpm
-
-  if (argv.config) {
-    // TODO enable this
-    // cfg.setConfigFile(argv.config)
-  }
 
   try {
     return sync({ token, config })
