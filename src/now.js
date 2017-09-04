@@ -369,14 +369,23 @@ const main = async (argv_) => {
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !ctx.argv.includes('-t') && !ctx.argv.includes('--token')
   ) {
-    console.log(info(`No existing credentials found. Please log in:`))
+    // $FlowFixMe
+    const { isTTY } = process.stdout
 
-    subcommand = 'login'
-    ctx.argv[2] = 'login'
+    if (isTTY) {
+      console.log(info(`No existing credentials found. Please log in:`))
 
-    // Ensure that sub commands lead to login as well, if
-    // no credentials are defined
-    ctx.argv = ctx.argv.splice(0, 3)
+      subcommand = 'login'
+      ctx.argv[2] = 'login'
+
+      // Ensure that sub commands lead to login as well, if
+      // no credentials are defined
+      ctx.argv = ctx.argv.splice(0, 3)
+    } else {
+      console.log(error('No existing credentials found. Please ' +
+      '`now login` to log in or pass `--token`'))
+      process.exit(1)
+    }
   }
 
   try {
