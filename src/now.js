@@ -382,8 +382,8 @@ const main = async (argv_) => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
-      console.log(error(`No existing credentials found. Please ` +
-      `use ${chalk.grey('`now login`')} to log in or pass ${chalk.grey('`--token`')}`))
+      console.log(error('No existing credentials found. Please ' +
+      '`now login` to log in or pass `--token`'))
       process.exit(1)
     }
   }
