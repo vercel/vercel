@@ -15,7 +15,6 @@ const chalk = require('chalk')
 const error = require('./util/output/error')
 const param = require('./util/output/param')
 const info = require('./util/output/info')
-const getWelcome = require('./get-welcome')
 const getNowDir = require('./get-now-dir')
 const getDefaultCfg = require('./get-default-cfg')
 const getDefaultAuthCfg = require('./get-default-auth-cfg')
@@ -358,15 +357,22 @@ const main = async (argv_) => {
     subcommand = 'deploy'
   }
 
-  if (subcommand === 'deploy' && !authConfig.credentials.length) {
-    debug('subcommand is deploy, but user has no credentials')
-    console.log(getWelcome(provider, providers))
-    return 0
-  }
-
   if (subcommand === 'help') {
     subcommand = argv._[3] || 'deploy'
     ctx.argv.push('-h')
+  }
+
+  // If no credentials are set at all, prompt for
+  // login to the .sh provider
+  if (!authConfig.credentials.length && !ctx.argv.includes('-h')) {
+    console.log(info(`No existing credentials found. Please log in:`))
+
+    subcommand = 'login'
+    ctx.argv[2] = 'login'
+
+    // Ensure that sub commands lead to login as well, if
+    // no credentials are defined
+    ctx.argv = ctx.argv.splice(0, 3)
   }
 
   try {

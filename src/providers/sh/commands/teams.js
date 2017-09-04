@@ -14,8 +14,6 @@ const list = require('./teams/list')
 const add = require('./teams/add')
 const change = require('./teams/switch')
 const invite = require('./teams/invite')
-const getWelcome = require('../../../get-welcome')
-const providers = require('../../')
 
 const help = () => {
   console.log(`
@@ -83,11 +81,6 @@ const main = async ctx => {
       switch: 'change'
     }
   })
-
-  if (!ctx.authConfig.credentials.length) {
-    console.log(getWelcome('sh', providers))
-    return 0
-  }
 
   debug = argv.debug
   apiUrl = argv.url || 'https://api.zeit.co'
