@@ -136,7 +136,7 @@ module.exports = async function(
       } catch (err) {
         stopSpinner()
         eraseLines(emails.length + 2)
-        error(err.message)
+        console.error(error(err.message))
         hasError = true
         for (const email of emails) {
           console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)

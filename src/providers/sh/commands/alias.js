@@ -143,9 +143,9 @@ const main = async ctx => {
     await run({ token, sh })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err}\n${err.stack}`)
+      console.error(error(`Unknown error: ${err}\n${err.stack}`))
     }
 
     exit(1)
@@ -175,7 +175,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           e => e.uid === argv._[1] || e.alias === argv._[1]
         )
         if (!item || !item.rules) {
-          error(`Could not match path alias for: ${argv._[1]}`)
+          console.error(error(`Could not match path alias for: ${argv._[1]}`))
           return exit(1)
         }
 
@@ -210,9 +210,9 @@ async function run({ token, sh: { currentTeam, user } }) {
         }
         break
       } else if (args.length !== 0) {
-        error(
+        console.error(error(
           `Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`
-        )
+        ))
         return exit(1)
       }
 
@@ -313,11 +313,11 @@ async function run({ token, sh: { currentTeam, user } }) {
       }
 
       if (args.length !== 1) {
-        error(
+        console.error(error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
             '`now alias rm <id>`'
           )}`
-        )
+        ))
         return exit(1)
       }
 
@@ -350,7 +350,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           )} removed [${elapsed}]`
         )
       } catch (err) {
-        error(err)
+        console.error(error(err))
         exit(1)
       }
 
@@ -363,11 +363,11 @@ async function run({ token, sh: { currentTeam, user } }) {
         break
       }
       if (args.length !== 2) {
-        error(
+        console.error(error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
             '`now alias set <id> <domain>`'
           )}`
-        )
+        ))
         return exit(1)
       }
       await alias.set(
@@ -424,11 +424,11 @@ async function run({ token, sh: { currentTeam, user } }) {
           user
         )
       } else if (argv._.length >= 3) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         help()
         exit(1)
       } else {
-        error('Please specify a valid subcommand: ls | set | rm')
+        console.error(error('Please specify a valid subcommand: ls | set | rm'))
         help()
         exit(1)
       }

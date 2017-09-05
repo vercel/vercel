@@ -130,9 +130,9 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
-      )
+      ))
       return exit(1)
     }
 
@@ -186,11 +186,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     }
   } else if (subcommand === 'create') {
     if (args.length !== 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now certs create <cn>`'
         )}`
-      )
+      ))
       return exit(1)
     }
     const cn = args[0]
@@ -199,11 +199,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     if (argv.crt || argv.key || argv.ca) {
       // Issue a custom certificate
       if (!argv.crt || !argv.key) {
-        error(
+        console.error(error(
           `Missing required arguments for a custom certificate entry. Usage: ${chalk.cyan(
             '`now certs create --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`'
           )}`
-        )
+        ))
         return exit(1)
       }
 
@@ -228,11 +228,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     )
   } else if (subcommand === 'renew') {
     if (args.length !== 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now certs renew <id | cn>`'
         )}`
-      )
+      ))
       return exit(1)
     }
 
@@ -246,7 +246,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     )
 
     if (!yes) {
-      error('User abort')
+      console.error(error('User abort'))
       return exit(0)
     }
 
@@ -259,11 +259,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     )
   } else if (subcommand === 'replace') {
     if (!argv.crt || !argv.key) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`'
         )}`
-      )
+      ))
       return exit(1)
     }
 
@@ -280,7 +280,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       'The following certificate will be replaced permanently\n'
     )
     if (!yes) {
-      error('User abort')
+      console.error(error('User abort'))
       return exit(0)
     }
 
@@ -293,11 +293,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     )
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now certs rm <id | cn>`'
         )}`
-      )
+      ))
       return exit(1)
     }
 
@@ -310,7 +310,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       'The following certificate will be removed permanently\n'
     )
     if (!yes) {
-      error('User abort')
+      console.error(error('User abort'))
       return exit(0)
     }
 
@@ -322,9 +322,9 @@ async function run({ token, sh: { currentTeam, user } }) {
       )} ${chalk.gray(`(${cert.uid})`)} removed ${chalk.gray(`[${elapsed}]`)}`
     )
   } else {
-    error(
+    console.error(error(
       'Please specify a valid subcommand: ls | create | renew | replace | rm'
-    )
+    ))
     help()
     exit(1)
   }
@@ -371,11 +371,11 @@ async function getCertIdCn(certs, idOrCn, currentTeam, user) {
   })[0]
 
   if (!thecert) {
-    error(
+    console.error(error(
       `No certificate found by id or cn "${idOrCn}" under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )}`
-    )
+    ))
     return null
   }
 

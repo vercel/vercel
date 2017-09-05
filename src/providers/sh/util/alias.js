@@ -653,9 +653,9 @@ module.exports = class Alias extends Now {
 
         if (!domainInfo.verified) {
           const tld = param(`.${parsed.tld}`)
-          error(
+          console.error(error(
             'The nameservers are pending propagation. Please try again shortly'
-          )
+          ))
           info(
             `The ${tld} servers might take some extra time to reflect changes`
           )

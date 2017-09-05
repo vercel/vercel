@@ -14,10 +14,9 @@ const success = require('../../../../util/output/success')
 const wait = require('../../../../util/output/wait')
 const { tick } = require('../../../../util/output/chars')
 const rightPad = require('../../../../util/output/right-pad')
+const error = require('../../../../util/output/error')
 
-function expDateMiddleware(data) {
-  return data
-}
+const expDateMiddleware = data => data
 
 module.exports = async function({
   creditCards,
@@ -205,7 +204,7 @@ module.exports = async function({
           if (err.message === 'USER_ABORT') {
             process.exit(1)
           } else {
-            console.error(err)
+            console.error(error(err))
           }
         }
       }

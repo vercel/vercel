@@ -15,6 +15,7 @@ const {
   readAuthConfigFile,
   writeToAuthConfigFile
 } = require('../../../util/config-files')
+const error = require('../../../util/output/error')
 
 const help = () => {
   console.log(`
@@ -101,7 +102,7 @@ const revokeToken = async (token, tokenId) => {
   const result = await fetch(endpoint + encodeURIComponent(tokenId), details)
 
   if (!result.ok) {
-    console.error('Not able to log out')
+    console.error(error('Not able to log out'))
   }
 }
 

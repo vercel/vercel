@@ -75,7 +75,7 @@ module.exports = async function({ teams, config }) {
     } catch (err) {
       stopSpinner()
       eraseLines(2)
-      error(err.message)
+      console.error(error(err.message))
     }
   } while (!team)
 
@@ -105,7 +105,7 @@ module.exports = async function({ teams, config }) {
 
   eraseLines(2)
   if (res.error) {
-    error(res.error.message)
+    console.error(error(res.error.message))
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`)
     exit(1)
     // TODO: maybe we want to ask the user to retry? not sure if

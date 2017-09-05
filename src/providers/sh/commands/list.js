@@ -75,7 +75,7 @@ const main = async ctx => {
   try {
     await list({ token, sh })
   } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`)
+    console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
   }
 }
