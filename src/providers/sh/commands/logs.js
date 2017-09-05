@@ -69,13 +69,12 @@ let instanceId
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['query', 'since', 'token', 'until'],
+    string: ['query', 'since', 'until'],
     boolean: ['help', 'all', 'debug', 'f'],
     alias: {
       help: 'h',
       all: 'a',
       debug: 'd',
-      token: 't',
       query: 'q'
     }
   })

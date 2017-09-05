@@ -36,12 +36,10 @@ let argv
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['token'],
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',
-      debug: 'd',
-      token: 't'
+      debug: 'd'
     }
   })
 

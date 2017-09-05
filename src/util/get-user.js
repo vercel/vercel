@@ -1,9 +1,9 @@
-// theirs
+// Packages
 const fetch = require('node-fetch')
 const debug = require('debug')('now:sh:get-user')
 
-// ours
-const error = require('../../../util/output/error')
+// Utilities
+const error = require('./output/error')
 
 const getUser = async ({ apiUrl, token }) => {
   debug('start')
