@@ -89,9 +89,9 @@ const main = async ctx => {
     await run({ token, sh })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err.stack}`)
+      console.error(error(`Unknown error: ${err.stack}`))
     }
 
     exit(1)
@@ -170,7 +170,7 @@ function buildInquirerChoices(current, until) {
 async function run({ token, sh: { currentTeam, user } }) {
   const args = argv._
   if (args.length > 1) {
-    error('Invalid number of arguments')
+    console.error(error('Invalid number of arguments'))
     return exit(1)
   }
 
@@ -180,7 +180,7 @@ async function run({ token, sh: { currentTeam, user } }) {
   let planId = args[0]
 
   if (![undefined, 'oss', 'premium', 'pro', 'advanced'].includes(planId)) {
-    error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`)
+    console.error(error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`))
     return exit(1)
   }
 
@@ -219,13 +219,13 @@ async function run({ token, sh: { currentTeam, user } }) {
     newPlan = await plans.set(planId)
   } catch (err) {
     if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
-      error(
+      console.error(error(
         `You have no payment methods available. Run ${cmd(
           'now billing add'
         )} to add one`
-      )
+      ))
     } else {
-      error(`An unknow error occured. Please try again later ${err.message}`)
+      console.error(error(`An unknow error occured. Please try again later ${err.message}`))
     }
     plans.close()
     return

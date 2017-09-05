@@ -90,7 +90,7 @@ const main = async ctx => {
   try {
     await remove({ token, sh })
   } catch (err) {
-    error(`Unknown error: ${err}\n${err.stack}`)
+    console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
   }
 }
@@ -171,13 +171,13 @@ async function remove({ token, sh: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    error(
+    console.error(error(
       `Could not find ${argv.safe
         ? 'unaliased'
         : 'any'} deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
-    )
+    ))
     return process.exit(1)
   }
 

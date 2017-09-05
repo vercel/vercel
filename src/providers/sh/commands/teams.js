@@ -104,9 +104,9 @@ const main = async ctx => {
     await run({ token, config })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err.stack}`)
+      console.error(error(`Unknown error: ${err.stack}`))
     }
 
     exit(1)
@@ -147,7 +147,7 @@ async function run({ token, config }) {
     }
     case 'add':
     case 'create': {
-      await add({ teams, token })
+      await add({ teams, config })
       break
     }
 
@@ -163,7 +163,7 @@ async function run({ token, config }) {
     default: {
       let code = 0
       if (subcommand !== 'help') {
-        error('Please specify a valid subcommand: ls | add | rm | set-default')
+        console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'))
         code = 1
       }
       help()

@@ -100,9 +100,9 @@ const main = async ctx => {
     await run({ token, sh })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err}\n${err.stack}`)
+      console.error(error(`Unknown error: ${err}\n${err.stack}`))
     }
 
     exit(1)
@@ -162,7 +162,7 @@ async function run({ token, sh: { currentTeam } }) {
       }
     }
   } else {
-    error('Please specify a deployment: now scale <id|url>')
+    console.error(error('Please specify a deployment: now scale <id|url>'))
     help()
     exit(1)
   }
@@ -186,7 +186,7 @@ async function run({ token, sh: { currentTeam } }) {
       e => e.alias === id
     )
     if (!aliasDeployment) {
-      error(`Could not find any deployments matching ${id}`)
+      console.error(error(`Could not find any deployments matching ${id}`))
       return process.exit(1)
     }
     match = deployments.find(d => {
@@ -206,7 +206,7 @@ async function run({ token, sh: { currentTeam } }) {
 
   if (match.type === 'STATIC') {
     if (min === 0 && max === 0) {
-      error("Static deployments can't be FROZEN. Use `now rm` to remove")
+      console.error(error("Static deployments can't be FROZEN. Use `now rm` to remove"))
       return process.exit(1)
     }
     console.log('> Static deployments are automatically scaled!')

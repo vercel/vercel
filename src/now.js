@@ -73,11 +73,11 @@ const main = async (argv_) => {
     try {
       await mkdirp(NOW_DIR)
     } catch (err) {
-      error(
+      console.error(error(
         'An unexpected error occurred while trying to create the ' +
           `now global directory "${hp(NOW_DIR)}" ` +
           err.message
-      )
+      ))
     }
   }
 

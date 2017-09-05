@@ -56,9 +56,9 @@ exports.reAlias = async (
   }
 
   if (!fs.existsSync(configFiles.pkg) && !fs.existsSync(configFiles.nowJSON)) {
-    error(
+    console.error(error(
       `Couldn't find a now.json or package.json file with an alias list in it`
-    )
+    ))
     return
   }
 
@@ -90,9 +90,9 @@ exports.reAlias = async (
       } else if (Array.isArray(value)) {
         pointers = pointers.concat(nowConfig.alias)
       } else {
-        error(
+        console.error(error(
           `Property ${chalk.grey('aliases')} is not a valid array or string`
-        )
+        ))
         return exit(1)
       }
     }

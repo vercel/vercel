@@ -341,7 +341,7 @@ async function sync({ token, config: { currentTeam, user } }) {
           )}" ${gitRef}on ${gitRepo.type}`
         )
       } else {
-        error(`The specified directory "${basename(path)}" doesn't exist.`)
+        console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
         process.exit(1)
       }
     }
@@ -350,8 +350,8 @@ async function sync({ token, config: { currentTeam, user } }) {
     try {
       await checkPath(path)
     } catch (err) {
-      error(err)
-      return
+      console.error(error(err.message))
+      process.exit(1)
     }
 
     if (!quiet) {
@@ -421,7 +421,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
       if (!fs.existsSync(dotenvFileName)) {
-        error(`--dotenv flag is set but ${dotenvFileName} file is missing`)
+        console.error(error(`--dotenv flag is set but ${dotenvFileName} file is missing`))
         return process.exit(1)
       }
 
@@ -460,7 +460,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     const env_ = await Promise.all(
       envs.map(async kv => {
         if (typeof kv !== 'string') {
-          error('Env key and value missing')
+          console.error(error('Env key and value missing'))
           return process.exit(1)
         }
 
@@ -472,16 +472,16 @@ async function sync({ token, config: { currentTeam, user } }) {
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          error(
+          console.error(error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
-          )
+          ))
           return process.exit(1)
         }
 
         if (!key) {
-          error(`Invalid env option ${chalk.bold(`"${kv}"`)}`)
+          console.error(error(`Invalid env option ${chalk.bold(`"${kv}"`)}`))
           return process.exit(1)
         }
 
@@ -495,11 +495,11 @@ async function sync({ token, config: { currentTeam, user } }) {
             // Escape value if it begins with @
             val = process.env[key].replace(/^@/, '\\@')
           } else {
-            error(
+            console.error(error(
               `No value specified for env ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
-            )
+            ))
             return process.exit(1)
           }
         }
@@ -509,23 +509,23 @@ async function sync({ token, config: { currentTeam, user } }) {
           const _secrets = await findSecret(uidOrName)
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              error(
+              console.error(error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
-              )
+              ))
             } else {
-              error(
+              console.error(error(
                 `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`
-              )
+              ))
             }
             return process.exit(1)
           } else if (_secrets.length > 1) {
-            error(
+            console.error(error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
-            )
+            ))
             return process.exit(1)
           }
 
@@ -700,7 +700,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       now.on('complete', () => complete({ syncCount }))
 
       now.on('error', err => {
-        error('Upload failed')
+        console.error(error('Upload failed'))
         return stopDeployment(err)
       })
     } else {
@@ -799,13 +799,13 @@ function printLogs(host, token) {
   logger.on('error', async err => {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
-        error(
+        console.error(error(
           `The build step of your project failed. To retry, run ${cmd(
             'now --force'
           )}.`
-        )
+        ))
       } else {
-        error('Deployment failed')
+        console.error(error('Deployment failed'))
       }
     }
 

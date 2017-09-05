@@ -112,11 +112,11 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length > 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now dns ls [domain]`'
         )}`
-      )
+      ))
       return exit(1)
     }
 
@@ -175,11 +175,11 @@ async function run({ token, sh: { currentTeam, user } }) {
   } else if (subcommand === 'add') {
     const param = parseAddArgs(args)
     if (!param) {
-      error(
+      console.error(error(
         `Invalid number of arguments. See: ${chalk.cyan(
           '`now dns --help`'
         )} for usage.`
-      )
+      ))
       return exit(1)
     }
     const record = await domainRecords.create(param.domain, param.data)
@@ -195,15 +195,15 @@ async function run({ token, sh: { currentTeam, user } }) {
     )
   } else if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`
-      )
+      ))
       return exit(1)
     }
 
     const record = await domainRecords.getRecord(args[0])
     if (!record) {
-      error('DNS record not found')
+      console.error(error('DNS record not found'))
       return exit(1)
     }
 
@@ -212,7 +212,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       'The following record will be removed permanently \n'
     )
     if (!yes) {
-      error('User abort')
+      console.error(error('User abort'))
       return exit(0)
     }
 
@@ -224,7 +224,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       )} removed ${chalk.gray(`[${elapsed}]`)}`
     )
   } else {
-    error('Please specify a valid subcommand: ls | add | rm')
+    console.error(error('Please specify a valid subcommand: ls | add | rm'))
     help()
     exit(1)
   }

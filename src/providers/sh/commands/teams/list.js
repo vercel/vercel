@@ -49,7 +49,7 @@ module.exports = async function({ teams, config }) {
   const count = teamList.length
   if (!count) {
     // Maybe should not happen
-    error(`No team found`)
+    console.error(error(`No team found`))
     return
   }
 

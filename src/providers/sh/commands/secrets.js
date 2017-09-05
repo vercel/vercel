@@ -119,9 +119,9 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
-      )
+      ))
       return exit(1)
     }
 
@@ -165,11 +165,11 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now secret rm <name>`'
         )}`
-      )
+      ))
       return exit(1)
     }
     const list = await secrets.ls()
@@ -178,11 +178,11 @@ async function run({ token, sh: { currentTeam, user } }) {
     if (theSecret) {
       const yes = await readConfirmation(theSecret)
       if (!yes) {
-        error('User abort')
+        console.error(error('User abort'))
         return exit(0)
       }
     } else {
-      error(`No secret found by name "${args[0]}"`)
+      console.error(error(`No secret found by name "${args[0]}"`))
       return exit(1)
     }
 
@@ -198,11 +198,11 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'rename') {
     if (args.length !== 2) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now secret rename <old-name> <new-name>`'
         )}`
-      )
+      ))
       return exit(1)
     }
     const secret = await secrets.rename(args[0], args[1])
@@ -217,11 +217,11 @@ async function run({ token, sh: { currentTeam, user } }) {
 
   if (subcommand === 'add' || subcommand === 'set') {
     if (args.length !== 2) {
-      error(
+      console.error(error(
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now secret add <name> <value>`'
         )}`
-      )
+      ))
 
       if (args.length > 2) {
         const example = chalk.cyan(`$ now secret add ${args[0]}`)
@@ -255,7 +255,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     return secrets.close()
   }
 
-  error('Please specify a valid subcommand: ls | add | rename | rm')
+  console.error(error('Please specify a valid subcommand: ls | add | rename | rm'))
   help()
   exit(1)
 }

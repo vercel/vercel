@@ -95,9 +95,9 @@ const main = async ctx => {
     await run({ token, sh })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err.stack}`)
+      console.error(error(`Unknown error: ${err.stack}`))
     }
 
     exit(1)
@@ -146,7 +146,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       try {
         cards = await creditCards.ls()
       } catch (err) {
-        error(err.message)
+        console.error(error(err.message))
         return
       }
       const text = cards.cards
@@ -201,7 +201,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 
     case 'set-default': {
       if (args.length > 1) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         return exit(1)
       }
 
@@ -211,12 +211,12 @@ async function run({ token, sh: { currentTeam, user } }) {
       try {
         cards = await creditCards.ls()
       } catch (err) {
-        error(err.message)
+        console.error(error(err.message))
         return
       }
 
       if (cards.cards.length === 0) {
-        error('You have no credit cards to choose from')
+        console.error(error('You have no credit cards to choose from'))
         return exit(0)
       }
 
@@ -268,7 +268,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'rm':
     case 'remove': {
       if (args.length > 1) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         return exit(1)
       }
 
@@ -277,16 +277,16 @@ async function run({ token, sh: { currentTeam, user } }) {
       try {
         cards = await creditCards.ls()
       } catch (err) {
-        error(err.message)
+        console.error(error(err.message))
         return
       }
 
       if (cards.cards.length === 0) {
-        error(
+        console.error(error(
           `You have no credit cards to choose from to delete under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
           )}`
-        )
+        ))
         return exit(0)
       }
 
@@ -365,7 +365,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     }
 
     default:
-      error('Please specify a valid subcommand: ls | add | rm | set-default')
+      console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'))
       help()
       exit(1)
   }

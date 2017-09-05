@@ -2,6 +2,8 @@ const inquirer = require('inquirer')
 const chalk = require('chalk')
 
 // Here we patch inquirer to use a `>` instead of the ugly green `?`
+
+/* eslint-disable no-multiple-empty-lines, no-var, no-undef, no-eq-null, eqeqeq, semi */
 const getQuestion = function() {
   var message = chalk.bold('> ' + this.opt.message) + ' '
 

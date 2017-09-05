@@ -57,7 +57,7 @@ module.exports = async function({ teams, args, config }) {
       return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
     }
 
-    error(`Could not find membership for team ${param(desiredSlug)}`)
+    console.error(error(`Could not find membership for team ${param(desiredSlug)}`))
     return exit(1)
   }
 

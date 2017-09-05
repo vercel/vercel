@@ -152,9 +152,9 @@ const main = async ctx => {
     await run({ token, sh })
   } catch (err) {
     if (err.userError) {
-      error(err.message)
+      console.error(error(err.message))
     } else {
-      error(`Unknown error: ${err}\n${err.stack}`)
+      console.error(error(`Unknown error: ${err}\n${err.stack}`))
     }
 
     exit(1)
@@ -178,7 +178,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'ls':
     case 'list': {
       if (args.length !== 0) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         return exit(1)
       }
 
@@ -228,7 +228,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'rm':
     case 'remove': {
       if (args.length !== 1) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         return exit(1)
       }
 
@@ -271,7 +271,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           )} removed [${elapsed}]`
         )
       } catch (err) {
-        error(err)
+        console.error(error(err))
         exit(1)
       }
       break
@@ -279,7 +279,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'add':
     case 'set': {
       if (args.length !== 1) {
-        error('Invalid number of arguments')
+        console.error(error('Invalid number of arguments'))
         return exit(1)
       }
       const name = String(args[0])
@@ -343,7 +343,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       break
     }
     default:
-      error('Please specify a valid subcommand: ls | add | rm')
+      console.error(error('Please specify a valid subcommand: ls | add | rm'))
       help()
       exit(1)
   }

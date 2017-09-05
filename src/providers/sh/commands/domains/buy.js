@@ -20,7 +20,7 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   let elapsed
 
   if (!name) {
-    return error(`Missing domain name. Run ${cmd('now domains help')}`)
+    return console.error(error(`Missing domain name. Run ${cmd('now domains help')}`))
   }
 
   const nameParam = param(name)
@@ -45,11 +45,11 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
       stopSpinner()
 
       if (!couponInfo.isValid) {
-        return error(`The coupon ${param(coupon)} is invalid`)
+        return console.error(error(`The coupon ${param(coupon)} is invalid`))
       }
 
       if (!couponInfo.canBeUsed) {
-        return error(`The coupon ${param(coupon)} has already been used`)
+        return console.error(error(`The coupon ${param(coupon)} has already been used`))
       }
 
       validCoupon = true
@@ -75,18 +75,19 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
     period = json.period
   } catch (err) {
     stopSpinner()
-    return error(err.message)
+    return console.error(error(err.message))
   }
 
   const available = await domains.status(name)
-
   stopSpinner()
 
   if (!available) {
-    return error(
+    console.error(error(
       `The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`
-    )
+    ))
+    return
   }
+
   const periodMsg = `${period}yr${period > 1 ? 's' : ''}`
   info(
     `The domain ${nameParam} is ${italic('available')} to buy under ${bold(
