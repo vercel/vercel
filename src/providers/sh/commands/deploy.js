@@ -33,7 +33,7 @@ const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 
 const mriOpts = {
-  string: ['token', 'name', 'alias', 'session-affinity'],
+  string: ['name', 'alias', 'session-affinity'],
   boolean: [
     'help',
     'version',
@@ -54,7 +54,6 @@ const mriOpts = {
     debug: 'd',
     version: 'v',
     force: 'f',
-    token: 't',
     forceSync: 'F',
     links: 'l',
     login: 'L',
@@ -269,7 +268,7 @@ async function main(ctx) {
   }
 
   const { authConfig: { credentials }, config: { sh } } = ctx
-  const { token } = argv.token || credentials.find(item => item.provider === 'sh')
+  const { token } = credentials.find(item => item.provider === 'sh')
   const config = sh
 
   alwaysForwardNpm = config.forwardNpm

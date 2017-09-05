@@ -22,6 +22,7 @@ const hp = require('./util/humanize-path')
 const providers = require('./providers')
 const configFiles = require('./util/config-files')
 const checkForUpdates = require('./util/updates')
+const getUser = require('./util/get-user')
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -362,12 +363,22 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
+  let hasToken = false
+
+  if (ctx.argv.includes('-t')) {
+    hasToken = '-t'
+  }
+
+  if (ctx.argv.includes('--token')) {
+    hasToken = '--token'
+  }
+
   // If no credentials are set at all, prompt for
   // login to the .sh provider
   if (
     !authConfig.credentials.length &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
-    !ctx.argv.includes('-t') && !ctx.argv.includes('--token')
+    !hasToken
   ) {
     // $FlowFixMe
     const { isTTY } = process.stdout
@@ -386,6 +397,31 @@ const main = async (argv_) => {
       '`now login` to log in or pass `--token`'))
       process.exit(1)
     }
+  }
+
+  if (hasToken) {
+    const {argv} = ctx
+    const tokenIndex = argv.indexOf(hasToken) + 1
+    const token = argv[tokenIndex]
+
+    if (!token) {
+      console.log(error('You defined `' + chalk.grey(hasToken) + '`, but it\'s missing a value'))
+      process.exit(1)
+    }
+
+    ctx.authConfig.credentials.push({
+      provider: 'sh',
+      token
+    })
+
+    console.log(info('Caching account information...'))
+
+    const user = await getUser({
+      apiUrl: 'https://api.zeit.co',
+      token
+    })
+
+    ctx.config.sh = {user}
   }
 
   try {

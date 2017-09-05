@@ -77,12 +77,11 @@ let subcommand
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['token', 'crt', 'key', 'ca'],
+    string: ['crt', 'key', 'ca'],
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd',
-      token: 't'
+      debug: 'd'
     }
   })
 
@@ -98,7 +97,7 @@ const main = async ctx => {
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
     await run({ token, sh })

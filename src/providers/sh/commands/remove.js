@@ -63,12 +63,10 @@ let ids
 
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
-    string: ['token'],
     boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
     alias: {
       help: 'h',
       debug: 'd',
-      token: 't',
       yes: 'y'
     }
   })
@@ -87,7 +85,7 @@ const main = async ctx => {
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
     await remove({ token, sh })

@@ -1,15 +1,15 @@
-// node
+// Native
 const { stringify: stringifyQuery } = require('querystring')
 const { platform, arch, hostname } = require('os')
 
-// theirs
+// Packaages
 const fetch = require('node-fetch')
 const debug = require('debug')('now:sh:login')
 const promptEmail = require('email-prompt')
 const ms = require('ms')
 const { validate: validateEmail } = require('email-validator')
 
-// ours
+// Utilities
 const { version } = require('../../../util/pkg')
 const ua = require('../util/ua')
 const error = require('../../../util/output/error')
@@ -23,7 +23,7 @@ const ready = require('../../../util/output/ready')
 const param = require('../../../util/output/param')
 const eraseLines = require('../../../util/output/erase-lines')
 const sleep = require('../../../util/sleep')
-const getUser = require('../util/get-user')
+const getUser = require('../../../util/get-user')
 const {
   writeToAuthConfigFile,
   writeToConfigFile
