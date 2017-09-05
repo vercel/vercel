@@ -41,6 +41,9 @@ const main = async (argv_) => {
     }
   })
 
+  // $FlowFixMe
+  const { isTTY } = process.stdout
+
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls` or `now aws help`)
@@ -380,8 +383,7 @@ const main = async (argv_) => {
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !hasToken
   ) {
-    // $FlowFixMe
-    const { isTTY } = process.stdout
+
 
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`))
@@ -414,7 +416,9 @@ const main = async (argv_) => {
       token
     })
 
-    console.log(info('Caching account information...'))
+    if(isTTY) {
+      console.log(info('Caching account information...'))  
+    }
 
     const user = await getUser({
       apiUrl: 'https://api.zeit.co',
