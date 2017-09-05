@@ -147,7 +147,7 @@ async function run({ token, config }) {
     }
     case 'add':
     case 'create': {
-      await add({ teams, token })
+      await add({ teams, config })
       break
     }
 

@@ -1,34 +1,26 @@
-// theirs
 const chalk = require('chalk')
-
-// ours
-const eraseLines = require('../output/erase-lines')
 
 module.exports = (
   label,
   {
     defaultValue = false,
-    abortSequences = new Set(['\u0003', '\u001b']), // ctrl+c, esc
-    resolveChars = new Set(['\r']), // enter
+    abortSequences = new Set(['\u0003']),
+    resolveChars = new Set(['\r']),
     yesChar = 'y',
     noChar = 'n',
     stdin = process.stdin,
     stdout = process.stdout,
-    // if `true`, `eraseLines(1)` will be `stdout.write`d before
-    // `resolve`ing or `reject`ing
-    clearWhenDone = true
+    trailing = ''
   } = {}
 ) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     const isRaw = stdin.isRaw
 
     stdin.setRawMode(true)
     stdin.resume()
 
     function restore() {
-      if (clearWhenDone) {
-        stdout.write(eraseLines(1))
-      }
+      stdout.write(trailing)
       stdin.setRawMode(isRaw)
       stdin.pause()
       stdin.removeListener('data', onData)
@@ -45,9 +37,7 @@ module.exports = (
         resolve(false)
       } else if (abortSequences.has(data)) {
         restore()
-        const e = new Error('User abort')
-        e.code = 'USER_ABORT'
-        reject(e)
+        resolve(false)
       } else if (resolveChars.has(data[0])) {
         restore()
         resolve(defaultValue)
@@ -62,7 +52,7 @@ module.exports = (
         : defaultValue
           ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
           : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`
-    stdout.write(`${label} ${chalk.gray(defaultText)} `)
+    stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `)
     stdin.on('data', onData)
   })
 }

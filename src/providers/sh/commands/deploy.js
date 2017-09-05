@@ -350,6 +350,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     try {
       await checkPath(path)
     } catch (err) {
+      console.log(err)
       error(err)
       return
     }

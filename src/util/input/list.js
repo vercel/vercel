@@ -16,7 +16,7 @@ function getLength(string) {
   return biggestLength
 }
 
-module.exports = async function promptList({
+module.exports = async function({
   message = 'the question',
   // eslint-disable-line no-unused-vars
   choices = [
@@ -28,9 +28,7 @@ module.exports = async function promptList({
   ],
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
   separator = true, // Puts a blank separator between each choice
-  // Wether the `abort` option will be at the `start` or the `end`
-  // can be `false`
-  abort = 'end'
+  abort = 'end' // Wether the `abort` option will be at the `start` or the `end`
 }) {
   let biggestLength = 0
 
@@ -52,21 +50,20 @@ module.exports = async function promptList({
     )
   }
 
-  if (abort) {
-    const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength))
-    const _abort = {
-      name: 'Abort',
-      value: undefined
-    }
-    if (abort === 'start') {
-      const blankSep = choices.shift()
-      choices.unshift(abortSeparator)
-      choices.unshift(_abort)
-      choices.unshift(blankSep)
-    } else {
-      choices.push(abortSeparator)
-      choices.push(_abort)
-    }
+  const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength))
+  const _abort = {
+    name: 'Abort',
+    value: undefined
+  }
+
+  if (abort === 'start') {
+    const blankSep = choices.shift()
+    choices.unshift(abortSeparator)
+    choices.unshift(_abort)
+    choices.unshift(blankSep)
+  } else {
+    choices.push(abortSeparator)
+    choices.push(_abort)
   }
 
   const nonce = Date.now()
