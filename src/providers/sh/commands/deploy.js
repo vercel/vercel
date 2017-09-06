@@ -130,7 +130,7 @@ const help = () => {
     --session-affinity        Session affinity, \`ip\` (default) or \`random\` to control session affinity.
 
   ${chalk.dim(
-    'Enforcable Types (when both package.json and Dockerfile exist):'
+    'Enforceable Types (when both package.json and Dockerfile exist):'
   )}
 
     --npm                     Node.js application
