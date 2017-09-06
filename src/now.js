@@ -41,9 +41,6 @@ const main = async (argv_) => {
     }
   })
 
-  // $FlowFixMe
-  const { isTTY } = process.stdout
-
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls` or `now aws help`)
@@ -376,6 +373,9 @@ const main = async (argv_) => {
     hasToken = '--token'
   }
 
+  // $FlowFixMe
+  const { isTTY } = process.stdout
+
   // If no credentials are set at all, prompt for
   // login to the .sh provider
   if (
@@ -383,8 +383,6 @@ const main = async (argv_) => {
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !hasToken
   ) {
-
-
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`))
 
@@ -416,8 +414,8 @@ const main = async (argv_) => {
       token
     })
 
-    if(isTTY) {
-      console.log(info('Caching account information...'))  
+    if (isTTY) {
+      console.log(info('Caching account information...'))
     }
 
     const user = await getUser({
