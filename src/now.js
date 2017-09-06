@@ -373,6 +373,9 @@ const main = async (argv_) => {
     hasToken = '--token'
   }
 
+  // $FlowFixMe
+  const { isTTY } = process.stdout
+
   // If no credentials are set at all, prompt for
   // login to the .sh provider
   if (
@@ -380,9 +383,6 @@ const main = async (argv_) => {
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !hasToken
   ) {
-    // $FlowFixMe
-    const { isTTY } = process.stdout
-
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`))
 
@@ -414,7 +414,9 @@ const main = async (argv_) => {
       token
     })
 
-    console.log(info('Caching account information...'))
+    if (isTTY) {
+      console.log(info('Caching account information...'))
+    }
 
     const user = await getUser({
       apiUrl: 'https://api.zeit.co',
