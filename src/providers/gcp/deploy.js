@@ -86,7 +86,7 @@ const deploy = async (ctx: {
   // {
   //   functionName: String,
   //   timeout: String,
-  //   availableMemoryMb: Number,
+  //   memory: Number,
   //   region: String
   // }
   const { nowJSON: { gcp: gcpConfig } } = desc
@@ -216,7 +216,7 @@ const deploy = async (ctx: {
       body: JSON.stringify({
         name: `projects/${project.id}/locations/${region}/functions/${deploymentId}`,
         timeout: gcpConfig.timeout || '15s',
-        availableMemoryMb: gcpConfig.availableMemoryMb || 512,
+        availableMemoryMb: gcpConfig.memory || 512,
         sourceArchiveUrl: `gs://${encodeURIComponent(
           bucketName
         )}/${zipFileName}`,
