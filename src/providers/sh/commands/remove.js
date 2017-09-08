@@ -33,7 +33,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -y, --yes                      Skip confirmation
-    --safe                         Skip deployments with an active alias
+    -s, --safe                     Skip deployments with an active alias
 
   ${chalk.dim('Examples:')}
 
@@ -69,7 +69,8 @@ const main = async ctx => {
     alias: {
       help: 'h',
       debug: 'd',
-      yes: 'y'
+      yes: 'y',
+      safe: 's'
     }
   })
 
