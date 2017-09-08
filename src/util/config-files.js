@@ -1,8 +1,8 @@
-// node
+// Native
 const { readFileSync, writeFileSync } = require('fs')
 const { join: joinPath } = require('path')
 
-// ours
+// Utilities
 const getNowDir = require('../get-now-dir')
 
 const NOW_DIR = getNowDir()
