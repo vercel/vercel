@@ -297,15 +297,8 @@ const main = async (argv_) => {
 
   if (null === suppliedProvider) {
     if (null === defaultProvider) {
-      // the first provider the user ever logged in to is
-      // the default provider
-      if (authConfig && authConfig.credentials.length) {
-        debug('using first credential as default provider')
-        defaultProvider = authConfig.credentials[0].provider
-      } else {
-        debug(`fallbacking to default now provider 'sh'`)
-        defaultProvider = 'sh'
-      }
+      debug(`falling back to default now provider 'sh'`)
+      defaultProvider = 'sh'
     } else {
       debug('using provider supplied by user', defaultProvider)
       if (!(defaultProvider in providers)) {
