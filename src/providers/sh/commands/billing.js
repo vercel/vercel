@@ -15,6 +15,7 @@ const promptBool = require('../../../util/input/prompt-bool')
 const info = require('../../../util/output/info')
 const logo = require('../../../util/output/logo')
 const addBilling = require('./billing/add')
+const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -55,14 +56,6 @@ const help = () => {
   `)
 }
 
-const exit = code => {
-  // We give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100)
-}
-
 let argv
 let debug
 let apiUrl
@@ -85,7 +78,9 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help()
-    process.exit(0)
+    exit(0)
+
+    return
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
