@@ -23,8 +23,8 @@ const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now certs`)} [options] <command>
 
-  ${chalk.yellow('NOTE:')} This command is intended for advanced use only. By default,
-  Now manages your certificates automatically.
+  ${chalk.yellow('NOTE:')} This command is intended for advanced use only.
+  By default, Now manages your certificates automatically.
 
   ${chalk.dim('Commands:')}
 

@@ -45,7 +45,7 @@ const help = () => {
   ${chalk.gray('–')} Add an A record for a subdomain
 
       ${chalk.cyan(
-        '$ now dns add <DOMAIN> <SUBDOMAIN> A | AAAA | ALIAS | CNAME | TXT>  <VALUE>'
+        '$ now dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>'
       )}
       ${chalk.cyan('$ now dns add zeit.rocks api A 198.51.100.100')}
 
