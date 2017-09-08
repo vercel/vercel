@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 const chalk = require('chalk')
 const fetch = require('node-fetch')
 const ora = require('ora')
@@ -45,7 +45,7 @@ let apiUrl
 let endpoint
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     boolean: ['help'],
     alias: {
       help: 'h'

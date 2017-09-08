@@ -1,7 +1,7 @@
 // Packages
 const { readFileSync } = require('fs')
 const publicSuffixList = require('psl')
-const minimist = require('minimist')
+const mri = require('mri')
 const ms = require('ms')
 const chalk = require('chalk')
 const { write: copy } = require('clipboardy')
@@ -25,7 +25,7 @@ const toHost = require('./to-host')
 const exit = require('../../../util/exit')
 const Now = require('./')
 
-const argv = minimist(process.argv.slice(2), {
+const argv = mri(process.argv.slice(2), {
   boolean: ['no-clipboard'],
   alias: { 'no-clipboard': 'C' }
 })

@@ -2,7 +2,7 @@
 
 // Packages
 const chalk = require('chalk')
-const minimist = require('minimist')
+const mri = require('mri')
 const ms = require('ms')
 const psl = require('psl')
 const table = require('text-table')
@@ -75,7 +75,7 @@ let apiUrl
 let subcommand
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     string: ['coupon'],
     boolean: ['help', 'debug', 'external', 'force'],
     alias: {

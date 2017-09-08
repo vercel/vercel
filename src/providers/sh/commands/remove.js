@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
 const table = require('text-table')
@@ -64,7 +64,7 @@ let skipConfirmation
 let ids
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
     alias: {
       help: 'h',

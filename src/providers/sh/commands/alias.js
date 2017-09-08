@@ -2,7 +2,7 @@
 
 // Packages
 const chalk = require('chalk')
-const minimist = require('minimist')
+const mri = require('mri')
 const table = require('text-table')
 const ms = require('ms')
 const printf = require('printf')
@@ -101,7 +101,7 @@ let debug
 let apiUrl
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     string: ['config', 'rules'],
     boolean: ['help', 'debug'],
     alias: {

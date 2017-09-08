@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
 const printf = require('printf')
@@ -52,7 +52,7 @@ let debug
 let apiUrl
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',

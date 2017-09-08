@@ -9,7 +9,7 @@ const promptEmail = require('email-prompt')
 const ms = require('ms')
 const { validate: validateEmail } = require('email-validator')
 const chalk = require('chalk')
-const minimist = require('minimist')
+const mri = require('mri')
 
 // Utilities
 const { version } = require('../../../util/pkg')
@@ -179,7 +179,7 @@ const readEmail = async () => {
 }
 
 const login = async ctx => {
-  const argv = minimist(ctx.argv.slice(2), {
+  const argv = mri(ctx.argv.slice(2), {
     boolean: ['help'],
     alias: {
       help: 'h'
