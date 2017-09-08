@@ -3,7 +3,7 @@
 // Packages
 const chalk = require('chalk')
 const isURL = require('is-url')
-const minimist = require('minimist')
+const mri = require('mri')
 const ms = require('ms')
 const printf = require('printf')
 require('epipebomb')()
@@ -74,7 +74,7 @@ let scaleArg
 let optionalScaleArg
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',

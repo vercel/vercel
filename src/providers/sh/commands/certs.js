@@ -6,7 +6,7 @@ const path = require('path')
 // Packages
 const chalk = require('chalk')
 const table = require('text-table')
-const minimist = require('minimist')
+const mri = require('mri')
 const fs = require('fs-extra')
 const ms = require('ms')
 const printf = require('printf')
@@ -69,7 +69,7 @@ let apiUrl
 let subcommand
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     string: ['crt', 'key', 'ca'],
     boolean: ['help', 'debug'],
     alias: {

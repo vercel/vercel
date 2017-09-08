@@ -2,10 +2,10 @@
 const path = require('path')
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 
 const getLocalPathConfig = prefix => {
-  const args = minimist(process.argv.slice(2), {
+  const args = mri(process.argv.slice(2), {
     string: ['local-config'],
     alias: {
       'local-config': 'A'

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 const chalk = require('chalk')
 
 // Utilities
@@ -38,7 +38,7 @@ const help = () => {
 let argv
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',

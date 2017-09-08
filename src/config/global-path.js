@@ -3,10 +3,10 @@ const { homedir } = require('os')
 const path = require('path')
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 
 const getNowDir = () => {
-  const args = minimist(process.argv.slice(2), {
+  const args = mri(process.argv.slice(2), {
     string: ['global-config'],
     alias: {
       'global-config': 'Q'

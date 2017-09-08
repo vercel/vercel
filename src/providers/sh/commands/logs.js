@@ -4,7 +4,7 @@
 const qs = require('querystring')
 
 // Packages
-const minimist = require('minimist')
+const mri = require('mri')
 const chalk = require('chalk')
 const dateformat = require('dateformat')
 const io = require('socket.io-client')
@@ -72,7 +72,7 @@ let until
 let instanceId
 
 const main = async ctx => {
-  argv = minimist(ctx.argv.slice(2), {
+  argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until'],
     boolean: ['help', 'all', 'debug', 'follow'],
     alias: {
