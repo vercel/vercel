@@ -99,39 +99,42 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help                Output usage information
-    -v, --version             Output the version number
-    -n, --name                Set the name of the deployment
-    -c ${chalk.underline('FILE')}, --config=${chalk.underline(
+    -h, --help                     Output usage information
+    -v, --version                  Output the version number
+    -n, --name                     Set the name of the deployment
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}    Config file
-    -d, --debug               Debug mode [off]
-    -f, --force               Force a new deployment even if nothing has changed
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+    -d, --debug                    Debug mode [off]
+    -f, --force                    Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
     'TOKEN'
-  )}   Login token
-    -L, --login               Configure login
-    -l, --links               Copy symlinks without resolving their target
-    -p, --public              Deployment is public (${chalk.dim(
+  )}        Login token
+    -L, --login                    Configure login
+    -l, --links                    Copy symlinks without resolving their target
+    -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
     )} is exposed) [on for oss, off for premium]
-    -e, --env                 Include an env var (e.g.: ${chalk.dim(
+    -e, --env                      Include an env var (e.g.: ${chalk.dim(
       '`-e KEY=value`'
     )}). Can appear many times.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
-  )}    Include env vars from .env file. Defaults to '.env'
-    -C, --no-clipboard        Do not attempt to copy URL to clipboard
-    -N, --forward-npm         Forward login information to install private npm modules
-    --session-affinity        Session affinity, \`ip\` (default) or \`random\` to control session affinity.
+  )}         Include env vars from .env file. Defaults to '.env'
+    -C, --no-clipboard             Do not attempt to copy URL to clipboard
+    -N, --forward-npm              Forward login information to install private npm modules
+    --session-affinity             Session affinity, \`ip\` (default) or \`random\` to control session affinity.
 
   ${chalk.dim(
     'Enforceable Types (when both package.json and Dockerfile exist):'
   )}
 
-    --npm                     Node.js application
-    --docker                  Docker container
-    --static                  Static file hosting
+    --npm                          Node.js application
+    --docker                       Docker container
+    --static                       Static file hosting
 
   ${chalk.dim('Examples:')}
 

@@ -31,17 +31,20 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    -h, --help                     Output usage information
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}  Config file
-    -d, --debug             Debug mode [off]
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+    -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
-  )} Login token
-    --crt ${chalk.bold.underline('FILE')}              Certificate file
-    --key ${chalk.bold.underline('FILE')}              Certificate key file
-    --ca ${chalk.bold.underline('FILE')}               CA certificate chain file
+  )}        Login token
+    --crt ${chalk.bold.underline('FILE')}                     Certificate file
+    --key ${chalk.bold.underline('FILE')}                     Certificate key file
+    --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
 
   ${chalk.dim('Examples:')}
 

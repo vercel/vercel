@@ -1,9 +1,9 @@
-// node
+// Native
 const { readFileSync, writeFileSync } = require('fs')
 const { join: joinPath } = require('path')
 
-// ours
-const getNowDir = require('../get-now-dir')
+// Utilities
+const getNowDir = require('../config/global-path')
 
 const NOW_DIR = getNowDir()
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json')

@@ -22,26 +22,29 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              output usage information
-    -a, --all               include access logs
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    -h, --help                     Output usage information
+    -a, --all                      Include access logs
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}  config file
-    -d, --debug             debug mode [off]
-    -f                      wait for additional data [off]
-    -n ${chalk.bold.underline('NUMBER')}               number of logs [1000]
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+    -d, --debug                    Debug mode [off]
+    -f                             Wait for additional data [off]
+    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [1000]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
-  )} search query
+  )}        Search query
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
-  )} login token
+  )}        Login token
     --since=${chalk.bold.underline(
       'SINCE'
-    )}           only return logs after date (ISO 8601)
+    )}                  Only return logs after date (ISO 8601)
     --until=${chalk.bold.underline(
       'UNTIL'
-    )}           only return logs before date (ISO 8601), ignored if the f option is enbled.
+    )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
 
   ${chalk.dim('Examples:')}
 
