@@ -3,7 +3,7 @@ const { readFileSync, writeFileSync } = require('fs')
 const { join: joinPath } = require('path')
 
 // Utilities
-const getNowDir = require('../get-now-dir')
+const getNowDir = require('../config/global-path')
 
 const NOW_DIR = getNowDir()
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json')

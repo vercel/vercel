@@ -8,8 +8,9 @@ const ignore = require('ignore')
 const _glob = require('glob')
 const { stat, readdir, readFile } = require('fs-extra')
 
-// Ours
+// Utilities
 const IGNORED = require('./ignored')
+const getLocalConfigPath = require('../../../config/local-path')
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
@@ -135,7 +136,7 @@ async function staticFiles(
   }
 
   if (hasNowJson) {
-    files.push(asAbsolute('now.json', path))
+    files.push(asAbsolute(getLocalConfigPath(path), path))
   }
 
   // Get files
@@ -231,7 +232,7 @@ async function npm(
   files.push(asAbsolute('package.json', path))
 
   if (hasNowJson) {
-    files.push(asAbsolute('now.json', path))
+    files.push(asAbsolute(getLocalConfigPath(path), path))
   }
 
   // Get files
@@ -312,7 +313,7 @@ async function docker(
   files.push(asAbsolute('Dockerfile', path))
 
   if (hasNowJson) {
-    files.push(asAbsolute('now.json', path))
+    files.push(asAbsolute(getLocalConfigPath(path), path))
   }
 
   // Get files

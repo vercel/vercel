@@ -28,7 +28,7 @@ const {
   writeToAuthConfigFile,
   writeToConfigFile
 } = require('../../../util/config-files')
-const getNowDir = require('../../../get-now-dir')
+const getNowDir = require('../../../config/global-path')
 const hp = require('../../../util/humanize-path')
 
 // POSTs to /now/registration – either creates an account or performs a login
