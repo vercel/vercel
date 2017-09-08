@@ -16,15 +16,15 @@ const logo = require('../../../util/output/logo')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now dns ls`)} [domain]
   ${chalk.bold(
-    `${logo} now dns add`
-  )} <domain> <name> <A | AAAA | ALIAS | CNAME | TXT> <value>
-  ${chalk.bold(`${logo} now dns add`)} <domain> <name> MX <value> <mx_priority>
-  ${chalk.bold(
-    `${logo} now dns add`
-  )} <domain> <name> SRV <priority> <weight> <port> <target>
-  ${chalk.bold(`${logo} now dns rm`)} <id>
+    `${logo} now dns`
+  )} [options] <command>
+
+  ${chalk.dim('Commands:')}
+
+    add   [details]    Add a new DNS entry (see below for examples)
+    rm    [id]         Remove a DNS entry using its ID
+    ls    [domain]     List all DNS entries for a domain
 
   ${chalk.dim('Options:')}
 
@@ -42,23 +42,26 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} List all your DNS records
-
-      ${chalk.cyan('$ now dns ls')}
-
   ${chalk.gray('–')} Add an A record for a subdomain
 
       ${chalk.cyan(
-        '$ now dns add <YOUR DOMAIN> <SUBDOMAIN NAME> A <RECORD VALUE>'
+        '$ now dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>'
       )}
       ${chalk.cyan('$ now dns add zeit.rocks api A 198.51.100.100')}
 
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
       ${chalk.cyan(
-        '$ now dns add <YOUR DOMAIN> @ MX <RECORD VALUE> <PRIORITY>'
+        '$ now dns add <DOMAIN> @ MX <RECORD VALUE> <PRIORITY>'
       )}
       ${chalk.cyan('$ now dns add zeit.rocks @ MX mail.zeit.rocks 10')}
+
+  ${chalk.gray('–')} Add an SVR record
+
+      ${chalk.cyan(
+        '$ now dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>'
+      )}
+      ${chalk.cyan('$ now dns add zeit.rocks SRV 10 0 389 zeit.party')}
 `)
 }
 

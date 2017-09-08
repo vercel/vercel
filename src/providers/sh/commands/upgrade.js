@@ -20,7 +20,7 @@ const { bold } = chalk
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now upgrade`)} [plan]
+  ${chalk.bold(`${logo} now upgrade`)} [options] <plan>
 
   ${chalk.dim('Options:')}
 
@@ -48,7 +48,7 @@ const help = () => {
 
       ${chalk.cyan(`$ now billing add`)}
 
-  ${chalk.gray('–')} Pick a specific plan (premium):
+  ${chalk.gray('–')} Pick a specific plan (e.g. "premium")
 
       ${chalk.cyan(`$ now upgrade premium`)}
   `)

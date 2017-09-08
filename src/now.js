@@ -374,7 +374,8 @@ const main = async (argv_) => {
   if (
     !authConfig.credentials.length &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
-    !hasToken
+    !hasToken &&
+    subcommand !== 'login'
   ) {
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`))

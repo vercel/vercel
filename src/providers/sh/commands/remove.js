@@ -17,7 +17,7 @@ const help = () => {
   console.log(`
   ${chalk.bold(
     `${logo} now remove`
-  )} deploymentId|deploymentName [...deploymentId|deploymentName]
+  )} [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
@@ -33,27 +33,25 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -y, --yes                      Skip confirmation
-    --safe                         Skip deployments with an active alias
+    -s, --safe                     Skip deployments with an active alias
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim(
     '`deploymentId`'
-  )}:
+  )}
 
     ${chalk.cyan('$ now rm deploymentId')}
 
-  ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}:
+  ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now rm my-app')}
 
   ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim(
     '`eyWt6zuSdeus`'
-  )} and ${chalk.dim('`uWHoA9RQ1d1o`')}:
+  )} and ${chalk.dim('`uWHoA9RQ1d1o`')}
 
     ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
-
-  ${chalk.dim('Alias:')} rm
 `)
 }
 
@@ -71,7 +69,8 @@ const main = async ctx => {
     alias: {
       help: 'h',
       debug: 'd',
-      yes: 'y'
+      yes: 'y',
+      safe: 's'
     }
   })
 

@@ -32,7 +32,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
-    -f                             Wait for additional data [off]
+    -f, --follow                   Wait for additional data [off]
     -n ${chalk.bold.underline('NUMBER')}                      Number of logs [1000]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
@@ -49,7 +49,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Print logs for the deployment ${chalk.dim(
+  ${chalk.gray('–')} Print the logs for the deployment ${chalk.dim(
     '`deploymentId`'
   )}
 
@@ -74,12 +74,13 @@ let instanceId
 const main = async ctx => {
   argv = minimist(ctx.argv.slice(2), {
     string: ['query', 'since', 'until'],
-    boolean: ['help', 'all', 'debug', 'f'],
+    boolean: ['help', 'all', 'debug', 'follow'],
     alias: {
       help: 'h',
       all: 'a',
       debug: 'd',
-      query: 'q'
+      query: 'q',
+      follow: 'f'
     }
   })
 

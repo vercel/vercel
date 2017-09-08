@@ -26,32 +26,34 @@ const underlineWidth = 11
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now alias`)} <ls | set | rm> <deployment> <alias>
+  ${chalk.bold(`${logo} now alias`)} [options] <command>
+
+  ${chalk.dim('Commands:')}
+
+    ls    [app]                  Show all aliases (or per app name)
+    set   [deployment] [alias]   Create a new alias
+    rm    [id]                   Remove an alias using its ID
 
   ${chalk.dim('Options:')}
 
-    -h, --help                         Output usage information
+    -h, --help                          Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}       Path to the local ${'`now.json`'} file
+  )}        Path to the local ${'`now.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}        Path to the global ${'`.now`'} directory
+  )}         Path to the global ${'`.now`'} directory
     -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline(
     'RULES_FILE'
-  )}  Rules file
-    -d, --debug                        Debug mode [off]
+  )}   Rules file
+    -d, --debug                         Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
-  )}            Login token
+  )}             Login token
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Lists all your aliases:
-
-      ${chalk.cyan('$ now alias ls')}
-
-  ${chalk.gray('–')} Adds a new alias to ${chalk.underline('my-api.now.sh')}:
+  ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.now.sh')}
 
       ${chalk.cyan(
         `$ now alias set ${chalk.underline(
@@ -59,15 +61,7 @@ const help = () => {
         )} ${chalk.underline('my-api.now.sh')}`
       )}
 
-      The ${chalk.dim('`.now.sh`')} suffix can be ommited:
-
-      ${chalk.cyan('$ now alias set api-ownv3nc9f8 my-api')}
-
-      The deployment id can be used as the source:
-
-      ${chalk.cyan('$ now alias set deploymentId my-alias')}
-
-      Custom domains work as alias targets:
+      Custom domains work as alias targets
 
       ${chalk.cyan(
         `$ now alias set ${chalk.underline(
@@ -79,12 +73,12 @@ const help = () => {
     '`set`'
   )} is the default and can be skipped.
       ${chalk.dim('–')} ${chalk.dim(
-    '`http(s)://`'
-  )} in the URLs is unneeded / ignored.
+    'Protocols'
+  )} in the URLs are unneeded and ignored.
 
   ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline(
     'zeit.ninja'
-  )}:
+  )}
 
       ${chalk.cyan(
         `$ now alias ${chalk.underline('zeit.ninja')} -r ${chalk.underline(
@@ -92,21 +86,11 @@ const help = () => {
         )}`
       )}
 
-      Export effective routing rules:
+      Export effective routing rules
 
       ${chalk.cyan(
         `$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`
       )}
-
-      ${chalk.cyan(`$ now alias ls zeit.ninja`)}
-
-  ${chalk.gray('–')} Removing an alias:
-
-      ${chalk.cyan('$ now alias rm aliasId')}
-
-      To get the list of alias ids, use ${chalk.dim('`now alias ls`')}.
-
-  ${chalk.dim('Alias:')} ln
 `)
 }
 

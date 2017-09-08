@@ -8,6 +8,8 @@ const debug = require('debug')('now:sh:login')
 const promptEmail = require('email-prompt')
 const ms = require('ms')
 const { validate: validateEmail } = require('email-validator')
+const chalk = require('chalk')
+const minimist = require('minimist')
 
 // Utilities
 const { version } = require('../../../util/pkg')
@@ -30,6 +32,34 @@ const {
 } = require('../../../util/config-files')
 const getNowDir = require('../../../config/global-path')
 const hp = require('../../../util/humanize-path')
+const logo = require('../../../util/output/logo')
+const exit = require('../../../util/exit')
+
+const help = () => {
+  console.log(`
+  ${chalk.bold(`${logo} now login`)} <email>
+
+  ${chalk.dim('Options:')}
+
+    -h, --help                     Output usage information
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Log into the Now platform
+
+    ${chalk.cyan('$ now login')}
+
+  ${chalk.gray('–')} Log in using a specific email address
+
+    ${chalk.cyan('$ now login john@doe.com')}
+`)
+}
 
 // POSTs to /now/registration – either creates an account or performs a login
 // returns {token, securityCode}
@@ -148,37 +178,39 @@ const readEmail = async () => {
   return email
 }
 
-// TODO open issues: .co, error messages
-
 const login = async ctx => {
-  const { argv } = ctx
+  const argv = minimist(ctx.argv.slice(2), {
+    boolean: ['help'],
+    alias: {
+      help: 'h'
+    }
+  })
+
+  if (argv.help) {
+    help()
+    await exit(0)
+  }
+
+  argv._ = argv._.slice(1)
+
   const apiUrl =
     (ctx.config.sh && ctx.config.sh.apiUrl) || 'https://api.zeit.co'
   let email
   let emailIsValid = false
   let stopSpinner
 
-  // node file sh login [email|help]
-  const argvHasSh = argv[2] === 'sh'
-  const allowedNumberOfArgs = argvHasSh ? 5 : 4
-  if (argv.length > allowedNumberOfArgs) {
-    const _cmd = argvHasSh ? 'now sh login' : 'now login'
-    console.log(error(`Invalid number of arguments for ${cmd(_cmd)}`))
-    console.log(info(`See ${cmd(_cmd + ' help')}`))
-    return 1
-  }
-
-  const maybeEmail = argv[argv.length - 1]
+  const possibleAddress = argv._[0]
 
   // if the last arg is not the command itself, then maybe it's an email
-  if (maybeEmail !== 'login') {
-    if (!validateEmail(maybeEmail)) {
+  if (possibleAddress) {
+    if (!validateEmail(possibleAddress)) {
       // if it's not a valid email, let's just error
-      console.log(error(`Invalid email: ${param(maybeEmail)}.`))
+      console.log(error(`Invalid email: ${param(possibleAddress)}.`))
       return 1
     }
+
     // valid email, no need to prompt the user
-    email = maybeEmail
+    email = possibleAddress
   } else {
     do {
       try {
@@ -221,7 +253,7 @@ const login = async ctx => {
   stopSpinner()
 
   // Clear up `Sending email` success message
-  process.stdout.write(eraseLines(2))
+  process.stdout.write(eraseLines(possibleAddress ? 1 : 2))
 
   console.log(info(
     `We sent an email to ${highlight(email)}. Please follow the steps provided`,

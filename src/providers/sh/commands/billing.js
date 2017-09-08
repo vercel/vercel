@@ -19,7 +19,14 @@ const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now billing`)} <ls | add | rm | set-default>
+  ${chalk.bold(`${logo} now billing`)} [options] <command>
+
+  ${chalk.dim('Options:')}
+
+    ls                   Show all of your credit cards
+    add                  Add a new credit card
+    rm            [id]   Remove a credit card
+    set-default   [id]   Make a credit card your default one
 
   ${chalk.dim('Options:')}
 
@@ -37,25 +44,9 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Lists all your credit cards:
-
-      ${chalk.cyan('$ now billing ls')}
-
-  ${chalk.gray('–')} Adds a credit card (interactively):
+  ${chalk.gray('–')} Add a new credit card (interactively)
 
       ${chalk.cyan(`$ now billing add`)}
-
-  ${chalk.gray('–')} Removes a credit card:
-
-      ${chalk.cyan(`$ now billing rm <id>`)}
-
-      ${chalk.gray('–')} If the id is omitted, you can choose interactively
-
-  ${chalk.gray('–')} Selects your default credit card:
-
-      ${chalk.cyan(`$ now billing set-default <id>`)}
-
-      ${chalk.gray('–')} If the id is omitted, you can choose interactively
   `)
 }
 

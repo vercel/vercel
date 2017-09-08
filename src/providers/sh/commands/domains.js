@@ -19,7 +19,14 @@ const buy = require('./domains/buy')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now domains`)} <ls | add | rm | buy> <domain>
+  ${chalk.bold(`${logo} now domains`)} [options] <command>
+
+  ${chalk.dim('Commands:')}
+
+    ls             Show all domains in a list
+    add   [name]   Add a new domain that you already own
+    rm    [name]   Remove a domain
+    buy   [name]   Buy a domain that you don't yet own
 
   ${chalk.dim('Options:')}
 
@@ -39,85 +46,25 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Lists all your domains:
-
-      ${chalk.cyan('$ now domains ls')}
-
-  ${chalk.gray('–')} Buy a new domain:
-
-      ${chalk.cyan(`$ now domains buy ${chalk.underline('domain-name.com')}`)}
-
-  ${chalk.gray('–')} Adds a domain name:
+  ${chalk.gray('–')} Add a domain that you already own
 
       ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
 
-      Make sure the domain's DNS nameservers are at least 2 of these:
+      Make sure the domain's DNS nameservers are at least 2 of the
+      ones listed on ${chalk.underline('https://zeit.world')}.
 
-      ${chalk.gray('–')} ${chalk.underline(
-    'california.zeit.world'
-  )}    ${chalk.dim('173.255.215.107')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'london.zeit.world'
-  )}        ${chalk.dim('178.62.47.76')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'newark.zeit.world'
-  )}        ${chalk.dim('173.255.231.87')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'amsterdam.zeit.world'
-  )}     ${chalk.dim('188.226.197.55')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'dallas.zeit.world'
-  )}        ${chalk.dim('173.192.101.194')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'paris.zeit.world'
-  )}         ${chalk.dim('37.123.115.172')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'singapore.zeit.world'
-  )}     ${chalk.dim('119.81.97.170')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'sydney.zeit.world'
-  )}        ${chalk.dim('52.64.171.200')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'frankfurt.zeit.world'
-  )}     ${chalk.dim('91.109.245.139')}
-      ${chalk.gray('–')} ${chalk.underline(
-    'iowa.zeit.world'
-  )}          ${chalk.dim('23.236.59.22')}
-
-      ${chalk.yellow('NOTE:')} running ${chalk.dim(
+      ${chalk.yellow('NOTE:')} Running ${chalk.dim(
     '`now alias`'
   )} will automatically register your domain
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
       )}).
 
-      For more details head to ${chalk.underline('https://zeit.world')}.
-
-  ${chalk.gray('–')} Removing a domain:
-
-      ${chalk.cyan('$ now domain rm my-app.com')}
-
-      or
-
-      ${chalk.cyan('$ now domain rm domainId')}
-
-      To get the list of domain ids, use ${chalk.dim('`now domains ls`')}.
-
   ${chalk.gray(
     '–'
-  )} Adding and verifying a domain name using zeit.world nameservers:
-
-      ${chalk.cyan('$ now domain add my-app.com')}
-
-      The command will tell you if the domain was verified succesfully. In case the domain was not verified succesfully you should retry adding the domain after some time.
-
-  ${chalk.gray(
-    '–'
-  )} Adding and verifying a domain name using an external nameserver:
+  )} Add a domain using an external nameserver
 
       ${chalk.cyan('$ now domain add -e my-app.com')}
-
-      and follow the verification instructions if requested. Finally, rerun the same command after completing the verification step.
 `)
 }
 

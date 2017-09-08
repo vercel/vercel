@@ -42,8 +42,6 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app')}
-
-  ${chalk.dim('Alias:')} ls
 `)
 }
 

@@ -21,13 +21,17 @@ const logo = require('../../../util/output/logo')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now certs`)} <ls | create | renew | replace | rm> <cn>
+  ${chalk.bold(`${logo} now certs`)} [options] <command>
 
-  ${chalk.dim('Note:')}
+  ${chalk.yellow('NOTE:')} This command is intended for advanced use only.
+  By default, Now manages your certificates automatically.
 
-  This command is intended for advanced use only, normally ${chalk.bold(
-    'now'
-  )} manages your certificates automatically.
+  ${chalk.dim('Commands:')}
+
+    ls                    Show all available certificates
+    create    [domain]    Create a certificate for a domain
+    renew     [domain]    Renew the certificate of a existing domain
+    replace   [domain]    Switch out a domain's certificate
 
   ${chalk.dim('Options:')}
 
@@ -48,23 +52,9 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Listing all your certificates:
-
-      ${chalk.cyan('$ now certs ls')}
-
-  ${chalk.gray('–')} Creating a new certificate:
-
-      ${chalk.cyan('$ now certs create domain.com')}
-
-  ${chalk.gray('–')} Renewing an existing certificate issued with ${chalk.bold(
-    'now'
-  )}:
-
-      ${chalk.cyan('$ now certs renew domain.com')}
-
   ${chalk.gray(
     '–'
-  )} Replacing an existing certificate with a user-supplied certificate:
+  )} Replace an existing certificate with a custom one
 
       ${chalk.cyan(
         '$ now certs replace --crt domain.crt --key domain.key --ca ca_chain.crt domain.com'

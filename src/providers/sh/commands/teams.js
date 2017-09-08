@@ -17,7 +17,14 @@ const invite = require('./teams/invite')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now teams`)} <add | ls | switch | invite>
+  ${chalk.bold(`${logo} now teams`)} [options] <command>
+
+  ${chalk.dim('Commands:')}
+
+    add                Create a new team
+    ls                 Show all teams you're a part of
+    switch   [name]    Switch to a different team
+    invite   [email]   Invite a new member to a team
 
   ${chalk.dim('Options:')}
 
@@ -35,11 +42,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Add a new team:
-
-      ${chalk.cyan('$ now teams add')}
-
-  ${chalk.gray('–')} Switch to a team:
+  ${chalk.gray('–')} Switch to a team
 
       ${chalk.cyan(`$ now switch <slug>`)}
 
@@ -52,13 +55,9 @@ const help = () => {
         'NOTE:'
       )} When you switch, everything you add, list or remove will be scoped that team!
 
-  ${chalk.gray('–')} Invite new members (interactively):
+  ${chalk.gray('–')} Invite new members (interactively)
 
       ${chalk.cyan(`$ now teams invite`)}
-
-  ${chalk.gray('–')} Invite a specific email:
-
-      ${chalk.cyan(`$ now teams invite geist@zeit.co`)}
   `)
 }
 
