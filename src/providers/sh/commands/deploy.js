@@ -97,10 +97,6 @@ const help = () => {
       login                            Login into your account or creates a new one
       logout                           Logout from your account
 
-    ${chalk.dim('Providers')}
-
-      sh, aws, gcp         [cmd]       Deploy using a different provider
-
   ${chalk.dim('Options:')}
 
     -h, --help                Output usage information
