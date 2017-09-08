@@ -20,9 +20,11 @@ const success = require('../../../util/output/success')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now scale`)} ls
-  ${chalk.bold(`${logo} now scale`)} <url>
   ${chalk.bold(`${logo} now scale`)} <url> <min> [max]
+
+  ${chalk.dim('Commands:')}
+
+    ls    List the scaling information for all deployments
 
   ${chalk.dim('Options:')}
 
