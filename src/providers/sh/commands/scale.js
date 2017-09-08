@@ -40,31 +40,25 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Create a deployment with 3 instances, never sleeps:
+  ${chalk.gray('–')} Scale a deployment to 3 instances (never sleeps):
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 3')}
 
-  ${chalk.gray('–')} Create an automatically scaling deployment:
+  ${chalk.gray('–')} Set a deployment to scale automatically between 1 and 5 instances:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
 
   ${chalk.gray(
     '–'
-  )} Create an automatically scaling deployment without specifying max:
+  )} Set a deployment to scale until your plan limit, but at least 1 instance:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
 
   ${chalk.gray(
     '–'
-  )} Create an automatically scaling deployment without specifying min or max:
+  )} Set a deployment to scale up and down without limits:
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
-
-  ${chalk.gray(
-    '–'
-  )} Create a deployment that is always active and never "sleeps":
-
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1')}
   `)
 }
 
