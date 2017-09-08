@@ -17,7 +17,7 @@ const invite = require('./teams/invite')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now teams`)} <add | ls | rm | invite>
+  ${chalk.bold(`${logo} now teams`)} <add | ls | switch | invite>
 
   ${chalk.dim('Options:')}
 
@@ -56,12 +56,6 @@ const help = () => {
   ${chalk.gray('–')} Invite a specific email:
 
       ${chalk.cyan(`$ now teams invite geist@zeit.co`)}
-
-  ${chalk.gray('–')} Remove a team:
-
-      ${chalk.cyan(`$ now teams rm <id>`)}
-
-      ${chalk.gray('–')} If the id is omitted, you can choose interactively
   `)
 }
 
@@ -163,7 +157,7 @@ async function run({ token, config }) {
     default: {
       let code = 0
       if (subcommand !== 'help') {
-        console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'))
+        console.error(error('Please specify a valid subcommand: add | ls | switch | invite'))
         code = 1
       }
       help()
