@@ -42,7 +42,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Switch to a team:
+  ${chalk.gray('–')} Switch to a team
 
       ${chalk.cyan(`$ now switch <slug>`)}
 
@@ -55,7 +55,7 @@ const help = () => {
         'NOTE:'
       )} When you switch, everything you add, list or remove will be scoped that team!
 
-  ${chalk.gray('–')} Invite new members (interactively):
+  ${chalk.gray('–')} Invite new members (interactively)
 
       ${chalk.cyan(`$ now teams invite`)}
   `)
