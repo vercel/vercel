@@ -253,7 +253,7 @@ const login = async ctx => {
   stopSpinner()
 
   // Clear up `Sending email` success message
-  process.stdout.write(eraseLines(2))
+  process.stdout.write(eraseLines(possibleAddress ? 1 : 2))
 
   console.log(info(
     `We sent an email to ${highlight(email)}. Please follow the steps provided`,
