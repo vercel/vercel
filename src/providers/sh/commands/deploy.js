@@ -136,29 +136,25 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Deploys the current directory
+  ${chalk.gray('–')} Deploy the current directory
 
     ${chalk.cyan('$ now')}
 
-  ${chalk.gray('–')} Deploys a custom path ${chalk.dim('`/usr/src/project`')}
+  ${chalk.gray('–')} Deploy a custom path ${chalk.dim('`/usr/src/project`')}
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Deploys a GitHub repository
+  ${chalk.gray('–')} Deploy a GitHub repository
 
     ${chalk.cyan('$ now user/repo#ref')}
 
-  ${chalk.gray('–')} Deploys a GitHub, GitLab or Bitbucket repo using its URL
-
-    ${chalk.cyan('$ now https://gitlab.com/user/repo')}
-
-  ${chalk.gray('–')} Deploys with ENV vars
+  ${chalk.gray('–')} Deploy with environment variables
 
     ${chalk.cyan(
       '$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password'
     )}
 
-  ${chalk.gray('–')} Displays comprehensive help for the subcommand ${chalk.dim(
+  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
     '`list`'
   )}
 

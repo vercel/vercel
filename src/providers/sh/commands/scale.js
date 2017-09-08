@@ -42,23 +42,23 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Scale a deployment to 3 instances (never sleeps):
+  ${chalk.gray('–')} Scale a deployment to 3 instances (never sleeps)
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 3')}
 
-  ${chalk.gray('–')} Set a deployment to scale automatically between 1 and 5 instances:
+  ${chalk.gray('–')} Set a deployment to scale automatically between 1 and 5 instances
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
 
   ${chalk.gray(
     '–'
-  )} Set a deployment to scale until your plan limit, but at least 1 instance:
+  )} Set a deployment to scale until your plan limit, but at least 1 instance
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
 
   ${chalk.gray(
     '–'
-  )} Set a deployment to scale up and down without limits:
+  )} Set a deployment to scale up and down without limits
 
     ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
   `)
