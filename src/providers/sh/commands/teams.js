@@ -94,7 +94,7 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help()
-    exit(0)
+    process.exit(0)
   }
 
   const {authConfig: { credentials }, config} = ctx
