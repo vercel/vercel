@@ -44,10 +44,10 @@ The output of the `now` command will be a unique url to the deployment. No need 
 
 ## Installation
 
-To install the latest version:
+To get the latest version, run this command:
 
 ```
-npm install -g now@beta
+npm install -g now
 ```
 
 Note: while the API has been in production for over a year, the different
