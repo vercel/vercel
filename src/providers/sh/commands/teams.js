@@ -22,10 +22,10 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -l ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
-    -g ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]

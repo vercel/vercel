@@ -106,10 +106,10 @@ const help = () => {
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -n, --name                     Set the name of the deployment
-    -l ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
-    -g ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]

@@ -27,10 +27,10 @@ const help = () => {
     -d, --debug                    Debug mode [off]
     -e, --external                 Use external DNS server
     -f, --force                    Skip DNS verification
-    -l ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
-    -g ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
   )}    Path to the global ${'`.now`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
