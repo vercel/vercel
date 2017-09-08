@@ -41,7 +41,6 @@ const mriOpts = {
     'debug',
     'force',
     'links',
-    'login',
     'no-clipboard',
     'forward-npm',
     'docker',
@@ -57,7 +56,6 @@ const mriOpts = {
     force: 'f',
     forceSync: 'F',
     links: 'l',
-    login: 'L',
     public: 'p',
     'no-clipboard': 'C',
     'forward-npm': 'N',
@@ -114,7 +112,6 @@ const help = () => {
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
     'TOKEN'
   )}        Login token
-    -L, --login                    Configure login
     -l, --links                    Copy symlinks without resolving their target
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
