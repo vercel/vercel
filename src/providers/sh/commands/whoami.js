@@ -62,16 +62,11 @@ module.exports = async ctx => {
   }
 }
 
-async function whoami({user, currentTeam}) {
+async function whoami({user}) {
   if (process.stdout.isTTY) {
     process.stdout.write('> ')
   }
 
-  let name = user.username || user.email
-
-  if (currentTeam) {
-    name = currentTeam.slug
-  }
-
+  const name = user.username || user.email
   console.log(name)
 }
