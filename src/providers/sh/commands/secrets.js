@@ -15,7 +15,14 @@ const logo = require('../../../util/output/logo')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now secrets`)} <ls | add | rename | rm> <secret>
+  ${chalk.bold(`${logo} now secrets`)} [options] <command>
+
+  ${chalk.dim('Commands:')}
+
+    ls                               Show all secrets in a list
+    add      [name] [value]          Add a new secret
+    rename   [old-name] [new-name]   Change the name of a secret
+    rm       [name]                  Remove a secret
 
   ${chalk.dim('Options:')}
 
@@ -34,37 +41,23 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Lists all your secrets:
-
-    ${chalk.cyan('$ now secrets ls')}
-
-  ${chalk.gray('–')} Adds a new secret:
+  ${chalk.gray('–')} Add a new secret
 
     ${chalk.cyan('$ now secrets add my-secret "my value"')}
 
     ${chalk.gray(
       '–'
-    )} Once added, a secret's value can't be retrieved in plaintext anymore
+    )} Once added, a secret's value can't be retrieved in plain text anymore
     ${chalk.gray(
       '–'
     )} If the secret's value is more than one word, wrap it in quotes
-    ${chalk.gray('–')} Actually, when in doubt, wrap your value in quotes
+    ${chalk.gray('–')} When in doubt, always wrap your value in quotes
 
-  ${chalk.gray('–')} Exposes a secret as an env variable:
+  ${chalk.gray('–')} Expose a secret as an environment variable (notice the ${chalk.cyan.bold(
+    '`@`'
+  )} symbol)
 
     ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
-
-    Notice the ${chalk.cyan.bold(
-      '`@`'
-    )} symbol which makes the value a secret reference.
-
-  ${chalk.gray('–')} Renames a secret:
-
-    ${chalk.cyan(`$ now secrets rename my-secret my-renamed-secret`)}
-
-  ${chalk.gray('–')} Removes a secret:
-
-    ${chalk.cyan(`$ now secrets rm my-secret`)}
 `)
 }
 
