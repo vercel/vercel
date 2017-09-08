@@ -49,7 +49,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Print logs for the deployment ${chalk.dim(
+  ${chalk.gray('–')} Print the logs for the deployment ${chalk.dim(
     '`deploymentId`'
   )}
 
