@@ -31,9 +31,12 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                         Output usage information
-    -c ${chalk.bold.underline('FILE')}, --config=${chalk.bold.underline(
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}             Config file
+  )}       Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}        Path to the global ${'`.now`'} directory
     -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline(
     'RULES_FILE'
   )}  Rules file

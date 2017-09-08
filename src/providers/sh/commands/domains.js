@@ -23,13 +23,19 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help              Output usage information
-    -d, --debug             Debug mode [off]
-    -e, --external          Use external DNS server
-    -f, --force             Skip DNS verification
+    -h, --help                     Output usage information
+    -d, --debug                    Debug mode [off]
+    -e, --external                 Use external DNS server
+    -f, --force                    Skip DNS verification
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
-  )} Login token
+  )}        Login token
 
   ${chalk.dim('Examples:')}
 

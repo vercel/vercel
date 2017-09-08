@@ -5,11 +5,12 @@ const { join } = require('path')
 const fs = require('fs-extra')
 const chalk = require('chalk')
 
-// Ours
+// Utilities
 const { error } = require('./error')
 const readMetaData = require('./read-metadata')
 const NowAlias = require('./alias')
 const NowDomains = require('./domains')
+const getLocalPathConfig = require('../../../config/local-path')
 
 exports.assignAlias = async (
   autoAlias,
@@ -52,7 +53,7 @@ exports.reAlias = async (
 
   const configFiles = {
     pkg: join(path, 'package.json'),
-    nowJSON: join(path, 'now.json')
+    nowJSON: getLocalPathConfig(path)
   }
 
   if (!fs.existsSync(configFiles.pkg) && !fs.existsSync(configFiles.nowJSON)) {

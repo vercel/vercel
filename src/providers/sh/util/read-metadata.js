@@ -7,6 +7,9 @@ const { readFile } = require('fs-extra')
 const { parse: parseDockerfile } = require('docker-file-parser')
 const determineType = require('deployment-type')
 
+// Utilities
+const getLocalConfigPath = require('../../../config/local-path')
+
 module.exports = readMetaData
 
 async function readMetaData(
@@ -25,7 +28,7 @@ async function readMetaData(
   let affinity = sessionAffinity
 
   const pkg = await readJSON(path, 'package.json')
-  let nowConfig = await readJSON(path, 'now.json')
+  let nowConfig = await readJSON(getLocalConfigPath(path))
   const dockerfile = await readDockerfile(path)
 
   const hasNowJson = Boolean(nowConfig)
@@ -170,7 +173,7 @@ async function readMetaData(
 
 async function readJSON(path, name) {
   try {
-    const contents = await readFile(resolvePath(path, name), 'utf8')
+    const contents = await readFile(name ? resolvePath(path, name) : path, 'utf8')
     return JSON.parse(contents)
   } catch (err) {
     // If the file doesn't exist then that's fine; any other error bubbles up
