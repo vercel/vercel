@@ -148,7 +148,7 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help()
-    exit(0)
+    await exit(0)
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx

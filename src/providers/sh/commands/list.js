@@ -13,6 +13,7 @@ const Now = require('../util')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
+const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -69,7 +70,7 @@ const main = async ctx => {
 
   if (argv.help || app === 'help') {
     help()
-    process.exit(0)
+    await exit(0)
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx

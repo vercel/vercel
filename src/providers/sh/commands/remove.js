@@ -11,6 +11,7 @@ const Now = require('../util')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const { normalizeURL } = require('../../../util/url')
+const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -84,7 +85,7 @@ const main = async ctx => {
 
   if (argv.help || ids.length === 0 || ids[0] === 'help') {
     help()
-    process.exit(0)
+    await exit(0)
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx

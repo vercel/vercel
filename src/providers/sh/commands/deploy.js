@@ -15,7 +15,7 @@ const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 
-// Ours
+// Utilities
 const Logger = require('../util/build-logger')
 const Now = require('../util')
 const toHumanPath = require('../../../util/humanize-path')
@@ -31,6 +31,7 @@ const NowPlans = require('../util/plans')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
+const exit = require('../../../util/exit')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity'],
@@ -263,7 +264,7 @@ async function main(ctx) {
 
   if (argv.h || argv.help) {
     help()
-    return 0
+    await exit(0)
   }
 
   const { authConfig: { credentials }, config: { sh } } = ctx

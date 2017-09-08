@@ -16,6 +16,7 @@ const {
   writeToAuthConfigFile
 } = require('../../../util/config-files')
 const error = require('../../../util/output/error')
+const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -58,7 +59,7 @@ const main = async ctx => {
 
   if (argv.help || argv._[0] === 'help') {
     help()
-    process.exit(0)
+    await exit(0)
   }
 
   logout()

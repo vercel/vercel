@@ -15,6 +15,7 @@ const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const { compare, deserialize } = require('../util/logs')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
+const exit = require('../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -87,7 +88,7 @@ const main = async ctx => {
 
   if (argv.help || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help()
-    process.exit(0)
+    await exit(0)
   }
 
   try {
