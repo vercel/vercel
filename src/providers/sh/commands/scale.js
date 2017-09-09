@@ -82,7 +82,15 @@ const main = async ctx => {
     }
   })
 
-  argv._ = argv._.slice(1)
+  argv._ = argv._.slice(1).map(arg => {
+    const parsed = parseInt(arg)
+
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      return parsed
+    }
+
+    return arg
+  })
 
   id = argv._[0]
   scaleArg = argv._[1]
@@ -120,7 +128,7 @@ module.exports = async ctx => {
   }
 }
 
-function guessParams() {
+const guessParams = () => {
   if (Number.isInteger(scaleArg) && !optionalScaleArg) {
     return { min: scaleArg, max: scaleArg }
   } else if (Number.isInteger(scaleArg) && Number.isInteger(optionalScaleArg)) {
@@ -133,11 +141,12 @@ function guessParams() {
   ) {
     return { min: 1, max: 'auto' }
   }
+
   help()
   process.exit(1)
 }
 
-function isHostNameOrId(str) {
+const isHostNameOrId = str => {
   return (
     /(https?:\/\/)?((?:(?=[a-z0-9-]{1,63}\.)(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\.)+[a-z]{2,63})/.test(
       str
