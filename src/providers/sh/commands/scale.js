@@ -140,7 +140,7 @@ const guessParams = () => {
   process.exit(1)
 }
 
-const isHostNameOrId = str => {
+const isHostName = str => {
   return (
     /(https?:\/\/)?((?:(?=[a-z0-9-]{1,63}\.)(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\.)+[a-z]{2,63})/.test(
       str
@@ -158,7 +158,7 @@ async function run({ token, sh: { currentTeam } }) {
   } else if (id === 'info') {
     await info(scale)
     process.exit(0)
-  } else if (id && isHostNameOrId(id)) {
+  } else if (id && isHostName(id)) {
     // Normalize URL by removing slash from the end
     if (isURL(id)) {
       id = id.replace(/^https:\/\//i, '')
