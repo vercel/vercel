@@ -167,7 +167,7 @@ async function run({ token, sh: { currentTeam } }) {
       }
     }
   } else {
-    console.error(error('Please specify a deployment: now scale <id|url>'))
+    console.error(error('Please specify a deployment: now scale <url>'))
     help()
     exit(1)
   }
