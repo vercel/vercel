@@ -83,13 +83,11 @@ const main = async ctx => {
   })
 
   argv._ = argv._.slice(1).map(arg => {
-    const parsed = parseInt(arg)
-
-    if (!isNaN(parsed) && isFinite(parsed)) {
-      return parsed
+    if (isNaN(arg)) {
+      return arg
     }
 
-    return arg
+    return parseInt(arg)
   })
 
   id = argv._[0]
