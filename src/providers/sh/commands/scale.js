@@ -83,13 +83,7 @@ const main = async ctx => {
   })
 
   argv._ = argv._.slice(1).map(arg => {
-    const parsed = parseInt(arg)
-
-    if (!isNaN(parsed) && isFinite(parsed)) {
-      return parsed
-    }
-
-    return arg
+    return isNaN(arg) ? arg : parseInt(arg)
   })
 
   id = argv._[0]
@@ -146,7 +140,7 @@ const guessParams = () => {
   process.exit(1)
 }
 
-const isHostNameOrId = str => {
+const isHostName = str => {
   return (
     /(https?:\/\/)?((?:(?=[a-z0-9-]{1,63}\.)(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\.)+[a-z]{2,63})/.test(
       str
@@ -164,7 +158,7 @@ async function run({ token, sh: { currentTeam } }) {
   } else if (id === 'info') {
     await info(scale)
     process.exit(0)
-  } else if (id && isHostNameOrId(id)) {
+  } else if (id && isHostName(id)) {
     // Normalize URL by removing slash from the end
     if (isURL(id)) {
       id = id.replace(/^https:\/\//i, '')
@@ -173,7 +167,7 @@ async function run({ token, sh: { currentTeam } }) {
       }
     }
   } else {
-    console.error(error('Please specify a deployment: now scale <id|url>'))
+    console.error(error('Please specify a deployment: now scale <url>'))
     help()
     exit(1)
   }
