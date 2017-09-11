@@ -267,7 +267,7 @@ function parseAddArgs(args) {
         name,
         type,
         value,
-        mxPriority: args[4]
+        mxPriority: Number(args[4])
       }
     }
   } else if (type === 'SRV') {
@@ -281,9 +281,9 @@ function parseAddArgs(args) {
         name,
         type,
         srv: {
-          priority: value,
-          weight: args[4],
-          port: args[5],
+          priority: Number(value),
+          weight: Number(args[4]),
+          port: Number(args[5]),
           target: args[6]
         }
       }
