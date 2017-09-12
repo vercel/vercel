@@ -403,10 +403,20 @@ const main = async (argv_) => {
       process.exit(1)
     }
 
-    ctx.authConfig.credentials.push({
+    const obj = {
       provider: 'sh',
       token
-    })
+    }
+
+    const credentialsIndex = ctx.authConfig.credentials.findIndex(
+      cred => cred.provider === 'sh'
+    )
+
+    if (credentialsIndex === -1) {
+      ctx.authConfig.credentials.push(obj)
+    } else {
+      ctx.authConfig.credentials[credentialsIndex] = obj
+    }
 
     if (isTTY) {
       console.log(info('Caching account information...'))
