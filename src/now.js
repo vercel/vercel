@@ -412,10 +412,10 @@ const main = async (argv_) => {
       cred => cred.provider === 'sh'
     )
 
-    if (credentialsIndex) {
-      ctx.authConfig.credentials[credentialsIndex] = obj
-    } else {
+    if (credentialsIndex === -1) {
       ctx.authConfig.credentials.push(obj)
+    } else {
+      ctx.authConfig.credentials[credentialsIndex] = obj
     }
 
     if (isTTY) {
