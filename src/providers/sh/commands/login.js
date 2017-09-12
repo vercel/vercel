@@ -66,7 +66,10 @@ const help = () => {
 // token: should be used to verify the status of the login process
 // securityCode: will be sent to the user in the email body
 const getVerificationData = async ({ apiUrl, email }) => {
-  const tokenName = `Now CLI ${version} – ${platform()}-${arch()} (${hostname()})`
+  const hyphens = new RegExp('-', 'g')
+  const host = hostname().replace(hyphens, ' ').replace('.local', '')
+  const tokenName = `Now CLI on ${host}`
+
   const data = JSON.stringify({ email, tokenName })
 
   debug('POST /now/registration')
