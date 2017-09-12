@@ -232,6 +232,13 @@ async function main(ctx) {
   if (argv._[0] === 'deploy') {
     argv._.shift()
   }
+  if (argv._.length > 0) {
+    path = argv._.shift()
+  }
+  if (argv._.length > 0) {
+    console.error(error(`At most one directory can be specified for deploying (${path})`))
+    process.exit(1)
+  }
 
   if (path) {
     // If path is relative: resolve
