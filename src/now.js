@@ -9,7 +9,6 @@ const debug = require('debug')('now:main')
 const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
-const chalk = require('chalk')
 
 // Utilities
 const error = require('./util/output/error')
@@ -241,7 +240,7 @@ const main = async (argv_) => {
 
   // Let the user know we migrated the config
   if (migrated) {
-    const directory = chalk.grey(join('~', basename(NOW_DIR)))
+    const directory = param(hp(NOW_DIR))
     console.log(info(`Your credentials and configuration were migrated to ${directory}`))
   }
 
@@ -399,7 +398,7 @@ const main = async (argv_) => {
     const token = argv[tokenIndex]
 
     if (!token) {
-      console.log(error('You defined `' + chalk.grey(hasToken) + '`, but it\'s missing a value'))
+      console.log(error(`You defined ${param(hasToken)}, but it\'s missing a value`))
       process.exit(1)
     }
 
