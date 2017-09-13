@@ -398,7 +398,7 @@ const main = async (argv_) => {
     const token = argv[tokenIndex]
 
     if (!token) {
-      console.log(error(`You defined ${param(hasToken)}, but it is missing a value`))
+      console.log(error(`You defined ${param(hasToken)}, but it\'s missing a value`))
       process.exit(1)
     }
 
