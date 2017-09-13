@@ -18,10 +18,7 @@ const getLocalPathConfig = prefix => {
     return path.join(prefix, 'now.json')
   }
 
-  console.log(path.resolve(path, customPath))
-  process.exit(1)
-
-  return path.resolve(path, customPath)
+  return path.resolve(prefix, customPath)
 }
 
 module.exports = getLocalPathConfig
