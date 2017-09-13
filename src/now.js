@@ -426,7 +426,8 @@ const main = async (argv_) => {
       token
     })
 
-    ctx.config.sh = {user}
+    // Remind: Keep the currentTeam information 
+    ctx.config.sh = Object.assign(ctx.config.sh, { user })
   }
 
   try {
