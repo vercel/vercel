@@ -9,6 +9,7 @@ const debug = require('debug')('now:main')
 const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
+const fetch = require('node-fetch')
 
 // Utilities
 const error = require('./util/output/error')
@@ -35,11 +36,12 @@ const main = async (argv_) => {
 
   const argv = mri(argv_, {
     boolean: ['help', 'version'],
-    string: ['token'],
+    string: ['token', 'team'],
     alias: {
       help: 'h',
       version: 'v',
-      token: 't'
+      token: 't',
+      team: 'T'
     }
   })
 
@@ -394,7 +396,7 @@ const main = async (argv_) => {
     const {token} = argv
 
     if (token.length === 0) {
-      console.log(error(`You defined ${`--token`}, but it's missing a value`))
+      console.error(error(`You defined ${`--token`}, but it's missing a value`))
       await exit(1)
     }
 
@@ -423,6 +425,46 @@ const main = async (argv_) => {
     })
 
     ctx.config.sh = Object.assign(ctx.config.sh, { user })
+  }
+
+  if (typeof argv.team === 'string') {
+    const {team} = argv
+
+    if (team.length === 0) {
+      console.log(error(`You defined ${`--team`}, but it's missing a value`))
+      await exit(1)
+    }
+
+    if (isTTY) {
+      console.log(info('Caching team information...'))
+    }
+
+    const {token} = ctx.authConfig.credentials.find(item => item.provider === 'sh')
+
+    const headers = {
+      Authorization: `Bearer ${token}`
+    }
+
+    const url = `https://api.zeit.co/teams/?slug=${team}`
+    let body
+
+    try {
+      const res = await fetch(url, { headers })
+      body = await res.json()
+    } catch (err) {
+      console.error(error('Not able to load teams'))
+      await exit(1)
+    }
+
+    if (body.error) {
+      console.error(error('The specified team doesn\'t exist'))
+      await exit(1)
+    }
+
+    delete body.creator_id
+    delete body.created
+
+    ctx.config.sh.currentTeam = body
   }
 
   try {
