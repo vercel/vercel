@@ -2,7 +2,7 @@
 //@flow
 
 // Native
-const { join, basename } = require('path')
+const { join } = require('path')
 
 // Packages
 const debug = require('debug')('now:main')
@@ -404,7 +404,7 @@ const main = async (argv_) => {
     const token = argv[tokenIndex]
 
     if (!token) {
-      console.log(error(`You defined ${param(hasToken)}, but it\'s missing a value`))
+      console.log(error(`You defined ${param(hasToken)}, but it's missing a value`))
       await exit(1)
     }
 
