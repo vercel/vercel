@@ -22,6 +22,7 @@ const providers = require('./providers')
 const configFiles = require('./util/config-files')
 const checkForUpdates = require('./util/updates')
 const getUser = require('./util/get-user')
+const exit = require('./util/exit')
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -386,10 +387,15 @@ const main = async (argv_) => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
-      console.log(error('No existing credentials found. Please ' +
+      console.error(error('No existing credentials found. Please ' +
       '`now login` to log in or pass `--token`'))
-      process.exit(1)
+      await exit(1)
     }
+  }
+
+  if (hasToken && subcommand === 'switch') {
+    console.error(error('This command doesn\'t work with `--token`. Please use `--team`.'))
+    await exit(1)
   }
 
   if (hasToken) {
@@ -399,7 +405,7 @@ const main = async (argv_) => {
 
     if (!token) {
       console.log(error(`You defined ${param(hasToken)}, but it\'s missing a value`))
-      process.exit(1)
+      await exit(1)
     }
 
     const obj = {
@@ -426,7 +432,7 @@ const main = async (argv_) => {
       token
     })
 
-    ctx.config.sh = {user}
+    ctx.config.sh = Object.assign(ctx.config.sh, { user })
   }
 
   try {

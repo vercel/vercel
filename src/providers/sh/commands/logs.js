@@ -125,7 +125,7 @@ const main = async ctx => {
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
 
   const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const {token} = credentials.find(item => item.provider === 'sh')
 
   await printLogs({ token, sh })
 }

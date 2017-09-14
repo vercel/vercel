@@ -94,7 +94,7 @@ const main = async ctx => {
   }
 
   const {authConfig: { credentials }, config} = ctx
-  const {token} = argv.token || credentials.find(item => item.provider === 'sh')
+  const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
     await run({ token, config })

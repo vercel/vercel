@@ -141,7 +141,7 @@ const logout = async () => {
   let tokenId
 
   try {
-    tokenId = await getTokenId(argv.token || related.token)
+    tokenId = await getTokenId(related.token)
   } catch (err) {
     spinner.fail('Not able to get token id on logout')
     process.exit(1)
@@ -152,7 +152,7 @@ const logout = async () => {
   }
 
   try {
-    await revokeToken(argv.token || related.token, tokenId)
+    await revokeToken(related.token, tokenId)
   } catch (err) {
     spinner.fail('Could not revoke token on logout')
     process.exit(1)
