@@ -452,7 +452,7 @@ const main = async (argv_) => {
       const res = await fetch(url, { headers })
 
       if (res.status === 403) {
-        console.error(error('Not authorized to load teams'))
+        console.error(error(`You don't have access to the specified team`))
         await exit(1)
       }
 
