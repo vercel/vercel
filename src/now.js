@@ -416,7 +416,7 @@ const main = async (argv_) => {
     }
 
     if (isTTY) {
-      console.log(info('Caching account information...'))
+      console.log(info('Caching account information'))
     }
 
     const user = await getUser({
@@ -436,7 +436,7 @@ const main = async (argv_) => {
     }
 
     if (isTTY) {
-      console.log(info('Caching team information...'))
+      console.log(info('Caching team information'))
     }
 
     const {token} = ctx.authConfig.credentials.find(item => item.provider === 'sh')
@@ -450,6 +450,12 @@ const main = async (argv_) => {
 
     try {
       const res = await fetch(url, { headers })
+
+      if (res.status === 403) {
+        console.error(error('Not authorized to load teams'))
+        await exit(1)
+      }
+
       body = await res.json()
     } catch (err) {
       console.error(error('Not able to load teams'))
