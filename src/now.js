@@ -382,13 +382,13 @@ const main = async (argv_) => {
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
       console.error(error('No existing credentials found. Please ' +
-      '`now login` to log in or pass `--token`'))
+      `${param('now login')} to log in or pass ${param('--token')}`))
       await exit(1)
     }
   }
 
   if (argv.token && subcommand === 'switch') {
-    console.error(error('This command doesn\'t work with `--token`. Please use `--team`.'))
+    console.error(error(`This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`))
     await exit(1)
   }
 
@@ -396,7 +396,7 @@ const main = async (argv_) => {
     const {token} = argv
 
     if (token.length === 0) {
-      console.error(error(`You defined ${`--token`}, but it's missing a value`))
+      console.error(error(`You defined ${param('--token')}, but it's missing a value`))
       await exit(1)
     }
 
@@ -431,7 +431,7 @@ const main = async (argv_) => {
     const {team} = argv
 
     if (team.length === 0) {
-      console.log(error(`You defined ${`--team`}, but it's missing a value`))
+      console.log(error(`You defined ${param('--team')}, but it's missing a value`))
       await exit(1)
     }
 
