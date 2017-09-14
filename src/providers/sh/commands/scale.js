@@ -39,6 +39,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
+    -T, --team                     Set a custom team scope
 
   ${chalk.dim('Examples:')}
 
