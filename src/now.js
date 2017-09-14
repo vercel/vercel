@@ -35,9 +35,11 @@ const main = async (argv_) => {
 
   const argv = mri(argv_, {
     boolean: ['help', 'version'],
+    string: ['token'],
     alias: {
       help: 'h',
-      version: 'v'
+      version: 'v',
+      token: 't'
     }
   })
 
@@ -356,16 +358,6 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
-  let hasToken = false
-
-  if (ctx.argv.includes('-t')) {
-    hasToken = '-t'
-  }
-
-  if (ctx.argv.includes('--token')) {
-    hasToken = '--token'
-  }
-
   // $FlowFixMe
   const { isTTY } = process.stdout
 
@@ -374,7 +366,7 @@ const main = async (argv_) => {
   if (
     !authConfig.credentials.length &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
-    !hasToken &&
+    !argv.token &&
     subcommand !== 'login'
   ) {
     if (isTTY) {
@@ -393,18 +385,16 @@ const main = async (argv_) => {
     }
   }
 
-  if (hasToken && subcommand === 'switch') {
+  if (argv.token && subcommand === 'switch') {
     console.error(error('This command doesn\'t work with `--token`. Please use `--team`.'))
     await exit(1)
   }
 
-  if (hasToken) {
-    const {argv} = ctx
-    const tokenIndex = argv.indexOf(hasToken) + 1
-    const token = argv[tokenIndex]
+  if (typeof argv.token === 'string') {
+    const {token} = argv
 
-    if (!token) {
-      console.log(error(`You defined ${param(hasToken)}, but it's missing a value`))
+    if (token.length === 0) {
+      console.log(error(`You defined ${`--token`}, but it's missing a value`))
       await exit(1)
     }
 
