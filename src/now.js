@@ -2,13 +2,14 @@
 //@flow
 
 // Native
-const { join, basename } = require('path')
+const { join } = require('path')
 
 // Packages
 const debug = require('debug')('now:main')
 const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
+const fetch = require('node-fetch')
 
 // Utilities
 const error = require('./util/output/error')
@@ -35,9 +36,12 @@ const main = async (argv_) => {
 
   const argv = mri(argv_, {
     boolean: ['help', 'version'],
+    string: ['token', 'team'],
     alias: {
       help: 'h',
-      version: 'v'
+      version: 'v',
+      token: 't',
+      team: 'T'
     }
   })
 
@@ -356,16 +360,6 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
-  let hasToken = false
-
-  if (ctx.argv.includes('-t')) {
-    hasToken = '-t'
-  }
-
-  if (ctx.argv.includes('--token')) {
-    hasToken = '--token'
-  }
-
   // $FlowFixMe
   const { isTTY } = process.stdout
 
@@ -374,7 +368,7 @@ const main = async (argv_) => {
   if (
     !authConfig.credentials.length &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
-    !hasToken &&
+    !argv.token &&
     subcommand !== 'login'
   ) {
     if (isTTY) {
@@ -388,23 +382,21 @@ const main = async (argv_) => {
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
       console.error(error('No existing credentials found. Please ' +
-      '`now login` to log in or pass `--token`'))
+      `${param('now login')} to log in or pass ${param('--token')}`))
       await exit(1)
     }
   }
 
-  if (hasToken && subcommand === 'switch') {
-    console.error(error('This command doesn\'t work with `--token`. Please use `--team`.'))
+  if (argv.token && subcommand === 'switch') {
+    console.error(error(`This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`))
     await exit(1)
   }
 
-  if (hasToken) {
-    const {argv} = ctx
-    const tokenIndex = argv.indexOf(hasToken) + 1
-    const token = argv[tokenIndex]
+  if (typeof argv.token === 'string') {
+    const {token} = argv
 
-    if (!token) {
-      console.log(error(`You defined ${param(hasToken)}, but it\'s missing a value`))
+    if (token.length === 0) {
+      console.error(error(`You defined ${param('--token')}, but it's missing a value`))
       await exit(1)
     }
 
@@ -424,7 +416,7 @@ const main = async (argv_) => {
     }
 
     if (isTTY) {
-      console.log(info('Caching account information...'))
+      console.log(info('Caching account information'))
     }
 
     const user = await getUser({
@@ -433,6 +425,55 @@ const main = async (argv_) => {
     })
 
     ctx.config.sh = Object.assign(ctx.config.sh, { user })
+  }
+
+  if (typeof argv.team === 'string') {
+    const {team} = argv
+
+    if (team.length === 0) {
+      console.log(error(`You defined ${param('--team')}, but it's missing a value`))
+      await exit(1)
+    }
+
+    if (isTTY) {
+      console.log(info('Caching team information'))
+    }
+
+    const {token} = ctx.authConfig.credentials.find(item => item.provider === 'sh')
+
+    const headers = {
+      Authorization: `Bearer ${token}`
+    }
+
+    const url = `https://api.zeit.co/teams/?slug=${team}`
+    let body
+
+    try {
+      const res = await fetch(url, { headers })
+
+      if (res.status === 403) {
+        console.error(error(`You don't have access to the specified team`))
+        await exit(1)
+      }
+
+      body = await res.json()
+    } catch (err) {
+      console.error(error('Not able to load teams'))
+      await exit(1)
+    }
+
+    if (!body || body.error) {
+      console.error(error('The specified team doesn\'t exist'))
+      await exit(1)
+    }
+
+    // $FlowFixMe
+    delete body.creator_id
+
+    // $FlowFixMe
+    delete body.created
+
+    ctx.config.sh.currentTeam = body
   }
 
   try {

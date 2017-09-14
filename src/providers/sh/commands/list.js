@@ -32,6 +32,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    -T, --team                     Set a custom team scope
 
   ${chalk.dim('Examples:')}
 

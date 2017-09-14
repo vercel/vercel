@@ -36,9 +36,6 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
 
   ${chalk.dim('Examples:')}
 

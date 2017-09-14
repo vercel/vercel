@@ -49,6 +49,7 @@ const help = () => {
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline('FILE')}                     Certificate key file
     --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
+    -T, --team                     Set a custom team scope
 
   ${chalk.dim('Examples:')}
 
