@@ -462,12 +462,15 @@ const main = async (argv_) => {
       await exit(1)
     }
 
-    if (body.error) {
+    if (!body || body.error) {
       console.error(error('The specified team doesn\'t exist'))
       await exit(1)
     }
 
+    // $FlowFixMe
     delete body.creator_id
+
+    // $FlowFixMe
     delete body.created
 
     ctx.config.sh.currentTeam = body
