@@ -436,7 +436,7 @@ const main = async (argv_) => {
       await exit(1)
     }
 
-    const cachedUser = sh && sh.user && sh.user.username && sh.user.username === team
+    const cachedUser = sh && sh.user && sh.user.username === team
 
     if (cachedUser) {
       delete ctx.config.sh.currentTeam
