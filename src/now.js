@@ -427,7 +427,7 @@ const main = async (argv_) => {
     ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
   }
 
-  if (typeof argv.team === 'string') {
+  if (typeof argv.team === 'string' && subcommand !== 'login') {
     const { team } = argv
     const { sh } = ctx.config
 
