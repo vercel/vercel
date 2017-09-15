@@ -436,10 +436,16 @@ const main = async (argv_) => {
       await exit(1)
     }
 
-    const cached = sh && sh.currentTeam && sh.currentTeam.slug === team
+    const cachedUser = sh && sh.user && sh.user.username && sh.user.username === team
+
+    if (cachedUser) {
+      delete ctx.config.sh.currentTeam
+    }
+
+    const cachedTeam = sh && sh.currentTeam && sh.currentTeam.slug === team
 
     // Only download team data if not cached
-    if (!cached) {
+    if (!cachedTeam && !cachedUser) {
       if (isTTY) {
         console.log(info('Caching team information'))
       }
