@@ -428,52 +428,58 @@ const main = async (argv_) => {
   }
 
   if (typeof argv.team === 'string') {
-    const {team} = argv
+    const { team } = argv
+    const { sh } = ctx.config
 
     if (team.length === 0) {
       console.log(error(`You defined ${param('--team')}, but it's missing a value`))
       await exit(1)
     }
 
-    if (isTTY) {
-      console.log(info('Caching team information'))
-    }
+    const cached = sh && sh.currentTeam && sh.currentTeam.slug === team
 
-    const {token} = ctx.authConfig.credentials.find(item => item.provider === 'sh')
+    // Only download team data if not cached
+    if (!cached) {
+      if (isTTY) {
+        console.log(info('Caching team information'))
+      }
 
-    const headers = {
-      Authorization: `Bearer ${token}`
-    }
+      const { token } = ctx.authConfig.credentials.find(item => item.provider === 'sh')
 
-    const url = `https://api.zeit.co/teams/?slug=${team}`
-    let body
+      const headers = {
+        Authorization: `Bearer ${token}`
+      }
 
-    try {
-      const res = await fetch(url, { headers })
+      const url = `https://api.zeit.co/teams/?slug=${team}`
+      let body
 
-      if (res.status === 403) {
-        console.error(error(`You don't have access to the specified team`))
+      try {
+        const res = await fetch(url, { headers })
+
+        if (res.status === 403) {
+          console.error(error(`You don't have access to the specified team`))
+          await exit(1)
+        }
+
+        body = await res.json()
+      } catch (err) {
+        console.error(error('Not able to load teams'))
         await exit(1)
       }
 
-      body = await res.json()
-    } catch (err) {
-      console.error(error('Not able to load teams'))
-      await exit(1)
+      if (!body || body.error) {
+        console.error(error('The specified team doesn\'t exist'))
+        await exit(1)
+      }
+
+      // $FlowFixMe
+      delete body.creator_id
+
+      // $FlowFixMe
+      delete body.created
+
+      ctx.config.sh.currentTeam = body
     }
-
-    if (!body || body.error) {
-      console.error(error('The specified team doesn\'t exist'))
-      await exit(1)
-    }
-
-    // $FlowFixMe
-    delete body.creator_id
-
-    // $FlowFixMe
-    delete body.created
-
-    ctx.config.sh.currentTeam = body
   }
 
   try {
