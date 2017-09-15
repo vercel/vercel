@@ -84,7 +84,7 @@ async function staticFiles(
 
   // The package.json `files` whitelist still
   // honors ignores: https://docs.npmjs.com/files/package.json#files
-  const search_ = whitelist || ['.']
+  const search_ = Array.isArray(whitelist) ? whitelist : ['.']
   // Convert all filenames into absolute paths
   const search = Array.prototype.concat.apply(
     [],
