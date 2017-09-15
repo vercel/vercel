@@ -424,7 +424,7 @@ const main = async (argv_) => {
       token
     })
 
-    ctx.config.sh = Object.assign(ctx.config.sh, { user })
+    ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
   }
 
   if (typeof argv.team === 'string') {
