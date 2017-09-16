@@ -223,7 +223,7 @@ const envFields = async list => {
 }
 
 async function main(ctx) {
-  argv = mri(ctx.argv.slice(2), mriOpts);
+  argv = mri(ctx.argv.slice(2), mriOpts)
 
   // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
   // we should fix this ASAP
