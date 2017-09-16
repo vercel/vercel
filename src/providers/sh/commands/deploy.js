@@ -601,10 +601,12 @@ async function sync({ token, config: { currentTeam, user } }) {
 
     const complete = ({ syncCount }) => {
       if (!quiet) {
-        const elapsedU = ms(new Date() - startU)
-        console.log(
-          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
-        )
+        if (syncCount) {
+          const elapsedU = ms(new Date() - startU)
+          console.log(
+            `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
+          )
+        }
         console.log('> Initializing…')
       }
 
@@ -705,21 +707,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         await stopDeployment(err)
       })
     } else {
-      if (!quiet) {
-        console.log(`> Initializing…`)
-      }
-
-      // Close http2 agent
-      now.close()
-
-      // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
-          console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
-        }
-      }
+      complete({});
     }
   })
 }
