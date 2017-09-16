@@ -396,7 +396,10 @@ const main = async (argv_) => {
     const {token} = argv
 
     if (token.length === 0) {
-      console.error(error(`You defined ${param('--token')}, but it's missing a value`))
+      console.error(error({
+        message: `You defined ${param('--token')}, but it's missing a value`,
+        slug: 'missing-token-value'
+      }))
       await exit(1)
     }
 
@@ -432,7 +435,10 @@ const main = async (argv_) => {
     const { sh } = ctx.config
 
     if (team.length === 0) {
-      console.log(error(`You defined ${param('--team')}, but it's missing a value`))
+      console.error(error({
+        message: `You defined ${param('--team')}, but it's missing a value`,
+        slug: 'missing-team-value'
+      }))
       await exit(1)
     }
 
