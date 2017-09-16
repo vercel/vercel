@@ -1,6 +1,6 @@
 // Native
 const { stringify: stringifyQuery } = require('querystring')
-const { platform, arch, hostname } = require('os')
+const { hostname } = require('os')
 
 // Packaages
 const fetch = require('node-fetch')
@@ -12,7 +12,6 @@ const chalk = require('chalk')
 const mri = require('mri')
 
 // Utilities
-const { version } = require('../../../util/pkg')
 const ua = require('../util/ua')
 const error = require('../../../util/output/error')
 const aborted = require('../../../util/output/aborted')
