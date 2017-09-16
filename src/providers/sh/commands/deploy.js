@@ -225,10 +225,19 @@ const envFields = async list => {
 async function main(ctx) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
-  if (path) {
+  // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
+  // we should fix this ASAP
+  if (argv._[0] === 'sh') {
+    argv._.shift()
+  }
+  if (argv._[0] === 'deploy') {
+    argv._.shift()
+  }
+
+  if (argv._[0]) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    path = resolve(process.cwd(), path)
+    path = resolve(process.cwd(), argv._[0])
   } else {
     path = process.cwd()
   }
@@ -278,7 +287,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     }).getCurrent()
 
     try {
-      await fs.stat(rawPath)
+      await fs.stat(rawPath || path)
     } catch (err) {
       let repo
       let isValidRepo = false
