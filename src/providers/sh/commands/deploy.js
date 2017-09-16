@@ -351,7 +351,10 @@ async function sync({ token, config: { currentTeam, user } }) {
     try {
       await checkPath(path)
     } catch (err) {
-      console.error(error(err.message))
+      console.error(error({
+        message: err.message,
+        slug: 'path-not-deployable'
+      }))
       process.exit(1)
     }
 
@@ -422,7 +425,10 @@ async function sync({ token, config: { currentTeam, user } }) {
         typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
       if (!fs.existsSync(dotenvFileName)) {
-        console.error(error(`--dotenv flag is set but ${dotenvFileName} file is missing`))
+        console.error(error({
+          message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
+          slug: 'missing-dotenv-target'
+        }))
         return process.exit(1)
       }
 

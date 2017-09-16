@@ -486,7 +486,10 @@ const main = async (argv_) => {
       }
 
       if (!body || body.error) {
-        console.error(error('The specified team doesn\'t exist'))
+        console.error(error({
+          message: 'The specified team doesn\'t exist',
+          slug: 'team-not-existent'
+        }))
         await exit(1)
       }
 

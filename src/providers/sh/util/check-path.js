@@ -43,7 +43,7 @@ const checkPath = async dir => {
       locationName = location
   }
 
-  throw new Error(`You're trying to deploy your ${locationName}.`)
+  throw new Error(`You're trying to deploy your ${locationName}`)
 }
 
 module.exports = checkPath
