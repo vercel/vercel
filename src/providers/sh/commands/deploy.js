@@ -278,7 +278,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     }).getCurrent()
 
     try {
-      await fs.stat(path)
+      await fs.stat(rawPath)
     } catch (err) {
       let repo
       let isValidRepo = false
