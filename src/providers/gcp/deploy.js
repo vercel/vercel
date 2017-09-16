@@ -131,16 +131,18 @@ const deploy = async (ctx: {
   const resourcesStart = Date.now()
 
   debug('checking gcp function check')
-  const fnCheckExistsRes = await fetch(
-    `https://cloudfunctions.googleapis.com/v1beta2/projects/${project.id}/locations/${region}/functions/${deploymentId}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+  const fnCheckExistsRes = () =>
+    fetch(
+      `https://cloudfunctions.googleapis.com/v1beta2/projects/${project.id}/locations/${region}/functions/${deploymentId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       }
-    }
-  )
-  const fnExists = fnCheckExistsRes.status !== 404
+    )
+  const checkExistsRes = await fnCheckExistsRes()
+  const fnExists = checkExistsRes.status !== 404
 
   const stopResourcesSpinner = wait(`${fnExists ? 'Updating' : 'Creating'} API resources`)
 
@@ -253,7 +255,12 @@ const deploy = async (ctx: {
   let url = ''
 
   do {
-    if (!--retriesLeft) {
+    if (status === 'FAILED') {
+      console.error(
+        error('API resources failed to deploy.')
+      )
+      return 1
+    } else if (!--retriesLeft) {
       console.error(
         error('Could not determine status of the deployment: ' + String(url))
       )
@@ -262,14 +269,15 @@ const deploy = async (ctx: {
       await sleep(5000)
     }
 
+    const checkExistsRes = await fnCheckExistsRes()
     try {
-      await assertSuccessfulResponse(fnCheckExistsRes)
+      await assertSuccessfulResponse(checkExistsRes)
     } catch (err) {
       console.error(error(err.message))
       return 1
     }
 
-    ;({ status, httpsTrigger: { url } } = await fnCheckExistsRes.json())
+    ;({ status, httpsTrigger: { url } } = await checkExistsRes.json())
   } while (status !== 'READY')
 
   stopResourcesSpinner()
