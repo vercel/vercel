@@ -126,7 +126,7 @@ The v1 release of `now.json` includes the following specification:
   - `String` an unique identifier for the project type. The following
     are recommended choices to be supported by every provider:
       - `docker`
-      - `nodejs`
+      - `node`
       - `static`
   - `Object`
     when it's necessary to specify a version or multiple interacting runtimes. It's a dictionary of runtime identifier and [SemVer-compatible]() version. For example:
@@ -206,7 +206,7 @@ Recommended, but not required, commands are:
   </tr>
 </table>
 
-The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type` `nodejs`, and others are on the way!
+The `build` step for serverless deployments is implemented locally and is compatible with projects configured with the `type` `node`, and others are on the way!
 
 ## Philosophy
 
