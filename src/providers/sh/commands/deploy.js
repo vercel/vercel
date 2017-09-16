@@ -223,23 +223,7 @@ const envFields = async list => {
 }
 
 async function main(ctx) {
-  argv = mri(ctx.argv.slice(2), mriOpts)
-
-  // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
-  // we should fix this ASAP
-  if (argv._[0] === 'sh') {
-    argv._.shift()
-  }
-  if (argv._[0] === 'deploy') {
-    argv._.shift()
-  }
-  if (argv._.length > 0) {
-    path = argv._.shift()
-  }
-  if (argv._.length > 0) {
-    console.error(error(`At most one directory can be specified for deploying (${path})`))
-    process.exit(1)
-  }
+  argv = mri(ctx.argv.slice(2), mriOpts);
 
   if (path) {
     // If path is relative: resolve
