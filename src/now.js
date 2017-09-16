@@ -381,14 +381,20 @@ const main = async (argv_) => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
-      console.error(error('No existing credentials found. Please ' +
-      `${param('now login')} to log in or pass ${param('--token')}`))
+      console.error(error({
+        message: 'No existing credentials found. Please ' +
+        `${param('now login')} to log in or pass ${param('--token')}`,
+        slug: 'no-credentials-found'
+      }))
       await exit(1)
     }
   }
 
-  if (argv.token && subcommand === 'switch') {
-    console.error(error(`This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`))
+  if (typeof argv.token === 'string' && subcommand === 'switch') {
+    console.error(error({
+      message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
+      slug: 'no-token-allowed'
+    }))
     await exit(1)
   }
 
