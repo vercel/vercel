@@ -184,9 +184,9 @@ let alwaysForwardNpm
 // If the current deployment is a repo
 const gitRepo = {}
 
-const stopDeployment = msg => {
+const stopDeployment = async msg => {
   handleError(msg)
-  process.exit(1)
+  await exit(1)
 }
 
 const envFields = async list => {
@@ -215,7 +215,7 @@ const envFields = async list => {
     const content = answers[answer]
 
     if (content === '') {
-      stopDeployment(`Enter a value for ${answer}`)
+      await stopDeployment(`Enter a value for ${answer}`)
     }
   }
 
@@ -280,7 +280,7 @@ async function main(ctx) {
   try {
     return sync({ token, config })
   } catch (err) {
-    return stopDeployment(err)
+    await stopDeployment(err)
   }
 }
 
@@ -306,7 +306,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         isValidRepo = isRepoPath(rawPath)
       } catch (_err) {
         if (err.code === 'INVALID_URL') {
-          stopDeployment(_err)
+          await stopDeployment(_err)
         } else {
           reject(_err)
         }
@@ -338,14 +338,15 @@ async function sync({ token, config: { currentTeam, user } }) {
         Object.assign(gitRepo, repo)
       } else if (isValidRepo) {
         const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
-        stopDeployment(
+
+        await stopDeployment(
           `There's no repository named "${chalk.bold(
             gitRepo.main
           )}" ${gitRef}on ${gitRepo.type}`
         )
       } else {
         console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
-        process.exit(1)
+        await exit(1)
       }
     }
 
@@ -357,7 +358,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         message: err.message,
         slug: 'path-not-deployable'
       }))
-      process.exit(1)
+      await exit(1)
     }
 
     if (!quiet) {
@@ -431,7 +432,7 @@ async function sync({ token, config: { currentTeam, user } }) {
           message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
           slug: 'missing-dotenv-target'
         }))
-        return process.exit(1)
+        await exit(1)
       }
 
       const dotenvFile = await fs.readFile(dotenvFileName)
@@ -470,7 +471,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       envs.map(async kv => {
         if (typeof kv !== 'string') {
           console.error(error('Env key and value missing'))
-          return process.exit(1)
+          await exit(1)
         }
 
         const [key, ...rest] = kv.split('=')
@@ -486,12 +487,12 @@ async function sync({ token, config: { currentTeam, user } }) {
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
           ))
-          return process.exit(1)
+          await exit(1)
         }
 
         if (!key) {
           console.error(error(`Invalid env option ${chalk.bold(`"${kv}"`)}`))
-          return process.exit(1)
+          await exit(1)
         }
 
         if (val === undefined) {
@@ -509,7 +510,7 @@ async function sync({ token, config: { currentTeam, user } }) {
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
             ))
-            return process.exit(1)
+            await exit(1)
           }
         }
 
@@ -528,14 +529,14 @@ async function sync({ token, config: { currentTeam, user } }) {
                 `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`
               ))
             }
-            return process.exit(1)
+            await exit(1)
           } else if (_secrets.length > 1) {
             console.error(error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
             ))
-            return process.exit(1)
+            await exit(1)
           }
 
           val = { uid: _secrets[0].uid }
@@ -578,7 +579,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         console.log(`> [debug] error: ${err}\n${err.stack}`)
       }
 
-      return stopDeployment(err)
+      await stopDeployment(err)
     }
 
     const { url } = now
@@ -669,7 +670,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         const msg =
           '\nYou are on the OSS plan. Your code and logs will be made public.' +
           ' If you agree with that, please run again with --public.'
-        return stopDeployment(msg)
+        await stopDeployment(msg)
       }
     }
 
@@ -708,9 +709,9 @@ async function sync({ token, config: { currentTeam, user } }) {
 
       now.on('complete', () => complete({ syncCount }))
 
-      now.on('error', err => {
+      now.on('error', async err => {
         console.error(error('Upload failed'))
-        return stopDeployment(err)
+        await stopDeployment(err)
       })
     } else {
       if (!quiet) {
@@ -827,7 +828,7 @@ function printLogs(host, token) {
       }
     }
 
-    process.exit(1)
+    await exit(1)
   })
 
   logger.on('close', async () => {
@@ -844,7 +845,7 @@ function printLogs(host, token) {
       }
     }
 
-    process.exit(0)
+    await exit()
   })
 }
 
