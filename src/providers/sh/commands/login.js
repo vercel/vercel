@@ -1,6 +1,6 @@
 // Native
 const { stringify: stringifyQuery } = require('querystring')
-const { platform, arch, hostname } = require('os')
+const { hostname } = require('os')
 
 // Packaages
 const fetch = require('node-fetch')
@@ -12,7 +12,6 @@ const chalk = require('chalk')
 const mri = require('mri')
 
 // Utilities
-const { version } = require('../../../util/pkg')
 const ua = require('../util/ua')
 const error = require('../../../util/output/error')
 const aborted = require('../../../util/output/aborted')
@@ -71,9 +70,10 @@ const getVerificationData = async ({ apiUrl, email }) => {
   const tokenName = `Now CLI on ${host}`
 
   const data = JSON.stringify({ email, tokenName })
-
   debug('POST /now/registration')
+
   let res
+
   try {
     res = await fetch(`${apiUrl}/now/registration`, {
       method: 'POST',
@@ -122,6 +122,7 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
   debug('GET /now/registration/verify')
 
   let res
+
   try {
     res = await fetch(
       `${apiUrl}/now/registration/verify?${stringifyQuery(query)}`,
@@ -131,6 +132,7 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
     )
   } catch (err) {
     debug(`error fetching /now/registration/verify: $O`, err.stack)
+
     throw new Error(
       error(
         `An unexpected error occurred while trying to verify your login: ${err.message}`
@@ -139,8 +141,8 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
   }
 
   debug('parsing response from GET /now/registration/verify')
-
   let body
+
   try {
     body = await res.json()
   } catch (err) {
@@ -160,13 +162,16 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
 
 const readEmail = async () => {
   let email
+
   try {
     email = await promptEmail({ start: info('Enter your email: ') })
   } catch (err) {
     console.log() // \n
+
     if (err.message === 'User abort') {
       throw new Error(aborted('No changes made.'))
     }
+
     if (err.message === 'stdin lacks setRawMode support') {
       throw new Error(
         error(
@@ -177,6 +182,7 @@ const readEmail = async () => {
       )
     }
   }
+
   console.log() // \n
   return email
 }
@@ -287,7 +293,9 @@ const login = async ctx => {
   console.log(ok('Email confirmed'))
 
   stopSpinner = wait('Feching your personal details')
+
   let user
+
   try {
     user = await getUser({ apiUrl, token })
   } catch (err) {
@@ -298,6 +306,7 @@ const login = async ctx => {
 
   const index = ctx.authConfig.credentials.findIndex(c => c.provider === 'sh')
   const obj = { provider: 'sh', token }
+
   if (index === -1) {
     // wasn't logged in before
     ctx.authConfig.credentials.push(obj)

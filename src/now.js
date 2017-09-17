@@ -305,6 +305,7 @@ const main = async (argv_) => {
       defaultProvider = 'sh'
     } else {
       debug('using provider supplied by user', defaultProvider)
+
       if (!(defaultProvider in providers)) {
         console.error(
           error(
@@ -381,14 +382,20 @@ const main = async (argv_) => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
-      console.error(error('No existing credentials found. Please ' +
-      `${param('now login')} to log in or pass ${param('--token')}`))
+      console.error(error({
+        message: 'No existing credentials found. Please ' +
+        `${param('now login')} to log in or pass ${param('--token')}`,
+        slug: 'no-credentials-found'
+      }))
       await exit(1)
     }
   }
 
-  if (argv.token && subcommand === 'switch') {
-    console.error(error(`This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`))
+  if (typeof argv.token === 'string' && subcommand === 'switch') {
+    console.error(error({
+      message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
+      slug: 'no-token-allowed'
+    }))
     await exit(1)
   }
 
@@ -396,7 +403,10 @@ const main = async (argv_) => {
     const {token} = argv
 
     if (token.length === 0) {
-      console.error(error(`You defined ${param('--token')}, but it's missing a value`))
+      console.error(error({
+        message: `You defined ${param('--token')}, but it's missing a value`,
+        slug: 'missing-token-value'
+      }))
       await exit(1)
     }
 
@@ -432,7 +442,10 @@ const main = async (argv_) => {
     const { sh } = ctx.config
 
     if (team.length === 0) {
-      console.log(error(`You defined ${param('--team')}, but it's missing a value`))
+      console.error(error({
+        message: `You defined ${param('--team')}, but it's missing a value`,
+        slug: 'missing-team-value'
+      }))
       await exit(1)
     }
 
@@ -463,7 +476,10 @@ const main = async (argv_) => {
         const res = await fetch(url, { headers })
 
         if (res.status === 403) {
-          console.error(error(`You don't have access to the specified team`))
+          console.error(error({
+            message: `You don't have access to the specified team`,
+            slug: 'team-not-accessible'
+          }))
           await exit(1)
         }
 
@@ -474,7 +490,10 @@ const main = async (argv_) => {
       }
 
       if (!body || body.error) {
-        console.error(error('The specified team doesn\'t exist'))
+        console.error(error({
+          message: 'The specified team doesn\'t exist',
+          slug: 'team-not-existent'
+        }))
         await exit(1)
       }
 

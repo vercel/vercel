@@ -1,7 +1,17 @@
+// Packages
 const { red } = require('chalk')
 
-// error('woot') === '> woot'
-// error('woot', 'yay') === 'woot\nyay'
-const error = (...msgs) => `${red('> Error!')} ${msgs.join('\n')}`
+module.exports = (...input) => {
+  let messages = input
 
-module.exports = error
+  if (typeof input[0] === 'object') {
+    const {slug, message} = input[0]
+
+    messages = [
+      message,
+      `> More details: https://err.sh/now-cli/${slug}`
+    ]
+  }
+
+  return `${red('> Error!')} ${messages.join('\n')}`
+}
