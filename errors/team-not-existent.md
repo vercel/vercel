@@ -1,4 +1,4 @@
-# No Token Allowed
+# Team Not Existent
 
 #### Why This Error Occurred
 
