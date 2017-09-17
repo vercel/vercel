@@ -100,7 +100,9 @@ async function list({ token, sh: { currentTeam, user } }) {
     console.log('> You must define an app when using `--all`')
     process.exit(1)
   }
+
   let deployments
+
   try {
     deployments = await now.list(app)
   } catch (err) {
@@ -110,16 +112,19 @@ async function list({ token, sh: { currentTeam, user } }) {
 
   if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
     const match = await now.findDeployment(app)
+
     if (match !== null && typeof match !== 'undefined') {
       deployments = Array.of(match)
     }
   }
+
   if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
     const aliases = await now.listAliases()
-
     const item = aliases.find(e => e.uid === app || e.alias === app)
+
     if (item) {
       const match = await now.findDeployment(item.deploymentId)
+
       if (match !== null && typeof match !== 'undefined') {
         deployments = Array.of(match)
       }
@@ -159,6 +164,7 @@ async function list({ token, sh: { currentTeam, user } }) {
   )
 
   let shouldShowAllInfo = false
+
   for (const app of apps) {
     shouldShowAllInfo =
       app[1].length > 5 ||
@@ -169,6 +175,7 @@ async function list({ token, sh: { currentTeam, user } }) {
       break
     }
   }
+
   if (!argv.all && shouldShowAllInfo) {
     console.log(
       `> To expand the list and see instances run ${chalk.cyan(
@@ -176,15 +183,20 @@ async function list({ token, sh: { currentTeam, user } }) {
       )}`
     )
   }
+
   console.log()
+
   sorted.forEach(([name, deps]) => {
     const listedDeployments = argv.all ? deps : deps.slice(0, 5)
+
     console.log(
       `${chalk.bold(name)} ${chalk.gray(
         '(' + listedDeployments.length + ' of ' + deps.length + ' total)'
       )}`
     )
+
     const urlSpec = `%-${urlLength}s`
+
     console.log(
       printf(
         ` ${chalk.grey(urlSpec + '  %8s    %-16s %8s')}`,
@@ -194,12 +206,15 @@ async function list({ token, sh: { currentTeam, user } }) {
         'age'
       )
     )
+
     listedDeployments.forEach(dep => {
       let state = dep.state
       let extraSpaceForState = 0
+
       if (state === null || typeof state === 'undefined') {
         state = 'DEPLOYMENT_ERROR'
       }
+
       if (/ERROR/.test(state)) {
         state = chalk.red(state)
         extraSpaceForState = 10
@@ -207,7 +222,9 @@ async function list({ token, sh: { currentTeam, user } }) {
         state = chalk.grey(state)
         extraSpaceForState = 10
       }
+
       let spec
+
       if (supportsColor) {
         spec = ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`
       } else {
@@ -223,15 +240,18 @@ async function list({ token, sh: { currentTeam, user } }) {
           ms(timeNow - dep.created)
         )
       )
+
       if (Array.isArray(dep.instances) && dep.instances.length > 0) {
         dep.instances.forEach(i => {
           console.log(
             printf(` %-${urlLength + 10}s`, ` - ${chalk.underline(i.url)}`)
           )
         })
+
         console.log()
       }
     })
+
     console.log()
   })
 }

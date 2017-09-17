@@ -461,7 +461,10 @@ async function sync({ token, config: { currentTeam, user } }) {
     const env_ = await Promise.all(
       envs.map(async kv => {
         if (typeof kv !== 'string') {
-          console.error(error('Env key and value missing'))
+          console.error(error({
+            message: 'Env key and value are missing',
+            slug: 'missing-env-key-value'
+          }))
           await exit(1)
         }
 
@@ -516,9 +519,10 @@ async function sync({ token, config: { currentTeam, user } }) {
                 )}`
               ))
             } else {
-              console.error(error(
-                `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`
-              ))
+              console.error(error({
+                message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+                slug: 'env-no-secret'
+              }))
             }
             await exit(1)
           } else if (_secrets.length > 1) {

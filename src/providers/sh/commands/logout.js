@@ -117,7 +117,6 @@ const logout = async () => {
 
   const configContent = JSON.parse(readConfigFile())
 
-
   if (configContent.sh) {
     delete configContent.sh
   }
