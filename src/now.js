@@ -305,6 +305,7 @@ const main = async (argv_) => {
       defaultProvider = 'sh'
     } else {
       debug('using provider supplied by user', defaultProvider)
+
       if (!(defaultProvider in providers)) {
         console.error(
           error(
@@ -475,7 +476,10 @@ const main = async (argv_) => {
         const res = await fetch(url, { headers })
 
         if (res.status === 403) {
-          console.error(error(`You don't have access to the specified team`))
+          console.error(error({
+            message: `You don't have access to the specified team`,
+            slug: 'team-not-accessible'
+          }))
           await exit(1)
         }
 
