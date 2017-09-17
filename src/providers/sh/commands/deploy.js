@@ -230,15 +230,18 @@ async function main(ctx) {
   if (argv._[0] === 'sh') {
     argv._.shift()
   }
+
   if (argv._[0] === 'deploy') {
     argv._.shift()
   }
+
   if (argv._.length > 0) {
     path = argv._.shift()
   }
+
   if (argv._.length > 0) {
     console.error(error(`At most one directory can be specified for deploying (${path})`))
-    process.exit(1)
+    await exit(1)
   }
 
   if (path) {
@@ -298,6 +301,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     } catch (err) {
       let repo
       let isValidRepo = false
+
       try {
         isValidRepo = isRepoPath(rawPath)
       } catch (_err) {
@@ -320,9 +324,7 @@ async function sync({ token, config: { currentTeam, user } }) {
 
         try {
           repo = await fromGit(rawPath, debug)
-        } catch (_err) {
-          // why is this ignored?
-        }
+        } catch (err) {}
 
         clearTimeout(searchMessage)
       }
