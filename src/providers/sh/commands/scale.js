@@ -183,7 +183,7 @@ async function run({ token, sh: { currentTeam } }) {
       // `.now.sh` domain is implied if just the subdomain is given
       u += '.now.sh'
     }
-    return d.uid === id || d.name === id || d.url === u
+    return d.uid === id || d.url === u
   })
 
   if (!match) {
