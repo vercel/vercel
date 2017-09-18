@@ -89,11 +89,11 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   }
 
   const periodMsg = `${period}yr${period > 1 ? 's' : ''}`
-  info(
+  console.log(info(
     `The domain ${nameParam} is ${italic('available')} to buy under ${bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
     )}! ${elapsed()}`
-  )
+  ))
   const confirmation = await promptBool(
     `Buy now for ${bold(`$${price}`)} (${periodMsg})?`
   )
