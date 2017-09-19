@@ -206,7 +206,7 @@ module.exports = class Domains extends Now {
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains/buy`)
+        console.time(`> [debug] #${attempt} POST /domains/buy`)
       }
       const res = await this._fetch(`/domains/buy`, {
         method: 'POST',
@@ -215,7 +215,7 @@ module.exports = class Domains extends Now {
       const json = await res.json()
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains/buy`)
+        console.timeEnd(`> [debug] #${attempt} POST /domains/buy`)
       }
 
       if ([400, 403, 500, 503].includes(res.status)) {
