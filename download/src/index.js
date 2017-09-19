@@ -60,7 +60,7 @@ async function download() {
   } catch (err) {
     if (err.code === 'EACCES') {
       warn(
-        'Please try installing now CLI again with the `--unsafe-perm` option.'
+        'Please try installing Now CLI again with the `--unsafe-perm` option.'
       )
       info('Example: `npm i -g --unsafe-perm now`')
 
@@ -86,7 +86,7 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    enableProgress('Downloading now CLI ' + packageJSON.version)
+    enableProgress('Downloading Now CLI ' + packageJSON.version)
     showProgress(0)
 
     try {
