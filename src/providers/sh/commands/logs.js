@@ -33,6 +33,7 @@ const help = () => {
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --follow                   Wait for additional data [off]
+    -j, --json                     Suppress date and pretty spacing of log objects [off]
     -n ${chalk.bold.underline('NUMBER')}                      Number of logs [1000]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
@@ -60,14 +61,13 @@ const help = () => {
 
 let argv
 let deploymentIdOrURL
-
 let debug
 let apiUrl
 let limit
 let query
+let jsonFlag
 let follow
 let types
-
 let since
 let until
 let instanceId
@@ -75,13 +75,14 @@ let instanceId
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until'],
-    boolean: ['help', 'all', 'debug', 'follow'],
+    boolean: ['help', 'all', 'debug', 'follow', 'json'],
     alias: {
       help: 'h',
       all: 'a',
       debug: 'd',
       query: 'q',
-      follow: 'f'
+      follow: 'f',
+      json: 'j'
     }
   })
 
@@ -122,7 +123,8 @@ const main = async ctx => {
 
   limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
-  follow = argv.f
+  follow = argv.follow
+  jsonFlag = argv.json
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
 
   const {authConfig: { credentials }, config: { sh }} = ctx
@@ -246,6 +248,10 @@ function printLog(log) {
     data =
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`
+  } else if (jsonFlag && obj) {
+    data = JSON.stringify(obj, null, 0)
+    console.log(data)
+    return
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
