@@ -237,7 +237,7 @@ async function list({ token, sh: { currentTeam, user } }) {
           chalk.underline(dep.url),
           dep.scale ? dep.scale.current : '✖',
           state,
-          ms(timeNow - dep.created)
+          dep.created ? ms(timeNow - dep.created) : 'n/a'
         )
       )
 
