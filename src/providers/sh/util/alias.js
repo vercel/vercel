@@ -1,4 +1,5 @@
 // Packages
+const fetch = require('node-fetch')
 const { readFileSync } = require('fs')
 const publicSuffixList = require('psl')
 const mri = require('mri')
@@ -727,7 +728,7 @@ module.exports = class Alias extends Now {
 
       try {
         if (!skipDNSVerification) {
-          await this.verifyOwnership(alias)
+          await this.verifyDomain(alias)
         }
       } catch (err) {
         if (err.userError) {
@@ -757,7 +758,7 @@ module.exports = class Alias extends Now {
               console.log('> DNS Configured! Verifying propagation…')
 
               try {
-                await this.retry(() => this.verifyOwnership(alias), {
+                await this.retry(() => this.verifyDomain(alias), {
                   retries: 10,
                   maxTimeout: 8000
                 })
@@ -823,56 +824,23 @@ module.exports = class Alias extends Now {
     return alias
   }
 
-  verifyOwnership(domain) {
+  verifyDomain(domain) {
     return this.retry(
       async bail => {
-        const targets = await resolve4('alias.zeit.co')
-
-        if (targets.length <= 0) {
-          return bail(new Error('Unable to resolve alias.zeit.co'))
-        }
-
-        let ips = []
+        const url = `http://${domain}`
+        let res
 
         try {
-          ips = await resolve4(domain)
+          res = await fetch(url, { method: 'HEAD', redirect: 'manual' })
         } catch (err) {
-          if (
-            err.code === 'ENODATA' ||
-            err.code === 'ESERVFAIL' ||
-            err.code === 'ENOTFOUND'
-          ) {
-            // Not errors per se, just absence of records
-            if (this._debug) {
-              console.log(`> [debug] No records found for "${domain}"`)
-            }
-
-            const err = new Error(DOMAIN_VERIFICATION_ERROR)
-            err.userError = true
-            return bail(err)
-          }
-          throw err
+          console.log(err);
+          throw new Error(`Failed to fetch "${url}"`)
         }
 
-        if (ips.length <= 0) {
+        if (res.headers.get('server') !== 'now') {
           const err = new Error(DOMAIN_VERIFICATION_ERROR)
           err.userError = true
           return bail(err)
-        }
-
-        for (const ip of ips) {
-          if (targets.indexOf(ip) === -1) {
-            const err = new Error(
-              `The domain ${domain} has an A record ${chalk.bold(
-                ip
-              )} that doesn't resolve to ${chalk.bold(
-                chalk.underline('alias.zeit.co')
-              )}.\n> ` + DOMAIN_VERIFICATION_ERROR
-            )
-            err.ip = ip
-            err.userError = true
-            return bail(err)
-          }
         }
       },
       { retries: 5 }
