@@ -54,7 +54,6 @@ const mriOpts = {
     debug: 'd',
     version: 'v',
     force: 'f',
-    forceSync: 'F',
     links: 'l',
     public: 'p',
     'no-clipboard': 'C',
@@ -173,7 +172,6 @@ let sessionAffinity
 let debug
 let clipboard
 let forwardNpm
-let forceSync
 let followSymlinks
 let wantsPublic
 let apiUrl
@@ -250,7 +248,6 @@ async function main(ctx) {
   debug = argv.debug
   clipboard = !argv['no-clipboard']
   forwardNpm = argv['forward-npm']
-  forceSync = argv.forceSync
   followSymlinks = !argv.links
   wantsPublic = argv.public
   apiUrl = argv.url || 'https://api.zeit.co'
@@ -560,7 +557,6 @@ async function sync({ token, config: { currentTeam, user } }) {
             env,
             followSymlinks,
             forceNew,
-            forceSync,
             forwardNpm: alwaysForwardNpm || forwardNpm,
             quiet,
             wantsPublic,

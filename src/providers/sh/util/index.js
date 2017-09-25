@@ -54,7 +54,6 @@ module.exports = class Now extends EventEmitter {
       env = {},
       followSymlinks = true,
       forceNew = false,
-      forceSync = false,
       forwardNpm = false,
 
       // From readMetaData
@@ -163,7 +162,6 @@ module.exports = class Now extends EventEmitter {
           env,
           public: wantsPublic || nowConfig.public,
           forceNew,
-          forceSync,
           name,
           description,
           deploymentType: type,
