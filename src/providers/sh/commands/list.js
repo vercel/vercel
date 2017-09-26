@@ -33,6 +33,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
+    --all                          See all instances for an app
 
   ${chalk.dim('Examples:')}
 
@@ -43,6 +44,10 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app')}
+
+  ${chalk.gray('–')} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
+
+    ${chalk.cyan('$ now ls my-app --all')}
 `)
 }
 
