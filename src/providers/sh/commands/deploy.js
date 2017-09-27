@@ -355,7 +355,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         console.log(
           `> Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
-          )}" ${gitRef} under ${chalk.bold(
+          )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
           )}`
         )
