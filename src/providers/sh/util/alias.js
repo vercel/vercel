@@ -833,7 +833,6 @@ module.exports = class Alias extends Now {
         try {
           res = await fetch(url, { method: 'HEAD', redirect: 'manual' })
         } catch (err) {
-          console.log(err);
           throw new Error(`Failed to fetch "${url}"`)
         }
 
