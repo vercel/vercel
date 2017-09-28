@@ -89,11 +89,11 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   }
 
   const periodMsg = `${period}yr${period > 1 ? 's' : ''}`
-  info(
+  console.log(info(
     `The domain ${nameParam} is ${italic('available')} to buy under ${bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
     )}! ${elapsed()}`
-  )
+  ))
   const confirmation = await promptBool(
     `Buy now for ${bold(`$${price}`)} (${periodMsg})?`
   )
@@ -114,10 +114,10 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
 
   stopSpinner()
 
-  success(`Domain ${nameParam} purchased ${elapsed()}`)
-  info(
+  console.log(success(`Domain ${nameParam} purchased ${elapsed()}`))
+  console.log(info(
     `You may now use your domain as an alias to your deployments. Run ${cmd(
       'now alias --help'
     )}`
-  )
+  ))
 }
