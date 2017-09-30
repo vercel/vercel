@@ -53,9 +53,9 @@ const help = () => {
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
       ${chalk.cyan(
-        '$ now dns add <DOMAIN> @ MX <RECORD VALUE> <PRIORITY>'
+        `$ now dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`
       )}
-      ${chalk.cyan('$ now dns add zeit.rocks @ MX mail.zeit.rocks 10')}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' MX mail.zeit.rocks 10`)}
 
   ${chalk.gray('–')} Add an SVR record
 
