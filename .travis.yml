@@ -6,10 +6,6 @@
   "before_script": [
     "yarn run pack"
   ],
-  "after_success": [
-    'yarn global add slackup',
-    './scripts/slack.js'
-  ],
   "deploy": [
     {
       "provider": "releases",
