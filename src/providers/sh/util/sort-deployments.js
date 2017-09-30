@@ -1,10 +1,9 @@
-const fs = require('fs-extra')
+const readPkg = require('read-pkg')
 
 module.exports = async function(apps) {
   let pkg
   try {
-    const json = await fs.readFile('package.json')
-    pkg = JSON.parse(json)
+    pkg = await readPkg()
   } catch (err) {
     pkg = {}
   }

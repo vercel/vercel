@@ -242,3 +242,12 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
   t.is(nowConfig.type, 'npm')
   t.is(hasNowJson, false)
 })
+
+test('friendly error for malformed JSON', async t => {
+  const err = await t.throws(readMetadata(fixture('json-syntax-error'), {
+    quiet: true,
+    strict: false
+  }))
+  t.is(err.name, 'JSONError')
+  t.is(err.message, 'Unexpected token \'o\' at 2:5 in test/_fixtures/json-syntax-error/package.json\n    oops\n    ^')
+})

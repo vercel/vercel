@@ -2,7 +2,9 @@
 const { join, basename } = require('path')
 
 // Packages
-const { existsSync, stat, readFile } = require('fs-extra')
+const { existsSync, stat } = require('fs-extra')
+const readJSON = require('load-json-file')
+const readPkg = require('read-pkg')
 
 // Utilities
 const getLocalPathConfig = require('./config/local-path')
@@ -21,13 +23,13 @@ const describeProject = async path => {
   const nowJSONPath = getLocalPathConfig(path)
 
   if (existsSync(nowJSONPath)) {
-    nowJSON = JSON.parse(await readFile(nowJSONPath))
+    nowJSON = await readJSON(nowJSONPath)
   }
 
   const packageJSONPath = join(path, 'package.json')
 
   if (existsSync(packageJSONPath)) {
-    packageJSON = JSON.parse(await readFile(packageJSONPath))
+    packageJSON = await readPkg(packageJSONPath)
   }
 
   if (packageJSON && packageJSON.now && nowJSON) {

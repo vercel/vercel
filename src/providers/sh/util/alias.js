@@ -1,6 +1,6 @@
 // Packages
 const fetch = require('node-fetch')
-const { readFileSync } = require('fs')
+const loadJSON = require('load-json-file')
 const publicSuffixList = require('psl')
 const mri = require('mri')
 const ms = require('ms')
@@ -228,8 +228,7 @@ module.exports = class Alias extends Now {
 
   readRulesFile(rules) {
     try {
-      const rulesJson = readFileSync(rules, 'utf8')
-      return JSON.parse(rulesJson)
+      return loadJSON.sync(rules)
     } catch (err) {
       console.error(`Reading rules file ${rules} failed: ${err}`)
     }

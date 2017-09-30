@@ -3,7 +3,7 @@ const { join } = require('path')
 const { homedir } = require('os')
 
 // Packages
-const { readJSON } = require('fs-extra')
+const readJSON = require('load-json-file')
 
 module.exports = async () => {
   let migrated = false
