@@ -833,7 +833,17 @@ module.exports = class Alias extends Now {
         try {
           res = await fetch(url, { method: 'HEAD', redirect: 'manual' })
         } catch (err) {
-          throw new Error(`Failed to fetch "${url}"`)
+          if (err.code === 'ENOTFOUND') {
+            // This means that the domain resolves to nowhere
+            // Therefore, it has no DNS records
+            // So let's just mark it as an userError so we try to setup the
+            // DNS records
+            const err = new Error(DOMAIN_VERIFICATION_ERROR)
+            err.userError = true
+            return bail(err)
+          } else {
+            throw new Error(`Failed to fetch "${url}"`)
+          }
         }
 
         if (res.headers.get('server') !== 'now') {
