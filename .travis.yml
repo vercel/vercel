@@ -27,7 +27,7 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "-n '$TRAVIS_TAG'",
+        "condition": "$TRAVIS_TAG",
         "branch": "master"
       }
     },
@@ -40,7 +40,7 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "-n '$TRAVIS_TAG'",
+        "condition": "$TRAVIS_TAG",
         "branch": "canary"
       }
     }
