@@ -7,7 +7,7 @@
   "scripts": {
     "test": "ava",
     "lint": "eslint .",
-    "prepublishOnly": "npm run build-download && cp /dev/null download/dist/now && echo $TRAVIS_TAG",
+    "prepublishOnly": "npm run build-download && cp /dev/null download/dist/now",
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
