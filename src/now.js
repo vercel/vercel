@@ -123,18 +123,6 @@ const main = async (argv_) => {
       )
       return
     }
-
-    try {
-      config = JSON.parse(config)
-    } catch (err) {
-      console.error(
-        error(
-          `An error occurred while trying to parse "${hp(NOW_CONFIG_PATH)}": ` +
-            err.message
-        )
-      )
-      return
-    }
   } else {
     const results = await getDefaultCfg()
 
@@ -186,49 +174,36 @@ const main = async (argv_) => {
       return
     }
 
-    try {
-      authConfig = JSON.parse(authConfig)
+    if (!Array.isArray(authConfig.credentials)) {
+      console.error(
+        error(
+          `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
+            'No `credentials` list found inside'
+        )
+      )
+      return
+    }
 
-      if (!Array.isArray(authConfig.credentials)) {
+    for (const [i, { provider }] of authConfig.credentials.entries()) {
+      if (null == provider) {
         console.error(
           error(
-            `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
-              'No `credentials` list found inside'
+            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
+              `Missing \`provider\` key in entry with index ${i}`
           )
         )
         return
       }
 
-      for (const [i, { provider }] of authConfig.credentials.entries()) {
-        if (null == provider) {
-          console.error(
-            error(
-              `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-                `Missing \`provider\` key in entry with index ${i}`
-            )
+      if (!(provider in providers)) {
+        console.error(
+          error(
+            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
+              `Unknown provider "${provider}"`
           )
-          return
-        }
-
-        if (!(provider in providers)) {
-          console.error(
-            error(
-              `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-                `Unknown provider "${provider}"`
-            )
-          )
-          return
-        }
-      }
-    } catch (err) {
-      console.error(
-        error(
-          `An error occurred while trying to parse "${hp(
-            NOW_AUTH_CONFIG_PATH
-          )}": ` + err.message
         )
-      )
-      return
+        return
+      }
     }
   } else {
     const results = await getDefaultAuthCfg()

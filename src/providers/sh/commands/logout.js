@@ -115,13 +115,13 @@ const logout = async () => {
     text: 'Logging out...'
   }).start()
 
-  const configContent = JSON.parse(readConfigFile())
+  const configContent = readConfigFile()
 
   if (configContent.sh) {
     delete configContent.sh
   }
 
-  const authContent = JSON.parse(readAuthConfigFile())
+  const authContent = readAuthConfigFile()
   const {credentials} = authContent
   const related = credentials.find(item => item.provider === 'sh')
   const index = credentials.indexOf(related)
