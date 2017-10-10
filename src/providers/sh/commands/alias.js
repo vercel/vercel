@@ -51,6 +51,7 @@ const help = () => {
     'TOKEN'
   )}             Login token
     -T, --team                          Set a custom team scope
+    --remove-old                        Remove prior deployment after setting alias
 
   ${chalk.dim('Examples:')}
 
