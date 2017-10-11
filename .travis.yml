@@ -3,6 +3,10 @@
   "node_js": [
     "node"
   ],
+  "install": [
+    "git clone https://github.com/$TRAVIS_REPO_SLUG.git $TRAVIS_REPO_SLUG",
+    "cd $TRAVIS_REPO_SLUG"
+  ],
   "before_script": [
     "yarn run pack"
   ],
@@ -27,7 +31,7 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "$TRAVIS_TAG",
+        "condition": "-z ${TRAVIS_TAG}",
         "branch": "master"
       }
     },
@@ -40,7 +44,7 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "$TRAVIS_TAG",
+        "condition": "-z ${TRAVIS_TAG}",
         "branch": "canary"
       }
     }
