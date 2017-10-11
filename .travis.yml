@@ -32,8 +32,8 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "-z ${TRAVIS_TAG}",
-        "branch": "master"
+        "condition": "\"$(git rev-parse --abbrev-ref HEAD)\" == \"master\"",
+        "tags": true
       }
     },
     {
@@ -45,8 +45,8 @@
       },
       "skip_cleanup": true,
       "on": {
-        "condition": "-z ${TRAVIS_TAG}",
-        "branch": "canary"
+        "condition": "\"$(git rev-parse --abbrev-ref HEAD)\" == \"canary\"",
+        "tags": true
       }
     }
   ],
