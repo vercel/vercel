@@ -541,11 +541,18 @@ module.exports = class Alias extends Now {
 
       const body = await res.json()
 
+      if (res.status === 409 && body.error.code === 'record_conflict') {
+        if (this._debug) {
+          console.log(`> [debug] ${body.error.oldId} is a conflicting record for "${name}"`)
+        }
+        return
+      }
+
       if (res.status !== 200) {
         throw new Error(body.error.message)
       }
 
-      return body
+      return
     })
   }
 
