@@ -48,7 +48,8 @@
   },
   "eslintIgnore": [
     "download",
-    "dist"
+    "dist",
+    "test/_fixtures"
   ],
   "eslintConfig": {
     "parserOptions": {
