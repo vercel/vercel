@@ -3,7 +3,6 @@ const { resolve } = require('path')
 
 // Packages
 const flatten = require('arr-flatten')
-const unique = require('array-unique')
 const ignore = require('ignore')
 const _glob = require('glob')
 const { stat, readdir, readFile } = require('fs-extra')
@@ -140,7 +139,7 @@ async function staticFiles(
   }
 
   // Get files
-  return unique(files)
+  return Array.from(new Set(files));
 }
 
 /**
@@ -236,7 +235,7 @@ async function npm(
   }
 
   // Get files
-  return unique(files)
+  return Array.from(new Set(files));
 }
 
 /**
@@ -317,7 +316,7 @@ async function docker(
   }
 
   // Get files
-  return unique(files)
+  return Array.from(new Set(files));
 }
 
 /**
