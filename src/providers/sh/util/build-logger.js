@@ -25,6 +25,13 @@ module.exports = class Logger extends EventEmitter {
     this.socket.on('logs', this.onLog.bind(this))
     this.socket.on('backend', this.onComplete.bind(this))
 
+    this.socket.on('disconnect', () => {
+      // ensure close event fires even if already built
+      if (!this.building) {
+        this.emit('close')
+      }
+    })
+
     // Log buffer
     this.buf = []
     this.printed = new Set()

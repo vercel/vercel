@@ -612,12 +612,12 @@ async function sync({ token, config: { currentTeam, user } }) {
       now.close()
 
       // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
+      if (deploymentType === 'static') {
+        if (!quiet) {
           console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
         }
+      } else {
+        printLogs(now.host, token, currentTeam, user)
       }
     }
 
@@ -713,12 +713,12 @@ async function sync({ token, config: { currentTeam, user } }) {
       now.close()
 
       // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
+      if (deploymentType === 'static') {
+        if (!quiet) {
           console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
         }
+      } else {
+        printLogs(now.host, token, currentTeam, user)
       }
     }
   })
