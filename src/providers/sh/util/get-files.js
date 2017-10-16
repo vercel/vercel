@@ -10,6 +10,7 @@ const { stat, readdir, readFile } = require('fs-extra')
 // Utilities
 const IGNORED = require('./ignored')
 const getLocalConfigPath = require('../../../config/local-path')
+const uniqueStrings = require('./uniqueStrings');
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
@@ -139,7 +140,7 @@ async function staticFiles(
   }
 
   // Get files
-  return Array.from(new Set(files));
+  return uniqueStrings(files)
 }
 
 /**
@@ -235,7 +236,7 @@ async function npm(
   }
 
   // Get files
-  return Array.from(new Set(files));
+  return uniqueStrings(files)
 }
 
 /**
@@ -316,7 +317,7 @@ async function docker(
   }
 
   // Get files
-  return Array.from(new Set(files));
+  return uniqueStrings(files)
 }
 
 /**
