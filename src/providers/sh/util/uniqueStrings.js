@@ -5,7 +5,7 @@ module.exports = function(arr) {
   let i;
 
   for (i = 0; i < len; i += 1) {
-    o[arr[i]] = o[arr[i]] || (arr[i] && res.push(arr[i]));
+    o[arr[i]] = o[arr[i]] || res.push(arr[i]);
   }
 
   return res;
