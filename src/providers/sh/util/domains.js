@@ -7,10 +7,9 @@ const chalk = require('chalk')
 // Ours
 const Now = require('.')
 const isZeitWorld = require('./is-zeit-world')
+const isValidDomain = require('./domains/is-valid-domain')
 const { DNS_VERIFICATION_ERROR } = require('./errors')
 const cmd = require('../../../util/output/param')
-
-const domainRegex = /^((?=[a-z0-9-]{1,63}\.)(xn--)?[a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,63}$/
 
 module.exports = class Domains extends Now {
   async ls() {
@@ -101,7 +100,7 @@ module.exports = class Domains extends Now {
   }
 
   async add(domain, skipVerification, isExternal) {
-    if (!domainRegex.test(domain)) {
+    if (!isValidDomain(domain)) {
       const err = new Error(
         `The supplied value ${chalk.bold(`"${domain}"`)} is not a valid domain.`
       )
