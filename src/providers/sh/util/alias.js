@@ -21,6 +21,7 @@ const treatBuyError = require('../util/domains/treat-buy-error')
 const scaleInfo = require('./scale-info')
 const { DOMAIN_VERIFICATION_ERROR } = require('./errors')
 const isZeitWorld = require('./is-zeit-world')
+const isValidDomain = require('./domains/is-valid-domain')
 const toHost = require('./to-host')
 const exit = require('../../../util/exit')
 const Now = require('./')
@@ -249,6 +250,16 @@ module.exports = class Alias extends Now {
       // `.now.sh` domain is implied if just the subdomain is given
       alias += '.now.sh'
     }
+
+    if (!isValidDomain(alias)) {
+      const err = new Error(
+        `${chalk.bold(alias)} is not a valid domain`
+      )
+
+      err.userError = true
+      throw err
+    }
+
     const depl = await this.findDeployment(deployment)
     if (!depl) {
       const err = new Error(
