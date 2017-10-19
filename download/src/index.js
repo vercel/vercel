@@ -11,6 +11,7 @@ import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
 import which from 'which-promise'
+import readPkg from 'read-pkg'
 
 // Utilities
 import plusxSync from './chmod'
@@ -27,8 +28,8 @@ global.Promise = Promise
 let { platform } = process
 if (detectAlpine()) platform = 'alpine'
 
-const packagePath = path.join(__dirname, '../../package.json')
-const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+const packageDir = path.join(__dirname, '..', '..')
+const packageJSON = readPkg.sync(packageDir)
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')

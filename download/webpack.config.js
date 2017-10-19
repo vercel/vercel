@@ -26,7 +26,7 @@ module.exports = {
           'transform-runtime'
         ],
         presets: [
-          'es2015'
+          'env'
         ]
       }
     } ]
