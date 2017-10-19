@@ -3,7 +3,6 @@ const { resolve } = require('path')
 
 // Packages
 const flatten = require('arr-flatten')
-const unique = require('array-unique')
 const ignore = require('ignore')
 const _glob = require('glob')
 const { stat, readdir, readFile } = require('fs-extra')
@@ -11,6 +10,7 @@ const { stat, readdir, readFile } = require('fs-extra')
 // Utilities
 const IGNORED = require('./ignored')
 const getLocalConfigPath = require('../../../config/local-path')
+const uniqueStrings = require('./unique-strings');
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
@@ -140,7 +140,7 @@ async function staticFiles(
   }
 
   // Get files
-  return unique(files)
+  return uniqueStrings(files)
 }
 
 /**
@@ -236,7 +236,7 @@ async function npm(
   }
 
   // Get files
-  return unique(files)
+  return uniqueStrings(files)
 }
 
 /**
@@ -317,7 +317,7 @@ async function docker(
   }
 
   // Get files
-  return unique(files)
+  return uniqueStrings(files)
 }
 
 /**
