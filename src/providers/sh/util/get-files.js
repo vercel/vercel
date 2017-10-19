@@ -10,7 +10,7 @@ const { stat, readdir, readFile } = require('fs-extra')
 // Utilities
 const IGNORED = require('./ignored')
 const getLocalConfigPath = require('../../../config/local-path')
-const uniqueStrings = require('./uniqueStrings');
+const uniqueStrings = require('./unique-strings')
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
