@@ -4,6 +4,7 @@ const { encode: encodeQuery, stringify: formUrlEncode } = require('querystring')
 const { createServer } = require('http')
 
 // theirs
+const opn = require('opn')
 const fetch = require('node-fetch')
 const debug = require('debug')('now:gcp:login')
 
@@ -268,11 +269,15 @@ const login = ctx => new Promise(async resolve => {
     prompt: PROMPT_CONSENT
   }
 
-  console.log(info(
-    `We'll need you to grant us access to provision functions on your ${highlight('Google Cloud Platform')} account in order to comunicate with their API.`,
-    `To provision a dedicated set of tokens for ${cmd('now')}, Go to ${link(USER_URL + '?' + encodeQuery(query))} and grant access to Now.`
-    ``
-  ))
+  if(process.platform === "darwin" || process.platform === "win32") {
+    opn(USER_URL + '?' + encodeQuery(query))
+  } else {
+    console.log(info(
+      `We'll need you to grant us access to provision functions on your ${highlight('Google Cloud Platform')} account in order to comunicate with their API.`,
+      `To provision a dedicated set of tokens for ${cmd('now')}, Go to ${link(USER_URL + '?' + encodeQuery(query))} and grant access to Now.`
+      ``
+    ))
+  }
 })
 
 module.exports = login
