@@ -217,7 +217,7 @@ module.exports = class Alias extends Now {
         return bail(new Error(body.error.message))
       }
 
-      // The two expected succesful cods are 200 and 304
+      // The two expected successful codes are 200 and 304
       if (res.status !== 200 && res.status !== 304) {
         throw new Error('Unhandled error')
       }
@@ -506,7 +506,7 @@ module.exports = class Alias extends Now {
         return bail(new Error(body.error.message))
       }
 
-      // The two expected succesful cods are 200 and 304
+      // The two expected successful codes are 200 and 304
       if (res.status !== 200 && res.status !== 304) {
         throw new Error('Unhandled error')
       }
