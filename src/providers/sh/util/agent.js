@@ -10,7 +10,7 @@ const Sema = require('async-sema');
 const {version} = require('../../../util/pkg')
 
 // TODO: Don't limit to canary
-const USE_HTTP2 = version.indeOf('canary') > -1
+const USE_HTTP2 = version.indexOf('canary') > -1
 const MAX_REQUESTS_PER_CONNECTION = 1000
 
 /**
