@@ -7,10 +7,11 @@ const https = require('https')
 const fetch = require('node-fetch')
 const { JsonBody, StreamBody, context } = require('fetch-h2')
 const Sema = require('async-sema');
+const {version} = require('../../../util/pkg')
 
-// TODO: Remove flag
-const USE_HTTP2 = true;
-const MAX_REQUESTS_PER_CONNECTION = 1000;
+// TODO: Don't limit to canary
+const USE_HTTP2 = version.indeOf('canary') > -1
+const MAX_REQUESTS_PER_CONNECTION = 1000
 
 /**
  * Returns a `fetch` version with a similar
