@@ -5,10 +5,12 @@ const https = require('https')
 
 // Packages
 const fetch = require('node-fetch')
-const { fetch: fetchH2, JsonBody, StreamBody, disconnect } = require('fetch-h2')
+const { JsonBody, StreamBody, context } = require('fetch-h2')
 const Sema = require('async-sema');
 
+// TODO: Remove flag
 const USE_HTTP2 = true;
+const MAX_REQUESTS_PER_CONNECTION = 1000;
 
 /**
  * Returns a `fetch` version with a similar
@@ -23,6 +25,17 @@ const USE_HTTP2 = true;
 
 module.exports = class Agent {
   constructor(url, { tls = true, debug } = {}) {
+    // We use multiple contexts because each context represent one connection
+    // With nginx, we're limited to 1000 requests before a connection is closed
+    // http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests
+    // To get arround this, we keep track of requests made on a connection. when we're about to hit 1000
+    // we start up a new connection, and re-route all future traffic through the new connection
+    // and when the final request from the old connection resolves, we auto-close the old connection
+    this._contexts = [context()]
+    this._currContext = this._contexts[0]
+    this._currContext.fetchesMade = 0
+    this._currContext.ongoingFetches = 0
+    
     this._url = url
     const parsed = parse(url)
     this._protocol = parsed.protocol
@@ -57,7 +70,25 @@ module.exports = class Agent {
 
   async fetch(path, opts = {}) {
     await this._sema.v()
-    // console.log(path, this._sema.nrWaiting())
+
+    this._currContext.fetchesMade++;
+    if(this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
+      const ctx = context()
+      ctx.fetchesMade = 1
+      ctx.ongoingFetches = 0
+      this._contexts.push(ctx)
+      this._currContext = ctx
+    }
+
+    // If we're changing contexts, we don't want to record the ongoingFetch on the old context
+    // That'll cause an off-by-one error when trying to close the old socket later
+    this._currContext.ongoingFetches++;
+    const currentContext = this._currContext
+
+    if (this._debug) {
+      console.log('> [debug] Total requests made on socket #%d: %d', this._contexts.length, this._currContext.fetchesMade)
+      console.log('> [debug] Concurrent requests on socket #%d: %d', this._contexts.length, this._currContext.ongoingFetches)
+    }
 
     if (!this._agent) {
       if (this._debug) {
@@ -88,10 +119,39 @@ module.exports = class Agent {
       opts.headers['Content-Length'] = Buffer.byteLength(opts.body)
     }
 
+    const handleCompleted = async (res) => {
+      currentContext.ongoingFetches--;
+      if(currentContext !== this._currContext && currentContext.ongoingFetches <= 0) {
+        // We've completely moved on to a new socket
+        // close the old one
+
+        // TODO: Fix race condition:
+        // If the response is a stream, and the server is still streaming data
+        // we should check if the stream has closed before disconnecting
+        // hasCompleted CAN technically be called before the res body stream is closed
+        if (this._debug) {
+          console.log('> [debug] Closing old socket');
+        }
+        currentContext.disconnect(this._url)
+      }
+      this._sema.p()
+      return res
+    }
+
     if (USE_HTTP2) {
-      return fetchH2(this._url + path, opts).then(res => this._sema.p() || res)
+      return currentContext.fetch(this._url + path, opts)
+        .then(res => handleCompleted(res) || res)
+        .catch(err => {
+          handleCompleted()
+          throw err
+        })
     } else {
       return fetch(this._url + path, opts)
+        .then(res => this._sema.p() || res)
+        .catch(err => {
+          this._sema.p()
+          throw err
+        })
     }
   }
 
@@ -104,7 +164,7 @@ module.exports = class Agent {
       this._agent.destroy()
     }
     if (USE_HTTP2) {
-      disconnect(this._url)
+      this._currContext.disconnect(this._url)
     }
   }
 }
