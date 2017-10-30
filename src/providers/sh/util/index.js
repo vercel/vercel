@@ -124,7 +124,7 @@ module.exports = class Now extends EventEmitter {
 
     const deployment = await this.retry(async bail => {
       if (this._debug) {
-        console.time('> [debug] /now/create')
+        console.time('> [debug] v2/now/deployments')
       }
 
       // Flatten the array to contain files to sync where each nested input
@@ -156,7 +156,7 @@ module.exports = class Now extends EventEmitter {
         )
       )
 
-      const res = await this._fetch('/now/create', {
+      const res = await this._fetch('/v2/now/deployments', {
         method: 'POST',
         body: {
           env,
@@ -173,7 +173,7 @@ module.exports = class Now extends EventEmitter {
       })
 
       if (this._debug) {
-        console.timeEnd('> [debug] /now/create')
+        console.timeEnd('> [debug] v2/now/deployments')
       }
 
       // No retry on 4xx
@@ -193,6 +193,8 @@ module.exports = class Now extends EventEmitter {
         err.status = res.status
         err.retryAfter = 'never'
         return bail(err)
+      } else if (res.status === 400 && body.error && body.error.code === 'missing_files') {
+        return body
       } else if (res.status >= 400 && res.status < 500) {
         const err = new Error(body.error.message)
         err.userError = true
@@ -241,6 +243,12 @@ module.exports = class Now extends EventEmitter {
       }
     }
 
+    if (deployment.error && deployment.error.code === 'missing_files') {
+      this._missing = deployment.error.missing || []
+      this._fileCount = files.length
+      return null;
+    }
+
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node) {
         if (missingVersion) {
@@ -263,7 +271,7 @@ module.exports = class Now extends EventEmitter {
 
     this._id = deployment.deploymentId
     this._host = deployment.url
-    this._missing = deployment.missing || []
+    this._missing = []
     this._fileCount = files.length
 
     return this._url
@@ -289,17 +297,16 @@ module.exports = class Now extends EventEmitter {
               const { data, names } = file
 
               if (this._debug) {
-                console.time(`> [debug] /sync #${attempt} ${names.join(' ')}`)
+                console.time(`> [debug] v2/now/files #${attempt} ${names.join(' ')}`)
               }
 
               const stream = resumer().queue(data).end()
-              const res = await this._fetch('/now/sync', {
+              const res = await this._fetch('/v2/now/files', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/octet-stream',
                   'Content-Length': data.length,
-                  'x-now-deployment-id': this._id,
-                  'x-now-sha': sha,
+                  'x-now-digest': sha,
                   'x-now-file': names
                     .map(name => {
                       return toRelative(encodeURIComponent(name), this._path)
@@ -312,7 +319,7 @@ module.exports = class Now extends EventEmitter {
 
               if (this._debug) {
                 console.timeEnd(
-                  `> [debug] /sync #${attempt} ${names.join(' ')}`
+                  `> [debug] v2/now/files #${attempt} ${names.join(' ')}`
                 )
               }
 

@@ -549,22 +549,67 @@ async function sync({ token, config: { currentTeam, user } }) {
       env[key] = val
     })
 
+    let syncCount
     try {
-      await now.create(
-        path,
-        Object.assign(
-          {
-            env,
-            followSymlinks,
-            forceNew,
-            forwardNpm: alwaysForwardNpm || forwardNpm,
-            quiet,
-            wantsPublic,
-            sessionAffinity
-          },
-          meta
+      do {
+        await now.create(
+          path,
+          Object.assign(
+            {
+              env,
+              followSymlinks,
+              forceNew,
+              forwardNpm: alwaysForwardNpm || forwardNpm,
+              quiet,
+              wantsPublic,
+              sessionAffinity
+            },
+            meta
+          )
         )
-      )
+        if (now.syncFileCount > 0) {
+          await new Promise((resolve) => {
+            if (debug && now.syncFileCount !== now.fileCount) {
+              console.log(
+                `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+              )
+            }
+            const size = bytes(now.syncAmount)
+            syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+              ? 's'
+              : ''}`
+            const bar = new Progress(
+              `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+              {
+                width: 20,
+                complete: '=',
+                incomplete: '',
+                total: now.syncAmount,
+                clear: true
+              }
+            )
+
+            now.upload()
+
+            now.on('upload', ({ names, data }) => {
+              const amount = data.length
+              if (debug) {
+                console.log(
+                  `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
+                )
+              }
+              bar.tick(amount)
+            })
+
+            now.on('complete', () => resolve())
+
+            now.on('error', err => {
+              console.error(error('Upload failed'))
+              reject(err)
+            })
+          })
+        }
+      } while (now.syncFileCount > 0)
     } catch (err) {
       if (debug) {
         console.log(`> [debug] error: ${err}\n${err.stack}`)
@@ -598,31 +643,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     const startU = new Date()
-
-    const complete = ({ syncCount }) => {
-      if (!quiet) {
-        const elapsedU = ms(new Date() - startU)
-        console.log(
-          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
-        )
-        console.log('> Initializing…')
-      }
-
-      // Close http2 agent
-      now.close()
-
-      // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
-          console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
-        }
-      }
-    }
-
     const plan = await planPromise
-
     if (plan.id === 'oss' && !wantsPublic) {
       if (isTTY) {
         console.log(
@@ -665,60 +686,25 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
     }
 
-    if (now.syncAmount) {
-      if (debug && now.syncFileCount !== now.fileCount) {
+    if (!quiet) {
+      if (syncCount) {
+        const elapsedU = ms(new Date() - startU)
         console.log(
-          `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
         )
       }
-      const size = bytes(now.syncAmount)
-      const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-        ? 's'
-        : ''}`
-      const bar = new Progress(
-        `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-        {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: now.syncAmount,
-          clear: true
-        }
-      )
+      console.log('> Initializing…')
+    }
 
-      now.upload()
+    // Close http2 agent
+    now.close()
 
-      now.on('upload', ({ names, data }) => {
-        const amount = data.length
-        if (debug) {
-          console.log(
-            `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
-          )
-        }
-        bar.tick(amount)
-      })
-
-      now.on('complete', () => complete({ syncCount }))
-
-      now.on('error', async err => {
-        console.error(error('Upload failed'))
-        await stopDeployment(err)
-      })
-    } else {
-      if (!quiet) {
-        console.log(`> Initializing…`)
-      }
-
-      // Close http2 agent
-      now.close()
-
-      // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
-          console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
-        }
+    // Show build logs
+    if (!quiet) {
+      if (deploymentType === 'static') {
+        console.log(`${chalk.cyan('> Deployment complete!')}`)
+      } else {
+        printLogs(now.host, token, currentTeam, user)
       }
     }
   })
