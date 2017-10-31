@@ -277,12 +277,13 @@ async function sync({ token, config: { currentTeam, user } }) {
     const start = Date.now()
     const rawPath = argv._[0]
 
-    const planPromise = new NowPlans({
+    const nowPlans = new NowPlans({
       apiUrl,
       token,
       debug,
       currentTeam
-    }).getCurrent()
+    })
+    const planPromise = nowPlans.getCurrent()
 
     try {
       await fs.stat(rawPath || path)
@@ -697,6 +698,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     // Close http2 agent
+    nowPlans.close()
     now.close()
 
     // Show build logs
