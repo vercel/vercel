@@ -9,9 +9,8 @@ const { parse: parseUrl } = require('url')
 const fetch = require('node-fetch')
 const bytes = require('bytes')
 const chalk = require('chalk')
-const resumer = require('resumer')
+const through2 = require('through2')
 const retry = require('async-retry')
-const splitArray = require('split-array')
 const { parse: parseIni } = require('ini')
 const { readFile, stat, lstat } = require('fs-extra')
 const ms = require('ms')
@@ -29,7 +28,7 @@ const toHost = require('./to-host')
 const { responseError } = require('./error')
 
 // How many concurrent HTTP/2 stream uploads
-const MAX_CONCURRENT = 10
+const MAX_CONCURRENT = 50
 
 // Check if running windows
 const IS_WIN = process.platform.startsWith('win')
@@ -278,77 +277,78 @@ module.exports = class Now extends EventEmitter {
   }
 
   upload() {
-    const parts = splitArray(this._missing, MAX_CONCURRENT)
-
     if (this._debug) {
       console.log(
         '> [debug] Will upload ' +
-          `${this._missing.length} files in ${parts.length} ` +
-          `steps of ${MAX_CONCURRENT} uploads.`
+          `${this._missing.length} files`
       )
     }
 
-    const uploadChunk = () => {
-      Promise.all(
-        parts.shift().map(sha =>
-          retry(
-            async (bail, attempt) => {
-              const file = this._files.get(sha)
-              const { data, names } = file
+    this._agent.setConcurrency({
+      maxStreams: MAX_CONCURRENT,
+      capacity: this._missing.length
+    })
 
+    console.time('> [debug] Uploading files')
+    Promise.all(
+      this._missing.map(sha =>
+        retry(
+          async (bail, attempt) => {
+            const file = this._files.get(sha)
+            const { data, names } = file
+
+            if (this._debug) {
+              console.time(`> [debug] v2/now/files #${attempt} ${names.join(' ')}`)
+            }
+
+            const stream = through2()
+            stream.write(data)
+            stream.end()
+            const res = await this._fetch('/v2/now/files', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': data.length,
+                'x-now-digest': sha,
+                'x-now-file': names
+                  .map(name => {
+                    return toRelative(encodeURIComponent(name), this._path)
+                  })
+                  .join(','),
+                'x-now-size': data.length
+              },
+              body: stream
+            })
+
+            if (this._debug) {
+              console.timeEnd(
+                `> [debug] v2/now/files #${attempt} ${names.join(' ')}`
+              )
+            }
+
+            // No retry on 4xx
+            if (
+              res.status !== 200 &&
+              (res.status >= 400 || res.status < 500)
+            ) {
               if (this._debug) {
-                console.time(`> [debug] v2/now/files #${attempt} ${names.join(' ')}`)
-              }
-
-              const stream = resumer().queue(data).end()
-              const res = await this._fetch('/v2/now/files', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
-                  'x-now-digest': sha,
-                  'x-now-file': names
-                    .map(name => {
-                      return toRelative(encodeURIComponent(name), this._path)
-                    })
-                    .join(','),
-                  'x-now-size': data.length
-                },
-                body: stream
-              })
-
-              if (this._debug) {
-                console.timeEnd(
-                  `> [debug] v2/now/files #${attempt} ${names.join(' ')}`
+                console.log(
+                  '> [debug] bailing on creating due to %s',
+                  res.status
                 )
               }
 
-              // No retry on 4xx
-              if (
-                res.status !== 200 &&
-                (res.status >= 400 || res.status < 500)
-              ) {
-                if (this._debug) {
-                  console.log(
-                    '> [debug] bailing on creating due to %s',
-                    res.status
-                  )
-                }
+              return bail(await responseError(res))
+            }
 
-                return bail(await responseError(res))
-              }
-
-              this.emit('upload', file)
-            },
-            { retries: 3, randomize: true, onRetry: this._onRetry }
-          )
+            this.emit('upload', file)
+          },
+          { retries: 3, randomize: true, onRetry: this._onRetry }
         )
       )
-        .then(() => (parts.length ? uploadChunk() : this.emit('complete')))
-        .catch(err => this.emit('error', err))
-    }
-
-    uploadChunk()
+    )
+      .then(() => (console.timeEnd('> [debug] Uploading files') || this.emit('complete')))
+      .catch(err => this.emit('error', err))
   }
 
   async listSecrets() {

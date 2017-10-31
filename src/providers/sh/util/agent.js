@@ -5,6 +5,13 @@ const https = require('https')
 
 // Packages
 const fetch = require('node-fetch')
+const { JsonBody, StreamBody, context } = require('fetch-h2')
+const Sema = require('async-sema');
+const {version} = require('../../../util/pkg')
+
+// TODO: Don't limit to canary
+const USE_HTTP2 = version.indexOf('canary') > -1
+const MAX_REQUESTS_PER_CONNECTION = 1000
 
 /**
  * Returns a `fetch` version with a similar
@@ -19,9 +26,21 @@ const fetch = require('node-fetch')
 
 module.exports = class Agent {
   constructor(url, { tls = true, debug } = {}) {
+    // We use multiple contexts because each context represent one connection
+    // With nginx, we're limited to 1000 requests before a connection is closed
+    // http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests
+    // To get arround this, we keep track of requests made on a connection. when we're about to hit 1000
+    // we start up a new connection, and re-route all future traffic through the new connection
+    // and when the final request from the old connection resolves, we auto-close the old connection
+    this._contexts = [context()]
+    this._currContext = this._contexts[0]
+    this._currContext.fetchesMade = 0
+    this._currContext.ongoingFetches = 0
+    
     this._url = url
     const parsed = parse(url)
     this._protocol = parsed.protocol
+    this._sema = new Sema(20)
     this._debug = debug
     if (tls) {
       this._initAgent()
@@ -46,7 +65,32 @@ module.exports = class Agent {
     }
   }
 
-  fetch(path, opts = {}) {
+  setConcurrency({maxStreams, capacity}) {
+    this._sema = new Sema(maxStreams || 20, {capacity})
+  }
+
+  async fetch(path, opts = {}) {
+    await this._sema.v()
+
+    this._currContext.fetchesMade++;
+    if(this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
+      const ctx = context()
+      ctx.fetchesMade = 1
+      ctx.ongoingFetches = 0
+      this._contexts.push(ctx)
+      this._currContext = ctx
+    }
+
+    // If we're changing contexts, we don't want to record the ongoingFetch on the old context
+    // That'll cause an off-by-one error when trying to close the old socket later
+    this._currContext.ongoingFetches++;
+    const currentContext = this._currContext
+
+    if (this._debug) {
+      console.log('> [debug] Total requests made on socket #%d: %d', this._contexts.length, this._currContext.fetchesMade)
+      console.log('> [debug] Concurrent requests on socket #%d: %d', this._contexts.length, this._currContext.ongoingFetches)
+    }
+
     if (!this._agent) {
       if (this._debug) {
         console.log('> [debug] re-initializing agent')
@@ -61,14 +105,55 @@ module.exports = class Agent {
 
     if (body && typeof body === 'object' && typeof body.pipe !== 'function') {
       opts.headers['Content-Type'] = 'application/json'
-      opts.body = JSON.stringify(body)
+      if (USE_HTTP2) {
+        opts.body = new JsonBody(body)
+      } else {
+        opts.body = JSON.stringify(body)
+      }
     }
 
-    if (opts.body && typeof body.pipe !== 'function') {
+    if(USE_HTTP2 && body && typeof body === 'object' && typeof body.pipe === 'function') {
+      opts.body = new StreamBody(body)
+    }
+
+    if (!USE_HTTP2 && opts.body && typeof body.pipe !== 'function') {
       opts.headers['Content-Length'] = Buffer.byteLength(opts.body)
     }
 
-    return fetch(this._url + path, opts)
+    const handleCompleted = async (res) => {
+      currentContext.ongoingFetches--;
+      if(currentContext !== this._currContext && currentContext.ongoingFetches <= 0) {
+        // We've completely moved on to a new socket
+        // close the old one
+
+        // TODO: Fix race condition:
+        // If the response is a stream, and the server is still streaming data
+        // we should check if the stream has closed before disconnecting
+        // hasCompleted CAN technically be called before the res body stream is closed
+        if (this._debug) {
+          console.log('> [debug] Closing old socket');
+        }
+        currentContext.disconnect(this._url)
+      }
+      this._sema.p()
+      return res
+    }
+
+    if (USE_HTTP2) {
+      return currentContext.fetch(this._url + path, opts)
+        .then(res => handleCompleted(res) || res)
+        .catch(err => {
+          handleCompleted()
+          throw err
+        })
+    } else {
+      return fetch(this._url + path, opts)
+        .then(res => this._sema.p() || res)
+        .catch(err => {
+          this._sema.p()
+          throw err
+        })
+    }
   }
 
   close() {
@@ -78,6 +163,9 @@ module.exports = class Agent {
 
     if (this._agent) {
       this._agent.destroy()
+    }
+    if (USE_HTTP2) {
+      this._currContext.disconnect(this._url)
     }
   }
 }
