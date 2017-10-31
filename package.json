@@ -11,7 +11,7 @@
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
-    "pack": "webpack && pkg dist/now.js -c package.json -o packed/now",
+    "pack": "webpack && pkg dist/now.js -c package.json -o packed/now --options expose-http2",
     "build-download": "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link"
   },
@@ -34,10 +34,10 @@
       "dist/*"
     ],
     "targets": [
-      "node7-alpine-x64",
-      "node7-linux-x64",
-      "node7-macos-x64",
-      "node7-win-x64"
+      "latest-alpine-x64",
+      "latest-linux-x64",
+      "latest-macos-x64",
+      "latest-win-x64"
     ]
   },
   "ava": {
