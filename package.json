@@ -34,10 +34,10 @@
       "dist/*"
     ],
     "targets": [
-      "latest-alpine-x64",
-      "latest-linux-x64",
-      "latest-macos-x64",
-      "latest-win-x64"
+      "node8-alpine-x64",
+      "node8-linux-x64",
+      "node8-macos-x64",
+      "node8-win-x64"
     ]
   },
   "ava": {
