@@ -4,18 +4,13 @@ const chalk = require('chalk')
 const DNS_VERIFICATION_ERROR = `Please make sure that your nameservers point to ${chalk.underline(
   'zeit.world'
 )}.
-> Examples: (full list at ${chalk.underline('https://zeit.world')})
-> ${chalk.gray('-')} ${chalk.underline('california.zeit.world')}    ${chalk.dim(
-  '173.255.215.107'
-)}
-> ${chalk.gray('-')} ${chalk.underline('newark.zeit.world')}        ${chalk.dim(
-  '173.255.231.87'
-)}
-> ${chalk.gray('-')} ${chalk.underline('london.zeit.world')}        ${chalk.dim(
-  '178.62.47.76'
-)}
-> ${chalk.gray('-')} ${chalk.underline('singapore.zeit.world')}     ${chalk.dim(
-  '119.81.97.170'
+> For more details visit: ${chalk.underline('https://zeit.world')})
+> ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}
+> ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}
+> ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}
+> ${chalk.gray('-')} ${chalk.underline('d.zeit.world')}
+> ${chalk.gray('-')} ${chalk.underline('e.zeit.world')}
+> ${chalk.gray('-')} ${chalk.underline('f.zeit.world')}
 )}`
 
 const DOMAIN_VERIFICATION_ERROR =
