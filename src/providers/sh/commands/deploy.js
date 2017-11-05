@@ -813,7 +813,8 @@ function printLogs(host, token) {
 
   logger.on('close', async () => {
     if (!quiet) {
-      console.log(`${chalk.cyan('> Deployment complete!')} access in ${chalk.bold(url)}`)
+      console.log(chalk.cyan('> Deployment complete!'))
+      console.log(chalk.cyan(`> You can access it here: ${chalk.bold(url)}`))
     }
 
     if (gitRepo && gitRepo.cleanup) {
