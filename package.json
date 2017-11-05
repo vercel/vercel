@@ -34,10 +34,10 @@
       "dist/*"
     ],
     "targets": [
-      "node7-alpine-x64",
-      "node7-linux-x64",
-      "node7-macos-x64",
-      "node7-win-x64"
+      "node9-alpine-x64",
+      "node9-linux-x64",
+      "node9-macos-x64",
+      "node9-win-x64"
     ]
   },
   "ava": {
@@ -136,7 +136,7 @@
     "opn": "5.1.0",
     "ora": "1.3.0",
     "pipe-streams-to-promise": "0.2.0",
-    "pkg": "4.2.4",
+    "pkg": "4.3.0-beta.1",
     "pre-commit": "1.2.2",
     "prettier": "1.6.1",
     "printf": "0.2.5",
