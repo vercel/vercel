@@ -90,7 +90,7 @@ const main = async ctx => {
   id = argv._[0]
   scaleArg = argv._[1]
   optionalScaleArg = argv._[2]
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   debug = argv.debug
 
   if (argv.help) {

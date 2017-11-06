@@ -35,8 +35,15 @@ const main = async (argv_) => {
   await checkForUpdates()
 
   const argv = mri(argv_, {
-    boolean: ['help', 'version'],
-    string: ['token', 'team'],
+    boolean: [
+      'help',
+      'version'
+    ],
+    string: [
+      'token',
+      'team',
+      'api'
+    ],
     alias: {
       help: 'h',
       version: 'v',
@@ -480,6 +487,12 @@ const main = async (argv_) => {
 
       ctx.config.sh.currentTeam = body
     }
+  }
+
+  const { api } = argv
+
+  if (api && typeof api === 'string') {
+    ctx.apiUrl = api
   }
 
   try {
