@@ -310,11 +310,6 @@ module.exports = class Now extends EventEmitter {
                 'Content-Type': 'application/octet-stream',
                 'Content-Length': data.length,
                 'x-now-digest': sha,
-                'x-now-file': names
-                  .map(name => {
-                    return toRelative(encodeURIComponent(name), this._path)
-                  })
-                  .join(','),
                 'x-now-size': data.length
               },
               body: stream
