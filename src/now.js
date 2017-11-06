@@ -232,7 +232,7 @@ const main = async (argv_) => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx = {
+  const ctx: Object = {
     config,
     authConfig,
     argv: argv_
@@ -343,6 +343,15 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
+  const { sh } = ctx.config
+  ctx.apiUrl = 'https://api.zeit.co'
+
+  if (argv.api && typeof argv.api === 'string') {
+    ctx.apiUrl = argv.api
+  } else if (sh && sh.api) {
+    ctx.apiUrl = sh.api
+  }
+
   // $FlowFixMe
   const { isTTY } = process.stdout
 
@@ -412,7 +421,7 @@ const main = async (argv_) => {
     }
 
     const user = await getUser({
-      apiUrl: 'https://api.zeit.co',
+      apiUrl: ctx.apiUrl,
       token
     })
 
@@ -487,14 +496,6 @@ const main = async (argv_) => {
 
       ctx.config.sh.currentTeam = body
     }
-  }
-
-  const { sh } = ctx.config
-
-  if (argv.api && typeof argv.api === 'string') {
-    ctx.apiUrl = argv.api
-  } else if (sh && sh.api) {
-    ctx.apiUrl = sh.api
   }
 
   try {
