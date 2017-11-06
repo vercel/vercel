@@ -489,10 +489,12 @@ const main = async (argv_) => {
     }
   }
 
-  const { api } = argv
+  const { sh } = ctx.config
 
-  if (api && typeof api === 'string') {
-    ctx.apiUrl = api
+  if (argv.api && typeof argv.api === 'string') {
+    ctx.apiUrl = argv.api
+  } else if (sh && sh.api) {
+    ctx.apiUrl = sh.api
   }
 
   try {
