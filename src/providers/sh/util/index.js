@@ -369,13 +369,13 @@ module.exports = class Now extends EventEmitter {
     const { deployments } = await this.retry(
       async bail => {
         if (this._debug) {
-          console.time('> [debug] /list')
+          console.time('> [debug] GET /v2/now/deployments')
         }
 
-        const res = await this._fetch('/now/list' + query)
+        const res = await this._fetch('/v2/now/deployments' + query)
 
         if (this._debug) {
-          console.timeEnd('> [debug] /list')
+          console.timeEnd('> [debug] GET /v2/now/deployments')
         }
 
         // No retry on 4xx
