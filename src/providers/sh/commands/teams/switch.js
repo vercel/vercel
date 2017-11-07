@@ -11,7 +11,7 @@ const error = require('../../../../util/output/error')
 const param = require('../../../../util/output/param')
 const {writeToConfigFile} = require('../../../../util/config-files')
 
-const updateCurrentTeam = async (config, newTeam) => {
+const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
     delete newTeam.created
     delete newTeam.creator_id
@@ -44,14 +44,14 @@ module.exports = async function({ teams, args, config }) {
     const newTeam = list.find(team => team.slug === desiredSlug)
 
     if (newTeam) {
-      await updateCurrentTeam(config, newTeam)
+      updateCurrentTeam(config, newTeam)
       success(`The team ${chalk.bold(newTeam.name)} is now active!`)
       return exit()
     }
 
     if (desiredSlug === user.username) {
       stopSpinner = wait('Saving')
-      await updateCurrentTeam(config)
+      updateCurrentTeam(config)
 
       stopSpinner()
       return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
@@ -121,7 +121,7 @@ module.exports = async function({ teams, args, config }) {
     }
 
     stopSpinner = wait('Saving')
-    await updateCurrentTeam(config)
+    updateCurrentTeam(config)
 
     stopSpinner()
     return success(`Your account (${chalk.bold(choice)}) is now active!`)
@@ -133,7 +133,7 @@ module.exports = async function({ teams, args, config }) {
   }
 
   stopSpinner = wait('Saving')
-  await updateCurrentTeam(config, newTeam)
+  updateCurrentTeam(config, newTeam)
 
   stopSpinner()
   success(`The team ${chalk.bold(newTeam.name)} is now active!`)
