@@ -51,6 +51,7 @@ const help = () => {
     'TOKEN'
   )}             Login token
     -T, --team                          Set a custom team scope
+    --remove-old                        Remove prior deployment after setting alias
 
   ${chalk.dim('Examples:')}
 
@@ -358,6 +359,13 @@ async function run({ token, sh: { currentTeam, user } }) {
         ))
         return exit(1)
       }
+
+      let oldAliasToRemove;
+      if (argv['remove-old']) {
+        const list = await alias.listAliases()
+        oldAliasToRemove = findAlias(String(args[1]), list)
+      }
+
       await alias.set(
         String(args[0]),
         String(args[1]),
@@ -365,6 +373,12 @@ async function run({ token, sh: { currentTeam, user } }) {
         currentTeam,
         user
       )
+      if (oldAliasToRemove) {
+        const newDeployment = await alias.findDeployment(String(args[0]))
+        if (newDeployment.uid !== oldAliasToRemove.deploymentId) {
+          await alias.remove(oldAliasToRemove.deploymentId, {})
+        }
+      }
       break
     }
     default: {
