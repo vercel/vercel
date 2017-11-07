@@ -78,7 +78,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   hard = argv.hard || false
   skipConfirmation = argv.yes || false
   ids = argv._

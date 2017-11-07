@@ -52,7 +52,7 @@ const main = async ctx => {
     }
   })
 
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   endpoint = apiUrl + '/user/tokens/'
 
   argv._ = argv._.slice(1)

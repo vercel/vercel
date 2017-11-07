@@ -202,8 +202,7 @@ const login = async ctx => {
 
   argv._ = argv._.slice(1)
 
-  const apiUrl =
-    (ctx.config.sh && ctx.config.sh.apiUrl) || 'https://api.zeit.co'
+  const apiUrl = ctx.apiUrl
   let email
   let emailIsValid = false
   let stopSpinner
