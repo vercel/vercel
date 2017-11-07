@@ -81,7 +81,7 @@ const main = async ctx => {
 
   argv._ = argv._.slice(1)
 
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   debug = argv.debug
   subcommand = argv._[0]
 

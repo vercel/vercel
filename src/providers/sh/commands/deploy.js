@@ -251,7 +251,7 @@ async function main(ctx) {
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
   wantsPublic = argv.public
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   isTTY = process.stdout.isTTY
   quiet = !isTTY
 

@@ -118,7 +118,7 @@ const main = async ctx => {
   }
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
 
   limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
