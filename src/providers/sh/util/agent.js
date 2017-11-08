@@ -13,6 +13,11 @@ const {version} = require('../../../util/pkg')
 const USE_HTTP2 = version.indexOf('canary') > -1
 const MAX_REQUESTS_PER_CONNECTION = 1000
 
+const shouldUseHttp2 = that => (
+  !that._url.includes('bru-api') &&
+  USE_HTTP2
+)
+
 /**
  * Returns a `fetch` version with a similar
  * API to the browser's configured with a
@@ -105,18 +110,18 @@ module.exports = class Agent {
 
     if (body && typeof body === 'object' && typeof body.pipe !== 'function') {
       opts.headers['Content-Type'] = 'application/json'
-      if (USE_HTTP2) {
+      if (shouldUseHttp2(this)) {
         opts.body = new JsonBody(body)
       } else {
         opts.body = JSON.stringify(body)
       }
     }
 
-    if(USE_HTTP2 && body && typeof body === 'object' && typeof body.pipe === 'function') {
+    if(shouldUseHttp2(this) && body && typeof body === 'object' && typeof body.pipe === 'function') {
       opts.body = new StreamBody(body)
     }
 
-    if (!USE_HTTP2 && opts.body && typeof body.pipe !== 'function') {
+    if (!shouldUseHttp2(this) && opts.body && typeof body.pipe !== 'function') {
       opts.headers['Content-Length'] = Buffer.byteLength(opts.body)
     }
 
@@ -139,7 +144,7 @@ module.exports = class Agent {
       return res
     }
 
-    if (USE_HTTP2) {
+    if (shouldUseHttp2(this)) {
       return currentContext.fetch(this._url + path, opts)
         .then(res => handleCompleted(res) || res)
         .catch(err => {
@@ -164,7 +169,7 @@ module.exports = class Agent {
     if (this._agent) {
       this._agent.destroy()
     }
-    if (USE_HTTP2) {
+    if (shouldUseHttp2(this)) {
       this._currContext.disconnect(this._url)
     }
   }
