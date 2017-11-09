@@ -167,7 +167,8 @@ module.exports = class Now extends EventEmitter {
           registryAuthToken: authToken,
           files,
           engines,
-          sessionAffinity
+          sessionAffinity,
+          atlas: hasNowJson && Boolean(nowConfig.atlas)
         }
       })
 
