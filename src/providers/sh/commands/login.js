@@ -110,6 +110,15 @@ const getVerificationData = async ({ apiUrl, email }) => {
     )
   }
 
+  if (!res.ok) {
+    debug('error response from POST /now/registration: %d %j', res.status, body)
+    const { error = {} } = body
+    const message = error.code === 'invalid_email'
+        ? 'Invalid email address'
+        : `Unexpected error: ${error.message}`
+    throw new Error(message)
+  }
+
   return body
 }
 
