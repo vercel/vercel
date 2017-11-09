@@ -140,6 +140,8 @@ module.exports = class Agent {
     }
 
     if (USE_HTTP2) {
+      // We have to set the `host` manually when using http2
+      opts.headers.host = this._url.replace(/^https?:\/\//, '')
       return currentContext.fetch(this._url + path, opts)
         .then(res => handleCompleted(res) || res)
         .catch(err => {
