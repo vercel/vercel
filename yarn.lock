@@ -52,12 +52,6 @@ abbrev@1:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.0.tgz#d0554c2256636e2f56e7c2e5ad183f859428d81f"
 
-abort-controller@1.x:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/abort-controller/-/abort-controller-1.0.0.tgz#ba3d7ca265114d3c0efe74a32a06228bd1c31ea3"
-  dependencies:
-    event-target-shim "^3.0.0"
-
 acorn-dynamic-import@^2.0.0:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/acorn-dynamic-import/-/acorn-dynamic-import-2.0.2.tgz#c752bd210bef679501b6c6cb7fc84f8f47158cc4"
@@ -2245,10 +2239,6 @@ event-emitter@~0.3.5:
     d "1"
     es5-ext "~0.10.14"
 
-event-target-shim@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/event-target-shim/-/event-target-shim-3.0.0.tgz#d2faa31db7d97188463b2cbde5e09601acae4672"
-
 events@^1.0.0, events@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/events/-/events-1.1.1.tgz#9ebdb7635ad099c70dcc4c2a1f5004288e8bd924"
@@ -2373,11 +2363,10 @@ fd-slicer@~1.0.1:
   dependencies:
     pend "~1.2.0"
 
-fetch-h2@0.0.9:
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/fetch-h2/-/fetch-h2-0.0.9.tgz#85b4883f94877f00d322a6b1679ad4e7ac31bd28"
+fetch-h2@false0.0.12:
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/fetch-h2/-/fetch-h2-0.0.12.tgz#984e43fe69f6ce0663e2176e2041abff98596feb"
   dependencies:
-    abort-controller "1.x"
     already "0.x"
     callguard "1.x"
     get-stream "3.x"
