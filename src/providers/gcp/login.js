@@ -274,6 +274,7 @@ const login = ctx => new Promise(async resolve => {
 
   if(process.platform === "darwin" || process.platform === "win32") {
     opn(USER_URL + '?' + encodeQuery(query))
+    console.log(info('A login window has been open in your default browser.'));
   } else {
     console.log(info(
       `We'll need you to grant us access to provision functions on your ${highlight('Google Cloud Platform')} account in order to comunicate with their API.`,
