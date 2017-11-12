@@ -156,7 +156,11 @@ async function main() {
     try {
       // Workaround for https://github.com/npm/cmd-shim/pull/25
       const globalPath = path.dirname(await which('npm'))
-      const gitBashFile = path.join(globalPath, 'now')
+      let gitBashFile = path.join(globalPath, 'now')
+      if (!fs.existsSync(gitBashFile)) {
+        gitBashFile = path.join(process.env.APPDATA, 'npm/now');
+      }
+
       fs.writeFileSync(
         gitBashFile,
         '#!/bin/sh\n' +
