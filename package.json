@@ -13,7 +13,8 @@
     "postinstall": "node download/install.js",
     "pack": "webpack && pkg dist/now.js -c package.json -o packed/now",
     "build-download": "webpack --context download --config download/webpack.config.js",
-    "link": "webpack && cd link && npm link"
+    "link": "webpack && cd link && npm link",
+    "build": "webpack"
   },
   "lint-staged": {
     "*.js": [
