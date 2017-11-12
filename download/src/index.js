@@ -164,9 +164,8 @@ async function main() {
   }
 
   if (platform === 'win32') {
-    // Now.exe is executed only
-    fs.unlinkSync(now)
     try {
+      fs.writeFileSync(now, '')
       // Workaround for https://github.com/npm/cmd-shim/pull/25
       const globalPath = path.dirname(await which('npm'))
       let gitBashFile = path.join(globalPath, 'now')
