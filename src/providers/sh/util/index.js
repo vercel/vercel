@@ -290,7 +290,10 @@ module.exports = class Now extends EventEmitter {
       capacity: this._missing.length
     })
 
-    console.time('> [debug] Uploading files')
+    if (this._debug) {
+      console.time('> [debug] Uploading files')
+    }
+
     Promise.all(
       this._missing.map(sha =>
         retry(
@@ -343,7 +346,13 @@ module.exports = class Now extends EventEmitter {
         )
       )
     )
-      .then(() => (console.timeEnd('> [debug] Uploading files') || this.emit('complete')))
+      .then(() => {
+        if (this._debug) {
+          console.timeEnd('> [debug] Uploading files')
+        }
+
+        this.emit('complete')
+      })
       .catch(err => this.emit('error', err))
   }
 
