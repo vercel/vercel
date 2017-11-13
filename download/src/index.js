@@ -143,6 +143,19 @@ async function download() {
   fs.writeFileSync(backup, fs.readFileSync(target))
 }
 
+function modifyGitBashFile (content) {
+  return (
+    '#!/bin/sh\n' +
+      'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+      '\n' +
+      'case `uname` in\n' +
+      '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+      'esac\n' +
+      '\n' +
+    content.replace(
+      'download/dist/now"', 'download/dist/now.exe"'));
+}
+
 async function main() {
   if (fs.existsSync(backup)) {
     fs.writeFileSync(target, fs.readFileSync(backup))
@@ -151,22 +164,17 @@ async function main() {
   }
 
   if (platform === 'win32') {
-    // Now.exe is executed only
-    fs.unlinkSync(now)
     try {
+      fs.writeFileSync(now, '')
       // Workaround for https://github.com/npm/cmd-shim/pull/25
       const globalPath = path.dirname(await which('npm'))
-      const gitBashFile = path.join(globalPath, 'now')
+      let gitBashFile = path.join(globalPath, 'now')
+      if (!fs.existsSync(gitBashFile)) {
+        gitBashFile = path.join(process.env.APPDATA, 'npm/now');
+      }
+
       fs.writeFileSync(
-        gitBashFile,
-        '#!/bin/sh\n' +
-          'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
-          '\n' +
-          'case `uname` in\n' +
-          '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
-          'esac\n' +
-          '\n' +
-          fs.readFileSync(gitBashFile, 'utf8')
+        gitBashFile, modifyGitBashFile(fs.readFileSync(gitBashFile, 'utf8'))
       )
     } catch (err) {
       if (err.code !== 'ENOENT') {
