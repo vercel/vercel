@@ -6,13 +6,14 @@ const https = require('https')
 // Packages
 const fetch = require('node-fetch')
 const {version} = require('../../../util/pkg')
-const Sema = require('async-sema');
+const Sema = require('async-sema')
 
 // TODO: Don't limit to canary
 const USE_HTTP2 = version.indexOf('canary') > -1
 const MAX_REQUESTS_PER_CONNECTION = 1000
 
-let JsonBody, StreamBody, context;
+let JsonBody, StreamBody, context
+
 if (USE_HTTP2) {
   ({ JsonBody, StreamBody, context } = require('fetch-h2'))
 }
@@ -42,7 +43,7 @@ module.exports = class Agent {
       this._currContext.fetchesMade = 0
       this._currContext.ongoingFetches = 0
     }
-    
+
     this._url = url
     const parsed = parse(url)
     this._protocol = parsed.protocol
