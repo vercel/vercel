@@ -119,7 +119,7 @@
     "epipebomb": "1.0.0",
     "eslint": "4.7.2",
     "eslint-plugin-flowtype": "2.36.0",
-    "fetch-h2": "false0.0.12",
+    "fetch-h2": "0.0.12",
     "flow-babel-webpack-plugin": "1.1.0",
     "fs-extra": "4.0.1",
     "glob": "7.1.2",
