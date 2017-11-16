@@ -82,8 +82,8 @@ module.exports = class Now extends EventEmitter {
       // in the root directory of the deployment are required
       if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
         const err = new Error(
-          'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start.'
+          'Missing `start` (or `now-start`) script in `package.json`.\n' +
+          '> See https://docs.npmjs.com/cli/start'
         )
         err.userError = true
         throw err
