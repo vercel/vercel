@@ -14,10 +14,10 @@ const CONFIGS = new Map([
     }
   ],
   [
-    'includeProtocol',
+    'includeScheme',
     value => {
-      const isValid = ["true", "false", true, false].includes(value)
-      return [isValid, value === "true" || value === true]
+      const isValid = ['true', 'false', true, false].includes(value)
+      return [isValid, value === 'true' || value === true]
     }
   ]
 ])
