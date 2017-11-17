@@ -83,7 +83,7 @@ module.exports = class Now extends EventEmitter {
       if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
         const err = new Error(
           'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start.'
+            'See: https://docs.npmjs.com/cli/start'
         )
         err.userError = true
         throw err
