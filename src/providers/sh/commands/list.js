@@ -77,11 +77,11 @@ const main = async ctx => {
     await exit(0)
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
-    await list({ token, sh })
+    await list({ token, sh, includeScheme })
   } catch (err) {
     console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
@@ -97,7 +97,7 @@ module.exports = async ctx => {
   }
 }
 
-async function list({ token, sh: { currentTeam, user } }) {
+async function list({ token, sh: { currentTeam, user }, includeScheme }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
   const start = new Date()
 
@@ -239,7 +239,7 @@ async function list({ token, sh: { currentTeam, user } }) {
       console.log(
         printf(
           spec,
-          chalk.underline(dep.url),
+          chalk.underline((includeScheme ? 'https://' : '') + dep.url),
           dep.scale ? dep.scale.current : '✖',
           state,
           dep.created ? ms(timeNow - dep.created) : 'n/a'
