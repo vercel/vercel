@@ -700,19 +700,24 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
     }
 
-    // Close http2 agent
-    nowPlans.close()
-    now.close()
-
     // Show build logs
     if (deploymentType === 'static') {
       if (!quiet) {
         console.log(success('Deployment complete!'));
       }
+      await exit(0);
     } else {
       if (nowConfig.atlas) {
         const cancelWait = wait('Initializing…');
-        await printEvents(now, token, currentTeam, cancelWait);
+        try {
+          await printEvents(now, currentTeam, {
+            onOpen: cancelWait,
+            debug
+          });
+        } catch (err) {
+          cancelWait();
+          throw err;
+        }
         await exit(0);
       } else {
         console.log(info('Initializing…'));
@@ -791,18 +796,28 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, token, teamId, onOpen = ()=>{}) {
-  const { _id: id } = now;
-  let url = `https://${apiUrl}/v1/now/deployments/${id}/events?follow=1`;
-  if (teamId) {
-    url += `&teamId=${teamId}`;
+async function printEvents(now, currentTeam = null, {
+  onOpen = ()=>{},
+  debug = false
+} = {}) {
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+  if (currentTeam) {
+    url += `&teamId=${currentTeam.id}`;
+  }
+
+  if (debug) {
+    console.log(info(`[debug] events ${url}`));
   }
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
   let o = 0;
 
-  await retry(async bail => {
+  await retry(async (bail, attemptNumber) => {
+    if (debug && attemptNumber > 1) {
+      console.log(info('[debug] retrying events'));
+    }
+
     // if we are retrying, we clear past logs
     if (!quiet && o) process.stdout.write(eraseLines(0));
 
