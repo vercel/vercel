@@ -358,17 +358,17 @@ async function sync({ token, config: { currentTeam, user } }) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
-          `> Deploying ${gitRepo.type} repository "${chalk.bold(
+          info(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       } else {
         console.log(
-          `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+          info(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       }
     }
