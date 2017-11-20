@@ -89,6 +89,7 @@ const deploy = async (ctx: {
   //   memory: Number,
   //   region: String
   // }
+  let gcpConfig = {};
   try {
     const { nowJSON: { gcp: gcpConfig } } = desc
   } catch (err) {
