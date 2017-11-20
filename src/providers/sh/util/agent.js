@@ -16,6 +16,15 @@ let JsonBody, StreamBody, context
 
 if (USE_HTTP2) {
   ({ JsonBody, StreamBody, context } = require('fetch-h2'))
+
+  // this requires `--no-warnings` to be passed to node.js to work
+  process.on('warning', function (warn) {
+    if (warn.message.includes('http2')) {
+      // ignore warnings about http2, we know node!
+    } else {
+      console.warn(warn.message);
+    }
+  });
 }
 
 /**
