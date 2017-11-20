@@ -122,12 +122,11 @@ module.exports = class Now extends EventEmitter {
     this._files = hashes
 
     const deployment = await this.retry(async bail => {
-      if (this._debug) {
-        console.time('> [debug] v2/now/deployments')
-      }
-
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
+      if (this._debug) {
+        console.time('> [debug] get files ready for deployment')
+      }
       const files = await Promise.all(
         Array.prototype.concat.apply(
           [],
@@ -154,7 +153,13 @@ module.exports = class Now extends EventEmitter {
           )
         )
       )
+      if (this._debug) {
+        console.timeEnd('> [debug] get files ready for deployment')
+      }
 
+      if (this._debug) {
+        console.time('> [debug] v2/now/deployments')
+      }
       const res = await this._fetch('/v2/now/deployments', {
         method: 'POST',
         body: {

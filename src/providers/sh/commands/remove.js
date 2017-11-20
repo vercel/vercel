@@ -11,6 +11,7 @@ const table = require('text-table')
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
+const info = require('../../../util/output/info')
 const { normalizeURL } = require('../../../util/url')
 const exit = require('../../../util/exit')
 
@@ -205,7 +206,7 @@ async function remove({ token, sh: { currentTeam } }) {
     console.log(
       table(
         matches.map(depl => {
-          return [`Deployment ${chalk.bold(depl.uid)} removed`]
+          return [info(`Deployment ${chalk.bold(depl.url)} removed`)]
         })
       )
     )

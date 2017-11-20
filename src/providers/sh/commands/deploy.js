@@ -14,6 +14,8 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
+const retry = require('async-retry');
+const jsonlines = require('jsonlines');
 
 // Utilities
 const Logger = require('../util/build-logger')
@@ -26,6 +28,7 @@ const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
 const info = require('../../../util/output/info')
+const success = require('../../../util/output/success')
 const wait = require('../../../util/output/wait')
 const NowPlans = require('../util/plans')
 const promptBool = require('../../../util/input/prompt-bool')
@@ -385,17 +388,17 @@ async function sync({ token, config: { currentTeam, user } }) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
-          `> Deploying ${gitRepo.type} repository "${chalk.bold(
+          info(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       } else {
         console.log(
-          `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+          info(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       }
     }
@@ -713,18 +716,14 @@ async function sync({ token, config: { currentTeam, user } }) {
           `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
         )
       }
-      console.log('> Initializing…')
     }
-
-    // Close http2 agent
-    nowPlans.close()
-    now.close()
 
     // Show build logs
     if (deploymentType === 'static') {
       if (!quiet) {
-        console.log(`${chalk.cyan('> Deployment complete!')}`)
+        console.log(success('Deployment complete!'));
       }
+      await exit(0);
     } else {
       if (nowConfig && nowConfig.atlas) {
         const cancelWait = wait('Initializing…');
@@ -815,6 +814,99 @@ async function readMeta(
     }
     throw err
   }
+}
+
+async function printEvents(now, currentTeam = null, {
+  onOpen = ()=>{},
+  debug = false
+} = {}) {
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+  if (currentTeam) {
+    url += `&teamId=${currentTeam.id}`;
+  }
+
+  if (debug) {
+    console.log(info(`[debug] events ${url}`));
+  }
+
+  // we keep track of how much we log in case we
+  // drop the connection and have to start over
+  let o = 0;
+
+  await retry(async (bail, attemptNumber) => {
+    if (debug && attemptNumber > 1) {
+      console.log(info('[debug] retrying events'));
+    }
+
+    // if we are retrying, we clear past logs
+    if (!quiet && o) process.stdout.write(eraseLines(0));
+
+    const res = await now._fetch(url);
+    if (res.ok) {
+      // fire the open callback and ensure it's only fired once
+      onOpen();
+      onOpen = ()=>{};
+
+      // handle the event stream and make the promise get rejected
+      // if errors occur so we can retry
+      return new Promise((resolve, reject) => {
+        const stream = res.body.pipe(jsonlines.parse());
+        const onData = ({ type, payload }) => {
+          // if we are 'quiet' because we are piping, simply
+          // wait for the first instance to be started
+          // and ignore everything else
+          if (quiet) {
+            if (type === 'instance-start') {
+              resolve();
+            }
+            return;
+          }
+
+          switch (type) {
+            case 'build-start':
+              o++;
+              console.log(info('Building…'));
+              break;
+
+            case 'stdout':
+            case 'stderr':
+              console.log(payload);
+              break;
+
+            case 'build-complete':
+              o++;
+              console.log(success('Build complete'));
+              break;
+
+            case 'instance-start':
+              o++;
+              console.log(success('Deployment started!'));
+
+              // avoid lingering events
+              stream.off('data', onData);
+
+              // close the stream and resolve
+              stream.end();
+              resolve();
+              break;
+          }
+        };
+        stream.on('data', onData)
+        stream.on('error', err => {
+          reject(new Error(`Deployment event stream error: ${err.stack}`));
+        });
+      });
+    } else {
+      const err = new Error(`Deployment events status ${res.status}`);
+      if (res.status < 500) {
+        bail(err);
+      } else {
+        throw err;
+      }
+    }
+  }, {
+    retries: 4
+  });
 }
 
 function printLogs(host, token) {
