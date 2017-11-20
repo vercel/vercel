@@ -89,7 +89,12 @@ const deploy = async (ctx: {
   //   memory: Number,
   //   region: String
   // }
-  const { nowJSON: { gcp: gcpConfig } } = desc
+  let gcpConfig = {};
+  try {
+    gcpConfig = desc.nowJSON.gcp;
+  } catch (err) {
+    console.error(error(`Couldn't find "gcp" property in now.json`))
+  }
 
   const overrides = {
     'function.js': getFunctionHandler(desc)
