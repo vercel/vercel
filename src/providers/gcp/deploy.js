@@ -91,7 +91,7 @@ const deploy = async (ctx: {
   // }
   let gcpConfig = {};
   try {
-    const { nowJSON: { gcp: gcpConfig } } = desc
+    gcpConfig = desc.nowJSON.gcp;
   } catch (err) {
     console.error(error(`Couldn't find "gcp" property in now.json`))
   }
