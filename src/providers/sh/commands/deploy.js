@@ -707,7 +707,7 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
       await exit(0);
     } else {
-      if (nowConfig.atlas) {
+      if (nowConfig && nowConfig.atlas) {
         const cancelWait = wait('Initializing…');
         try {
           await printEvents(now, currentTeam, {
