@@ -707,7 +707,22 @@ async function sync({ token, config: { currentTeam, user } }) {
         console.log(`${chalk.cyan('> Deployment complete!')}`)
       }
     } else {
-      printLogs(now.host, token, currentTeam, user)
+      if (nowConfig && nowConfig.atlas) {
+        const cancelWait = wait('Initializing…');
+        try {
+          await printEvents(now, currentTeam, {
+            onOpen: cancelWait,
+            debug
+          });
+        } catch (err) {
+          cancelWait();
+          throw err;
+        }
+        await exit(0);
+      } else {
+        console.log(info('Initializing…'));
+        printLogs(now.host, token, currentTeam, user)
+      }
     }
   })
 }
