@@ -102,7 +102,8 @@ module.exports = async function({ teams, args, config }) {
   const choice = await listInput({
     message,
     choices,
-    separator: false
+    separator: false,
+    eraseFinalAnswer: true
   })
 
   // Abort
