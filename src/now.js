@@ -528,7 +528,7 @@ const main = async (argv_) => {
   } catch (err) {
     console.error(
       error(
-        `An unexpected error occurred in provider ${subcommand}: ${err.stack}`
+        `An unexpected error occurred in ${subcommand}: ${err.stack}`
       )
     )
   }
