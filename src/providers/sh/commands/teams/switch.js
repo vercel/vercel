@@ -45,7 +45,7 @@ module.exports = async function({ teams, args, config }) {
 
     if (newTeam) {
       updateCurrentTeam(config, newTeam)
-      success(`The team ${chalk.bold(newTeam.name)} is now active!`)
+      console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
       return exit()
     }
 
@@ -54,7 +54,7 @@ module.exports = async function({ teams, args, config }) {
       updateCurrentTeam(config)
 
       stopSpinner()
-      return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
+      return console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
     }
 
     console.error(error(`Could not find membership for team ${param(desiredSlug)}`))
@@ -124,7 +124,7 @@ module.exports = async function({ teams, args, config }) {
     updateCurrentTeam(config)
 
     stopSpinner()
-    return success(`Your account (${chalk.bold(choice)}) is now active!`)
+    return console.log(success(`Your account (${chalk.bold(choice)}) is now active!`))
   }
 
   if (newTeam.slug === currentTeam.slug) {
@@ -136,5 +136,5 @@ module.exports = async function({ teams, args, config }) {
   updateCurrentTeam(config, newTeam)
 
   stopSpinner()
-  success(`The team ${chalk.bold(newTeam.name)} is now active!`)
+  console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
 }
