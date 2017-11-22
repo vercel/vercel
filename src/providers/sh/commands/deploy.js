@@ -631,7 +631,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         try {
           await copy(url)
           console.log(
-            `${chalk.cyan('> Ready!')} ${chalk.bold(
+            `${chalk.cyan('> Deploying to')} ${chalk.bold(
               url
             )} (copied to clipboard) [${elapsed}]`
           )
