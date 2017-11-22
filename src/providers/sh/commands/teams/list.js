@@ -50,7 +50,7 @@ module.exports = async function({ teams, config }) {
   if (!count) {
     // Maybe should not happen
     console.error(error(`No team found`))
-    return
+    return 1
   }
 
   info(`${chalk.bold(count)} team${count > 1 ? 's' : ''} found`)

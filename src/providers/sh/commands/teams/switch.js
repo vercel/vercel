@@ -4,7 +4,6 @@ const chalk = require('chalk')
 // Utilities
 const wait = require('../../../../util/output/wait')
 const listInput = require('../../../../util/input/list')
-const exit = require('../../../../util/exit')
 const success = require('../../../../util/output/success')
 const info = require('../../../../util/output/info')
 const error = require('../../../../util/output/error')
@@ -46,7 +45,7 @@ module.exports = async function({ teams, args, config }) {
     if (newTeam) {
       updateCurrentTeam(config, newTeam)
       console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
-      return exit()
+      return 0
     }
 
     if (desiredSlug === user.username) {
@@ -54,11 +53,12 @@ module.exports = async function({ teams, args, config }) {
       updateCurrentTeam(config)
 
       stopSpinner()
-      return console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
+      console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
+      return 0
     }
 
     console.error(error(`Could not find membership for team ${param(desiredSlug)}`))
-    return exit(1)
+    return 1
   }
 
   const choices = list.map(({ slug, name }) => {
@@ -108,7 +108,7 @@ module.exports = async function({ teams, args, config }) {
   // Abort
   if (!choice) {
     info('No changes made')
-    return exit()
+    return 0
   }
 
   const newTeam = list.find(item => item.slug === choice)
@@ -117,19 +117,20 @@ module.exports = async function({ teams, args, config }) {
   if (!newTeam) {
     if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
       info('No changes made')
-      return exit()
+      return 0
     }
 
     stopSpinner = wait('Saving')
     updateCurrentTeam(config)
 
     stopSpinner()
-    return console.log(success(`Your account (${chalk.bold(choice)}) is now active!`))
+    console.log(success(`Your account (${chalk.bold(choice)}) is now active!`))
+    return 0
   }
 
   if (newTeam.slug === currentTeam.slug) {
     info('No changes made')
-    return exit()
+    return 0
   }
 
   stopSpinner = wait('Saving')
@@ -137,4 +138,5 @@ module.exports = async function({ teams, args, config }) {
 
   stopSpinner()
   console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
+  return 0
 }
