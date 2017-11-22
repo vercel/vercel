@@ -44,7 +44,7 @@ module.exports = async function({ teams, args, config }) {
 
     if (newTeam) {
       updateCurrentTeam(config, newTeam)
-      console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
+      console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`))
       return 0
     }
 
@@ -53,7 +53,7 @@ module.exports = async function({ teams, args, config }) {
       updateCurrentTeam(config)
 
       stopSpinner()
-      console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
+      console.log(success(`Your account (${chalk.bold(desiredSlug)}) (${newTeam.slug}) is now active!`))
       return 0
     }
 
@@ -138,6 +138,6 @@ module.exports = async function({ teams, args, config }) {
   updateCurrentTeam(config, newTeam)
 
   stopSpinner()
-  console.log(success(`The team ${chalk.bold(newTeam.name)} is now active!`))
+  console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`))
   return 0
 }
