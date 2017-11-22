@@ -24,7 +24,7 @@ const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH)
 
 // writes whatever's in `stuff` to `AUTH_CONFIG_FILE_PATH`, atomically
 const writeToAuthConfigFile = stuff =>
-  writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, { indent : 2 })
+  writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, { indent : 2, mode : 0o600 })
 
 function getConfigFilePath() {
   return CONFIG_FILE_PATH
