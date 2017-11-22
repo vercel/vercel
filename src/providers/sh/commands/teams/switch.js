@@ -108,7 +108,7 @@ module.exports = async function({ teams, args, config }) {
 
   // Abort
   if (!choice) {
-    info('No changes made')
+    console.log(info('No changes made'))
     return 0
   }
 
@@ -117,7 +117,7 @@ module.exports = async function({ teams, args, config }) {
   // Switch to account
   if (!newTeam) {
     if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
-      info('No changes made')
+      console.log(info('No changes made'))
       return 0
     }
 
@@ -130,7 +130,7 @@ module.exports = async function({ teams, args, config }) {
   }
 
   if (newTeam.slug === currentTeam.slug) {
-    info('No changes made')
+    console.log(info('No changes made'))
     return 0
   }
 
