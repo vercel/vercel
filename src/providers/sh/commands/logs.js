@@ -128,7 +128,7 @@ const main = async ctx => {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
-  await printLogs({ token, sh })
+  return printLogs({ token, sh })
 }
 
 module.exports = async ctx => {
@@ -140,98 +140,101 @@ module.exports = async ctx => {
   }
 }
 
-async function printLogs({ token, sh: { currentTeam } }) {
-  let buf = []
-  let init = false
-  let lastLog
+function printLogs({ token, sh: { currentTeam } }) {
+  return new Promise(async (resolve, reject) => {
+    let buf = []
+    let init = false
+    let lastLog
 
-  if (!follow) {
-    onLogs(await fetchLogs({ token, currentTeam, since, until }))
-    return
-  }
-
-  const isURL = deploymentIdOrURL.includes('.')
-  const q = qs.stringify({
-    deploymentId: isURL ? '' : deploymentIdOrURL,
-    host: isURL ? deploymentIdOrURL : '',
-    instanceId,
-    types: types.join(','),
-    query
-  })
-
-  const socket = io(`https://log-io.zeit.co?${q}`)
-  socket.on('connect', () => {
-    if (debug) {
-      console.log('> [debug] Socket connected')
-    }
-  })
-
-  socket.on('auth', callback => {
-    if (debug) {
-      console.log('> [debug] Socket authenticate')
-    }
-    callback(token)
-  })
-
-  socket.on('ready', () => {
-    if (debug) {
-      console.log('> [debug] Socket ready')
+    if (!follow) {
+      onLogs(await fetchLogs({ token, currentTeam, since, until }))
+      resolve()
     }
 
-    // For the case socket reconnected
-    const _since = lastLog ? lastLog.serial : since
-
-    fetchLogs({ token, currentTeam, since: _since }).then(logs => {
-      init = true
-      const m = {}
-      logs.concat(buf.map(b => b.log)).forEach(l => {
-        m[l.id] = l
-      })
-      buf = []
-      onLogs(Object.values(m))
+    const isURL = deploymentIdOrURL.includes('.')
+    const q = qs.stringify({
+      deploymentId: isURL ? '' : deploymentIdOrURL,
+      host: isURL ? deploymentIdOrURL : '',
+      instanceId,
+      types: types.join(','),
+      query
     })
-  })
 
-  socket.on('logs', l => {
-    const log = deserialize(l)
-    let timer
-    if (init) {
-      // Wait for other logs for a while
-      // and sort them in the correct order
-      timer = setTimeout(() => {
-        buf.sort((a, b) => compare(a.log, b.log))
-        const idx = buf.findIndex(b => b.log.id === log.id)
-        buf.slice(0, idx + 1).forEach(b => {
-          clearTimeout(b.timer)
-          onLog(b.log)
+    const socket = io(`https://log-io.zeit.co?${q}`)
+    socket.on('connect', () => {
+      if (debug) {
+        console.log('> [debug] Socket connected')
+      }
+    })
+
+    socket.on('auth', callback => {
+      if (debug) {
+        console.log('> [debug] Socket authenticate')
+      }
+      callback(token)
+    })
+
+    socket.on('ready', () => {
+      if (debug) {
+        console.log('> [debug] Socket ready')
+      }
+
+      // For the case socket reconnected
+      const _since = lastLog ? lastLog.serial : since
+
+      fetchLogs({ token, currentTeam, since: _since }).then(logs => {
+        init = true
+        const m = {}
+        logs.concat(buf.map(b => b.log)).forEach(l => {
+          m[l.id] = l
         })
-        buf = buf.slice(idx + 1)
-      }, 300)
+        buf = []
+        onLogs(Object.values(m))
+      })
+    })
+
+    socket.on('logs', l => {
+      const log = deserialize(l)
+      let timer
+      if (init) {
+        // Wait for other logs for a while
+        // and sort them in the correct order
+        timer = setTimeout(() => {
+          buf.sort((a, b) => compare(a.log, b.log))
+          const idx = buf.findIndex(b => b.log.id === log.id)
+          buf.slice(0, idx + 1).forEach(b => {
+            clearTimeout(b.timer)
+            onLog(b.log)
+          })
+          buf = buf.slice(idx + 1)
+        }, 300)
+      }
+      buf.push({ log, timer })
+    })
+
+    socket.on('disconnect', () => {
+      if (debug) {
+        console.log('> [debug] Socket disconnect')
+      }
+      init = false
+      reject(1)
+    })
+
+    socket.on('error', err => {
+      if (debug) {
+        console.log('> [debug] Socket error', err.stack)
+      }
+    })
+
+    function onLogs(logs) {
+      logs.sort(compare).forEach(onLog)
     }
-    buf.push({ log, timer })
-  })
 
-  socket.on('disconnect', () => {
-    if (debug) {
-      console.log('> [debug] Socket disconnect')
-    }
-    init = false
-  })
-
-  socket.on('error', err => {
-    if (debug) {
-      console.log('> [debug] Socket error', err.stack)
+    function onLog(log) {
+      lastLog = log
+      printLog(log)
     }
   })
-
-  function onLogs(logs) {
-    logs.sort(compare).forEach(onLog)
-  }
-
-  function onLog(log) {
-    lastLog = log
-    printLog(log)
-  }
 }
 
 function printLog(log) {
