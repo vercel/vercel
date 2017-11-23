@@ -720,7 +720,9 @@ async function sync({ token, config: { currentTeam, user } }) {
         }
         await exit(0);
       } else {
-        console.log(info('Initializing…'));
+        if (!quiet) {
+          console.log(info('Initializing…'));
+        }
         printLogs(now.host, token, currentTeam, user)
       }
     }
