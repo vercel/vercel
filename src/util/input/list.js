@@ -1,6 +1,7 @@
 const inquirer = require('inquirer')
 const stripAnsi = require('strip-ansi')
 
+const eraseLines = require('../output/erase-lines')
 // eslint-disable-next-line import/no-unassigned-import
 require('./patch-inquirer')
 
@@ -28,7 +29,8 @@ module.exports = async function({
   ],
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
   separator = true, // Puts a blank separator between each choice
-  abort = 'end' // Wether the `abort` option will be at the `start` or the `end`
+  abort = 'end', // Wether the `abort` option will be at the `start` or the `end`,
+  eraseFinalAnswer = false // If true, the line with the final answee that inquirer prints will be erased before returning
 }) {
   let biggestLength = 0
 
@@ -74,6 +76,8 @@ module.exports = async function({
     choices,
     pageSize
   })
-
+  if (eraseFinalAnswer === true) {
+    process.stdout.write(eraseLines(2))
+  }
   return answer[nonce]
 }
