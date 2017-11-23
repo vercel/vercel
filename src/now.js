@@ -524,7 +524,7 @@ const main = async (argv_) => {
   }
 
   try {
-    await provider[subcommand](ctx)
+    process.exit(await provider[subcommand](ctx))
   } catch (err) {
     console.error(
       error(

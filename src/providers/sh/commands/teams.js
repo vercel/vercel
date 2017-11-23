@@ -94,24 +94,23 @@ const main = async ctx => {
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, config })
+    return run({ token, config })
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message))
     } else {
       console.error(error(`Unknown error: ${err.stack}`))
     }
-
-    exit(1)
+    return 1
   }
 }
 
 module.exports = async ctx => {
   try {
-    await main(ctx)
+    return main(ctx)
   } catch (err) {
     handleError(err)
-    process.exit(1)
+    return 1
   }
 }
 
@@ -120,10 +119,11 @@ async function run({ token, config }) {
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam })
   const args = argv._
 
+  let exitCode
   switch (subcommand) {
     case 'list':
     case 'ls': {
-      await list({
+      exitCode = await list({
         teams,
         config
       })
@@ -131,7 +131,7 @@ async function run({ token, config }) {
     }
     case 'switch':
     case 'change': {
-      await change({
+     exitCode = await change({
         teams,
         args,
         config
@@ -140,27 +140,26 @@ async function run({ token, config }) {
     }
     case 'add':
     case 'create': {
-      await add({ teams, config })
+      exitCode = await add({ teams, config })
       break
     }
 
     case 'invite': {
-      await invite({
+      exitCode = await invite({
         teams,
         args,
         config
       })
       break
     }
-
     default: {
-      let code = 0
       if (subcommand !== 'help') {
         console.error(error('Please specify a valid subcommand: add | ls | switch | invite'))
-        code = 1
+        exitCode = 1
       }
       help()
-      exit(code)
     }
   }
+  teams.close()
+  return exitCode || 0
 }
