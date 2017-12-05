@@ -220,9 +220,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         await domain.rm(_domain)
         const elapsed = ms(new Date() - start)
         console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-            _domain.uid
-          )} removed [${elapsed}]`
+          `${chalk.cyan('> Success!')} Domain ${chalk.bold(_domain.name)} removed [${elapsed}]`
         )
       } catch (err) {
         console.error(error(err))
@@ -308,7 +306,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 async function readConfirmation(domain, _domain) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(_domain.created)) + ' ago')
-    const tbl = table([[chalk.underline(`https://${_domain.name}`), time]], {
+    const tbl = table([[chalk.bold(_domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
     })
