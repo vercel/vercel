@@ -5,6 +5,7 @@ const chalk = require('chalk')
 const table = require('text-table')
 const mri = require('mri')
 const ms = require('ms')
+const plural = require('pluralize')
 
 // Utilities
 const strlen = require('../util/strlen')
@@ -126,9 +127,9 @@ async function run({ token, sh: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `> ${list.length} secret${list.length === 1
-        ? ''
-        : 's'} found under ${chalk.bold(
+      `> ${
+        plural('secret', list.length, true)
+      } found under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )} ${chalk.gray(`[${elapsed}]`)}`
     )

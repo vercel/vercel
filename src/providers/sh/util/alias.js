@@ -5,6 +5,7 @@ const publicSuffixList = require('psl')
 const mri = require('mri')
 const ms = require('ms')
 const chalk = require('chalk')
+const plural = require('pluralize')
 const { write: copy } = require('clipboardy')
 
 // Ours
@@ -319,12 +320,14 @@ module.exports = class Alias extends Now {
         console.log(
           `> Alias ${alias} points to ${chalk.bold(
             aliasedDeployment.url
-          )} (${chalk.bold(aliasedDeployment.scale.current + ' instances')})`
+          )} (${chalk.bold(
+            plural('instance', aliasedDeployment.scale.current, true)
+          )})`
         )
         // Test if we need to change the scale or just update the rules
         console.log(
           `> Scaling ${depl.url} to ${chalk.bold(
-            aliasedDeployment.scale.current + ' instances'
+            plural('instance', aliasedDeployment.scale.current, true)
           )} atomically` // Not a typo
         )
         if (depl.scale.current !== aliasedDeployment.scale.current) {

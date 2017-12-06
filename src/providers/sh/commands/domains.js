@@ -6,6 +6,7 @@ const mri = require('mri')
 const ms = require('ms')
 const psl = require('psl')
 const table = require('text-table')
+const plural = require('pluralize')
 
 // Utilities
 const NowDomains = require('../util/domains')
@@ -166,9 +167,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 
       const elapsed_ = ms(new Date() - start_)
       console.log(
-        `> ${domains.length} domain${domains.length === 1
-          ? ''
-          : 's'} found under ${chalk.bold(
+        `> ${plural('domain', domains.length, true)} found under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed_}]`)}`
       )
@@ -320,9 +319,7 @@ async function readConfirmation(domain, _domain) {
       process.stdout.write(
         `> ${chalk.yellow('Warning!')} This domain's ` +
           `${chalk.bold(
-            _domain.aliases.length +
-              ' alias' +
-              (_domain.aliases.length === 1 ? '' : 'es')
+            plural('alias', _domain.aliases.length, true)
           )} ` +
           `will be removed. Run ${chalk.dim('`now alias ls`')} to list them.\n`
       )
@@ -331,9 +328,7 @@ async function readConfirmation(domain, _domain) {
       process.stdout.write(
         `> ${chalk.yellow('Warning!')} This domain's ` +
           `${chalk.bold(
-            _domain.certs.length +
-              ' certificate' +
-              (_domain.certs.length === 1 ? '' : 's')
+            plural('certificate', _domain.certs.length, true)
           )} ` +
           `will be removed. Run ${chalk.dim('`now cert ls`')} to list them.\n`
       )
