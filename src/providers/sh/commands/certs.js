@@ -10,6 +10,7 @@ const mri = require('mri')
 const fs = require('fs-extra')
 const ms = require('ms')
 const printf = require('printf')
+const plural = require('pluralize')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -134,9 +135,9 @@ async function run({ token, sh: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `> ${list.length} certificate${list.length === 1
-        ? ''
-        : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
+      `> ${
+        plural('certificate', list.length, true)
+      } found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )}`
     )

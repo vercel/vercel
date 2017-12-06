@@ -5,6 +5,7 @@ const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
 const printf = require('printf')
+const plural = require('pluralize')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -161,9 +162,9 @@ async function list({ token, sh: { currentTeam, user } }) {
     }, 0) + 5
   const timeNow = new Date()
   console.log(
-    `> ${deployments.length} deployment${deployments.length === 1
-      ? ''
-      : 's'} found under ${chalk.bold(
+    `> ${
+      plural('deployment', deployments.length, true)
+    } found under ${chalk.bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
     )} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
   )
