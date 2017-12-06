@@ -6,6 +6,7 @@ const mri = require('mri')
 const table = require('text-table')
 const ms = require('ms')
 const printf = require('printf')
+const plural = require('pluralize')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -218,9 +219,9 @@ async function run({ token, sh: { currentTeam, user } }) {
         }, 0) + 8
       const elapsed_ = ms(new Date() - start_)
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1
-          ? ''
-          : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold(
+        `> ${
+          plural('alias', aliases.length, true)
+        } found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )}`
       )
@@ -268,9 +269,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           }
         } else if (_alias.rules) {
           _sourceUrl = chalk.gray(
-            `[${_alias.rules.length} custom rule${_alias.rules.length > 1
-              ? 's'
-              : ''}]`
+            `[${plural('custom rule', _alias.rules.length, true)}]`
           )
           if (supportsColor) {
             urlSpec += underlineWidth

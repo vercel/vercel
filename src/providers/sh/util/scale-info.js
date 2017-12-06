@@ -2,6 +2,7 @@ const linelog = require('single-line-log').stdout
 const range = require('lodash.range')
 const ms = require('ms')
 const chalk = require('chalk')
+const plural = require('pluralize')
 const retry = require('async-retry')
 
 function barify(cur, tot) {
@@ -35,10 +36,9 @@ module.exports = async function(now, url) {
   let barcurr = current
   const end = Math.max(current, max)
   linelog(
-    `${chalk.gray('>')} Scaling to ${chalk.bold(
-      String(targetReplicaCount) +
-        (targetReplicaCount === 1 ? ' instance' : ' instances')
-    )}: ` + barify(barcurr, end)
+    `${chalk.gray('>')} Scaling to ${
+      chalk.bold(plural('instance', targetReplicaCount, true))
+    }: ` + barify(barcurr, end)
   )
 
   const instances = await retry(
@@ -47,19 +47,17 @@ module.exports = async function(now, url) {
       if (barcurr !== res.length) {
         barcurr = res.length
         linelog(
-          `${chalk.gray('>')} Scaling to ${chalk.bold(
-            String(targetReplicaCount) +
-              (targetReplicaCount === 1 ? ' instance' : ' instances')
-          )}: ` + barify(barcurr, end)
+          `${chalk.gray('>')} Scaling to ${
+            chalk.bold(plural('instance', targetReplicaCount, true))
+          }: ` + barify(barcurr, end)
         )
 
         if (barcurr === targetReplicaCount) {
           linelog.clear()
           linelog(
-            `> Scaled to ${chalk.bold(
-              String(targetReplicaCount) +
-                (targetReplicaCount === 1 ? ' instance' : ' instances')
-            )}: ${chalk.gray('[' + ms(Date.now() - startTime) + ']')}\n`
+            `> Scaled to ${
+              chalk.bold(plural('instance', targetReplicaCount, true))
+            }: ${chalk.gray('[' + ms(Date.now() - startTime) + ']')}\n`
           )
           return res
         }

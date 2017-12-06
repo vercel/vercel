@@ -4,6 +4,7 @@
 const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
+const plural = require('pluralize')
 const table = require('text-table')
 
 // Utilities
@@ -111,11 +112,11 @@ module.exports = async ctx => {
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
-    process.stdout.write(
-      info(`The following deployment${matches.length === 1
-        ? ''
-        : 's'} will be removed permanently:\n`)
-    )
+    console.log(info(
+      `> The following ${
+        plural('deployment', matches.length, true)
+      } will be removed permanently:`
+    ))
 
     const tbl = table(
       matches.map(depl => {
