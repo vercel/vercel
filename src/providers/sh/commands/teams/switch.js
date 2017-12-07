@@ -53,7 +53,7 @@ module.exports = async function({ teams, args, config }) {
       updateCurrentTeam(config)
 
       stopSpinner()
-      console.log(success(`Your account (${chalk.bold(desiredSlug)}) (${newTeam.slug}) is now active!`))
+      console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
       return 0
     }
 
