@@ -192,6 +192,10 @@ const stopDeployment = async msg => {
 }
 
 const envFields = async list => {
+  if (list.length === 0) {
+    return {}
+  }
+
   const questions = []
 
   for (const field of list) {
