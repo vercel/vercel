@@ -213,11 +213,7 @@ const envFields = async list => {
   )
   const answers = await inquirer.prompt(questions)
 
-  for (const answer in answers) {
-    if (!{}.hasOwnProperty.call(answers, answer)) {
-      continue
-    }
-
+  for (const answer of Object.keys(answers)) {
     const content = answers[answer]
 
     if (content === '') {
