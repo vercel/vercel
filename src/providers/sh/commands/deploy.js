@@ -188,6 +188,10 @@ const stopDeployment = async msg => {
 }
 
 const envFields = async list => {
+  if (list.length === 0) {
+    return {}
+  }
+
   const questions = []
 
   for (const field of list) {
@@ -205,11 +209,7 @@ const envFields = async list => {
   )
   const answers = await inquirer.prompt(questions)
 
-  for (const answer in answers) {
-    if (!{}.hasOwnProperty.call(answers, answer)) {
-      continue
-    }
-
+  for (const answer of Object.keys(answers)) {
     const content = answers[answer]
 
     if (content === '') {
