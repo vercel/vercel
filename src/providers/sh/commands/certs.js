@@ -9,8 +9,9 @@ const table = require('text-table')
 const mri = require('mri')
 const fs = require('fs-extra')
 const ms = require('ms')
-const printf = require('printf')
 const plural = require('pluralize')
+const printf = require('printf')
+const psl = require('psl')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -145,7 +146,10 @@ async function run({ token, sh: { currentTeam, user } }) {
     if (list.length > 0) {
       const cur = Date.now()
       list.sort((a, b) => {
-        return a.cn.localeCompare(b.cn)
+        const domainA = psl.get(a.cn)
+        const domainB = psl.get(b.cn)
+        if (!domainA || !domainB) return 0;
+        return domainA.localeCompare(domainB)
       })
 
       const maxCnLength =
