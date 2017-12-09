@@ -28,7 +28,6 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -b, --base64                   Treat value as base64-encoded
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
@@ -71,11 +70,10 @@ let subcommand
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug', 'base64'],
+    boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd',
-      base64: 'b'
+      debug: 'd'
     }
   })
 
@@ -231,15 +229,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       return exit(1)
     }
 
-    const [name, value_] = args
-    let value
-
-    if (argv.base64) {
-      value = { base64: value_ }
-    } else {
-      value = value_
-    }
-
+    const [name, value] = args
     await secrets.add(name, value)
     const elapsed = ms(new Date() - start)
 
