@@ -217,13 +217,14 @@ function printLogs({ token, sh: { currentTeam } }) {
         console.log('> [debug] Socket disconnect')
       }
       init = false
-      reject(1)
+      reject(new Error('Socket disconnected'))
     })
 
     socket.on('error', err => {
       if (debug) {
         console.log('> [debug] Socket error', err.stack)
       }
+      reject(err)
     })
 
     function onLogs(logs) {
