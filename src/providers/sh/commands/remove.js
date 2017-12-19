@@ -176,14 +176,14 @@ async function remove({ token, sh: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    console.error(error(
-      `Could not find ${argv.safe
+    console.log(info(
+      `> Could not find ${argv.safe
         ? 'unaliased'
         : 'any'} deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
     ))
-    return process.exit(1)
+    return process.exit(0)
   }
 
   try {
