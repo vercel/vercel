@@ -192,8 +192,9 @@ const stopDeployment = async msg => {
 }
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-// `null` value means to prompt user for value upon deployment.
-const parseEnv = env => {
+// `null` empty value means to prompt user for value upon deployment.
+// `undefined` empty value means to inherit value from user's env.
+const parseEnv = (env, empty) => {
   if (!env) {
     return {}
   }
@@ -208,7 +209,7 @@ const parseEnv = env => {
       const equalsSign = e.indexOf('=')
       if (equalsSign === -1) {
         key = e
-        value = null
+        value = empty
       } else {
         key = e.substr(0, equalsSign)
         value = e.substr(equalsSign + 1)
@@ -470,8 +471,8 @@ async function sync({ token, config: { currentTeam, user } }) {
     const deploymentEnv = Object.assign(
       {},
       dotenvConfig,
-      parseEnv(nowConfig && nowConfig.env),
-      parseEnv(argv.env)
+      parseEnv(nowConfig && nowConfig.env, null),
+      parseEnv(argv.env, undefined)
     )
 
     // If there's any envs with `null` then prompt the user for the values
@@ -491,11 +492,9 @@ async function sync({ token, config: { currentTeam, user } }) {
 
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
-        let val = deploymentEnv[key]
-
-        if (!key || !val) {
+        if (!key) {
           console.error(error({
-            message: 'Env key and value are missing',
+            message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
           await exit(1)
@@ -510,10 +509,7 @@ async function sync({ token, config: { currentTeam, user } }) {
           await exit(1)
         }
 
-        if (!key) {
-          console.error(error(`Invalid env option ${chalk.bold(`"${kv}"`)}`))
-          await exit(1)
-        }
+        let val = deploymentEnv[key]
 
         if (val === undefined) {
           if (key in process.env) {
