@@ -77,6 +77,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -105,6 +106,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -121,6 +123,7 @@ const main = async (argv_) => {
             err.message
         )
       )
+
       return
     }
   } else {
@@ -139,6 +142,7 @@ const main = async (argv_) => {
             err.message
         )
       )
+
       return
     }
   }
@@ -155,6 +159,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -171,6 +176,7 @@ const main = async (argv_) => {
             err.message
         )
       )
+
       return
     }
 
@@ -374,10 +380,11 @@ const main = async (argv_) => {
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
       console.error(error({
-        message: 'No existing credentials found. Please ' +
-        `${param('now login')} to log in or pass ${param('--token')}`,
+        message: 'No existing credentials found. Please run ' +
+        `${param('now login')} or pass ${param('--token')}`,
         slug: 'no-credentials-found'
       }))
+
       await exit(1)
     }
   }
@@ -387,6 +394,7 @@ const main = async (argv_) => {
       message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
       slug: 'no-token-allowed'
     }))
+
     await exit(1)
   }
 
@@ -398,6 +406,7 @@ const main = async (argv_) => {
         message: `You defined ${param('--token')}, but it's missing a value`,
         slug: 'missing-token-value'
       }))
+
       await exit(1)
     }
 
@@ -414,10 +423,6 @@ const main = async (argv_) => {
       ctx.authConfig.credentials.push(obj)
     } else {
       ctx.authConfig.credentials[credentialsIndex] = obj
-    }
-
-    if (isTTY) {
-      console.log(info('Caching account information'))
     }
 
     const user = await getUser({
@@ -437,6 +442,7 @@ const main = async (argv_) => {
         message: `You defined ${param('--team')}, but it's missing a value`,
         slug: 'missing-team-value'
       }))
+
       await exit(1)
     }
 
@@ -450,10 +456,6 @@ const main = async (argv_) => {
 
     // Only download team data if not cached
     if (!cachedTeam && !cachedUser) {
-      if (isTTY) {
-        console.log(info('Caching team information'))
-      }
-
       const { token } = ctx.authConfig.credentials.find(item => item.provider === 'sh')
 
       const headers = {
@@ -471,6 +473,7 @@ const main = async (argv_) => {
             message: `You don't have access to the specified team`,
             slug: 'team-not-accessible'
           }))
+
           await exit(1)
         }
 
@@ -485,6 +488,7 @@ const main = async (argv_) => {
           message: 'The specified team doesn\'t exist',
           slug: 'team-not-existent'
         }))
+
         await exit(1)
       }
 
@@ -517,6 +521,7 @@ debug('start')
 
 const handleRejection = err => {
   debug('handling rejection')
+
   if (err) {
     if (err instanceof Error) {
       handleUnexpected(err)
@@ -526,14 +531,17 @@ const handleRejection = err => {
   } else {
     console.error(error('An unexpected empty rejection occurred'))
   }
+
   process.exit(1)
 }
 
 const handleUnexpected = err => {
   debug('handling unexpected error')
+
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
+
   process.exit(1)
 }
 
