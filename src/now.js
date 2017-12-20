@@ -425,10 +425,6 @@ const main = async (argv_) => {
       ctx.authConfig.credentials[credentialsIndex] = obj
     }
 
-    if (isTTY) {
-      console.log(info('Loading account information'))
-    }
-
     const user = await getUser({
       apiUrl: ctx.apiUrl,
       token
@@ -460,10 +456,6 @@ const main = async (argv_) => {
 
     // Only download team data if not cached
     if (!cachedTeam && !cachedUser) {
-      if (isTTY) {
-        console.log(info('Loading team information'))
-      }
-
       const { token } = ctx.authConfig.credentials.find(item => item.provider === 'sh')
 
       const headers = {
