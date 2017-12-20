@@ -191,7 +191,38 @@ const stopDeployment = async msg => {
   await exit(1)
 }
 
-const envFields = async list => {
+// Converts `env` Arrays, Strings and Objects into env Objects.
+// `null` empty value means to prompt user for value upon deployment.
+// `undefined` empty value means to inherit value from user's env.
+const parseEnv = (env, empty) => {
+  if (!env) {
+    return {}
+  }
+  if (typeof env === 'string') {
+    // a single `--env` arg comes in as a String
+    env = [ env ]
+  }
+  if (Array.isArray(env)) {
+    return env.reduce((o, e) => {
+      let key
+      let value
+      const equalsSign = e.indexOf('=')
+      if (equalsSign === -1) {
+        key = e
+        value = empty
+      } else {
+        key = e.substr(0, equalsSign)
+        value = e.substr(equalsSign + 1)
+      }
+      o[key] = value
+      return o
+    }, {})
+  }
+  // assume it's already an Object
+  return env
+}
+
+const promptForEnvFields = async list => {
   if (list.length === 0) {
     return {}
   }
@@ -209,7 +240,7 @@ const envFields = async list => {
   require('../../../util/input/patch-inquirer')
 
   console.log(
-    info('Please enter the values for the following environment variables:')
+    info('Please enter values for the following environment variables:')
   )
   const answers = await inquirer.prompt(questions)
 
@@ -420,34 +451,33 @@ async function sync({ token, config: { currentTeam, user } }) {
       const dotenvFileName =
         typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
-      if (!fs.existsSync(dotenvFileName)) {
-        console.error(error({
-          message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-          slug: 'missing-dotenv-target'
-        }))
-        await exit(1)
+      try {
+        const dotenvFile = await fs.readFile(dotenvFileName)
+        dotenvConfig = dotenv.parse(dotenvFile)
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          console.error(error({
+            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
+            slug: 'missing-dotenv-target'
+          }))
+          await exit(1)
+        } else {
+          throw err
+        }
       }
-
-      const dotenvFile = await fs.readFile(dotenvFileName)
-      dotenvConfig = dotenv.parse(dotenvFile)
     }
 
-    let pkgEnv = nowConfig && nowConfig.env
-    const argEnv = [].concat(argv.env || [])
+    // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+    const deploymentEnv = Object.assign(
+      {},
+      dotenvConfig,
+      parseEnv(nowConfig && nowConfig.env, null),
+      parseEnv(argv.env, undefined)
+    )
 
-    if (pkgEnv && Array.isArray(nowConfig.env)) {
-      const defined = argEnv.join()
-      const askFor = nowConfig.env.filter(item => !defined.includes(`${item}=`))
-
-      pkgEnv = await envFields(askFor)
-    }
-
-    // Merge `now.env` from package.json with `-e` arguments
-    const envs = [
-      ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
-      ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
-      ...argEnv
-    ]
+    // If there's any envs with `null` then prompt the user for the values
+    const askFor = Object.keys(deploymentEnv).filter(key => deploymentEnv[key] === null)
+    Object.assign(deploymentEnv, await promptForEnvFields(askFor))
 
     let secrets
     const findSecret = async uidOrName => {
@@ -461,20 +491,13 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     const env_ = await Promise.all(
-      envs.map(async kv => {
-        if (typeof kv !== 'string') {
+      Object.keys(deploymentEnv).map(async key => {
+        if (!key) {
           console.error(error({
-            message: 'Env key and value are missing',
+            message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
           await exit(1)
-        }
-
-        const [key, ...rest] = kv.split('=')
-        let val
-
-        if (rest.length > 0) {
-          val = rest.join('=')
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
@@ -486,10 +509,7 @@ async function sync({ token, config: { currentTeam, user } }) {
           await exit(1)
         }
 
-        if (!key) {
-          console.error(error(`Invalid env option ${chalk.bold(`"${kv}"`)}`))
-          await exit(1)
-        }
+        let val = deploymentEnv[key]
 
         if (val === undefined) {
           if (key in process.env) {
