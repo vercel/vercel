@@ -146,7 +146,7 @@ The v1 release of `now.json` includes the following specification:
   - `Array` a list of suggested environmental variables that the project
     _might_ require to be deployed and function correctly
 - `regions` - `Array` of `String`
-  - specifies one or more regition identifiers to deploy to. A wildcard
+  - specifies one or more region identifiers to deploy to. A wildcard
     can be used to signify deployment to all supported regions by the
     provider
 - `files` - `Array` of `String`
