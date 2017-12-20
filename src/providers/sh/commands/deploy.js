@@ -576,65 +576,64 @@ async function sync({ token, config: { currentTeam, user } }) {
 
     let syncCount
     try {
-      do {
-        await now.create(
-          path,
-          Object.assign(
-            {
-              env,
-              followSymlinks,
-              forceNew,
-              forwardNpm: alwaysForwardNpm || forwardNpm,
-              quiet,
-              wantsPublic,
-              sessionAffinity
-            },
-            meta
-          )
+      const createArgs = Object.assign(
+          {
+            env,
+            followSymlinks,
+            forceNew,
+            forwardNpm: alwaysForwardNpm || forwardNpm,
+            quiet,
+            wantsPublic,
+            sessionAffinity
+          },
+          meta
         )
-        if (now.syncFileCount > 0) {
-          await new Promise((resolve) => {
-            if (debug && now.syncFileCount !== now.fileCount) {
+
+      await now.create(path, createArgs)
+      if (now.syncFileCount > 0) {
+        await new Promise((resolve) => {
+          if (debug && now.syncFileCount !== now.fileCount) {
+            console.log(
+              `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+            )
+          }
+          const size = bytes(now.syncAmount)
+          syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+            ? 's'
+            : ''}`
+          const bar = new Progress(
+            `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+            {
+              width: 20,
+              complete: '=',
+              incomplete: '',
+              total: now.syncAmount,
+              clear: true
+            }
+          )
+
+          now.upload()
+
+          now.on('upload', ({ names, data }) => {
+            const amount = data.length
+            if (debug) {
               console.log(
-                `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+                `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
               )
             }
-            const size = bytes(now.syncAmount)
-            syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-              ? 's'
-              : ''}`
-            const bar = new Progress(
-              `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-              {
-                width: 20,
-                complete: '=',
-                incomplete: '',
-                total: now.syncAmount,
-                clear: true
-              }
-            )
-
-            now.upload()
-
-            now.on('upload', ({ names, data }) => {
-              const amount = data.length
-              if (debug) {
-                console.log(
-                  `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
-                )
-              }
-              bar.tick(amount)
-            })
-
-            now.on('complete', () => resolve())
-
-            now.on('error', err => {
-              console.error(error('Upload failed'))
-              reject(err)
-            })
+            bar.tick(amount)
           })
-        }
-      } while (now.syncFileCount > 0)
+
+          now.on('complete', () => resolve())
+
+          now.on('error', err => {
+            console.error(error('Upload failed'))
+            reject(err)
+          })
+        })
+
+        await now.create(path, createArgs)
+      }
     } catch (err) {
       if (debug) {
         console.log(`> [debug] error: ${err}\n${err.stack}`)
