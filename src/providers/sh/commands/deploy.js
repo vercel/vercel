@@ -130,7 +130,7 @@ const help = () => {
     -T, --team                     Set a custom team scope
 
   ${chalk.dim(
-    'Enforceable Types (when both package.json and Dockerfile exist):'
+    `Enforceable Types (by default, it's detected automatically):`
   )}
 
     --npm                          Node.js application
@@ -143,7 +143,7 @@ const help = () => {
 
     ${chalk.cyan('$ now')}
 
-  ${chalk.gray('–')} Deploy a custom path ${chalk.dim('`/usr/src/project`')}
+  ${chalk.gray('–')} Deploy a custom path
 
     ${chalk.cyan('$ now /usr/src/project')}
 
@@ -154,7 +154,7 @@ const help = () => {
   ${chalk.gray('–')} Deploy with environment variables
 
     ${chalk.cyan(
-      '$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password'
+      '$ now -e NODE_ENV=production -e SECRET=@mysql-secret'
     )}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
