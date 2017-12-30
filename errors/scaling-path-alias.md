@@ -1,0 +1,12 @@
+# Scaling path alias
+
+#### Why This Error Occurred
+
+You tried to use `now scale` on a path alias (`now alias -r rules.json`). 
+
+#### Possible Ways to Fix It
+
+Path aliases are routes to instances. So instances can be scaled independent from eachother.
+You can view path aliases by running `now alias ls <id>`.
+
+Documentation for Path Aliases can be found [here](https://zeit.co/docs/features/path-aliases).
