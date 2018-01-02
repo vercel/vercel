@@ -876,7 +876,7 @@ async function printEvents(now, currentTeam = null, {
               console.log(payload.data);
               break;
 
-            case 'build-complete':
+            case 'build-stop':
               o++;
               console.log(success('Build complete'));
               break;
