@@ -839,7 +839,10 @@ async function printEvents(now, currentTeam = null, {
     }
 
     // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0));
+    if (!quiet && o) {
+      process.stdout.write(eraseLines(o));
+      o = 0;
+    }
 
     const res = await now._fetch(url);
     if (res.ok) {
