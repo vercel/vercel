@@ -873,7 +873,7 @@ async function printEvents(now, currentTeam = null, {
 
             case 'stdout':
             case 'stderr':
-              console.log(payload);
+              console.log(payload.data);
               break;
 
             case 'build-complete':
