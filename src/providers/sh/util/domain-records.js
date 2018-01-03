@@ -125,7 +125,7 @@ module.exports = class DomainRecords extends Now {
 
       const body = await res.json()
       if (res.status === 403) {
-        const err = new Error(`Not authorized to access domain ${domain}`)
+        const err = new Error(`Not authorized to access domain ${domain} https://err.sh/now-cli/unauthorized-domain`)
         err.userError = true
         return bail(err)
       } else if (res.status === 404) {
