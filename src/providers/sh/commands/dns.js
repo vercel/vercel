@@ -62,7 +62,14 @@ const help = () => {
       ${chalk.cyan(
         '$ now dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>'
       )}
-      ${chalk.cyan('$ now dns add zeit.rocks SRV 10 0 389 zeit.party')}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' SRV 10 0 389 zeit.party`)}
+
+  ${chalk.gray('–')} Add a CAA record
+
+      ${chalk.cyan(
+        `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
+      )}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
 `)
 }
 
