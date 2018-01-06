@@ -211,7 +211,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       const current = new Date()
       const sourceUrlLength =
         aliases.reduce((acc, i) => {
-          return Math.max(acc, (i.deployment && i.deployment.url.length) || 0)
+          return Math.max(acc, (i.deployment && i.deployment.url && i.deployment.url.length) || 0)
         }, 0) + 9
       const aliasLength =
         aliases.reduce((acc, i) => {
@@ -263,7 +263,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           ageSpec += grayWidth
         }
         if (_alias.deployment) {
-          _sourceUrl = chalk.underline(_alias.deployment.url)
+          _sourceUrl = chalk.underline(_alias.deployment.url || '[deployment-deleted]')
           if (supportsColor) {
             urlSpec += grayWidth
           }
