@@ -729,7 +729,7 @@ module.exports = class Now extends EventEmitter {
             )}.`
           )
         } else {
-          err = new Error(`Not authorized to access domain ${name}`)
+          err = new Error(`Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`)
         }
 
         err.userError = true
