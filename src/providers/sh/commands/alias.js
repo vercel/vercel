@@ -205,13 +205,14 @@ async function run({ token, sh: { currentTeam, user } }) {
         return exit(1)
       }
 
+      const deploymentDeletedStub = '<deployment deleted>'
       const start_ = new Date()
       const aliases = await alias.ls()
       aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
       const sourceUrlLength =
         aliases.reduce((acc, i) => {
-          return Math.max(acc, (i.deployment && i.deployment.url.length) || 0)
+          return Math.max(acc, (i.deployment && i.deployment.url && i.deployment.url.length) || deploymentDeletedStub.length)
         }, 0) + 9
       const aliasLength =
         aliases.reduce((acc, i) => {
@@ -262,7 +263,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           aliasSpec += underlineWidth
           ageSpec += grayWidth
         }
-        if (_alias.deployment) {
+        if (_alias.deployment && _alias.deployment.url) {
           _sourceUrl = chalk.underline(_alias.deployment.url)
           if (supportsColor) {
             urlSpec += grayWidth
@@ -275,7 +276,10 @@ async function run({ token, sh: { currentTeam, user } }) {
             urlSpec += underlineWidth
           }
         } else {
-          _sourceUrl = chalk.gray('<null>')
+          _sourceUrl = chalk.gray(deploymentDeletedStub)
+          if (supportsColor) {
+            urlSpec += underlineWidth
+          }
         }
 
         const time = chalk.gray(ms(current - new Date(_alias.created)))
