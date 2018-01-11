@@ -853,7 +853,7 @@ async function printEvents(now, currentTeam = null, {
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse());
+        const stream = jsonlines.parse();
         const onData = ({ type, payload }) => {
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
@@ -894,10 +894,13 @@ async function printEvents(now, currentTeam = null, {
               break;
           }
         };
-        stream.on('data', onData)
-        stream.on('error', err => {
+        const onError = err => {
           reject(new Error(`Deployment event stream error: ${err.stack}`));
-        });
+        };
+        stream.on('data', onData)
+        stream.on('error', onError);
+        res.body.pipe(stream);
+        res.body.on('error', onError);
       });
     } else {
       const err = new Error(`Deployment events status ${res.status}`);
