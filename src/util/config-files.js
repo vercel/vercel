@@ -9,6 +9,7 @@ const { existsSync } = require('fs-extra')
 // Utilities
 const getNowDir = require('../config/global-path')
 const getLocalPathConfig = require('../config/local-path')
+const error = require('./output/error')
 
 const NOW_DIR = getNowDir()
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json')
@@ -39,15 +40,43 @@ function getAuthConfigFilePath() {
 }
 
 function readLocalConfig() {
-  if (existsSync(LOCAL_CONFIG_FILE_PATH)) {
-    return loadJSON.sync(LOCAL_CONFIG_FILE_PATH)
+  let localConfigExists
+
+  try {
+    localConfigExists = existsSync(LOCAL_CONFIG_FILE_PATH)
+  } catch (err) {
+    console.error(error('Failed to check if `now.json` exists'))
+    process.exit(1)
   }
 
-  if (existsSync(PACKAGE_JSON_PATH)) {
-    const { now } = loadJSON.sync(PACKAGE_JSON_PATH)
+  if (localConfigExists) {
+    try {
+      return loadJSON.sync(LOCAL_CONFIG_FILE_PATH)
+    } catch (err) {
+      console.error(error('Failed to read the `now.json` file'))
+      process.exit(1)
+    }
+  }
 
-    if (now) {
-      return now
+  let packageJsonExists
+
+  try {
+    packageJsonExists = existsSync(PACKAGE_JSON_PATH)
+  } catch (err) {
+    console.error(error('Failed to check if `package.json` exists'))
+    process.exit(1)
+  }
+
+  if (packageJsonExists) {
+    try {
+      const { now } = loadJSON.sync(PACKAGE_JSON_PATH)
+
+      if (now) {
+        return now
+      }
+    } catch (err) {
+      console.error(error('Failed to read the `package.json` file'))
+      process.exit(1)
     }
   }
 
