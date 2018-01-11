@@ -144,6 +144,7 @@
     "prettier": "1.6.1",
     "printf": "0.2.5",
     "progress": "2.0.0",
+    "promisepipe": "2.1.1",
     "psl": "1.1.20",
     "read-pkg": "2.0.0",
     "resumer": "0.0.0",
@@ -163,5 +164,6 @@
     "webpack-node-externals": "1.6.0",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0"
-  }
+  },
+  "dependencies": {}
 }
