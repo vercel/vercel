@@ -358,6 +358,19 @@ const main = async (argv_) => {
     ctx.apiUrl = sh.api
   }
 
+  let localConfig
+
+  try {
+    localConfig = configFiles.readLocalConfig()
+  } catch (err) {}
+
+  if (localConfig) {
+    ctx.apiUrl = localConfig.api
+    delete localConfig.api
+
+    Object.assign(ctx.config, localConfig)
+  }
+
   // $FlowFixMe
   const { isTTY } = process.stdout
 

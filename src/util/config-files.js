@@ -4,6 +4,7 @@ const { join: joinPath } = require('path')
 // Packages
 const loadJSON = require('load-json-file')
 const writeJSON = require('write-json-file')
+const { existsSync } = require('fs-extra')
 
 // Utilities
 const getNowDir = require('../config/global-path')
@@ -11,6 +12,8 @@ const getNowDir = require('../config/global-path')
 const NOW_DIR = getNowDir()
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json')
 const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json')
+const LOCAL_CONFIG_FILE_PATH = joinPath(process.cwd(), 'now.json')
+const PACKAGE_JSON_PATH = joinPath(process.cwd(), 'package.json')
 
 // reads `CONFIG_FILE_PATH` atomically
 const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH)
@@ -34,11 +37,28 @@ function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH
 }
 
+function readLocalConfig() {
+  if (existsSync(LOCAL_CONFIG_FILE_PATH)) {
+    return loadJSON.sync(LOCAL_CONFIG_FILE_PATH)
+  }
+
+  if (existsSync(PACKAGE_JSON_PATH)) {
+    const { now } = loadJSON.sync(PACKAGE_JSON_PATH)
+
+    if (now) {
+      return now
+    }
+  }
+
+  return null
+}
+
 module.exports = {
   readConfigFile,
   writeToConfigFile,
   readAuthConfigFile,
   writeToAuthConfigFile,
+  readLocalConfig,
   getConfigFilePath,
   getAuthConfigFilePath
 }
