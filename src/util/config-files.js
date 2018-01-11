@@ -53,7 +53,13 @@ function readLocalConfig() {
     try {
       return loadJSON.sync(LOCAL_CONFIG_FILE_PATH)
     } catch (err) {
-      console.error(error('Failed to read the `now.json` file'))
+      if (err.name === 'JSONError') {
+        console.log(error(err.message))
+      } else {
+        const code = err.code ? `(${err.code})` : ''
+        console.error(error(`Failed to read the \`now.json\` file ${code}`))
+      }
+
       process.exit(1)
     }
   }
@@ -75,7 +81,13 @@ function readLocalConfig() {
         return now
       }
     } catch (err) {
-      console.error(error('Failed to read the `package.json` file'))
+      if (err.name === 'JSONError') {
+        console.log(error(err.message))
+      } else {
+        const code = err.code ? `(${err.code})` : ''
+        console.error(error(`Failed to read the \`package.json\` file ${code}`))
+      }
+
       process.exit(1)
     }
   }
