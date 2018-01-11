@@ -35,6 +35,7 @@ const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
+const fetch = require('../util/fetch-auth')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity'],
@@ -844,7 +845,7 @@ async function printEvents(now, currentTeam = null, {
       o = 0;
     }
 
-    const res = await now._fetch(url);
+    const res = await fetch(url, now._token);
     if (res.ok) {
       // fire the open callback and ensure it's only fired once
       onOpen();
