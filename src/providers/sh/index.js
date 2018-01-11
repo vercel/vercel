@@ -4,6 +4,7 @@ const mainCommands = new Set([
   'list',
   'remove',
   'alias',
+  'events',
   'domains',
   'dns',
   'certs',
