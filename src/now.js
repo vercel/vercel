@@ -361,8 +361,10 @@ const main = async (argv_) => {
   const localConfig = configFiles.readLocalConfig()
 
   if (localConfig) {
-    ctx.apiUrl = localConfig.api
-    delete localConfig.api
+    if (localConfig.api) {
+      ctx.apiUrl = localConfig.api
+      delete localConfig.api
+    }
 
     Object.assign(ctx.config, localConfig)
   }
