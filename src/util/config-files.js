@@ -13,7 +13,7 @@ const getLocalPathConfig = require('../config/local-path')
 const NOW_DIR = getNowDir()
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json')
 const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json')
-const LOCAL_CONFIG_FILE_PATH = getLocalPathConfig()
+const LOCAL_CONFIG_FILE_PATH = getLocalPathConfig(process.cwd())
 const PACKAGE_JSON_PATH = joinPath(process.cwd(), 'package.json')
 
 // reads `CONFIG_FILE_PATH` atomically
