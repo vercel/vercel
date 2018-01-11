@@ -886,7 +886,7 @@ async function printEvents(now, currentTeam = null, {
               console.log(success('Deployment started!'));
 
               // avoid lingering events
-              stream.off('data', onData);
+              stream.removeListener('data', onData);
 
               // close the stream and resolve
               stream.end();
