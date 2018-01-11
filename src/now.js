@@ -358,11 +358,7 @@ const main = async (argv_) => {
     ctx.apiUrl = sh.api
   }
 
-  let localConfig
-
-  try {
-    localConfig = configFiles.readLocalConfig()
-  } catch (err) {}
+  const localConfig = configFiles.readLocalConfig()
 
   if (localConfig) {
     ctx.apiUrl = localConfig.api
