@@ -138,6 +138,9 @@ const renderEvent = ev => {
   }
 };
 
-const renderEventStream = through2.obj(renderEvent);
+const renderEventStream = through2.obj((ev, enc, fn) => {
+  renderEvent(ev);
+  fn();
+});
 
 module.exports = main;
