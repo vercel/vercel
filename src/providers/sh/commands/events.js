@@ -15,6 +15,7 @@ const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
 const info = require('../../../util/output/info')
 const error = require('../../../util/output/error')
+const param = require('../../../util/output/param')
 
 const help = () => (
   `
@@ -78,8 +79,8 @@ const main = async ctx => {
   }
 
   if (argv._.length !== 1) {
-    console.error(error('Missing argument <url>'));
-    console.error(info(`Usage: now events <url>. Run ${cmd('now events -h')} for help.`));
+    console.error(error(`Missing argument ${cmd('<url>')}`));
+    console.error(info(`Usage: ${cmd('now events <url>')}. Run ${cmd('now events -h')} for help.`));
     return 2;
   }
 
@@ -98,12 +99,12 @@ const main = async ctx => {
   try {
     deployment = await getDeploymentByURL(url, { apiUrl, token });
   } catch (err) {
-    console.error(error(`An error occurred while retrieving the deployment by URL "${url}": ${err.message}`));
+    console.error(error(`An error occurred while retrieving the deployment by URL ${param(url)}: ${err.message}`));
     return 1;
   }
 
   if (deployment === null) {
-    console.error(error(`Could not find or was unauthorized to access deployment "${url}"`));
+    console.error(error(`Could not find or was unauthorized to access deployment ${param(url)}`));
     return 1;
   }
 
