@@ -195,6 +195,13 @@ async function run({ token, sh: { currentTeam } }) {
       console.error(error(`Could not find any deployments matching ${id}`))
       return process.exit(1)
     }
+
+    // Alias is a path alias, these can't be scaled.
+    if(aliasDeployment.rules && aliasDeployment.rules.length > 0) {
+      console.error(error(`Requested identifier is a path alias. https://err.sh/now-cli/scaling-path-alias`))
+      return process.exit(1)
+    }
+    
     match = deployments.find(d => {
       return d.uid === aliasDeployment.deploymentId
     })
