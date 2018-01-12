@@ -10,6 +10,7 @@ const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 const fetch = require('node-fetch')
+const updateNotifier = require('@zeit/check-updates')
 
 // Utilities
 const error = require('./util/output/error')
@@ -21,9 +22,9 @@ const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
 const providers = require('./providers')
 const configFiles = require('./util/config-files')
-const checkForUpdates = require('./util/updates')
 const getUser = require('./util/get-user')
 const exit = require('./util/exit')
+const pkg = require('./util/pkg')
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -32,7 +33,7 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 const GLOBAL_COMMANDS = new Set(['help'])
 
 const main = async (argv_) => {
-  await checkForUpdates()
+  updateNotifier(pkg, 'Now CLI')
 
   const argv = mri(argv_, {
     boolean: [

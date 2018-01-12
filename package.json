@@ -84,6 +84,7 @@
   },
   "devDependencies": {
     "@google/maps": "0.4.3",
+    "@zeit/check-updates": "1.0.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "archiver": "2.0.3",
@@ -157,7 +158,6 @@
     "through2": "2.0.3",
     "tmp-promise": "1.0.3",
     "uid-promise": "1.0.0",
-    "update-notifier": "2.2.0",
     "webpack": "3.6.0",
     "webpack-node-externals": "1.6.0",
     "which-promise": "1.0.0",
