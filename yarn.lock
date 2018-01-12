@@ -48,7 +48,7 @@
   version "0.4.3"
   resolved "https://registry.yarnpkg.com/@google/maps/-/maps-0.4.3.tgz#b468961114d6e0749c15802e0da149dcea2283a5"
 
-"@zeit/check-updates@false1.0.2":
+"@zeit/check-updates@1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@zeit/check-updates/-/check-updates-1.0.2.tgz#3f5edadc7dee2cf12852b703c7db588d406064c2"
   dependencies:
