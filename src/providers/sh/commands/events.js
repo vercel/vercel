@@ -83,6 +83,11 @@ const main = async ctx => {
     return 2;
   }
 
+  if (argv.head && argv.follow) {
+    console.error(error(`The options ${cmd('--head')} and ${cmd('--follow')} cannot be used together`));
+    return 2;
+  }
+
   const token = getAuthToken(ctx);
   const {currentTeam} = getConfig(ctx);
   const {apiUrl} = ctx;
