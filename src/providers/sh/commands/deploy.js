@@ -48,7 +48,8 @@ const mriOpts = {
     'forward-npm',
     'docker',
     'npm',
-    'static'
+    'static',
+    'public'
   ],
   alias: {
     env: 'e',

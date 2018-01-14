@@ -10,7 +10,14 @@ const CONFIGS = new Map([
     'defaultProvider',
     value => {
       const providers = require('../providers')
-      return providers.hasOwnProperty(value)
+      return [providers.hasOwnProperty(value), value]
+    }
+  ],
+  [
+    'includeScheme',
+    value => {
+      const isValid = ['true', 'false', true, false].includes(value)
+      return [isValid, value === 'true' || value === true]
     }
   ]
 ])
@@ -26,12 +33,13 @@ module.exports = function set(ctx) {
   }
 
   const validate = CONFIGS.get(name)
-  if (!validate(value)) {
+  const [isValid, finalValue] = validate(value);
+  if (!isValid) {
     console.error(error(`Unexpected config value for ${name}: ${value}`))
     return 1
   }
 
-  ctx.config[name] = value
+  ctx.config[name] = finalValue
   writeToConfigFile(ctx.config)
 
   console.log(success(`Config saved in ${param(hp(getConfigFilePath()))}`))
