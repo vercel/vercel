@@ -19,7 +19,7 @@ const getUser = async ({ apiUrl, token }) => {
     res = await fetch(url, { headers })
   } catch (err) {
     debug(`error fetching /www/user: $O`, err.stack)
-    throw new Error(`An unexpected error occurred while trying to fetch your personal details: ${err.message}`)
+    throw new Error(`An unexpected error occurred while trying to fetch your user information: ${err.message}`)
   }
 
   debug('parsing response from GET /www/user')
