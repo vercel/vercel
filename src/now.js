@@ -437,10 +437,22 @@ const main = async (argv_) => {
       ctx.authConfig.credentials[credentialsIndex] = obj
     }
 
-    const user = await getUser({
-      apiUrl: ctx.apiUrl,
-      token
-    })
+    let user
+
+    try {
+      user = await getUser({
+        apiUrl: ctx.apiUrl,
+        token
+      })
+    } catch (err) {
+      console.error(error(err))
+      await exit(1)
+    }
+
+    // Don't use team from config if `--token` was set
+    if (ctx.config.sh && ctx.config.sh.currentTeam) {
+      delete ctx.config.sh.currentTeam
+    }
 
     ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
   }
