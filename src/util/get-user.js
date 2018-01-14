@@ -19,11 +19,7 @@ const getUser = async ({ apiUrl, token }) => {
     res = await fetch(url, { headers })
   } catch (err) {
     debug(`error fetching /www/user: $O`, err.stack)
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to fetch your personal details: ${err.message}`
-      )
-    )
+    throw new Error(`An unexpected error occurred while trying to fetch your user information: ${err.message}`)
   }
 
   debug('parsing response from GET /www/user')
@@ -36,11 +32,11 @@ const getUser = async ({ apiUrl, token }) => {
       `error parsing the response from /www/user as JSON – got %O`,
       err.stack
     )
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to fetch your personal details: ${err.message}`
-      )
-    )
+    throw new Error(`An unexpected error occurred while trying to fetch your personal details: ${err.message}`)
+  }
+
+  if (body.error && body.error.code === 'forbidden') {
+    throw new Error('The specified token is not valid')
   }
 
   const { user } = body
