@@ -860,7 +860,7 @@ async function printEvents(now, currentTeam = null, {
           // wait for the first instance to be started
           // and ignore everything else
           if (quiet) {
-            if (type === 'instance-start') {
+            if (type === 'instance-ping') {
               resolve();
             }
             return;
@@ -882,7 +882,7 @@ async function printEvents(now, currentTeam = null, {
               console.log(success('Build complete'));
               break;
 
-            case 'instance-start':
+            case 'instance-ping':
               o++;
               console.log(success('Deployment started!'));
 
