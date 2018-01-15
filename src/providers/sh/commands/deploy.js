@@ -821,7 +821,7 @@ async function printEvents(now, currentTeam = null, {
   onOpen = ()=>{},
   debug = false
 } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?limit=200&follow=1`;
   if (currentTeam) {
     url += `&teamId=${currentTeam.id}`;
   }
