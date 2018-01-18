@@ -87,7 +87,8 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    console.log('Downloading Now CLI ' + packageJSON.version)
+    enableProgress('Downloading Now CLI ' + packageJSON.version)
+    showProgress(0)
 
     try {
       const name = platformToName[platform]
@@ -96,6 +97,12 @@ async function download() {
 
       if (resp.status !== 200) {
         throw new Error(resp.statusText + ' ' + url)
+      }
+
+      const size = resp.headers.get('content-length')
+
+      if (!size) {
+        throw new Error('Not found (content-length is absent)')
       }
 
       const ws = fs.createWriteStream(partial)
@@ -107,6 +114,7 @@ async function download() {
           .on('error', reject)
           .on('data', chunk => {
             bytesRead += chunk.length
+            showProgress(100 * bytesRead / size)
           })
 
         const encoding = resp.headers.get('content-encoding')
@@ -125,6 +133,7 @@ async function download() {
         ws
           .on('error', reject)
           .on('close', () => {
+            showProgress(100)
             resolve()
           })
       })
