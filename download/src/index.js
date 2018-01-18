@@ -128,8 +128,6 @@ async function download() {
             resolve()
           })
       })
-    } finally {
-      disableProgress()
     }
   }, {
     retries: 500,
