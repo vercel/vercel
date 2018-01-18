@@ -87,7 +87,7 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    console.log('Downloading Now CLI ' + packageJSON.version)
+    console.log('Downloading Now CLI ' + packageJSON.version + '. Please wait...')
 
     try {
       const name = platformToName[platform]
