@@ -128,7 +128,7 @@ async function download() {
             resolve()
           })
       })
-    }
+    } catch (err) {}
   }, {
     retries: 500,
     onRetry: (err) => console.error(err)
