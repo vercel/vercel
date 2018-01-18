@@ -755,7 +755,7 @@ module.exports = class Now extends EventEmitter {
     })
   }
 
-  createCert(domain, { renew } = {}) {
+  createCert(domain, { renew, overwriteCustom } = {}) {
     return this.retry(
       async (bail, attempt) => {
         if (this._debug) {
@@ -766,7 +766,8 @@ module.exports = class Now extends EventEmitter {
           method: 'POST',
           body: {
             domains: [domain],
-            renew
+            renew,
+            overwriteCustom
           }
         })
 

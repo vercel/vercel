@@ -48,6 +48,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    --overwrite                    Overwrite existing custom certificate on create
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline('FILE')}                     Certificate key file
     --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
@@ -62,6 +63,14 @@ const help = () => {
       ${chalk.cyan(
         '$ now certs replace --crt domain.crt --key domain.key --ca ca_chain.crt domain.com'
       )}
+
+  ${chalk.gray(
+    '–'
+  )} Create a new auto-renewable certificate replacing an existing custom certificate
+
+      ${chalk.cyan(
+        '$ now certs create --overwrite domain.com'
+      )}
 `)
 }
 
@@ -74,7 +83,7 @@ let subcommand
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['crt', 'key', 'ca'],
-    boolean: ['help', 'debug'],
+    boolean: ['help', 'debug', 'overwrite'],
     alias: {
       help: 'h',
       debug: 'd'
@@ -196,6 +205,15 @@ async function run({ token, sh: { currentTeam, user } }) {
     let cert
 
     if (argv.crt || argv.key || argv.ca) {
+      if (argv.overwrite) {
+        console.error(error(
+          `Use replace command instead. Usage: ${chalk.cyan(
+            '`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`'
+          )}`
+        ))
+        return exit(1)
+      }
+
       // Issue a custom certificate
       if (!argv.crt || !argv.key) {
         console.error(error(
@@ -213,7 +231,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       cert = await certs.put(cn, crt, key, ca)
     } else {
       // Issue a standard certificate
-      cert = await certs.create(cn)
+      cert = await certs.create(cn, { overwrite: argv.overwrite })
     }
     if (!cert) {
       // Cert is undefined and "Cert is already issued" has been printed to stdout

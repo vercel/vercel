@@ -19,8 +19,8 @@ module.exports = class Certs extends Now {
     })
   }
 
-  create(cn) {
-    return this.createCert(cn)
+  create(cn, { overwrite }) {
+    return this.createCert(cn, { renew: true, overwriteCustom: overwrite })
   }
 
   renew(cn) {
