@@ -117,12 +117,18 @@ async function download() {
             showProgress(100 * bytesRead / size)
           })
 
-        const gunzip = zlib.createGunzip()
+        const encoding = resp.headers.get('content-encoding')
 
-        gunzip
-          .on('error', reject)
+        if (encoding && encoding === 'gzip') {
+          const gunzip = zlib.createGunzip()
 
-        resp.body.pipe(gunzip).pipe(ws)
+          gunzip
+            .on('error', reject)
+
+          resp.body.pipe(gunzip).pipe(ws)
+        } else {
+          resp.body.pipe(ws)
+        }
 
         ws
           .on('error', reject)
