@@ -115,18 +115,12 @@ async function download() {
             }
           })
 
-        const encoding = resp.headers.get('content-encoding')
+        const gunzip = zlib.createGunzip()
 
-        if (encoding && encoding === 'gzip') {
-          const gunzip = zlib.createGunzip()
+        gunzip
+          .on('error', reject)
 
-          gunzip
-            .on('error', reject)
-
-          resp.body.pipe(gunzip).pipe(ws)
-        } else {
-          resp.body.pipe(ws)
-        }
+        resp.body.pipe(gunzip).pipe(ws)
 
         ws
           .on('error', reject)
