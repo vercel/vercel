@@ -10,6 +10,7 @@ const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 const fetch = require('node-fetch')
+const updateNotifier = require('@zeit/check-updates')
 
 // Utilities
 const error = require('./util/output/error')
@@ -21,9 +22,9 @@ const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
 const providers = require('./providers')
 const configFiles = require('./util/config-files')
-const checkForUpdates = require('./util/updates')
 const getUser = require('./util/get-user')
 const exit = require('./util/exit')
+const pkg = require('./util/pkg')
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -32,11 +33,18 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 const GLOBAL_COMMANDS = new Set(['help'])
 
 const main = async (argv_) => {
-  await checkForUpdates()
+  updateNotifier(pkg, 'Now CLI')
 
   const argv = mri(argv_, {
-    boolean: ['help', 'version'],
-    string: ['token', 'team'],
+    boolean: [
+      'help',
+      'version'
+    ],
+    string: [
+      'token',
+      'team',
+      'api'
+    ],
     alias: {
       help: 'h',
       version: 'v',
@@ -70,6 +78,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -98,6 +107,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -114,18 +124,7 @@ const main = async (argv_) => {
             err.message
         )
       )
-      return
-    }
 
-    try {
-      config = JSON.parse(config)
-    } catch (err) {
-      console.error(
-        error(
-          `An error occurred while trying to parse "${hp(NOW_CONFIG_PATH)}": ` +
-            err.message
-        )
-      )
       return
     }
   } else {
@@ -144,6 +143,7 @@ const main = async (argv_) => {
             err.message
         )
       )
+
       return
     }
   }
@@ -160,6 +160,7 @@ const main = async (argv_) => {
           err.message
       )
     )
+
     return
   }
 
@@ -176,52 +177,40 @@ const main = async (argv_) => {
             err.message
         )
       )
+
       return
     }
 
-    try {
-      authConfig = JSON.parse(authConfig)
+    if (!Array.isArray(authConfig.credentials)) {
+      console.error(
+        error(
+          `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
+            'No `credentials` list found inside'
+        )
+      )
+      return
+    }
 
-      if (!Array.isArray(authConfig.credentials)) {
+    for (const [i, { provider }] of authConfig.credentials.entries()) {
+      if (null == provider) {
         console.error(
           error(
-            `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
-              'No `credentials` list found inside'
+            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
+              `Missing \`provider\` key in entry with index ${i}`
           )
         )
         return
       }
 
-      for (const [i, { provider }] of authConfig.credentials.entries()) {
-        if (null == provider) {
-          console.error(
-            error(
-              `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-                `Missing \`provider\` key in entry with index ${i}`
-            )
+      if (!(provider in providers)) {
+        console.error(
+          error(
+            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
+              `Unknown provider "${provider}"`
           )
-          return
-        }
-
-        if (!(provider in providers)) {
-          console.error(
-            error(
-              `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-                `Unknown provider "${provider}"`
-            )
-          )
-          return
-        }
-      }
-    } catch (err) {
-      console.error(
-        error(
-          `An error occurred while trying to parse "${hp(
-            NOW_AUTH_CONFIG_PATH
-          )}": ` + err.message
         )
-      )
-      return
+        return
+      }
     }
   } else {
     const results = await getDefaultAuthCfg()
@@ -250,7 +239,7 @@ const main = async (argv_) => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx = {
+  const ctx: Object = {
     config,
     authConfig,
     argv: argv_
@@ -361,6 +350,26 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
+  const { sh } = ctx.config
+  ctx.apiUrl = 'https://api.zeit.co'
+
+  if (argv.api && typeof argv.api === 'string') {
+    ctx.apiUrl = argv.api
+  } else if (sh && sh.api) {
+    ctx.apiUrl = sh.api
+  }
+
+  const localConfig = configFiles.readLocalConfig()
+
+  if (localConfig) {
+    if (localConfig.api) {
+      ctx.apiUrl = localConfig.api
+      delete localConfig.api
+    }
+
+    Object.assign(ctx.config, localConfig)
+  }
+
   // $FlowFixMe
   const { isTTY } = process.stdout
 
@@ -383,10 +392,11 @@ const main = async (argv_) => {
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
       console.error(error({
-        message: 'No existing credentials found. Please ' +
-        `${param('now login')} to log in or pass ${param('--token')}`,
+        message: 'No existing credentials found. Please run ' +
+        `${param('now login')} or pass ${param('--token')}`,
         slug: 'no-credentials-found'
       }))
+
       await exit(1)
     }
   }
@@ -396,6 +406,7 @@ const main = async (argv_) => {
       message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
       slug: 'no-token-allowed'
     }))
+
     await exit(1)
   }
 
@@ -407,6 +418,7 @@ const main = async (argv_) => {
         message: `You defined ${param('--token')}, but it's missing a value`,
         slug: 'missing-token-value'
       }))
+
       await exit(1)
     }
 
@@ -425,14 +437,22 @@ const main = async (argv_) => {
       ctx.authConfig.credentials[credentialsIndex] = obj
     }
 
-    if (isTTY) {
-      console.log(info('Caching account information'))
+    let user
+
+    try {
+      user = await getUser({
+        apiUrl: ctx.apiUrl,
+        token
+      })
+    } catch (err) {
+      console.error(error(err))
+      await exit(1)
     }
 
-    const user = await getUser({
-      apiUrl: 'https://api.zeit.co',
-      token
-    })
+    // Don't use team from config if `--token` was set
+    if (ctx.config.sh && ctx.config.sh.currentTeam) {
+      delete ctx.config.sh.currentTeam
+    }
 
     ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
   }
@@ -446,6 +466,7 @@ const main = async (argv_) => {
         message: `You defined ${param('--team')}, but it's missing a value`,
         slug: 'missing-team-value'
       }))
+
       await exit(1)
     }
 
@@ -459,10 +480,6 @@ const main = async (argv_) => {
 
     // Only download team data if not cached
     if (!cachedTeam && !cachedUser) {
-      if (isTTY) {
-        console.log(info('Caching team information'))
-      }
-
       const { token } = ctx.authConfig.credentials.find(item => item.provider === 'sh')
 
       const headers = {
@@ -480,6 +497,7 @@ const main = async (argv_) => {
             message: `You don't have access to the specified team`,
             slug: 'team-not-accessible'
           }))
+
           await exit(1)
         }
 
@@ -494,6 +512,7 @@ const main = async (argv_) => {
           message: 'The specified team doesn\'t exist',
           slug: 'team-not-existent'
         }))
+
         await exit(1)
       }
 
@@ -508,11 +527,11 @@ const main = async (argv_) => {
   }
 
   try {
-    await provider[subcommand](ctx)
+    process.exit(await provider[subcommand](ctx))
   } catch (err) {
     console.error(
       error(
-        `An unexpected error occurred in provider ${subcommand}: ${err.stack}`
+        `An unexpected error occurred in ${subcommand}: ${err.stack}`
       )
     )
   }
@@ -526,6 +545,7 @@ debug('start')
 
 const handleRejection = err => {
   debug('handling rejection')
+
   if (err) {
     if (err instanceof Error) {
       handleUnexpected(err)
@@ -535,14 +555,17 @@ const handleRejection = err => {
   } else {
     console.error(error('An unexpected empty rejection occurred'))
   }
+
   process.exit(1)
 }
 
 const handleUnexpected = err => {
   debug('handling unexpected error')
+
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
+
   process.exit(1)
 }
 

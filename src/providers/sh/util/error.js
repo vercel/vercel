@@ -18,7 +18,7 @@ function handleError(err, { debug = false } = {}) {
 
   if (err.status === 403) {
     console.error(error(
-      'Authentication error. Run `now -L` or `now --login` to log-in again.'
+      'Authentication error. Run `now login` to log-in again.'
     ))
   } else if (err.status === 429) {
     if (err.retryAfter === 'never') {

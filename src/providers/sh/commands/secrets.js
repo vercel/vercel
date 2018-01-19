@@ -5,6 +5,7 @@ const chalk = require('chalk')
 const table = require('text-table')
 const mri = require('mri')
 const ms = require('ms')
+const plural = require('pluralize')
 
 // Utilities
 const strlen = require('../util/strlen')
@@ -27,7 +28,6 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -b, --base64                   Treat value as base64-encoded
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
@@ -70,18 +70,17 @@ let subcommand
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug', 'base64'],
+    boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd',
-      base64: 'b'
+      debug: 'd'
     }
   })
 
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   subcommand = argv._[0]
 
   if (argv.help || !subcommand) {
@@ -126,9 +125,9 @@ async function run({ token, sh: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `> ${list.length} secret${list.length === 1
-        ? ''
-        : 's'} found under ${chalk.bold(
+      `> ${
+        plural('secret', list.length, true)
+      } found under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )} ${chalk.gray(`[${elapsed}]`)}`
     )
@@ -230,15 +229,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       return exit(1)
     }
 
-    const [name, value_] = args
-    let value
-
-    if (argv.base64) {
-      value = { base64: value_ }
-    } else {
-      value = value_
-    }
-
+    const [name, value] = args
     await secrets.add(name, value)
     const elapsed = ms(new Date() - start)
 

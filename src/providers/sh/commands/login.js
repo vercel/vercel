@@ -110,6 +110,15 @@ const getVerificationData = async ({ apiUrl, email }) => {
     )
   }
 
+  if (!res.ok) {
+    debug('error response from POST /now/registration: %d %j', res.status, body)
+    const { error = {} } = body
+    const message = error.code === 'invalid_email'
+        ? 'Invalid email address'
+        : `Unexpected error: ${error.message}`
+    throw new Error(message)
+  }
+
   return body
 }
 
@@ -202,8 +211,7 @@ const login = async ctx => {
 
   argv._ = argv._.slice(1)
 
-  const apiUrl =
-    (ctx.config.sh && ctx.config.sh.apiUrl) || 'https://api.zeit.co'
+  const apiUrl = ctx.apiUrl
   let email
   let emailIsValid = false
   let stopSpinner

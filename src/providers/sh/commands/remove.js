@@ -4,12 +4,14 @@
 const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
+const plural = require('pluralize')
 const table = require('text-table')
 
 // Utilities
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
+const info = require('../../../util/output/info')
 const { normalizeURL } = require('../../../util/url')
 const exit = require('../../../util/exit')
 
@@ -78,7 +80,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   hard = argv.hard || false
   skipConfirmation = argv.yes || false
   ids = argv._
@@ -110,11 +112,11 @@ module.exports = async ctx => {
 
 function readConfirmation(matches) {
   return new Promise(resolve => {
-    process.stdout.write(
-      `> The following deployment${matches.length === 1
-        ? ''
-        : 's'} will be removed permanently:\n`
-    )
+    console.log(info(
+      `> The following ${
+        plural('deployment', matches.length, true)
+      } will be removed permanently:`
+    ))
 
     const tbl = table(
       matches.map(depl => {
@@ -175,14 +177,14 @@ async function remove({ token, sh: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    console.error(error(
-      `Could not find ${argv.safe
+    console.log(info(
+      `> Could not find ${argv.safe
         ? 'unaliased'
         : 'any'} deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
     ))
-    return process.exit(1)
+    return process.exit(0)
   }
 
   try {
@@ -204,7 +206,7 @@ async function remove({ token, sh: { currentTeam } }) {
     console.log(
       table(
         matches.map(depl => {
-          return [`Deployment ${chalk.bold(depl.uid)} removed`]
+          return [info(`Deployment ${chalk.bold(depl.url)} removed`)]
         })
       )
     )

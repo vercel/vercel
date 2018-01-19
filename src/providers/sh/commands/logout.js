@@ -52,7 +52,7 @@ const main = async ctx => {
     }
   })
 
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   endpoint = apiUrl + '/user/tokens/'
 
   argv._ = argv._.slice(1)
@@ -115,13 +115,13 @@ const logout = async () => {
     text: 'Logging out...'
   }).start()
 
-  const configContent = JSON.parse(readConfigFile())
+  const configContent = readConfigFile()
 
   if (configContent.sh) {
     delete configContent.sh
   }
 
-  const authContent = JSON.parse(readAuthConfigFile())
+  const authContent = readAuthConfigFile()
   const {credentials} = authContent
   const related = credentials.find(item => item.provider === 'sh')
   const index = credentials.indexOf(related)

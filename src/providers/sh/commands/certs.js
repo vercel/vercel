@@ -9,7 +9,9 @@ const table = require('text-table')
 const mri = require('mri')
 const fs = require('fs-extra')
 const ms = require('ms')
+const plural = require('pluralize')
 const printf = require('printf')
+const psl = require('psl')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -46,6 +48,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    --overwrite                    Overwrite existing custom certificate on create
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline('FILE')}                     Certificate key file
     --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
@@ -60,6 +63,14 @@ const help = () => {
       ${chalk.cyan(
         '$ now certs replace --crt domain.crt --key domain.key --ca ca_chain.crt domain.com'
       )}
+
+  ${chalk.gray(
+    '–'
+  )} Create a new auto-renewable certificate replacing an existing custom certificate
+
+      ${chalk.cyan(
+        '$ now certs create --overwrite domain.com'
+      )}
 `)
 }
 
@@ -72,7 +83,7 @@ let subcommand
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['crt', 'key', 'ca'],
-    boolean: ['help', 'debug'],
+    boolean: ['help', 'debug', 'overwrite'],
     alias: {
       help: 'h',
       debug: 'd'
@@ -81,7 +92,7 @@ const main = async ctx => {
 
   argv._ = argv._.slice(1)
 
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   debug = argv.debug
   subcommand = argv._[0]
 
@@ -134,9 +145,9 @@ async function run({ token, sh: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start)
 
     console.log(
-      `> ${list.length} certificate${list.length === 1
-        ? ''
-        : 's'} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
+      `> ${
+        plural('certificate', list.length, true)
+      } found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )}`
     )
@@ -144,7 +155,10 @@ async function run({ token, sh: { currentTeam, user } }) {
     if (list.length > 0) {
       const cur = Date.now()
       list.sort((a, b) => {
-        return a.cn.localeCompare(b.cn)
+        const domainA = psl.get(a.cn)
+        const domainB = psl.get(b.cn)
+        if (!domainA || !domainB) return 0;
+        return domainA.localeCompare(domainB)
       })
 
       const maxCnLength =
@@ -191,6 +205,15 @@ async function run({ token, sh: { currentTeam, user } }) {
     let cert
 
     if (argv.crt || argv.key || argv.ca) {
+      if (argv.overwrite) {
+        console.error(error(
+          `Use replace command instead. Usage: ${chalk.cyan(
+            '`now certs replace --crt DOMAIN.CRT --key DOMAIN.KEY [--ca CA.CRT] <id | cn>`'
+          )}`
+        ))
+        return exit(1)
+      }
+
       // Issue a custom certificate
       if (!argv.crt || !argv.key) {
         console.error(error(
@@ -208,7 +231,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       cert = await certs.put(cn, crt, key, ca)
     } else {
       // Issue a standard certificate
-      cert = await certs.create(cn)
+      cert = await certs.create(cn, { overwrite: argv.overwrite })
     }
     if (!cert) {
       // Cert is undefined and "Cert is already issued" has been printed to stdout

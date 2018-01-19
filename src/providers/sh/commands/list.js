@@ -5,6 +5,7 @@ const mri = require('mri')
 const chalk = require('chalk')
 const ms = require('ms')
 const printf = require('printf')
+const plural = require('pluralize')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -70,18 +71,18 @@ const main = async ctx => {
 
   app = argv._[0]
   debug = argv.debug
-  apiUrl = argv.apiUrl || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
 
   if (argv.help || app === 'help') {
     help()
     await exit(0)
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
-    await list({ token, sh })
+    await list({ token, sh, includeScheme })
   } catch (err) {
     console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
@@ -97,7 +98,7 @@ module.exports = async ctx => {
   }
 }
 
-async function list({ token, sh: { currentTeam, user } }) {
+async function list({ token, sh: { currentTeam, user }, includeScheme }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
   const start = new Date()
 
@@ -161,9 +162,9 @@ async function list({ token, sh: { currentTeam, user } }) {
     }, 0) + 5
   const timeNow = new Date()
   console.log(
-    `> ${deployments.length} deployment${deployments.length === 1
-      ? ''
-      : 's'} found under ${chalk.bold(
+    `> ${
+      plural('deployment', deployments.length, true)
+    } found under ${chalk.bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
     )} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
   )
@@ -239,7 +240,7 @@ async function list({ token, sh: { currentTeam, user } }) {
       console.log(
         printf(
           spec,
-          chalk.underline(dep.url),
+          chalk.underline((includeScheme ? 'https://' : '') + dep.url),
           dep.scale ? dep.scale.current : '✖',
           state,
           dep.created ? ms(timeNow - dep.created) : 'n/a'

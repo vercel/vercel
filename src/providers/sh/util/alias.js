@@ -1,10 +1,11 @@
 // Packages
 const fetch = require('node-fetch')
-const { readFileSync } = require('fs')
+const loadJSON = require('load-json-file')
 const publicSuffixList = require('psl')
 const mri = require('mri')
 const ms = require('ms')
 const chalk = require('chalk')
+const plural = require('pluralize')
 const { write: copy } = require('clipboardy')
 
 // Ours
@@ -21,7 +22,7 @@ const treatBuyError = require('../util/domains/treat-buy-error')
 const scaleInfo = require('./scale-info')
 const { DOMAIN_VERIFICATION_ERROR } = require('./errors')
 const isZeitWorld = require('./is-zeit-world')
-const resolve4 = require('./dns')
+const isValidDomain = require('./domains/is-valid-domain')
 const toHost = require('./to-host')
 const exit = require('../../../util/exit')
 const Now = require('./')
@@ -217,7 +218,7 @@ module.exports = class Alias extends Now {
         return bail(new Error(body.error.message))
       }
 
-      // The two expected succesful cods are 200 and 304
+      // The two expected successful codes are 200 and 304
       if (res.status !== 200 && res.status !== 304) {
         throw new Error('Unhandled error')
       }
@@ -228,8 +229,7 @@ module.exports = class Alias extends Now {
 
   readRulesFile(rules) {
     try {
-      const rulesJson = readFileSync(rules, 'utf8')
-      return JSON.parse(rulesJson)
+      return loadJSON.sync(rules)
     } catch (err) {
       console.error(`Reading rules file ${rules} failed: ${err}`)
     }
@@ -238,10 +238,29 @@ module.exports = class Alias extends Now {
   async set(deployment, alias, domains, currentTeam, user) {
     alias = alias.replace(/^https:\/\//i, '')
 
+    if (alias.endsWith('.ws')) {
+      const err = new Error(
+        `ZEIT.world currently does't support ${chalk.bold('.ws')} domains`
+      )
+
+      err.userError = true
+      throw err
+    }
+
     if (alias.indexOf('.') === -1) {
       // `.now.sh` domain is implied if just the subdomain is given
       alias += '.now.sh'
     }
+
+    if (!isValidDomain(alias)) {
+      const err = new Error(
+        `${chalk.bold(alias)} is not a valid domain`
+      )
+
+      err.userError = true
+      throw err
+    }
+
     const depl = await this.findDeployment(deployment)
     if (!depl) {
       const err = new Error(
@@ -301,12 +320,14 @@ module.exports = class Alias extends Now {
         console.log(
           `> Alias ${alias} points to ${chalk.bold(
             aliasedDeployment.url
-          )} (${chalk.bold(aliasedDeployment.scale.current + ' instances')})`
+          )} (${chalk.bold(
+            plural('instance', aliasedDeployment.scale.current, true)
+          )})`
         )
         // Test if we need to change the scale or just update the rules
         console.log(
           `> Scaling ${depl.url} to ${chalk.bold(
-            aliasedDeployment.scale.current + ' instances'
+            plural('instance', aliasedDeployment.scale.current, true)
           )} atomically` // Not a typo
         )
         if (depl.scale.current !== aliasedDeployment.scale.current) {
@@ -506,7 +527,7 @@ module.exports = class Alias extends Now {
         return bail(new Error(body.error.message))
       }
 
-      // The two expected succesful cods are 200 and 304
+      // The two expected successful codes are 200 and 304
       if (res.status !== 200 && res.status !== 304) {
         throw new Error('Unhandled error')
       }
@@ -543,11 +564,18 @@ module.exports = class Alias extends Now {
 
       const body = await res.json()
 
+      if (res.status === 409 && body.error.code === 'record_conflict') {
+        if (this._debug) {
+          console.log(`> [debug] ${body.error.oldId} is a conflicting record for "${name}"`)
+        }
+        return
+      }
+
       if (res.status !== 200) {
         throw new Error(body.error.message)
       }
 
-      return body
+      return
     })
   }
 

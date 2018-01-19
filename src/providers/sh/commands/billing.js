@@ -4,6 +4,7 @@
 const chalk = require('chalk')
 const mri = require('mri')
 const ms = require('ms')
+const plural = require('pluralize')
 
 // Utilities
 const { handleError, error } = require('../util/error')
@@ -68,7 +69,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   subcommand = argv._[0]
 
   if (argv.help || !subcommand) {
@@ -174,9 +175,9 @@ async function run({ token, sh: { currentTeam, user } }) {
 
       const elapsed = ms(new Date() - start)
       console.log(
-        `> ${cards.cards.length} card${cards.cards.length === 1
-          ? ''
-          : 's'} found under ${chalk.bold(
+        `> ${
+          plural('card', cards.cards.length, true)
+        } found under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed}]`)}`
       )

@@ -9,9 +9,8 @@ const { parse: parseUrl } = require('url')
 const fetch = require('node-fetch')
 const bytes = require('bytes')
 const chalk = require('chalk')
-const resumer = require('resumer')
+const through2 = require('through2')
 const retry = require('async-retry')
-const splitArray = require('split-array')
 const { parse: parseIni } = require('ini')
 const { readFile, stat, lstat } = require('fs-extra')
 const ms = require('ms')
@@ -29,7 +28,7 @@ const toHost = require('./to-host')
 const { responseError } = require('./error')
 
 // How many concurrent HTTP/2 stream uploads
-const MAX_CONCURRENT = 10
+const MAX_CONCURRENT = 50
 
 // Check if running windows
 const IS_WIN = process.platform.startsWith('win')
@@ -84,7 +83,7 @@ module.exports = class Now extends EventEmitter {
       if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
         const err = new Error(
           'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start.'
+            'See: https://docs.npmjs.com/cli/start'
         )
         err.userError = true
         throw err
@@ -123,12 +122,11 @@ module.exports = class Now extends EventEmitter {
     this._files = hashes
 
     const deployment = await this.retry(async bail => {
-      if (this._debug) {
-        console.time('> [debug] /now/create')
-      }
-
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
+      if (this._debug) {
+        console.time('> [debug] get files ready for deployment')
+      }
       const files = await Promise.all(
         Array.prototype.concat.apply(
           [],
@@ -155,8 +153,14 @@ module.exports = class Now extends EventEmitter {
           )
         )
       )
+      if (this._debug) {
+        console.timeEnd('> [debug] get files ready for deployment')
+      }
 
-      const res = await this._fetch('/now/create', {
+      if (this._debug) {
+        console.time('> [debug] v2/now/deployments')
+      }
+      const res = await this._fetch('/v2/now/deployments', {
         method: 'POST',
         body: {
           env,
@@ -168,12 +172,13 @@ module.exports = class Now extends EventEmitter {
           registryAuthToken: authToken,
           files,
           engines,
-          sessionAffinity
+          sessionAffinity,
+          atlas: hasNowJson && Boolean(nowConfig.atlas)
         }
       })
 
       if (this._debug) {
-        console.timeEnd('> [debug] /now/create')
+        console.timeEnd('> [debug] v2/now/deployments')
       }
 
       // No retry on 4xx
@@ -193,6 +198,8 @@ module.exports = class Now extends EventEmitter {
         err.status = res.status
         err.retryAfter = 'never'
         return bail(err)
+      } else if (res.status === 400 && body.error && body.error.code === 'missing_files') {
+        return body
       } else if (res.status >= 400 && res.status < 500) {
         const err = new Error(body.error.message)
         err.userError = true
@@ -241,6 +248,12 @@ module.exports = class Now extends EventEmitter {
       }
     }
 
+    if (deployment.error && deployment.error.code === 'missing_files') {
+      this._missing = deployment.error.missing || []
+      this._fileCount = files.length
+      return null;
+    }
+
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node) {
         if (missingVersion) {
@@ -263,85 +276,89 @@ module.exports = class Now extends EventEmitter {
 
     this._id = deployment.deploymentId
     this._host = deployment.url
-    this._missing = deployment.missing || []
+    this._missing = []
     this._fileCount = files.length
 
     return this._url
   }
 
   upload() {
-    const parts = splitArray(this._missing, MAX_CONCURRENT)
-
     if (this._debug) {
       console.log(
         '> [debug] Will upload ' +
-          `${this._missing.length} files in ${parts.length} ` +
-          `steps of ${MAX_CONCURRENT} uploads.`
+          `${this._missing.length} files`
       )
     }
 
-    const uploadChunk = () => {
-      Promise.all(
-        parts.shift().map(sha =>
-          retry(
-            async (bail, attempt) => {
-              const file = this._files.get(sha)
-              const { data, names } = file
+    this._agent.setConcurrency({
+      maxStreams: MAX_CONCURRENT,
+      capacity: this._missing.length
+    })
 
+    if (this._debug) {
+      console.time('> [debug] Uploading files')
+    }
+
+    Promise.all(
+      this._missing.map(sha =>
+        retry(
+          async (bail, attempt) => {
+            const file = this._files.get(sha)
+            const { data, names } = file
+
+            if (this._debug) {
+              console.time(`> [debug] v2/now/files #${attempt} ${names.join(' ')}`)
+            }
+
+            const stream = through2()
+            stream.write(data)
+            stream.end()
+            const res = await this._fetch('/v2/now/files', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': data.length,
+                'x-now-digest': sha,
+                'x-now-size': data.length
+              },
+              body: stream
+            })
+
+            if (this._debug) {
+              console.timeEnd(
+                `> [debug] v2/now/files #${attempt} ${names.join(' ')}`
+              )
+            }
+
+            // No retry on 4xx
+            if (
+              res.status !== 200 &&
+              (res.status >= 400 || res.status < 500)
+            ) {
               if (this._debug) {
-                console.time(`> [debug] /sync #${attempt} ${names.join(' ')}`)
-              }
-
-              const stream = resumer().queue(data).end()
-              const res = await this._fetch('/now/sync', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
-                  'x-now-deployment-id': this._id,
-                  'x-now-sha': sha,
-                  'x-now-file': names
-                    .map(name => {
-                      return toRelative(encodeURIComponent(name), this._path)
-                    })
-                    .join(','),
-                  'x-now-size': data.length
-                },
-                body: stream
-              })
-
-              if (this._debug) {
-                console.timeEnd(
-                  `> [debug] /sync #${attempt} ${names.join(' ')}`
+                console.log(
+                  '> [debug] bailing on creating due to %s',
+                  res.status
                 )
               }
 
-              // No retry on 4xx
-              if (
-                res.status !== 200 &&
-                (res.status >= 400 || res.status < 500)
-              ) {
-                if (this._debug) {
-                  console.log(
-                    '> [debug] bailing on creating due to %s',
-                    res.status
-                  )
-                }
+              return bail(await responseError(res))
+            }
 
-                return bail(await responseError(res))
-              }
-
-              this.emit('upload', file)
-            },
-            { retries: 3, randomize: true, onRetry: this._onRetry }
-          )
+            this.emit('upload', file)
+          },
+          { retries: 3, randomize: true, onRetry: this._onRetry }
         )
       )
-        .then(() => (parts.length ? uploadChunk() : this.emit('complete')))
-        .catch(err => this.emit('error', err))
-    }
+    )
+      .then(() => {
+        if (this._debug) {
+          console.timeEnd('> [debug] Uploading files')
+        }
 
-    uploadChunk()
+        this.emit('complete')
+      })
+      .catch(err => this.emit('error', err))
   }
 
   async listSecrets() {
@@ -367,13 +384,13 @@ module.exports = class Now extends EventEmitter {
     const { deployments } = await this.retry(
       async bail => {
         if (this._debug) {
-          console.time('> [debug] /list')
+          console.time('> [debug] GET /v2/now/deployments')
         }
 
-        const res = await this._fetch('/now/list' + query)
+        const res = await this._fetch('/v2/now/deployments' + query)
 
         if (this._debug) {
-          console.timeEnd('> [debug] /list')
+          console.timeEnd('> [debug] GET /v2/now/deployments')
         }
 
         // No retry on 4xx
@@ -712,7 +729,7 @@ module.exports = class Now extends EventEmitter {
             )}.`
           )
         } else {
-          err = new Error(`Not authorized to access domain ${name}`)
+          err = new Error(`Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`)
         }
 
         err.userError = true
@@ -738,7 +755,7 @@ module.exports = class Now extends EventEmitter {
     })
   }
 
-  createCert(domain, { renew } = {}) {
+  createCert(domain, { renew, overwriteCustom } = {}) {
     return this.retry(
       async (bail, attempt) => {
         if (this._debug) {
@@ -749,7 +766,8 @@ module.exports = class Now extends EventEmitter {
           method: 'POST',
           body: {
             domains: [domain],
-            renew
+            renew,
+            overwriteCustom
           }
         })
 
@@ -821,20 +839,19 @@ module.exports = class Now extends EventEmitter {
   }
 
   async remove(deploymentId, { hard }) {
-    const data = { deploymentId, hard }
+    const url =`/now/deployments/${deploymentId}?hard=${hard ? '1' : '0' }`
 
     await this.retry(async bail => {
       if (this._debug) {
-        console.time('> [debug] /remove')
+        console.time(`> [debug] DELETE ${url}`)
       }
 
-      const res = await this._fetch('/now/remove', {
-        method: 'DELETE',
-        body: data
+      const res = await this._fetch(url, {
+        method: 'DELETE'
       })
 
       if (this._debug) {
-        console.timeEnd('> [debug] /remove')
+        console.timeEnd(`> [debug] DELETE ${url}`)
       }
 
       // No retry on 4xx

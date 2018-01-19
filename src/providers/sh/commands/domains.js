@@ -6,6 +6,7 @@ const mri = require('mri')
 const ms = require('ms')
 const psl = require('psl')
 const table = require('text-table')
+const plural = require('pluralize')
 
 // Utilities
 const NowDomains = require('../util/domains')
@@ -91,7 +92,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   subcommand = argv._[0]
 
   if (argv.help || !subcommand) {
@@ -166,9 +167,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 
       const elapsed_ = ms(new Date() - start_)
       console.log(
-        `> ${domains.length} domain${domains.length === 1
-          ? ''
-          : 's'} found under ${chalk.bold(
+        `> ${plural('domain', domains.length, true)} found under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed_}]`)}`
       )
@@ -220,9 +219,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         await domain.rm(_domain)
         const elapsed = ms(new Date() - start)
         console.log(
-          `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-            _domain.uid
-          )} removed [${elapsed}]`
+          `${chalk.cyan('> Success!')} Domain ${chalk.bold(_domain.name)} removed [${elapsed}]`
         )
       } catch (err) {
         console.error(error(err))
@@ -308,7 +305,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 async function readConfirmation(domain, _domain) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(_domain.created)) + ' ago')
-    const tbl = table([[chalk.underline(`https://${_domain.name}`), time]], {
+    const tbl = table([[chalk.bold(_domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
     })
@@ -320,9 +317,7 @@ async function readConfirmation(domain, _domain) {
       process.stdout.write(
         `> ${chalk.yellow('Warning!')} This domain's ` +
           `${chalk.bold(
-            _domain.aliases.length +
-              ' alias' +
-              (_domain.aliases.length === 1 ? '' : 'es')
+            plural('alias', _domain.aliases.length, true)
           )} ` +
           `will be removed. Run ${chalk.dim('`now alias ls`')} to list them.\n`
       )
@@ -331,9 +326,7 @@ async function readConfirmation(domain, _domain) {
       process.stdout.write(
         `> ${chalk.yellow('Warning!')} This domain's ` +
           `${chalk.bold(
-            _domain.certs.length +
-              ' certificate' +
-              (_domain.certs.length === 1 ? '' : 's')
+            plural('certificate', _domain.certs.length, true)
           )} ` +
           `will be removed. Run ${chalk.dim('`now cert ls`')} to list them.\n`
       )

@@ -1,4 +1,6 @@
 // Ours
+const error = require('../../../util/output/error')
+const exit = require('../../../util/exit')
 const Now = require('.')
 
 module.exports = class DomainRecords extends Now {
@@ -90,9 +92,11 @@ module.exports = class DomainRecords extends Now {
           new Error(body.error ? body.error.message : 'Unknown error')
         )
       } else if (res.status === 403) {
-        const err = new Error(`Not authorized to access the domain "${domain}"`)
-        err.userError = true
-        return bail(err)
+        console.error(error({
+          message: `Not authorized to access domain ${domain}`,
+          slug: 'unauthorized-domain'
+        }))
+        await exit(1)
       } else if (res.status === 404) {
         let err
 
@@ -125,9 +129,11 @@ module.exports = class DomainRecords extends Now {
 
       const body = await res.json()
       if (res.status === 403) {
-        const err = new Error(`Not authorized to access domain ${domain}`)
-        err.userError = true
-        return bail(err)
+        console.error(error({
+          message: `Not authorized to access domain ${domain}`,
+          slug: 'unauthorized-domain'
+        }))
+        await exit(1)
       } else if (res.status === 404) {
         let err
 

@@ -53,16 +53,23 @@ const help = () => {
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
       ${chalk.cyan(
-        '$ now dns add <DOMAIN> @ MX <RECORD VALUE> <PRIORITY>'
+        `$ now dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`
       )}
-      ${chalk.cyan('$ now dns add zeit.rocks @ MX mail.zeit.rocks 10')}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' MX mail.zeit.rocks 10`)}
 
   ${chalk.gray('–')} Add an SRV record
 
       ${chalk.cyan(
         '$ now dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>'
       )}
-      ${chalk.cyan('$ now dns add zeit.rocks SRV 10 0 389 zeit.party')}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' SRV 10 0 389 zeit.party`)}
+
+  ${chalk.gray('–')} Add a CAA record
+
+      ${chalk.cyan(
+        `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
+      )}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
 `)
 }
 
@@ -84,7 +91,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1)
 
   debug = argv.debug
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   subcommand = argv._[0]
 
   if (argv.help || !subcommand) {

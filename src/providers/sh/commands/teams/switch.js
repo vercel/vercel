@@ -4,14 +4,13 @@ const chalk = require('chalk')
 // Utilities
 const wait = require('../../../../util/output/wait')
 const listInput = require('../../../../util/input/list')
-const exit = require('../../../../util/exit')
 const success = require('../../../../util/output/success')
 const info = require('../../../../util/output/info')
 const error = require('../../../../util/output/error')
 const param = require('../../../../util/output/param')
 const {writeToConfigFile} = require('../../../../util/config-files')
 
-const updateCurrentTeam = async (config, newTeam) => {
+const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
     delete newTeam.created
     delete newTeam.creator_id
@@ -44,21 +43,22 @@ module.exports = async function({ teams, args, config }) {
     const newTeam = list.find(team => team.slug === desiredSlug)
 
     if (newTeam) {
-      await updateCurrentTeam(config, newTeam)
-      success(`The team ${chalk.bold(newTeam.name)} is now active!`)
-      return exit()
+      updateCurrentTeam(config, newTeam)
+      console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`))
+      return 0
     }
 
     if (desiredSlug === user.username) {
       stopSpinner = wait('Saving')
-      await updateCurrentTeam(config)
+      updateCurrentTeam(config)
 
       stopSpinner()
-      return success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
+      console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`))
+      return 0
     }
 
     console.error(error(`Could not find membership for team ${param(desiredSlug)}`))
-    return exit(1)
+    return 1
   }
 
   const choices = list.map(({ slug, name }) => {
@@ -102,13 +102,14 @@ module.exports = async function({ teams, args, config }) {
   const choice = await listInput({
     message,
     choices,
-    separator: false
+    separator: false,
+    eraseFinalAnswer: true
   })
 
   // Abort
   if (!choice) {
-    info('No changes made')
-    return exit()
+    console.log(info('No changes made'))
+    return 0
   }
 
   const newTeam = list.find(item => item.slug === choice)
@@ -116,25 +117,27 @@ module.exports = async function({ teams, args, config }) {
   // Switch to account
   if (!newTeam) {
     if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
-      info('No changes made')
-      return exit()
+      console.log(info('No changes made'))
+      return 0
     }
 
     stopSpinner = wait('Saving')
-    await updateCurrentTeam(config)
+    updateCurrentTeam(config)
 
     stopSpinner()
-    return success(`Your account (${chalk.bold(choice)}) is now active!`)
+    console.log(success(`Your account (${chalk.bold(choice)}) is now active!`))
+    return 0
   }
 
   if (newTeam.slug === currentTeam.slug) {
-    info('No changes made')
-    return exit()
+    console.log(info('No changes made'))
+    return 0
   }
 
   stopSpinner = wait('Saving')
-  await updateCurrentTeam(config, newTeam)
+  updateCurrentTeam(config, newTeam)
 
   stopSpinner()
-  success(`The team ${chalk.bold(newTeam.name)} is now active!`)
+  console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`))
+  return 0
 }

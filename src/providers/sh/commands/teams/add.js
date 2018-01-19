@@ -14,7 +14,6 @@ const cmd = require('../../../../util/output/cmd')
 const note = require('../../../../util/output/note')
 const uid = require('../../../../util/output/uid')
 const textInput = require('../../../../util/input/text')
-const exit = require('../../../../util/exit')
 const invite = require('./invite')
 const {writeToConfigFile} = require('../../../../util/config-files')
 
@@ -31,7 +30,7 @@ const gracefulExit = () => {
       'now switch'
     )} to change it in the future.`
   )
-  return exit()
+  return 0
 }
 
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/')
@@ -59,7 +58,7 @@ module.exports = async function({ teams, config }) {
     } catch (err) {
       if (err.message === 'USER_ABORT') {
         info('Aborted')
-        return exit()
+        return 0
       }
       throw err
     }
@@ -107,7 +106,7 @@ module.exports = async function({ teams, config }) {
   if (res.error) {
     console.error(error(res.error.message))
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`)
-    exit(1)
+    return 1
     // TODO: maybe we want to ask the user to retry? not sure if
     // there's a scenario where that would be wanted
   }

@@ -11,6 +11,7 @@ import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
 import which from 'which-promise'
+import readPkg from 'read-pkg'
 
 // Utilities
 import plusxSync from './chmod'
@@ -27,8 +28,8 @@ global.Promise = Promise
 let { platform } = process
 if (detectAlpine()) platform = 'alpine'
 
-const packagePath = path.join(__dirname, '../../package.json')
-const packageJSON = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+const packageDir = path.join(__dirname, '..', '..')
+const packageJSON = readPkg.sync(packageDir)
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
@@ -86,8 +87,7 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    enableProgress('Downloading Now CLI ' + packageJSON.version)
-    showProgress(0)
+    console.log('Downloading Now CLI ' + packageJSON.version + '. Please wait...')
 
     try {
       const name = platformToName[platform]
@@ -96,12 +96,6 @@ async function download() {
 
       if (resp.status !== 200) {
         throw new Error(resp.statusText + ' ' + url)
-      }
-
-      const size = resp.headers.get('content-length')
-
-      if (!size) {
-        throw new Error('Not found (content-length is absent)')
       }
 
       const ws = fs.createWriteStream(partial)
@@ -113,26 +107,28 @@ async function download() {
           .on('error', reject)
           .on('data', chunk => {
             bytesRead += chunk.length
-            showProgress(100 * bytesRead / size)
           })
 
-        const gunzip = zlib.createGunzip()
+        const encoding = resp.headers.get('content-encoding')
 
-        gunzip
-          .on('error', reject)
+        if (encoding && encoding === 'gzip') {
+          const gunzip = zlib.createGunzip()
 
-        resp.body.pipe(gunzip).pipe(ws)
+          gunzip
+            .on('error', reject)
+
+          resp.body.pipe(gunzip).pipe(ws)
+        } else {
+          resp.body.pipe(ws)
+        }
 
         ws
           .on('error', reject)
           .on('close', () => {
-            showProgress(100)
             resolve()
           })
       })
-    } finally {
-      disableProgress()
-    }
+    } catch (err) {}
   }, {
     retries: 500,
     onRetry: (err) => console.error(err)
@@ -140,6 +136,19 @@ async function download() {
 
   fs.renameSync(partial, target)
   fs.writeFileSync(backup, fs.readFileSync(target))
+}
+
+function modifyGitBashFile (content) {
+  return (
+    '#!/bin/sh\n' +
+      'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
+      '\n' +
+      'case `uname` in\n' +
+      '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
+      'esac\n' +
+      '\n' +
+    content.replace(
+      'download/dist/now"', 'download/dist/now.exe"'));
 }
 
 async function main() {
@@ -150,22 +159,17 @@ async function main() {
   }
 
   if (platform === 'win32') {
-    // Now.exe is executed only
-    fs.unlinkSync(now)
     try {
+      fs.writeFileSync(now, '')
       // Workaround for https://github.com/npm/cmd-shim/pull/25
       const globalPath = path.dirname(await which('npm'))
-      const gitBashFile = path.join(globalPath, 'now')
+      let gitBashFile = path.join(globalPath, 'now')
+      if (!fs.existsSync(gitBashFile)) {
+        gitBashFile = path.join(process.env.APPDATA, 'npm/now');
+      }
+
       fs.writeFileSync(
-        gitBashFile,
-        '#!/bin/sh\n' +
-          'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
-          '\n' +
-          'case `uname` in\n' +
-          '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
-          'esac\n' +
-          '\n' +
-          fs.readFileSync(gitBashFile, 'utf8')
+        gitBashFile, modifyGitBashFile(fs.readFileSync(gitBashFile, 'utf8'))
       )
     } catch (err) {
       if (err.code !== 'ENOENT') {

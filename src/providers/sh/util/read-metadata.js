@@ -3,6 +3,8 @@ const { basename, resolve: resolvePath } = require('path')
 
 // Packages
 const chalk = require('chalk')
+const loadJSON = require('load-json-file')
+const loadPackageJSON = require('read-pkg')
 const { readFile } = require('fs-extra')
 const { parse: parseDockerfile } = require('docker-file-parser')
 const determineType = require('deployment-type')
@@ -27,7 +29,7 @@ async function readMetaData(
   let name = deploymentName
   let affinity = sessionAffinity
 
-  const pkg = await readJSON(path, 'package.json')
+  const pkg = await readPkg(path)
   let nowConfig = await readJSON(getLocalConfigPath(path))
   const dockerfile = await readDockerfile(path)
 
@@ -171,28 +173,24 @@ async function readMetaData(
   }
 }
 
-async function readJSON(path, name) {
-  try {
-    const contents = await readFile(name ? resolvePath(path, name) : path, 'utf8')
-    return JSON.parse(contents)
-  } catch (err) {
-    // If the file doesn't exist then that's fine; any other error bubbles up
-    if (err.code !== 'ENOENT') {
-      err.userError = true
-      throw err
+function decorateUserErrors(fn) {
+  return async (...args) => {
+    try {
+      const res = await fn(...args)
+      return res
+    } catch (err) {
+      // If the file doesn't exist then that's fine; any other error bubbles up
+      if (err.code !== 'ENOENT') {
+        err.userError = true
+        throw err
+      }
     }
   }
 }
 
-async function readDockerfile(path, name = 'Dockerfile') {
-  try {
+const readPkg = decorateUserErrors(loadPackageJSON)
+const readJSON = decorateUserErrors(loadJSON)
+const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
     const contents = await readFile(resolvePath(path, name), 'utf8')
     return parseDockerfile(contents, { includeComments: true })
-  } catch (err) {
-    // If the file doesn't exist then that's fine; any other error bubbles up
-    if (err.code !== 'ENOENT') {
-      err.userError = true
-      throw err
-    }
-  }
-}
+})

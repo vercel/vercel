@@ -14,6 +14,8 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
+const retry = require('async-retry');
+const jsonlines = require('jsonlines');
 
 // Utilities
 const Logger = require('../util/build-logger')
@@ -26,6 +28,7 @@ const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
 const info = require('../../../util/output/info')
+const success = require('../../../util/output/success')
 const wait = require('../../../util/output/wait')
 const NowPlans = require('../util/plans')
 const promptBool = require('../../../util/input/prompt-bool')
@@ -45,7 +48,8 @@ const mriOpts = {
     'forward-npm',
     'docker',
     'npm',
-    'static'
+    'static',
+    'public'
   ],
   alias: {
     env: 'e',
@@ -127,7 +131,7 @@ const help = () => {
     -T, --team                     Set a custom team scope
 
   ${chalk.dim(
-    'Enforceable Types (when both package.json and Dockerfile exist):'
+    `Enforceable Types (by default, it's detected automatically):`
   )}
 
     --npm                          Node.js application
@@ -140,7 +144,7 @@ const help = () => {
 
     ${chalk.cyan('$ now')}
 
-  ${chalk.gray('–')} Deploy a custom path ${chalk.dim('`/usr/src/project`')}
+  ${chalk.gray('–')} Deploy a custom path
 
     ${chalk.cyan('$ now /usr/src/project')}
 
@@ -151,7 +155,7 @@ const help = () => {
   ${chalk.gray('–')} Deploy with environment variables
 
     ${chalk.cyan(
-      '$ now -e NODE_ENV=production -e MYSQL_PASSWORD=@mysql-password'
+      '$ now -e NODE_ENV=production -e SECRET=@mysql-secret'
     )}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
@@ -187,7 +191,42 @@ const stopDeployment = async msg => {
   await exit(1)
 }
 
-const envFields = async list => {
+// Converts `env` Arrays, Strings and Objects into env Objects.
+// `null` empty value means to prompt user for value upon deployment.
+// `undefined` empty value means to inherit value from user's env.
+const parseEnv = (env, empty) => {
+  if (!env) {
+    return {}
+  }
+  if (typeof env === 'string') {
+    // a single `--env` arg comes in as a String
+    env = [ env ]
+  }
+  if (Array.isArray(env)) {
+    return env.reduce((o, e) => {
+      let key
+      let value
+      const equalsSign = e.indexOf('=')
+      if (equalsSign === -1) {
+        key = e
+        value = empty
+      } else {
+        key = e.substr(0, equalsSign)
+        value = e.substr(equalsSign + 1)
+      }
+      o[key] = value
+      return o
+    }, {})
+  }
+  // assume it's already an Object
+  return env
+}
+
+const promptForEnvFields = async list => {
+  if (list.length === 0) {
+    return {}
+  }
+
   const questions = []
 
   for (const field of list) {
@@ -201,15 +240,11 @@ const envFields = async list => {
   require('../../../util/input/patch-inquirer')
 
   console.log(
-    info('Please enter the values for the following environment variables:')
+    info('Please enter values for the following environment variables:')
   )
   const answers = await inquirer.prompt(questions)
 
-  for (const answer in answers) {
-    if (!{}.hasOwnProperty.call(answers, answer)) {
-      continue
-    }
-
+  for (const answer of Object.keys(answers)) {
     const content = answers[answer]
 
     if (content === '') {
@@ -250,7 +285,7 @@ async function main(ctx) {
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
   wantsPublic = argv.public
-  apiUrl = argv.url || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
   isTTY = process.stdout.isTTY
   quiet = !isTTY
 
@@ -277,12 +312,13 @@ async function sync({ token, config: { currentTeam, user } }) {
     const start = Date.now()
     const rawPath = argv._[0]
 
-    const planPromise = new NowPlans({
+    const nowPlans = new NowPlans({
       apiUrl,
       token,
       debug,
       currentTeam
-    }).getCurrent()
+    })
+    const planPromise = nowPlans.getCurrent()
 
     try {
       await fs.stat(rawPath || path)
@@ -353,17 +389,17 @@ async function sync({ token, config: { currentTeam, user } }) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
-          `> Deploying ${gitRepo.type} repository "${chalk.bold(
+          info(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       } else {
         console.log(
-          `> Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+          info(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          )}`)
         )
       }
     }
@@ -415,34 +451,33 @@ async function sync({ token, config: { currentTeam, user } }) {
       const dotenvFileName =
         typeof dotenvOption === 'string' ? dotenvOption : '.env'
 
-      if (!fs.existsSync(dotenvFileName)) {
-        console.error(error({
-          message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-          slug: 'missing-dotenv-target'
-        }))
-        await exit(1)
+      try {
+        const dotenvFile = await fs.readFile(dotenvFileName)
+        dotenvConfig = dotenv.parse(dotenvFile)
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          console.error(error({
+            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
+            slug: 'missing-dotenv-target'
+          }))
+          await exit(1)
+        } else {
+          throw err
+        }
       }
-
-      const dotenvFile = await fs.readFile(dotenvFileName)
-      dotenvConfig = dotenv.parse(dotenvFile)
     }
 
-    let pkgEnv = nowConfig && nowConfig.env
-    const argEnv = [].concat(argv.env || [])
+    // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+    const deploymentEnv = Object.assign(
+      {},
+      dotenvConfig,
+      parseEnv(nowConfig && nowConfig.env, null),
+      parseEnv(argv.env, undefined)
+    )
 
-    if (pkgEnv && Array.isArray(nowConfig.env)) {
-      const defined = argEnv.join()
-      const askFor = nowConfig.env.filter(item => !defined.includes(`${item}=`))
-
-      pkgEnv = await envFields(askFor)
-    }
-
-    // Merge `now.env` from package.json with `-e` arguments
-    const envs = [
-      ...Object.keys(dotenvConfig || {}).map(k => `${k}=${dotenvConfig[k]}`),
-      ...Object.keys(pkgEnv || {}).map(k => `${k}=${pkgEnv[k]}`),
-      ...argEnv
-    ]
+    // If there's any envs with `null` then prompt the user for the values
+    const askFor = Object.keys(deploymentEnv).filter(key => deploymentEnv[key] === null)
+    Object.assign(deploymentEnv, await promptForEnvFields(askFor))
 
     let secrets
     const findSecret = async uidOrName => {
@@ -456,20 +491,13 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     const env_ = await Promise.all(
-      envs.map(async kv => {
-        if (typeof kv !== 'string') {
+      Object.keys(deploymentEnv).map(async key => {
+        if (!key) {
           console.error(error({
-            message: 'Env key and value are missing',
+            message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
           await exit(1)
-        }
-
-        const [key, ...rest] = kv.split('=')
-        let val
-
-        if (rest.length > 0) {
-          val = rest.join('=')
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
@@ -481,10 +509,7 @@ async function sync({ token, config: { currentTeam, user } }) {
           await exit(1)
         }
 
-        if (!key) {
-          console.error(error(`Invalid env option ${chalk.bold(`"${kv}"`)}`))
-          await exit(1)
-        }
+        let val = deploymentEnv[key]
 
         if (val === undefined) {
           if (key in process.env) {
@@ -549,10 +574,9 @@ async function sync({ token, config: { currentTeam, user } }) {
       env[key] = val
     })
 
+    let syncCount
     try {
-      await now.create(
-        path,
-        Object.assign(
+      const createArgs = Object.assign(
           {
             env,
             followSymlinks,
@@ -564,7 +588,52 @@ async function sync({ token, config: { currentTeam, user } }) {
           },
           meta
         )
-      )
+
+      await now.create(path, createArgs)
+      if (now.syncFileCount > 0) {
+        await new Promise((resolve) => {
+          if (debug && now.syncFileCount !== now.fileCount) {
+            console.log(
+              `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+            )
+          }
+          const size = bytes(now.syncAmount)
+          syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+            ? 's'
+            : ''}`
+          const bar = new Progress(
+            `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+            {
+              width: 20,
+              complete: '=',
+              incomplete: '',
+              total: now.syncAmount,
+              clear: true
+            }
+          )
+
+          now.upload()
+
+          now.on('upload', ({ names, data }) => {
+            const amount = data.length
+            if (debug) {
+              console.log(
+                `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
+              )
+            }
+            bar.tick(amount)
+          })
+
+          now.on('complete', () => resolve())
+
+          now.on('error', err => {
+            console.error(error('Upload failed'))
+            reject(err)
+          })
+        })
+
+        await now.create(path, createArgs)
+      }
     } catch (err) {
       if (debug) {
         console.log(`> [debug] error: ${err}\n${err.stack}`)
@@ -598,31 +667,7 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     const startU = new Date()
-
-    const complete = ({ syncCount }) => {
-      if (!quiet) {
-        const elapsedU = ms(new Date() - startU)
-        console.log(
-          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
-        )
-        console.log('> Initializing…')
-      }
-
-      // Close http2 agent
-      now.close()
-
-      // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
-          console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
-        }
-      }
-    }
-
     const plan = await planPromise
-
     if (plan.id === 'oss' && !wantsPublic) {
       if (isTTY) {
         console.log(
@@ -665,60 +710,39 @@ async function sync({ token, config: { currentTeam, user } }) {
       }
     }
 
-    if (now.syncAmount) {
-      if (debug && now.syncFileCount !== now.fileCount) {
+    if (!quiet) {
+      if (syncCount) {
+        const elapsedU = ms(new Date() - startU)
         console.log(
-          `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
+          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
         )
       }
-      const size = bytes(now.syncAmount)
-      const syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-        ? 's'
-        : ''}`
-      const bar = new Progress(
-        `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-        {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: now.syncAmount,
-          clear: true
-        }
-      )
+    }
 
-      now.upload()
-
-      now.on('upload', ({ names, data }) => {
-        const amount = data.length
-        if (debug) {
-          console.log(
-            `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
-          )
-        }
-        bar.tick(amount)
-      })
-
-      now.on('complete', () => complete({ syncCount }))
-
-      now.on('error', async err => {
-        console.error(error('Upload failed'))
-        await stopDeployment(err)
-      })
-    } else {
+    // Show build logs
+    if (deploymentType === 'static') {
       if (!quiet) {
-        console.log(`> Initializing…`)
+        console.log(success('Deployment complete!'));
       }
-
-      // Close http2 agent
-      now.close()
-
-      // Show build logs
-      if (!quiet) {
-        if (deploymentType === 'static') {
-          console.log(`${chalk.cyan('> Deployment complete!')}`)
-        } else {
-          printLogs(now.host, token, currentTeam, user)
+      await exit(0);
+    } else {
+      if (nowConfig && nowConfig.atlas) {
+        const cancelWait = wait('Initializing…');
+        try {
+          await printEvents(now, currentTeam, {
+            onOpen: cancelWait,
+            debug
+          });
+        } catch (err) {
+          cancelWait();
+          throw err;
         }
+        await exit(0);
+      } else {
+        if (!quiet) {
+          console.log(info('Initializing…'));
+        }
+        printLogs(now.host, token, currentTeam, user)
       }
     }
   })
@@ -791,6 +815,99 @@ async function readMeta(
     }
     throw err
   }
+}
+
+async function printEvents(now, currentTeam = null, {
+  onOpen = ()=>{},
+  debug = false
+} = {}) {
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+  if (currentTeam) {
+    url += `&teamId=${currentTeam.id}`;
+  }
+
+  if (debug) {
+    console.log(info(`[debug] events ${url}`));
+  }
+
+  // we keep track of how much we log in case we
+  // drop the connection and have to start over
+  let o = 0;
+
+  await retry(async (bail, attemptNumber) => {
+    if (debug && attemptNumber > 1) {
+      console.log(info('[debug] retrying events'));
+    }
+
+    // if we are retrying, we clear past logs
+    if (!quiet && o) process.stdout.write(eraseLines(0));
+
+    const res = await now._fetch(url);
+    if (res.ok) {
+      // fire the open callback and ensure it's only fired once
+      onOpen();
+      onOpen = ()=>{};
+
+      // handle the event stream and make the promise get rejected
+      // if errors occur so we can retry
+      return new Promise((resolve, reject) => {
+        const stream = res.body.pipe(jsonlines.parse());
+        const onData = ({ type, payload }) => {
+          // if we are 'quiet' because we are piping, simply
+          // wait for the first instance to be started
+          // and ignore everything else
+          if (quiet) {
+            if (type === 'instance-start') {
+              resolve();
+            }
+            return;
+          }
+
+          switch (type) {
+            case 'build-start':
+              o++;
+              console.log(info('Building…'));
+              break;
+
+            case 'stdout':
+            case 'stderr':
+              console.log(payload);
+              break;
+
+            case 'build-complete':
+              o++;
+              console.log(success('Build complete'));
+              break;
+
+            case 'instance-start':
+              o++;
+              console.log(success('Deployment started!'));
+
+              // avoid lingering events
+              stream.off('data', onData);
+
+              // close the stream and resolve
+              stream.end();
+              resolve();
+              break;
+          }
+        };
+        stream.on('data', onData)
+        stream.on('error', err => {
+          reject(new Error(`Deployment event stream error: ${err.stack}`));
+        });
+      });
+    } else {
+      const err = new Error(`Deployment events status ${res.status}`);
+      if (res.status < 500) {
+        bail(err);
+      } else {
+        throw err;
+      }
+    }
+  }, {
+    retries: 4
+  });
 }
 
 function printLogs(host, token) {

@@ -6,6 +6,7 @@ const mri = require('mri')
 const table = require('text-table')
 const ms = require('ms')
 const printf = require('printf')
+const plural = require('pluralize')
 require('epipebomb')()
 const supportsColor = require('supports-color')
 
@@ -117,7 +118,7 @@ const main = async ctx => {
   subcommand = argv._[0]
 
   debug = argv.debug
-  apiUrl = argv.apiUrl || 'https://api.zeit.co'
+  apiUrl = ctx.apiUrl
 
   if (argv.help) {
     help()
@@ -204,13 +205,14 @@ async function run({ token, sh: { currentTeam, user } }) {
         return exit(1)
       }
 
+      const deploymentDeletedStub = '<deployment deleted>'
       const start_ = new Date()
       const aliases = await alias.ls()
       aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
       const sourceUrlLength =
         aliases.reduce((acc, i) => {
-          return Math.max(acc, (i.deployment && i.deployment.url.length) || 0)
+          return Math.max(acc, (i.deployment && i.deployment.url && i.deployment.url.length) || deploymentDeletedStub.length)
         }, 0) + 9
       const aliasLength =
         aliases.reduce((acc, i) => {
@@ -218,9 +220,9 @@ async function run({ token, sh: { currentTeam, user } }) {
         }, 0) + 8
       const elapsed_ = ms(new Date() - start_)
       console.log(
-        `> ${aliases.length} alias${aliases.length === 1
-          ? ''
-          : 'es'} found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold(
+        `> ${
+          plural('alias', aliases.length, true)
+        } found ${chalk.gray(`[${elapsed_}]`)} under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )}`
       )
@@ -261,22 +263,23 @@ async function run({ token, sh: { currentTeam, user } }) {
           aliasSpec += underlineWidth
           ageSpec += grayWidth
         }
-        if (_alias.deployment) {
+        if (_alias.deployment && _alias.deployment.url) {
           _sourceUrl = chalk.underline(_alias.deployment.url)
           if (supportsColor) {
             urlSpec += grayWidth
           }
         } else if (_alias.rules) {
           _sourceUrl = chalk.gray(
-            `[${_alias.rules.length} custom rule${_alias.rules.length > 1
-              ? 's'
-              : ''}]`
+            `[${plural('custom rule', _alias.rules.length, true)}]`
           )
           if (supportsColor) {
             urlSpec += underlineWidth
           }
         } else {
-          _sourceUrl = chalk.gray('<null>')
+          _sourceUrl = chalk.gray(deploymentDeletedStub)
+          if (supportsColor) {
+            urlSpec += underlineWidth
+          }
         }
 
         const time = chalk.gray(ms(current - new Date(_alias.created)))

@@ -146,7 +146,7 @@ The v1 release of `now.json` includes the following specification:
   - `Array` a list of suggested environmental variables that the project
     _might_ require to be deployed and function correctly
 - `regions` - `Array` of `String`
-  - specifies one or more regition identifiers to deploy to. A wildcard
+  - specifies one or more region identifiers to deploy to. A wildcard
     can be used to signify deployment to all supported regions by the
     provider
 - `files` - `Array` of `String`
@@ -305,8 +305,8 @@ As always, you can use `npm test` to run the tests and see if your changes have 
 
 ## Authors
 
-- Guillermo Rauch ([@rauchg](https://twitter.com/rauchg)) - [▲ZEIT](https://zeit.co)
-- Leo Lamprecht ([@notquiteleo](https://twitter.com/notquiteleo)) - [▲ZEIT](https://zeit.co)
-- Tony Kovanen ([@TonyKovanen](https://twitter.com/TonyKovanen)) - [▲ZEIT](https://zeit.co)
-- Olli Vanhoja ([@OVanhoja](https://twitter.com/OVanhoja)) - [▲ZEIT](https://zeit.co)
-- Naoyuki Kanezawa ([@nkzawa](https://twitter.com/nkzawa)) - [▲ZEIT](https://zeit.co)
+- Guillermo Rauch ([@rauchg](https://twitter.com/rauchg)) - [ZEIT](https://zeit.co)
+- Leo Lamprecht ([@notquiteleo](https://twitter.com/notquiteleo)) - [ZEIT](https://zeit.co)
+- Tony Kovanen ([@TonyKovanen](https://twitter.com/TonyKovanen)) - [ZEIT](https://zeit.co)
+- Olli Vanhoja ([@OVanhoja](https://twitter.com/OVanhoja)) - [ZEIT](https://zeit.co)
+- Naoyuki Kanezawa ([@nkzawa](https://twitter.com/nkzawa)) - [ZEIT](https://zeit.co)
