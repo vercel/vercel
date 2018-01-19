@@ -31,6 +31,5 @@
         "tags": true
       }
     }
-  ],
-  "after_deploy": "npm install -g now"
+  ]
 }
