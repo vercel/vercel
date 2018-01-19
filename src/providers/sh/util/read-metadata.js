@@ -57,8 +57,8 @@ async function readMetaData(
     type = nowConfig.type
   }
 
-  // The same goes for this
-  if (nowConfig && nowConfig.type) {
+  // If a deployment type hasn't been specified then retrieve it from now.json
+  if (!type && nowConfig && nowConfig.type) {
     type = nowConfig.type
   }
 
