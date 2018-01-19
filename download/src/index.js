@@ -87,7 +87,8 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    console.log('Downloading Now CLI ' + packageJSON.version + '. Please wait...')
+    enableProgress('Downloading Now CLI ' + packageJSON.version)
+    showProgress(0)
 
     try {
       const name = platformToName[platform]
@@ -98,6 +99,7 @@ async function download() {
         throw new Error(resp.statusText + ' ' + url)
       }
 
+      const size = resp.headers.get('content-length')
       const ws = fs.createWriteStream(partial)
 
       await new Promise((resolve, reject) => {
@@ -107,6 +109,10 @@ async function download() {
           .on('error', reject)
           .on('data', chunk => {
             bytesRead += chunk.length
+
+            if (size) {
+              showProgress(100 * bytesRead / size)
+            }
           })
 
         const encoding = resp.headers.get('content-encoding')
@@ -125,10 +131,13 @@ async function download() {
         ws
           .on('error', reject)
           .on('close', () => {
+            showProgress(100)
             resolve()
           })
       })
-    } catch (err) {}
+    } finally {
+      disableProgress()
+    }
   }, {
     retries: 500,
     onRetry: (err) => console.error(err)
