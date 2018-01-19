@@ -87,17 +87,19 @@ async function download() {
   console.log('')
 
   await retry(async () => {
-    console.log('Downloading Now CLI ' + packageJSON.version + '. Please wait...')
+    enableProgress('Downloading Now CLI ' + packageJSON.version)
+    showProgress(0)
 
     try {
       const name = platformToName[platform]
-      const url = `https://cdn.zeit.co/releases/now-cli/${packageJSON.version}/${name}`
+      const url = `https://assets.zeit.co/raw/upload/now-cli/${packageJSON.version}/${name}.gz`
       const resp = await fetch(url, { compress: false })
 
       if (resp.status !== 200) {
         throw new Error(resp.statusText + ' ' + url)
       }
 
+      const size = resp.headers.get('content-length')
       const ws = fs.createWriteStream(partial)
 
       await new Promise((resolve, reject) => {
@@ -107,28 +109,29 @@ async function download() {
           .on('error', reject)
           .on('data', chunk => {
             bytesRead += chunk.length
+
+            if (size) {
+              showProgress(100 * bytesRead / size)
+            }
           })
 
-        const encoding = resp.headers.get('content-encoding')
+        const gunzip = zlib.createGunzip()
 
-        if (encoding && encoding === 'gzip') {
-          const gunzip = zlib.createGunzip()
+        gunzip
+          .on('error', reject)
 
-          gunzip
-            .on('error', reject)
-
-          resp.body.pipe(gunzip).pipe(ws)
-        } else {
-          resp.body.pipe(ws)
-        }
+        resp.body.pipe(gunzip).pipe(ws)
 
         ws
           .on('error', reject)
           .on('close', () => {
+            showProgress(100)
             resolve()
           })
       })
-    } catch (err) {}
+    } finally {
+      disableProgress()
+    }
   }, {
     retries: 500,
     onRetry: (err) => console.error(err)

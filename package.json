@@ -11,7 +11,9 @@
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
-    "pack": "webpack && pkg dist/now.js -c package.json -o packed/now --options no-warnings",
+    "gzip": "ls packed/now* | xargs gzip -k",
+    "bundle": "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
+    "pack": "rm -rf packed && webpack && npm run bundle && npm run gzip",
     "build-download": "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link",
     "build": "webpack"

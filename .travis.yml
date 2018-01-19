@@ -13,7 +13,7 @@
         "secure": "ff5V20LO5B8nwguQYtmb3Es/WHBP6GYFo0yOaiw7d1GrmeVFyZauQ7CQgI41toEuYnPlDxd+CQACXjARKLGzJbz80bIPuHZ07GevrmhEgYVHq4DuWAiQnuVf0CJKehDUAKUtR+c8giMQK9tE7O+M+yBciiC9UEKYRCmfyQPXOnEU+cRWNaL0PH2hnlz1AIgScdLblAqdJbVUjHQ+eT2yYeKx2qR09pxu9MDwYLCfpWsLa+8PAcS4MHyuU7mqF27Y484Ab/X3kwNDhnzanyG9YhgHcCeNTZULDQUAJh7Pdf5uQvsfrcgNh1IzY+xvxmYPo2YavkGoDraPBqV46L7FP7KZX3pyh+crR1J+915pE96yHcV3+o40OgSuvW1jw7JCnVkkefryrABFlu7Dez7vd2mlUE+YXcnWhOEp12KUC2izfvm+hvQOqlA+I4VmCWHCA4peM93upQ3QCRhfB18L7JjoGo9/UvUF7wtm/1urMRSU3pWfcNRUtAg497gUUEbA9zVpLya+fQ2QdDe13L/03lYOz78NtDrzSIaWDfJTFrYSpgzwqmSwsTuismxP4NUV0aVEnpL9M+iKBxT0aLWeOIylGsnO5Ido7A+6SGqh8qqeNI84VRKZheOLV6GAqM5zvPDPeFdijRFNbP1n+rW+eepv2uCU8Km38FfhV1Qp85k="
       },
       "file_glob": true,
-      "file": "packed/*",
+      "file": "packed/*.gz",
       "skip_cleanup": true,
       "on": {
         "tags": true
@@ -30,6 +30,5 @@
         "tags": true
       }
     }
-  ],
-  "after_deploy": "npm install -g now"
+  ]
 }
