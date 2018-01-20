@@ -92,7 +92,7 @@ async function download() {
 
     try {
       const name = platformToName[platform]
-      const url = `https://assets.zeit.co/raw/upload/now-cli/${packageJSON.version}/${name}.gz`
+      const url = `https://github.com/zeit/now-cli/releases/download/${packageJSON.version}/${name}.gz`
       const resp = await fetch(url, { compress: false })
 
       if (resp.status !== 200) {
