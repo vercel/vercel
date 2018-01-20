@@ -4349,9 +4349,9 @@ pkg-dir@^2.0.0:
   dependencies:
     find-up "^2.1.0"
 
-pkg-fetch@2.5.3:
-  version "2.5.3"
-  resolved "https://registry.yarnpkg.com/pkg-fetch/-/pkg-fetch-2.5.3.tgz#fe9f13795a0aa99e66d227db98da3936229bc1ca"
+pkg-fetch@2.5.4:
+  version "2.5.4"
+  resolved "https://registry.yarnpkg.com/pkg-fetch/-/pkg-fetch-2.5.4.tgz#0573550050f38d2d5f91131c1bd718f9b39faf06"
   dependencies:
     babel-runtime "6.25.0"
     byline "5.0.0"
@@ -4366,9 +4366,9 @@ pkg-fetch@2.5.3:
     semver "5.4.1"
     unique-temp-dir "1.0.0"
 
-pkg@4.3.0-beta.4:
-  version "4.3.0-beta.4"
-  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.0-beta.4.tgz#61c48c27a4970cab269a79f4a0f0dc5a2fae62b2"
+pkg@4.3.0:
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.0.tgz#f1a7dd05439d6fbfc513340d6478778781a3112b"
   dependencies:
     acorn "5.1.1"
     babel-runtime "6.25.0"
@@ -4378,7 +4378,7 @@ pkg@4.3.0-beta.4:
     globby "6.1.0"
     minimist "1.2.0"
     multistream "2.1.0"
-    pkg-fetch "2.5.3"
+    pkg-fetch "2.5.4"
     progress "2.0.0"
     resolve "1.4.0"
     simple-bufferstream "1.0.0"
