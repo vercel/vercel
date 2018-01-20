@@ -86,7 +86,7 @@
   },
   "devDependencies": {
     "@google/maps": "0.4.3",
-    "@zeit/check-updates": "1.0.2",
+    "@zeit/check-updates": "1.1.0",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "archiver": "2.0.3",
