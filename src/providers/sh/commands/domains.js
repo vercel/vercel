@@ -34,7 +34,6 @@ const help = () => {
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
     -e, --external                 Use external DNS server
-    -f, --force                    Skip DNS verification
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
@@ -79,13 +78,12 @@ let subcommand
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['coupon'],
-    boolean: ['help', 'debug', 'external', 'force'],
+    boolean: ['help', 'debug', 'external'],
     alias: {
       help: 'h',
       coupon: 'c',
       debug: 'd',
       external: 'e',
-      force: 'f'
     }
   })
 
@@ -254,7 +252,6 @@ async function run({ token, sh: { currentTeam, user } }) {
       const start = new Date()
       const { uid, code, created, verified } = await domain.add(
         name,
-        argv.force,
         argv.external
       )
       const elapsed = ms(new Date() - start)
