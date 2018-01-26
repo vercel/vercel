@@ -6,9 +6,7 @@ const chalk = require('chalk')
 
 // Ours
 const Now = require('.')
-const isZeitWorld = require('./is-zeit-world')
 const isValidDomain = require('./domains/is-valid-domain')
-const { DNS_VERIFICATION_ERROR } = require('./errors')
 const cmd = require('../../../util/output/param')
 
 module.exports = class Domains extends Now {
@@ -99,7 +97,7 @@ module.exports = class Domains extends Now {
     })
   }
 
-  async add(domain, skipVerification, isExternal) {
+  async add(domain, isExternal) {
     if (!isValidDomain(domain)) {
       const err = new Error(
         `The supplied value ${chalk.bold(`"${domain}"`)} is not a valid domain.`
@@ -116,40 +114,7 @@ module.exports = class Domains extends Now {
       throw err
     }
 
-    if (skipVerification || isExternal) {
-      return this.setupDomain(domain, { isExternal })
-    }
-
-    let ns
-
-    try {
-      console.log('> Verifying nameservers…')
-      const res = await this.getNameservers(domain)
-      ns = res.nameservers
-    } catch (err) {
-      const err2 = new Error(
-        `Unable to fetch nameservers for ${chalk.underline(
-          chalk.bold(domain)
-        )}.`
-      )
-      err2.userError = true
-      throw err2
-    }
-
-    if (isZeitWorld(ns)) {
-      console.log(`> Verification ${chalk.bold('OK')}!`)
-      return this.setupDomain(domain)
-    }
-
-    if (this._debug) {
-      console.log(
-        `> [debug] Supplied domain "${domain}" has non-zeit nameservers`
-      )
-    }
-
-    const err3 = new Error(DNS_VERIFICATION_ERROR)
-    err3.userError = true
-    throw err3
+    return this.setupDomain(domain, { isExternal })
   }
 
   async status(name) {
