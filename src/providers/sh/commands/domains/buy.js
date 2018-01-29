@@ -55,10 +55,10 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
       validCoupon = true
 
       if (cards.length === 0) {
-        info(
+        console.log(info(
           'You have no credit cards on file. Please add one in order to claim your free domain'
-        )
-        info(`Your card will ${bold('not')} be charged`)
+        ))
+        console.log(info(`Your card will ${bold('not')} be charged`))
 
         await addBilling({
           creditCards,
@@ -100,7 +100,7 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
 
   eraseLines(1)
   if (!confirmation) {
-    return info('Aborted')
+    return console.log(info('Aborted'))
   }
 
   stopSpinner = wait('Purchasing')
