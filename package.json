@@ -117,7 +117,7 @@
     "docker-file-parser": "1.0.2",
     "dotenv": "4.0.0",
     "download": "6.2.5",
-    "email-prompt": "0.3.1",
+    "email-prompt": "0.3.2",
     "email-validator": "1.1.1",
     "epipebomb": "1.0.0",
     "eslint": "4.7.2",
