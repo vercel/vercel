@@ -340,7 +340,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         const elapsed = ms(new Date() - start)
         console.log(
           `${chalk.cyan('> Success!')} Alias ${chalk.bold(
-            _alias.uid
+            _alias.alias
           )} removed [${elapsed}]`
         )
       } catch (err) {
@@ -441,7 +441,6 @@ async function confirmDeploymentRemoval(alias, _alias) {
   const tbl = table(
     [
       [
-        _alias.uid,
         ...(_sourceUrl ? [_sourceUrl] : []),
         chalk.underline(_alias.alias),
         time
