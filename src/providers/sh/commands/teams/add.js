@@ -48,9 +48,9 @@ module.exports = async function({ teams, config }) {
   let elapsed
   let stopSpinner
 
-  info(
+  console.log(info(
     `Pick a team identifier for its url (e.g.: ${chalk.cyan('`zeit.co/acme`')})`
-  )
+  ))
   do {
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -85,10 +85,10 @@ module.exports = async function({ teams, config }) {
   } while (!team)
 
   eraseLines(2)
-  success(`Team created ${uid(team.id)} ${elapsed()}`)
+  console.log(success(`Team created ${uid(team.id)} ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n')
 
-  info('Pick a display name for your team')
+  console.log(info('Pick a display name for your team'))
   let name
   try {
     name = await textInput({
@@ -97,7 +97,7 @@ module.exports = async function({ teams, config }) {
     })
   } catch (err) {
     if (err.message === 'USER_ABORT') {
-      info('No name specified')
+      console.log(info('No name specified'))
       gracefulExit()
     } else {
       throw err
@@ -119,7 +119,7 @@ module.exports = async function({ teams, config }) {
 
   team = Object.assign(team, res)
 
-  success(`Team name saved ${elapsed()}`)
+  console.log(success(`Team name saved ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamNamePrefix + team.name + '\n')
 
   stopSpinner = wait('Saving')
