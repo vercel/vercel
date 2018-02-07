@@ -74,7 +74,7 @@ module.exports = async function(
     return fatalError(err)
   }
 
-  info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`)
+  console.log(info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`))
 
   if (args.length > 0) {
     for (const email of args) {
@@ -125,10 +125,10 @@ module.exports = async function(
         if (hasError) {
           hasError = false
           eraseLines(emails.length + 2)
-          info(
+          console.log(info(
             introMsg ||
               `Inviting team members to ${chalk.bold(currentTeam.name)}`
-          )
+          ))
           for (const email of emails) {
             console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
           }
@@ -149,9 +149,9 @@ module.exports = async function(
 
   const n = emails.length
   if (emails.length === 0) {
-    info(noopMsg)
+    console.log(info(noopMsg))
   } else {
-    success(`Invited ${n} team mate${n > 1 ? 's' : ''}`)
+    console.log(success(`Invited ${n} team mate${n > 1 ? 's' : ''}`))
     for (const email of emails) {
       console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
     }
