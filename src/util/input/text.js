@@ -178,7 +178,7 @@ module.exports = function(
           }
 
           const l = chalk.red(label.replace('-', '✖'))
-          eraseLines(1)
+          stdout.write(eraseLines(1))
           stdout.write(l + value + ansiEscapes.beep)
           if (caretOffset) {
             process.stdout.write(
@@ -250,7 +250,7 @@ module.exports = function(
         value = value.replace(regex, chalk.gray('$1'))
       }
 
-      eraseLines(1)
+      stdout.write(eraseLines(1))
       stdout.write(label + value + suggestion)
       if (caretOffset) {
         process.stdout.write(ansiEscapes.cursorBackward(Math.abs(caretOffset)))
