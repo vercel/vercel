@@ -344,7 +344,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     }
 
     case 'add': {
-      addBilling({
+      await addBilling({
         creditCards,
         currentTeam,
         user
