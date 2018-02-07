@@ -23,6 +23,12 @@ const validateSlugKeypress = (data, value) => {
   return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data)
 }
 
+const validateNameKeypress = (data, value) => (
+  // TODO: the `value` here should contain the current value + the keypress
+  // should be fixed on utils/input/text.js
+  /^[ a-zA-Z0-9_-]+$/.test(value + data)
+)
+
 const gracefulExit = () => {
   console.log() // Blank line
   note(
@@ -87,7 +93,7 @@ module.exports = async function({ teams, config }) {
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
-      validateValue: value => value.trim().length > 0
+      validateKeypress: validateNameKeypress
     })
   } catch (err) {
     if (err.message === 'USER_ABORT') {
