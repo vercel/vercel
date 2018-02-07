@@ -79,12 +79,12 @@ module.exports = async function({ teams, config }) {
       team = res
     } catch (err) {
       stopSpinner()
-      eraseLines(2)
+      process.stdout.write(eraseLines(2))
       console.error(error(err.message))
     }
   } while (!team)
 
-  eraseLines(2)
+  process.stdout.write(eraseLines(2))
   console.log(success(`Team created ${uid(team.id)} ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n')
 
@@ -108,7 +108,7 @@ module.exports = async function({ teams, config }) {
   const res = await teams.edit({ id: team.id, name })
   stopSpinner()
 
-  eraseLines(2)
+  process.stdout.write(eraseLines(2))
   if (res.error) {
     console.error(error(res.error.message))
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`)
