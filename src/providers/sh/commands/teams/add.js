@@ -57,7 +57,7 @@ module.exports = async function({ teams, config }) {
       })
     } catch (err) {
       if (err.message === 'USER_ABORT') {
-        info('Aborted')
+        console.log(info('Aborted'))
         return 0
       }
       throw err
