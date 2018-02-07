@@ -98,7 +98,7 @@ module.exports = async function({ teams, config }) {
   } catch (err) {
     if (err.message === 'USER_ABORT') {
       console.log(info('No name specified'))
-      gracefulExit()
+      return gracefulExit()
     } else {
       throw err
     }
