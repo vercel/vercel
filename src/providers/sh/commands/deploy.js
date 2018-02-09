@@ -127,7 +127,7 @@ const help = () => {
   )}         Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
-    --session-affinity             Session affinity, \`ip\` (default) or \`random\` to control session affinity
+    --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
 
   ${chalk.dim(
