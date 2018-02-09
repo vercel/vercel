@@ -124,7 +124,7 @@ module.exports = async function(
         console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
         if (hasError) {
           hasError = false
-          eraseLines(emails.length + 2)
+          process.stdout.write(eraseLines(emails.length + 2))
           console.log(info(
             introMsg ||
               `Inviting team members to ${chalk.bold(currentTeam.name)}`
@@ -135,7 +135,7 @@ module.exports = async function(
         }
       } catch (err) {
         stopSpinner()
-        eraseLines(emails.length + 2)
+        process.stdout.write(eraseLines(emails.length + 2))
         console.error(error(err.message))
         hasError = true
         for (const email of emails) {
@@ -145,7 +145,7 @@ module.exports = async function(
     }
   } while (email !== '')
 
-  eraseLines(emails.length + 2)
+  process.stdout.write(eraseLines(emails.length + 2))
 
   const n = emails.length
   if (emails.length === 0) {
