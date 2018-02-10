@@ -79,10 +79,11 @@ const main = async ctx => {
   const isSwitch = argv._[0] && argv._[0] === 'switch'
 
   argv._ = argv._.slice(1)
-  subcommand = argv._.shift()
 
   if (isSwitch) {
     subcommand = 'switch'
+  } else {
+    subcommand = argv._.shift()
   }
 
   if (argv.help || !subcommand) {
