@@ -12,7 +12,6 @@ const { tick } = require('../../../../util/output/chars')
 const success = require('../../../../util/output/success')
 const cmd = require('../../../../util/output/cmd')
 const note = require('../../../../util/output/note')
-const uid = require('../../../../util/output/uid')
 const textInput = require('../../../../util/input/text')
 const invite = require('./invite')
 const {writeToConfigFile} = require('../../../../util/config-files')
@@ -85,7 +84,7 @@ module.exports = async function({ teams, config }) {
   } while (!team)
 
   process.stdout.write(eraseLines(2))
-  console.log(success(`Team created ${uid(team.id)} ${elapsed()}`))
+  console.log(success(`Team created ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n')
 
   console.log(info('Pick a display name for your team'))
