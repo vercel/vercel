@@ -135,8 +135,8 @@ module.exports = async function({ teams, config }) {
     args: [],
     config,
     introMsg:
-      'Invite your team mates! When done, press enter on an empty field',
-    noopMsg: `You can invite team mates later by running ${cmd(
+      'Invite your teammates! When done, press enter on an empty field',
+    noopMsg: `You can invite teammates later by running ${cmd(
       'now teams invite'
     )}`
   })
