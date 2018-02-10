@@ -229,12 +229,12 @@ module.exports = async function({
         const linesToClear = state.error ? 15 : 14
         process.stdout.write(ansiEscapes.eraseLines(linesToClear))
       }
-      success(
+      console.log(success(
         `${state.cardNumber
           .brand} ending in ${res.last4} was added to ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )}`
-      )
+      ))
     } catch (err) {
       stopSpinner()
       const linesToClear = state.error ? 15 : 14
