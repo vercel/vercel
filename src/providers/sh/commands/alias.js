@@ -105,12 +105,13 @@ let apiUrl
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['config', 'rules'],
-    boolean: ['help', 'debug'],
+    boolean: ['help', 'debug', 'yes'],
     alias: {
       help: 'h',
       config: 'c',
       rules: 'r',
-      debug: 'd'
+      debug: 'd',
+      yes: 'y'
     }
   })
 
@@ -326,7 +327,9 @@ async function run({ token, sh: { currentTeam, user } }) {
       }
 
       try {
-        const confirmation = await confirmDeploymentRemoval(alias, _alias)
+        const confirmation = argv.yes ||
+          await confirmDeploymentRemoval(alias, _alias)
+
         if (!confirmation) {
           info('Aborted')
           return process.exit(0)
