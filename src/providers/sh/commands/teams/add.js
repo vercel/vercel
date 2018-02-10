@@ -12,7 +12,6 @@ const { tick } = require('../../../../util/output/chars')
 const success = require('../../../../util/output/success')
 const cmd = require('../../../../util/output/cmd')
 const note = require('../../../../util/output/note')
-const uid = require('../../../../util/output/uid')
 const textInput = require('../../../../util/input/text')
 const invite = require('./invite')
 const {writeToConfigFile} = require('../../../../util/config-files')
@@ -22,6 +21,12 @@ const validateSlugKeypress = (data, value) => {
   // should be fixed on utils/input/text.js
   return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data)
 }
+
+const validateNameKeypress = (data, value) => (
+  // TODO: the `value` here should contain the current value + the keypress
+  // should be fixed on utils/input/text.js
+  /^[ a-zA-Z0-9_-]+$/.test(value + data)
+)
 
 const gracefulExit = () => {
   console.log() // Blank line
@@ -42,9 +47,9 @@ module.exports = async function({ teams, config }) {
   let elapsed
   let stopSpinner
 
-  info(
+  console.log(info(
     `Pick a team identifier for its url (e.g.: ${chalk.cyan('`zeit.co/acme`')})`
-  )
+  ))
   do {
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -73,26 +78,26 @@ module.exports = async function({ teams, config }) {
       team = res
     } catch (err) {
       stopSpinner()
-      eraseLines(2)
+      process.stdout.write(eraseLines(2))
       console.error(error(err.message))
     }
   } while (!team)
 
-  eraseLines(2)
-  success(`Team created ${uid(team.id)} ${elapsed()}`)
+  process.stdout.write(eraseLines(2))
+  console.log(success(`Team created ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n')
 
-  info('Pick a display name for your team')
+  console.log(info('Pick a display name for your team'))
   let name
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
-      validateValue: value => value.trim().length > 0
+      validateKeypress: validateNameKeypress
     })
   } catch (err) {
     if (err.message === 'USER_ABORT') {
-      info('No name specified')
-      gracefulExit()
+      console.log(info('No name specified'))
+      return gracefulExit()
     } else {
       throw err
     }
@@ -102,7 +107,7 @@ module.exports = async function({ teams, config }) {
   const res = await teams.edit({ id: team.id, name })
   stopSpinner()
 
-  eraseLines(2)
+  process.stdout.write(eraseLines(2))
   if (res.error) {
     console.error(error(res.error.message))
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`)
@@ -113,7 +118,7 @@ module.exports = async function({ teams, config }) {
 
   team = Object.assign(team, res)
 
-  success(`Team name saved ${elapsed()}`)
+  console.log(success(`Team name saved ${elapsed()}`))
   console.log(chalk.cyan(`${tick} `) + teamNamePrefix + team.name + '\n')
 
   stopSpinner = wait('Saving')
@@ -130,8 +135,8 @@ module.exports = async function({ teams, config }) {
     args: [],
     config,
     introMsg:
-      'Invite your team mates! When done, press enter on an empty field',
-    noopMsg: `You can invite team mates later by running ${cmd(
+      'Invite your teammates! When done, press enter on an empty field',
+    noopMsg: `You can invite teammates later by running ${cmd(
       'now teams invite'
     )}`
   })
