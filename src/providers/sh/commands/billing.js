@@ -234,7 +234,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           trailing: '\n'
         })
         if (!confirmation) {
-          info('Aborted')
+          consoel.log(info('Aborted'))
           break
         }
         const start = new Date()
@@ -242,11 +242,11 @@ async function run({ token, sh: { currentTeam, user } }) {
 
         const card = cards.cards.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
-        success(
+        console.log(success(
           `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(
             `[${elapsed}]`
           )}`
-        )
+        ))
       } else {
         console.log('No changes made')
       }
@@ -335,7 +335,7 @@ async function run({ token, sh: { currentTeam, user } }) {
 
         const elapsed = ms(new Date() - start)
         text += ` ${chalk.gray(`[${elapsed}]`)}`
-        success(text)
+        console.log(success(text))
       } else {
         console.log('No changes made')
       }
