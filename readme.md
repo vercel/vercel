@@ -303,6 +303,14 @@ npm run build
 
 As always, you can use `npm test` to run the tests and see if your changes have broken anything.
 
+## How to Do a Release (Internal)
+
+- **Stable release:** Run `release <major|minor|patch>` (depending on the version bump you're planning to do) on the `master` branch.
+
+- **Canary release:** Run `release pre` on the `canary` branch.
+
+Other than one of these two commands, **no other action is required**. The CI will take care of the rest.
+
 ## Authors
 
 - Guillermo Rauch ([@rauchg](https://twitter.com/rauchg)) - [ZEIT](https://zeit.co)
