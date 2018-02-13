@@ -641,45 +641,27 @@ module.exports = class Now extends EventEmitter {
 
   getNameservers(domain) {
     return new Promise((resolve, reject) => {
-      let fallback = false
-
       this.retry(async (bail, attempt) => {
         if (this._debug) {
           console.time(
-            `> [debug] #${attempt} GET /whois-ns${fallback ? '-fallback' : ''}`
+            `> [debug] #${attempt} GET /whois-ns`
           )
         }
 
         const res = await this._fetch(
-          `/whois-ns${fallback ? '-fallback' : ''}?domain=${encodeURIComponent(
-            domain
-          )}`
+          `/whois-ns?domain=${encodeURIComponent(domain)}`
         )
 
         if (this._debug) {
           console.timeEnd(
-            `> [debug] #${attempt} GET /whois-ns${fallback ? '-fallback' : ''}`
+            `> [debug] #${attempt} GET /whois-ns`
           )
         }
 
         const body = await res.json()
 
         if (res.status === 200) {
-          if (
-            (!body.nameservers || body.nameservers.length === 0) &&
-            !fallback
-          ) {
-            // If the nameservers are `null` it's likely
-            // that our whois service failed to parse it
-            fallback = true
-            throw new Error('Invalid whois response')
-          }
-
           return body
-        }
-
-        if (attempt > 1) {
-          fallback = true
         }
 
         throw new Error(`Whois error (${res.status}): ${body.error.message}`)
