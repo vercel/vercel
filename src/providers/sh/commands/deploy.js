@@ -643,6 +643,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             )
           }
 
+          let url = 'https://zeit.co/account/plan'
+
+          if (currentTeam) {
+            url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
+          }
+
+          console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
+
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `${story} If you agree with that, please run again with ${cmd('--public')}.`
@@ -658,13 +666,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           }
         }
 
-        let url = 'https://zeit.co/account/plan'
-
-        if (currentTeam) {
-          url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
-        }
-
-        console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
         wantsPublic = true
 
         sync({
