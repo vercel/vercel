@@ -656,9 +656,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
             return
           }
-
-          console.log(note(`You can use ${cmd('now --public')} to skip this prompt`))
         }
+
+        let url = 'https://zeit.co/account/plan'
+
+        if (currentTeam) {
+          url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
+        }
+
+        console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
 
         wantsPublic = true
 
