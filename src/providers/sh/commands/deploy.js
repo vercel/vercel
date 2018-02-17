@@ -665,7 +665,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
 
         console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
-
         wantsPublic = true
 
         sync({
