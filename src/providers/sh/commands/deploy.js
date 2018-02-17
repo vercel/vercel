@@ -633,20 +633,25 @@ async function sync({ token, config: { currentTeam, user } }) {
           const who = currentTeam ? 'your team is' : 'you are'
           const story = `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
 
-          let proceed = false
+          let proceed
 
           if (isTTY) {
             proceed = await promptBool(
               `${story} Are you sure you want to proceed?`,
               { trailing: eraseLines(2) }
             )
-          } else {
-            console.log(info(`${story} If you agree with that, please run again with ${cmd('--public')}.`))
           }
 
           if (!proceed) {
-            console.log(info('Aborted the deployment'))
-            await exit(0)
+            if (typeof proceed === 'undefined') {
+              const message = `${story} If you agree with that, please run again with ${cmd('--public')}.`
+              console.error(error(message))
+
+              await exit(1)
+            } else {
+              console.log(info('Aborted the deployment'))
+              await exit(0)
+            }
 
             return
           }
