@@ -301,24 +301,16 @@ async function main(ctx) {
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ token, config })
+    return sync({ token, config, showMessage: true })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ token, config: { currentTeam, user } }) {
+async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
     const rawPath = argv._[0]
-
-    const nowPlans = new NowPlans({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    })
-    const planPromise = nowPlans.getCurrent()
 
     try {
       await fs.stat(rawPath || path)
@@ -382,10 +374,11 @@ async function sync({ token, config: { currentTeam, user } }) {
         message: err.message,
         slug: 'path-not-deployable'
       }))
+
       await exit(1)
     }
 
-    if (!quiet) {
+    if (!quiet && showMessage) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
@@ -590,6 +583,7 @@ async function sync({ token, config: { currentTeam, user } }) {
         )
 
       await now.create(path, createArgs)
+
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
           if (debug && now.syncFileCount !== now.fileCount) {
@@ -635,7 +629,56 @@ async function sync({ token, config: { currentTeam, user } }) {
         await now.create(path, createArgs)
       }
     } catch (err) {
-      if (debug) {
+      if (err.code === 'plan_requires_public') {
+        if (!wantsPublic) {
+          const who = currentTeam ? 'your team is' : 'you are'
+          const story = `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
+
+          let proceed
+
+          if (isTTY) {
+            proceed = await promptBool(
+              `${story} Are you sure you want to proceed?`,
+              { trailing: eraseLines(2) }
+            )
+          }
+
+          let url = 'https://zeit.co/account/plan'
+
+          if (currentTeam) {
+            url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
+          }
+
+          console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
+
+          if (!proceed) {
+            if (typeof proceed === 'undefined') {
+              const message = `${story} If you agree with that, please run again with ${cmd('--public')}.`
+              console.error(error(message))
+
+              await exit(1)
+            } else {
+              console.log(info('Aborted'))
+              await exit(0)
+            }
+
+            return
+          }
+        }
+
+        wantsPublic = true
+
+        sync({
+          token,
+          config: {
+            currentTeam,
+            user
+          },
+          showMessage: false
+        })
+
+        return
+      } else if (debug) {
         console.log(`> [debug] error: ${err}\n${err.stack}`)
       }
 
@@ -667,48 +710,6 @@ async function sync({ token, config: { currentTeam, user } }) {
     }
 
     const startU = new Date()
-    const plan = await planPromise
-    if (plan.id === 'oss' && !wantsPublic) {
-      if (isTTY) {
-        console.log(
-          info(
-            `${chalk.bold(
-              (currentTeam && `${currentTeam.slug} is`) ||
-                `You (${user.username || user.email}) are`
-            )} on the OSS plan. Your code and logs will be made ${chalk.bold(
-              'public'
-            )}.`
-          )
-        )
-
-        const proceed = await promptBool(
-          'Are you sure you want to proceed with the deployment?',
-          { trailing: eraseLines(1) }
-        )
-
-        if (proceed) {
-          console.log(
-            note(`You can use ${cmd('now --public')} to skip this prompt`)
-          )
-        } else {
-          const stopSpinner = wait('Canceling deployment')
-          await now.remove(now.id, { hard: true })
-          stopSpinner()
-          console.log(
-            info(
-              'Deployment aborted. No files were synced.',
-              `  You can upgrade by running ${cmd('now upgrade')}.`
-            )
-          )
-          return 0
-        }
-      } else if (!wantsPublic) {
-        const msg =
-          '\nYou are on the OSS plan. Your code and logs will be made public.' +
-          ' If you agree with that, please run again with --public.'
-        await stopDeployment(msg)
-      }
-    }
 
     if (!quiet) {
       if (syncCount) {

@@ -127,6 +127,7 @@ module.exports = class Now extends EventEmitter {
       if (this._debug) {
         console.time('> [debug] get files ready for deployment')
       }
+
       const files = await Promise.all(
         Array.prototype.concat.apply(
           [],
@@ -158,9 +159,10 @@ module.exports = class Now extends EventEmitter {
       }
 
       if (this._debug) {
-        console.time('> [debug] v2/now/deployments')
+        console.time('> [debug] v3/now/deployments')
       }
-      const res = await this._fetch('/v2/now/deployments', {
+
+      const res = await this._fetch('/v3/now/deployments', {
         method: 'POST',
         body: {
           env,
@@ -178,11 +180,12 @@ module.exports = class Now extends EventEmitter {
       })
 
       if (this._debug) {
-        console.timeEnd('> [debug] v2/now/deployments')
+        console.timeEnd('> [debug] v3/now/deployments')
       }
 
       // No retry on 4xx
       let body
+
       try {
         body = await res.json()
       } catch (err) {
@@ -191,20 +194,37 @@ module.exports = class Now extends EventEmitter {
 
       if (res.status === 429) {
         let msg = `You reached your 20 deployments limit in the OSS plan.\n`
+
         msg += `${chalk.gray('>')} Please run ${chalk.gray('`')}${chalk.cyan(
           'now upgrade'
         )}${chalk.gray('`')} to proceed`
+
         const err = new Error(msg)
+
         err.status = res.status
         err.retryAfter = 'never'
+
         return bail(err)
-      } else if (res.status === 400 && body.error && body.error.code === 'missing_files') {
+      }
+
+      if (res.status === 400 && body.error && body.error.code === 'missing_files') {
         return body
-      } else if (res.status >= 400 && res.status < 500) {
-        const err = new Error(body.error.message)
+      }
+
+      if (res.status >= 400 && res.status < 500) {
+        const err = new Error()
+
+        if (body.error) {
+          Object.assign(err, body.error)
+        } else {
+          err.message = 'Not able to create deployment'
+        }
+
         err.userError = true
         return bail(err)
-      } else if (res.status !== 200) {
+      }
+
+      if (res.status !== 200) {
         throw new Error(body.error.message)
       }
 
@@ -213,8 +233,10 @@ module.exports = class Now extends EventEmitter {
 
     // We report about files whose sizes are too big
     let missingVersion = false
+
     if (deployment.warnings) {
       let sizeExceeded = 0
+
       deployment.warnings.forEach(warning => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning
