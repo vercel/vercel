@@ -632,14 +632,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (err.code === 'plan_requires_public') {
         if (!wantsPublic) {
           const who = currentTeam ? 'your team is' : 'you are'
-          const story = `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
-
           let proceed
+
+          console.log(info(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`))
 
           if (isTTY) {
             proceed = await promptBool(
-              `${story} Are you sure you want to proceed?`,
-              { trailing: eraseLines(2) }
+              'Are you sure you want to proceed?',
+              { trailing: eraseLines(1) }
             )
           }
 
