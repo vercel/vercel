@@ -301,13 +301,13 @@ async function main(ctx) {
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ token, config })
+    return sync({ token, config, showMessage: true })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ token, config: { currentTeam, user } }) {
+async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
     const rawPath = argv._[0]
@@ -374,10 +374,11 @@ async function sync({ token, config: { currentTeam, user } }) {
         message: err.message,
         slug: 'path-not-deployable'
       }))
+
       await exit(1)
     }
 
-    if (!quiet) {
+    if (!quiet && showMessage) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
@@ -666,7 +667,8 @@ async function sync({ token, config: { currentTeam, user } }) {
           config: {
             currentTeam,
             user
-          }
+          },
+          showMessage: false
         })
 
         return
