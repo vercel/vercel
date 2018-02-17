@@ -650,7 +650,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
               await exit(1)
             } else {
-              console.log(info('Aborted the deployment'))
+              console.log(info('Aborted'))
               await exit(0)
             }
 
