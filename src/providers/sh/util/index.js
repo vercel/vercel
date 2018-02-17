@@ -205,13 +205,26 @@ module.exports = class Now extends EventEmitter {
         err.retryAfter = 'never'
 
         return bail(err)
-      } else if (res.status === 400 && body.error && body.error.code === 'missing_files') {
+      }
+
+      if (res.status === 400 && body.error && body.error.code === 'missing_files') {
         return body
-      } else if (res.status >= 400 && res.status < 500) {
-        const err = new Error(body.error.message)
+      }
+
+      if (res.status >= 400 && res.status < 500) {
+        const err = new Error()
+
+        if (body.error) {
+          Object.assign(err, body.error)
+        } else {
+          err.message = 'Not able to create deployment'
+        }
+
         err.userError = true
         return bail(err)
-      } else if (res.status !== 200) {
+      }
+
+      if (res.status !== 200) {
         throw new Error(body.error.message)
       }
 
@@ -220,8 +233,10 @@ module.exports = class Now extends EventEmitter {
 
     // We report about files whose sizes are too big
     let missingVersion = false
+
     if (deployment.warnings) {
       let sizeExceeded = 0
+
       deployment.warnings.forEach(warning => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning
