@@ -8,7 +8,7 @@ const { asc: alpha } = require('alpha-sort')
 // Utilities
 const hash = require('../src/providers/sh/util/hash')
 const readMetadata = require('../src/providers/sh/util/read-metadata')
-const getLocalConfigPath = require('../src/config/local-path')	
+const getLocalConfigPath = require('../src/config/local-path')
 const loadJSON = require('load-json-file')
 const {
   npm: getNpmFiles_,
@@ -31,21 +31,21 @@ const getNpmFiles = async dir => {
 }
 
 const getDockerFiles = async dir => {
-	const { nowConfig, hasNowJson } = await readMetadata(dir, {
-		quiet: true,
-		strict: false
-	})
+  const { nowConfig, hasNowJson } = await readMetadata(dir, {
+    quiet: true,
+    strict: false
+  })
 
-	return getDockerFiles_(dir, nowConfig, { hasNowJson })
+  return getDockerFiles_(dir, nowConfig, { hasNowJson })
 }
 
 const getStaticFiles = async dir => {
-	const { nowConfig, hasNowJson } = await readMetadata(dir, {
-		quiet: true,
-		strict: false
-	})
+  const { nowConfig, hasNowJson } = await readMetadata(dir, {
+    quiet: true,
+    strict: false
+  })
 
-	return getStaticFiles_(dir, nowConfig, { hasNowJson })
+  return getStaticFiles_(dir, nowConfig, { hasNowJson })
 }
 
 test('`files`', async t => {
@@ -79,69 +79,84 @@ test('`files` overrides `.gitignore`', async t => {
 })
 
 test('`now.files` overrides `.gitignore` in Docker', async t => {
-	const path = 'now-json-docker-gitignore-override'
-	let files = await getDockerFiles(fixture(path), await loadJSON(getLocalConfigPath(fixture(path))))
-	files = files.sort(alpha)
+  const path = 'now-json-docker-gitignore-override'
+  let files = await getDockerFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  )
+  files = files.sort(alpha)
 
-	t.is(files.length, 5)
-	t.is(base(files[0]), `${path}/Dockerfile`)
-	t.is(base(files[1]), `${path}/a.js`)
-	t.is(base(files[2]), `${path}/b.js`)
-	t.is(base(files[3]), `${path}/build/a/c.js`)
-	t.is(base(files[4]), `${path}/now.json`)
+  t.is(files.length, 5)
+  t.is(base(files[0]), `${path}/Dockerfile`)
+  t.is(base(files[1]), `${path}/a.js`)
+  t.is(base(files[2]), `${path}/b.js`)
+  t.is(base(files[3]), `${path}/build/a/c.js`)
+  t.is(base(files[4]), `${path}/now.json`)
 })
 
 test('`now.files` overrides `.dockerignore` in Docker', async t => {
-	const path = 'now-json-docker-dockerignore-override'
-	let files = await getDockerFiles(fixture(path), await loadJSON(getLocalConfigPath(fixture(path))))
-	files = files.sort(alpha)
+  const path = 'now-json-docker-dockerignore-override'
+  let files = await getDockerFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  )
+  files = files.sort(alpha)
 
-	t.is(files.length, 6)
-	t.is(base(files[0]), `${path}/Dockerfile`)
-	t.is(base(files[1]), `${path}/a.js`)
-	t.is(base(files[2]), `${path}/b.js`)
-	t.is(base(files[3]), `${path}/build/a/c.js`)
-	t.is(base(files[4]), `${path}/c.js`)
-	t.is(base(files[5]), `${path}/now.json`)
+  t.is(files.length, 6)
+  t.is(base(files[0]), `${path}/Dockerfile`)
+  t.is(base(files[1]), `${path}/a.js`)
+  t.is(base(files[2]), `${path}/b.js`)
+  t.is(base(files[3]), `${path}/build/a/c.js`)
+  t.is(base(files[4]), `${path}/c.js`)
+  t.is(base(files[5]), `${path}/now.json`)
 })
 
 test('`now.files` overrides `.gitignore` in Node', async t => {
-	const path = 'now-json-npm-gitignore-override'
-	let files = await getNpmFiles(fixture(path), await loadJSON(getLocalConfigPath(fixture(path))))
-	files = files.sort(alpha)
+  const path = 'now-json-npm-gitignore-override'
+  let files = await getNpmFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  )
+  files = files.sort(alpha)
 
-	t.is(files.length, 5)
-	t.is(base(files[0]), `${path}/a.js`)
-	t.is(base(files[1]), `${path}/b.js`)
-	t.is(base(files[2]), `${path}/build/a/c.js`)
-	t.is(base(files[3]), `${path}/now.json`)
-	t.is(base(files[4]), `${path}/package.json`)
+  t.is(files.length, 5)
+  t.is(base(files[0]), `${path}/a.js`)
+  t.is(base(files[1]), `${path}/b.js`)
+  t.is(base(files[2]), `${path}/build/a/c.js`)
+  t.is(base(files[3]), `${path}/now.json`)
+  t.is(base(files[4]), `${path}/package.json`)
 })
 
 test('`now.files` overrides `.npmignore` in Node', async t => {
-	const path = 'now-json-npm-npmignore-override'
-	let files = await getNpmFiles(fixture(path), await loadJSON(getLocalConfigPath(fixture(path))))
-	files = files.sort(alpha)
+  const path = 'now-json-npm-npmignore-override'
+  let files = await getNpmFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  )
+  files = files.sort(alpha)
 
-	t.is(files.length, 6)
-	t.is(base(files[0]), `${path}/a.js`)
-	t.is(base(files[1]), `${path}/b.js`)
-	t.is(base(files[2]), `${path}/build/a/c.js`)
-	t.is(base(files[3]), `${path}/c.js`)
-	t.is(base(files[4]), `${path}/now.json`)
-	t.is(base(files[5]), `${path}/package.json`)
+  t.is(files.length, 6)
+  t.is(base(files[0]), `${path}/a.js`)
+  t.is(base(files[1]), `${path}/b.js`)
+  t.is(base(files[2]), `${path}/build/a/c.js`)
+  t.is(base(files[3]), `${path}/c.js`)
+  t.is(base(files[4]), `${path}/now.json`)
+  t.is(base(files[5]), `${path}/package.json`)
 })
 
 test('`now.files` overrides `.gitignore` in Static', async t => {
-	const path = 'now-json-static-gitignore-override'
-	let files = await getStaticFiles(fixture(path), await loadJSON(getLocalConfigPath(fixture(path))))
-	files = files.sort(alpha)
+  const path = 'now-json-static-gitignore-override'
+  let files = await getStaticFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  )
+  files = files.sort(alpha)
 
-	t.is(files.length, 4)
-	t.is(base(files[0]), `${path}/a.js`)
-	t.is(base(files[1]), `${path}/b.js`)
-	t.is(base(files[2]), `${path}/build/a/c.js`)
-	t.is(base(files[3]), `${path}/now.json`)
+  t.is(files.length, 4)
+  t.is(base(files[0]), `${path}/a.js`)
+  t.is(base(files[1]), `${path}/b.js`)
+  t.is(base(files[2]), `${path}/build/a/c.js`)
+  t.is(base(files[3]), `${path}/now.json`)
 })
 
 test('`now.files` overrides `.npmignore`', async t => {
@@ -333,10 +348,15 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
 })
 
 test('friendly error for malformed JSON', async t => {
-  const err = await t.throws(readMetadata(fixture('json-syntax-error'), {
-    quiet: true,
-    strict: false
-  }))
+  const err = await t.throws(
+    readMetadata(fixture('json-syntax-error'), {
+      quiet: true,
+      strict: false
+    })
+  )
   t.is(err.name, 'JSONError')
-  t.is(err.message, 'Unexpected token \'o\' at 2:5 in test/_fixtures/json-syntax-error/package.json\n    oops\n    ^')
+  t.is(
+    err.message,
+    "Unexpected token 'o' at 2:5 in test/_fixtures/json-syntax-error/package.json\n    oops\n    ^"
+  )
 })

@@ -24,46 +24,66 @@ const glob = async function(pattern, options) {
   })
 }
 
-const walkSync = async (dir, path, filelist = [], {debug=false}={}) => {
-	const dirc = await readdir(asAbsolute(dir, path))
-	for (let file of dirc) {
-		file = asAbsolute(file, dir)
-	try{
-		const file_stat = await stat(file)
-		filelist = file_stat.isDirectory()
-			? await walkSync(file, path, filelist)
-			: filelist.concat(file)
-	} catch(e) {
-		if (debug) {
-			console.log('> [debug] ignoring invalid file "%s"', file)
-		}
-	}
+/**
+ * Will recursivly walk through a directory and return an array of the files found within.
+ * @param {string} dir the directory to walk
+ * @param {string} path the path to this directory
+ * @param {Array[string]} filelist a list of files so far identified
+ * @param {Object} options 
+ * 	- `debug` {Boolean} warn upon ignore
+ * @returns {Array}  
+ */
+const walkSync = async (dir, path, filelist = [], { debug = false } = {}) => {
+  const dirc = await readdir(asAbsolute(dir, path))
+  for (let file of dirc) {
+    file = asAbsolute(file, dir)
+    try {
+      const file_stat = await stat(file)
+      filelist = file_stat.isDirectory()
+        ? await walkSync(file, path, filelist)
+        : filelist.concat(file)
+    } catch (e) {
+      if (debug) {
+        console.log('> [debug] ignoring invalid file "%s"', file)
+      }
     }
-    return filelist
   }
+  return filelist
+}
 
-const getFilesInWhitelist = async function(whitelist, path, {debug=false}={}) {
+/**
+ * Will return an array containing the expaneded list of all files included in the whitelist.
+ * @param {Array[string]} whitelist array of files and directories to include.
+ * @param {string} path the path of the deployment. 
+ * @param {Object} options
+ * 	- `debug` {Boolean} warn upon ignore
+ * @returns {Array} the expanded list of whitelisted files.
+ */
+const getFilesInWhitelist = async function(
+  whitelist,
+  path,
+  { debug = false } = {}
+) {
   let files = []
 
-  await Promise.all(whitelist.map(async file => {
-	file = asAbsolute(file, path)
-	// console.log(file)
-	try {
-		const file_stat = (await stat(file))
-		if (file_stat.isDirectory()){
-			const dir_files = await walkSync(file, path)
-			files.push(...dir_files)
-		} else {
-			files.push(file)
-		}
-	} catch(e) {
-		if (debug) {
-			console.log('> [debug] ignoring invalid file "%s"', file)
-		}
-	}
-
-  }))
-//   console.log(files)
+  await Promise.all(
+    whitelist.map(async file => {
+      file = asAbsolute(file, path)
+      try {
+        const file_stat = await stat(file)
+        if (file_stat.isDirectory()) {
+          const dir_files = await walkSync(file, path)
+          files.push(...dir_files)
+        } else {
+          files.push(file)
+        }
+      } catch (e) {
+        if (debug) {
+          console.log('> [debug] ignoring invalid file "%s"', file)
+        }
+      }
+    })
+  )
   return files
 }
 
@@ -125,7 +145,7 @@ async function staticFiles(
 ) {
   let files = []
   if (nowConfig.files && Array.isArray(nowConfig.files)) {
-	files = await getFilesInWhitelist(nowConfig.files, path)
+    files = await getFilesInWhitelist(nowConfig.files, path)
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
@@ -214,7 +234,7 @@ async function npm(
   let files = []
 
   if (whitelist) {
-	files = await getFilesInWhitelist(whitelist, path)
+    files = await getFilesInWhitelist(whitelist, path)
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
@@ -317,7 +337,7 @@ async function docker(
   let files = []
 
   if (nowConfig.files) {
-	files = await getFilesInWhitelist(nowConfig.files, path)
+    files = await getFilesInWhitelist(nowConfig.files, path)
   } else {
     // Base search path
     // the now.json `files` whitelist still
