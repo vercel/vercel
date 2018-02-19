@@ -40,10 +40,11 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
   let files = await getNpmFiles(fixture('files-in-package-ignore'))
   files = files.sort(alpha)
 
-  t.is(files.length, 3)
+  t.is(files.length, 4)
   t.is(base(files[0]), 'files-in-package-ignore/build/a/b/c/d.js')
   t.is(base(files[1]), 'files-in-package-ignore/build/a/e.js')
-  t.is(base(files[2]), 'files-in-package-ignore/package.json')
+  t.is(base(files[2]), 'files-in-package-ignore/build/a/should-be-included.js')
+  t.is(base(files[3]), 'files-in-package-ignore/package.json')
 })
 
 test('`files` overrides `.gitignore`', async t => {
