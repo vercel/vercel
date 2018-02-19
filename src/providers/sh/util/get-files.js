@@ -25,17 +25,12 @@ const glob = async function(pattern, options) {
 }
 
 const walkSync = async (dir, path, filelist = [], {debug=false}={}) => {
-	// console.log("AHA: ", dir)
-	// console.log(filelist)
 	const dirc = await readdir(asAbsolute(dir, path))
-	// console.log("WOAH: ",dirc)
 	for (let file of dirc) {
 		file = asAbsolute(file, dir)
-	//   console.log("fielname: ",file)
 	try{
-
 		const file_stat = await stat(file)
-		  filelist = file_stat.isDirectory()
+		filelist = file_stat.isDirectory()
 			? await walkSync(file, path, filelist)
 			: filelist.concat(file)
 	} catch(e) {
