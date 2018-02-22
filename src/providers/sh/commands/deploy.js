@@ -740,6 +740,12 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
         await exit(0);
       } else {
+        if(!now.syncFileCount && !forceNew) {
+          if (!quiet) {
+            console.log(success('Deployment ready!'));
+          }
+          exit(0);
+        }
         if (!quiet) {
           console.log(info('Initializing…'));
         }
