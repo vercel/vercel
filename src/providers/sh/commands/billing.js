@@ -234,7 +234,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           trailing: '\n'
         })
         if (!confirmation) {
-          consoel.log(info('Aborted'))
+          console.log(info('Aborted'))
           break
         }
         const start = new Date()
