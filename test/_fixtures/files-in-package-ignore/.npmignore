@@ -1,2 +1,2 @@
 should-be-excluded.js
-./build/a/should-be-excluded.js
+./build/a/should-be-included.js
