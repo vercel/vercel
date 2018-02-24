@@ -215,7 +215,13 @@ module.exports = class Now extends EventEmitter {
         const err = new Error()
 
         if (body.error) {
-          Object.assign(err, body.error)
+          if (body.error.code === 'env_value_invalid_type') {
+            const {key} = body.error;
+            err.message = `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
+              'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
+          } else {
+            Object.assign(err, body.error)
+          }
         } else {
           err.message = 'Not able to create deployment'
         }
