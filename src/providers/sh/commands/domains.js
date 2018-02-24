@@ -233,6 +233,10 @@ async function run({ token, sh: { currentTeam, user } }) {
       }
       const name = String(args[0])
 
+      if (!await promptBool(`Are you sure you want to add "${name}"?`)) {
+        return exit(1)
+      }
+
       const parsedDomain = psl.parse(name)
       if (parsedDomain.subdomain) {
         const msg =
