@@ -104,14 +104,6 @@ $ now gcp login
 
 and follow the instructions!
 
-### Microsoft Azure (`az`)
-
-```
-$ now az login
-```
-
-and follow the instructions!
-
 ## <span id="configuration">Project Configuration</span>
 
 <table>
