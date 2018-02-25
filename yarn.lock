@@ -2055,9 +2055,9 @@ elliptic@^6.0.0:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
 
-email-prompt@0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/email-prompt/-/email-prompt-0.3.1.tgz#62f0fe9914a7388897ab42b5409dd0f37b086c06"
+email-prompt@0.3.2:
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/email-prompt/-/email-prompt-0.3.2.tgz#2312e4474f3d67d660cf4e41c5033af59aa2179c"
   dependencies:
     ansi-escapes "2.0.0"
     chalk "1.1.3"
