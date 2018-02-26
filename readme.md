@@ -244,7 +244,7 @@ All feedback and suggestions are welcome!
 - 📣 Stay up to date on new features and announcments on [@zeithq](https://twitter.com/zeithq).
 - 🔐 Subscribe to our [security](http://zeit.us12.list-manage1.com/subscribe?u=3c9e9e13d7e6dae8faf375bed&id=110e586914) mailing list to stay up-to-date on urgent security disclosures.
 
-Please note: we adhere to the [contributor coventant](http://contributor-covenant.org/) for
+Please note: we adhere to the [contributor covenant](http://contributor-covenant.org/) for
 all interactions in our community.
 
 #### Contributions
