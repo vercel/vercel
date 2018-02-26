@@ -349,7 +349,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         // Tell now which directory to deploy
         path = repo.path
 
-
         // Set global variable for deleting tmp dir later
         // once the deployment has finished
         Object.assign(gitRepo, repo)
