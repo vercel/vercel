@@ -76,6 +76,7 @@ module.exports = class Now extends EventEmitter {
     }
 
     const opts = { debug: this._debug, hasNowJson }
+
     if (type === 'npm') {
       files = await getNpmFiles(path, pkg, nowConfig, opts)
 
@@ -93,7 +94,7 @@ module.exports = class Now extends EventEmitter {
       engines = nowConfig.engines || pkg.engines
       forwardNpm = forwardNpm || nowConfig.forwardNpm
     } else if (type === 'static') {
-      if(isStaticFile) {
+      if (isStaticFile) {
         files = [resolvePath(path)]
       } else {
         files = await getFiles(path, nowConfig, opts)

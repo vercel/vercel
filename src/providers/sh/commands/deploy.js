@@ -369,16 +369,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let deploymentType
     let isStaticFile = false
 
-    const fsData = await fs.lstat(path);
-    if (fsData.isFile() && path.split('.').pop() != "json") {
+    const fsData = await fs.lstat(path)
 
-    	deploymentType = 'static';
+    if (fsData.isFile()) {
+    	deploymentType = 'static'
       isStaticFile = true
-
     } else {
       // Make sure that directory is deployable
       try {
-          await checkPath(path)
+        await checkPath(path)
       } catch (err) {
         console.error(error({
           message: err.message,
@@ -431,11 +430,11 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     let meta
 
-    if(isStaticFile) {
+    if (isStaticFile) {
       deploymentName = path.split('/').pop().split('.').slice(0, -1).join('-')
+
       meta = {
         name: deploymentName,
-        description: 'Static file ' + deploymentName,
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -455,7 +454,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const nowConfig = meta.nowConfig
-
     const now = new Now({ apiUrl, token, debug, currentTeam })
 
     let dotenvConfig
