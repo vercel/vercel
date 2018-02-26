@@ -407,8 +407,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    let deploymentType
-
     // CLI deployment type explicit overrides
     if (argv.docker) {
       if (debug) {
@@ -433,6 +431,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let meta
 
     if (isStaticFile) {
+      console.log(path)
       deploymentName = path.split('/').pop().split('.').slice(0, -1).join('-')
 
       meta = {
