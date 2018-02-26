@@ -407,6 +407,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
+    let deploymentType
+
     // CLI deployment type explicit overrides
     if (argv.docker) {
       if (debug) {
