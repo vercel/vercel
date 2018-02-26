@@ -372,7 +372,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const fsData = await fs.lstat(path)
 
     if (fsData.isFile()) {
-    	deploymentType = 'static'
+      deploymentType = 'static'
       isStaticFile = true
     } else {
       // Make sure that directory is deployable
