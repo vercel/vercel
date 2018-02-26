@@ -431,11 +431,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let meta
 
     if (isStaticFile) {
-      console.log(path)
-      deploymentName = path.split('/').pop().split('.').slice(0, -1).join('-')
-
       meta = {
-        name: deploymentName,
+        name: 'file',
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
