@@ -653,7 +653,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
-              const message = `${story} If you agree with that, please run again with ${cmd('--public')}.`
+              const message = `If you agree with that, please run again with ${cmd('--public')}.`
               console.error(error(message))
 
               await exit(1)
