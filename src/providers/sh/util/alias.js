@@ -524,6 +524,10 @@ module.exports = class Alias extends Now {
           }
         }
 
+        if (code === 'invalid_alias') {
+          return bail(new Error('We do not support nested subdomains.'))
+        }
+
         return bail(new Error(body.error.message))
       }
 
