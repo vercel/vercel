@@ -62,10 +62,11 @@ module.exports = class Now extends EventEmitter {
       pkg = {},
       nowConfig = {},
       hasNowJson = false,
-      sessionAffinity = 'ip'
+      sessionAffinity = 'ip',
+      isStaticFile = false
     }
   ) {
-    this._path = path
+    this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
 
     let files
     let engines
@@ -75,6 +76,7 @@ module.exports = class Now extends EventEmitter {
     }
 
     const opts = { debug: this._debug, hasNowJson }
+
     if (type === 'npm') {
       files = await getNpmFiles(path, pkg, nowConfig, opts)
 
@@ -92,7 +94,11 @@ module.exports = class Now extends EventEmitter {
       engines = nowConfig.engines || pkg.engines
       forwardNpm = forwardNpm || nowConfig.forwardNpm
     } else if (type === 'static') {
-      files = await getFiles(path, nowConfig, opts)
+      if (isStaticFile) {
+        files = [resolvePath(path)]
+      } else {
+        files = await getFiles(path, nowConfig, opts)
+      }
     } else if (type === 'docker') {
       files = await getDockerFiles(path, nowConfig, opts)
     }

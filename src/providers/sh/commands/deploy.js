@@ -366,16 +366,26 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    // Make sure that directory is deployable
-    try {
-      await checkPath(path)
-    } catch (err) {
-      console.error(error({
-        message: err.message,
-        slug: 'path-not-deployable'
-      }))
+    let deploymentType
+    let isStaticFile = false
 
-      await exit(1)
+    const fsData = await fs.lstat(path)
+
+    if (fsData.isFile()) {
+      deploymentType = 'static'
+      isStaticFile = true
+    } else {
+      // Make sure that directory is deployable
+      try {
+        await checkPath(path)
+      } catch (err) {
+        console.error(error({
+          message: err.message,
+          slug: 'path-not-deployable'
+        }))
+
+        await exit(1)
+      }
     }
 
     if (!quiet && showMessage) {
@@ -396,8 +406,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         )
       }
     }
-
-    let deploymentType
 
     // CLI deployment type explicit overrides
     if (argv.docker) {
@@ -421,14 +429,29 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     let meta
-    ;({
-      meta,
-      deploymentName,
-      deploymentType,
-      sessionAffinity
-    } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
-    const nowConfig = meta.nowConfig
 
+    if (isStaticFile) {
+      meta = {
+        name: 'file',
+        type: deploymentType,
+        pkg: undefined,
+        nowConfig: undefined,
+        hasNowJson: false,
+
+        // XXX: legacy
+        deploymentType,
+        sessionAffinity
+      }
+    } else {
+      ;({
+        meta,
+        deploymentName,
+        deploymentType,
+        sessionAffinity
+      } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
+    }
+
+    const nowConfig = meta.nowConfig
     const now = new Now({ apiUrl, token, debug, currentTeam })
 
     let dotenvConfig
@@ -577,7 +600,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             forwardNpm: alwaysForwardNpm || forwardNpm,
             quiet,
             wantsPublic,
-            sessionAffinity
+            sessionAffinity,
+            isStaticFile
           },
           meta
         )
