@@ -50,7 +50,7 @@ const getStaticFiles = async dir => {
   return getStaticFiles_(dir, nowConfig, { hasNowJson, output })
 }
 
-test.only('`files`', async t => {
+test('`files`', async t => {
   let files = await getNpmFiles(fixture('files-in-package'))
   t.is(files.length, 3)
   files = files.sort(alpha)
