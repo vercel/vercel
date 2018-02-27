@@ -311,12 +311,17 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
 
-    let fsData
-    let deploymentType = 'static'
+    let deploymentType
+    let isFile
 
     if (paths.length === 1) {
       try {
-        fsData = await fs.stat(paths[0])
+        const fsData = await fs.lstat(paths[0])
+
+        if (fsData.isFile()) {
+          isFile = true
+          deploymentType = 'static'
+        }
       } catch (err) {
         let repo
         let isValidRepo = false
@@ -368,12 +373,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           await exit(1)
         }
       }
+    } else {
+      isFile = false
+      deploymentType = 'static'
     }
 
     const checkers = []
 
-    for (const path of paths) {
-      checkers.push(checkPath(path))
+    if (isFile || (!isFile && paths.length === 1)) {
+      checkers.push(checkPath(path[0]))
+    } else {
+      for (const path of paths) {
+        const fsData = await fs.lstat(path)
+
+        if (fsData.isFile()) {
+          continue
+        }
+
+        checkers.push(checkPath(path))
+      }
     }
 
     try {
