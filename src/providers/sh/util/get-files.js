@@ -165,7 +165,7 @@ async function staticFiles(
 
     const filter = ignore()
       .add(IGNORED + '\n' + clearRelative(gitIgnore))
-      .add([ 'now.json', 'package.json' ])
+      .add([ 'now.json', 'package.json', 'Dockerfile' ])
       .createFilter()
 
     const prefixLength = path.length + 1
