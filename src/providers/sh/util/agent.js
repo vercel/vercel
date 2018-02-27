@@ -4,9 +4,10 @@ const http = require('http')
 const https = require('https')
 
 // Packages
+const Sema = require('async-sema')
 const fetch = require('node-fetch')
 const {version} = require('../../../util/pkg')
-const Sema = require('async-sema')
+const createOutput = require('../../../util/output')
 
 // TODO: Don't limit to canary
 const USE_HTTP2 = version.indexOf('canary') > -1
@@ -57,7 +58,7 @@ module.exports = class Agent {
     const parsed = parse(url)
     this._protocol = parsed.protocol
     this._sema = new Sema(20)
-    this._debug = debug
+    this._output = createOutput({ debug })
     if (tls) {
       this._initAgent()
     }
@@ -73,9 +74,8 @@ module.exports = class Agent {
   }
 
   _onError(err, agent) {
-    if (this._debug) {
-      console.log(`> [debug] agent connection error ${err}\n${err.stack}`)
-    }
+    const { debug } = this._output
+    debug(`Agent connection error ${err}\n${err.stack}`)
     if (this._agent === agent) {
       this._agent = null
     }
@@ -86,6 +86,7 @@ module.exports = class Agent {
   }
 
   async fetch(path, opts = {}) {
+    const { debug } = this._output
     await this._sema.v()
 
     let currentContext;
@@ -105,16 +106,12 @@ module.exports = class Agent {
       this._currContext.ongoingFetches++;
       currentContext = this._currContext
 
-      if (this._debug) {
-        console.log('> [debug] Total requests made on socket #%d: %d', this._contexts.length, this._currContext.fetchesMade)
-        console.log('> [debug] Concurrent requests on socket #%d: %d', this._contexts.length, this._currContext.ongoingFetches)
-      }
+      debug(`Total requests made on socket #${this._contexts.length}: ${this._currContext.fetchesMade}`)
+      debug(`Concurrent requests on socket #${this._contexts.length}: ${this._currContext.ongoingFetches}`)
     }
 
     if (!this._agent) {
-      if (this._debug) {
-        console.log('> [debug] re-initializing agent')
-      }
+      debug('Re-initializing agent')
       this._initAgent()
     }
 
@@ -132,7 +129,7 @@ module.exports = class Agent {
       }
     }
 
-    if(USE_HTTP2 && body && typeof body === 'object' && typeof body.pipe === 'function') {
+    if (USE_HTTP2 && body && typeof body === 'object' && typeof body.pipe === 'function') {
       opts.body = new StreamBody(body)
     }
 
@@ -151,9 +148,7 @@ module.exports = class Agent {
           // If the response is a stream, and the server is still streaming data
           // we should check if the stream has closed before disconnecting
           // hasCompleted CAN technically be called before the res body stream is closed
-          if (this._debug) {
-            console.log('> [debug] Closing old socket');
-          }
+          debug('Closing old socket')
           currentContext.disconnect(this._url)
         }
       }
@@ -181,9 +176,8 @@ module.exports = class Agent {
   }
 
   close() {
-    if (this._debug) {
-      console.log('> [debug] closing agent')
-    }
+    const { debug } = this._output
+    debug('Closing agent')
 
     if (this._agent) {
       this._agent.destroy()
