@@ -17,7 +17,7 @@ const {
   staticFiles: getStaticFiles_
 } = require('../src/providers/sh/util/get-files')
 
-const output = createOutput({ debug: true })
+const output = createOutput({ debug: false })
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./test/_fixtures/${name}`)
