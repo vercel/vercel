@@ -152,11 +152,10 @@ test('`now.files` overrides `.gitignore` in Static', async t => {
   )
   files = files.sort(alpha)
 
-  t.is(files.length, 4)
+  t.is(files.length, 3)
   t.is(base(files[0]), `${path}/a.js`)
   t.is(base(files[1]), `${path}/b.js`)
   t.is(base(files[2]), `${path}/build/a/c.js`)
-  t.is(base(files[3]), `${path}/now.json`)
 })
 
 test('`now.files` overrides `.npmignore`', async t => {

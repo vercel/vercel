@@ -29,9 +29,9 @@ const glob = async function(pattern, options) {
  * @param {string} dir the directory to walk
  * @param {string} path the path to this directory
  * @param {Array[string]} filelist a list of files so far identified
- * @param {Object} options 
+ * @param {Object} options
  * 	- `debug` {Boolean} warn upon ignore
- * @returns {Array}  
+ * @returns {Array}
  */
 const walkSync = async (dir, path, filelist = [], { debug = false } = {}) => {
   const dirc = await readdir(asAbsolute(dir, path))
@@ -54,7 +54,7 @@ const walkSync = async (dir, path, filelist = [], { debug = false } = {}) => {
 /**
  * Will return an array containing the expaneded list of all files included in the whitelist.
  * @param {Array[string]} whitelist array of files and directories to include.
- * @param {string} path the path of the deployment. 
+ * @param {string} path the path of the deployment.
  * @param {Object} options
  * 	- `debug` {Boolean} warn upon ignore
  * @returns {Array} the expanded list of whitelisted files.
@@ -165,6 +165,7 @@ async function staticFiles(
 
     const filter = ignore()
       .add(IGNORED + '\n' + clearRelative(gitIgnore))
+      .add([ 'now.json', 'package.json', 'Dockerfile' ])
       .createFilter()
 
     const prefixLength = path.length + 1
@@ -181,9 +182,11 @@ async function staticFiles(
       }
 
       const accepted = filter(relativePath)
+
       if (!accepted && debug) {
         console.log('> [debug] ignoring "%s"', file)
       }
+
       return accepted
     }
 
@@ -201,10 +204,6 @@ async function staticFiles(
     if (debug) {
       console.timeEnd(`> [debug] locating files ${path}`)
     }
-  }
-
-  if (hasNowJson) {
-    files.push(asAbsolute(getLocalConfigPath(path), path))
   }
 
   // Get files
