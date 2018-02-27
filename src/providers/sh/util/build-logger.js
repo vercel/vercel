@@ -123,16 +123,12 @@ module.exports = class Logger extends EventEmitter {
 
     if (log.type === 'command') {
       this.output.log(`▲ ${data}`)
-    } else if (log.type === 'stderr') {
+    } else if (log.type === 'stdout' || log.type === 'stderr') {
       data.split('\n').forEach(v => {
         if (v.length > 0) {
-          this.output.log(v)
-        }
-      })
-    } else if (log.type === 'stdout') {
-      data.split('\n').forEach(v => {
-        if (v.length > 0) {
-          this.output.log(v)
+          // strip out the beginning `>` if there is one because
+          // `log()` prepends its own and we don't want `> >`
+          this.output.log(v.replace(/^> /, ''))
         }
       })
     }
