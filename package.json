@@ -7,20 +7,20 @@
   "scripts": {
     "test": "ava",
     "lint": "eslint .",
-    "prepublishOnly": "npm run build-download && cp /dev/null download/dist/now",
+    "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
     "dev": "webpack -w",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
     "gzip": "ls packed/now* | xargs gzip -k",
     "bundle": "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
-    "pack": "rm -rf packed && webpack && npm run bundle && npm run gzip",
+    "pack": "rm -rf packed && webpack && yarn bundle && yarn gzip",
     "build-download": "webpack --context download --config download/webpack.config.js",
-    "link": "webpack && cd link && npm link",
+    "link": "webpack && cd link && yarn link",
     "build": "webpack"
   },
   "lint-staged": {
     "*.js": [
-      "npm run lint",
+      "yarn lint",
       "prettier --write --single-quote --no-semi",
       "git add"
     ]
