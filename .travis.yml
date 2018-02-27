@@ -4,7 +4,7 @@
     "node"
   ],
   "before_script": [
-    "yarn run pack"
+    "yarn pack"
   ],
   "deploy": [
     {
