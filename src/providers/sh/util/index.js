@@ -25,8 +25,9 @@ const ua = require('./ua')
 const hash = require('./hash')
 const Agent = require('./agent')
 const toHost = require('./to-host')
-const createOutput = require('./output')
 const { responseError } = require('./error')
+const cmd = require('../../../util/output/cmd')
+const createOutput = require('../../../util/output')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -111,7 +112,7 @@ module.exports = class Now extends EventEmitter {
         (await readAuthToken(path)) || (await readAuthToken(homedir()))
     }
 
-    const hashes = await time('Computing hashes', async () => {
+    const hashes = await time('Computing hashes', () => {
       const pkgDetails = Object.assign({ name }, pkg)
       return hash(files, pkgDetails)
     })
@@ -149,7 +150,7 @@ module.exports = class Now extends EventEmitter {
       ))
 
       const res = await time(
-        'GET /v3/now/deployments',
+        'POST /v3/now/deployments',
         this._fetch('/v3/now/deployments', {
           method: 'POST',
           body: {
@@ -179,11 +180,7 @@ module.exports = class Now extends EventEmitter {
 
       if (res.status === 429) {
         let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-
-        msg += `${chalk.gray('>')} Please run ${chalk.gray('`')}${chalk.cyan(
-          'now upgrade'
-        )}${chalk.gray('`')} to proceed`
-
+        msg += `Please run ${cmd('now upgrade')} to proceed`
         const err = new Error(msg)
 
         err.status = res.status
@@ -232,7 +229,7 @@ module.exports = class Now extends EventEmitter {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning
           const n = hashes.get(sha).names.pop()
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)})
+          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`)
           hashes.get(sha).names.unshift(n) // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++
         } else if (warning.reason === 'node_version_not_found') {
@@ -243,7 +240,7 @@ module.exports = class Now extends EventEmitter {
 
       if (sizeExceeded > 0) {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(chalk`Please run {gray `}{cyan now upgrade}{gray `} to upgrade.`);
+        log(`Please run ${cmd('now upgrade')} to upgrade.`);
       }
     }
 
@@ -289,7 +286,7 @@ module.exports = class Now extends EventEmitter {
             stream.write(data)
             stream.end()
             const res = await time(
-              `v2/now/files #${attempt} ${names.join(' ')}`
+              `POST /v2/now/files #${attempt} ${names.join(' ')}`,
               this._fetch('/v2/now/files', {
                 method: 'POST',
                 headers: {

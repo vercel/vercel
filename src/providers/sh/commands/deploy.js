@@ -20,6 +20,7 @@ const jsonlines = require('jsonlines');
 // Utilities
 const Logger = require('../util/build-logger')
 const Now = require('../util')
+const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError, error } = require('../util/error')
 const { fromGit, isRepoPath, gitPathParts } = require('../util/git')

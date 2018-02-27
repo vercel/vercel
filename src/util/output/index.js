@@ -30,7 +30,8 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     log(...args) { debug(format(...args)) }
   }
 
-  async function time(label, promise) {
+  async function time(label, fn) {
+    const promise = !fn.then && typeof fn === 'function' ? fn() : fn
     if (debugEnabled) {
       Console.prototype.time.call(c, label)
       const r = await promise
