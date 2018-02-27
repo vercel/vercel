@@ -167,7 +167,7 @@ const help = () => {
 }
 
 let argv
-let path
+let paths
 
 // Options
 let forceNew
@@ -268,12 +268,12 @@ async function main(ctx) {
     argv._.shift()
   }
 
-  if (argv._[0]) {
+  if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    path = resolve(process.cwd(), argv._[0])
+    paths = argv._.map(item => resolve(process.cwd(), item))
   } else {
-    path = process.cwd()
+    paths = [ process.cwd() ]
   }
 
   // Options
@@ -310,82 +310,81 @@ async function main(ctx) {
 async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
-    const rawPath = argv._[0]
 
-    try {
-      await fs.stat(rawPath || path)
-    } catch (err) {
-      let repo
-      let isValidRepo = false
+    let fsData
+    let deploymentType = 'static'
 
+    if (paths.length === 1) {
       try {
-        isValidRepo = isRepoPath(rawPath)
-      } catch (_err) {
-        if (err.code === 'INVALID_URL') {
-          await stopDeployment(_err)
-        } else {
-          reject(_err)
-        }
-      }
-
-      if (isValidRepo) {
-        const gitParts = gitPathParts(rawPath)
-        Object.assign(gitRepo, gitParts)
-
-        const searchMessage = setTimeout(() => {
-          console.log(
-            `> Didn't find directory. Searching on ${gitRepo.type}...`
-          )
-        }, 500)
+        fsData = await fs.stat(paths[0])
+      } catch (err) {
+        let repo
+        let isValidRepo = false
 
         try {
-          repo = await fromGit(rawPath, debug)
-        } catch (err) {}
+          isValidRepo = isRepoPath(rawPath)
+        } catch (_err) {
+          if (err.code === 'INVALID_URL') {
+            await stopDeployment(_err)
+          } else {
+            reject(_err)
+          }
+        }
 
-        clearTimeout(searchMessage)
-      }
+        if (isValidRepo) {
+          const gitParts = gitPathParts(rawPath)
+          Object.assign(gitRepo, gitParts)
 
-      if (repo) {
-        // Tell now which directory to deploy
-        path = repo.path
+          const searchMessage = setTimeout(() => {
+            console.log(
+              `> Didn't find directory. Searching on ${gitRepo.type}...`
+            )
+          }, 500)
 
-        // Set global variable for deleting tmp dir later
-        // once the deployment has finished
-        Object.assign(gitRepo, repo)
-      } else if (isValidRepo) {
-        const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+          try {
+            repo = await fromGit(rawPath, debug)
+          } catch (err) {}
 
-        await stopDeployment(
-          `There's no repository named "${chalk.bold(
-            gitRepo.main
-          )}" ${gitRef}on ${gitRepo.type}`
-        )
-      } else {
-        console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
-        await exit(1)
+          clearTimeout(searchMessage)
+        }
+
+        if (repo) {
+          // Tell now which directory to deploy
+          path = repo.path
+
+          // Set global variable for deleting tmp dir later
+          // once the deployment has finished
+          Object.assign(gitRepo, repo)
+        } else if (isValidRepo) {
+          const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+
+          await stopDeployment(
+            `There's no repository named "${chalk.bold(
+              gitRepo.main
+            )}" ${gitRef}on ${gitRepo.type}`
+          )
+        } else {
+          console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
+          await exit(1)
+        }
       }
     }
 
-    let deploymentType
-    let isStaticFile = false
+    const checkers = []
 
-    const fsData = await fs.lstat(path)
+    for (const path of paths) {
+      checkers.push(checkPath(path))
+    }
 
-    if (fsData.isFile()) {
-      deploymentType = 'static'
-      isStaticFile = true
-    } else {
-      // Make sure that directory is deployable
-      try {
-        await checkPath(path)
-      } catch (err) {
-        console.error(error({
-          message: err.message,
-          slug: 'path-not-deployable'
-        }))
+    try {
+      await Promise.all(checkers)
+    } catch (err) {
+      console.error(error({
+        message: err.message,
+        slug: 'path-not-deployable'
+      }))
 
-        await exit(1)
-      }
+      await exit(1)
     }
 
     if (!quiet && showMessage) {
@@ -399,13 +398,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           )}`)
         )
       } else {
+        const list = paths.map((path, index) => {
+          let suffix = ''
+
+          if (paths.length > 1 && index !== paths.length - 1) {
+            suffix = (index < paths.length - 2) ? ', ' : ' and '
+          }
+
+          return chalk.bold(toHumanPath(path)) + suffix
+        }).join('')
+
         console.log(
-          info(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+          info(`Deploying ${list} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
           )}`)
         )
       }
     }
+
+    process.exit(0)
 
     // CLI deployment type explicit overrides
     if (argv.docker) {
