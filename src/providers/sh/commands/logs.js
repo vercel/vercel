@@ -47,6 +47,9 @@ const help = () => {
       'UNTIL'
     )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
     -T, --team                     Set a custom team scope
+    -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
+      'MODE'
+    )}         Specify the output format (${Object.keys(logPrinters).join('|')}) [short]
 
   ${chalk.dim('Examples:')}
 
@@ -67,6 +70,7 @@ let limit
 let query
 let follow
 let types
+let outputMode
 
 let since
 let until
@@ -74,14 +78,15 @@ let instanceId
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
-    string: ['query', 'since', 'until'],
+    string: ['query', 'since', 'until', 'output'],
     boolean: ['help', 'all', 'debug', 'follow'],
     alias: {
       help: 'h',
       all: 'a',
       debug: 'd',
       query: 'q',
-      follow: 'f'
+      follow: 'f',
+      output: 'o'
     }
   })
 
@@ -124,6 +129,7 @@ const main = async ctx => {
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
+  outputMode = argv.output in logPrinters ? argv.output : 'short'
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
@@ -238,7 +244,7 @@ function printLogs({ token, sh: { currentTeam } }) {
   })
 }
 
-function printLog(log) {
+function printLogShort(log) {
   let data
   const obj = log.object
   if (log.type === 'request') {
@@ -265,6 +271,19 @@ function printLog(log) {
       console.log(`${repeat(' ', date.length)}  ${line}`)
     }
   })
+}
+
+function printLogRaw(log) {
+  console.log(log.object ? JSON.stringify(log.object) : log.text)
+}
+
+const logPrinters = {
+  short: printLogShort,
+  raw: printLogRaw
+}
+
+function printLog(log) {
+  logPrinters[outputMode](log)
 }
 
 async function fetchLogs({ token, currentTeam, since, until } = {}) {
