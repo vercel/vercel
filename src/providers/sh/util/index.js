@@ -76,7 +76,7 @@ module.exports = class Now extends EventEmitter {
     let engines
 
     await time('Getting files', async () => {
-      const opts = { debug: this._debug, hasNowJson }
+      const opts = { output: this._output, hasNowJson }
 
       if (type === 'npm') {
         files = await getNpmFiles(path, pkg, nowConfig, opts)

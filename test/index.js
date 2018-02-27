@@ -6,6 +6,7 @@ const test = require('ava')
 const { asc: alpha } = require('alpha-sort')
 
 // Utilities
+const createOutput = require('../src/util/output')
 const hash = require('../src/providers/sh/util/hash')
 const readMetadata = require('../src/providers/sh/util/read-metadata')
 const getLocalConfigPath = require('../src/config/local-path')
@@ -16,6 +17,7 @@ const {
   staticFiles: getStaticFiles_
 } = require('../src/providers/sh/util/get-files')
 
+const output = createOutput({ debug: true })
 const prefix = join(__dirname, '_fixtures') + '/'
 const base = path => path.replace(prefix, '')
 const fixture = name => resolve(`./test/_fixtures/${name}`)
@@ -27,7 +29,7 @@ const getNpmFiles = async dir => {
     strict: false
   })
 
-  return getNpmFiles_(dir, pkg, nowConfig, { hasNowJson })
+  return getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output })
 }
 
 const getDockerFiles = async dir => {
@@ -36,7 +38,7 @@ const getDockerFiles = async dir => {
     strict: false
   })
 
-  return getDockerFiles_(dir, nowConfig, { hasNowJson })
+  return getDockerFiles_(dir, nowConfig, { hasNowJson, output })
 }
 
 const getStaticFiles = async dir => {
@@ -45,10 +47,10 @@ const getStaticFiles = async dir => {
     strict: false
   })
 
-  return getStaticFiles_(dir, nowConfig, { hasNowJson })
+  return getStaticFiles_(dir, nowConfig, { hasNowJson, output })
 }
 
-test('`files`', async t => {
+test.only('`files`', async t => {
   let files = await getNpmFiles(fixture('files-in-package'))
   t.is(files.length, 3)
   files = files.sort(alpha)
