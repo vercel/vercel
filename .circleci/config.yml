@@ -17,6 +17,13 @@ jobs:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
+
+  test:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
       - run: yarn test
 
   deploy-stable:
@@ -39,7 +46,8 @@ workflows:
   version: 2
   handle:
     jobs:
-      - build-and-test
+      - build
+      - test
       - deploy-stable:
           requires:
             - build-and-test
