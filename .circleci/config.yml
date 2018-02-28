@@ -34,7 +34,7 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run: echo "deploying canary"
+      - run: echo "deploying canary now"
 
 workflows:
   version: 2
