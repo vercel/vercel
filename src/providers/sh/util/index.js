@@ -350,7 +350,7 @@ module.exports = class Now extends EventEmitter {
           { retries: 3, randomize: true, onRetry: this._onRetry }
         )
       )
-    )
+    ))
       .then(() => {
         this.emit('complete')
       })
