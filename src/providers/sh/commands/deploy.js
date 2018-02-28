@@ -434,6 +434,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
+    let meta
+
     if (!isFile && deploymentType !== 'static') {
       if (argv.docker) {
         if (debug) {
@@ -458,13 +460,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (debug) {
         console.log(`> [debug] Forcing \`deploymentType\` = \`static\` automatically`)
       }
-    }
 
-    let meta
-
-    if (isStaticFile) {
       meta = {
-        name: 'file',
+        name: isFile ? 'file' : (paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -474,14 +472,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         deploymentType,
         sessionAffinity
       }
-    } else {
-      ;({
-        meta,
-        deploymentName,
-        deploymentType,
-        sessionAffinity
-      } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
     }
+
+    ({
+      meta,
+      deploymentName,
+      deploymentType,
+      sessionAffinity
+    } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
 
     const nowConfig = meta.nowConfig
     const now = new Now({ apiUrl, token, debug, currentTeam })
@@ -508,6 +506,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
             slug: 'missing-dotenv-target'
           }))
+
           await exit(1)
         } else {
           throw err
