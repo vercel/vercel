@@ -47,7 +47,9 @@ workflows:
   handle:
     jobs:
       - build
-      - test
+      - test:
+        requires:
+          - build
       - deploy-stable:
           requires:
             - build
