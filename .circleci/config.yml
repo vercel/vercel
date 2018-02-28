@@ -69,9 +69,11 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - run:
           name: Uploading binaries
-          command: putasset --help
+          command: npx putasset --help
 
 workflows:
   version: 2
