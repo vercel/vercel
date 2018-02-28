@@ -441,11 +441,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         deploymentType = 'static'
       }
     } else if (deploymentType === 'static') {
-      if (debug) {
-        console.log(
-          `> [debug] Forcing \`deploymentType\` = \`static\` automatically`
-        )
-      }
+      debug(`Forcing \`deploymentType\` = \`static\` automatically`)
 
       meta = {
         name: isFile
