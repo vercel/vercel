@@ -28,10 +28,7 @@ const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
-const info = require('../../../util/output/info')
-const success = require('../../../util/output/success')
 const wait = require('../../../util/output/wait')
-const NowPlans = require('../util/plans')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
@@ -363,7 +360,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               gitRepo.main
             )}" ${gitRef}on ${gitRepo.type}`)
         } else {
-          log(error(`The specified directory "${basename(path)}" doesn't exist.`))
+          log(error(`The specified directory "${basename(paths[0])}" doesn't exist.`))
           await exit(1)
         }
       }

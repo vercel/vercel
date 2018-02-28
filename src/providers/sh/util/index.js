@@ -574,6 +574,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async getDomain(domain) {
+    const { debug, time } = this._output
+
     return this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /domains/${domain}`,
