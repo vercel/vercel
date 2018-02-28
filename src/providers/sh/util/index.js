@@ -26,6 +26,8 @@ const hash = require('./hash')
 const Agent = require('./agent')
 const toHost = require('./to-host')
 const { responseError } = require('./error')
+const cmd = require('../../../util/output/cmd')
+const createOutput = require('../../../util/output')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -40,6 +42,7 @@ module.exports = class Now extends EventEmitter {
     this._token = token
     this._debug = debug
     this._forceNew = forceNew
+    this._output = createOutput({ debug })
     this._agent = new Agent(apiUrl, { debug })
     this._onRetry = this._onRetry.bind(this)
     this.currentTeam = currentTeam
@@ -66,46 +69,41 @@ module.exports = class Now extends EventEmitter {
       isStaticFile = false
     }
   ) {
+    const { log, warn, time } = this._output
     this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
 
     let files
     let engines
 
-    if (this._debug) {
-      console.time('> [debug] Getting files')
-    }
+    await time('Getting files', async () => {
+      const opts = { output: this._output, hasNowJson }
 
-    const opts = { debug: this._debug, hasNowJson }
+      if (type === 'npm') {
+        files = await getNpmFiles(path, pkg, nowConfig, opts)
 
-    if (type === 'npm') {
-      files = await getNpmFiles(path, pkg, nowConfig, opts)
+        // A `start` or `now-start` npm script, or a `server.js` file
+        // in the root directory of the deployment are required
+        if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
+          const err = new Error(
+            'Missing `start` (or `now-start`) script in `package.json`. ' +
+              'See: https://docs.npmjs.com/cli/start'
+          )
+          err.userError = true
+          throw err
+        }
 
-      // A `start` or `now-start` npm script, or a `server.js` file
-      // in the root directory of the deployment are required
-      if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
-        const err = new Error(
-          'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start'
-        )
-        err.userError = true
-        throw err
+        engines = nowConfig.engines || pkg.engines
+        forwardNpm = forwardNpm || nowConfig.forwardNpm
+      } else if (type === 'static') {
+        if (isStaticFile) {
+          files = [resolvePath(path)]
+        } else {
+          files = await getFiles(path, nowConfig, opts)
+        }
+      } else if (type === 'docker') {
+        files = await getDockerFiles(path, nowConfig, opts)
       }
-
-      engines = nowConfig.engines || pkg.engines
-      forwardNpm = forwardNpm || nowConfig.forwardNpm
-    } else if (type === 'static') {
-      if (isStaticFile) {
-        files = [resolvePath(path)]
-      } else {
-        files = await getFiles(path, nowConfig, opts)
-      }
-    } else if (type === 'docker') {
-      files = await getDockerFiles(path, nowConfig, opts)
-    }
-
-    if (this._debug) {
-      console.timeEnd('> [debug] Getting files')
-    }
+    })
 
     // Read `registry.npmjs.org` authToken from .npmrc
     let authToken
@@ -114,27 +112,17 @@ module.exports = class Now extends EventEmitter {
         (await readAuthToken(path)) || (await readAuthToken(homedir()))
     }
 
-    if (this._debug) {
-      console.time('> [debug] Computing hashes')
-    }
-
-    const pkgDetails = Object.assign({ name }, pkg)
-    const hashes = await hash(files, pkgDetails)
-
-    if (this._debug) {
-      console.timeEnd('> [debug] Computing hashes')
-    }
+    const hashes = await time('Computing hashes', () => {
+      const pkgDetails = Object.assign({ name }, pkg)
+      return hash(files, pkgDetails)
+    })
 
     this._files = hashes
 
     const deployment = await this.retry(async bail => {
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
-      if (this._debug) {
-        console.time('> [debug] get files ready for deployment')
-      }
-
-      const files = await Promise.all(
+      const files = await time('Get files ready for deployment', Promise.all(
         Array.prototype.concat.apply(
           [],
           await Promise.all(
@@ -159,35 +147,27 @@ module.exports = class Now extends EventEmitter {
             })
           )
         )
+      ))
+
+      const res = await time(
+        'POST /v3/now/deployments',
+        this._fetch('/v3/now/deployments', {
+          method: 'POST',
+          body: {
+            env,
+            public: wantsPublic || nowConfig.public,
+            forceNew,
+            name,
+            description,
+            deploymentType: type,
+            registryAuthToken: authToken,
+            files,
+            engines,
+            sessionAffinity,
+            atlas: hasNowJson && Boolean(nowConfig.atlas)
+          }
+        })
       )
-      if (this._debug) {
-        console.timeEnd('> [debug] get files ready for deployment')
-      }
-
-      if (this._debug) {
-        console.time('> [debug] v3/now/deployments')
-      }
-
-      const res = await this._fetch('/v3/now/deployments', {
-        method: 'POST',
-        body: {
-          env,
-          public: wantsPublic || nowConfig.public,
-          forceNew,
-          name,
-          description,
-          deploymentType: type,
-          registryAuthToken: authToken,
-          files,
-          engines,
-          sessionAffinity,
-          atlas: hasNowJson && Boolean(nowConfig.atlas)
-        }
-      })
-
-      if (this._debug) {
-        console.timeEnd('> [debug] v3/now/deployments')
-      }
 
       // No retry on 4xx
       let body
@@ -200,11 +180,7 @@ module.exports = class Now extends EventEmitter {
 
       if (res.status === 429) {
         let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-
-        msg += `${chalk.gray('>')} Please run ${chalk.gray('`')}${chalk.cyan(
-          'now upgrade'
-        )}${chalk.gray('`')} to proceed`
-
+        msg += `Please run ${cmd('now upgrade')} to proceed`
         const err = new Error(msg)
 
         err.status = res.status
@@ -253,32 +229,18 @@ module.exports = class Now extends EventEmitter {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning
           const n = hashes.get(sha).names.pop()
-          console.error(
-            '> \u001B[31mWarning!\u001B[39m Skipping file %s (size exceeded %s)',
-            n,
-            bytes(limit)
-          )
+          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`)
           hashes.get(sha).names.unshift(n) // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++
         } else if (warning.reason === 'node_version_not_found') {
-          const { wanted, used } = warning
-          console.error(
-            '> \u001B[31mWarning!\u001B[39m Requested node version %s is not available',
-            wanted,
-            used
-          )
+          warn(`Requested node version ${warning.wanted} is not available`);
           missingVersion = true
         }
       })
 
-      if (sizeExceeded) {
-        console.error(
-          `> \u001B[31mWarning!\u001B[39m ${sizeExceeded} of the files ` +
-            'exceeded the limit for your plan.\n' +
-            `> Please run ${chalk.gray('`')}${chalk.cyan(
-              'now upgrade'
-            )}${chalk.gray('`')} to upgrade.`
-        )
+      if (sizeExceeded > 0) {
+        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
+        log(`Please run ${cmd('now upgrade')} to upgrade.`);
       }
     }
 
@@ -289,22 +251,11 @@ module.exports = class Now extends EventEmitter {
     }
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
-      if (engines && engines.node) {
-        if (missingVersion) {
-          console.log(
-            `> Using Node.js ${chalk.bold(deployment.nodeVersion)} (default)`
-          )
-        } else {
-          console.log(
-            `> Using Node.js ${chalk.bold(
-              deployment.nodeVersion
-            )} (requested: ${chalk.dim(`\`${engines.node}\``)})`
-          )
-        }
+      if (engines && engines.node && !missingVersion) {
+        log(chalk`Using Node.js {bold ${
+          deployment.nodeVersion}} (requested: {dim \`${engines.node}\`)`)
       } else {
-        console.log(
-          `> Using Node.js ${chalk.bold(deployment.nodeVersion)} (default)`
-        )
+        log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`)
       }
     }
 
@@ -317,65 +268,43 @@ module.exports = class Now extends EventEmitter {
   }
 
   upload() {
-    if (this._debug) {
-      console.log(
-        '> [debug] Will upload ' +
-          `${this._missing.length} files`
-      )
-    }
+    const { debug, time } = this._output;
+    debug(`Will upload ${this._missing.length} files`)
 
     this._agent.setConcurrency({
       maxStreams: MAX_CONCURRENT,
       capacity: this._missing.length
     })
 
-    if (this._debug) {
-      console.time('> [debug] Uploading files')
-    }
-
-    Promise.all(
+    time('Uploading files', Promise.all(
       this._missing.map(sha =>
         retry(
           async (bail, attempt) => {
             const file = this._files.get(sha)
             const { data, names } = file
-
-            if (this._debug) {
-              console.time(`> [debug] v2/now/files #${attempt} ${names.join(' ')}`)
-            }
-
             const stream = through2()
             stream.write(data)
             stream.end()
-            const res = await this._fetch('/v2/now/files', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': data.length,
-                'x-now-digest': sha,
-                'x-now-size': data.length
-              },
-              body: stream
-            })
-
-            if (this._debug) {
-              console.timeEnd(
-                `> [debug] v2/now/files #${attempt} ${names.join(' ')}`
-              )
-            }
+            const res = await time(
+              `POST /v2/now/files #${attempt} ${names.join(' ')}`,
+              this._fetch('/v2/now/files', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  'Content-Length': data.length,
+                  'x-now-digest': sha,
+                  'x-now-size': data.length
+                },
+                body: stream
+              })
+            )
 
             // No retry on 4xx
             if (
               res.status !== 200 &&
               (res.status >= 400 || res.status < 500)
             ) {
-              if (this._debug) {
-                console.log(
-                  '> [debug] bailing on creating due to %s',
-                  res.status
-                )
-              }
-
+              debug(`Bailing on creating due to ${res.status}`);
               return bail(await responseError(res))
             }
 
@@ -384,54 +313,41 @@ module.exports = class Now extends EventEmitter {
           { retries: 3, randomize: true, onRetry: this._onRetry }
         )
       )
-    )
+    ))
       .then(() => {
-        if (this._debug) {
-          console.timeEnd('> [debug] Uploading files')
-        }
-
         this.emit('complete')
       })
       .catch(err => this.emit('error', err))
   }
 
   async listSecrets() {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /secrets`)
-      }
+    const { time } = this._output
 
-      const res = await this._fetch('/now/secrets')
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /secrets`)
-      }
-
-      const body = await res.json()
-      return body.secrets
+    const { secrets } = await this.retry(async (bail, attempt) => {
+      const res = await time(
+        `#${attempt} GET /secrets`,
+        this._fetch('/now/secrets')
+      )
+      return res.json()
     })
+
+    return secrets
   }
 
   async list(app) {
+    const { debug, time } = this._output
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
 
     const { deployments } = await this.retry(
       async bail => {
-        if (this._debug) {
-          console.time('> [debug] GET /v2/now/deployments')
-        }
-
-        const res = await this._fetch('/v2/now/deployments' + query)
-
-        if (this._debug) {
-          console.timeEnd('> [debug] GET /v2/now/deployments')
-        }
+        const res = await time(
+          'GET /v2/now/deployments',
+          this._fetch('/v2/now/deployments' + query)
+        );
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
-          if (this._debug) {
-            console.log('> [debug] bailing on listing due to %s', res.status)
-          }
+          debug(`Bailing on listing deployments due to ${res.status}`)
           return bail(await responseError(res))
         }
 
@@ -448,25 +364,18 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listInstances(deploymentId) {
+    const { debug, time } = this._output
+
     const { instances } = await this.retry(
       async bail => {
-        if (this._debug) {
-          console.time(`> [debug] /deployments/${deploymentId}/instances`)
-        }
-
-        const res = await this._fetch(
-          `/now/deployments/${deploymentId}/instances`
+        const res = await time(
+          `/deployments/${deploymentId}/instances`,
+          this._fetch(`/now/deployments/${deploymentId}/instances`)
         )
-
-        if (this._debug) {
-          console.timeEnd(`> [debug] /deployments/${deploymentId}/instances`)
-        }
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
-          if (this._debug) {
-            console.log('> [debug] bailing on listing due to %s', res.status)
-          }
+          debug(`Bailing on listing instances due to ${res.status}`)
           return bail(await responseError(res))
         }
 
@@ -483,6 +392,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async findDeployment(deployment) {
+    const { debug } = this._output
     const list = await this.list()
 
     let key
@@ -498,19 +408,13 @@ module.exports = class Now extends EventEmitter {
 
     const depl = list.find(d => {
       if (d[key] === val) {
-        if (this._debug) {
-          console.log(`> [debug] matched deployment ${d.uid} by ${key} ${val}`)
-        }
-
+        debug(`Matched deployment ${d.uid} by ${key} ${val}`)
         return true
       }
 
       // Match prefix
       if (`${val}.now.sh` === d.url) {
-        if (this._debug) {
-          console.log(`> [debug] matched deployment ${d.uid} by url ${d.url}`)
-        }
-
+        debug(`Matched deployment ${d.uid} by url ${d.url}`)
         return true
       }
 
@@ -524,6 +428,7 @@ module.exports = class Now extends EventEmitter {
     deploymentIdOrURL,
     { instanceId, types, limit, query, since, until } = {}
   ) {
+    const { debug, time } = this._outut
     const q = qs.stringify({
       instanceId,
       types: types.join(','),
@@ -535,28 +440,14 @@ module.exports = class Now extends EventEmitter {
 
     const { logs } = await this.retry(
       async bail => {
-        if (this._debug) {
-          console.time('> [debug] /logs')
-        }
-
         const url = `/now/deployments/${encodeURIComponent(
           deploymentIdOrURL
         )}/logs?${q}`
-        const res = await this._fetch(url)
-
-        if (this._debug) {
-          console.timeEnd('> [debug] /logs')
-        }
+        const res = await time('GET /logs', this._fetch(url))
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
-          if (this._debug) {
-            console.log(
-              '> [debug] bailing on printing logs due to %s',
-              res.status
-            )
-          }
-
+          debug(`Bailing on printing logs due to ${res.status}`)
           return bail(await responseError(res))
         }
 
@@ -577,7 +468,9 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listAliases(deploymentId) {
-    return this.retry(async bail => {
+    const { debug } = this._output
+
+    const { aliases } = await this.retry(async bail => {
       const res = await this._fetch(
         deploymentId
           ? `/now/deployments/${deploymentId}/aliases`
@@ -585,9 +478,7 @@ module.exports = class Now extends EventEmitter {
       )
 
       if (res.status >= 400 && res.status < 500) {
-        if (this._debug) {
-          console.log('> [debug] bailing on get domain due to %s', res.status)
-        }
+        debug(`Bailing on get domain due to ${res.status}`)
         return bail(await responseError(res))
       }
 
@@ -595,9 +486,10 @@ module.exports = class Now extends EventEmitter {
         throw new Error('API error getting aliases')
       }
 
-      const body = await res.json()
-      return body.aliases
+      return res.json()
     })
+
+    return aliases
   }
 
   async last(app) {
@@ -619,21 +511,16 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listDomains() {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains`)
-      }
+    const { debug, time } = this._output
 
-      const res = await this._fetch('/domains')
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains`)
-      }
+    const { domains } = await this.retry(async (bail, attempt) => {
+      const res = await time(
+        `#${attempt} GET /domains`,
+        this._fetch('/domains')
+      )
 
       if (res.status >= 400 && res.status < 500) {
-        if (this._debug) {
-          console.log('> [debug] bailing on get domain due to %s', res.status)
-        }
+        debug(`Bailing on get domain due to ${res.status}`)
         return bail(await responseError(res))
       }
 
@@ -641,23 +528,21 @@ module.exports = class Now extends EventEmitter {
         throw new Error('API error getting domains')
       }
 
-      const body = await res.json()
-      return body.domains
+      return res.json()
     })
+
+    return domains
   }
 
   async getDomain(domain) {
     return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains/${domain}`)
-      }
-
-      const res = await this._fetch(`/domains/${domain}`)
+      const res = await time(
+        `#${attempt} GET /domains/${domain}`,
+        this._fetch(`/domains/${domain}`)
+      )
 
       if (res.status >= 400 && res.status < 500) {
-        if (this._debug) {
-          console.log('> [debug] bailing on get domain due to %s', res.status)
-        }
+        debug(`Bailing on get domain due to ${res.status}`)
         return bail(await responseError(res))
       }
 
@@ -665,97 +550,70 @@ module.exports = class Now extends EventEmitter {
         throw new Error('API error getting domain name')
       }
 
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains/${domain}`)
-      }
-
       return res.json()
     })
   }
 
-  getNameservers(domain) {
-    return new Promise((resolve, reject) => {
-      this.retry(async (bail, attempt) => {
-        if (this._debug) {
-          console.time(
-            `> [debug] #${attempt} GET /whois-ns`
-          )
-        }
+  async getNameservers(domain) {
+    const { time } = this._output
 
-        const res = await this._fetch(
-          `/whois-ns?domain=${encodeURIComponent(domain)}`
-        )
+    const body = await this.retry(async (bail, attempt) => {
+      const res = await time(
+        `#${attempt} GET /whois-ns`,
+        this._fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`)
+      )
 
-        if (this._debug) {
-          console.timeEnd(
-            `> [debug] #${attempt} GET /whois-ns`
-          )
-        }
+      const body = await res.json()
 
-        const body = await res.json()
+      if (res.status === 200) {
+        return body
+      }
 
-        if (res.status === 200) {
-          return body
-        }
-
-        throw new Error(`Whois error (${res.status}): ${body.error.message}`)
-      })
-        .then(body => {
-          body.nameservers = body.nameservers.filter(ns => {
-            // Temporary hack:
-            // sometimes we get a response that looks like:
-            // ['ns', 'ns', '', '']
-            // so we filter the empty ones
-            return ns.length
-          })
-          resolve(body)
-        })
-        .catch(err => {
-          reject(err)
-        })
+      throw new Error(`Whois error (${res.status}): ${body.error.message}`)
     })
+
+    body.nameservers = body.nameservers.filter(ns => {
+      // Temporary hack:
+      // sometimes we get a response that looks like:
+      // ['ns', 'ns', '', '']
+      // so we filter the empty ones
+      return ns.length > 0
+    })
+
+    return body
   }
 
   // _ensures_ the domain is setup (idempotent)
   setupDomain(name, { isExternal } = {}) {
+    const { debug, time } = this._output
+
     return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /domains`)
-      }
-
-      const res = await this._fetch('/domains', {
-        method: 'POST',
-        body: { name, isExternal: Boolean(isExternal) }
-      })
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} POST /domains`)
-      }
+      const res = await time(
+        `#${attempt} POST /domains`,
+        this._fetch('/domains', {
+          method: 'POST',
+          body: { name, isExternal: Boolean(isExternal) }
+        })
+      )
 
       const body = await res.json()
 
       if (res.status === 403) {
         const code = body.error.code
         let err
-
         if (code === 'custom_domain_needs_upgrade') {
           err = new Error(
-            `Custom domains are only enabled for premium accounts. Please upgrade at ${chalk.underline(
-              'https://zeit.co/account'
-            )}.`
+            `Custom domains are only enabled for premium accounts. ` +
+              chalk`Please upgrade at {underline https://zeit.co/account}`
           )
         } else {
           err = new Error(`Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`)
         }
-
         err.userError = true
         return bail(err)
       } else if (res.status === 409) {
         // Domain already exists
-        if (this._debug) {
-          console.log('> [debug] Domain already exists (noop)')
-        }
-
+        debug('Domain already exists (noop)')
         return { uid: body.error.uid, code: body.error.code }
       } else if (
         res.status === 401 &&
@@ -772,31 +630,27 @@ module.exports = class Now extends EventEmitter {
   }
 
   createCert(domain, { renew, overwriteCustom } = {}) {
+    const { log, time } = this._output
     return this.retry(
       async (bail, attempt) => {
-        if (this._debug) {
-          console.time(`> [debug] /now/certs #${attempt}`)
-        }
-
-        const res = await this._fetch('/now/certs', {
-          method: 'POST',
-          body: {
-            domains: [domain],
-            renew,
-            overwriteCustom
-          }
-        })
+        const res = await time(
+          `/now/certs #${attempt}`,
+          this._fetch('/now/certs', {
+            method: 'POST',
+            body: {
+              domains: [domain],
+              renew,
+              overwriteCustom
+            }
+          })
+        )
 
         if (res.status === 304) {
-          console.log('> Certificate already issued.')
+          log('Certificate already issued.')
           return
         }
 
         const body = await res.json()
-
-        if (this._debug) {
-          console.timeEnd(`> [debug] /now/certs #${attempt}`)
-        }
 
         if (body.error) {
           const { code } = body.error
@@ -829,15 +683,15 @@ module.exports = class Now extends EventEmitter {
   }
 
   deleteCert(domain) {
+    const { time } = this._output
     return this.retry(
       async (bail, attempt) => {
-        if (this._debug) {
-          console.time(`> [debug] /now/certs #${attempt}`)
-        }
-
-        const res = await this._fetch(`/now/certs/${domain}`, {
-          method: 'DELETE'
-        })
+        const res = await time(
+          `/now/certs #${attempt}`,
+          this._fetch(`/now/certs/${domain}`, {
+            method: 'DELETE'
+          })
+        )
 
         if (res.status !== 200) {
           const err = new Error(res.body.error.message)
@@ -855,26 +709,20 @@ module.exports = class Now extends EventEmitter {
   }
 
   async remove(deploymentId, { hard }) {
-    const url =`/now/deployments/${deploymentId}?hard=${hard ? '1' : '0' }`
+    const { debug, time } = this._output
+    const url =`/now/deployments/${deploymentId}?hard=${hard ? 1 : 0 }`
 
     await this.retry(async bail => {
-      if (this._debug) {
-        console.time(`> [debug] DELETE ${url}`)
-      }
-
-      const res = await this._fetch(url, {
-        method: 'DELETE'
-      })
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] DELETE ${url}`)
-      }
+      const res = await time(
+        `DELETE ${url}`,
+        this._fetch(url, {
+          method: 'DELETE'
+        })
+      )
 
       // No retry on 4xx
       if (res.status >= 400 && res.status < 500) {
-        if (this._debug) {
-          console.log('> [debug] bailing on removal due to %s', res.status)
-        }
+        debug(`Bailing on removal due to ${res.status}`)
         return bail(await responseError(res))
       }
 
@@ -895,9 +743,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   _onRetry(err) {
-    if (this._debug) {
-      console.log(`> [debug] Retrying: ${err}\n${err.stack}`)
-    }
+    this._output.debug(`Retrying: ${err}\n${err.stack}`)
   }
 
   close() {
@@ -950,27 +796,20 @@ module.exports = class Now extends EventEmitter {
   }
 
   setScale(nameOrId, scale) {
+    const { time } = this._output
+
     return this.retry(
       async (bail, attempt) => {
-        if (this._debug) {
-          console.time(
-            `> [debug] #${attempt} POST /deployments/${nameOrId}/instances`
+        const res = await time(
+          `#${attempt} POST /deployments/${nameOrId}/instances`,
+          this._fetch(
+            `/now/deployments/${nameOrId}/instances`,
+            {
+              method: 'POST',
+              body: scale
+            }
           )
-        }
-
-        const res = await this._fetch(
-          `/now/deployments/${nameOrId}/instances`,
-          {
-            method: 'POST',
-            body: scale
-          }
         )
-
-        if (this._debug) {
-          console.timeEnd(
-            `> [debug] #${attempt} POST /deployments/${nameOrId}/instances`
-          )
-        }
 
         if (res.status === 403) {
           return bail(new Error('Unauthorized'))
