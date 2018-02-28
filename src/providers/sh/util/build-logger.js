@@ -2,8 +2,9 @@
 const EventEmitter = require('events')
 
 // Packages
-const io = require('socket.io-client')
 const chalk = require('chalk')
+const io = require('socket.io-client')
+const createOutput = require('../../../util/output')
 
 const { compare, deserialize } = require('./logs')
 
@@ -14,6 +15,7 @@ module.exports = class Logger extends EventEmitter {
     this.token = token
     this.debug = debug
     this.quiet = quiet
+    this.output = createOutput({ debug })
 
     // ReadyState
     this.building = false
@@ -31,16 +33,16 @@ module.exports = class Logger extends EventEmitter {
   }
 
   onAuth(callback) {
-    if (this.debug) {
-      console.log('> [debug] authenticate')
-    }
+    const { debug } = this.output
+    debug('Authenticate')
     callback(this.token)
   }
 
   onState(state) {
-    // Console.log(state)
+    const { log } = this.output
+
     if (!state.id) {
-      console.error('> Deployment not found')
+      log('Deployment not found')
       this.emit('error')
       return
     }
@@ -63,7 +65,7 @@ module.exports = class Logger extends EventEmitter {
   onLog(log) {
     if (!this.building) {
       if (!this.quiet) {
-        console.log('> Building')
+        this.output.log('Building')
       }
       this.building = true
     }
@@ -108,7 +110,7 @@ module.exports = class Logger extends EventEmitter {
 
   onSocketError(err) {
     if (this.debug) {
-      console.log(`> [debug] Socket error ${err}\n${err.stack}`)
+      this.output.debug(`Socket error ${err}\n${err.stack}`)
     }
   }
 
@@ -120,17 +122,13 @@ module.exports = class Logger extends EventEmitter {
     const data = log.object ? JSON.stringify(log.object) : log.text
 
     if (log.type === 'command') {
-      console.log(`${chalk.gray('>')} ▲ ${data}`)
-    } else if (log.type === 'stderr') {
+      this.output.log(`▲ ${data}`)
+    } else if (log.type === 'stdout' || log.type === 'stderr') {
       data.split('\n').forEach(v => {
         if (v.length > 0) {
-          console.error(chalk.gray(`> ${v}`))
-        }
-      })
-    } else if (log.type === 'stdout') {
-      data.split('\n').forEach(v => {
-        if (v.length > 0) {
-          console.log(`${chalk.gray('>')} ${v}`)
+          // strip out the beginning `>` if there is one because
+          // `log()` prepends its own and we don't want `> >`
+          this.output.log(v.replace(/^> /, ''))
         }
       })
     }

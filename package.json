@@ -104,7 +104,7 @@
     "babel-plugin-transform-runtime": "6.23.0",
     "babel-preset-env": "1.6.0",
     "bytes": "3.0.0",
-    "chalk": "2.1.0",
+    "chalk": "2.3.1",
     "child-process-promise": "2.2.1",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
