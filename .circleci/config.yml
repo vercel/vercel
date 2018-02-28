@@ -25,12 +25,16 @@ jobs:
       - run: yarn test
 
   deploy-stable:
+    machine:
+      enabled: true
     working_directory: ~/repo
     steps:
       - checkout
       - run: echo "deploying stable"
 
   deploy-canary:
+    machine:
+      enabled: true
     working_directory: ~/repo
     steps:
       - checkout
@@ -38,7 +42,7 @@ jobs:
 
 workflows:
   version: 2
-  build-and-deploy:
+  handle:
     jobs:
       - build
       - test
