@@ -2,7 +2,6 @@
 const EventEmitter = require('events')
 
 // Packages
-const chalk = require('chalk')
 const io = require('socket.io-client')
 const createOutput = require('../../../util/output')
 
@@ -11,6 +10,7 @@ const { compare, deserialize } = require('./logs')
 module.exports = class Logger extends EventEmitter {
   constructor(host, token, { debug = false, quiet = false } = {}) {
     super()
+
     this.host = host
     this.token = token
     this.debug = debug

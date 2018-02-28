@@ -1,6 +1,6 @@
 // Native
 const { homedir } = require('os')
-const { resolve: resolvePath } = require('path')
+const { resolve: resolvePath, join, basename } = require('path')
 const EventEmitter = require('events')
 const qs = require('querystring')
 const { parse: parseUrl } = require('url')
@@ -21,11 +21,11 @@ const {
   npm: getNpmFiles,
   docker: getDockerFiles
 } = require('./get-files')
-const ua = require('./ua')
-const hash = require('./hash')
 const Agent = require('./agent')
 const toHost = require('./to-host')
 const { responseError } = require('./error')
+const ua = require('./ua')
+const hash = require('./hash')
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
 
@@ -39,6 +39,7 @@ const SEP = IS_WIN ? '\\' : '/'
 module.exports = class Now extends EventEmitter {
   constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }) {
     super()
+
     this._token = token
     this._debug = debug
     this._forceNew = forceNew
@@ -49,7 +50,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async create(
-    path,
+    paths,
     {
       wantsPublic,
       quiet = false,
@@ -66,24 +67,24 @@ module.exports = class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'ip',
-      isStaticFile = false
+      isFile = false
     }
   ) {
     const { log, warn, time } = this._output
-    this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
 
-    let files
+    let files = []
+    let relatives = {}
     let engines
 
     await time('Getting files', async () => {
       const opts = { output: this._output, hasNowJson }
 
       if (type === 'npm') {
-        files = await getNpmFiles(path, pkg, nowConfig, opts)
+        files = await getNpmFiles(paths[0], pkg, nowConfig, opts)
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
+        if (!hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
@@ -95,21 +96,35 @@ module.exports = class Now extends EventEmitter {
         engines = nowConfig.engines || pkg.engines
         forwardNpm = forwardNpm || nowConfig.forwardNpm
       } else if (type === 'static') {
-        if (isStaticFile) {
-          files = [resolvePath(path)]
+        if (isFile) {
+          files = [resolvePath(paths[0])]
+        } else if (paths.length === 1) {
+          files = await getFiles(paths[0], nowConfig, opts)
         } else {
-          files = await getFiles(path, nowConfig, opts)
+          if (!files) {
+            files = []
+          }
+
+          for (const path of paths) {
+            const list = await getFiles(path, {}, opts)
+            files = files.concat(list)
+
+            for (const file of list) {
+              relatives[file] = path
+            }
+          }
         }
       } else if (type === 'docker') {
-        files = await getDockerFiles(path, nowConfig, opts)
+        files = await getDockerFiles(paths[0], nowConfig, opts)
       }
     })
 
     // Read `registry.npmjs.org` authToken from .npmrc
     let authToken
+
     if (type === 'npm' && forwardNpm) {
       authToken =
-        (await readAuthToken(path)) || (await readAuthToken(homedir()))
+        (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
     }
 
     const hashes = await time('Computing hashes', () => {
@@ -122,32 +137,46 @@ module.exports = class Now extends EventEmitter {
     const deployment = await this.retry(async bail => {
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
-      const files = await time('Get files ready for deployment', Promise.all(
-        Array.prototype.concat.apply(
-          [],
-          await Promise.all(
-            Array.from(this._files).map(async ([sha, { data, names }]) => {
-              const statFn = followSymlinks ? stat : lstat
+      const files = await time(
+        'Get files ready for deployment',
+        Promise.all(
+          Array.prototype.concat.apply(
+            [],
+            await Promise.all(
+              Array.from(this._files).map(async ([sha, { data, names }]) => {
+                const statFn = followSymlinks ? stat : lstat
 
-              return names.map(async name => {
-                const getMode = async () => {
-                  const st = await statFn(name)
-                  return st.mode
-                }
+                return names.map(async name => {
+                  const getMode = async () => {
+                    const st = await statFn(name)
+                    return st.mode
+                  }
 
-                const mode = await getMode()
+                  const mode = await getMode()
+                  const multipleStatic = Object.keys(relatives).length !== 0
 
-                return {
-                  sha,
-                  size: data.length,
-                  file: toRelative(name, this._path),
-                  mode
-                }
+                  let file
+
+                  if (isFile) {
+                    file = basename(paths[0])
+                  } else if (multipleStatic) {
+                    file = toRelative(name, join(relatives[name], '..'))
+                  } else {
+                    file = toRelative(name, paths[0])
+                  }
+
+                  return {
+                    sha,
+                    size: data.length,
+                    file,
+                    mode
+                  }
+                })
               })
-            })
+            )
           )
         )
-      ))
+      )
 
       const res = await time(
         'POST /v3/now/deployments',
@@ -189,7 +218,11 @@ module.exports = class Now extends EventEmitter {
         return bail(err)
       }
 
-      if (res.status === 400 && body.error && body.error.code === 'missing_files') {
+      if (
+        res.status === 400 &&
+        body.error &&
+        body.error.code === 'missing_files'
+      ) {
         return body
       }
 
@@ -198,8 +231,9 @@ module.exports = class Now extends EventEmitter {
 
         if (body.error) {
           if (body.error.code === 'env_value_invalid_type') {
-            const {key} = body.error;
-            err.message = `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
+            const { key } = body.error
+            err.message =
+              `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
               'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
           } else {
             Object.assign(err, body.error)
@@ -233,21 +267,22 @@ module.exports = class Now extends EventEmitter {
           hashes.get(sha).names.unshift(n) // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++
         } else if (warning.reason === 'node_version_not_found') {
-          warn(`Requested node version ${warning.wanted} is not available`);
+          warn(`Requested node version ${warning.wanted} is not available`)
           missingVersion = true
         }
       })
 
       if (sizeExceeded > 0) {
-        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(`Please run ${cmd('now upgrade')} to upgrade.`);
+        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`)
+        log(`Please run ${cmd('now upgrade')} to upgrade.`)
       }
     }
 
     if (deployment.error && deployment.error.code === 'missing_files') {
       this._missing = deployment.error.missing || []
       this._fileCount = files.length
-      return null;
+
+      return null
     }
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
@@ -345,7 +380,7 @@ module.exports = class Now extends EventEmitter {
         const res = await time(
           'GET /v2/now/deployments',
           this._fetch('/v2/now/deployments' + query)
-        );
+        )
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
@@ -612,7 +647,9 @@ module.exports = class Now extends EventEmitter {
               chalk`Please upgrade at {underline https://zeit.co/account}`
           )
         } else {
-          err = new Error(`Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`)
+          err = new Error(
+            `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
+          )
         }
         err.userError = true
         return bail(err)
@@ -715,7 +752,7 @@ module.exports = class Now extends EventEmitter {
 
   async remove(deploymentId, { hard }) {
     const { debug, time } = this._output
-    const url =`/now/deployments/${deploymentId}?hard=${hard ? 1 : 0 }`
+    const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`
 
     await this.retry(async bail => {
       const res = await time(
@@ -807,13 +844,10 @@ module.exports = class Now extends EventEmitter {
       async (bail, attempt) => {
         const res = await time(
           `#${attempt} POST /deployments/${nameOrId}/instances`,
-          this._fetch(
-            `/now/deployments/${nameOrId}/instances`,
-            {
-              method: 'POST',
-              body: scale
-            }
-          )
+          this._fetch(`/now/deployments/${nameOrId}/instances`, {
+            method: 'POST',
+            body: scale
+          })
         )
 
         if (res.status === 403) {

@@ -139,10 +139,11 @@ const asAbsolute = function(path, parent) {
 async function staticFiles(
   path,
   nowConfig = {},
-  { limit = null, hasNowJson = false, output } = {}
+  { limit = null, output } = {}
 ) {
   const { debug, time } = output
   let files = []
+
   if (nowConfig.files && Array.isArray(nowConfig.files)) {
     files = await getFilesInWhitelist(nowConfig.files, path, { output })
   } else {
