@@ -544,6 +544,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
+
           await exit(1)
         }
 
@@ -553,6 +554,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
           ))
+
           await exit(1)
         }
 
@@ -573,6 +575,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
             ))
+
             await exit(1)
           }
         }
@@ -580,6 +583,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         if (val[0] === '@') {
           const uidOrName = val.substr(1)
           const _secrets = await findSecret(uidOrName)
+
           if (_secrets.length === 0) {
             if (uidOrName === '') {
               console.error(error(
@@ -593,6 +597,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 slug: 'env-no-secret'
               }))
             }
+
             await exit(1)
           } else if (_secrets.length > 1) {
             console.error(error(
@@ -600,6 +605,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
             ))
+
             await exit(1)
           }
 
@@ -611,6 +617,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     )
 
     const env = {}
+
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
         console.log(
@@ -622,6 +629,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     })
 
     let syncCount
+
     try {
       const createArgs = Object.assign(
           {
@@ -747,6 +755,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (clipboard) {
         try {
           await copy(url)
+
           console.log(
             `${chalk.cyan('> Ready!')} ${chalk.bold(
               url
