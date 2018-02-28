@@ -351,7 +351,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
         if (repo) {
           // Tell now which directory to deploy
-          path = repo.path
+          paths = [ repo.path ]
 
           // Set global variable for deleting tmp dir later
           // once the deployment has finished
@@ -379,7 +379,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const checkers = []
 
     if (isFile || (!isFile && paths.length === 1)) {
-      checkers.push(checkPath(path[0]))
+      checkers.push(checkPath(paths[0]))
     } else {
       for (const path of paths) {
         const fsData = await fs.lstat(path)
@@ -462,7 +462,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
         deploymentType = 'static'
       }
-    } else {
+    } else if (deploymentType === 'static') {
       if (debug) {
         console.log(
           `> [debug] Forcing \`deploymentType\` = \`static\` automatically`
@@ -482,14 +482,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         deploymentType,
         sessionAffinity
       }
+    } else {
+      ;({
+        meta,
+        deploymentName,
+        deploymentType,
+        sessionAffinity
+      } = await readMeta(path[0], deploymentName, deploymentType, sessionAffinity))
     }
-
-    ;({
-      meta,
-      deploymentName,
-      deploymentType,
-      sessionAffinity
-    } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
 
     const nowConfig = meta.nowConfig
     const now = new Now({ apiUrl, token, debug, currentTeam })
@@ -668,7 +668,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           quiet,
           wantsPublic,
           sessionAffinity,
-          isStaticFile
+          isFile
         },
         meta
       )
@@ -701,11 +701,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           now.on('upload', ({ names, data }) => {
             const amount = data.length
+
             if (debug) {
               console.log(
                 `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
               )
             }
+
             bar.tick(amount)
           })
 
@@ -828,10 +830,12 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (!quiet) {
         console.log(success('Deployment complete!'))
       }
+
       await exit(0)
     } else {
       if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing…')
+        const cancelWait = wait('Initializing...')
+
         try {
           await printEvents(now, currentTeam, {
             onOpen: cancelWait,
@@ -841,17 +845,21 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           cancelWait()
           throw err
         }
+
         await exit(0)
       } else {
         if (!now.syncFileCount && !forceNew) {
           if (!quiet) {
             console.log(success('Deployment ready!'))
           }
+
           exit(0)
         }
+
         if (!quiet) {
           console.log(info('Initializing…'))
         }
+
         printLogs(now.host, token, currentTeam, user)
       }
     }

@@ -63,7 +63,7 @@ module.exports = class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'ip',
-      isStaticFile = false
+      isFile = false
     }
   ) {
     this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
