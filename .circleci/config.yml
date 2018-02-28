@@ -12,7 +12,7 @@ jobs:
           - v1-dependencies-{{ checksum "package.json" }}
           - v1-dependencies-
       - run:
-          name: Installing dependencies
+          name: Installing Dependencies
           command: yarn
       - save_cache:
           paths:
@@ -32,7 +32,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Compiling binaries
+          name: Compiling Binaries
           command: yarn run pack
       - persist_to_workspace:
           root: .
@@ -48,7 +48,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Linting code
+          name: Linting Code
           command: yarn test-lint
 
   test-unit:
@@ -60,7 +60,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Running unit tests
+          name: Running Unit Tests
           command: yarn test-unit
 
   deploy:
@@ -72,7 +72,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Uploading binaries
+          name: Uploading Binaries
           command: npx putasset --help
 
 workflows:
