@@ -1,7 +1,7 @@
 version: 2
 jobs:
 
-  build-and-test:
+  install:
     docker:
       - image: circleci/node:latest
     working_directory: ~/repo
@@ -12,11 +12,18 @@ jobs:
           - v1-dependencies-{{ checksum "package.json" }}
           - v1-dependencies-
       - run: yarn
-      - run: yarn run pack
       - save_cache:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
+
+  build:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run: yarn run pack
 
   test:
     docker:
@@ -26,7 +33,7 @@ jobs:
       - checkout
       - run: yarn test
 
-  deploy-stable:
+  deploy:
     docker:
       - image: circleci/node:latest
     working_directory: ~/repo
@@ -34,29 +41,17 @@ jobs:
       - checkout
       - run: echo "deploying stable"
 
-  deploy-canary:
-    docker:
-      - image: circleci/node:latest
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - run: echo "deploying canary now"
-
 workflows:
   version: 2
   handle:
     jobs:
-      - build
-      - test
-      - deploy-stable:
+      - install
+      - build:
           requires:
-            - build-and-test
-          filters:
-            branches:
-              only: master
-      - deploy-canary:
+            - install
+      - test:
           requires:
-            - build-and-test
-          filters:
-            branches:
-              only: canary
+            - build
+      - deploy:
+          requires:
+            - test
