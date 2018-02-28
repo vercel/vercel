@@ -11,7 +11,9 @@ jobs:
           keys:
           - v1-dependencies-{{ checksum "package.json" }}
           - v1-dependencies-
-      - run: yarn
+      - run:
+          name: Installing dependencies
+          command: yarn
       - save_cache:
           paths:
             - node_modules
@@ -29,7 +31,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run: yarn run pack
+      - run:
+          name: Compiling binaries
+          command: yarn run pack
       - persist_to_workspace:
           root: .
           paths:
@@ -43,7 +47,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run: yarn test-lint
+      - run:
+          name: Linting code
+          command: yarn test-lint
 
   test-unit:
     docker:
@@ -53,7 +59,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run: yarn test-unit
+      - run:
+          name: Running unit tests
+          command: yarn test-unit
 
   deploy:
     docker:
@@ -61,7 +69,9 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run: echo "deploying stable"
+      - run:
+          name: Uploading binaries
+          command: echo "uploading them"
 
 workflows:
   version: 2
