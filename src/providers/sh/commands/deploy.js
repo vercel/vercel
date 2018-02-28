@@ -482,13 +482,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         deploymentType,
         sessionAffinity
       }
-    } else {
+    }
+
+    if (!meta) {
       ;({
         meta,
         deploymentName,
         deploymentType,
         sessionAffinity
-      } = await readMeta(path[0], deploymentName, deploymentType, sessionAffinity))
+      } = await readMeta(paths[0], deploymentName, deploymentType, sessionAffinity))
     }
 
     const nowConfig = meta.nowConfig

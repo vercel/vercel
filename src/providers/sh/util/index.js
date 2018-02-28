@@ -1,6 +1,6 @@
 // Native
 const { homedir } = require('os')
-const { resolve: resolvePath } = require('path')
+const { resolve: resolvePath, join } = require('path')
 const EventEmitter = require('events')
 const qs = require('querystring')
 const { parse: parseUrl } = require('url')
@@ -21,11 +21,11 @@ const {
   npm: getNpmFiles,
   docker: getDockerFiles
 } = require('./get-files')
-const ua = require('./ua')
-const hash = require('./hash')
 const Agent = require('./agent')
 const toHost = require('./to-host')
 const { responseError } = require('./error')
+const ua = require('./ua')
+const hash = require('./hash')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -37,6 +37,7 @@ const SEP = IS_WIN ? '\\' : '/'
 module.exports = class Now extends EventEmitter {
   constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }) {
     super()
+
     this._token = token
     this._debug = debug
     this._forceNew = forceNew
@@ -46,7 +47,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async create(
-    path,
+    paths,
     {
       wantsPublic,
       quiet = false,
@@ -66,9 +67,8 @@ module.exports = class Now extends EventEmitter {
       isFile = false
     }
   ) {
-    // this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
-
-    let files
+    let files = []
+    let relatives = {}
     let engines
 
     if (this._debug) {
@@ -78,11 +78,11 @@ module.exports = class Now extends EventEmitter {
     const opts = { debug: this._debug, hasNowJson }
 
     if (type === 'npm') {
-      files = await getNpmFiles(path, pkg, nowConfig, opts)
+      files = await getNpmFiles(paths[0], pkg, nowConfig, opts)
 
       // A `start` or `now-start` npm script, or a `server.js` file
       // in the root directory of the deployment are required
-      if (!hasNpmStart(pkg) && !hasFile(path, files, 'server.js')) {
+      if (!hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
         const err = new Error(
           'Missing `start` (or `now-start`) script in `package.json`. ' +
             'See: https://docs.npmjs.com/cli/start'
@@ -95,12 +95,25 @@ module.exports = class Now extends EventEmitter {
       forwardNpm = forwardNpm || nowConfig.forwardNpm
     } else if (type === 'static') {
       if (isFile) {
-        files = [ resolvePath(path) ]
+        files = [ resolvePath(paths[0]) ]
+      } else if (paths.length === 1) {
+        files = await getFiles(paths[0], nowConfig, opts)
       } else {
-        files = await getFiles(path, nowConfig, opts)
+        if (!files) {
+          files = []
+        }
+
+        for (const path of paths) {
+          const list = await getFiles(path, {}, opts)
+          files = files.concat(list)
+
+          for (const file of list) {
+            relatives[file] = path
+          }
+        }
       }
     } else if (type === 'docker') {
-      files = await getDockerFiles(path, nowConfig, opts)
+      files = await getDockerFiles(paths[0], nowConfig, opts)
     }
 
     if (this._debug) {
@@ -111,7 +124,7 @@ module.exports = class Now extends EventEmitter {
     let authToken
     if (type === 'npm' && forwardNpm) {
       authToken =
-        (await readAuthToken(path)) || (await readAuthToken(homedir()))
+        (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
     }
 
     if (this._debug) {
@@ -148,11 +161,12 @@ module.exports = class Now extends EventEmitter {
                 }
 
                 const mode = await getMode()
+                const multipleStatic = Object.keys(relatives).length !== 0
 
                 return {
                   sha,
                   size: data.length,
-                  file: toRelative(name, this._path),
+                  file: toRelative(name, multipleStatic ? join(relatives[name], '..') : paths[0]),
                   mode
                 }
               })
@@ -160,6 +174,7 @@ module.exports = class Now extends EventEmitter {
           )
         )
       )
+
       if (this._debug) {
         console.timeEnd('> [debug] get files ready for deployment')
       }
