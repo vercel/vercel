@@ -66,7 +66,7 @@ module.exports = class Now extends EventEmitter {
       isFile = false
     }
   ) {
-    this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
+    // this._path = isStaticFile ? path.split('/').slice(0, -1).join('/') : path
 
     let files
     let engines
@@ -94,8 +94,8 @@ module.exports = class Now extends EventEmitter {
       engines = nowConfig.engines || pkg.engines
       forwardNpm = forwardNpm || nowConfig.forwardNpm
     } else if (type === 'static') {
-      if (isStaticFile) {
-        files = [resolvePath(path)]
+      if (isFile) {
+        files = [ resolvePath(path) ]
       } else {
         files = await getFiles(path, nowConfig, opts)
       }

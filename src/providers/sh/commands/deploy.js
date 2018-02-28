@@ -323,7 +323,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         let isValidRepo = false
 
         try {
-          isValidRepo = isRepoPath(rawPath)
+          isValidRepo = isRepoPath(paths[0])
         } catch (_err) {
           if (err.code === 'INVALID_URL') {
             await stopDeployment(_err)
@@ -333,7 +333,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
 
         if (isValidRepo) {
-          const gitParts = gitPathParts(rawPath)
+          const gitParts = gitPathParts(paths[0])
           Object.assign(gitRepo, gitParts)
 
           const searchMessage = setTimeout(() => {
@@ -343,7 +343,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           }, 500)
 
           try {
-            repo = await fromGit(rawPath, debug)
+            repo = await fromGit(paths[0], debug)
           } catch (err) {}
 
           clearTimeout(searchMessage)
@@ -366,7 +366,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           )
         } else {
           console.error(
-            error(`The specified directory "${basename(path)}" doesn't exist.`)
+            error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           )
           await exit(1)
         }
@@ -673,7 +673,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         meta
       )
 
-      await now.create(path, createArgs)
+      await now.create(paths, createArgs)
 
       if (now.syncFileCount > 0) {
         await new Promise(resolve => {
@@ -719,7 +719,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           })
         })
 
-        await now.create(path, createArgs)
+        await now.create(paths, createArgs)
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
