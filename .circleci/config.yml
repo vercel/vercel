@@ -20,7 +20,6 @@ jobs:
           root: .
           paths:
             - node_modules
-            - packed
 
   build:
     docker:
@@ -31,6 +30,10 @@ jobs:
       - attach_workspace:
           at: .
       - run: yarn run pack
+      - persist_to_workspace:
+          root: .
+          paths:
+            - packed
 
   test:
     docker:
@@ -38,6 +41,8 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - run: yarn test
 
   deploy:
