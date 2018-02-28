@@ -1,6 +1,6 @@
 // Native
 const { homedir } = require('os')
-const { resolve: resolvePath, join } = require('path')
+const { resolve: resolvePath, join, basename } = require('path')
 const EventEmitter = require('events')
 const qs = require('querystring')
 const { parse: parseUrl } = require('url')
@@ -163,10 +163,20 @@ module.exports = class Now extends EventEmitter {
                 const mode = await getMode()
                 const multipleStatic = Object.keys(relatives).length !== 0
 
+                let file
+
+                if (isFile) {
+                  file = basename(paths[0])
+                } else if (multipleStatic) {
+                  file = toRelative(name, join(relatives[name], '..'))
+                } else {
+                  file = toRelative(name, paths[0])
+                }
+
                 return {
                   sha,
                   size: data.length,
-                  file: toRelative(name, multipleStatic ? join(relatives[name], '..') : paths[0]),
+                  file,
                   mode
                 }
               })
