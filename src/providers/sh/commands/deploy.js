@@ -28,10 +28,7 @@ const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
-const info = require('../../../util/output/info')
-const success = require('../../../util/output/success')
 const wait = require('../../../util/output/wait')
-const NowPlans = require('../util/plans')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
@@ -131,9 +128,7 @@ const help = () => {
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
 
-  ${chalk.dim(
-    `Enforceable Types (by default, it's detected automatically):`
-  )}
+  ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
     --npm                          Node.js application
     --docker                       Docker container
@@ -155,9 +150,7 @@ const help = () => {
 
   ${chalk.gray('–')} Deploy with environment variables
 
-    ${chalk.cyan(
-      '$ now -e NODE_ENV=production -e SECRET=@mysql-secret'
-    )}
+    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
     '`list`'
@@ -168,7 +161,7 @@ const help = () => {
 }
 
 let argv
-let path
+let paths
 
 // Options
 let forceNew
@@ -203,7 +196,7 @@ const parseEnv = (env, empty) => {
   }
   if (typeof env === 'string') {
     // a single `--env` arg comes in as a String
-    env = [ env ]
+    env = [env]
   }
   if (Array.isArray(env)) {
     return env.reduce((o, e) => {
@@ -269,12 +262,12 @@ async function main(ctx) {
     argv._.shift()
   }
 
-  if (argv._[0]) {
+  if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    path = resolve(process.cwd(), argv._[0])
+    paths = argv._.map(item => resolve(process.cwd(), item))
   } else {
-    path = process.cwd()
+    paths = [process.cwd()]
   }
 
   // Options
@@ -312,116 +305,145 @@ async function main(ctx) {
 async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
-    const rawPath = argv._[0]
 
-    try {
-      await fs.stat(rawPath || path)
-    } catch (err) {
-      let repo
-      let isValidRepo = false
+    let deploymentType
+    let isFile
 
+    if (paths.length === 1) {
       try {
-        isValidRepo = isRepoPath(rawPath)
-      } catch (_err) {
-        if (err.code === 'INVALID_URL') {
-          await stopDeployment(_err)
-        } else {
-          reject(_err)
+        const fsData = await fs.lstat(paths[0])
+
+        if (fsData.isFile()) {
+          isFile = true
+          deploymentType = 'static'
         }
-      }
-
-      if (isValidRepo) {
-        const gitParts = gitPathParts(rawPath)
-        Object.assign(gitRepo, gitParts)
-
-        const searchMessage = setTimeout(() => {
-          log(`Didn't find directory. Searching on ${gitRepo.type}...`)
-        }, 500)
+      } catch (err) {
+        let repo
+        let isValidRepo = false
 
         try {
-          repo = await fromGit(rawPath, debugEnabled)
-        } catch (err) {}
+          isValidRepo = isRepoPath(paths[0])
+        } catch (_err) {
+          if (err.code === 'INVALID_URL') {
+            await stopDeployment(_err)
+          } else {
+            reject(_err)
+          }
+        }
 
-        clearTimeout(searchMessage)
+        if (isValidRepo) {
+          const gitParts = gitPathParts(paths[0])
+          Object.assign(gitRepo, gitParts)
+
+          const searchMessage = setTimeout(() => {
+            log(`Didn't find directory. Searching on ${gitRepo.type}...`)
+          }, 500)
+
+          try {
+            repo = await fromGit(paths[0], debugEnabled)
+          } catch (err) {}
+
+          clearTimeout(searchMessage)
+        }
+
+        if (repo) {
+          // Tell now which directory to deploy
+          paths = [ repo.path ]
+
+          // Set global variable for deleting tmp dir later
+          // once the deployment has finished
+          Object.assign(gitRepo, repo)
+        } else if (isValidRepo) {
+          const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+
+          await stopDeployment(`There's no repository named "${chalk.bold(
+              gitRepo.main
+            )}" ${gitRef}on ${gitRepo.type}`)
+        } else {
+          log(error(`The specified directory "${basename(paths[0])}" doesn't exist.`))
+          await exit(1)
+        }
       }
+    } else {
+      isFile = false
+      deploymentType = 'static'
+    }
 
-      if (repo) {
-        // Tell now which directory to deploy
-        path = repo.path
+    const checkers = []
 
-        // Set global variable for deleting tmp dir later
-        // once the deployment has finished
-        Object.assign(gitRepo, repo)
-      } else if (isValidRepo) {
-        const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
+    if (isFile || (!isFile && paths.length === 1)) {
+      checkers.push(checkPath(paths[0]))
+    } else {
+      for (const path of paths) {
+        const fsData = await fs.lstat(path)
 
-        await stopDeployment(
-          `There's no repository named "${chalk.bold(
-            gitRepo.main
-          )}" ${gitRef}on ${gitRepo.type}`
-        )
-      } else {
-        log(error(`The specified directory "${basename(path)}" doesn't exist.`))
-        await exit(1)
+        if (fsData.isFile()) {
+          continue
+        }
+
+        checkers.push(checkPath(path))
       }
     }
 
-    let deploymentType
-    let isStaticFile = false
+    try {
+      await Promise.all(checkers)
+    } catch (err) {
+      log(error({
+        message: err.message,
+        slug: 'path-not-deployable'
+      }))
 
-    const fsData = await fs.lstat(path)
-
-    if (fsData.isFile()) {
-      deploymentType = 'static'
-      isStaticFile = true
-    } else {
-      // Make sure that directory is deployable
-      try {
-        await checkPath(path)
-      } catch (err) {
-        log(error({
-          message: err.message,
-          slug: 'path-not-deployable'
-        }))
-
-        await exit(1)
-      }
+      await exit(1)
     }
 
     if (!quiet && showMessage) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
+
         log(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
-        )
+          )}`)
       } else {
-        log(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
-        )
-      }
-    }
+        const list = paths
+          .map((path, index) => {
+            let suffix = ''
 
-    // CLI deployment type explicit overrides
-    if (argv.docker) {
-      debug(`Forcing \`deploymentType\` = \`docker\``)
-      deploymentType = 'docker'
-    } else if (argv.npm) {
-      debug(`Forcing \`deploymentType\` = \`npm\``)
-      deploymentType = 'npm'
-    } else if (argv.static) {
-      debug(`Forcing \`deploymentType\` = \`static\``)
-      deploymentType = 'static'
+            if (paths.length > 1 && index !== paths.length - 1) {
+              suffix = index < paths.length - 2 ? ', ' : ' and '
+            }
+
+            return chalk.bold(toHumanPath(path)) + suffix
+          })
+          .join('')
+
+        log(`Deploying ${list} under ${chalk.bold(
+            (currentTeam && currentTeam.slug) || user.username || user.email
+          )}`)
+      }
     }
 
     let meta
 
-    if (isStaticFile) {
+    if (!isFile && deploymentType !== 'static') {
+      if (argv.docker) {
+        debug(`Forcing \`deploymentType\` = \`docker\``)
+        deploymentType = 'docker'
+      } else if (argv.npm) {
+        debug(`Forcing \`deploymentType\` = \`npm\``)
+        deploymentType = 'npm'
+      } else if (argv.static) {
+        debug(`Forcing \`deploymentType\` = \`static\``)
+        deploymentType = 'static'
+      }
+    } else if (deploymentType === 'static') {
+      debug(`Forcing \`deploymentType\` = \`static\` automatically`)
+
       meta = {
-        name: 'file',
+        name: isFile
+          ? 'file'
+          : paths.length === 1 ? basename(paths[0]) : 'files',
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -431,13 +453,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         deploymentType,
         sessionAffinity
       }
-    } else {
+    }
+
+    if (!meta) {
       ;({
         meta,
         deploymentName,
         deploymentType,
         sessionAffinity
-      } = await readMeta(path, deploymentName, deploymentType, sessionAffinity))
+      } = await readMeta(paths[0], deploymentName, deploymentType, sessionAffinity))
     }
 
     const nowConfig = meta.nowConfig
@@ -465,6 +489,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
             slug: 'missing-dotenv-target'
           }))
+
           await exit(1)
         } else {
           throw err
@@ -481,7 +506,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     )
 
     // If there's any envs with `null` then prompt the user for the values
-    const askFor = Object.keys(deploymentEnv).filter(key => deploymentEnv[key] === null)
+    const askFor = Object.keys(deploymentEnv).filter(
+      key => deploymentEnv[key] === null
+    )
     Object.assign(deploymentEnv, await promptForEnvFields(askFor))
 
     let secrets
@@ -502,6 +529,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
+
           await exit(1)
         }
 
@@ -511,6 +539,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
           ))
+
           await exit(1)
         }
 
@@ -531,6 +560,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
             ))
+
             await exit(1)
           }
         }
@@ -538,6 +568,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         if (val[0] === '@') {
           const uidOrName = val.substr(1)
           const _secrets = await findSecret(uidOrName)
+
           if (_secrets.length === 0) {
             if (uidOrName === '') {
               log(error(
@@ -551,6 +582,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 slug: 'env-no-secret'
               }))
             }
+
             await exit(1)
           } else if (_secrets.length > 1) {
             log(error(
@@ -558,6 +590,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
             ))
+
             await exit(1)
           }
 
@@ -569,6 +602,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     )
 
     const env = {}
+
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
         log(
@@ -580,28 +614,30 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     })
 
     let syncCount
+
     try {
       const createArgs = Object.assign(
-          {
-            env,
-            followSymlinks,
-            forceNew,
-            forwardNpm: alwaysForwardNpm || forwardNpm,
-            quiet,
-            wantsPublic,
-            sessionAffinity,
-            isStaticFile
-          },
-          meta
-        )
+        {
+          env,
+          followSymlinks,
+          forceNew,
+          forwardNpm: alwaysForwardNpm || forwardNpm,
+          quiet,
+          wantsPublic,
+          sessionAffinity,
+          isFile
+        },
+        meta
+      )
 
-      await now.create(path, createArgs)
+      await now.create(paths, createArgs)
 
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
           }
+
           const size = bytes(now.syncAmount)
           syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
             ? 's'
@@ -622,6 +658,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           now.on('upload', ({ names, data }) => {
             const amount = data.length
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
+
             bar.tick(amount)
           })
 
@@ -633,21 +670,20 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           })
         })
 
-        await now.create(path, createArgs)
+        await now.create(paths, createArgs)
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
         if (!wantsPublic) {
           const who = currentTeam ? 'your team is' : 'you are'
-          let proceed
 
+          let proceed
           log(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`)
 
           if (isTTY) {
-            proceed = await promptBool(
-              'Are you sure you want to proceed?',
-              { trailing: eraseLines(1) }
-            )
+            proceed = await promptBool('Are you sure you want to proceed?', {
+              trailing: eraseLines(1)
+            })
           }
 
           let url = 'https://zeit.co/account/plan'
@@ -699,6 +735,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (clipboard) {
         try {
           await copy(url)
+
           log(
             chalk`{cyan Ready!} {bold ${url}} (copied to clipboard) [${elapsed}]`
           )
@@ -730,7 +767,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       await exit(0)
     } else {
       if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing…')
+        const cancelWait = wait('Initializing...')
+
         try {
           await printEvents(now, currentTeam, {
             onOpen: cancelWait,
@@ -740,11 +778,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           cancelWait()
           throw err
         }
+
         await exit(0)
       } else {
         if (!quiet) {
           log('Initializing…')
         }
+
         printLogs(now.host, token, currentTeam, user)
       }
     }
@@ -807,6 +847,7 @@ async function printEvents(now, currentTeam = null, {
   debug = false
 } = {}) {
   let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+
   if (currentTeam) {
     url += `&teamId=${currentTeam.id}`
   }
@@ -882,6 +923,7 @@ async function printEvents(now, currentTeam = null, {
       })
     } else {
       const err = new Error(`Deployment events status ${res.status}`)
+
       if (res.status < 500) {
         bail(err)
       } else {
