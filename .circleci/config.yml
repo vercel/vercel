@@ -19,6 +19,8 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
   test:
+    machine:
+      enabled: true
     working_directory: ~/repo
     steps:
       - checkout
