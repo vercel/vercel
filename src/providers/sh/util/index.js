@@ -268,7 +268,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   upload() {
-    const { debug, time } = this._output;
+    const { debug, time } = this._output
     debug(`Will upload ${this._missing.length} files`)
 
     this._agent.setConcurrency({
@@ -283,8 +283,10 @@ module.exports = class Now extends EventEmitter {
             const file = this._files.get(sha)
             const { data, names } = file
             const stream = through2()
+
             stream.write(data)
             stream.end()
+
             const res = await time(
               `POST /v2/now/files #${attempt} ${names.join(' ')}`,
               this._fetch('/v2/now/files', {
@@ -428,7 +430,8 @@ module.exports = class Now extends EventEmitter {
     deploymentIdOrURL,
     { instanceId, types, limit, query, since, until } = {}
   ) {
-    const { debug, time } = this._outut
+    const { debug, time } = this._output
+
     const q = qs.stringify({
       instanceId,
       types: types.join(','),
@@ -535,6 +538,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async getDomain(domain) {
+    const { debug, time } = this._output
+
     return this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /domains/${domain}`,
