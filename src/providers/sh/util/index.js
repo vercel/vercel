@@ -117,16 +117,13 @@ module.exports = class Now extends EventEmitter {
       } else if (type === 'docker') {
         files = await getDockerFiles(paths[0], nowConfig, opts)
       }
-
-      if (this._debug) {
-        console.timeEnd('> [debug] Getting files')
-      }
+    })
 
     // Read `registry.npmjs.org` authToken from .npmrc
     let authToken
+
     if (type === 'npm' && forwardNpm) {
-      authToken =
-        (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
+      authToken = (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
     }
 
     const hashes = await time('Computing hashes', () => {
@@ -137,123 +134,115 @@ module.exports = class Now extends EventEmitter {
     this._files = hashes
 
     const deployment = await this.retry(async bail => {
-      // Flatten the array to contain files to sync where each nested input
-      // array has a group of files with the same sha but different path
-      const files = await time('Get files ready for deployment', Promise.all(
-        Array.prototype.concat.apply(
-          [],
-          await Promise.all(
-            Array.from(this._files).map(async ([sha, { data, names }]) => {
-              const statFn = followSymlinks ? stat : lstat
+    // Flatten the array to contain files to sync where each nested input
+    // array has a group of files with the same sha but different path
+    const files = await time('Get files ready for deployment', Promise.all(
+      Array.prototype.concat.apply(
+        [],
+        await Promise.all(
+          Array.from(this._files).map(async ([sha, { data, names }]) => {
+            const statFn = followSymlinks ? stat : lstat
 
-              return names.map(async name => {
-                const getMode = async () => {
-                  const st = await statFn(name)
-                  return st.mode
-                }
+            return names.map(async name => {
+              const getMode = async () => {
+                const st = await statFn(name)
+                return st.mode
+              }
 
-                const mode = await getMode()
-                const multipleStatic = Object.keys(relatives).length !== 0
+              const mode = await getMode()
+              const multipleStatic = Object.keys(relatives).length !== 0
 
-                let file
+              let file
 
-                if (isFile) {
-                  file = basename(paths[0])
-                } else if (multipleStatic) {
-                  file = toRelative(name, join(relatives[name], '..'))
-                } else {
-                  file = toRelative(name, paths[0])
-                }
+              if (isFile) {
+                file = basename(paths[0])
+              } else if (multipleStatic) {
+                file = toRelative(name, join(relatives[name], '..'))
+              } else {
+                file = toRelative(name, paths[0])
+              }
 
-                return {
-                  sha,
-                  size: data.length,
-                  file,
-                  mode
-                }
-              })
+              return {
+                sha,
+                size: data.length,
+                file,
+                mode
+              }
             })
-          )
+          })
         )
-      ))
-      
-      if (this._debug) {
-        console.timeEnd('> [debug] get files ready for deployment')
-      }
-
-      if (this._debug) {
-        console.time('> [debug] v3/now/deployments')
-      }
-
-      const res = await time(
-        'POST /v3/now/deployments',
-        this._fetch('/v3/now/deployments', {
-          method: 'POST',
-          body: {
-            env,
-            public: wantsPublic || nowConfig.public,
-            forceNew,
-            name,
-            description,
-            deploymentType: type,
-            registryAuthToken: authToken,
-            files,
-            engines,
-            sessionAffinity,
-            atlas: hasNowJson && Boolean(nowConfig.atlas)
-          }
-        })
       )
+    ))
 
-      // No retry on 4xx
-      let body
-
-      try {
-        body = await res.json()
-      } catch (err) {
-        throw new Error('Unexpected response')
-      }
-
-      if (res.status === 429) {
-        let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-        msg += `Please run ${cmd('now upgrade')} to proceed`
-        const err = new Error(msg)
-
-        err.status = res.status
-        err.retryAfter = 'never'
-
-        return bail(err)
-      }
-
-      if (res.status === 400 && body.error && body.error.code === 'missing_files') {
-        return body
-      }
-
-      if (res.status >= 400 && res.status < 500) {
-        const err = new Error()
-
-        if (body.error) {
-          if (body.error.code === 'env_value_invalid_type') {
-            const {key} = body.error;
-            err.message = `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-              'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
-          } else {
-            Object.assign(err, body.error)
-          }
-        } else {
-          err.message = 'Not able to create deployment'
+    const res = await time(
+      'POST /v3/now/deployments',
+      this._fetch('/v3/now/deployments', {
+        method: 'POST',
+        body: {
+          env,
+          public: wantsPublic || nowConfig.public,
+          forceNew,
+          name,
+          description,
+          deploymentType: type,
+          registryAuthToken: authToken,
+          files,
+          engines,
+          sessionAffinity,
+          atlas: hasNowJson && Boolean(nowConfig.atlas)
         }
+      })
+    )
 
-        err.userError = true
-        return bail(err)
-      }
+    // No retry on 4xx
+    let body
 
-      if (res.status !== 200) {
-        throw new Error(body.error.message)
-      }
+    try {
+      body = await res.json()
+    } catch (err) {
+      throw new Error('Unexpected response')
+    }
 
+    if (res.status === 429) {
+      let msg = `You reached your 20 deployments limit in the OSS plan.\n`
+      msg += `Please run ${cmd('now upgrade')} to proceed`
+      const err = new Error(msg)
+
+      err.status = res.status
+      err.retryAfter = 'never'
+
+      return bail(err)
+    }
+
+    if (res.status === 400 && body.error && body.error.code === 'missing_files') {
       return body
-    })
+    }
+
+    if (res.status >= 400 && res.status < 500) {
+      const err = new Error()
+
+      if (body.error) {
+        if (body.error.code === 'env_value_invalid_type') {
+          const {key} = body.error;
+          err.message = `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
+            'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
+        } else {
+          Object.assign(err, body.error)
+        }
+      } else {
+        err.message = 'Not able to create deployment'
+      }
+
+      err.userError = true
+      return bail(err)
+    }
+
+    if (res.status !== 200) {
+      throw new Error(body.error.message)
+    }
+
+    return body
+  })
 
     // We report about files whose sizes are too big
     let missingVersion = false
@@ -269,21 +258,22 @@ module.exports = class Now extends EventEmitter {
           hashes.get(sha).names.unshift(n) // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++
         } else if (warning.reason === 'node_version_not_found') {
-          warn(`Requested node version ${warning.wanted} is not available`);
+          warn(`Requested node version ${warning.wanted} is not available`)
           missingVersion = true
         }
       })
 
       if (sizeExceeded > 0) {
-        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(`Please run ${cmd('now upgrade')} to upgrade.`);
+        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`)
+        log(`Please run ${cmd('now upgrade')} to upgrade.`)
       }
     }
 
     if (deployment.error && deployment.error.code === 'missing_files') {
       this._missing = deployment.error.missing || []
       this._fileCount = files.length
-      return null;
+
+      return null
     }
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
@@ -304,7 +294,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   upload() {
-    const { debug, time } = this._output;
+    const { debug, time } = this._output
     debug(`Will upload ${this._missing.length} files`)
 
     this._agent.setConcurrency({

@@ -359,14 +359,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         } else if (isValidRepo) {
           const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
 
-        await stopDeployment(
-          `There's no repository named "${chalk.bold(
-            gitRepo.main
-          )}" ${gitRef}on ${gitRepo.type}`
-        )
-      } else {
-        log(error(`The specified directory "${basename(path)}" doesn't exist.`))
-        await exit(1)
+          await stopDeployment(`There's no repository named "${chalk.bold(
+              gitRepo.main
+            )}" ${gitRef}on ${gitRepo.type}`)
+        } else {
+          log(error(`The specified directory "${basename(path)}" doesn't exist.`))
+          await exit(1)
+        }
       }
     } else {
       isFile = false
@@ -395,7 +394,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       log(error({
         message: err.message,
         slug: 'path-not-deployable'
-      })
+      }))
 
       await exit(1)
     }
@@ -645,7 +644,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
           }
-          
+
           const size = bytes(now.syncAmount)
           syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
             ? 's'
@@ -684,7 +683,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (err.code === 'plan_requires_public') {
         if (!wantsPublic) {
           const who = currentTeam ? 'your team is' : 'you are'
-          
+
           let proceed
           log(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`)
 
@@ -776,7 +775,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     } else {
       if (nowConfig && nowConfig.atlas) {
         const cancelWait = wait('Initializing...')
-        
+
         try {
           await printEvents(now, currentTeam, {
             onOpen: cancelWait,
@@ -862,7 +861,7 @@ async function printEvents(now, currentTeam = null, {
   debug = false
 } = {}) {
   let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
-  
+
   if (currentTeam) {
     url += `&teamId=${currentTeam.id}`
   }
@@ -938,13 +937,14 @@ async function printEvents(now, currentTeam = null, {
       })
     } else {
       const err = new Error(`Deployment events status ${res.status}`)
-      
+
       if (res.status < 500) {
         bail(err)
       } else {
         throw err
       }
-    }, {
+    }
+  }, {
     retries: 4
   })
 }
