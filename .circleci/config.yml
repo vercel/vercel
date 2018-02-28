@@ -71,7 +71,7 @@ jobs:
       - checkout
       - run:
           name: Uploading binaries
-          command: echo "uploading them"
+          command: putasset --help
 
 workflows:
   version: 2
