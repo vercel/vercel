@@ -139,7 +139,7 @@ const asAbsolute = function(path, parent) {
 async function staticFiles(
   path,
   nowConfig = {},
-  { limit = null, debug = false } = {}
+  { limit = null, output } = {}
 ) {
   const { debug, time } = output
   let files = []
