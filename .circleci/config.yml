@@ -55,7 +55,7 @@ jobs:
 
 workflows:
   version: 2
-  handle:
+  compile:
     jobs:
       - install
       - build:
