@@ -312,44 +312,43 @@ module.exports = class Now extends EventEmitter {
       capacity: this._missing.length
     })
 
-    time(
-      'Uploading files',
-      Promise.all(
-        this._missing.map(sha =>
-          retry(
-            async (bail, attempt) => {
-              const file = this._files.get(sha)
-              const { data, names } = file
-              const stream = through2()
-              stream.write(data)
-              stream.end()
-              const res = await time(
-                `POST /v2/now/files #${attempt} ${names.join(' ')}`,
-                this._fetch('/v2/now/files', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/octet-stream',
-                    'Content-Length': data.length,
-                    'x-now-digest': sha,
-                    'x-now-size': data.length
-                  },
-                  body: stream
-                })
-              )
+    time('Uploading files', Promise.all(
+      this._missing.map(sha =>
+        retry(
+          async (bail, attempt) => {
+            const file = this._files.get(sha)
+            const { data, names } = file
+            const stream = through2()
 
-              // No retry on 4xx
-              if (
-                res.status !== 200 &&
-                (res.status >= 400 || res.status < 500)
-              ) {
-                debug(`Bailing on creating due to ${res.status}`)
-                return bail(await responseError(res))
-              }
+            stream.write(data)
+            stream.end()
 
-              this.emit('upload', file)
-            },
-            { retries: 3, randomize: true, onRetry: this._onRetry }
-          )
+            const res = await time(
+              `POST /v2/now/files #${attempt} ${names.join(' ')}`,
+              this._fetch('/v2/now/files', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  'Content-Length': data.length,
+                  'x-now-digest': sha,
+                  'x-now-size': data.length
+                },
+                body: stream
+              })
+            )
+
+            // No retry on 4xx
+            if (
+              res.status !== 200 &&
+              (res.status >= 400 || res.status < 500)
+            ) {
+              debug(`Bailing on creating due to ${res.status}`);
+              return bail(await responseError(res))
+            }
+
+            this.emit('upload', file)
+          },
+          { retries: 3, randomize: true, onRetry: this._onRetry }
         )
       )
     )
@@ -467,7 +466,8 @@ module.exports = class Now extends EventEmitter {
     deploymentIdOrURL,
     { instanceId, types, limit, query, since, until } = {}
   ) {
-    const { debug, time } = this._outut
+    const { debug, time } = this._output
+
     const q = qs.stringify({
       instanceId,
       types: types.join(','),
