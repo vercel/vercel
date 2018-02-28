@@ -19,24 +19,24 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
   test:
-    machine:
-      enabled: true
+    docker:
+      - image: circleci/node:latest
     working_directory: ~/repo
     steps:
       - checkout
       - run: yarn test
 
   deploy-stable:
-    machine:
-      enabled: true
+    docker:
+      - image: circleci/node:latest
     working_directory: ~/repo
     steps:
       - checkout
       - run: echo "deploying stable"
 
   deploy-canary:
-    machine:
-      enabled: true
+    docker:
+      - image: circleci/node:latest
     working_directory: ~/repo
     steps:
       - checkout
