@@ -742,12 +742,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
         await exit(0)
       } else {
-        if(!now.syncFileCount && !forceNew) {
-          if (!quiet) {
-            log(chalk`{cyan Deployment ready!}`)
-          }
-          exit(0)
-        }
         if (!quiet) {
           log('Initializing…')
         }
