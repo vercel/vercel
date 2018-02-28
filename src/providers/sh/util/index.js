@@ -97,7 +97,7 @@ module.exports = class Now extends EventEmitter {
         forwardNpm = forwardNpm || nowConfig.forwardNpm
       } else if (type === 'static') {
         if (isFile) {
-          files = [ resolvePath(paths[0]) ]
+          files = [resolvePath(paths[0])]
         } else if (paths.length === 1) {
           files = await getFiles(paths[0], nowConfig, opts)
         } else {
@@ -123,7 +123,8 @@ module.exports = class Now extends EventEmitter {
     let authToken
 
     if (type === 'npm' && forwardNpm) {
-      authToken = (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
+      authToken =
+        (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
     }
 
     const hashes = await time('Computing hashes', () => {
@@ -134,115 +135,123 @@ module.exports = class Now extends EventEmitter {
     this._files = hashes
 
     const deployment = await this.retry(async bail => {
-    // Flatten the array to contain files to sync where each nested input
-    // array has a group of files with the same sha but different path
-    const files = await time('Get files ready for deployment', Promise.all(
-      Array.prototype.concat.apply(
-        [],
-        await Promise.all(
-          Array.from(this._files).map(async ([sha, { data, names }]) => {
-            const statFn = followSymlinks ? stat : lstat
+      // Flatten the array to contain files to sync where each nested input
+      // array has a group of files with the same sha but different path
+      const files = await time(
+        'Get files ready for deployment',
+        Promise.all(
+          Array.prototype.concat.apply(
+            [],
+            await Promise.all(
+              Array.from(this._files).map(async ([sha, { data, names }]) => {
+                const statFn = followSymlinks ? stat : lstat
 
-            return names.map(async name => {
-              const getMode = async () => {
-                const st = await statFn(name)
-                return st.mode
-              }
+                return names.map(async name => {
+                  const getMode = async () => {
+                    const st = await statFn(name)
+                    return st.mode
+                  }
 
-              const mode = await getMode()
-              const multipleStatic = Object.keys(relatives).length !== 0
+                  const mode = await getMode()
+                  const multipleStatic = Object.keys(relatives).length !== 0
 
-              let file
+                  let file
 
-              if (isFile) {
-                file = basename(paths[0])
-              } else if (multipleStatic) {
-                file = toRelative(name, join(relatives[name], '..'))
-              } else {
-                file = toRelative(name, paths[0])
-              }
+                  if (isFile) {
+                    file = basename(paths[0])
+                  } else if (multipleStatic) {
+                    file = toRelative(name, join(relatives[name], '..'))
+                  } else {
+                    file = toRelative(name, paths[0])
+                  }
 
-              return {
-                sha,
-                size: data.length,
-                file,
-                mode
-              }
-            })
-          })
+                  return {
+                    sha,
+                    size: data.length,
+                    file,
+                    mode
+                  }
+                })
+              })
+            )
+          )
         )
       )
-    ))
 
-    const res = await time(
-      'POST /v3/now/deployments',
-      this._fetch('/v3/now/deployments', {
-        method: 'POST',
-        body: {
-          env,
-          public: wantsPublic || nowConfig.public,
-          forceNew,
-          name,
-          description,
-          deploymentType: type,
-          registryAuthToken: authToken,
-          files,
-          engines,
-          sessionAffinity,
-          atlas: hasNowJson && Boolean(nowConfig.atlas)
-        }
-      })
-    )
+      const res = await time(
+        'POST /v3/now/deployments',
+        this._fetch('/v3/now/deployments', {
+          method: 'POST',
+          body: {
+            env,
+            public: wantsPublic || nowConfig.public,
+            forceNew,
+            name,
+            description,
+            deploymentType: type,
+            registryAuthToken: authToken,
+            files,
+            engines,
+            sessionAffinity,
+            atlas: hasNowJson && Boolean(nowConfig.atlas)
+          }
+        })
+      )
 
-    // No retry on 4xx
-    let body
+      // No retry on 4xx
+      let body
 
-    try {
-      body = await res.json()
-    } catch (err) {
-      throw new Error('Unexpected response')
-    }
-
-    if (res.status === 429) {
-      let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-      msg += `Please run ${cmd('now upgrade')} to proceed`
-      const err = new Error(msg)
-
-      err.status = res.status
-      err.retryAfter = 'never'
-
-      return bail(err)
-    }
-
-    if (res.status === 400 && body.error && body.error.code === 'missing_files') {
-      return body
-    }
-
-    if (res.status >= 400 && res.status < 500) {
-      const err = new Error()
-
-      if (body.error) {
-        if (body.error.code === 'env_value_invalid_type') {
-          const {key} = body.error;
-          err.message = `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-            'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
-        } else {
-          Object.assign(err, body.error)
-        }
-      } else {
-        err.message = 'Not able to create deployment'
+      try {
+        body = await res.json()
+      } catch (err) {
+        throw new Error('Unexpected response')
       }
 
-      err.userError = true
-      return bail(err)
-    }
+      if (res.status === 429) {
+        let msg = `You reached your 20 deployments limit in the OSS plan.\n`
+        msg += `Please run ${cmd('now upgrade')} to proceed`
+        const err = new Error(msg)
 
-    if (res.status !== 200) {
-      throw new Error(body.error.message)
-    }
+        err.status = res.status
+        err.retryAfter = 'never'
 
-    return body
-  })
+        return bail(err)
+      }
+
+      if (
+        res.status === 400 &&
+        body.error &&
+        body.error.code === 'missing_files'
+      ) {
+        return body
+      }
+
+      if (res.status >= 400 && res.status < 500) {
+        const err = new Error()
+
+        if (body.error) {
+          if (body.error.code === 'env_value_invalid_type') {
+            const { key } = body.error
+            err.message =
+              `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
+              'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)'
+          } else {
+            Object.assign(err, body.error)
+          }
+        } else {
+          err.message = 'Not able to create deployment'
+        }
+
+        err.userError = true
+        return bail(err)
+      }
+
+      if (res.status !== 200) {
+        throw new Error(body.error.message)
+      }
+
+      return body
+    })
 
     // We report about files whose sizes are too big
     let missingVersion = false
@@ -278,8 +287,9 @@ module.exports = class Now extends EventEmitter {
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
-        log(chalk`Using Node.js {bold ${
-          deployment.nodeVersion}} (requested: {dim \`${engines.node}\`)`)
+        log(
+          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`)`
+        )
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`)
       }
@@ -302,44 +312,47 @@ module.exports = class Now extends EventEmitter {
       capacity: this._missing.length
     })
 
-    time('Uploading files', Promise.all(
-      this._missing.map(sha =>
-        retry(
-          async (bail, attempt) => {
-            const file = this._files.get(sha)
-            const { data, names } = file
-            const stream = through2()
-            stream.write(data)
-            stream.end()
-            const res = await time(
-              `POST /v2/now/files #${attempt} ${names.join(' ')}`,
-              this._fetch('/v2/now/files', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
-                  'x-now-digest': sha,
-                  'x-now-size': data.length
-                },
-                body: stream
-              })
-            )
+    time(
+      'Uploading files',
+      Promise.all(
+        this._missing.map(sha =>
+          retry(
+            async (bail, attempt) => {
+              const file = this._files.get(sha)
+              const { data, names } = file
+              const stream = through2()
+              stream.write(data)
+              stream.end()
+              const res = await time(
+                `POST /v2/now/files #${attempt} ${names.join(' ')}`,
+                this._fetch('/v2/now/files', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': data.length,
+                    'x-now-digest': sha,
+                    'x-now-size': data.length
+                  },
+                  body: stream
+                })
+              )
 
-            // No retry on 4xx
-            if (
-              res.status !== 200 &&
-              (res.status >= 400 || res.status < 500)
-            ) {
-              debug(`Bailing on creating due to ${res.status}`);
-              return bail(await responseError(res))
-            }
+              // No retry on 4xx
+              if (
+                res.status !== 200 &&
+                (res.status >= 400 || res.status < 500)
+              ) {
+                debug(`Bailing on creating due to ${res.status}`)
+                return bail(await responseError(res))
+              }
 
-            this.emit('upload', file)
-          },
-          { retries: 3, randomize: true, onRetry: this._onRetry }
+              this.emit('upload', file)
+            },
+            { retries: 3, randomize: true, onRetry: this._onRetry }
+          )
         )
       )
-    ))
+    )
       .then(() => {
         this.emit('complete')
       })
@@ -369,7 +382,7 @@ module.exports = class Now extends EventEmitter {
         const res = await time(
           'GET /v2/now/deployments',
           this._fetch('/v2/now/deployments' + query)
-        );
+        )
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
@@ -633,7 +646,9 @@ module.exports = class Now extends EventEmitter {
               chalk`Please upgrade at {underline https://zeit.co/account}`
           )
         } else {
-          err = new Error(`Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`)
+          err = new Error(
+            `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
+          )
         }
         err.userError = true
         return bail(err)
@@ -736,7 +751,7 @@ module.exports = class Now extends EventEmitter {
 
   async remove(deploymentId, { hard }) {
     const { debug, time } = this._output
-    const url =`/now/deployments/${deploymentId}?hard=${hard ? 1 : 0 }`
+    const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`
 
     await this.retry(async bail => {
       const res = await time(
@@ -828,13 +843,10 @@ module.exports = class Now extends EventEmitter {
       async (bail, attempt) => {
         const res = await time(
           `#${attempt} POST /deployments/${nameOrId}/instances`,
-          this._fetch(
-            `/now/deployments/${nameOrId}/instances`,
-            {
-              method: 'POST',
-              body: scale
-            }
-          )
+          this._fetch(`/now/deployments/${nameOrId}/instances`, {
+            method: 'POST',
+            body: scale
+          })
         )
 
         if (res.status === 403) {
