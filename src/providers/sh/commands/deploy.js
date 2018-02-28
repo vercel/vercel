@@ -14,8 +14,8 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
-const retry = require('async-retry');
-const jsonlines = require('jsonlines');
+const retry = require('async-retry')
+const jsonlines = require('jsonlines')
 
 // Utilities
 const Logger = require('../util/build-logger')
@@ -130,9 +130,7 @@ const help = () => {
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
 
-  ${chalk.dim(
-    `Enforceable Types (by default, it's detected automatically):`
-  )}
+  ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
     --npm                          Node.js application
     --docker                       Docker container
@@ -154,9 +152,7 @@ const help = () => {
 
   ${chalk.gray('–')} Deploy with environment variables
 
-    ${chalk.cyan(
-      '$ now -e NODE_ENV=production -e SECRET=@mysql-secret'
-    )}
+    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
     '`list`'
@@ -200,7 +196,7 @@ const parseEnv = (env, empty) => {
   }
   if (typeof env === 'string') {
     // a single `--env` arg comes in as a String
-    env = [ env ]
+    env = [env]
   }
   if (Array.isArray(env)) {
     return env.reduce((o, e) => {
@@ -273,7 +269,7 @@ async function main(ctx) {
     // if path is absolute: clear up strange `/` etc
     paths = argv._.map(item => resolve(process.cwd(), item))
   } else {
-    paths = [ process.cwd() ]
+    paths = [process.cwd()]
   }
 
   // Options
@@ -369,7 +365,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             )}" ${gitRef}on ${gitRepo.type}`
           )
         } else {
-          console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
+          console.error(
+            error(`The specified directory "${basename(path)}" doesn't exist.`)
+          )
           await exit(1)
         }
       }
@@ -397,10 +395,12 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     try {
       await Promise.all(checkers)
     } catch (err) {
-      console.error(error({
-        message: err.message,
-        slug: 'path-not-deployable'
-      }))
+      console.error(
+        error({
+          message: err.message,
+          slug: 'path-not-deployable'
+        })
+      )
 
       await exit(1)
     }
@@ -409,27 +409,33 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
         console.log(
-          info(`Deploying ${gitRepo.type} repository "${chalk.bold(
-            gitRepo.main
-          )}"${gitRef} under ${chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          info(
+            `Deploying ${gitRepo.type} repository "${chalk.bold(
+              gitRepo.main
+            )}"${gitRef} under ${chalk.bold(
+              (currentTeam && currentTeam.slug) || user.username || user.email
+            )}`
+          )
         )
       } else {
-        const list = paths.map((path, index) => {
-          let suffix = ''
+        const list = paths
+          .map((path, index) => {
+            let suffix = ''
 
-          if (paths.length > 1 && index !== paths.length - 1) {
-            suffix = (index < paths.length - 2) ? ', ' : ' and '
-          }
+            if (paths.length > 1 && index !== paths.length - 1) {
+              suffix = index < paths.length - 2 ? ', ' : ' and '
+            }
 
-          return chalk.bold(toHumanPath(path)) + suffix
-        }).join('')
+            return chalk.bold(toHumanPath(path)) + suffix
+          })
+          .join('')
 
         console.log(
-          info(`Deploying ${list} under ${chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          info(
+            `Deploying ${list} under ${chalk.bold(
+              (currentTeam && currentTeam.slug) || user.username || user.email
+            )}`
+          )
         )
       }
     }
@@ -458,11 +464,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     } else {
       if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`static\` automatically`)
+        console.log(
+          `> [debug] Forcing \`deploymentType\` = \`static\` automatically`
+        )
       }
 
       meta = {
-        name: isFile ? 'file' : (paths.length === 1 ? basename(paths[0]) : 'files'),
+        name: isFile
+          ? 'file'
+          : paths.length === 1 ? basename(paths[0]) : 'files',
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -474,7 +484,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    ({
+    ;({
       meta,
       deploymentName,
       deploymentType,
@@ -502,10 +512,12 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          console.error(error({
-            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-            slug: 'missing-dotenv-target'
-          }))
+          console.error(
+            error({
+              message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
+              slug: 'missing-dotenv-target'
+            })
+          )
 
           await exit(1)
         } else {
@@ -523,7 +535,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     )
 
     // If there's any envs with `null` then prompt the user for the values
-    const askFor = Object.keys(deploymentEnv).filter(key => deploymentEnv[key] === null)
+    const askFor = Object.keys(deploymentEnv).filter(
+      key => deploymentEnv[key] === null
+    )
     Object.assign(deploymentEnv, await promptForEnvFields(askFor))
 
     let secrets
@@ -540,20 +554,24 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          console.error(error({
-            message: 'Environment variable name is missing',
-            slug: 'missing-env-key-value'
-          }))
+          console.error(
+            error({
+              message: 'Environment variable name is missing',
+              slug: 'missing-env-key-value'
+            })
+          )
 
           await exit(1)
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          console.error(error(
-            `Invalid ${chalk.dim('-e')} key ${chalk.bold(
-              `"${chalk.bold(key)}"`
-            )}. Only letters, digits and underscores are allowed.`
-          ))
+          console.error(
+            error(
+              `Invalid ${chalk.dim('-e')} key ${chalk.bold(
+                `"${chalk.bold(key)}"`
+              )}. Only letters, digits and underscores are allowed.`
+            )
+          )
 
           await exit(1)
         }
@@ -570,11 +588,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             // Escape value if it begins with @
             val = process.env[key].replace(/^@/, '\\@')
           } else {
-            console.error(error(
-              `No value specified for env ${chalk.bold(
-                `"${chalk.bold(key)}"`
-              )} and it was not found in your env.`
-            ))
+            console.error(
+              error(
+                `No value specified for env ${chalk.bold(
+                  `"${chalk.bold(key)}"`
+                )} and it was not found in your env.`
+              )
+            )
 
             await exit(1)
           }
@@ -586,25 +606,33 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              console.error(error(
-                `Empty reference provided for env key ${chalk.bold(
-                  `"${chalk.bold(key)}"`
-                )}`
-              ))
+              console.error(
+                error(
+                  `Empty reference provided for env key ${chalk.bold(
+                    `"${chalk.bold(key)}"`
+                  )}`
+                )
+              )
             } else {
-              console.error(error({
-                message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
-                slug: 'env-no-secret'
-              }))
+              console.error(
+                error({
+                  message: `No secret found by uid or name ${chalk.bold(
+                    `"${uidOrName}"`
+                  )}`,
+                  slug: 'env-no-secret'
+                })
+              )
             }
 
             await exit(1)
           } else if (_secrets.length > 1) {
-            console.error(error(
-              `Ambiguous secret ${chalk.bold(
-                `"${uidOrName}"`
-              )} (matches ${chalk.bold(_secrets.length)} secrets)`
-            ))
+            console.error(
+              error(
+                `Ambiguous secret ${chalk.bold(
+                  `"${uidOrName}"`
+                )} (matches ${chalk.bold(_secrets.length)} secrets)`
+              )
+            )
 
             await exit(1)
           }
@@ -632,23 +660,23 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     try {
       const createArgs = Object.assign(
-          {
-            env,
-            followSymlinks,
-            forceNew,
-            forwardNpm: alwaysForwardNpm || forwardNpm,
-            quiet,
-            wantsPublic,
-            sessionAffinity,
-            isStaticFile
-          },
-          meta
-        )
+        {
+          env,
+          followSymlinks,
+          forceNew,
+          forwardNpm: alwaysForwardNpm || forwardNpm,
+          quiet,
+          wantsPublic,
+          sessionAffinity,
+          isStaticFile
+        },
+        meta
+      )
 
       await now.create(path, createArgs)
 
       if (now.syncFileCount > 0) {
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           if (debug && now.syncFileCount !== now.fileCount) {
             console.log(
               `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
@@ -697,13 +725,16 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           const who = currentTeam ? 'your team is' : 'you are'
           let proceed
 
-          console.log(info(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`))
+          console.log(
+            info(
+              `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
+            )
+          )
 
           if (isTTY) {
-            proceed = await promptBool(
-              'Are you sure you want to proceed?',
-              { trailing: eraseLines(1) }
-            )
+            proceed = await promptBool('Are you sure you want to proceed?', {
+              trailing: eraseLines(1)
+            })
           }
 
           let url = 'https://zeit.co/account/plan'
@@ -712,11 +743,19 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
           }
 
-          console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
+          console.log(
+            note(
+              `You can use ${cmd(
+                'now --public'
+              )} or upgrade your plan (${url}) to skip this prompt`
+            )
+          )
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
-              const message = `If you agree with that, please run again with ${cmd('--public')}.`
+              const message = `If you agree with that, please run again with ${cmd(
+                '--public'
+              )}.`
               console.error(error(message))
 
               await exit(1)
@@ -787,31 +826,31 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     // Show build logs
     if (deploymentType === 'static') {
       if (!quiet) {
-        console.log(success('Deployment complete!'));
+        console.log(success('Deployment complete!'))
       }
-      await exit(0);
+      await exit(0)
     } else {
       if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing…');
+        const cancelWait = wait('Initializing…')
         try {
           await printEvents(now, currentTeam, {
             onOpen: cancelWait,
             debug
-          });
+          })
         } catch (err) {
-          cancelWait();
-          throw err;
+          cancelWait()
+          throw err
         }
-        await exit(0);
+        await exit(0)
       } else {
-        if(!now.syncFileCount && !forceNew) {
+        if (!now.syncFileCount && !forceNew) {
           if (!quiet) {
-            console.log(success('Deployment ready!'));
+            console.log(success('Deployment ready!'))
           }
-          exit(0);
+          exit(0)
         }
         if (!quiet) {
-          console.log(info('Initializing…'));
+          console.log(info('Initializing…'))
         }
         printLogs(now.host, token, currentTeam, user)
       }
@@ -888,97 +927,101 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{},
-  debug = false
-} = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+async function printEvents(
+  now,
+  currentTeam = null,
+  { onOpen = () => {}, debug = false } = {}
+) {
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
   if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`;
+    url += `&teamId=${currentTeam.id}`
   }
 
   if (debug) {
-    console.log(info(`[debug] events ${url}`));
+    console.log(info(`[debug] events ${url}`))
   }
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
-  let o = 0;
+  let o = 0
 
-  await retry(async (bail, attemptNumber) => {
-    if (debug && attemptNumber > 1) {
-      console.log(info('[debug] retrying events'));
-    }
-
-    // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0));
-
-    const res = await now._fetch(url);
-    if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen();
-      onOpen = ()=>{};
-
-      // handle the event stream and make the promise get rejected
-      // if errors occur so we can retry
-      return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse());
-        const onData = ({ type, payload }) => {
-          // if we are 'quiet' because we are piping, simply
-          // wait for the first instance to be started
-          // and ignore everything else
-          if (quiet) {
-            if (type === 'instance-start') {
-              resolve();
-            }
-            return;
-          }
-
-          switch (type) {
-            case 'build-start':
-              o++;
-              console.log(info('Building…'));
-              break;
-
-            case 'stdout':
-            case 'stderr':
-              console.log(payload);
-              break;
-
-            case 'build-complete':
-              o++;
-              console.log(success('Build complete'));
-              break;
-
-            case 'instance-start':
-              o++;
-              console.log(success('Deployment started!'));
-
-              // avoid lingering events
-              stream.off('data', onData);
-
-              // close the stream and resolve
-              stream.end();
-              resolve();
-              break;
-          }
-        };
-        stream.on('data', onData)
-        stream.on('error', err => {
-          reject(new Error(`Deployment event stream error: ${err.stack}`));
-        });
-      });
-    } else {
-      const err = new Error(`Deployment events status ${res.status}`);
-      if (res.status < 500) {
-        bail(err);
-      } else {
-        throw err;
+  await retry(
+    async (bail, attemptNumber) => {
+      if (debug && attemptNumber > 1) {
+        console.log(info('[debug] retrying events'))
       }
+
+      // if we are retrying, we clear past logs
+      if (!quiet && o) process.stdout.write(eraseLines(0))
+
+      const res = await now._fetch(url)
+      if (res.ok) {
+        // fire the open callback and ensure it's only fired once
+        onOpen()
+        onOpen = () => {}
+
+        // handle the event stream and make the promise get rejected
+        // if errors occur so we can retry
+        return new Promise((resolve, reject) => {
+          const stream = res.body.pipe(jsonlines.parse())
+          const onData = ({ type, payload }) => {
+            // if we are 'quiet' because we are piping, simply
+            // wait for the first instance to be started
+            // and ignore everything else
+            if (quiet) {
+              if (type === 'instance-start') {
+                resolve()
+              }
+              return
+            }
+
+            switch (type) {
+              case 'build-start':
+                o++
+                console.log(info('Building…'))
+                break
+
+              case 'stdout':
+              case 'stderr':
+                console.log(payload)
+                break
+
+              case 'build-complete':
+                o++
+                console.log(success('Build complete'))
+                break
+
+              case 'instance-start':
+                o++
+                console.log(success('Deployment started!'))
+
+                // avoid lingering events
+                stream.off('data', onData)
+
+                // close the stream and resolve
+                stream.end()
+                resolve()
+                break
+            }
+          }
+          stream.on('data', onData)
+          stream.on('error', err => {
+            reject(new Error(`Deployment event stream error: ${err.stack}`))
+          })
+        })
+      } else {
+        const err = new Error(`Deployment events status ${res.status}`)
+        if (res.status < 500) {
+          bail(err)
+        } else {
+          throw err
+        }
+      }
+    },
+    {
+      retries: 4
     }
-  }, {
-    retries: 4
-  });
+  )
 }
 
 function printLogs(host, token) {
@@ -988,11 +1031,13 @@ function printLogs(host, token) {
   logger.on('error', async err => {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
-        console.error(error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        ))
+        console.error(
+          error(
+            `The build step of your project failed. To retry, run ${cmd(
+              'now --force'
+            )}.`
+          )
+        )
       } else {
         console.error(error('Deployment failed'))
       }
