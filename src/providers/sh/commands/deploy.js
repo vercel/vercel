@@ -14,12 +14,13 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
-const retry = require('async-retry');
-const jsonlines = require('jsonlines');
+const retry = require('async-retry')
+const jsonlines = require('jsonlines')
 
 // Utilities
 const Logger = require('../util/build-logger')
 const Now = require('../util')
+const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError, error } = require('../util/error')
 const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
@@ -173,7 +174,9 @@ let path
 let forceNew
 let deploymentName
 let sessionAffinity
+let log
 let debug
+let debugEnabled
 let clipboard
 let forwardNpm
 let followSymlinks
@@ -239,9 +242,7 @@ const promptForEnvFields = async list => {
   // eslint-disable-next-line import/no-unassigned-import
   require('../../../util/input/patch-inquirer')
 
-  console.log(
-    info('Please enter values for the following environment variables:')
-  )
+  log('Please enter values for the following environment variables:')
   const answers = await inquirer.prompt(questions)
 
   for (const answer of Object.keys(answers)) {
@@ -280,7 +281,7 @@ async function main(ctx) {
   forceNew = argv.force
   deploymentName = argv.name
   sessionAffinity = argv['session-affinity']
-  debug = argv.debug
+  debugEnabled = argv.debug
   clipboard = !argv['no-clipboard']
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
@@ -288,6 +289,7 @@ async function main(ctx) {
   apiUrl = ctx.apiUrl
   isTTY = process.stdout.isTTY
   quiet = !isTTY
+  ;({ log, debug } = createOutput({ debug: debugEnabled }))
 
   if (argv.h || argv.help) {
     help()
@@ -333,13 +335,11 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         Object.assign(gitRepo, gitParts)
 
         const searchMessage = setTimeout(() => {
-          console.log(
-            `> Didn't find directory. Searching on ${gitRepo.type}...`
-          )
+          log(`Didn't find directory. Searching on ${gitRepo.type}...`)
         }, 500)
 
         try {
-          repo = await fromGit(rawPath, debug)
+          repo = await fromGit(rawPath, debugEnabled)
         } catch (err) {}
 
         clearTimeout(searchMessage)
@@ -361,7 +361,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           )}" ${gitRef}on ${gitRepo.type}`
         )
       } else {
-        console.error(error(`The specified directory "${basename(path)}" doesn't exist.`))
+        log(error(`The specified directory "${basename(path)}" doesn't exist.`))
         await exit(1)
       }
     }
@@ -379,7 +379,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       try {
         await checkPath(path)
       } catch (err) {
-        console.error(error({
+        log(error({
           message: err.message,
           slug: 'path-not-deployable'
         }))
@@ -391,40 +391,29 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     if (!quiet && showMessage) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
-        console.log(
-          info(`Deploying ${gitRepo.type} repository "${chalk.bold(
+        log(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          )}`
         )
       } else {
-        console.log(
-          info(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
+        log(`Deploying ${chalk.bold(toHumanPath(path))} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          )}`
         )
       }
     }
 
     // CLI deployment type explicit overrides
     if (argv.docker) {
-      if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
-      }
-
+      debug(`Forcing \`deploymentType\` = \`docker\``)
       deploymentType = 'docker'
     } else if (argv.npm) {
-      if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`npm\``)
-      }
-
+      debug(`Forcing \`deploymentType\` = \`npm\``)
       deploymentType = 'npm'
     } else if (argv.static) {
-      if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`static\``)
-      }
-
+      debug(`Forcing \`deploymentType\` = \`static\``)
       deploymentType = 'static'
     }
 
@@ -452,7 +441,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const nowConfig = meta.nowConfig
-    const now = new Now({ apiUrl, token, debug, currentTeam })
+    const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
     let dotenvConfig
     let dotenvOption
@@ -472,7 +461,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          console.error(error({
+          log(error({
             message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
             slug: 'missing-dotenv-target'
           }))
@@ -509,7 +498,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          console.error(error({
+          log(error({
             message: 'Environment variable name is missing',
             slug: 'missing-env-key-value'
           }))
@@ -517,7 +506,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          console.error(error(
+          log(error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
@@ -529,15 +518,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
         if (val === undefined) {
           if (key in process.env) {
-            console.log(
-              `> Reading ${chalk.bold(
+            log(
+              `Reading ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} from your env (as no value was specified)`
             )
             // Escape value if it begins with @
             val = process.env[key].replace(/^@/, '\\@')
           } else {
-            console.error(error(
+            log(error(
               `No value specified for env ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
@@ -551,20 +540,20 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           const _secrets = await findSecret(uidOrName)
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              console.error(error(
+              log(error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
               ))
             } else {
-              console.error(error({
+              log(error({
                 message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
                 slug: 'env-no-secret'
               }))
             }
             await exit(1)
           } else if (_secrets.length > 1) {
-            console.error(error(
+            log(error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
@@ -582,7 +571,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env = {}
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
-        console.log(
+        log(
           note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`)
         )
       }
@@ -610,10 +599,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
-          if (debug && now.syncFileCount !== now.fileCount) {
-            console.log(
-              `> [debug] total files ${now.fileCount}, ${now.syncFileCount} changed. `
-            )
+          if (now.syncFileCount !== now.fileCount) {
+            debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
           }
           const size = bytes(now.syncAmount)
           syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
@@ -634,18 +621,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           now.on('upload', ({ names, data }) => {
             const amount = data.length
-            if (debug) {
-              console.log(
-                `> [debug] Uploaded: ${names.join(' ')} (${bytes(data.length)})`
-              )
-            }
+            debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
             bar.tick(amount)
           })
 
           now.on('complete', () => resolve())
 
           now.on('error', err => {
-            console.error(error('Upload failed'))
+            log(error('Upload failed'))
             reject(err)
           })
         })
@@ -658,7 +641,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           const who = currentTeam ? 'your team is' : 'you are'
           let proceed
 
-          console.log(info(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`))
+          log(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`)
 
           if (isTTY) {
             proceed = await promptBool(
@@ -673,16 +656,16 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
             url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
           }
 
-          console.log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
+          log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `If you agree with that, please run again with ${cmd('--public')}.`
-              console.error(error(message))
+              log(error(message))
 
               await exit(1)
             } else {
-              console.log(info('Aborted'))
+              log('Aborted')
               await exit(0)
             }
 
@@ -702,8 +685,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         })
 
         return
-      } else if (debug) {
-        console.log(`> [debug] error: ${err}\n${err.stack}`)
+      } else {
+        debug(`Error: ${err}\n${err.stack}`)
       }
 
       await stopDeployment(err)
@@ -716,18 +699,15 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       if (clipboard) {
         try {
           await copy(url)
-          console.log(
-            `${chalk.cyan('> Ready!')} ${chalk.bold(
-              url
-            )} (copied to clipboard) [${elapsed}]`
+          log(
+            chalk`{cyan Ready!} {bold ${url}} (copied to clipboard) [${elapsed}]`
           )
         } catch (err) {
-          console.log(
-            `${chalk.cyan('> Ready!')} ${chalk.bold(url)} [${elapsed}]`
-          )
+          debug(`Error copying to clipboard: ${err}`)
+          log(chalk`{cyan Ready!} {bold ${url}} [${elapsed}]`)
         }
       } else {
-        console.log(`> ${url} [${elapsed}]`)
+        log(`${url} [${elapsed}]`)
       }
     } else {
       process.stdout.write(url)
@@ -738,40 +718,38 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     if (!quiet) {
       if (syncCount) {
         const elapsedU = ms(new Date() - startU)
-        console.log(
-          `> Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}] `
-        )
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}]`)
       }
     }
 
     // Show build logs
     if (deploymentType === 'static') {
       if (!quiet) {
-        console.log(success('Deployment complete!'));
+        log(chalk`{cyan Deployment complete!}`)
       }
-      await exit(0);
+      await exit(0)
     } else {
       if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing…');
+        const cancelWait = wait('Initializing…')
         try {
           await printEvents(now, currentTeam, {
             onOpen: cancelWait,
-            debug
-          });
+            debug: debugEnabled
+          })
         } catch (err) {
-          cancelWait();
-          throw err;
+          cancelWait()
+          throw err
         }
-        await exit(0);
+        await exit(0)
       } else {
         if(!now.syncFileCount && !forceNew) {
           if (!quiet) {
-            console.log(success('Deployment ready!'));
+            log(chalk`{cyan Deployment ready!}`)
           }
-          exit(0);
+          exit(0)
         }
         if (!quiet) {
-          console.log(info('Initializing…'));
+          log('Initializing…')
         }
         printLogs(now.host, token, currentTeam, user)
       }
@@ -795,22 +773,12 @@ async function readMeta(
 
     if (!deploymentType) {
       deploymentType = meta.type
-
-      if (debug) {
-        console.log(
-          `> [debug] Detected \`deploymentType\` = \`${deploymentType}\``
-        )
-      }
+      debug(`Detected \`deploymentType\` = \`${deploymentType}\``)
     }
 
     if (!_deploymentName) {
       _deploymentName = meta.name
-
-      if (debug) {
-        console.log(
-          `> [debug] Detected \`deploymentName\` = "${_deploymentName}"`
-        )
-      }
+      debug(`Detected \`deploymentName\` = "${_deploymentName}"`)
     }
 
     return {
@@ -821,12 +789,9 @@ async function readMeta(
     }
   } catch (err) {
     if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
-      if (debug) {
-        console.log('> [debug] Multiple manifests found, disambiguating')
-      }
-
-      console.log(
-        `> Two manifests found. Press [${chalk.bold(
+      debug('Multiple manifests found, disambiguating')
+      log(
+        `Two manifests found. Press [${chalk.bold(
           'n'
         )}] to deploy or re-run with --flag`
       )
@@ -836,12 +801,7 @@ async function readMeta(
         ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
       ])
 
-      if (debug) {
-        console.log(
-          `> [debug] Selected \`deploymentType\` = "${deploymentType}"`
-        )
-      }
-
+      debug(`Selected \`deploymentType\` = "${deploymentType}"`)
       return readMeta(_path, _deploymentName, deploymentType)
     }
     throw err
@@ -852,109 +812,107 @@ async function printEvents(now, currentTeam = null, {
   onOpen = ()=>{},
   debug = false
 } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`;
+  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
   if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`;
+    url += `&teamId=${currentTeam.id}`
   }
 
-  if (debug) {
-    console.log(info(`[debug] events ${url}`));
-  }
+  debug(`Events ${url}`)
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
-  let o = 0;
+  let o = 0
 
   await retry(async (bail, attemptNumber) => {
-    if (debug && attemptNumber > 1) {
-      console.log(info('[debug] retrying events'));
+    if (attemptNumber > 1) {
+      debug('Retrying events')
     }
 
     // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0));
+    if (!quiet && o) process.stdout.write(eraseLines(0))
 
-    const res = await now._fetch(url);
+    const res = await now._fetch(url)
     if (res.ok) {
       // fire the open callback and ensure it's only fired once
-      onOpen();
-      onOpen = ()=>{};
+      onOpen()
+      onOpen = ()=>{}
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse());
+        const stream = res.body.pipe(jsonlines.parse())
         const onData = ({ type, payload }) => {
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              resolve();
+              resolve()
             }
-            return;
+            return
           }
 
           switch (type) {
             case 'build-start':
-              o++;
-              console.log(info('Building…'));
-              break;
+              o++
+              log('Building…')
+              break
 
             case 'stdout':
             case 'stderr':
-              console.log(payload);
-              break;
+              log(payload)
+              break
 
             case 'build-complete':
-              o++;
-              console.log(success('Build complete'));
-              break;
+              o++
+              log(chalk`{cyan Success!} Build complete`)
+              break
 
             case 'instance-start':
-              o++;
-              console.log(success('Deployment started!'));
+              o++
+              log(chalk`{cyan Success!} Build complete`)
 
               // avoid lingering events
-              stream.off('data', onData);
+              stream.off('data', onData)
 
               // close the stream and resolve
-              stream.end();
-              resolve();
-              break;
+              stream.end()
+              resolve()
+              break
           }
-        };
+        }
         stream.on('data', onData)
         stream.on('error', err => {
-          reject(new Error(`Deployment event stream error: ${err.stack}`));
-        });
-      });
+          reject(new Error(`Deployment event stream error: ${err.stack}`))
+        })
+      })
     } else {
-      const err = new Error(`Deployment events status ${res.status}`);
+      const err = new Error(`Deployment events status ${res.status}`)
       if (res.status < 500) {
-        bail(err);
+        bail(err)
       } else {
-        throw err;
+        throw err
       }
     }
   }, {
     retries: 4
-  });
+  })
 }
 
 function printLogs(host, token) {
   // Log build
-  const logger = new Logger(host, token, { debug, quiet })
+  const logger = new Logger(host, token, { debug: debugEnabled, quiet })
 
   logger.on('error', async err => {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
-        console.error(error(
+        log(error(
           `The build step of your project failed. To retry, run ${cmd(
             'now --force'
           )}.`
         ))
       } else {
-        console.error(error('Deployment failed'))
+        log(error('Deployment failed'))
       }
     }
 
@@ -962,9 +920,7 @@ function printLogs(host, token) {
       // Delete temporary directory that contains repository
       gitRepo.cleanup()
 
-      if (debug) {
-        console.log(`> [debug] Removed temporary repo directory`)
-      }
+      debug(`Removed temporary repo directory`)
     }
 
     await exit(1)
@@ -972,16 +928,14 @@ function printLogs(host, token) {
 
   logger.on('close', async () => {
     if (!quiet) {
-      console.log(`${chalk.cyan('> Deployment complete!')}`)
+      log(chalk`{cyan Deployment complete!}`)
     }
 
     if (gitRepo && gitRepo.cleanup) {
       // Delete temporary directory that contains repository
       gitRepo.cleanup()
 
-      if (debug) {
-        console.log(`> [debug] Removed temporary repo directory`)
-      }
+      debug(`Removed temporary repo directory`)
     }
 
     await exit()

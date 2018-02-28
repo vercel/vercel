@@ -9,8 +9,8 @@ const { stat, readdir, readFile } = require('fs-extra')
 
 // Utilities
 const IGNORED = require('./ignored')
-const getLocalConfigPath = require('../../../config/local-path')
 const uniqueStrings = require('./unique-strings')
+const getLocalConfigPath = require('../../../config/local-path')
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
@@ -30,22 +30,21 @@ const glob = async function(pattern, options) {
  * @param {string} path the path to this directory
  * @param {Array[string]} filelist a list of files so far identified
  * @param {Object} options
- * 	- `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @returns {Array}
  */
-const walkSync = async (dir, path, filelist = [], { debug = false } = {}) => {
+const walkSync = async (dir, path, filelist = [], { output } = {}) => {
+  const { debug } = output
   const dirc = await readdir(asAbsolute(dir, path))
   for (let file of dirc) {
     file = asAbsolute(file, dir)
     try {
       const file_stat = await stat(file)
       filelist = file_stat.isDirectory()
-        ? await walkSync(file, path, filelist)
+        ? await walkSync(file, path, filelist, { output })
         : filelist.concat(file)
     } catch (e) {
-      if (debug) {
-        console.log('> [debug] ignoring invalid file "%s"', file)
-      }
+      debug(`Ignoring invalid file ${file}`)
     }
   }
   return filelist
@@ -56,14 +55,15 @@ const walkSync = async (dir, path, filelist = [], { debug = false } = {}) => {
  * @param {Array[string]} whitelist array of files and directories to include.
  * @param {string} path the path of the deployment.
  * @param {Object} options
- * 	- `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
 const getFilesInWhitelist = async function(
   whitelist,
   path,
-  { debug = false } = {}
+  { output } = {}
 ) {
+  const { debug } = output
   let files = []
 
   await Promise.all(
@@ -72,15 +72,13 @@ const getFilesInWhitelist = async function(
       try {
         const file_stat = await stat(file)
         if (file_stat.isDirectory()) {
-          const dir_files = await walkSync(file, path)
+          const dir_files = await walkSync(file, path, [], { output })
           files.push(...dir_files)
         } else {
           files.push(file)
         }
       } catch (e) {
-        if (debug) {
-          console.log('> [debug] ignoring invalid file "%s"', file)
-        }
+        debug(`Ignoring invalid file ${file}`)
       }
     })
   )
@@ -134,18 +132,19 @@ const asAbsolute = function(path, parent) {
  * @param {String} full path to directory
  * @param {Object} options:
  *  - `limit` {Number|null} byte limit
- *  - `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @return {Array} comprehensive list of paths to sync
  */
 
 async function staticFiles(
   path,
   nowConfig = {},
-  { limit = null, hasNowJson = false, debug = false } = {}
+  { limit = null, hasNowJson = false, output } = {}
 ) {
+  const { debug, time } = output
   let files = []
   if (nowConfig.files && Array.isArray(nowConfig.files)) {
-    files = await getFilesInWhitelist(nowConfig.files, path)
+    files = await getFilesInWhitelist(nowConfig.files, path, { output })
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
@@ -183,27 +182,22 @@ async function staticFiles(
 
       const accepted = filter(relativePath)
 
-      if (!accepted && debug) {
-        console.log('> [debug] ignoring "%s"', file)
+      if (!accepted) {
+        debug(`Ignoring ${file}`)
       }
 
       return accepted
     }
 
     // Locate files
-    if (debug) {
-      console.time(`> [debug] locating files ${path}`)
-    }
-
-    files = await explode(search, {
-      accepts,
-      limit,
-      debug
-    })
-
-    if (debug) {
-      console.timeEnd(`> [debug] locating files ${path}`)
-    }
+    files = await time(
+      `Locating files ${path}`,
+      explode(search, {
+        accepts,
+        limit,
+        output
+      })
+    )
   }
 
   // Get files
@@ -219,7 +213,7 @@ async function staticFiles(
  * @param {String} contents of `package.json` to avoid lookup
  * @param {Object} options:
  *  - `limit` {Number|null} byte limit
- *  - `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @return {Array} comprehensive list of paths to sync
  */
 
@@ -227,13 +221,14 @@ async function npm(
   path,
   pkg = {},
   nowConfig = {},
-  { limit = null, hasNowJson = false, debug = false } = {}
+  { limit = null, hasNowJson = false, output } = {}
 ) {
+  const { debug, time } = output
   const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files)
   let files = []
 
   if (whitelist) {
-    files = await getFilesInWhitelist(whitelist, path)
+    files = await getFilesInWhitelist(whitelist, path, { output })
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
@@ -281,26 +276,21 @@ async function npm(
           }
 
           const accepted = filter(relativePath)
-          if (!accepted && debug) {
-            console.log('> [debug] ignoring "%s"', file)
+          if (!accepted) {
+            debug(`Ignoring ${file}`)
           }
           return accepted
         }
 
     // Locate files
-    if (debug) {
-      console.time(`> [debug] locating files ${path}`)
-    }
-
-    files = await explode(search, {
-      accepts,
-      limit,
-      debug
-    })
-
-    if (debug) {
-      console.timeEnd(`> [debug] locating files ${path}`)
-    }
+    files = await time(
+      `Locating files ${path}`,
+      explode(search, {
+        accepts,
+        limit,
+        output
+      })
+    )
   }
 
   // Always include manifest as npm does not allow ignoring it
@@ -324,19 +314,20 @@ async function npm(
  * @param {String} contents of `Dockerfile`
  * @param {Object} options:
  *  - `limit` {Number|null} byte limit
- *  - `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @return {Array} comprehensive list of paths to sync
  */
 
 async function docker(
   path,
   nowConfig = {},
-  { limit = null, hasNowJson = false, debug = false } = {}
+  { limit = null, hasNowJson = false, output } = {}
 ) {
+  const { debug, time } = output
   let files = []
 
   if (nowConfig.files) {
-    files = await getFilesInWhitelist(nowConfig.files, path)
+    files = await getFilesInWhitelist(nowConfig.files, path, { output })
   } else {
     // Base search path
     // the now.json `files` whitelist still
@@ -368,22 +359,17 @@ async function docker(
       }
 
       const accepted = filter(relativePath)
-      if (!accepted && debug) {
-        console.log('> [debug] ignoring "%s"', file)
+      if (!accepted) {
+        debug(`Ignoring ${file}`)
       }
       return accepted
     }
 
     // Locate files
-    if (debug) {
-      console.time(`> [debug] locating files ${path}`)
-    }
-
-    files = await explode(search, { accepts, limit, debug })
-
-    if (debug) {
-      console.timeEnd(`> [debug] locating files ${path}`)
-    }
+    files = await time(
+      `Locating files ${path}`,
+      explode(search, { accepts, limit, output })
+    )
   }
 
   if (hasNowJson) {
@@ -408,11 +394,12 @@ async function docker(
  * @param {Array} of ignored {String}s.
  * @param {Object} options:
  *  - `limit` {Number|null} byte limit
- *  - `debug` {Boolean} warn upon ignore
+ *  - `output` {Object} "output" helper object
  * @return {Array} of {String}s of full paths
  */
 
-async function explode(paths, { accepts, debug }) {
+async function explode(paths, { accepts, output }) {
+  const { debug } = output
   const list = async file => {
     let path = file
     let s
@@ -431,9 +418,7 @@ async function explode(paths, { accepts, debug }) {
       try {
         s = await stat(path)
       } catch (e2) {
-        if (debug) {
-          console.log('> [debug] ignoring invalid file "%s"', file)
-        }
+        debug(`Ignoring invalid file ${file}`)
         return null
       }
     }
@@ -444,14 +429,13 @@ async function explode(paths, { accepts, debug }) {
       return many(all.map(subdir => asAbsolute(subdir, file)))
       /* eslint-enable no-use-before-define */
     } else if (!s.isFile()) {
-      if (debug) {
-        console.log('> [debug] ignoring special file "%s"', file)
-      }
+      debug(`Ignoring special file ${file}`)
       return null
     }
 
     return path
   }
+
 
   const many = all => Promise.all(all.map(file => list(file)))
   return flatten(await many(paths)).filter(v => v !== null)
