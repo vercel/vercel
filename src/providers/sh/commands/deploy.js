@@ -434,27 +434,30 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    process.exit(0)
+    if (!isFile && deploymentType !== 'static') {
+      if (argv.docker) {
+        if (debug) {
+          console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
+        }
 
-    // CLI deployment type explicit overrides
-    if (argv.docker) {
-      if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`docker\``)
+        deploymentType = 'docker'
+      } else if (argv.npm) {
+        if (debug) {
+          console.log(`> [debug] Forcing \`deploymentType\` = \`npm\``)
+        }
+
+        deploymentType = 'npm'
+      } else if (argv.static) {
+        if (debug) {
+          console.log(`> [debug] Forcing \`deploymentType\` = \`static\``)
+        }
+
+        deploymentType = 'static'
       }
-
-      deploymentType = 'docker'
-    } else if (argv.npm) {
+    } else {
       if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`npm\``)
+        console.log(`> [debug] Forcing \`deploymentType\` = \`static\` automatically`)
       }
-
-      deploymentType = 'npm'
-    } else if (argv.static) {
-      if (debug) {
-        console.log(`> [debug] Forcing \`deploymentType\` = \`static\``)
-      }
-
-      deploymentType = 'static'
     }
 
     let meta
