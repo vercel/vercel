@@ -166,15 +166,22 @@ workflows:
       - upload:
           requires:
             - compress
+          filters:
+            tags:
+              only: /.*/
       - publish-canary:
           requires:
             - upload
           filters:
             branches:
               only: canary
+            tags:
+              only: /.*/
       - publish-stable:
           requires:
             - upload
           filters:
             branches:
               only: master
+            tags:
+              only: /.*/
