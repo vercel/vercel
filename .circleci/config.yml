@@ -78,8 +78,11 @@ jobs:
           name: Installing Uploader
           command: go get github.com/tcnksm/ghr
       - run:
+          name: Set GitHub Token
+          command: git config --global github.token $GITHUB_TOKEN
+      - run:
           name: Uploading Binaries
-          command: ghr --help
+          command: ghr --replace 11.0.0-canary.10 packed/*.gz
       - save_cache:
           key: v1-pkg-cache
           paths:
