@@ -97,6 +97,36 @@ jobs:
           paths:
             - "/go/pkg"
 
+  publish-stable:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Canary Channel
+          command: yarn publish -t latest
+
+  publish-canary:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Canary Channel
+          command: yarn publish -t canary
+
 workflows:
   version: 2
   compile:
@@ -123,3 +153,15 @@ workflows:
               ignore: /.*/
             tags:
               only: /.*/
+      - publish-canary:
+          requires:
+            - upload
+          filters:
+            branches:
+              only: canary
+      - publish-stable:
+          requires:
+            - upload
+          filters:
+            branches:
+              only: master
