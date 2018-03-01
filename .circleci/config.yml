@@ -65,18 +65,25 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/golang:1.8
     working_directory: ~/repo
     steps:
       - checkout
       - attach_workspace:
           at: .
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
       - run:
           name: Installing Uploader
           command: go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
           command: ghr --help
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
 
 workflows:
   version: 2
