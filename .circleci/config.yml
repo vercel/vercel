@@ -78,8 +78,8 @@ jobs:
           name: Installing Uploader
           command: go get github.com/tcnksm/ghr
       - run:
-          name: Set GitHub Token
-          command: git config --global github.token $GITHUB_TOKEN
+          name: Filter Binaries
+          command: shopt -s extglob && rm packed/!(*.gz)
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
