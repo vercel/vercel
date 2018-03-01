@@ -96,7 +96,12 @@ jobs:
           command: go get github.com/aktau/github-release
       - run:
           name: Uploading Binaries
-          command: github-release upload -t `git describe --tags` -n "now-macos.gz" -f "packed/now-macos.gz"
+          command:
+            - >-
+              for file in ./packed/*
+              do
+               github-release upload -t `git describe --tags` -n ${file##*/} -f $file
+              done
       - save_cache:
           key: v1-pkg-cache
           paths:
