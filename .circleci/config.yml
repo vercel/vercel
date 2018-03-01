@@ -82,7 +82,7 @@ jobs:
           command: git config --global github.token $GITHUB_TOKEN
       - run:
           name: Uploading Binaries
-          command: ghr 11.0.0-canary.10 packed/*.gz
+          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
       - save_cache:
           key: v1-pkg-cache
           paths:
