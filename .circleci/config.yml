@@ -97,7 +97,7 @@ jobs:
       - run:
           name: Uploading Binaries
           command:
-            - >-
+            >-
               for file in ./packed/*
               do
                github-release upload -t `git describe --tags` -n ${file##*/} -f $file
