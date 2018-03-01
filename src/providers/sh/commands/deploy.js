@@ -751,12 +751,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       process.stdout.write(url)
     }
 
-    const startU = new Date()
-
     if (!quiet) {
       if (syncCount) {
-        const elapsedU = ms(new Date() - startU)
-        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsedU}]`)
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsed}]`)
       }
     }
 
