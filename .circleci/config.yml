@@ -72,8 +72,11 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Installing Uploader
+          command: go get github.com/tcnksm/ghr
+      - run:
           name: Uploading Binaries
-          command: npx putasset --help
+          command: ghr --help
 
 workflows:
   version: 2
