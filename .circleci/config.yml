@@ -75,6 +75,10 @@ jobs:
       - run:
           name: Compressing Binaries
           command: yarn gzip
+      - persist_to_workspace:
+          root: .
+          paths:
+            - packed
 
   upload:
     docker:
@@ -91,11 +95,8 @@ jobs:
           name: Installing Uploader
           command: go get github.com/aktau/github-release
       - run:
-          name: Installing Path Resolver
-          command: sudo apt-get update; sudo apt-get install realpath
-      - run:
           name: Uploading Binaries
-          command: github-release upload -t `git describe --tags` -n "now-macos.gz" -f `realpath packed/now-macos.gz`
+          command: github-release upload -t `git describe --tags` -n "now-macos.gz" -f "packed/now-macos.gz"
       - save_cache:
           key: v1-pkg-cache
           paths:
