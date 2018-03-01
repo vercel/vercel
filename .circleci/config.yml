@@ -63,7 +63,7 @@ jobs:
           name: Running Unit Tests
           command: yarn test-unit
 
-  deploy:
+  compress:
     docker:
       - image: circleci/node:latest
     working_directory: ~/repo
@@ -74,12 +74,18 @@ jobs:
       - run:
           name: Compressing Binaries
           command: yarn gzip
-      - run:
-          name: Preparing Go
-          command: sudo apt-get install golang-go
+
+  upload:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
       - run:
           name: Installing Uploader
-          command: GOPATH=$HOME/go go get github.com/tcnksm/ghr
+          command: go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
@@ -98,7 +104,10 @@ workflows:
       - test-unit:
           requires:
             - build
-      - deploy:
+      - compress:
           requires:
             - test-lint
             - test-unit
+      - upload:
+          requires:
+            - compress
