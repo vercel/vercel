@@ -82,7 +82,7 @@ jobs:
           command: go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
-          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
+          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
 
 workflows:
   version: 2
