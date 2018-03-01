@@ -111,7 +111,7 @@ jobs:
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
       - run:
           name: Publishing to Stable Channel
-          command: yarn publish -t latest
+          command: npm publish --tag latest
 
   publish-canary:
     docker:
@@ -126,31 +126,43 @@ jobs:
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
       - run:
           name: Publishing to Canary Channel
-          command: yarn publish -t canary
+          command: npm publish --tag canary
 
 workflows:
   version: 2
   compile:
     jobs:
-      - install
+      - install:
+          filters:
+            tags:
+              only: /.*/
       - build:
           requires:
             - install
+          filters:
+            tags:
+              only: /.*/
       - test-lint:
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
       - test-unit:
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
       - compress:
           requires:
             - test-lint
             - test-unit
           filters:
-            branches:
-              ignore: /.*/
             tags:
               only: /.*/
+            branches:
+              ignore: /.*/
       - upload:
           requires:
             - compress
