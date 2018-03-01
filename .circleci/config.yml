@@ -71,9 +71,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - restore_cache:
-          keys:
-            - v1-pkg-cache
       - run:
           name: Compressing Binaries
           command: yarn gzip
@@ -83,10 +80,6 @@ jobs:
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
-      - save_cache:
-          key: v1-pkg-cache
-          paths:
-            - "/go/pkg"
 
 workflows:
   version: 2
