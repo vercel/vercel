@@ -75,6 +75,10 @@ jobs:
       - run:
           name: Compressing Binaries
           command: yarn gzip
+      - persist_to_workspace:
+          root: .
+          paths:
+            - packed
 
   upload:
     docker:
@@ -89,10 +93,15 @@ jobs:
             - v1-pkg-cache
       - run:
           name: Installing Uploader
-          command: go get github.com/tcnksm/ghr
+          command: go get github.com/aktau/github-release
       - run:
           name: Uploading Binaries
-          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
+          command:
+            >-
+              for file in ./packed/*.gz;
+              do
+               github-release upload -t `git describe --tags` -n ${file##*/} -f $file
+              done
       - save_cache:
           key: v1-pkg-cache
           paths:
@@ -166,15 +175,18 @@ workflows:
       - upload:
           requires:
             - compress
+          filters:
+            tags:
+              only: /.*/
       - publish-canary:
           requires:
             - upload
           filters:
-            branches:
-              only: canary
+            tags:
+              only: /^.*canary.*($|\b)/
       - publish-stable:
           requires:
             - upload
           filters:
-            branches:
-              only: master
+            tags:
+              only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
