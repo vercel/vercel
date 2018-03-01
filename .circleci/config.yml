@@ -145,14 +145,14 @@ workflows:
           requires:
             - test-lint
             - test-unit
-      - upload:
-          requires:
-            - compress
           filters:
             branches:
               ignore: /.*/
             tags:
               only: /.*/
+      - upload:
+          requires:
+            - compress
       - publish-canary:
           requires:
             - upload
