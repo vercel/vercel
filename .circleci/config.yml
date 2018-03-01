@@ -174,14 +174,14 @@ workflows:
             - upload
           filters:
             branches:
-              ignore: /.*/
+              only: canary
             tags:
-              only: /canary/
+              only: /.*/
       - publish-stable:
           requires:
             - upload
           filters:
             branches:
-              ignore: /.*/
+              only: master
             tags:
-              ignore: /canary/
+              only: /.*/
