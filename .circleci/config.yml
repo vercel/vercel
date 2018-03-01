@@ -118,3 +118,8 @@ workflows:
       - upload:
           requires:
             - compress
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /.*/
