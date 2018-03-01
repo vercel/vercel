@@ -305,6 +305,7 @@ async function main(ctx) {
 async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const start = Date.now()
+    const rawPath = argv._[0]
 
     let deploymentType
     let isFile
@@ -322,7 +323,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         let isValidRepo = false
 
         try {
-          isValidRepo = isRepoPath(paths[0])
+          isValidRepo = isRepoPath(rawPath)
         } catch (_err) {
           if (err.code === 'INVALID_URL') {
             await stopDeployment(_err)
@@ -332,7 +333,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         }
 
         if (isValidRepo) {
-          const gitParts = gitPathParts(paths[0])
+          const gitParts = gitPathParts(rawPath)
           Object.assign(gitRepo, gitParts)
 
           const searchMessage = setTimeout(() => {
@@ -340,7 +341,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           }, 500)
 
           try {
-            repo = await fromGit(paths[0], debugEnabled)
+            repo = await fromGit(rawPath, debugEnabled)
           } catch (err) {}
 
           clearTimeout(searchMessage)
