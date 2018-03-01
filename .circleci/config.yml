@@ -89,10 +89,10 @@ jobs:
             - v1-pkg-cache
       - run:
           name: Installing Uploader
-          command: go get github.com/tcnksm/ghr
+          command: go get github.com/aktau/github-release
       - run:
           name: Uploading Binaries
-          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
+          command: github-release upload -t `git describe --tags` -n "now-macos.gz" -f "packed/now-macos.gz"
       - save_cache:
           key: v1-pkg-cache
           paths:
