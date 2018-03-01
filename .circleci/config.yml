@@ -75,8 +75,11 @@ jobs:
           name: Compressing Binaries
           command: yarn gzip
       - run:
+          name: Preparing Go
+          command: sudo apt-get install golang-go; export GOPATH=$HOME/go
+      - run:
           name: Installing Uploader
-          command: sudo apt-get install golang-go; go get github.com/tcnksm/ghr
+          command: go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
