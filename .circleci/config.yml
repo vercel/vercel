@@ -75,11 +75,11 @@ jobs:
           keys:
             - v1-pkg-cache
       - run:
+          name: Compressing Binaries
+          command: yarn gzip
+      - run:
           name: Installing Uploader
           command: go get github.com/tcnksm/ghr
-      - run:
-          name: Filter Binaries
-          command: shopt -s extglob && rm packed/!(*.gz)
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
