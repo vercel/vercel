@@ -48,17 +48,6 @@
   version "0.4.3"
   resolved "https://registry.yarnpkg.com/@google/maps/-/maps-0.4.3.tgz#b468961114d6e0749c15802e0da149dcea2283a5"
 
-"@octokit/rest@^14.0.7":
-  version "14.0.9"
-  resolved "https://registry.yarnpkg.com/@octokit/rest/-/rest-14.0.9.tgz#d5e0a00dcb78901dd7b2ef852acfc0aea7c479ef"
-  dependencies:
-    before-after-hook "^1.1.0"
-    debug "^3.1.0"
-    is-array-buffer "^1.0.0"
-    is-stream "^1.1.0"
-    lodash "^4.17.4"
-    url-template "^2.0.8"
-
 "@zeit/check-updates@1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@zeit/check-updates/-/check-updates-1.1.0.tgz#d0f65026a36f27cd1fd54c647d8294447c1d2d8b"
@@ -1110,10 +1099,6 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-before-after-hook@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/before-after-hook/-/before-after-hook-1.1.0.tgz#83165e15a59460d13702cb8febd6a1807896db5a"
-
 better-assert@~1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/better-assert/-/better-assert-1.0.2.tgz#40866b9e1b9e0b55b481894311e68faffaebc522"
@@ -1462,10 +1447,6 @@ chalk@^0.4.0:
 chardet@^0.4.0:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/chardet/-/chardet-0.4.2.tgz#b5473b33dc97c424e5d98dc87d55d4d8a29c8bf2"
-
-checkup@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/checkup/-/checkup-1.3.0.tgz#d3800276fea5d0f247ffc951be78c8b02f8e0d76"
 
 child-process-promise@2.2.1:
   version "2.2.1"
@@ -1969,7 +1950,7 @@ debug@2.3.3:
   dependencies:
     ms "0.7.2"
 
-debug@3.1.0, debug@^3.0.1, debug@^3.1.0:
+debug@3.1.0, debug@^3.0.1:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.1.0.tgz#5bb5a0672628b64149566ba16819e61518c67261"
   dependencies:
@@ -2325,10 +2306,6 @@ es6-map@^0.1.3:
     es6-set "~0.1.5"
     es6-symbol "~3.1.1"
     event-emitter "~0.3.5"
-
-es6-promisify@^6.0.0:
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/es6-promisify/-/es6-promisify-6.0.0.tgz#b526a75eaa5ca600e960bf3d5ad98c40d75c7203"
 
 es6-set@~0.1.5:
   version "0.1.5"
@@ -2877,10 +2854,6 @@ fstream@^1.0.0, fstream@^1.0.10, fstream@^1.0.2:
     mkdirp ">=0.5 0"
     rimraf "2"
 
-fullstore@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/fullstore/-/fullstore-1.1.0.tgz#a7a8b00ca07d86faca05fb825c45e5d1c3bba97e"
-
 function-name-support@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/function-name-support/-/function-name-support-0.2.0.tgz#55d3bfaa6eafd505a50f9bc81fdf57564a0bb071"
@@ -3355,10 +3328,6 @@ is-accessor-descriptor@^1.0.0:
   resolved "https://registry.yarnpkg.com/is-accessor-descriptor/-/is-accessor-descriptor-1.0.0.tgz#169c2f6d3df1f992618072365c9b0ea1f6878656"
   dependencies:
     kind-of "^6.0.0"
-
-is-array-buffer@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/is-array-buffer/-/is-array-buffer-1.0.0.tgz#f32497a0509d109423f472003f98bab6a8ea34cb"
 
 is-arrayish@^0.2.1:
   version "0.2.1"
@@ -4976,20 +4945,6 @@ punycode@^1.2.4, punycode@^1.4.1:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-1.4.1.tgz#c0d5a63b2718800ad8e1eb0fa5269c84dd41845e"
 
-putasset@3.1.8:
-  version "3.1.8"
-  resolved "https://registry.yarnpkg.com/putasset/-/putasset-3.1.8.tgz#cd10596f4f0110e5c55989972a892a5d6e9ae2e1"
-  dependencies:
-    "@octokit/rest" "^14.0.7"
-    checkup "^1.3.0"
-    es6-promisify "^6.0.0"
-    fullstore "^1.1.0"
-    minimist "^1.2.0"
-    os-homedir "^1.0.0"
-    readjson "^1.1.0"
-    try-catch "^2.0.0"
-    wraptile "^1.0.0"
-
 qs@~6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.4.0.tgz#13e26d28ad6b0ffaa91312cd3bf708ed351e7233"
@@ -5089,12 +5044,6 @@ readdirp@^2.0.0:
     minimatch "^3.0.2"
     readable-stream "^2.0.2"
     set-immediate-shim "^1.0.1"
-
-readjson@^1.1.0:
-  version "1.1.4"
-  resolved "https://registry.yarnpkg.com/readjson/-/readjson-1.1.4.tgz#89501f648453dcda9b15399b3fb10c38249662c7"
-  dependencies:
-    try-catch "^2.0.0"
 
 redent@^1.0.0:
   version "1.0.0"
@@ -6008,10 +5957,6 @@ trim-right@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
 
-try-catch@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/try-catch/-/try-catch-2.0.0.tgz#a491141d597f8b72b46757fe1c47059341a16aed"
-
 tty-browserify@0.0.0:
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/tty-browserify/-/tty-browserify-0.0.0.tgz#a157ba402da24e9bf957f9aa69d524eed42901a6"
@@ -6145,10 +6090,6 @@ url-parse-lax@^1.0.0:
   resolved "https://registry.yarnpkg.com/url-parse-lax/-/url-parse-lax-1.0.0.tgz#7af8f303645e9bd79a272e7a14ac68bc0609da73"
   dependencies:
     prepend-http "^1.0.1"
-
-url-template@^2.0.8:
-  version "2.0.8"
-  resolved "https://registry.yarnpkg.com/url-template/-/url-template-2.0.8.tgz#fc565a3cccbff7730c775f5641f9555791439f21"
 
 url-to-options@^1.0.1:
   version "1.0.1"
@@ -6327,10 +6268,6 @@ wrap-ansi@^2.0.0:
 wrappy@1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
-
-wraptile@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/wraptile/-/wraptile-1.0.0.tgz#ee67b9c36835993f8c1d0b38f19ef2fb9ef16cff"
 
 write-file-atomic@^1.1.4:
   version "1.3.4"
