@@ -83,12 +83,19 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
       - run:
           name: Installing Uploader
           command: go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
 
 workflows:
   version: 2
