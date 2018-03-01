@@ -174,7 +174,7 @@ workflows:
             - upload
           filters:
             branches:
-              only: canary
+              ignore: master
             tags:
               only: /.*/
       - publish-stable:
@@ -182,6 +182,6 @@ workflows:
             - upload
           filters:
             branches:
-              only: master
+              ignore: canary
             tags:
               only: /.*/
