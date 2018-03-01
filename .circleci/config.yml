@@ -173,15 +173,11 @@ workflows:
           requires:
             - upload
           filters:
-            branches:
-              ignore: master
             tags:
-              only: /.*/
+              only: /^.*canary.*($|\b)/
       - publish-stable:
           requires:
             - upload
           filters:
-            branches:
-              ignore: canary
             tags:
-              only: /.*/
+              only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
