@@ -1,0 +1,168 @@
+version: 2
+jobs:
+
+  install:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "yarn.lock" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+      - run:
+          name: Installing Dependencies
+          command: yarn
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "yarn.lock" }}
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+
+  build:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Compiling Binaries
+          command: yarn run pack
+      - persist_to_workspace:
+          root: .
+          paths:
+            - packed
+
+  test-lint:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Linting Code
+          command: yarn test-lint
+
+  test-unit:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Running Unit Tests
+          command: yarn test-unit
+
+  compress:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Compressing Binaries
+          command: yarn gzip
+
+  upload:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+      - run:
+          name: Installing Uploader
+          command: go get github.com/tcnksm/ghr
+      - run:
+          name: Uploading Binaries
+          command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
+
+  publish-stable:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Stable Channel
+          command: yarn publish -t latest
+
+  publish-canary:
+    docker:
+      - image: circleci/node:latest
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Canary Channel
+          command: yarn publish -t canary
+
+workflows:
+  version: 2
+  compile:
+    jobs:
+      - install
+      - build:
+          requires:
+            - install
+      - test-lint:
+          requires:
+            - build
+      - test-unit:
+          requires:
+            - build
+      - compress:
+          requires:
+            - test-lint
+            - test-unit
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /.*/
+      - upload:
+          requires:
+            - compress
+      - publish-canary:
+          requires:
+            - upload
+          filters:
+            branches:
+              only: canary
+      - publish-stable:
+          requires:
+            - upload
+          filters:
+            branches:
+              only: master
