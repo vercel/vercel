@@ -65,7 +65,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang:1.8
+      - image: circleci/node:latest
     working_directory: ~/repo
     steps:
       - checkout
@@ -79,7 +79,7 @@ jobs:
           command: yarn gzip
       - run:
           name: Installing Uploader
-          command: go get github.com/tcnksm/ghr
+          command: sudo apt-get install golang-go; go get github.com/tcnksm/ghr
       - run:
           name: Uploading Binaries
           command: ghr -u "zeit" -r "now-cli" --replace `git describe --tags` packed/
