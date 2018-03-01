@@ -109,7 +109,7 @@ jobs:
           name: Saving Authentication Information
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
       - run:
-          name: Publishing to Canary Channel
+          name: Publishing to Stable Channel
           command: yarn publish -t latest
 
   publish-canary:
