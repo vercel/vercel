@@ -106,14 +106,6 @@ module.exports = class Domains extends Now {
       throw err
     }
 
-    if (domain.endsWith('.ws')) {
-      const err = new Error(
-        `ZEIT.world currently does't support ${chalk.bold('.ws')} domains`
-      )
-      err.userError = true
-      throw err
-    }
-
     return this.setupDomain(domain, { isExternal })
   }
 
