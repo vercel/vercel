@@ -238,15 +238,6 @@ module.exports = class Alias extends Now {
   async set(deployment, alias, domains, currentTeam, user) {
     alias = alias.replace(/^https:\/\//i, '')
 
-    if (alias.endsWith('.ws')) {
-      const err = new Error(
-        `ZEIT.world currently does't support ${chalk.bold('.ws')} domains`
-      )
-
-      err.userError = true
-      throw err
-    }
-
     if (alias.indexOf('.') === -1) {
       // `.now.sh` domain is implied if just the subdomain is given
       alias += '.now.sh'
