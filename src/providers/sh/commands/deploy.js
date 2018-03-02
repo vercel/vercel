@@ -178,6 +178,7 @@ let apiUrl
 let isTTY
 let quiet
 let alwaysForwardNpm
+let meta
 
 // If the current deployment is a repo
 const gitRepo = {}
@@ -424,8 +425,6 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           )}`)
       }
     }
-
-    let meta
 
     if (!isFile && deploymentType !== 'static') {
       if (argv.docker) {
