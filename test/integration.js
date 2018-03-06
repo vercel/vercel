@@ -17,7 +17,7 @@ const binary = {
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 
-test.serial('packed "now help" prints deploy help message', async t => {
+test('packed "now help" prints deploy help message', async t => {
   if (!process.env.CI) {
     t.true(true)
     return
