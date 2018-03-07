@@ -7,11 +7,11 @@ const test = require('ava')
 const semVer = require('semver')
 const fkill = require('fkill')
 const { remove, pathExists, readJSON, writeJSON } = require('fs-extra')
+const execa = require('execa')
 
 // Utilities
 const logo = require('../src/util/output/logo')
 const pkg = require('../package')
-const spawn = require('./helpers/spawn')
 
 const binary = {
   darwin: 'now-macos',
@@ -20,7 +20,9 @@ const binary = {
 }[process.platform]
 
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
+const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
+const sesion = Math.random().toString(36).split('.')[1]
 
 const configDir = path.resolve(homedir(), '.now')
 
@@ -57,14 +59,14 @@ test.before(async t => {
 })
 
 test('print the deploy help message', async t => {
-  const { stdout, code } = await spawn(binaryPath, ['help'])
+  const { stdout, code } = await execa(binaryPath, ['help'])
 
   t.is(code, 0)
   t.true(stdout.includes(deployHelpMessage))
 })
 
 test('output the version', async t => {
-  const { stdout, code } = await spawn(binaryPath, ['--version'])
+  const { stdout, code } = await execa(binaryPath, ['--version'])
   const version = stdout.trim()
 
   t.is(code, 0)
@@ -73,7 +75,7 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
-  const { stdout, code } = await spawn(binaryPath, ['login', 'now-cli@zeit.pub'])
+  const { stdout, code } = await execa(binaryPath, ['login', 'now-cli@zeit.pub'])
 
   const goal = `> Ready! Authentication token and personal details saved in "~/.now"`
   const lines = stdout.trim().split('\n')
@@ -82,8 +84,18 @@ test('log in', async t => {
   t.is(last, goal)
 })
 
-test('deploy something cached', async t => {
-  t.truthy(true)
+test('trigger OSS confirmation message', async t => {
+  const target = fixture('node-micro')
+  const goal = `Your deployment's code and logs will be publicly accessible`
+
+  try {
+    await execa.stderr(binaryPath, [ target ])
+  } catch (err) {
+    t.true(err.stderr.includes(goal))
+    return
+  }
+
+  throw new Error(`Didn't print to stderr`)
 })
 
 test.after.always(async t => {
