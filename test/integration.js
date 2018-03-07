@@ -354,12 +354,23 @@ test('deploy a dockerfile project', async t => {
 })
 
 test('deploy a github repository', async t => {
+  const options = {}
+  let flag = '--env REDIRECT_URL="https://zeit.co"'
+
+  if (process.env.CI) {
+    options.env = {
+      REDIRECT_URL: 'https://zeit.co'
+    }
+
+    flag = ''
+  }
+
   const { stdout, code } = await execa(binaryPath, [
     'now-examples/redirect#master',
     '--public',
     `--name ${session}`,
-    '--env REDIRECT_URL="https://zeit.co"'
-  ])
+    flag
+  ], options)
 
   // Ensure the exit code is right
   t.is(code, 0)
