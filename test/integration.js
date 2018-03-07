@@ -89,7 +89,7 @@ test('trigger OSS confirmation message', async t => {
   const goal = `Your deployment's code and logs will be publicly accessible`
 
   try {
-    await execa.stderr(binaryPath, [ target ])
+    await execa(binaryPath, [ target ])
   } catch (err) {
     t.true(err.stderr.includes(goal))
     return
