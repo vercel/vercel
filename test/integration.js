@@ -1,6 +1,7 @@
 // Native
 const path = require('path')
 const { homedir } = require('os')
+const { URL } = require('url')
 
 // Packages
 const test = require('ava')
@@ -8,6 +9,7 @@ const semVer = require('semver')
 const fkill = require('fkill')
 const { remove, pathExists, readJSON, writeJSON } = require('fs-extra')
 const execa = require('execa')
+const fetch = require('node-fetch')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -96,6 +98,25 @@ test('trigger OSS confirmation message', async t => {
   }
 
   throw new Error(`Didn't print to stderr`)
+})
+
+test('deploy a node microservice', async t => {
+  const target = fixture('node-micro')
+  const { stdout, code } = await execa(binaryPath, [ target, '--public' ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href } = new URL(stdout)
+
+  // Send a test request to the deployment
+  const response = await fetch(href)
+  const contentType = response.headers.get('content-type')
+  const content = await response.json()
+
+  t.is(contentType, 'application/json; charset=utf-8')
+  t.is(content.hello, 'world')
 })
 
 test.after.always(async t => {
