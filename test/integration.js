@@ -15,11 +15,7 @@ const fetch = require('node-fetch')
 const logo = require('../src/util/output/logo')
 const pkg = require('../package')
 const parseList = require('./helpers/parse-list')
-
-// It's EXTREMELY important that this file is
-// not run with `--fail-fast`, otherwise the cleanups
-// are not happening and we get stuck with
-// a lot of errors about too many instances.
+const removeDeployment = require('./helpers/remove')
 
 const binary = {
   darwin: 'now-macos',
@@ -252,6 +248,8 @@ test('scale down the deployment directly', async t => {
 
   t.true(stdout.includes(goals.first))
   t.true(stdout.includes(goals.second))
+
+  await removeDeployment(t, binaryPath, context.deployment)
 })
 
 test('deploy multiple static files', async t => {
@@ -293,6 +291,7 @@ test('deploy multiple static files', async t => {
   const bareCurrent = content.map(item => item.file)
 
   t.deepEqual(bareGoal, bareCurrent)
+  await removeDeployment(t, binaryPath, stdout)
 })
 
 test('deploy single static file', async t => {
@@ -322,6 +321,8 @@ test('deploy single static file', async t => {
 
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
+
+  await removeDeployment(t, binaryPath, stdout)
 })
 
 test('deploy a dockerfile project', async t => {
@@ -348,6 +349,8 @@ test('deploy a dockerfile project', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.type, 'docker')
+
+  await removeDeployment(t, binaryPath, stdout)
 })
 
 test('deploy a github repository', async t => {
@@ -372,21 +375,8 @@ test('deploy a github repository', async t => {
 
   const location = response.headers.get('location')
   t.is(location, 'https://zeit.co/')
-})
 
-test('clean up deployments', async t => {
-  const { stdout } = await execa(binaryPath, [ 'rm', session, '--yes' ])
-  const goal = new RegExp(`> Deployment ${session}-(.*).now.sh removed`, 'g')
-
-  t.truthy(stdout)
-  t.true(goal.test(stdout))
-})
-
-test('list deployments and see if they were removed', async t => {
-  const secondOutput = await execa(binaryPath, [ 'ls', session ])
-  const list = parseList(secondOutput.stdout)
-
-  t.is(list.length, 0)
+  await removeDeployment(t, binaryPath, stdout)
 })
 
 test.after.always(async () => {
