@@ -126,7 +126,7 @@ test('deploy a node microservice', async t => {
   t.is(content.hello, 'world')
 })
 
-test('find deployment and remove it', async t => {
+test('find deployment in list', async t => {
   const { stdout } = await execa(binaryPath, [ 'ls' ])
   const deployments = parseDeployments(stdout)
 
@@ -140,11 +140,31 @@ test('find deployment and remove it', async t => {
     t.fail('Deployment not found')
   }
 
-  const output = await execa(binaryPath, [ 'rm', target, '--yes' ])
-  const goal = `> Deployment ${target} removed`
+  t.pass('Found it')
+})
 
-  t.true(output.stdout.includes(goal))
-  t.is(output.code, 0)
+test('clean up deployments', async t => {
+  const target = fixture('node-micro')
+  const { stdout } = await execa(binaryPath, [ 'ls' ])
+  const deployments = parseDeployments(stdout)
+
+  if (deployments.length === 0) {
+    t.pass()
+    return
+  }
+
+  let removers = []
+
+  for (const deployment of deployments) {
+    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
+  }
+
+  await Promise.all(removers)
+
+  const output = await execa(binaryPath, [ 'ls' ])
+  const list = parseDeployments(output.stdout)
+
+  t.is(list.length, 0)
 })
 
 test.after.always(async t => {
