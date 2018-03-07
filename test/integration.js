@@ -27,6 +27,10 @@ const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
 
+// AVA's `t.context` can only be set before the tests,
+// but we want to set it within as well
+const context = {}
+
 const configDir = path.resolve(homedir(), '.now')
 
 const configFiles = {
@@ -58,7 +62,7 @@ test.before(async t => {
   }
 
   // Save it so we can put it back after the tests
-  t.context.oldConfig = configContent
+  context.oldConfig = configContent
 })
 
 test('print the deploy help message', async t => {
@@ -141,6 +145,31 @@ test('find deployment in list', async t => {
   }
 
   t.pass('Found it')
+  context.deployment = target
+})
+
+test('create alias for deployment', async t => {
+  const hosts = {
+    deployment: context.deployment,
+    alias: `${session}.now.sh`
+  }
+
+  const { stdout } = await execa(binaryPath, [
+    'alias',
+    hosts.deployment,
+    hosts.alias
+  ])
+
+  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
+  t.true(stdout.startsWith(goal))
+
+  // Send a test request to the alias
+  const response = await fetch(`https://${hosts.alias}`)
+  const contentType = response.headers.get('content-type')
+  const content = await response.json()
+
+  t.is(contentType, 'application/json; charset=utf-8')
+  t.is(content.hello, 'world')
 })
 
 test('clean up deployments', async t => {
@@ -159,7 +188,7 @@ test('list deployments and see if they were removed', async t => {
 })
 
 test.after.always(async t => {
-  const { oldConfig } = t.context
+  const { oldConfig } = context
 
   if (!oldConfig) {
     return
