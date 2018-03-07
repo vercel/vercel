@@ -144,24 +144,16 @@ test('find deployment in list', async t => {
 })
 
 test('clean up deployments', async t => {
-  const { stdout } = await execa(binaryPath, [ 'ls' ])
-  const deployments = parseDeployments(stdout)
+  const { stdout } = await execa(binaryPath, [ 'rm', session, '--yes' ])
+  const goal = new RegExp(`> Deployment ${session}-(.*).now.sh removed`, 'g')
 
-  if (deployments.length === 0) {
-    t.pass()
-    return
-  }
+  t.truthy(stdout)
+  t.true(goal.test(stdout))
+})
 
-  let removers = []
-
-  for (const deployment of deployments) {
-    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
-  }
-
-  await Promise.all(removers)
-
-  const output = await execa(binaryPath, [ 'ls' ])
-  const list = parseDeployments(output.stdout)
+test('list deployments and see if they were removed', async t => {
+  const secondOutput = await execa(binaryPath, [ 'ls', session ])
+  const list = parseDeployments(secondOutput.stdout)
 
   t.is(list.length, 0)
 })
