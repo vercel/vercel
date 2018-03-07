@@ -184,6 +184,48 @@ test('list the aliases', async t => {
   t.true(results.includes(context.deployment))
 })
 
+test('scale the alias', async t => {
+  const goal = `${context.deployment} (1 current)`
+
+  const { stdout } = await execa(binaryPath, [
+    'scale',
+    context.alias,
+    '1'
+  ])
+
+  t.true(stdout.includes(goal))
+  t.true(stdout.includes(`auto ✖`))
+})
+
+test('error on trying to auto-scale', async t => {
+  const goal = `> Error! Autoscaling requires pro or max plan`
+
+  const output = await execa.stderr(binaryPath, [
+    'scale',
+    context.deployment,
+    '1',
+    'auto'
+  ])
+
+  t.is(output, goal)
+})
+
+test('scale down the deployment directly', async t => {
+  const goals = {
+    first: `${context.deployment} (1 current)`,
+    second: `> Scaled to 0 instances`
+  }
+
+  const { stdout } = await execa(binaryPath, [
+    'scale',
+    context.deployment,
+    '0'
+  ])
+
+  t.true(stdout.includes(goals.first))
+  t.true(stdout.includes(goals.second))
+})
+
 test('clean up deployments', async t => {
   const { stdout } = await execa(binaryPath, [ 'rm', session, '--yes' ])
   const goal = new RegExp(`> Deployment ${session}-(.*).now.sh removed`, 'g')
