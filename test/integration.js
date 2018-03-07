@@ -16,6 +16,11 @@ const logo = require('../src/util/output/logo')
 const pkg = require('../package')
 const parseList = require('./helpers/parse-list')
 
+// It's EXTREMELY important that this file is
+// not run with `--fail-fast`, otherwise the cleanups
+// are not happening and we get stuck with
+// a lot of errors about too many instances.
+
 const binary = {
   darwin: 'now-macos',
   linux: 'now-linux',
@@ -38,7 +43,7 @@ const configFiles = {
   config: path.resolve(configDir, 'config.json')
 }
 
-test.before(async t => {
+test.before(async () => {
   let configContent
 
   // Close the existing app
@@ -180,7 +185,7 @@ test('list the aliases', async t => {
     'ls'
   ])
 
-  const results = parseList(stdout, context.alias)
+  const results = parseList(stdout)
   t.true(results.includes(context.deployment))
 })
 
@@ -195,6 +200,29 @@ test('scale the alias', async t => {
 
   t.true(stdout.includes(goal))
   t.true(stdout.includes(`auto ✖`))
+})
+
+test('remove the alias', async t => {
+  const goal = `> Success! Alias ${context.alias} removed`
+
+  const { stdout } = await execa(binaryPath, [
+    'alias',
+    'rm',
+    context.alias,
+    '--yes'
+  ])
+
+  t.true(stdout.startsWith(goal))
+})
+
+test('find deployment in scaling list', async t => {
+  const { stdout } = await execa(binaryPath, [
+    'scale',
+    'ls'
+  ])
+
+  const list = parseList(stdout)
+  t.true(list.includes(context.deployment))
 })
 
 test('error on trying to auto-scale', async t => {
@@ -241,7 +269,7 @@ test('list deployments and see if they were removed', async t => {
   t.is(list.length, 0)
 })
 
-test.after.always(async t => {
+test.after.always(async () => {
   const { oldConfig } = context
 
   if (!oldConfig) {

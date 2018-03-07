@@ -7,7 +7,7 @@
   "scripts": {
     "test": "yarn run pack; yarn test-lint; yarn test-unit; yarn test-integration",
     "test-unit": "ava test/unit.js --fail-fast",
-    "test-integration": "ava test/integration.js --fail-fast --serial",
+    "test-integration": "ava test/integration.js --serial",
     "test-lint": "eslint .",
     "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
     "dev": "webpack -w",
