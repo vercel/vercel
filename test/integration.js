@@ -241,7 +241,7 @@ test('error on trying to auto-scale', async t => {
 test('scale down the deployment directly', async t => {
   const goals = {
     first: `${context.deployment} (1 current)`,
-    second: `> Scaled to 0 instances`
+    second: 'min 0'
   }
 
   const { stdout } = await execa(binaryPath, [
@@ -348,6 +348,30 @@ test('deploy a dockerfile project', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.type, 'docker')
+})
+
+test('deploy a github repository', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'now-examples/redirect#master',
+    '--public',
+    `--name ${session}`,
+    '--env REDIRECT_URL="https://zeit.co"'
+  ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    redirect: 'manual'
+  })
+
+  const location = response.headers.get('location')
+  t.is(location, 'https://zeit.co/')
 })
 
 test('clean up deployments', async t => {
