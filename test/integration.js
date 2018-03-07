@@ -97,7 +97,7 @@ test('log in', async t => {
 })
 
 test('trigger OSS confirmation message', async t => {
-  const target = fixture('node-micro')
+  const target = fixture('node')
   const goal = `Your deployment's code and logs will be publicly accessible`
 
   try {
@@ -111,7 +111,7 @@ test('trigger OSS confirmation message', async t => {
 })
 
 test('deploy a node microservice', async t => {
-  const target = fixture('node-micro')
+  const target = fixture('node')
 
   const { stdout, code } = await execa(binaryPath, [
     target,
@@ -132,7 +132,7 @@ test('deploy a node microservice', async t => {
   const content = await response.json()
 
   t.is(contentType, 'application/json; charset=utf-8')
-  t.is(content.hello, 'world')
+  t.is(content.type, 'node')
 })
 
 test('find deployment in list', async t => {
@@ -174,7 +174,7 @@ test('create alias for deployment', async t => {
   const content = await response.json()
 
   t.is(contentType, 'application/json; charset=utf-8')
-  t.is(content.hello, 'world')
+  t.is(content.type, 'node')
 
   context.alias = hosts.alias
 })
@@ -322,6 +322,32 @@ test('deploy single static file', async t => {
 
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
+})
+
+test('deploy a dockerfile project', async t => {
+  const target = fixture('dockerfile')
+
+  const { stdout, code } = await execa(binaryPath, [
+    target,
+    '--public',
+    `--name ${session}`,
+    '--docker'
+  ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
+
+  // Send a test request to the deployment
+  const response = await fetch(href)
+  const contentType = response.headers.get('content-type')
+  const content = await response.json()
+
+  t.is(contentType, 'application/json; charset=utf-8')
+  t.is(content.type, 'docker')
 })
 
 test('clean up deployments', async t => {
