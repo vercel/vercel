@@ -14,7 +14,7 @@ const fetch = require('node-fetch')
 // Utilities
 const logo = require('../src/util/output/logo')
 const pkg = require('../package')
-const parseDeployments = require('./helpers/deployments')
+const parseList = require('./helpers/parse-list')
 
 const binary = {
   darwin: 'now-macos',
@@ -132,7 +132,7 @@ test('deploy a node microservice', async t => {
 
 test('find deployment in list', async t => {
   const { stdout } = await execa(binaryPath, [ 'ls' ])
-  const deployments = parseDeployments(stdout)
+  const deployments = parseList(stdout)
 
   t.true(deployments.length > 0)
 
@@ -170,6 +170,18 @@ test('create alias for deployment', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.hello, 'world')
+
+  context.alias = hosts.alias
+})
+
+test('list the aliases', async t => {
+  const { stdout } = await execa(binaryPath, [
+    'alias',
+    'ls'
+  ])
+
+  const results = parseList(stdout, context.alias)
+  t.true(results.includes(context.deployment))
 })
 
 test('clean up deployments', async t => {
@@ -182,7 +194,7 @@ test('clean up deployments', async t => {
 
 test('list deployments and see if they were removed', async t => {
   const secondOutput = await execa(binaryPath, [ 'ls', session ])
-  const list = parseDeployments(secondOutput.stdout)
+  const list = parseList(secondOutput.stdout)
 
   t.is(list.length, 0)
 })
