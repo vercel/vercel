@@ -1,0 +1,11 @@
+{
+  "name": "node-micro",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "micro"
+  },
+  "dependencies": {
+    "micro": "latest"
+  }
+}

@@ -72,6 +72,20 @@ test('output the version', async t => {
   t.is(version, pkg.version)
 })
 
+test('log in', async t => {
+  const { stdout, code } = await spawn(binaryPath, ['login', 'now-cli@zeit.pub'])
+
+  const goal = `> Ready! Authentication token and personal details saved in "~/.now"`
+  const lines = stdout.trim().split('\n')
+  const last = lines[lines.length - 1]
+
+  t.is(last, goal)
+})
+
+test('deploy something cached', async t => {
+  t.truthy(true)
+})
+
 test.after.always(async t => {
   const { oldConfig } = t.context
 

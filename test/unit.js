@@ -20,9 +20,9 @@ const {
 } = require('../src/providers/sh/util/get-files')
 
 const output = createOutput({ debug: false })
-const prefix = join(__dirname, 'fixtures') + '/'
+const prefix = join(__dirname, 'fixtures', 'unit') + '/'
 const base = path => path.replace(prefix, '')
-const fixture = name => resolve(`./test/fixtures/${name}`)
+const fixture = name => join(prefix, name)
 
 // Overload to force debugging
 const getNpmFiles = async dir => {
@@ -360,7 +360,7 @@ test('friendly error for malformed JSON', async t => {
   t.is(err.name, 'JSONError')
   t.is(
     err.message,
-    "Unexpected token 'o' at 2:5 in test/fixtures/json-syntax-error/package.json\n    oops\n    ^"
+    "Unexpected token 'o' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^"
   )
 })
 
