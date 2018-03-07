@@ -1,5 +1,5 @@
 // Native
-const { join, resolve } = require('path')
+const { join } = require('path')
 
 // Packages
 const test = require('ava')

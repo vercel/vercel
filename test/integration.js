@@ -1,7 +1,7 @@
 // Native
 const path = require('path')
 const { homedir } = require('os')
-const { URL } = require('url')
+const { URL } = require('url')
 
 // Packages
 const test = require('ava')
@@ -78,7 +78,7 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
-  const { stdout, code } = await execa(binaryPath, ['login', 'now-cli@zeit.pub'])
+  const { stdout } = await execa(binaryPath, ['login', 'now-cli@zeit.pub'])
 
   const goal = `> Ready! Authentication token and personal details saved in "~/.now"`
   const lines = stdout.trim().split('\n')
@@ -144,7 +144,6 @@ test('find deployment in list', async t => {
 })
 
 test('clean up deployments', async t => {
-  const target = fixture('node-micro')
   const { stdout } = await execa(binaryPath, [ 'ls' ])
   const deployments = parseDeployments(stdout)
 
