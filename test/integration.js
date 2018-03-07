@@ -98,31 +98,7 @@ test('trigger OSS confirmation message', async t => {
     return
   }
 
-  throw new Error(`Didn't print to stderr`)
-})
-
-test('clean up old deployments', async t => {
-  const target = fixture('node-micro')
-  const { stdout } = await execa(binaryPath, [ 'ls' ])
-  const deployments = parseDeployments(stdout)
-
-  if (deployments.length === 0) {
-    t.pass()
-    return
-  }
-
-  let removers = []
-
-  for (const deployment of deployments) {
-    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
-  }
-
-  await Promise.all(removers)
-
-  const output = await execa(binaryPath, [ 'ls' ])
-  const list = parseDeployments(output.stdout)
-
-  t.is(list.length, 0)
+  t.fail(`Didn't print to stderr`)
 })
 
 test('deploy a node microservice', async t => {
@@ -148,6 +124,27 @@ test('deploy a node microservice', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.hello, 'world')
+})
+
+test('find deployment and remove it', async t => {
+  const { stdout } = await execa(binaryPath, [ 'ls' ])
+  const deployments = parseDeployments(stdout)
+
+  t.true(deployments.length > 0)
+
+  const target = deployments.find(deployment => {
+    return deployment.includes(`${session}-`)
+  })
+
+  if (!target) {
+    t.fail('Deployment not found')
+  }
+
+  const output = await execa(binaryPath, [ 'rm', target, '--yes' ])
+  const goal = `> Deployment ${target} removed`
+
+  t.true(output.stdout.includes(goal))
+  t.is(output.code, 0)
 })
 
 test.after.always(async t => {
