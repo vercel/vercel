@@ -14,6 +14,7 @@ const fetch = require('node-fetch')
 // Utilities
 const logo = require('../src/util/output/logo')
 const pkg = require('../package')
+const parseDeployments = require('./helpers/deployments')
 
 const binary = {
   darwin: 'now-macos',
@@ -24,7 +25,7 @@ const binary = {
 const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
-const sesion = Math.random().toString(36).split('.')[1]
+const session = Math.random().toString(36).split('.')[1]
 
 const configDir = path.resolve(homedir(), '.now')
 
@@ -100,15 +101,45 @@ test('trigger OSS confirmation message', async t => {
   throw new Error(`Didn't print to stderr`)
 })
 
+test('clean up old deployments', async t => {
+  const target = fixture('node-micro')
+  const { stdout } = await execa(binaryPath, [ 'ls' ])
+  const deployments = parseDeployments(stdout)
+
+  if (deployments.length === 0) {
+    t.pass()
+    return
+  }
+
+  let removers = []
+
+  for (const deployment of deployments) {
+    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
+  }
+
+  await Promise.all(removers)
+
+  const output = await execa(binaryPath, [ 'ls' ])
+  const list = parseDeployments(output.stdout)
+
+  t.is(list.length, 0)
+})
+
 test('deploy a node microservice', async t => {
   const target = fixture('node-micro')
-  const { stdout, code } = await execa(binaryPath, [ target, '--public' ])
+
+  const { stdout, code } = await execa(binaryPath, [
+    target,
+    '--public',
+    `--name ${session}`
+  ])
 
   // Ensure the exit code is right
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href } = new URL(stdout)
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
   const response = await fetch(href)
