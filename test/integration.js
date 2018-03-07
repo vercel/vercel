@@ -7,7 +7,7 @@ const { URL } = require('url')
 const test = require('ava')
 const semVer = require('semver')
 const fkill = require('fkill')
-const { remove, pathExists, readJSON, writeJSON } = require('fs-extra')
+const { remove, pathExists, readJSON, writeJSON, readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 
@@ -252,6 +252,76 @@ test('scale down the deployment directly', async t => {
 
   t.true(stdout.includes(goals.first))
   t.true(stdout.includes(goals.second))
+})
+
+test('deploy multiple static files', async t => {
+  const directory = fixture('static-multiple-files')
+
+  const files = [
+    path.join(directory, 'logo-black.png'),
+    path.join(directory, 'logo-white.png')
+  ]
+
+  const { stdout, code } = await execa(binaryPath, [
+    files[0],
+    files[1],
+    '--public',
+    `--name ${session}`
+  ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+
+  const contentType = response.headers.get('content-type')
+  t.is(contentType, 'application/json; charset=utf8')
+
+  const content = await response.json()
+  t.is(content.length, 2)
+
+  const bareGoal = files.map(file => path.basename(file))
+  const bareCurrent = content.map(item => item.file)
+
+  t.deepEqual(bareGoal, bareCurrent)
+})
+
+test('deploy single static file', async t => {
+  const file = fixture('static-single-file/logo.png')
+
+  const { stdout, code } = await execa(binaryPath, [
+    file,
+    '--public',
+    `--name ${session}`
+  ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+
+  const contentType = response.headers.get('content-type')
+
+  t.is(contentType, 'image/png')
+  t.deepEqual(await readFile(file), await response.buffer())
 })
 
 test('clean up deployments', async t => {
