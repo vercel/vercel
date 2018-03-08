@@ -370,6 +370,11 @@ test.after.always(async t => {
 })
 
 test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, [ 'logout' ])
+})
+
+test.after.always(async () => {
   const { oldConfig } = context
 
   if (!oldConfig) {
