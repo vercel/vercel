@@ -108,6 +108,7 @@ module.exports = function(
       stdin.setRawMode(isRaw)
       stdin.pause()
       stdin.removeListener('data', onData)
+
       if (trailing) {
         stdout.write(trailing)
       }
