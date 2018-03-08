@@ -1,12 +1,12 @@
 // Native
 const path = require('path')
-const { homedir, tmpdir } = require('os')
+const { homedir } = require('os')
 const { URL } = require('url')
 
 // Packages
 const test = require('ava')
 const semVer = require('semver')
-const { readFile, remove } = require('fs-extra')
+const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
