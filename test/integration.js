@@ -16,6 +16,7 @@ const logo = require('../src/util/output/logo')
 const pkg = require('../package')
 const parseList = require('./helpers/parse-list')
 const removeDeployment = require('./helpers/remove')
+const prepareFixtures = require('./helpers/prepare')
 
 const binary = {
   darwin: 'now-macos',
@@ -65,6 +66,8 @@ test.before(async () => {
   // Save it so we can put it back after the tests
   context.oldConfig = configContent
 })
+
+test.before(async () => prepareFixtures(session))
 
 test('print the deploy help message', async t => {
   const { stdout, code } = await execa(binaryPath, ['help'])

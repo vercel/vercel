@@ -5,6 +5,7 @@ package-lock.json
 # build output
 dist
 packed
+test/fixtures/integration
 
 # logs
 npm-debug.log
