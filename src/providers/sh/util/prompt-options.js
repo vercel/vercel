@@ -13,10 +13,7 @@ function promptOptions(opts) {
       const s = v.toString()
 
       const cleanup = () => {
-        try {
-          process.stdin.setRawMode(false)
-        } catch (err) {}
-
+        process.stdin.setRawMode(false)
         process.stdin.removeListener('data', ondata)
       }
 
@@ -35,10 +32,7 @@ function promptOptions(opts) {
       }
     }
 
-    try {
-      process.stdin.setRawMode(true)
-    } catch (err) {}
-
+    process.stdin.setRawMode(true)
     process.stdin.resume()
     process.stdin.on('data', ondata)
   })

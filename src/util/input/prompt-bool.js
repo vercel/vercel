@@ -16,19 +16,12 @@ module.exports = (
   return new Promise(resolve => {
     const isRaw = stdin.isRaw
 
-    try {
-      stdin.setRawMode(true)
-    } catch (err) {}
-
+    stdin.setRawMode(true)
     stdin.resume()
 
     function restore() {
       stdout.write(trailing)
-
-      try {
-        stdin.setRawMode(isRaw)
-      } catch (err) {}
-
+      stdin.setRawMode(isRaw)
       stdin.pause()
       stdin.removeListener('data', onData)
     }

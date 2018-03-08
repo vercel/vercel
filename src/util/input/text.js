@@ -101,19 +101,14 @@ module.exports = function(
       regex = new RegExp(`(${regex})`, 'g')
     }
 
-    try {
-      stdin.setRawMode(true)
-    } catch (err) {}
-
+    stdin.setRawMode(true)
     stdin.resume()
 
     function restore() {
-      try {
-        stdin.setRawMode(isRaw)
-      } catch (err) {}
-
+      stdin.setRawMode(isRaw)
       stdin.pause()
       stdin.removeListener('data', onData)
+
       if (trailing) {
         stdout.write(trailing)
       }
