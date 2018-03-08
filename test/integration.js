@@ -106,6 +106,18 @@ test('trigger OSS confirmation message', async t => {
   t.fail(`Didn't print to stderr`)
 })
 
+test('try to deploy user directory', async t => {
+  const goal = `> Error! You're trying to deploy your user directory`
+
+  const { stderr, code } = await execa(binaryPath, {
+    reject: false,
+    cwd: homedir()
+  })
+
+  t.is(code, 1)
+  t.true(stderr.includes(goal))
+})
+
 test('deploy a node microservice', async t => {
   const target = fixture('node')
 
