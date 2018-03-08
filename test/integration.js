@@ -38,6 +38,8 @@ let tmpDir
 
 if (!process.env.CI) {
   tmpDir = tmp.dirSync({
+    // This ensures the directory gets
+    // deleted even if it has contents
     unsafeCleanup: true
   })
 
