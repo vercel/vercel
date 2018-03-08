@@ -43,7 +43,7 @@ if (!process.env.CI) {
     unsafeCleanup: true
   })
 
-  defaultArgs.push(`-Q ${path.join(tmpDir.name, '.now')}`)
+  defaultArgs.push('-Q', path.join(tmpDir.name, '.now'))
 }
 
 test.before(async () => prepareFixtures(session))
@@ -121,7 +121,8 @@ test('deploy a node microservice', async t => {
   const { stdout, code } = await execa(binaryPath, [
     target,
     '--public',
-    `--name ${session}`,
+    '--name',
+    session,
     ...defaultArgs
   ])
 
@@ -284,7 +285,8 @@ test('deploy multiple static files', async t => {
     files[0],
     files[1],
     '--public',
-    `--name ${session}`,
+    '--name',
+    session,
     ...defaultArgs
   ])
 
@@ -321,7 +323,8 @@ test('deploy single static file', async t => {
   const { stdout, code } = await execa(binaryPath, [
     file,
     '--public',
-    `--name ${session}`,
+    '--name',
+    session,
     ...defaultArgs
   ])
 
@@ -348,7 +351,8 @@ test('deploy a static directory', async t => {
   const { stdout, code } = await execa(binaryPath, [
     directory,
     '--public',
-    `--name ${session}`,
+    '--name',
+    session,
     ...defaultArgs
   ])
 
@@ -376,7 +380,8 @@ test('deploy a dockerfile project', async t => {
   const { stdout, code } = await execa(binaryPath, [
     target,
     '--public',
-    `--name ${session}`,
+    '--name',
+    session,
     '--docker',
     ...defaultArgs
   ])
@@ -419,7 +424,8 @@ test('try to deploy with non-existing team', async t => {
 
   const { stderr, code } = await execa(binaryPath, [
     target,
-    `--team ${session}`,
+    '--team',
+    session,
     ...defaultArgs
   ], {
     reject: false
