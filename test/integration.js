@@ -311,13 +311,35 @@ test('deploy single static file', async t => {
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
-
+  const response = await fetch(href)
   const contentType = response.headers.get('content-type')
+
+  t.is(contentType, 'image/png')
+  t.deepEqual(await readFile(file), await response.buffer())
+
+  await removeDeployment(t, binaryPath, stdout)
+})
+
+test('deploy a static directory', async t => {
+  const directory = fixture('static-single-file')
+
+  const { stdout, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    `--name ${session}`
+  ])
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout)
+  t.is(host.split('-')[0], session)
+
+  // Send a test request to the deployment
+  const response = await fetch(href)
+  const contentType = response.headers.get('content-type')
+  const file = path.join(directory, 'logo.png')
 
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
