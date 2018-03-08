@@ -143,7 +143,7 @@ test('deploy a node microservice', async t => {
   const content = await response.json()
 
   t.is(contentType, 'application/json; charset=utf-8')
-  t.is(content.type, 'node')
+  t.is(content.id, session)
 })
 
 test('find deployment in list', async t => {
@@ -185,7 +185,7 @@ test('create alias for deployment', async t => {
   const content = await response.json()
 
   t.is(contentType, 'application/json; charset=utf-8')
-  t.is(content.type, 'node')
+  t.is(content.id, session)
 
   context.alias = hosts.alias
 })
@@ -271,8 +271,8 @@ test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files')
 
   const files = [
-    path.join(directory, 'logo-black.png'),
-    path.join(directory, 'logo-white.png')
+    path.join(directory, 'first.png'),
+    path.join(directory, 'second.png')
   ]
 
   const { stdout, code } = await execa(binaryPath, [
@@ -310,7 +310,7 @@ test('deploy multiple static files', async t => {
 })
 
 test('deploy single static file', async t => {
-  const file = fixture('static-single-file/logo.png')
+  const file = fixture('static-single-file/first.png')
 
   const { stdout, code } = await execa(binaryPath, [
     file,
@@ -354,7 +354,7 @@ test('deploy a static directory', async t => {
   // Send a test request to the deployment
   const response = await fetch(href)
   const contentType = response.headers.get('content-type')
-  const file = path.join(directory, 'logo.png')
+  const file = path.join(directory, 'first.png')
 
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
@@ -385,7 +385,7 @@ test('deploy a dockerfile project', async t => {
   const content = await response.json()
 
   t.is(contentType, 'application/json; charset=utf-8')
-  t.is(content.type, 'docker')
+  t.is(content.id, session)
 
   await removeDeployment(t, binaryPath, stdout)
 })

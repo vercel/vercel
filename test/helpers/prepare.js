@@ -3,10 +3,11 @@ const { promisify } = require('util')
 const { join } = require('path')
 
 // Packages
+const strip = require('strip-indent')
 const { imageSync: getImageFile } = require('qr-image')
 const { ensureDir, writeFile } = require('fs-extra')
 
-const getDockerFile = session => `
+const getDockerFile = session => strip(`
   FROM mhart/alpine-node:latest
 
   LABEL name "now-cli-dockerfile-${session}"
@@ -14,15 +15,14 @@ const getDockerFile = session => `
   RUN mkdir /app
   WORKDIR /app
   COPY package.json /app
-  COPY yarn.lock /app
   RUN yarn
   COPY index.js /app
 
   EXPOSE 3000
   CMD ["yarn", "start"]
-`
+`).trim()
 
-const getPackageFile = session => `
+const getPackageFile = session => strip(`
   {
     "name": "node-test-${session}",
     "main": "index.js",
@@ -34,23 +34,23 @@ const getPackageFile = session => `
       "micro": "latest"
     }
   }
-`
+`).trim()
 
-const getIndexFile = session => `
+const getIndexFile = session => strip(`
   module.exports = () => ({
     id: '${session}'
   })
-`
+`).trim()
 
 module.exports = async session => {
   const files = {
     'Dockerfile': getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
-    'first-test.png': getImageFile(session, {
+    'first.png': getImageFile(session, {
       size: 30
     }),
-    'second-test.png': getImageFile(session, {
+    'second.png': getImageFile(session, {
       size: 20
     })
   }
@@ -66,11 +66,11 @@ module.exports = async session => {
       'package.json'
     ],
     'static-single-file': [
-      'first-test.png'
+      'first.png'
     ],
     'static-multiple-files': [
-      'first-test.png',
-      'second-test.png'
+      'first.png',
+      'second.png'
     ]
   }
 
