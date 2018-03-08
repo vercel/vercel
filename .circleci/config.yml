@@ -65,8 +65,8 @@ jobs:
           command: yarn test-unit
 
   test-integration:
-    docker:
-      - image: circleci/node:latest
+    macos:
+      xcode: '9.2.0'
     working_directory: ~/repo
     steps:
       - checkout
