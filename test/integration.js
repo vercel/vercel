@@ -353,41 +353,20 @@ test('deploy a dockerfile project', async t => {
   await removeDeployment(t, binaryPath, stdout)
 })
 
-test('deploy a github repository', async t => {
-  const options = {}
-  let flag = '--env REDIRECT_URL="https://zeit.co"'
+test.after.always(async () => {
+  const { stdout } = await execa(binaryPath, [
+    'ls',
+    session
+  ])
 
-  if (process.env.CI) {
-    options.env = {
-      REDIRECT_URL: 'https://zeit.co'
-    }
+  const deployments = parseList(stdout)
+  const removers = []
 
-    flag = ''
+  for (const deployment of deployments) {
+    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
   }
 
-  const { stdout, code } = await execa(binaryPath, [
-    'now-examples/redirect#master',
-    '--public',
-    `--name ${session}`,
-    flag
-  ], options)
-
-  // Ensure the exit code is right
-  t.is(code, 0)
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
-  t.is(host.split('-')[0], session)
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    redirect: 'manual'
-  })
-
-  const location = response.headers.get('location')
-  t.is(location, 'https://zeit.co/')
-
-  await removeDeployment(t, binaryPath, stdout)
+  await Promise.all(removers)
 })
 
 test.after.always(async () => {
