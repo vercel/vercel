@@ -1,5 +1,4 @@
 // Native
-const { promisify } = require('util')
 const { join } = require('path')
 
 // Packages
