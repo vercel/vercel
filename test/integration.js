@@ -353,6 +353,19 @@ test('deploy a dockerfile project', async t => {
   await removeDeployment(t, binaryPath, stdout)
 })
 
+test('try to deploy non-existing path', async t => {
+  const goal = `> Error! The specified directory "${session}" doesn't exist.`
+
+  const { stderr, code } = await execa(binaryPath, [
+    session
+  ], {
+    reject: false
+  })
+
+  t.is(code, 1)
+  t.true(stderr.trim().endsWith(goal))
+})
+
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node')
   const goal = `> Error! The specified team doesn't exist`
