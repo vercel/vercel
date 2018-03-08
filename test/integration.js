@@ -353,7 +353,7 @@ test('deploy a dockerfile project', async t => {
   await removeDeployment(t, binaryPath, stdout)
 })
 
-test.after.always(async () => {
+test.after.always(async t => {
   const { stdout } = await execa(binaryPath, [
     'ls',
     session
@@ -363,7 +363,7 @@ test.after.always(async () => {
   const removers = []
 
   for (const deployment of deployments) {
-    removers.push(execa(binaryPath, [ 'rm', deployment, '--yes' ]))
+    removers.push(removeDeployment(t, binaryPath, deployment))
   }
 
   await Promise.all(removers)
