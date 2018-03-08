@@ -2,11 +2,10 @@
 const { join } = require('path')
 
 // Packages
-const strip = require('strip-indent')
 const { imageSync: getImageFile } = require('qr-image')
 const { ensureDir, writeFile } = require('fs-extra')
 
-const getDockerFile = session => strip(`
+const getDockerFile = session => `
   FROM mhart/alpine-node:latest
 
   LABEL name "now-cli-dockerfile-${session}"
@@ -19,9 +18,9 @@ const getDockerFile = session => strip(`
 
   EXPOSE 3000
   CMD ["yarn", "start"]
-`).trim()
+`
 
-const getPackageFile = session => strip(`
+const getPackageFile = session => `
   {
     "name": "node-test-${session}",
     "main": "index.js",
@@ -33,13 +32,13 @@ const getPackageFile = session => strip(`
       "micro": "latest"
     }
   }
-`).trim()
+`
 
-const getIndexFile = session => strip(`
+const getIndexFile = session => `
   module.exports = () => ({
     id: '${session}'
   })
-`).trim()
+`
 
 module.exports = async session => {
   const files = {

@@ -155,7 +155,6 @@
     "socket.io-client": "1.7.4",
     "split-array": "1.0.1",
     "strip-ansi": "4.0.0",
-    "strip-indent": "2.0.0",
     "stripe": "5.1.0",
     "supports-color": "5.2.0",
     "tar-fs": "1.15.3",
