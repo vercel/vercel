@@ -3,7 +3,7 @@ const { join } = require('path')
 
 // Packages
 const strip = require('strip-indent')
-const { imageSync: getImageFile } = require('qr-image')
+const { imageSync: getImageFile } = require('qr-image')
 const { ensureDir, writeFile } = require('fs-extra')
 
 const getDockerFile = session => strip(`
