@@ -32,7 +32,6 @@ function promptOptions(opts) {
       }
     }
 
-
     process.stdin.setRawMode(true)
     process.stdin.resume()
     process.stdin.on('data', ondata)
