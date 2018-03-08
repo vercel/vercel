@@ -1,14 +1,15 @@
 // Native
 const path = require('path')
-const { homedir } = require('os')
+const { homedir, tmpdir } = require('os')
 const { URL } = require('url')
 
 // Packages
 const test = require('ava')
 const semVer = require('semver')
-const { readFile } = require('fs-extra')
+const { readFile, remove } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
+const tmp = require('tmp-promise')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -32,17 +33,35 @@ const session = Math.random().toString(36).split('.')[1]
 // but we want to set it within as well
 const context = {}
 
+const defaultArgs = []
+let tmpDir
+
+if (!process.env.CI) {
+  tmpDir = tmp.dirSync({
+    unsafeCleanup: true
+  })
+
+  defaultArgs.push(`-Q ${path.join(tmpDir.name, '.now')}`)
+}
+
 test.before(async () => prepareFixtures(session))
 
 test('print the deploy help message', async t => {
-  const { stdout, code } = await execa(binaryPath, ['help'])
+  const { stdout, code } = await execa(binaryPath, [
+    'help',
+    ...defaultArgs
+  ])
 
   t.is(code, 0)
   t.true(stdout.includes(deployHelpMessage))
 })
 
 test('output the version', async t => {
-  const { stdout, code } = await execa(binaryPath, ['--version'])
+  const { stdout, code } = await execa(binaryPath, [
+    '--version',
+    ...defaultArgs
+  ])
+
   const version = stdout.trim()
 
   t.is(code, 0)
@@ -51,9 +70,14 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
-  const { stdout } = await execa(binaryPath, ['login', 'now-cli@zeit.pub'])
+  const { stdout } = await execa(binaryPath, [
+    'login',
+    'now-cli@zeit.pub',
+    ...defaultArgs
+  ])
 
-  const goal = `> Ready! Authentication token and personal details saved in "~/.now"`
+  const location = path.join(tmpDir ? tmpDir.name : '~', '.now')
+  const goal = `> Ready! Authentication token and personal details saved in "${location}"`
   const lines = stdout.trim().split('\n')
   const last = lines[lines.length - 1]
 
@@ -65,7 +89,10 @@ test('trigger OSS confirmation message', async t => {
   const goal = `Your deployment's code and logs will be publicly accessible`
 
   try {
-    await execa(binaryPath, [ target ])
+    await execa(binaryPath, [
+      target,
+      ...defaultArgs
+    ])
   } catch (err) {
     t.true(err.stderr.includes(goal))
     return
@@ -77,7 +104,7 @@ test('trigger OSS confirmation message', async t => {
 test('try to deploy user directory', async t => {
   const goal = `> Error! You're trying to deploy your user directory`
 
-  const { stderr, code } = await execa(binaryPath, {
+  const { stderr, code } = await execa(binaryPath, defaultArgs, {
     reject: false,
     cwd: homedir()
   })
@@ -92,7 +119,8 @@ test('deploy a node microservice', async t => {
   const { stdout, code } = await execa(binaryPath, [
     target,
     '--public',
-    `--name ${session}`
+    `--name ${session}`,
+    ...defaultArgs
   ])
 
   // Ensure the exit code is right
@@ -112,9 +140,12 @@ test('deploy a node microservice', async t => {
 })
 
 test('find deployment in list', async t => {
-  const { stdout } = await execa(binaryPath, [ 'ls' ])
-  const deployments = parseList(stdout)
+  const { stdout } = await execa(binaryPath, [
+    'ls',
+    ...defaultArgs
+  ])
 
+  const deployments = parseList(stdout)
   t.true(deployments.length > 0)
 
   const target = deployments.find(deployment => {
@@ -138,7 +169,8 @@ test('create alias for deployment', async t => {
   const { stdout } = await execa(binaryPath, [
     'alias',
     hosts.deployment,
-    hosts.alias
+    hosts.alias,
+    ...defaultArgs
   ])
 
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
@@ -158,7 +190,8 @@ test('create alias for deployment', async t => {
 test('list the aliases', async t => {
   const { stdout } = await execa(binaryPath, [
     'alias',
-    'ls'
+    'ls',
+    ...defaultArgs
   ])
 
   const results = parseList(stdout)
@@ -171,7 +204,8 @@ test('scale the alias', async t => {
   const { stdout } = await execa(binaryPath, [
     'scale',
     context.alias,
-    '1'
+    '1',
+    ...defaultArgs
   ])
 
   t.true(stdout.includes(goal))
@@ -185,7 +219,8 @@ test('remove the alias', async t => {
     'alias',
     'rm',
     context.alias,
-    '--yes'
+    '--yes',
+    ...defaultArgs
   ])
 
   t.true(stdout.startsWith(goal))
@@ -194,7 +229,8 @@ test('remove the alias', async t => {
 test('find deployment in scaling list', async t => {
   const { stdout } = await execa(binaryPath, [
     'scale',
-    'ls'
+    'ls',
+    ...defaultArgs
   ])
 
   const list = parseList(stdout)
@@ -208,7 +244,8 @@ test('error on trying to auto-scale', async t => {
     'scale',
     context.deployment,
     '1',
-    'auto'
+    'auto',
+    ...defaultArgs
   ])
 
   t.is(output, goal)
@@ -223,13 +260,14 @@ test('scale down the deployment directly', async t => {
   const { stdout } = await execa(binaryPath, [
     'scale',
     context.deployment,
-    '0'
+    '0',
+    ...defaultArgs
   ])
 
   t.true(stdout.includes(goals.first))
   t.true(stdout.includes(goals.second))
 
-  await removeDeployment(t, binaryPath, context.deployment)
+  await removeDeployment(t, binaryPath, defaultArgs, context.deployment)
 })
 
 test('deploy multiple static files', async t => {
@@ -244,7 +282,8 @@ test('deploy multiple static files', async t => {
     files[0],
     files[1],
     '--public',
-    `--name ${session}`
+    `--name ${session}`,
+    ...defaultArgs
   ])
 
   // Ensure the exit code is right
@@ -271,7 +310,7 @@ test('deploy multiple static files', async t => {
   const bareCurrent = content.map(item => item.file)
 
   t.deepEqual(bareGoal, bareCurrent)
-  await removeDeployment(t, binaryPath, stdout)
+  await removeDeployment(t, binaryPath, defaultArgs, stdout)
 })
 
 test('deploy single static file', async t => {
@@ -280,7 +319,8 @@ test('deploy single static file', async t => {
   const { stdout, code } = await execa(binaryPath, [
     file,
     '--public',
-    `--name ${session}`
+    `--name ${session}`,
+    ...defaultArgs
   ])
 
   // Ensure the exit code is right
@@ -297,7 +337,7 @@ test('deploy single static file', async t => {
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
 
-  await removeDeployment(t, binaryPath, stdout)
+  await removeDeployment(t, binaryPath, defaultArgs, stdout)
 })
 
 test('deploy a static directory', async t => {
@@ -306,7 +346,8 @@ test('deploy a static directory', async t => {
   const { stdout, code } = await execa(binaryPath, [
     directory,
     '--public',
-    `--name ${session}`
+    `--name ${session}`,
+    ...defaultArgs
   ])
 
   // Ensure the exit code is right
@@ -324,7 +365,7 @@ test('deploy a static directory', async t => {
   t.is(contentType, 'image/png')
   t.deepEqual(await readFile(file), await response.buffer())
 
-  await removeDeployment(t, binaryPath, stdout)
+  await removeDeployment(t, binaryPath, defaultArgs, stdout)
 })
 
 test('deploy a dockerfile project', async t => {
@@ -334,7 +375,8 @@ test('deploy a dockerfile project', async t => {
     target,
     '--public',
     `--name ${session}`,
-    '--docker'
+    '--docker',
+    ...defaultArgs
   ])
 
   // Ensure the exit code is right
@@ -352,14 +394,15 @@ test('deploy a dockerfile project', async t => {
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.id, session)
 
-  await removeDeployment(t, binaryPath, stdout)
+  await removeDeployment(t, binaryPath, defaultArgs, stdout)
 })
 
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified directory "${session}" doesn't exist.`
 
   const { stderr, code } = await execa(binaryPath, [
-    session
+    session,
+    ...defaultArgs
   ], {
     reject: false
   })
@@ -374,7 +417,8 @@ test('try to deploy with non-existing team', async t => {
 
   const { stderr, code } = await execa(binaryPath, [
     target,
-    `--team ${session}`
+    `--team ${session}`,
+    ...defaultArgs
   ], {
     reject: false
   })
@@ -386,14 +430,15 @@ test('try to deploy with non-existing team', async t => {
 test.after.always(async t => {
   const { stdout } = await execa(binaryPath, [
     'ls',
-    session
+    session,
+    ...defaultArgs
   ])
 
   const deployments = parseList(stdout)
   const removers = []
 
   for (const deployment of deployments) {
-    removers.push(removeDeployment(t, binaryPath, deployment))
+    removers.push(removeDeployment(t, binaryPath, defaultArgs, deployment))
   }
 
   await Promise.all(removers)
@@ -401,5 +446,15 @@ test.after.always(async t => {
 
 test.after.always(async () => {
   // Make sure the token gets revoked
-  await execa(binaryPath, [ 'logout' ])
+  await execa(binaryPath, [
+    'logout',
+    ...defaultArgs
+  ])
+
+  if (!tmpDir) {
+    return
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback()
 })
