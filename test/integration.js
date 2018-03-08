@@ -6,8 +6,7 @@ const { URL } = require('url')
 // Packages
 const test = require('ava')
 const semVer = require('semver')
-const fkill = require('fkill')
-const { remove, pathExists, readJSON, writeJSON, readFile } = require('fs-extra')
+const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 
@@ -32,40 +31,6 @@ const session = Math.random().toString(36).split('.')[1]
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {}
-
-const configDir = path.resolve(homedir(), '.now')
-
-const configFiles = {
-  auth: path.resolve(configDir, 'auth.json'),
-  config: path.resolve(configDir, 'config.json')
-}
-
-test.before(async () => {
-  let configContent
-
-  // Close the existing app
-  if (!process.env.CI) {
-    try {
-      await fkill('Now')
-    } catch (err) {}
-  }
-
-  const { auth, config } = configFiles
-
-  // Remove the config directory to
-  // simulate a new user starting the app
-  if (await pathExists(configDir)) {
-    configContent = {
-      auth: await readJSON(auth),
-      config: await readJSON(config)
-    }
-
-    await remove(configDir)
-  }
-
-  // Save it so we can put it back after the tests
-  context.oldConfig = configContent
-})
 
 test.before(async () => prepareFixtures(session))
 
@@ -437,18 +402,4 @@ test.after.always(async t => {
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, [ 'logout' ])
-})
-
-test.after.always(async () => {
-  const { oldConfig } = context
-
-  if (!oldConfig) {
-    return
-  }
-
-  const { auth, config } = oldConfig
-  const options = { spaces: 2 }
-
-  await writeJSON(configFiles.auth, auth, options)
-  await writeJSON(configFiles.config, config, options)
 })

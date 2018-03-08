@@ -5,7 +5,7 @@
   "description": "The command-line interface for Now",
   "repository": "zeit/now-cli",
   "scripts": {
-    "test": "yarn test-lint && yarn test-unit && yarn run pack && yarn test-integration",
+    "test": "yarn test-lint",
     "test-unit": "ava test/unit.js --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint .",
@@ -121,7 +121,6 @@
     "eslint-plugin-flowtype": "2.36.0",
     "execa": "0.9.0",
     "fetch-h2": "0.0.12",
-    "fkill": "5.2.0",
     "flow-babel-webpack-plugin": "1.1.0",
     "fs-extra": "4.0.2",
     "glob": "7.1.2",
