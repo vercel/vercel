@@ -441,9 +441,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       debug(`Forcing \`deploymentType\` = \`static\` automatically`)
 
       meta = {
-        name: isFile
+        name: deploymentName || (isFile
           ? 'file'
-          : paths.length === 1 ? basename(paths[0]) : 'files',
+          : paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,

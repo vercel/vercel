@@ -1,16 +1,18 @@
 // Native
-const { join, resolve } = require('path')
+const { join } = require('path')
 
 // Packages
 const test = require('ava')
 const { asc: alpha } = require('alpha-sort')
+const loadJSON = require('load-json-file')
 
 // Utilities
 const createOutput = require('../src/util/output')
 const hash = require('../src/providers/sh/util/hash')
 const readMetadata = require('../src/providers/sh/util/read-metadata')
 const getLocalConfigPath = require('../src/config/local-path')
-const loadJSON = require('load-json-file')
+const toHost = require('../src/providers/sh/util/to-host')
+
 const {
   npm: getNpmFiles_,
   docker: getDockerFiles_,
@@ -18,9 +20,9 @@ const {
 } = require('../src/providers/sh/util/get-files')
 
 const output = createOutput({ debug: false })
-const prefix = join(__dirname, '_fixtures') + '/'
+const prefix = join(__dirname, 'fixtures', 'unit') + '/'
 const base = path => path.replace(prefix, '')
-const fixture = name => resolve(`./test/_fixtures/${name}`)
+const fixture = name => join(prefix, name)
 
 // Overload to force debugging
 const getNpmFiles = async dir => {
@@ -358,6 +360,39 @@ test('friendly error for malformed JSON', async t => {
   t.is(err.name, 'JSONError')
   t.is(
     err.message,
-    "Unexpected token 'o' at 2:5 in test/_fixtures/json-syntax-error/package.json\n    oops\n    ^"
+    "Unexpected token 'o' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^"
   )
+})
+
+test('simple to host', t => {
+  t.is(toHost('zeit.co'), 'zeit.co')
+})
+
+test('leading // to host', t => {
+  t.is(toHost('//zeit-logos-rnemgaicnc.now.sh'), 'zeit-logos-rnemgaicnc.now.sh')
+})
+
+test('leading http:// to host', t => {
+  t.is(
+    toHost('http://zeit-logos-rnemgaicnc.now.sh'),
+    'zeit-logos-rnemgaicnc.now.sh'
+  )
+})
+
+test('leading https:// to host', t => {
+  t.is(
+    toHost('https://zeit-logos-rnemgaicnc.now.sh'),
+    'zeit-logos-rnemgaicnc.now.sh'
+  )
+})
+
+test('leading https:// and path to host', t => {
+  t.is(
+    toHost('https://zeit-logos-rnemgaicnc.now.sh/path'),
+    'zeit-logos-rnemgaicnc.now.sh'
+  )
+})
+
+test('simple and path to host', t => {
+  t.is(toHost('zeit.co/test'), 'zeit.co')
 })
