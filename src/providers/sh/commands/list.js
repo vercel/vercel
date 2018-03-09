@@ -79,10 +79,7 @@ const main = async ctx => {
     await exit(0)
   }
 
-  let stopSpinner
-  setTimeout(() => {
-    stopSpinner = wait('Fetching teams')
-  }, 300);
+  const stopSpinner = await wait('Fetching teams')
 
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
@@ -90,12 +87,12 @@ const main = async ctx => {
   try {
     await list({ token, sh, includeScheme })
   } catch (err) {
-    if (stopSpinner) stopSpinner()
+    stopSpinner()
     console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
   }
 
-  if (stopSpinner) stopSpinner()
+  stopSpinner()
 }
 
 module.exports = async ctx => {

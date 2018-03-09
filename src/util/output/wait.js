@@ -17,4 +17,12 @@ const wait = msg => {
   }
 }
 
-module.exports = wait
+const debouncedWait = (debounceTime) => {  
+   return async (msg) => {
+     return new Promise((resolve) => {
+      setTimeout(() => resolve(wait(msg)), debounceTime)
+    })
+  }
+}
+
+module.exports = debouncedWait(300)
