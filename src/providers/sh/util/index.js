@@ -372,7 +372,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async list(app) {
-    const { debug, time } = this._output
+    const { time } = this._output
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
 
     const { deployments } = await this.retry(
@@ -382,19 +382,22 @@ module.exports = class Now extends EventEmitter {
           this._fetch('/v2/now/deployments' + query)
         )
 
-        // No retry on 4xx
-        if (res.status >= 400 && res.status < 500) {
-          debug(`Bailing on listing deployments due to ${res.status}`)
-          return bail(await responseError(res))
+        if (res.status === 200) {
+          // What we want
+          return res.json()
+        } else if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(await responseError(res, 'Failed to list deployments'))
+        } else {
+          // If something is wrong with the server, we retry
+          throw await responseError(res, 'Failed to list deployments')
         }
-
-        if (res.status !== 200) {
-          throw new Error('Fetching deployment url failed')
-        }
-
-        return res.json()
       },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      {
+        retries: 3,
+        minTimeout: 2500,
+        onRetry: this._onRetry
+      }
     )
 
     return deployments
