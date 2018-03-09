@@ -1,14 +1,23 @@
-const ora = require('ora')
+const ora2 = require('ora')
 const { gray } = require('chalk')
 const eraseLines = require('./erase-lines')
 
-const wait = msg => {
-  const spinner = ora(gray(msg))
-  spinner.color = 'gray'
-  spinner.start()
-  let running = true;
+const wait = (msg, timeOut = 300, ora = ora2) => {
+  let running = false;
+  let spinner;
+  let stopped = false;
+
+  setTimeout(() => {
+    if (stopped) return;
+    console.log('spinning');
+    spinner = ora(gray(msg))
+    spinner.color = 'gray'
+    spinner.start()
+    running = true;
+  }, timeOut);
 
   return () => {
+    stopped = true;
     if (running) {
       spinner.stop()
       process.stdout.write(eraseLines(1))
@@ -17,12 +26,4 @@ const wait = msg => {
   }
 }
 
-const debouncedWait = (debounceTime) => {  
-   return async (msg) => {
-     return new Promise((resolve) => {
-      setTimeout(() => resolve(wait(msg)), debounceTime)
-    })
-  }
-}
-
-module.exports = debouncedWait(300)
+module.exports = wait
