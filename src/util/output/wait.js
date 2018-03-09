@@ -9,7 +9,6 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
 
   setTimeout(() => {
     if (stopped) return;
-    console.log('spinning');
     spinner = ora(gray(msg))
     spinner.color = 'gray'
     spinner.start()

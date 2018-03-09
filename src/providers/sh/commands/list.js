@@ -79,7 +79,7 @@ const main = async ctx => {
     await exit(0)
   }
 
-  const stopSpinner = wait('Fetching teams')
+  const stopSpinner = wait('Fetching deployments')
 
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
