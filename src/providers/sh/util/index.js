@@ -336,18 +336,22 @@ module.exports = class Now extends EventEmitter {
               })
             )
 
-            // No retry on 4xx
-            if (
-              res.status !== 200 &&
-              (res.status >= 400 || res.status < 500)
-            ) {
-              debug(`Bailing on creating due to ${res.status}`);
-              return bail(await responseError(res))
+            if (res.status === 200) {
+              // What we want
+              this.emit('upload', file)
+            } else if (res.status > 200 && res.status < 500) {
+              // If something is wrong with our request, we don't retry
+              return bail(await responseError(res, 'Failed to upload file'))
+            } else {
+              // If something is wrong with the server, we retry
+              throw await responseError(res, 'Failed to upload file')
             }
-
-            this.emit('upload', file)
           },
-          { retries: 3, randomize: true, onRetry: this._onRetry }
+          {
+            retries: 3,
+            randomize: true,
+            onRetry: this._onRetry
+          }
         )
       )
     ))
