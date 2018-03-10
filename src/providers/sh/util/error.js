@@ -44,7 +44,7 @@ function handleError(err, { debug = false } = {}) {
   }
 }
 
-async function responseError(res, fallbackMessage) {
+async function responseError(res, fallbackMessage = null) {
   let message
   let userError
 
@@ -64,11 +64,11 @@ async function responseError(res, fallbackMessage) {
     userError = false
   }
 
-  if (!message && fallbackMessage) {
-    message = fallbackMessage
+  if (message == null) {
+    message = fallbackMessage === null ? 'Response Error' : fallbackMessage
   }
 
-  const err = new Error(message ? `${message} (${res.status})` : 'Response error')
+  const err = new Error(`${message} (${res.status})`)
 
   err.status = res.status
   err.userError = userError
