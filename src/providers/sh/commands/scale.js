@@ -201,7 +201,7 @@ async function run({ token, sh: { currentTeam } }) {
       console.error(error(`Requested identifier is a path alias. https://err.sh/now-cli/scaling-path-alias`))
       return process.exit(1)
     }
-    
+
     match = deployments.find(d => {
       return d.uid === aliasDeployment.deploymentId
     })
@@ -240,18 +240,8 @@ async function run({ token, sh: { currentTeam } }) {
     currentCurrent <= max
   ) {
     // Nothing to do, let's print the rules
-    printScaleingRules(match.url, currentCurrent, min, max)
+    printScalingRules(match.url, currentCurrent, min, max)
     return
-  }
-
-  if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
-    console.log(
-      `> Deployment is currently in 0 replicas, preparing deployment for scaling...`
-    )
-    if (match.scale.max < 1) {
-      await scale.setScale(match.uid, { min: 0, max: 1 })
-    }
-    await scale.unfreeze(match)
   }
 
   const { min: newMin, max: newMax } = await scale.setScale(match.uid, {
@@ -262,12 +252,12 @@ async function run({ token, sh: { currentTeam } }) {
   const elapsed = ms(new Date() - start)
 
   const currentReplicas = match.scale.current
-  printScaleingRules(match.url, currentReplicas, newMin, newMax, elapsed)
+  printScalingRules(match.url, currentReplicas, newMin, newMax, elapsed)
   await info(scale, match.url)
 
   scale.close()
 }
-function printScaleingRules(url, currentReplicas, min, max, elapsed) {
+function printScalingRules(url, currentReplicas, min, max, elapsed) {
   const log = console.log
   success(
     `Configured scaling rules ${chalk.gray(elapsed ? '[' + elapsed + ']' : '')}`

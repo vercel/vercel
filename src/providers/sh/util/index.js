@@ -6,14 +6,12 @@ const qs = require('querystring')
 const { parse: parseUrl } = require('url')
 
 // Packages
-const fetch = require('node-fetch')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const through2 = require('through2')
 const retry = require('async-retry')
 const { parse: parseIni } = require('ini')
 const { readFile, stat, lstat } = require('fs-extra')
-const ms = require('ms')
 
 // Utilities
 const {
@@ -835,71 +833,6 @@ module.exports = class Now extends EventEmitter {
     opts.headers.authorization = `Bearer ${this._token}`
     opts.headers['user-agent'] = ua
     return this._agent.fetch(_url, opts)
-  }
-
-  setScale(nameOrId, scale) {
-    const { time } = this._output
-
-    return this.retry(
-      async (bail, attempt) => {
-        const res = await time(
-          `#${attempt} POST /deployments/${nameOrId}/instances`,
-          this._fetch(`/now/deployments/${nameOrId}/instances`, {
-            method: 'POST',
-            body: scale
-          })
-        )
-
-        if (res.status === 403) {
-          return bail(new Error('Unauthorized'))
-        }
-
-        const body = await res.json()
-
-        if (res.status !== 200) {
-          if (res.status === 404 || res.status === 400) {
-            if (
-              body &&
-              body.error &&
-              body.error.code &&
-              body.error.code === 'not_snapshotted'
-            ) {
-              throw new Error(body.error.message)
-            }
-            const err = new Error(body.error.message)
-            err.userError = true
-            return bail(err)
-          }
-
-          if (body.error && body.error.message) {
-            const err = new Error(body.error.message)
-            err.userError = true
-            return bail(err)
-          }
-          throw new Error(
-            `Error occurred while scaling. Please try again later`
-          )
-        }
-
-        return body
-      },
-      {
-        retries: 300,
-        maxTimeout: ms('5s'),
-        factor: 1.1
-      }
-    )
-  }
-
-  async unfreeze(depl) {
-    return this.retry(async bail => {
-      const res = await fetch(`https://${depl.url}`)
-
-      if ([500, 502, 503].includes(res.status)) {
-        const err = new Error('Unfreeze failed. Try again later.')
-        bail(err)
-      }
-    })
   }
 
   async getPlanMax() {
