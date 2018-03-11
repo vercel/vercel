@@ -86,7 +86,7 @@ module.exports = class Scale extends Now {
         return body
       },
       {
-        retries: 300,
+        retries: 5,
         maxTimeout: 5000,
         factor: 1.1
       }
