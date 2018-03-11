@@ -33,7 +33,7 @@ function handleError(err, { debug = false } = {}) {
           `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
       ))
     }
-  } else if (err.userError) {
+  } else if (err.userError || err.message) {
     console.error(error(err.message))
   } else if (err.status === 500) {
     console.error(error('Unexpected server error. Please retry.'))
@@ -44,7 +44,7 @@ function handleError(err, { debug = false } = {}) {
   }
 }
 
-async function responseError(res) {
+async function responseError(res, fallbackMessage = null) {
   let message
   let userError
 
@@ -64,7 +64,12 @@ async function responseError(res) {
     userError = false
   }
 
-  const err = new Error(message || 'Response error')
+  if (message == null) {
+    message = fallbackMessage === null ? 'Response Error' : fallbackMessage
+  }
+
+  const err = new Error(`${message} (${res.status})`)
+
   err.status = res.status
   err.userError = userError
 
