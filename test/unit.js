@@ -401,7 +401,7 @@ test('simple and path to host', t => {
   t.is(toHost('zeit.co/test'), 'zeit.co')
 })
 
-test('response error with fallback message', async t => {
+test('4xx response error with fallback message', async t => {
   const fn = async (req, res) => {
     send(res, 404, {})
   }
@@ -413,7 +413,7 @@ test('response error with fallback message', async t => {
   t.is(formatted.message, 'Failed to load data (404)')
 })
 
-test('response error without fallback message', async t => {
+test('4xx response error without fallback message', async t => {
   const fn = async (req, res) => {
     send(res, 404, {})
   }
@@ -425,7 +425,19 @@ test('response error without fallback message', async t => {
   t.is(formatted.message, 'Response Error (404)')
 })
 
-test('response error as correct JSON', async t => {
+test('5xx response error without fallback message', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, '')
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res)
+
+  t.is(formatted.message, 'Response Error (500)')
+})
+
+test('4xx response error as correct JSON', async t => {
   const fn = async (req, res) => {
     send(res, 400, {
       error: {
@@ -439,4 +451,30 @@ test('response error as correct JSON', async t => {
   const formatted = await responseError(res)
 
   t.is(formatted.message, 'The request is not correct (400)')
+})
+
+test('5xx response error as HTML', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, 'This is a malformed error')
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res, 'Failed to process data')
+
+  t.is(formatted.message, 'Failed to process data (500)')
+})
+
+test('5xx response error with random JSON', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, {
+      wrong: 'property'
+    })
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res, 'Failed to process data')
+
+  t.is(formatted.message, 'Failed to process data (500)')
 })
