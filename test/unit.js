@@ -2,10 +2,12 @@
 const { join } = require('path')
 
 // Packages
+const { send } = require('micro')
 const test = require('ava')
 const sinon = require('sinon');
 const { asc: alpha } = require('alpha-sort')
 const loadJSON = require('load-json-file')
+const fetch = require('node-fetch')
 
 // Utilities
 const createOutput = require('../src/util/output')
@@ -14,6 +16,8 @@ const readMetadata = require('../src/providers/sh/util/read-metadata')
 const getLocalConfigPath = require('../src/config/local-path')
 const toHost = require('../src/providers/sh/util/to-host')
 const wait = require('../src/util/output/wait')
+const { responseError } = require('../src/providers/sh/util/error')
+const getURL = require('./helpers/get-url')
 
 const {
   npm: getNpmFiles_,
@@ -399,8 +403,6 @@ test('simple and path to host', t => {
   t.is(toHost('zeit.co/test'), 'zeit.co')
 })
 
-
-
 test('`wait` utility does not invoke spinner before n miliseconds', async t => {
   const oraStub = sinon.stub().returns({
     color: '',
@@ -413,7 +415,7 @@ test('`wait` utility does not invoke spinner before n miliseconds', async t => {
   stop();
 
   t.truthy(oraStub.notCalled);
-});
+})
 
 test('`wait` utility invokes spinner after n miliseconds', async t => {
   const oraStub = sinon.stub().returns({
@@ -436,7 +438,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
   await delayedWait();
 
   t.is(oraStub.calledOnce, true)
-});
+})
 
 test('`wait` utility does not invoke spinner when stopped before delay', async t => {
   const oraStub = sinon.stub().returns({
@@ -459,4 +461,82 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
   await delayedWait();
 
   t.is(oraStub.notCalled, true)
-});
+})
+
+test('4xx response error with fallback message', async t => {
+  const fn = async (req, res) => {
+    send(res, 404, {})
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res, 'Failed to load data')
+
+  t.is(formatted.message, 'Failed to load data (404)')
+})
+
+test('4xx response error without fallback message', async t => {
+  const fn = async (req, res) => {
+    send(res, 404, {})
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res)
+
+  t.is(formatted.message, 'Response Error (404)')
+})
+
+test('5xx response error without fallback message', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, '')
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res)
+
+  t.is(formatted.message, 'Response Error (500)')
+})
+
+test('4xx response error as correct JSON', async t => {
+  const fn = async (req, res) => {
+    send(res, 400, {
+      error: {
+        message: 'The request is not correct'
+      }
+    })
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res)
+
+  t.is(formatted.message, 'The request is not correct (400)')
+})
+
+test('5xx response error as HTML', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, 'This is a malformed error')
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res, 'Failed to process data')
+
+  t.is(formatted.message, 'Failed to process data (500)')
+})
+
+test('5xx response error with random JSON', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, {
+      wrong: 'property'
+    })
+  }
+
+  const url = await getURL(fn)
+  const res = await fetch(url)
+  const formatted = await responseError(res, 'Failed to process data')
+
+  t.is(formatted.message, 'Failed to process data (500)')
+})
