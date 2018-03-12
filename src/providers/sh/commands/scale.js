@@ -16,7 +16,6 @@ const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
 const info = require('../util/scale-info')
 const sort = require('../util/sort-deployments')
-const success = require('../../../util/output/success')
 
 const help = () => {
   console.log(`
@@ -141,73 +140,30 @@ const guessParams = () => {
   process.exit(1)
 }
 
-const isHostName = str => {
-  return (
-    /(https?:\/\/)?((?:(?=[a-z0-9-]{1,63}\.)(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\.)+[a-z]{2,63})/.test(
-      str
-    ) || str.length === 28
-  )
-}
-
 async function run({ token, sh: { currentTeam } }) {
   const scale = new NowScale({ apiUrl, token, debug, currentTeam })
-  const start = Date.now()
 
   if (id === 'ls') {
     await list(scale)
     process.exit(0)
-  } else if (id === 'info') {
-    await info(scale)
-    process.exit(0)
-  } else if (id && isHostName(id)) {
-    // Normalize URL by removing slash from the end
+  } else if (id) {
     if (isURL(id)) {
+      // Normalize URL by removing slash from the end
       id = id.replace(/^https:\/\//i, '')
       if (id.slice(-1) === '/') {
         id = id.slice(0, -1)
       }
     }
   } else {
-    console.error(error('Please specify a deployment: now scale <url>'))
+    console.error(error('Please specify a deployment: now scale <url> <min> [max]'))
     help()
     exit(1)
   }
 
-  const deployments = await scale.list()
-
-  let match = deployments.find(d => {
-    // `url` should match the hostname of the deployment
-    let u = id.replace(/^https:\/\//i, '')
-
-    if (u.indexOf('.') === -1) {
-      // `.now.sh` domain is implied if just the subdomain is given
-      u += '.now.sh'
-    }
-    return d.uid === id || d.url === u
-  })
-
-  if (!match) {
-    // Maybe it's an alias
-    const aliasDeployment = (await scale.listAliases()).find(
-      e => e.alias === id
-    )
-    if (!aliasDeployment) {
-      console.error(error(`Could not find any deployments matching ${id}`))
-      return process.exit(1)
-    }
-
-    // Alias is a path alias, these can't be scaled.
-    if(aliasDeployment.rules && aliasDeployment.rules.length > 0) {
-      console.error(error(`Requested identifier is a path alias. https://err.sh/now-cli/scaling-path-alias`))
-      return process.exit(1)
-    }
-
-    match = deployments.find(d => {
-      return d.uid === aliasDeployment.deploymentId
-    })
-  }
-
+  const deployment = await scale.getDeployment(id)
   const { min, max } = guessParams()
+  // TODO parametrize
+  const dc = 'sfo1'
 
   if (
     !(Number.isInteger(min) || min === 'auto') &&
@@ -217,61 +173,16 @@ async function run({ token, sh: { currentTeam } }) {
     return exit(1)
   }
 
-  if (match.type === 'STATIC') {
-    if (min === 0 && max === 0) {
-      console.error(error("Static deployments can't be FROZEN. Use `now rm` to remove"))
-      return process.exit(1)
+  await scale.setScale(deployment.id, {
+    [dc]: {
+      min,
+      max
     }
-    console.log('> Static deployments are automatically scaled!')
-    return process.exit(0)
-  }
-
-  const {
-    max: currentMax,
-    min: currentMin,
-    current: currentCurrent
-  } = match.scale
-  if (
-    max === currentMax &&
-    min === currentMin &&
-    Number.isInteger(min) &&
-    currentCurrent >= min &&
-    Number.isInteger(max) &&
-    currentCurrent <= max
-  ) {
-    // Nothing to do, let's print the rules
-    printScalingRules(match.url, currentCurrent, min, max)
-    return
-  }
-
-  const { min: newMin, max: newMax } = await scale.setScale(match.uid, {
-    min,
-    max
   })
 
-  const elapsed = ms(new Date() - start)
-
-  const currentReplicas = match.scale.current
-  printScalingRules(match.url, currentReplicas, newMin, newMax, elapsed)
-  await info(scale, match.url)
+  await info(scale, deployment.host)
 
   scale.close()
-}
-function printScalingRules(url, currentReplicas, min, max, elapsed) {
-  const log = console.log
-  success(
-    `Configured scaling rules ${chalk.gray(elapsed ? '[' + elapsed + ']' : '')}`
-  )
-  log()
-  log(
-    `${chalk.bold(url)} (${chalk.gray(currentReplicas)} ${chalk.gray(
-      'current'
-    )})`
-  )
-  log(printf('%6s %s', 'min', chalk.bold(min)))
-  log(printf('%6s %s', 'max', chalk.bold(max)))
-  log(printf('%6s %s', 'auto', chalk.bold(min === max ? '✖' : '✔')))
-  log()
 }
 
 async function list(scale) {

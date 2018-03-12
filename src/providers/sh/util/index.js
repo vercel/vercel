@@ -20,7 +20,6 @@ const {
   docker: getDockerFiles
 } = require('./get-files')
 const Agent = require('./agent')
-const toHost = require('./to-host')
 const { responseError } = require('./error')
 const ua = require('./ua')
 const hash = require('./hash')
@@ -426,37 +425,61 @@ module.exports = class Now extends EventEmitter {
     return instances
   }
 
-  async findDeployment(deployment) {
-    const { debug } = this._output
-    const list = await this.list()
+  async findDeployment(hostOrId) {
+    const { debug, time } = this._output
+    let id = !hostOrId.includes('.') && hostOrId;
 
-    let key
-    let val
+    if (!id) {
+      const url = `/v2/now/hosts/${encodeURIComponent(hostOrId)}?resolve=1`
 
-    if (/\./.test(deployment)) {
-      val = toHost(deployment)
-      key = 'url'
-    } else {
-      val = deployment
-      key = 'uid'
+      const { deployment } = await this.retry(
+        async bail => {
+          const res = await time(
+            `GET ${url}`,
+            this._fetch(url)
+          )
+
+          // No retry on 4xx
+          if (res.status >= 400 && res.status < 500) {
+            debug(`Bailing on getting a deployment due to ${res.status}`)
+            return bail(await responseError(res))
+          }
+
+          if (res.status !== 200) {
+            throw new Error('Fetching a deployment failed')
+          }
+
+          return res.json()
+        },
+        { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      )
+
+      id = deployment.id;
     }
 
-    const depl = list.find(d => {
-      if (d[key] === val) {
-        debug(`Matched deployment ${d.uid} by ${key} ${val}`)
-        return true
-      }
+    const url = `/v3/now/deployments/${encodeURIComponent(hostOrId)}`
 
-      // Match prefix
-      if (`${val}.now.sh` === d.url) {
-        debug(`Matched deployment ${d.uid} by url ${d.url}`)
-        return true
-      }
+    return this.retry(
+      async bail => {
+        const res = await time(
+          `GET ${url}`,
+          this._fetch(url)
+        )
 
-      return false
-    })
+        // No retry on 4xx
+        if (res.status >= 400 && res.status < 500) {
+          debug(`Bailing on getting a deployment due to ${res.status}`)
+          return bail(await responseError(res))
+        }
 
-    return depl
+        if (res.status !== 200) {
+          throw new Error('Fetching a deployment failed')
+        }
+
+        return res.json()
+      },
+      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+    )
   }
 
   async logs(

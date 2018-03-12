@@ -46,9 +46,9 @@ module.exports = class Scale extends Now {
     return this.retry(
       async (bail, attempt) => {
         const res = await time(
-          `#${attempt} POST ${url}`,
+          `#${attempt} PATCH ${url}`,
           this._fetch(url, {
-            method: 'POST',
+            method: 'PATCH',
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json'
