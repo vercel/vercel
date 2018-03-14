@@ -409,9 +409,10 @@ test('`wait` utility does not invoke spinner before n miliseconds', async t => {
     start: () => {},
     stop: () => {}
   })
+  
   const timeOut = 200
-
   const stop = wait('test', timeOut, oraStub)
+  
   stop()
 
   t.truthy(oraStub.notCalled)
@@ -429,6 +430,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
   const delayedWait = () => {
     return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub)
+      
       setTimeout(() => {
         resolve()
         stop()
@@ -437,7 +439,6 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
   }
 
   await delayedWait()
-
   t.is(oraStub.calledOnce, true)
 })
 
