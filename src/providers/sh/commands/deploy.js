@@ -18,7 +18,6 @@ const retry = require('async-retry')
 const jsonlines = require('jsonlines')
 
 // Utilities
-const Logger = require('../util/build-logger')
 const Now = require('../util')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
@@ -763,27 +762,21 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing...')
-
-        try {
-          await printEvents(now, currentTeam, {
-            onOpen: cancelWait,
-            debug: debugEnabled
-          })
-        } catch (err) {
-          cancelWait()
-          throw err
-        }
-
-        await exit(0)
-      } else {
-        if (!quiet) {
-          log('Initializing…')
-        }
-
-        printLogs(now.host, token, currentTeam, user)
+      let cancelWait;
+      if (!quiet) {
+        cancelWait = wait('Initializing…')
       }
+
+      try {
+        await printEvents(now, currentTeam, {
+          onOpen: cancelWait
+        })
+      } catch (err) {
+        cancelWait()
+        throw err
+      }
+
+      await exit(0)
     }
   })
 }
@@ -840,10 +833,9 @@ async function readMeta(
 }
 
 async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{},
-  debug = false
+  onOpen = ()=>{}
 } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+  let url = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
     url += `&teamId=${currentTeam.id}`
@@ -865,15 +857,17 @@ async function printEvents(now, currentTeam = null, {
 
     const res = await now._fetch(url)
     if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen()
-      onOpen = ()=>{}
+      const readable = await res.readable();
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse())
-        const onData = ({ type, payload }) => {
+        const stream = readable.pipe(jsonlines.parse())
+        const onData = ({ type, text }) => {
+          // fire the open callback and ensure it's only fired once
+          onOpen()
+          onOpen = ()=>{}
+
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
@@ -892,7 +886,7 @@ async function printEvents(now, currentTeam = null, {
 
             case 'stdout':
             case 'stderr':
-              log(payload)
+              log(text)
               break
 
             case 'build-complete':
@@ -929,49 +923,6 @@ async function printEvents(now, currentTeam = null, {
     }
   }, {
     retries: 4
-  })
-}
-
-function printLogs(host, token) {
-  // Log build
-  const logger = new Logger(host, token, { debug: debugEnabled, quiet })
-
-  logger.on('error', async err => {
-    if (!quiet) {
-      if (err && err.type === 'BUILD_ERROR') {
-        log(error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        ))
-      } else {
-        log(error('Deployment failed'))
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit(1)
-  })
-
-  logger.on('close', async () => {
-    if (!quiet) {
-      log(chalk`{cyan Deployment complete!}`)
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit()
   })
 }
 
