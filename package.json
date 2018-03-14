@@ -152,6 +152,7 @@
     "semver": "5.5.0",
     "shebang-loader": "0.0.1",
     "single-line-log": "1.1.2",
+    "sinon": "4.4.2",
     "socket.io-client": "1.7.4",
     "split-array": "1.0.1",
     "strip-ansi": "4.0.0",
