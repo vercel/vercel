@@ -15,6 +15,7 @@ const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
 const exit = require('../../../util/exit')
+const wait = require('../../../util/output/wait')
 
 const help = () => {
   console.log(`
@@ -78,15 +79,20 @@ const main = async ctx => {
     await exit(0)
   }
 
+  const stopSpinner = wait('Fetching deployments')
+
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
     await list({ token, sh, includeScheme })
   } catch (err) {
+    stopSpinner()
     console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
   }
+
+  stopSpinner()
 }
 
 module.exports = async ctx => {
