@@ -4,7 +4,7 @@ const { join } = require('path')
 // Packages
 const { send } = require('micro')
 const test = require('ava')
-const sinon = require('sinon');
+const sinon = require('sinon')
 const { asc: alpha } = require('alpha-sort')
 const loadJSON = require('load-json-file')
 const fetch = require('node-fetch')
@@ -412,9 +412,9 @@ test('`wait` utility does not invoke spinner before n miliseconds', async t => {
   const timeOut = 200
 
   const stop = wait('test', timeOut, oraStub)
-  stop();
+  stop()
 
-  t.truthy(oraStub.notCalled);
+  t.truthy(oraStub.notCalled)
 })
 
 test('`wait` utility invokes spinner after n miliseconds', async t => {
@@ -423,6 +423,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
     start: () => {},
     stop: () => {}
   })
+  
   const timeOut = 200
 
   const delayedWait = () => {
@@ -435,7 +436,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
     })
   }
 
-  await delayedWait();
+  await delayedWait()
 
   t.is(oraStub.calledOnce, true)
 })
@@ -446,20 +447,21 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
     start: () => {},
     stop: () => {}
   })
+  
   const timeOut = 200
 
   const delayedWait = () => {
     return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub)
-      stop();
+      stop()
+      
       setTimeout(() => {
         resolve()
       }, timeOut + 100)
     })
   }
 
-  await delayedWait();
-
+  await delayedWait()
   t.is(oraStub.notCalled, true)
 })
 
