@@ -863,7 +863,7 @@ async function printEvents(now, currentTeam = null, {
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
         const stream = readable.pipe(jsonlines.parse())
-        const onData = ({ type, text }) => {
+        const onData = ({ type, event, text }) => {
           // fire the open callback and ensure it's only fired once
           onOpen()
           onOpen = ()=>{}
@@ -878,33 +878,25 @@ async function printEvents(now, currentTeam = null, {
             return
           }
 
-          switch (type) {
-            case 'build-start':
-              o++
-              log('Building…')
-              break
+          if (event === 'build-start') {
+            o++
+            log('Building…')
+          } else
+          if (event === 'build-complete' ||
+              event === 'instance-start') { // TODO
+            o++
+            log(chalk`{cyan Success!} Build complete`)
 
-            case 'stdout':
-            case 'stderr':
-              log(text)
-              break
+            // avoid lingering events
+            stream.removeListener('data', onData)
 
-            case 'build-complete':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-              break
-
-            case 'instance-start':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-
-              // avoid lingering events
-              stream.off('data', onData)
-
-              // close the stream and resolve
-              stream.end()
-              resolve()
-              break
+            // close the stream and resolve
+            stream.end()
+            resolve()
+          } else
+          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+            if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            log(text)
           }
         }
         stream.on('data', onData)
