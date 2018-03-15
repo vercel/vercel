@@ -35,7 +35,7 @@ const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity'],
+  string: ['name', 'alias', 'session-affinity', 'regions'],
   boolean: [
     'help',
     'version',
@@ -127,6 +127,7 @@ const help = () => {
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
+    --regions                      Set regions
 
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
@@ -174,6 +175,7 @@ let clipboard
 let forwardNpm
 let followSymlinks
 let wantsPublic
+let regions
 let apiUrl
 let isTTY
 let quiet
@@ -280,6 +282,7 @@ async function main(ctx) {
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
   wantsPublic = argv.public
+  regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   apiUrl = ctx.apiUrl
   isTTY = process.stdout.isTTY
   quiet = !isTTY
@@ -465,6 +468,28 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const nowConfig = meta.nowConfig
+
+    let scale
+    if (regions.length) {
+      // ignore now.json if regions cli option exists
+      scale = {}
+    } else {
+      const _nowConfig = nowConfig || {}
+      regions = _nowConfig.regions || []
+      scale = _nowConfig.scale || {}
+    }
+
+    if (regions.length) {
+      if (Object.keys(scale).length) {
+        log(error('Can\'t set both regions and scale options'))
+        await exit(1)
+      }
+
+      for (const r of regions) {
+        scale[`${r}1`] = { min: 0, max: 1 }
+      }
+    }
+
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
     let dotenvConfig
@@ -623,6 +648,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,
           quiet,
+          scale,
           wantsPublic,
           sessionAffinity,
           isFile
@@ -721,8 +747,17 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         })
 
         return
-      } else {
-        debug(`Error: ${err}\n${err.stack}`)
+      }
+
+      debug(`Error: ${err}\n${err.stack}`)
+
+      if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
+        const { additionalProperty = '' } = err.params || {}
+        const message = regions.length
+          ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
+          : `Invalid DC name for the scale option: ${additionalProperty}`
+        log(error(message));
+        await exit(1)
       }
 
       await stopDeployment(err)
