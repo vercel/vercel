@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//@flow
 
 // Native
 const { resolve, basename } = require('path')
@@ -33,6 +34,9 @@ const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
+
+const REGIONS = new Set(["sfo", "bru"]);
+const DCS = new Set(["sfo1", "bru1"]);
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -479,14 +483,30 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       scale = _nowConfig.scale || {}
     }
 
+    // get all the region or dc identifiers from the scale settings
+    const scaleKeys = Object.keys(scale);
+
+    for (const scaleKey of scaleKeys) {
+      if (!isValidRegionOrDcId(scaleKey)) {
+        log(error({
+          message: `The identifier "${scaleKey}" in \`scale\` settings is invalid`,
+          slug: 'invalid-region-or-dc'
+        }))
+        await exit(1)
+      }
+    }
+
     if (regions.length) {
       if (Object.keys(scale).length) {
-        log(error('Can\'t set both regions and scale options'))
+        log(error({
+          message: "Can't set both `regions` and `scale` options simultaneously",
+          slug: 'regions-and-scale-at-once'
+        }))
         await exit(1)
       }
 
       for (const r of regions) {
-        scale[`${r}1`] = { min: 0, max: 1 }
+        scale[getDcId(r)] = { min: 0, max: 1 }
       }
     }
 
@@ -1008,6 +1028,19 @@ function printLogs(host, token) {
 
     await exit()
   })
+}
+
+// if supplied with a region (eg: `sfo`) it returns
+// the default dc for it (`sfo1`)
+// if supplied with a dc id, it just returns it
+function getDcId(r: string) {
+  return r.test(/\d$/) ? r : `${r}`
+}
+
+// determines if the supplied string is a valid
+// region name or dc id
+function isValidRegionOrDcId(r: string) {
+  return REGIONS.has(r) || DCS.has(r);
 }
 
 module.exports = main
