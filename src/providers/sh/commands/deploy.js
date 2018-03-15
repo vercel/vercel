@@ -127,7 +127,7 @@ const help = () => {
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
-    --regions                      Set regions
+    --regions                      Set default regions or DCs to enable the deployment on
 
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
