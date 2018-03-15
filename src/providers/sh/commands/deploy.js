@@ -256,7 +256,7 @@ const promptForEnvFields = async list => {
   return answers
 }
 
-async function main(ctx) {
+async function main(ctx: any) {
   argv = mri(ctx.argv.slice(2), mriOpts)
 
   // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
@@ -288,6 +288,8 @@ async function main(ctx) {
   wantsPublic = argv.public
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   apiUrl = ctx.apiUrl
+  // https://github.com/facebook/flow/issues/1825
+  // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
   ;({ log, debug } = createOutput({ debug: debugEnabled }))
@@ -598,7 +600,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               )} from your env (as no value was specified)`
             )
             // Escape value if it begins with @
-            val = process.env[key].replace(/^@/, '\\@')
+            if (process.env[key] != null) {
+              val = process.env[key].replace(/^@/, '\\@')
+            }
           } else {
             log(error(
               `No value specified for env ${chalk.bold(
@@ -661,6 +665,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let syncCount
 
     try {
+      // $FlowFixMe
       const createArgs = Object.assign(
         {
           env,
@@ -822,10 +827,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         const cancelWait = wait('Initializing...')
 
         try {
-          await printEvents(now, currentTeam, {
-            onOpen: cancelWait,
-            debug: debugEnabled
-          })
+          await printEvents(now, currentTeam, { onOpen: cancelWait })
         } catch (err) {
           cancelWait()
           throw err
@@ -837,7 +839,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           log('Initializing…')
         }
 
-        printLogs(now.host, token, currentTeam, user)
+        printLogs(now.host, token)
       }
     }
   })
@@ -894,10 +896,7 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{},
-  debug = false
-} = {}) {
+async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
@@ -1034,7 +1033,7 @@ function printLogs(host, token) {
 // the default dc for it (`sfo1`)
 // if supplied with a dc id, it just returns it
 function getDcId(r: string) {
-  return r.test(/\d$/) ? r : `${r}`
+  return /\d$/.test(r) ? r : `${r}1`
 }
 
 // determines if the supplied string is a valid
