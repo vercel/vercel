@@ -491,7 +491,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
         log(error({
-          message: `The identifier "${scaleKey}" in \`scale\` settings is invalid`,
+          message: `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
           slug: 'invalid-region-or-dc'
         }))
         await exit(1)
@@ -508,6 +508,14 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
 
       for (const r of regions) {
+        if (!isValidRegionOrDcId(r)) {
+          log(error({
+            message: `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
+            slug: 'invalid-region-or-dc'
+          }))
+          await exit(1)
+        }
+
         scale[getDcId(r)] = { min: 0, max: 1 }
       }
     }
