@@ -160,7 +160,7 @@ async function run({ token, sh: { currentTeam } }) {
     exit(1)
   }
 
-  const deployment = await scale.getDeployment(id)
+  const deployment = await scale.findDeployment(id)
   const { min, max } = guessParams()
   // TODO parametrize
   const dc = 'sfo1'
@@ -173,7 +173,7 @@ async function run({ token, sh: { currentTeam } }) {
     return exit(1)
   }
 
-  await scale.setScale(deployment.id, {
+  await scale.setScale(deployment.uid, {
     [dc]: {
       min,
       max
