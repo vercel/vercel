@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+//@flow
 
 // Packages
-const mri = require('mri')
+const arg = require('arg')
 const chalk = require('chalk')
 const ms = require('ms')
 const printf = require('printf')
@@ -10,11 +11,12 @@ const supportsColor = require('supports-color')
 
 // Utilities
 const Now = require('../util')
+const createOutput = require('../../../util/output')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
-const exit = require('../../../util/exit')
 const wait = require('../../../util/output/wait')
+const argCommon = require('../util/arg-common')()
 
 const help = () => {
   console.log(`
@@ -34,7 +36,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
-    --all                          See all instances for an app
+    -a, --all                      See all instances for each deployment (requires [app])
 
   ${chalk.dim('Examples:')}
 
@@ -53,87 +55,76 @@ const help = () => {
 }
 
 // Options
-let app
-let argv
-let debug
-let apiUrl
-let stopSpinner
-
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug', 'all'],
-    alias: {
-      help: 'h',
-      debug: 'd'
-    }
-  })
+// $FlowFixMe
+module.exports = async function main(ctx) {
+  let argv
+  
+  try {
+    argv = arg(ctx.argv.slice(2), {
+      ...argCommon,
+      '--all': Boolean,
+      '-a': '--all',
+    })
+  } catch (err) {
+    handleError(err)
+    return 1;
+  }
 
   argv._ = argv._.slice(1)
 
-  app = argv._[0]
-  debug = argv.debug
-  apiUrl = ctx.apiUrl
+  const app = argv._[0]
+  const debugEnabled = argv['--debug']
+  const apiUrl = ctx.apiUrl
 
-  if (argv.help || app === 'help') {
+  const { log, debug } = createOutput({ debug: debugEnabled })
+
+  if (argv['--help'] || app === 'help') {
     help()
-    await exit(0)
+    return 0
   }
 
-  stopSpinner = wait('Fetching deployments')
+  const stopSpinner = wait('Fetching deployments')
 
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
+  const { currentTeam, user } = sh;
 
-  try {
-    await list({ token, sh, includeScheme })
-  } catch (err) {
-    stopSpinner()
-    console.error(error(`Unknown error: ${err}\n${err.stack}`))
-    process.exit(1)
-  }
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-}
-
-async function list({ token, sh: { currentTeam, user }, includeScheme }) {
-  const now = new Now({ apiUrl, token, debug, currentTeam })
+  const now = new Now({ apiUrl, token, currentTeam })
   const start = new Date()
 
-  if (argv.all && !app) {
+  if (argv['--all'] && !app) {
     stopSpinner()
-    console.log('> You must define an app when using `--all`')
-    process.exit(1)
+    log(error('> You must define an app when using `-a` / `--all`'))
+    return 1;
   }
 
   let deployments
 
   try {
-    deployments = await now.list(app)
+    debug('Fetching deployments')
+    deployments = await now.list(app, { version: 3 })
   } catch (err) {
     handleError(err)
-    process.exit(1)
+    return 1;
   }
 
   if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+    debug('No deployments: attempting to find deployment that matches supplied app name')
     const match = await now.findDeployment(app)
 
     if (match !== null && typeof match !== 'undefined') {
+      debug('Found deployment that matches app name');
       deployments = Array.of(match)
     }
   }
 
   if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+    debug('No deployments: attempting to find aliases that matches supplied app name')
     const aliases = await now.listAliases()
     const item = aliases.find(e => e.uid === app || e.alias === app)
 
     if (item) {
+      debug('Found alias that matches app name');
       const match = await now.findDeployment(item.deploymentId)
 
       if (match !== null && typeof match !== 'undefined') {
@@ -146,7 +137,7 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
 
   const apps = new Map()
 
-  if (argv.all) {
+  if (argv['--all']) {
     await Promise.all(
       deployments.map(async ({ uid }, i) => {
         deployments[i].instances = await now.listInstances(uid)
@@ -188,7 +179,7 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
     }
   }
 
-  if (!argv.all && shouldShowAllInfo) {
+  if (!argv['--all'] && shouldShowAllInfo) {
     console.log(
       `> To expand the list and see instances run ${chalk.cyan(
         '`now ls --all [app]`'
@@ -199,7 +190,7 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
   console.log()
 
   sorted.forEach(([name, deps]) => {
-    const listedDeployments = argv.all ? deps : deps.slice(0, 5)
+    const listedDeployments = argv['--all'] ? deps : deps.slice(0, 5)
 
     console.log(
       `${chalk.bold(name)} ${chalk.gray(
