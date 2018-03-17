@@ -78,7 +78,12 @@
   "babel": {
     "plugins": [
       "transform-flow-comments",
-      ["transform-object-rest-spread", { "useBuiltIns": true }]
+      [
+        "transform-object-rest-spread",
+        {
+          "useBuiltIns": true
+        }
+      ]
     ]
   },
   "devDependencies": {
