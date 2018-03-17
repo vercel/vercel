@@ -6,7 +6,6 @@ const isURL = require('is-url')
 const mri = require('mri')
 const ms = require('ms')
 const printf = require('printf')
-require('epipebomb')()
 const supportsColor = require('supports-color')
 
 // Utilities

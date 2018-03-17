@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 //@flow
+// fix for EPIPE when piping to a truncated pipe
+require('epipebomb')()
 
 // Native
 const { join } = require('path')

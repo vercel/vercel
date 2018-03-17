@@ -7,7 +7,6 @@ const table = require('text-table')
 const ms = require('ms')
 const printf = require('printf')
 const plural = require('pluralize')
-require('epipebomb')()
 const supportsColor = require('supports-color')
 
 // Utilities
