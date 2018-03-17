@@ -303,7 +303,7 @@ module.exports = class Now extends EventEmitter {
     this._missing = []
     this._fileCount = files.length
 
-    return this._url
+    return deployment
   }
 
   upload() {
