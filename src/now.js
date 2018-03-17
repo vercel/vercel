@@ -529,17 +529,14 @@ const main = async (argv_) => {
   }
 
   try {
-    process.exit(await provider[subcommand](ctx))
+    return exit(await provider[subcommand](ctx))
   } catch (err) {
     console.error(
       error(
         `An unexpected error occurred in ${subcommand}: ${err.stack}`
       )
     )
-  }
-
-  if (providerName === 'gcp') {
-    process.exit()
+    return exit(1);
   }
 }
 
@@ -558,7 +555,7 @@ const handleRejection = err => {
     console.error(error('An unexpected empty rejection occurred'))
   }
 
-  process.exit(1)
+  exit(1)
 }
 
 const handleUnexpected = err => {
@@ -568,7 +565,7 @@ const handleUnexpected = err => {
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
 
-  process.exit(1)
+  exit(1)
 }
 
 process.on('unhandledRejection', handleRejection)
