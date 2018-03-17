@@ -317,6 +317,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const start = Date.now()
     const rawPath = argv._[0]
 
+    let deployment
     let deploymentType
     let isFile
 
@@ -689,7 +690,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         meta
       )
 
-      await now.create(paths, createArgs)
+      deployment = await now.create(paths, createArgs)
 
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
@@ -729,7 +730,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           })
         })
 
-        await now.create(paths, createArgs)
+        deployment = await now.create(paths, createArgs)
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
@@ -847,7 +848,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           log('Initializing…')
         }
 
-        printLogs(now.host, token)
+        printLogs(deployment, token)
       }
     }
   })
@@ -994,9 +995,9 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   })
 }
 
-function printLogs(host, token) {
+function printLogs({ url, scale } = {}, token) {
   // Log build
-  const logger = new Logger(host, token, { debug: debugEnabled, quiet })
+  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
 
   logger.on('error', async err => {
     if (!quiet) {
@@ -1023,7 +1024,9 @@ function printLogs(host, token) {
 
   logger.on('close', async () => {
     if (!quiet) {
+      const dcs = Object.keys(scale)
       log(chalk`{cyan Deployment complete!}`)
+      log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
     }
 
     if (gitRepo && gitRepo.cleanup) {
