@@ -7,6 +7,7 @@ module.exports = {
   entry: './src/now.js',
   target: 'node',
   externals: [nodeExternals()],
+  devtool: 'source-map',
   node: {
     __dirname: false
   },

@@ -147,6 +147,12 @@
     ms "2.1.1"
     update-notifier "2.3.0"
 
+"@zeit/source-map-support@0.6.2":
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@zeit/source-map-support/-/source-map-support-0.6.2.tgz#0efd478f24a606726948165e53a8efe89e24036f"
+  dependencies:
+    source-map "^0.6.0"
+
 abbrev@1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"

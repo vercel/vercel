@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 //@flow
+
+// we only enable source maps while developing, since
+// they have a small performance hit. for this, we
+// look for `pkg`, which is only present in the final bin
+if (!process.pkg) {
+  require('@zeit/source-map-support').install();
+}
+
 // fix for EPIPE when piping to a truncated pipe
 require('epipebomb')()
 
