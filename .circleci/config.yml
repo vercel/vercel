@@ -151,7 +151,24 @@ jobs:
 
 workflows:
   version: 2
-  compile:
+  scheduled:
+    triggers:
+      - schedule:
+          cron: "30 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+                - canary
+    jobs:
+      - install
+      - build:
+          requires:
+            - install
+      - test-integration:
+          requires:
+            - build
+  unscheduled:
     jobs:
       - install:
           filters:
