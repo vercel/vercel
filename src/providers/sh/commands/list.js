@@ -5,17 +5,17 @@
 const arg = require('arg')
 const chalk = require('chalk')
 const ms = require('ms')
-const printf = require('printf')
 const plural = require('pluralize')
-const supportsColor = require('supports-color')
+const table = require('text-table')
 
 // Utilities
 const Now = require('../util')
 const createOutput = require('../../../util/output')
 const { handleError } = require('../util/error')
+const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
-const sort = require('../util/sort-deployments')
 const wait = require('../../../util/output/wait')
+const strlen = require('../util/strlen')
 const argCommon = require('../util/arg-common')()
 
 const help = () => {
@@ -76,7 +76,7 @@ module.exports = async function main(ctx) {
   const { log, error, debug } = createOutput({ debug: debugEnabled })
 
   if (argv._.length > 1) {
-    error('`now ls [app]` accepts at most one argument');
+    error(`${cmd('now ls [app]')} accepts at most one argument`);
     return 1;
   }
 
@@ -140,8 +140,6 @@ module.exports = async function main(ctx) {
 
   now.close()
 
-  const apps = new Map()
-
   if (argv['--all']) {
     await Promise.all(
       deployments.map(async ({ uid }, i) => {
@@ -150,117 +148,79 @@ module.exports = async function main(ctx) {
     )
   }
 
-  for (const dep of deployments) {
-    const deps = apps.get(dep.name) || []
-    apps.set(dep.name, deps.concat(dep))
-  }
-
-  const sorted = await sort([...apps])
-
-  const urlLength =
-    deployments.reduce((acc, i) => {
-      return Math.max(acc, (i.url && i.url.length) || 0)
-    }, 0) + 5
-  const timeNow = new Date()
   stopSpinner()
   log(
     `${
-      plural('deployment', deployments.length, true)
+      plural('total deployment', deployments.length, true)
     } found under ${chalk.bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
-    )} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
+    )} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
   )
 
-  let shouldShowAllInfo = false
-
-  for (const app of apps) {
-    shouldShowAllInfo =
-      app[1].length > 5 ||
-      app.find(depl => {
-        // $FlowFixMe
-        return depl.scale && depl.scale.current > 1
-      })
-    if (shouldShowAllInfo) {
-      break
-    }
-  }
-
-  if (!argv['--all'] && shouldShowAllInfo) {
+  if (!argv['--all']) {
     log(
-      `To expand the list and see instances run ${chalk.cyan(
-        '`now ls --all [app]`'
-      )}`
+      `To expand the list and see instances run ${cmd('now ls --all [app]')}`
     )
   }
 
   console.log()
 
-  sorted.forEach(([name, deps]) => {
-    const listedDeployments = argv['--all'] ? deps : deps.slice(0, 5)
+  console.log(table([
+    ['app', 'url', 'inst #', 'state', 'age'].map(s => chalk.dim(s)),
+    ...deployments
+    .sort(sortRecent())
+    .map(dep => (
+      [
+        dep.name,
+        (includeScheme ? 'https://' : '') + dep.url,
+        dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+        stateString(dep.state),
+        chalk.gray(ms(Date.now() - new Date(dep.created)))
+      ]
+    ))
+    .filter(filterUniqueApps())
+  ], {
+    align: ['l','l','r','l','b'],
+    hsep: ' '.repeat(4),
+    stringLength: strlen
+  }))
+}
 
-    console.log(
-      `${chalk.bold(name)} ${chalk.gray(
-        '(' + listedDeployments.length + ' of ' + deps.length + ' total)'
-      )}`
-    )
+// renders the state string
+function stateString(s: string) {
+  switch (s) {
+    case 'INITIALIZING':
+      return chalk.gray(s);
 
-    const urlSpec = `%-${urlLength}s`
+    case 'ERROR':
+      return chalk.red(s);
 
-    console.log(
-      printf(
-        ` ${chalk.grey(urlSpec + '  %8s    %-16s %8s')}`,
-        'url',
-        'inst #',
-        'state',
-        'age'
-      )
-    )
+    case 'READY':
+      return s;
 
-    listedDeployments.forEach(dep => {
-      let state = dep.state
-      let extraSpaceForState = 0
+    default:
+      return chalk.gray('UNKNOWN')
+  }
+}
 
-      if (state === null || typeof state === 'undefined') {
-        state = 'DEPLOYMENT_ERROR'
-      }
+// sorts by most recent deployment
+function sortRecent() {
+  return function recencySort(a, b) {
+    return b.created - a.created;
+  }
+}
 
-      if (/ERROR/.test(state)) {
-        state = chalk.red(state)
-        extraSpaceForState = 10
-      } else if (state === 'FROZEN') {
-        state = chalk.grey(state)
-        extraSpaceForState = 10
-      }
-
-      let spec
-
-      if (supportsColor) {
-        spec = ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`
-      } else {
-        spec = ` %-${urlLength + 1}s %8s    %-${16}s %8s`
-      }
-
-      console.log(
-        printf(
-          spec,
-          chalk.underline((includeScheme ? 'https://' : '') + dep.url),
-          dep.scale ? dep.scale.current : '✖',
-          state,
-          dep.created ? ms(timeNow - dep.created) : 'n/a'
-        )
-      )
-
-      if (Array.isArray(dep.instances) && dep.instances.length > 0) {
-        dep.instances.forEach(i => {
-          console.log(
-            printf(` %-${urlLength + 10}s`, ` - ${chalk.underline(i.url)}`)
-          )
-        })
-
-        console.log()
-      }
-    })
-
-    console.log()
-  })
+// filters only one deployment per app, so that
+// the user doesn't see so many deployments at once.
+// this mode can be bypassed by supplying an app name
+function filterUniqueApps() {
+  const uniqueApps = new Set()
+  return function uniqueAppFilter([appName]) {
+    if (uniqueApps.has(appName)) {
+      return false;
+    } else {
+      uniqueApps.add(appName);
+      return true;
+    }
+  }
 }
