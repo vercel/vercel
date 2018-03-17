@@ -58,7 +58,7 @@ const help = () => {
 // $FlowFixMe
 module.exports = async function main(ctx) {
   let argv
-  
+
   try {
     argv = arg(ctx.argv.slice(2), {
       ...argCommon,
