@@ -389,15 +389,15 @@ module.exports = class Now extends EventEmitter {
     return secrets
   }
 
-  async list(app) {
+  async list(app, { version = 2 } = {}) {
     const { time } = this._output
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
 
     const { deployments } = await this.retry(
       async bail => {
         const res = await time(
-          'GET /v2/now/deployments',
-          this._fetch('/v2/now/deployments' + query)
+          `GET /v${version}/now/deployments`,
+          this._fetch(`/v${version}/now/deployments${query}`)
         )
 
         if (res.status === 200) {
