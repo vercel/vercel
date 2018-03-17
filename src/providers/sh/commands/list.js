@@ -72,11 +72,16 @@ module.exports = async function main(ctx) {
 
   argv._ = argv._.slice(1)
 
-  const app = argv._[0]
   const debugEnabled = argv['--debug']
-  const apiUrl = ctx.apiUrl
-
   const { log, error, debug } = createOutput({ debug: debugEnabled })
+
+  if (argv._.length > 1) {
+    error('`now ls [app]` accepts at most one argument');
+    return 1;
+  }
+
+  const app = argv._[0]
+  const apiUrl = ctx.apiUrl
 
   if (argv['--help']) {
     help()
