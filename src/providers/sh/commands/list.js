@@ -12,7 +12,7 @@ const supportsColor = require('supports-color')
 // Utilities
 const Now = require('../util')
 const createOutput = require('../../../util/output')
-const { handleError, error } = require('../util/error')
+const { handleError } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
 const wait = require('../../../util/output/wait')
@@ -76,7 +76,7 @@ module.exports = async function main(ctx) {
   const debugEnabled = argv['--debug']
   const apiUrl = ctx.apiUrl
 
-  const { log, debug } = createOutput({ debug: debugEnabled })
+  const { log, error, debug } = createOutput({ debug: debugEnabled })
 
   if (argv['--help'] || app === 'help') {
     help()
@@ -94,7 +94,7 @@ module.exports = async function main(ctx) {
 
   if (argv['--all'] && !app) {
     stopSpinner()
-    log(error('> You must define an app when using `-a` / `--all`'))
+    error('You must define an app when using `-a` / `--all`')
     return 1;
   }
 
@@ -158,8 +158,8 @@ module.exports = async function main(ctx) {
     }, 0) + 5
   const timeNow = new Date()
   stopSpinner()
-  console.log(
-    `> ${
+  log(
+    `${
       plural('deployment', deployments.length, true)
     } found under ${chalk.bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
@@ -172,6 +172,7 @@ module.exports = async function main(ctx) {
     shouldShowAllInfo =
       app[1].length > 5 ||
       app.find(depl => {
+        // $FlowFixMe
         return depl.scale && depl.scale.current > 1
       })
     if (shouldShowAllInfo) {
@@ -180,8 +181,8 @@ module.exports = async function main(ctx) {
   }
 
   if (!argv['--all'] && shouldShowAllInfo) {
-    console.log(
-      `> To expand the list and see instances run ${chalk.cyan(
+    log(
+      `To expand the list and see instances run ${chalk.cyan(
         '`now ls --all [app]`'
       )}`
     )
