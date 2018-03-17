@@ -995,7 +995,7 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   })
 }
 
-function printLogs({ url, scale }, token) {
+function printLogs({ url, scale } = {}, token) {
   // Log build
   const logger = new Logger(url, token, { debug: debugEnabled, quiet })
 
