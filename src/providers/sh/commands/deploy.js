@@ -995,7 +995,7 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   })
 }
 
-function printLogs({ url, scale } = {}, token) {
+function printLogs({ url, scale = {} } = {}, token) {
   // Log build
   const logger = new Logger(url, token, { debug: debugEnabled, quiet })
 
@@ -1024,9 +1024,12 @@ function printLogs({ url, scale } = {}, token) {
 
   logger.on('close', async () => {
     if (!quiet) {
-      const dcs = Object.keys(scale)
       log(chalk`{cyan Deployment complete!}`)
-      log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
+
+      const dcs = Object.keys(scale)
+      if (dcs.length > 0) {
+        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
+      }
     }
 
     if (gitRepo && gitRepo.cleanup) {
