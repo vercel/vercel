@@ -430,7 +430,11 @@ module.exports = class Now extends EventEmitter {
     let id = !hostOrId.includes('.') && hostOrId;
 
     if (!id) {
-      const url = `/v2/now/hosts/${encodeURIComponent(hostOrId)}?resolve=1`
+      let host = hostOrId.replace(/^https:\/\//i, '')
+      if (host.slice(-1) === '/') {
+        host = id.slice(0, -1)
+      }
+      const url = `/v2/now/hosts/${encodeURIComponent(host)}?resolve=1`
 
       const { deployment } = await this.retry(
         async bail => {

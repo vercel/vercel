@@ -2,7 +2,6 @@
 
 // Packages
 const chalk = require('chalk')
-const isURL = require('is-url')
 const mri = require('mri')
 const ms = require('ms')
 const printf = require('printf')
@@ -146,15 +145,7 @@ async function run({ token, sh: { currentTeam } }) {
   if (id === 'ls') {
     await list(scale)
     process.exit(0)
-  } else if (id) {
-    if (isURL(id)) {
-      // Normalize URL by removing slash from the end
-      id = id.replace(/^https:\/\//i, '')
-      if (id.slice(-1) === '/') {
-        id = id.slice(0, -1)
-      }
-    }
-  } else {
+  } else if (!id) {
     console.error(error('Please specify a deployment: now scale <url> <min> [max]'))
     help()
     exit(1)
@@ -173,12 +164,12 @@ async function run({ token, sh: { currentTeam } }) {
     return exit(1)
   }
 
-  await scale.setScale(deployment.uid, {
+  console.log(await scale.setScale(deployment.uid, {
     [dc]: {
       min,
       max
     }
-  })
+  }))
 
   await info(scale, deployment.host)
 

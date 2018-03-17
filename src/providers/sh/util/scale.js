@@ -63,7 +63,7 @@ module.exports = class Scale extends Now {
 
         const body = await res.json()
 
-        if (res.status !== 200) {
+        if (!res.ok) {
           if (body) {
             if ((res.status === 404 || res.status === 400) &&
               body.error && body.error.code) {
