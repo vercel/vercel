@@ -157,10 +157,11 @@ module.exports = async function main(ctx) {
     )} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
   )
 
-  if (!argv['--all']) {
-    log(
-      `To expand the list and see instances run ${cmd('now ls --all [app]')}`
-    )
+  // information to help the user find other deployments or instances
+  if (app == null) {
+    log(`To list more deployments for an app run ${cmd('now ls [app]')}`)
+  } else if (!argv['--all']) {
+    log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
   }
 
   console.log()
@@ -172,13 +173,19 @@ module.exports = async function main(ctx) {
     .map(dep => (
       [
         dep.name,
-        (includeScheme ? 'https://' : '') + dep.url,
+        chalk.bold((includeScheme ? 'https://' : '') + dep.url),
         dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
         stateString(dep.state),
         chalk.gray(ms(Date.now() - new Date(dep.created)))
       ]
     ))
-    .filter(filterUniqueApps())
+    .filter(
+      app == null
+        // if an app wasn't supplied to filter by,
+        // we only want to render one deployment per app
+        ? filterUniqueApps()
+        : () => true
+    )
   ], {
     align: ['l','l','r','l','b'],
     hsep: ' '.repeat(4),
