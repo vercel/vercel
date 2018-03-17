@@ -78,7 +78,7 @@ module.exports = async function main(ctx) {
 
   const { log, error, debug } = createOutput({ debug: debugEnabled })
 
-  if (argv['--help'] || app === 'help') {
+  if (argv['--help']) {
     help()
     return 0
   }
