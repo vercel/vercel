@@ -113,7 +113,7 @@ module.exports = async function main(ctx) {
     return 1;
   }
 
-  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+  if (!deployments.length) {
     debug('No deployments: attempting to find deployment that matches supplied app name')
     const match = await now.findDeployment(app)
 
@@ -123,7 +123,7 @@ module.exports = async function main(ctx) {
     }
   }
 
-  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+  if (!deployments.length) {
     debug('No deployments: attempting to find aliases that matches supplied app name')
     const aliases = await now.listAliases()
     const item = aliases.find(e => e.uid === app || e.alias === app)
@@ -158,6 +158,11 @@ module.exports = async function main(ctx) {
       (currentTeam && currentTeam.slug) || user.username || user.email
     )} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
   )
+
+  // we don't output the table headers if we have no deployments
+  if (!deployments.length) {
+    return 0;
+  }
 
   // information to help the user find other deployments or instances
   if (app == null) {
