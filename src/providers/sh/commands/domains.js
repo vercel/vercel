@@ -11,9 +11,9 @@ const plural = require('pluralize')
 // Utilities
 const NowDomains = require('../util/domains')
 const exit = require('../../../util/exit')
+const formatTable = require('../util/format-table');
 const logo = require('../../../util/output/logo')
 const promptBool = require('../../../util/input/prompt-bool')
-const strlen = require('../util/strlen')
 const toHost = require('../util/to-host')
 const { handleError, error } = require('../util/error')
 const buy = require('./domains/buy')
@@ -138,30 +138,17 @@ async function run({ token, sh: { currentTeam, user } }) {
       const start_ = new Date()
       const domains = await domain.ls()
       domains.sort((a, b) => new Date(b.created) - new Date(a.created))
-      const current = new Date()
-      const header = [
-        ['', 'domain', 'dns', 'verified', 'created'].map(s => chalk.dim(s))
-      ]
-      const out =
-        domains.length === 0
-          ? null
-          : table(
-              header.concat(
-                domains.map(domain => {
-                  const ns = domain.isExternal ? 'external' : 'zeit.world'
-                  const url = chalk.bold(domain.name)
-                  const time = chalk.gray(
-                    ms(current - new Date(domain.created)) + ' ago'
-                  )
-                  return ['', url, ns, domain.verified, time]
-                })
-              ),
-              {
-                align: ['l', 'l', 'l', 'l', 'l'],
-                hsep: ' '.repeat(2),
-                stringLength: strlen
-              }
-            )
+      const timeNow = new Date()
+      const header = ['domain', 'dns', 'verified', 'created'].map(s => chalk.dim(s))
+      const align = ['l', 'l', 'l', 'l', 'l']
+      const data = [{
+        rows: domains.map((domain) => {
+          const url = chalk.bold(domain.name)
+          const ns = domain.isExternal ? 'external' : 'zeit.world'
+          const age = chalk.gray(ms(timeNow - new Date(domain.created)) + ' ago')
+          return [url, ns, domain.verified, age]
+        })
+      }]
 
       const elapsed_ = ms(new Date() - start_)
       console.log(
@@ -169,10 +156,7 @@ async function run({ token, sh: { currentTeam, user } }) {
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed_}]`)}`
       )
-
-      if (out) {
-        console.log('\n' + out + '\n')
-      }
+      console.log(formatTable(header, align, data))
 
       break
     }
