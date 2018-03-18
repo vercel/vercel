@@ -36,7 +36,7 @@
   ],
   "pkg": {
     "scripts": [
-      "dist/*"
+      "dist/*.js"
     ],
     "targets": [
       "node9-alpine-x64",
