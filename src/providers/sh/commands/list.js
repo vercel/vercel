@@ -179,13 +179,30 @@ module.exports = async function main(ctx) {
     .sort(sortRecent())
     .map(dep => (
       [
-        dep.name,
-        chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-        dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
-        stateString(dep.state),
-        chalk.gray(ms(Date.now() - new Date(dep.created)))
+        [
+          dep.name,
+          chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+          dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          stateString(dep.state),
+          chalk.gray(ms(Date.now() - new Date(dep.created)))
+        ],
+        ...(argv['--all']
+          ? dep.instances.map(
+              (i) => [
+                '',
+                ` ${chalk.gray('-')} ${i.url} `,
+                '',
+                '',
+                ''
+              ]
+            )
+          : []
+        )
       ]
     ))
+    // flatten since the previous step returns a nested
+    // array of the deployment and (optionally) its instances
+    .reduce((ac, c) => ac.concat(c), [])
     .filter(
       app == null
         // if an app wasn't supplied to filter by,
