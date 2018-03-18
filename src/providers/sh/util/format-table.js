@@ -21,7 +21,7 @@ const strlen = require('./strlen')
 //   ...
 // ]
 module.exports = function formatTable(header, align, blocks) {
-  const nrCols = blocks[0].rows[0].length;
+  const nrCols = header.length;
   const padding = [];
   let out = '\n';
 
