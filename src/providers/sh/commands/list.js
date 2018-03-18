@@ -142,8 +142,10 @@ module.exports = async function main(ctx) {
 
   if (argv['--all']) {
     await Promise.all(
-      deployments.map(async ({ uid }, i) => {
-        deployments[i].instances = await now.listInstances(uid)
+      deployments.map(async ({ uid, instanceCount }, i) => {
+        deployments[i].instances = instanceCount > 0
+          ? await now.listInstances(uid)
+          : []
       })
     )
   }
