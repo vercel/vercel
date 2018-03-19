@@ -140,7 +140,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       domains.sort((a, b) => new Date(b.created) - new Date(a.created))
       const current = new Date()
       const header = [
-        ['', 'domain', 'dns', 'verified', 'created'].map(s => chalk.dim(s))
+        ['', 'domain', 'dns', 'verified', 'age'].map(s => chalk.dim(s))
       ]
       const out =
         domains.length === 0
@@ -151,7 +151,7 @@ async function run({ token, sh: { currentTeam, user } }) {
                   const ns = domain.isExternal ? 'external' : 'zeit.world'
                   const url = chalk.bold(domain.name)
                   const time = chalk.gray(
-                    ms(current - new Date(domain.created)) + ' ago'
+                    ms(current - new Date(domain.created))
                   )
                   return ['', url, ns, domain.verified, time]
                 })

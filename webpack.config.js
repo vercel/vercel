@@ -7,11 +7,15 @@ module.exports = {
   entry: './src/now.js',
   target: 'node',
   externals: [nodeExternals()],
+  devtool: 'source-map',
   node: {
     __dirname: false
   },
   output: {
-    filename: 'dist/now.js'
+    filename: 'dist/now.js',
+    // this makes sure that the pathnames in the stack traces
+    // are correct, avoiding a webpack: prefix inside a segment
+    devtoolModuleFilenameTemplate: '[absolute-resource-path]',
   },
   module: {
     loaders: [

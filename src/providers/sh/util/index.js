@@ -55,6 +55,7 @@ module.exports = class Now extends EventEmitter {
       followSymlinks = true,
       forceNew = false,
       forwardNpm = false,
+      scale = {},
 
       // From readMetaData
       name,
@@ -189,6 +190,7 @@ module.exports = class Now extends EventEmitter {
             registryAuthToken: authToken,
             files,
             engines,
+            scale,
             sessionAffinity,
             atlas: hasNowJson && Boolean(nowConfig.atlas)
           }
@@ -260,7 +262,9 @@ module.exports = class Now extends EventEmitter {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning
           const n = hashes.get(sha).names.pop()
+
           warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`)
+
           hashes.get(sha).names.unshift(n) // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++
         } else if (warning.reason === 'node_version_not_found') {
@@ -296,7 +300,7 @@ module.exports = class Now extends EventEmitter {
     this._missing = []
     this._fileCount = files.length
 
-    return this._url
+    return deployment
   }
 
   upload() {
@@ -333,18 +337,22 @@ module.exports = class Now extends EventEmitter {
               })
             )
 
-            // No retry on 4xx
-            if (
-              res.status !== 200 &&
-              (res.status >= 400 || res.status < 500)
-            ) {
-              debug(`Bailing on creating due to ${res.status}`);
-              return bail(await responseError(res))
+            if (res.status === 200) {
+              // What we want
+              this.emit('upload', file)
+            } else if (res.status > 200 && res.status < 500) {
+              // If something is wrong with our request, we don't retry
+              return bail(await responseError(res, 'Failed to upload file'))
+            } else {
+              // If something is wrong with the server, we retry
+              throw await responseError(res, 'Failed to upload file')
             }
-
-            this.emit('upload', file)
           },
-          { retries: 3, randomize: true, onRetry: this._onRetry }
+          {
+            retries: 3,
+            randomize: true,
+            onRetry: this._onRetry
+          }
         )
       )
     ))
@@ -362,43 +370,56 @@ module.exports = class Now extends EventEmitter {
         `#${attempt} GET /secrets`,
         this._fetch('/now/secrets')
       )
-      return res.json()
+
+      if (res.status === 200) {
+        // What we want
+        return res.json()
+      } else if (res.status > 200 && res.status < 500) {
+        // If something is wrong with our request, we don't retry
+        return bail(await responseError(res, 'Failed to list secrets'))
+      } else {
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list secrets')
+      }
     })
 
     return secrets
   }
 
-  async list(app) {
-    const { debug, time } = this._output
+  async list(app, { version = 2 } = {}) {
+    const { time } = this._output
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
 
     const { deployments } = await this.retry(
       async bail => {
         const res = await time(
-          'GET /v2/now/deployments',
-          this._fetch('/v2/now/deployments' + query)
+          `GET /v${version}/now/deployments`,
+          this._fetch(`/v${version}/now/deployments${query}`)
         )
 
-        // No retry on 4xx
-        if (res.status >= 400 && res.status < 500) {
-          debug(`Bailing on listing deployments due to ${res.status}`)
-          return bail(await responseError(res))
+        if (res.status === 200) {
+          // What we want
+          return res.json()
+        } else if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(await responseError(res, 'Failed to list deployments'))
+        } else {
+          // If something is wrong with the server, we retry
+          throw await responseError(res, 'Failed to list deployments')
         }
-
-        if (res.status !== 200) {
-          throw new Error('Fetching deployment url failed')
-        }
-
-        return res.json()
       },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      {
+        retries: 3,
+        minTimeout: 2500,
+        onRetry: this._onRetry
+      }
     )
 
     return deployments
   }
 
   async listInstances(deploymentId) {
-    const { debug, time } = this._output
+    const { time } = this._output
 
     const { instances } = await this.retry(
       async bail => {
@@ -407,19 +428,22 @@ module.exports = class Now extends EventEmitter {
           this._fetch(`/now/deployments/${deploymentId}/instances`)
         )
 
-        // No retry on 4xx
-        if (res.status >= 400 && res.status < 500) {
-          debug(`Bailing on listing instances due to ${res.status}`)
-          return bail(await responseError(res))
+        if (res.status === 200) {
+          // What we want
+          return res.json()
+        } else if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(await responseError(res, 'Failed to list instances'))
+        } else {
+          // If something is wrong with the server, we retry
+          throw await responseError(res, 'Failed to list instances')
         }
-
-        if (res.status !== 200) {
-          throw new Error('Fetching instances list failed')
-        }
-
-        return res.json()
       },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      {
+        retries: 3,
+        minTimeout: 2500,
+        onRetry: this._onRetry
+      }
     )
 
     return instances
@@ -490,7 +514,7 @@ module.exports = class Now extends EventEmitter {
     deploymentIdOrURL,
     { instanceId, types, limit, query, since, until } = {}
   ) {
-    const { debug, time } = this._output
+    const { time } = this._output
 
     const q = qs.stringify({
       instanceId,
@@ -506,19 +530,19 @@ module.exports = class Now extends EventEmitter {
         const url = `/now/deployments/${encodeURIComponent(
           deploymentIdOrURL
         )}/logs?${q}`
+
         const res = await time('GET /logs', this._fetch(url))
 
-        // No retry on 4xx
-        if (res.status >= 400 && res.status < 500) {
-          debug(`Bailing on printing logs due to ${res.status}`)
-          return bail(await responseError(res))
+        if (res.status === 200) {
+          // What we want
+          return res.json()
+        } else if (res.status > 200 && res.status < 500) {
+          // If something is wrong with our request, we don't retry
+          return bail(await responseError(res, 'Failed to fetch deployment logs'))
+        } else {
+          // If something is wrong with the server, we retry
+          throw await responseError(res, 'Failed to fetch deployment logs')
         }
-
-        if (res.status !== 200) {
-          throw new Error('Fetching deployment logs failed')
-        }
-
-        return res.json()
       },
       {
         retries: 3,
@@ -531,8 +555,6 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listAliases(deploymentId) {
-    const { debug } = this._output
-
     const { aliases } = await this.retry(async bail => {
       const res = await this._fetch(
         deploymentId
@@ -540,16 +562,16 @@ module.exports = class Now extends EventEmitter {
           : '/now/aliases'
       )
 
-      if (res.status >= 400 && res.status < 500) {
-        debug(`Bailing on get domain due to ${res.status}`)
-        return bail(await responseError(res))
+      if (res.status === 200) {
+        // What we want
+        return res.json()
+      } else if (res.status > 200 && res.status < 500) {
+        // If something is wrong with our request, we don't retry
+        return bail(await responseError(res, 'Failed to list aliases'))
+      } else {
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list aliases')
       }
-
-      if (res.status !== 200) {
-        throw new Error('API error getting aliases')
-      }
-
-      return res.json()
     })
 
     return aliases
@@ -574,7 +596,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listDomains() {
-    const { debug, time } = this._output
+    const { time } = this._output
 
     const { domains } = await this.retry(async (bail, attempt) => {
       const res = await time(
@@ -582,23 +604,23 @@ module.exports = class Now extends EventEmitter {
         this._fetch('/domains')
       )
 
-      if (res.status >= 400 && res.status < 500) {
-        debug(`Bailing on get domain due to ${res.status}`)
-        return bail(await responseError(res))
+      if (res.status === 200) {
+        // What we want
+        return res.json()
+      } else if (res.status > 200 && res.status < 500) {
+        // If something is wrong with our request, we don't retry
+        return bail(await responseError(res, 'Failed to list domains'))
+      } else {
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list domains')
       }
-
-      if (res.status !== 200) {
-        throw new Error('API error getting domains')
-      }
-
-      return res.json()
     })
 
     return domains
   }
 
   async getDomain(domain) {
-    const { debug, time } = this._output
+    const { time } = this._output
 
     return this.retry(async (bail, attempt) => {
       const res = await time(
@@ -606,16 +628,16 @@ module.exports = class Now extends EventEmitter {
         this._fetch(`/domains/${domain}`)
       )
 
-      if (res.status >= 400 && res.status < 500) {
-        debug(`Bailing on get domain due to ${res.status}`)
-        return bail(await responseError(res))
+      if (res.status === 200) {
+        // What we want
+        return res.json()
+      } else if (res.status > 200 && res.status < 500) {
+        // If something is wrong with our request, we don't retry
+        return bail(await responseError(res, 'Failed to fetch domain'))
+      } else {
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to fetch domain')
       }
-
-      if (res.status !== 200) {
-        throw new Error('API error getting domain name')
-      }
-
-      return res.json()
     })
   }
 
@@ -698,6 +720,7 @@ module.exports = class Now extends EventEmitter {
 
   createCert(domain, { renew, overwriteCustom } = {}) {
     const { log, time } = this._output
+
     return this.retry(
       async (bail, attempt) => {
         const res = await time(
@@ -743,14 +766,20 @@ module.exports = class Now extends EventEmitter {
         if (res.status !== 200 && res.status !== 304) {
           throw new Error('Unhandled error')
         }
+
         return body
       },
-      { retries: 3, minTimeout: 30000, maxTimeout: 90000 }
+      {
+        retries: 3,
+        minTimeout: 30000,
+        maxTimeout: 90000
+      }
     )
   }
 
   deleteCert(domain) {
     const { time } = this._output
+
     return this.retry(
       async (bail, attempt) => {
         const res = await time(
@@ -776,7 +805,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async remove(deploymentId, { hard }) {
-    const { debug, time } = this._output
+    const { time } = this._output
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`
 
     await this.retry(async bail => {
@@ -787,14 +816,15 @@ module.exports = class Now extends EventEmitter {
         })
       )
 
-      // No retry on 4xx
-      if (res.status >= 400 && res.status < 500) {
-        debug(`Bailing on removal due to ${res.status}`)
-        return bail(await responseError(res))
-      }
-
-      if (res.status !== 200) {
-        throw new Error('Removing deployment failed')
+      if (res.status === 200) {
+        // What we want
+        return
+      } else if (res.status > 200 && res.status < 500) {
+        // If something is wrong with our request, we don't retry
+        return bail(await responseError(res, 'Failed to remove deployment'))
+      } else {
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to fetch domain')
       }
     })
 
@@ -839,6 +869,7 @@ module.exports = class Now extends EventEmitter {
         .map(sha => this._files.get(sha).data.length)
         .reduce((a, b) => a + b, 0)
     }
+
     return this._syncAmount
   }
 
@@ -859,6 +890,7 @@ module.exports = class Now extends EventEmitter {
     opts.headers = opts.headers || {}
     opts.headers.authorization = `Bearer ${this._token}`
     opts.headers['user-agent'] = ua
+
     return this._agent.fetch(_url, opts)
   }
 

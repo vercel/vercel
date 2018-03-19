@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 //@flow
 
+// we only enable source maps while developing, since
+// they have a small performance hit. for this, we
+// look for `pkg`, which is only present in the final bin
+if (!process.pkg) {
+  require('@zeit/source-map-support').install();
+}
+
+// fix for EPIPE when piping to a truncated pipe
+require('epipebomb')()
+
 // Native
 const { join } = require('path')
 
@@ -527,17 +537,14 @@ const main = async (argv_) => {
   }
 
   try {
-    process.exit(await provider[subcommand](ctx))
+    return exit(await provider[subcommand](ctx))
   } catch (err) {
     console.error(
       error(
         `An unexpected error occurred in ${subcommand}: ${err.stack}`
       )
     )
-  }
-
-  if (providerName === 'gcp') {
-    process.exit()
+    return exit(1);
   }
 }
 
@@ -556,7 +563,7 @@ const handleRejection = err => {
     console.error(error('An unexpected empty rejection occurred'))
   }
 
-  process.exit(1)
+  exit(1)
 }
 
 const handleUnexpected = err => {
@@ -566,7 +573,7 @@ const handleUnexpected = err => {
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
 
-  process.exit(1)
+  exit(1)
 }
 
 process.on('unhandledRejection', handleRejection)

@@ -5,7 +5,6 @@ const chalk = require('chalk')
 const mri = require('mri')
 const ms = require('ms')
 const printf = require('printf')
-require('epipebomb')()
 const supportsColor = require('supports-color')
 
 // Utilities
@@ -14,7 +13,6 @@ const NowScale = require('../util/scale')
 const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
 const info = require('../util/scale-info')
-const sort = require('../util/sort-deployments')
 
 const help = () => {
   console.log(`
@@ -195,15 +193,13 @@ async function list(scale) {
     apps.set(dep.name, deps.concat(dep))
   }
 
-  const sorted = await sort([...apps])
-
   const timeNow = new Date()
   const urlLength =
     deployments.reduce((acc, i) => {
       return Math.max(acc, (i.url && i.url.length) || 0)
     }, 0) + 5
 
-  for (const app of sorted) {
+  for (const app of apps) {
     const depls = argv.all ? app[1] : app[1].slice(0, 5)
     console.log(
       `${chalk.bold(app[0])} ${chalk.gray(

@@ -3,7 +3,7 @@ jobs:
 
   install:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -26,7 +26,7 @@ jobs:
 
   build:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -35,6 +35,8 @@ jobs:
       - run:
           name: Compiling Binaries
           command: yarn run pack
+      - store_artifacts:
+          path: packed
       - persist_to_workspace:
           root: .
           paths:
@@ -42,7 +44,7 @@ jobs:
 
   test-lint:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -54,7 +56,7 @@ jobs:
 
   test-unit:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -78,7 +80,7 @@ jobs:
 
   compress:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -94,7 +96,7 @@ jobs:
 
   upload:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.10
     working_directory: ~/repo
     steps:
       - checkout
@@ -121,7 +123,7 @@ jobs:
 
   publish-stable:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -136,7 +138,7 @@ jobs:
 
   publish-canary:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.7.1
     working_directory: ~/repo
     steps:
       - checkout
@@ -151,7 +153,24 @@ jobs:
 
 workflows:
   version: 2
-  compile:
+  scheduled:
+    triggers:
+      - schedule:
+          cron: "30 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+                - canary
+    jobs:
+      - install
+      - build:
+          requires:
+            - install
+      - test-integration:
+          requires:
+            - build
+  unscheduled:
     jobs:
       - install:
           filters:

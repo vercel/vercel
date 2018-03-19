@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//@flow
 
 // Native
 const { resolve, basename } = require('path')
@@ -34,8 +35,11 @@ const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
 
+const REGIONS = new Set(["sfo", "bru"]);
+const DCS = new Set(["sfo1", "bru1"]);
+
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity'],
+  string: ['name', 'alias', 'session-affinity', 'regions'],
   boolean: [
     'help',
     'version',
@@ -127,6 +131,7 @@ const help = () => {
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
+    --regions                      Set default regions or DCs to enable the deployment on
 
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
@@ -174,6 +179,7 @@ let clipboard
 let forwardNpm
 let followSymlinks
 let wantsPublic
+let regions
 let apiUrl
 let isTTY
 let quiet
@@ -250,7 +256,7 @@ const promptForEnvFields = async list => {
   return answers
 }
 
-async function main(ctx) {
+async function main(ctx: any) {
   argv = mri(ctx.argv.slice(2), mriOpts)
 
   // very ugly hack – this (now-cli's code) expects that `argv._[0]` is the path
@@ -280,7 +286,10 @@ async function main(ctx) {
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
   wantsPublic = argv.public
+  regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   apiUrl = ctx.apiUrl
+  // https://github.com/facebook/flow/issues/1825
+  // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
   ;({ log, debug } = createOutput({ debug: debugEnabled }))
@@ -308,6 +317,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const start = Date.now()
     const rawPath = argv._[0]
 
+    let deployment
     let deploymentType
     let isFile
 
@@ -465,6 +475,52 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const nowConfig = meta.nowConfig
+
+    let scale
+    if (regions.length) {
+      // ignore now.json if regions cli option exists
+      scale = {}
+    } else {
+      const _nowConfig = nowConfig || {}
+      regions = _nowConfig.regions || []
+      scale = _nowConfig.scale || {}
+    }
+
+    // get all the region or dc identifiers from the scale settings
+    const scaleKeys = Object.keys(scale);
+
+    for (const scaleKey of scaleKeys) {
+      if (!isValidRegionOrDcId(scaleKey)) {
+        log(error({
+          message: `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
+          slug: 'invalid-region-or-dc'
+        }))
+        await exit(1)
+      }
+    }
+
+    if (regions.length) {
+      if (Object.keys(scale).length) {
+        log(error({
+          message: "Can't set both `regions` and `scale` options simultaneously",
+          slug: 'regions-and-scale-at-once'
+        }))
+        await exit(1)
+      }
+
+      for (const r of regions) {
+        if (!isValidRegionOrDcId(r)) {
+          log(error({
+            message: `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
+            slug: 'invalid-region-or-dc'
+          }))
+          await exit(1)
+        }
+
+        scale[getDcId(r)] = { min: 0, max: 1 }
+      }
+    }
+
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
     let dotenvConfig
@@ -553,7 +609,9 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               )} from your env (as no value was specified)`
             )
             // Escape value if it begins with @
-            val = process.env[key].replace(/^@/, '\\@')
+            if (process.env[key] != null) {
+              val = process.env[key].replace(/^@/, '\\@')
+            }
           } else {
             log(error(
               `No value specified for env ${chalk.bold(
@@ -616,6 +674,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let syncCount
 
     try {
+      // $FlowFixMe
       const createArgs = Object.assign(
         {
           env,
@@ -623,6 +682,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,
           quiet,
+          scale,
           wantsPublic,
           sessionAffinity,
           isFile
@@ -630,7 +690,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         meta
       )
 
-      await now.create(paths, createArgs)
+      deployment = await now.create(paths, createArgs)
 
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
@@ -670,7 +730,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           })
         })
 
-        await now.create(paths, createArgs)
+        deployment = await now.create(paths, createArgs)
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
@@ -721,8 +781,17 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         })
 
         return
-      } else {
-        debug(`Error: ${err}\n${err.stack}`)
+      }
+
+      debug(`Error: ${err}\n${err.stack}`)
+
+      if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
+        const { additionalProperty = '' } = err.params || {}
+        const message = regions.length
+          ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
+          : `Invalid DC name for the scale option: ${additionalProperty}`
+        log(error(message));
+        await exit(1)
       }
 
       await stopDeployment(err)
@@ -767,10 +836,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         const cancelWait = wait('Initializing...')
 
         try {
-          await printEvents(now, currentTeam, {
-            onOpen: cancelWait,
-            debug: debugEnabled
-          })
+          await printEvents(now, currentTeam, { onOpen: cancelWait })
         } catch (err) {
           cancelWait()
           throw err
@@ -782,7 +848,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           log('Initializing…')
         }
 
-        printLogs(now.host, token, currentTeam, user)
+        printLogs(deployment, token)
       }
     }
   })
@@ -839,10 +905,7 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{},
-  debug = false
-} = {}) {
+async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
@@ -932,9 +995,9 @@ async function printEvents(now, currentTeam = null, {
   })
 }
 
-function printLogs(host, token) {
+function printLogs({ url, scale = {} } = {}, token) {
   // Log build
-  const logger = new Logger(host, token, { debug: debugEnabled, quiet })
+  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
 
   logger.on('error', async err => {
     if (!quiet) {
@@ -962,6 +1025,11 @@ function printLogs(host, token) {
   logger.on('close', async () => {
     if (!quiet) {
       log(chalk`{cyan Deployment complete!}`)
+
+      const dcs = Object.keys(scale)
+      if (dcs.length > 0) {
+        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
+      }
     }
 
     if (gitRepo && gitRepo.cleanup) {
@@ -973,6 +1041,19 @@ function printLogs(host, token) {
 
     await exit()
   })
+}
+
+// if supplied with a region (eg: `sfo`) it returns
+// the default dc for it (`sfo1`)
+// if supplied with a dc id, it just returns it
+function getDcId(r: string) {
+  return /\d$/.test(r) ? r : `${r}1`
+}
+
+// determines if the supplied string is a valid
+// region name or dc id
+function isValidRegionOrDcId(r: string) {
+  return REGIONS.has(r) || DCS.has(r);
 }
 
 module.exports = main

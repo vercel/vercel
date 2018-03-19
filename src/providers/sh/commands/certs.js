@@ -12,7 +12,6 @@ const ms = require('ms')
 const plural = require('pluralize')
 const printf = require('printf')
 const psl = require('psl')
-require('epipebomb')()
 const supportsColor = require('supports-color')
 
 // Utilities
