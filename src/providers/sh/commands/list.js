@@ -221,7 +221,7 @@ module.exports = async function main(ctx) {
 function stateString(s: string) {
   switch (s) {
     case 'INITIALIZING':
-      return chalk.gray(s);
+      return chalk.yellow(s);
 
     case 'ERROR':
       return chalk.red(s);
