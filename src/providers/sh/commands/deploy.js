@@ -24,7 +24,6 @@ const Now = require('../util')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError } = require('../util/error')
-const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
 const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
@@ -333,6 +332,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       } catch (err) {
         let repo
         let isValidRepo = false
+
+        const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
 
         try {
           isValidRepo = isRepoPath(rawPath)
