@@ -23,7 +23,7 @@ const Logger = require('../util/build-logger')
 const Now = require('../util')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
-const { handleError, error } = require('../util/error')
+const { handleError } = require('../util/error')
 const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
 const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
@@ -173,6 +173,7 @@ let forceNew
 let deploymentName
 let sessionAffinity
 let log
+let error
 let debug
 let debugEnabled
 let clipboard
@@ -292,7 +293,7 @@ async function main(ctx: any) {
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, debug } = createOutput({ debug: debugEnabled }))
+  ;({ log, error, debug } = createOutput({ debug: debugEnabled }))
 
   if (argv.h || argv.help) {
     help()
@@ -372,7 +373,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               gitRepo.main
             )}" ${gitRef}on ${gitRepo.type}`)
         } else {
-          log(error(`The specified directory "${basename(paths[0])}" doesn't exist.`))
+          error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           await exit(1)
         }
       }
@@ -400,11 +401,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     try {
       await Promise.all(checkers)
     } catch (err) {
-      log(error({
-        message: err.message,
-        slug: 'path-not-deployable'
-      }))
-
+      error(err.message, 'path-not-deployable')
       await exit(1)
     }
 
@@ -491,29 +488,29 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
-        log(error({
-          message: `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
-          slug: 'deploy-invalid-dc'
-        }))
+        error(
+          `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
+          'deploy-invalid-dc'
+        )
         await exit(1)
       }
     }
 
     if (regions.length) {
       if (Object.keys(scale).length) {
-        log(error({
-          message: "Can't set both `regions` and `scale` options simultaneously",
-          slug: 'regions-and-scale-at-once'
-        }))
+        error(
+          "Can't set both `regions` and `scale` options simultaneously",
+          'regions-and-scale-at-once'
+        )
         await exit(1)
       }
 
       for (const r of regions) {
         if (!isValidRegionOrDcId(r)) {
-          log(error({
-            message: `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
-            slug: 'deploy-invalid-dc'
-          }))
+          error(
+            `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
+            'deploy-invalid-dc'
+          )
           await exit(1)
         }
 
@@ -541,10 +538,10 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          log(error({
-            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-            slug: 'missing-dotenv-target'
-          }))
+          error(
+            `--dotenv flag is set but ${dotenvFileName} file is missing`,
+            'missing-dotenv-target'
+          )
 
           await exit(1)
         } else {
@@ -581,20 +578,20 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          log(error({
-            message: 'Environment variable name is missing',
-            slug: 'missing-env-key-value'
-          }))
+          error(
+            'Environment variable name is missing',
+            'missing-env-key-value'
+          )
 
           await exit(1)
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          log(error(
+          error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
-          ))
+          )
 
           await exit(1)
         }
@@ -613,11 +610,11 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               val = process.env[key].replace(/^@/, '\\@')
             }
           } else {
-            log(error(
+            error(
               `No value specified for env ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
-            ))
+            )
 
             await exit(1)
           }
@@ -629,25 +626,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              log(error(
+              error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
-              ))
+              )
             } else {
-              log(error({
-                message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
-                slug: 'env-no-secret'
-              }))
+              error(
+                `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+                'env-no-secret'
+              )
             }
 
             await exit(1)
           } else if (_secrets.length > 1) {
-            log(error(
+            error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
-            ))
+            )
 
             await exit(1)
           }
@@ -725,7 +722,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           now.on('complete', () => resolve())
 
           now.on('error', err => {
-            log(error('Upload failed'))
+            error('Upload failed')
             reject(err)
           })
         })
@@ -757,7 +754,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `If you agree with that, please run again with ${cmd('--public')}.`
-              log(error(message))
+              error(message)
 
               await exit(1)
             } else {
@@ -790,7 +787,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         const message = regions.length
           ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
           : `Invalid DC name for the scale option: ${additionalProperty}`
-        log(error(message));
+        error(message)
         await exit(1)
       }
 
@@ -1002,13 +999,13 @@ function printLogs({ url, scale = {} } = {}, token) {
   logger.on('error', async err => {
     if (!quiet) {
       if (err && err.type === 'BUILD_ERROR') {
-        log(error(
+        error(
           `The build step of your project failed. To retry, run ${cmd(
             'now --force'
           )}.`
-        ))
+        )
       } else {
-        log(error('Deployment failed'))
+        error('Deployment failed')
       }
     }
 
