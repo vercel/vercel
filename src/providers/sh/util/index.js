@@ -28,6 +28,7 @@ const ua = require('./ua')
 const hash = require('./hash')
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
+const wait = require('../../../util/output/wait')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -367,12 +368,15 @@ module.exports = class Now extends EventEmitter {
 
   async listSecrets() {
     const { time } = this._output
+    const stopSpinner = wait('Listing secrets')
 
     const { secrets } = await this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /secrets`,
         this._fetch('/now/secrets')
       )
+
+      stopSpinner()
 
       if (res.status === 200) {
         // What we want
@@ -392,6 +396,7 @@ module.exports = class Now extends EventEmitter {
   async list(app) {
     const { time } = this._output
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
+    const stopSpinner = wait('Fetching deployments')
 
     const { deployments } = await this.retry(
       async bail => {
@@ -399,6 +404,8 @@ module.exports = class Now extends EventEmitter {
           'GET /v2/now/deployments',
           this._fetch('/v2/now/deployments' + query)
         )
+
+        stopSpinner()
 
         if (res.status === 200) {
           // What we want
@@ -423,6 +430,7 @@ module.exports = class Now extends EventEmitter {
 
   async listInstances(deploymentId) {
     const { time } = this._output
+    const stopSpinner = wait('Listing instances')
 
     const { instances } = await this.retry(
       async bail => {
@@ -430,6 +438,8 @@ module.exports = class Now extends EventEmitter {
           `/deployments/${deploymentId}/instances`,
           this._fetch(`/now/deployments/${deploymentId}/instances`)
         )
+
+        stopSpinner()
 
         if (res.status === 200) {
           // What we want
@@ -490,6 +500,7 @@ module.exports = class Now extends EventEmitter {
     { instanceId, types, limit, query, since, until } = {}
   ) {
     const { time } = this._output
+    const stopSpinner = wait(`Fetching logs for ${deploymentIdOrURL}`)
 
     const q = qs.stringify({
       instanceId,
@@ -507,6 +518,8 @@ module.exports = class Now extends EventEmitter {
         )}/logs?${q}`
 
         const res = await time('GET /logs', this._fetch(url))
+
+        stopSpinner()
 
         if (res.status === 200) {
           // What we want
@@ -530,12 +543,15 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listAliases(deploymentId) {
+    const stopSpinner = wait(`Fetching aliases for deployment ${deploymentId}`)
     const { aliases } = await this.retry(async bail => {
       const res = await this._fetch(
         deploymentId
           ? `/now/deployments/${deploymentId}/aliases`
           : '/now/aliases'
       )
+
+      stopSpinner()
 
       if (res.status === 200) {
         // What we want
@@ -572,12 +588,15 @@ module.exports = class Now extends EventEmitter {
 
   async listDomains() {
     const { time } = this._output
+    const stopSpinner = wait('Listing domains')
 
     const { domains } = await this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /domains`,
         this._fetch('/domains')
       )
+
+      stopSpinner()
 
       if (res.status === 200) {
         // What we want
@@ -596,12 +615,15 @@ module.exports = class Now extends EventEmitter {
 
   async getDomain(domain) {
     const { time } = this._output
+    const stopSpinner = wait(`Fetching domain ${domain}`)
 
     return this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /domains/${domain}`,
         this._fetch(`/domains/${domain}`)
       )
+
+      stopSpinner()
 
       if (res.status === 200) {
         // What we want
@@ -618,12 +640,15 @@ module.exports = class Now extends EventEmitter {
 
   async getNameservers(domain) {
     const { time } = this._output
+    const stopSpinner = wait(`Getting nameservers for domain ${domain}`)
 
     const body = await this.retry(async (bail, attempt) => {
       const res = await time(
         `#${attempt} GET /whois-ns`,
         this._fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`)
       )
+
+      stopSpinner()
 
       const body = await res.json()
 
@@ -648,6 +673,7 @@ module.exports = class Now extends EventEmitter {
   // _ensures_ the domain is setup (idempotent)
   setupDomain(name, { isExternal } = {}) {
     const { debug, time } = this._output
+    const stopSpinner = wait(`Setting up domain ${name}`)
 
     return this.retry(async (bail, attempt) => {
       const res = await time(
@@ -657,6 +683,8 @@ module.exports = class Now extends EventEmitter {
           body: { name, isExternal: Boolean(isExternal) }
         })
       )
+
+      stopSpinner()
 
       const body = await res.json()
 
@@ -695,6 +723,7 @@ module.exports = class Now extends EventEmitter {
 
   createCert(domain, { renew, overwriteCustom } = {}) {
     const { log, time } = this._output
+    const stopSpinner = wait(`Creating certificate for domain ${domain}`)
 
     return this.retry(
       async (bail, attempt) => {
@@ -709,6 +738,8 @@ module.exports = class Now extends EventEmitter {
             }
           })
         )
+
+        stopSpinner()
 
         if (res.status === 304) {
           log('Certificate already issued.')
@@ -754,6 +785,7 @@ module.exports = class Now extends EventEmitter {
 
   deleteCert(domain) {
     const { time } = this._output
+    const stopSpinner = wait(`Deleting certificate for domain ${domain}`)
 
     return this.retry(
       async (bail, attempt) => {
@@ -763,6 +795,8 @@ module.exports = class Now extends EventEmitter {
             method: 'DELETE'
           })
         )
+
+        stopSpinner()
 
         if (res.status !== 200) {
           const err = new Error(res.body.error.message)
@@ -782,6 +816,7 @@ module.exports = class Now extends EventEmitter {
   async remove(deploymentId, { hard }) {
     const { time } = this._output
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`
+    const stopSpinner = wait(`Removing deplyoment ${deploymentId}`)
 
     await this.retry(async bail => {
       const res = await time(
@@ -790,6 +825,8 @@ module.exports = class Now extends EventEmitter {
           method: 'DELETE'
         })
       )
+
+      stopSpinner()
 
       if (res.status === 200) {
         // What we want
