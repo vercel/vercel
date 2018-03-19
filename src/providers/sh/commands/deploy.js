@@ -77,9 +77,7 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
+      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       ls | list            [app]       List deployments
       rm | remove          [id]        Remove a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
