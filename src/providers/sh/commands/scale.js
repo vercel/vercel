@@ -2,21 +2,19 @@
 
 // Packages
 const chalk = require('chalk')
-const mri = require('mri')
+const arg = require('mri')
 
 // Utilities
-const { handleError, error } = require('../util/error')
+const { handleError } = require('../util/error')
+const cmd = require('../../../util/output/cmd')
+const createOutput = require('../../../util/output')
 const NowScale = require('../util/scale')
-const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
+const argCommon = require('../util/arg-common')()
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now scale`)} <url> <min> [max]
-
-  ${chalk.dim('Commands:')}
-
-    ls    List the scaling information for all deployments
+  ${chalk.bold(`${logo} now scale`)} <url> [dc] <min> [max]
 
   ${chalk.dim('Options:')}
 
@@ -57,40 +55,51 @@ const help = () => {
   `)
 }
 
-// Options
-let argv
-let debug
-let apiUrl
+module.exports = async function main (ctx) {
+  let id // Deployment Id or URL
+  let dcs // Target DCs
+  let min = 1 // Minimum number of instances
+  let max = 'auto' // Maximum number of instances
 
-let id // Deployment Id or URL
-let dcs // Target DCs
-let min = 1 // Minimum number of instances
-let max = 'auto' // Maximum number of instances
+  let argv;
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug'],
-    alias: {
-      help: 'h',
-      debug: 'd'
-    }
-  })
+  try {
+    argv = arg(ctx.argv.slice(2), argCommon)
+  } catch (err) {
+    handleError(err)
+    return 1;
+  }
 
-  apiUrl = ctx.apiUrl
-  debug = argv.debug
+  argv._ = argv._.slice(1)
 
-  argv._ = argv._.slice(1).map(arg => {
+  const debugEnabled = argv['--debug']
+  const { error, debug } = createOutput({ debug: debugEnabled })
+
+  if (!argv._.length) {
+    error(`${cmd('now scale')} expects at least two arguments`)
+    help();
+    return 1;
+  }
+
+  const apiUrl = ctx.apiUrl
+
+  argv._ = argv._.map(arg => {
     return isNaN(arg) ? arg : parseInt(arg)
   })
 
   id = argv._[0]
+
+  if (id === 'ls') {
+    error(`${cmd('now scale ls')} has been deprecated. Use ${cmd('now ls')} and ${cmd('now inspect <url>')}`, 'scale-ls')
+    return 1
+  }
 
   if (typeof !argv._[0] === 'string') {
     dcs = argv._[0].split(',')
     argv._.pop()
   }
 
-  if (Number.isInteger(argv._1[0])) {
+  if (Number.isInteger(argv._[0])) {
     min = Number(argv._[0])
   }
   if (Number.isInteger(argv._[1])) {
@@ -99,45 +108,14 @@ const main = async ctx => {
 
   if (argv.help) {
     help()
-    await exit(0)
+    return 2;
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
+  const { currentTeam } = sh;
 
-  try {
-    await run({ token, sh })
-  } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message))
-    } else {
-      console.error(error(`Unknown error: ${err}\n${err.stack}`))
-    }
-
-    exit(1)
-  }
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-}
-
-async function run({ token, sh: { currentTeam } }) {
   const scale = new NowScale({ apiUrl, token, debug, currentTeam })
-
-  if (id === 'ls') {
-    console.error(error(`\`now scale ls\` has been deprecated. Use \`now ls\` and \`now inspect <url>\``))
-    process.exit(1)
-  } else if (!id) {
-    console.error(error('Please specify a deployment: now scale <url> [dc] <min> [max]'))
-    help()
-    exit(1)
-  }
 
   const deployment = await scale.findDeployment(id)
 
@@ -146,7 +124,7 @@ async function run({ token, sh: { currentTeam } }) {
     !(Number.isInteger(max) || max === 'auto')
   ) {
     help()
-    return exit(1)
+    return 1
   }
 
   const scaleArgs = {}
@@ -161,8 +139,3 @@ async function run({ token, sh: { currentTeam } }) {
 
   scale.close()
 }
-
-process.on('uncaughtException', err => {
-  handleError(err)
-  exit(1)
-})
