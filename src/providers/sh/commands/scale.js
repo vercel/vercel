@@ -11,6 +11,7 @@ const createOutput = require('../../../util/output')
 const NowScale = require('../util/scale')
 const logo = require('../../../util/output/logo')
 const argCommon = require('../util/arg-common')()
+const { isValidRegionOrDcId } = require('../util/dcs')
 
 const help = () => {
   console.log(`
@@ -68,8 +69,15 @@ module.exports = async function main (ctx) {
 
   argv._ = argv._.slice(1)
 
+  const apiUrl = ctx.apiUrl
   const debugEnabled = argv['--debug']
   const { error, debug } = createOutput({ debug: debugEnabled })
+
+  // `now scale ls` has been deprecated
+  if (id === argv._[0]) {
+    error(`${cmd('now scale ls')} has been deprecated. Use ${cmd('now ls')} and ${cmd('now inspect <url>')}`, 'scale-ls')
+    return 1
+  }
 
   if (argv._.length < 2) {
     error(`${cmd('now scale <dc> <url> [min] [max]')} expects at least two arguments`)
@@ -77,17 +85,18 @@ module.exports = async function main (ctx) {
     return 1;
   }
 
-  const apiUrl = ctx.apiUrl
-
   argv._ = argv._.map(arg => {
     return isNaN(arg) ? arg : parseInt(arg)
   })
 
   id = argv._[0]
+  dcs = argv._[1].split(',')
 
-  if (id === 'ls') {
-    error(`${cmd('now scale ls')} has been deprecated. Use ${cmd('now ls')} and ${cmd('now inspect <url>')}`, 'scale-ls')
-    return 1
+  for (const dc of dcs) {
+    if ('all' !== dc && isValidRegionOrDcId(dc)) {
+      error(`The region or DC "${dc}" is invalid.`)
+      return 1;
+    }
   }
 
   if (typeof !argv._[0] === 'string') {
