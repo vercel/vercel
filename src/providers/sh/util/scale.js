@@ -82,8 +82,6 @@ module.exports = class Scale extends Now {
             `Error occurred while scaling. Please try again later`
           )
         }
-
-        return body
       },
       {
         retries: 5,
