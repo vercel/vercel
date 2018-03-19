@@ -15,8 +15,11 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     log(chalk`{yellow.bold Warning!} ${v}`)
   }
 
-  function error(v) {
+  function error(v, slug = null) {
     log(chalk`{red.bold Error!} ${v}`, chalk.red)
+    if (slug !== null) {
+      log(`More details: https://err.sh/now-cli/${slug}`)
+    }
   }
 
   function debug(v) {

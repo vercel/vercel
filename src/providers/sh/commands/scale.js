@@ -14,7 +14,7 @@ const argCommon = require('../util/arg-common')()
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now scale`)} <url> [dc] <min> [max]
+  ${chalk.bold(`${logo} now scale`)} <url> <dc> [min] [max]
 
   ${chalk.dim('Options:')}
 
@@ -33,25 +33,21 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Scale a deployment to 3 instances (never sleeps)
+  ${chalk.gray('–')} Enable your deployment in all datacenters (min: 0, max: 1)
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 3')}
+    ${chalk.cyan('$ now scale my-deployment-123.now.sh all')}
 
-  ${chalk.gray('–')} Set a deployment to scale automatically between 1 and 5 instances
+  ${chalk.gray('-')} Enable your deployment in the SFO datacenter (min: 0, max: 1)
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 5')}
+    ${chalk.cyan('$ now scale my-deployment-123.now.sh sfo')}
 
-  ${chalk.gray(
-    '–'
-  )} Set a deployment to scale until your plan limit, but at least 1 instance
+  ${chalk.gray('–')} Scale a deployment in all datacenters to 3 instances at all times (no sleep)
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh 1 auto')}
+    ${chalk.cyan('$ now scale my-deployment-123.now.sh all 3')}
 
-  ${chalk.gray(
-    '–'
-  )} Set a deployment to scale up and down without limits
+  ${chalk.gray('–')} Enable your deployment in all datacenters, with auto-scaling
 
-    ${chalk.cyan('$ now scale my-deployment-ntahoeato.now.sh auto')}
+    ${chalk.cyan('$ now scale my-deployment-123.now.sh all auto')}
   `)
 }
 
@@ -75,8 +71,8 @@ module.exports = async function main (ctx) {
   const debugEnabled = argv['--debug']
   const { error, debug } = createOutput({ debug: debugEnabled })
 
-  if (!argv._.length) {
-    error(`${cmd('now scale')} expects at least two arguments`)
+  if (argv._.length < 2) {
+    error(`${cmd('now scale <dc> <url> [min] [max]')} expects at least two arguments`)
     help();
     return 1;
   }
