@@ -33,9 +33,7 @@ const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
-
-const REGIONS = new Set(["sfo", "bru"]);
-const DCS = new Set(["sfo1", "bru1"]);
+const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -495,6 +493,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
+    let dcIds = [];
+
     if (regions.length) {
       if (Object.keys(scale).length) {
         error(
@@ -504,16 +504,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         await exit(1)
       }
 
-      for (const r of regions) {
-        if (!isValidRegionOrDcId(r)) {
+      try {
+        dcIds = normalizeRegionsList(regions);
+      } catch (err) {
+        if (err.code === 'INVALID_ID') {
           error(
-            `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
+            `The value "${err.id}" in \`--regions\` is not a valid region or DC identifier`,
             'deploy-invalid-dc'
           )
           await exit(1)
+        } else if (err.code === 'INVALID_ALL') {
+          error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
+          await exit(1)
+        } else {
+          throw err;
         }
+      }
 
-        scale[getDcId(r)] = { min: 0, max: 1 }
+      for (const dcId of dcIds) {
+        scale[dcId] = { min: 0, max: 1 }
       }
     }
 
@@ -1037,19 +1046,6 @@ function printLogs({ url, scale = {} } = {}, token) {
 
     await exit()
   })
-}
-
-// if supplied with a region (eg: `sfo`) it returns
-// the default dc for it (`sfo1`)
-// if supplied with a dc id, it just returns it
-function getDcId(r: string) {
-  return /\d$/.test(r) ? r : `${r}1`
-}
-
-// determines if the supplied string is a valid
-// region name or dc id
-function isValidRegionOrDcId(r: string) {
-  return REGIONS.has(r) || DCS.has(r);
 }
 
 module.exports = main
