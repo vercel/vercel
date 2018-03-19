@@ -3,16 +3,12 @@
 // Packages
 const chalk = require('chalk')
 const mri = require('mri')
-const ms = require('ms')
-const printf = require('printf')
-const supportsColor = require('supports-color')
 
 // Utilities
 const { handleError, error } = require('../util/error')
 const NowScale = require('../util/scale')
 const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
-const info = require('../util/scale-info')
 
 const help = () => {
   console.log(`
@@ -66,9 +62,10 @@ let argv
 let debug
 let apiUrl
 
-let id
-let scaleArg
-let optionalScaleArg
+let id // Deployment Id or URL
+let dcs // Target DCs
+let min = 1 // Minimum number of instances
+let max = 'auto' // Maximum number of instances
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -79,15 +76,26 @@ const main = async ctx => {
     }
   })
 
+  apiUrl = ctx.apiUrl
+  debug = argv.debug
+
   argv._ = argv._.slice(1).map(arg => {
     return isNaN(arg) ? arg : parseInt(arg)
   })
 
   id = argv._[0]
-  scaleArg = argv._[1]
-  optionalScaleArg = argv._[2]
-  apiUrl = ctx.apiUrl
-  debug = argv.debug
+
+  if (typeof !argv._[0] === 'string') {
+    dcs = argv._[0].split(',')
+    argv._.pop()
+  }
+
+  if (Number.isInteger(argv._1[0])) {
+    min = Number(argv._[0])
+  }
+  if (Number.isInteger(argv._[1])) {
+    max = Number(argv._[1])
+  }
 
   if (argv.help) {
     help()
@@ -119,40 +127,19 @@ module.exports = async ctx => {
   }
 }
 
-const guessParams = () => {
-  if (Number.isInteger(scaleArg) && !optionalScaleArg) {
-    return { min: scaleArg, max: scaleArg }
-  } else if (Number.isInteger(scaleArg) && Number.isInteger(optionalScaleArg)) {
-    return { min: scaleArg, max: optionalScaleArg }
-  } else if (Number.isInteger(scaleArg) && optionalScaleArg === 'auto') {
-    return { min: scaleArg, max: 'auto' }
-  } else if (
-    (!scaleArg && !optionalScaleArg) ||
-    (scaleArg === 'auto' && !optionalScaleArg)
-  ) {
-    return { min: 1, max: 'auto' }
-  }
-
-  help()
-  process.exit(1)
-}
-
 async function run({ token, sh: { currentTeam } }) {
   const scale = new NowScale({ apiUrl, token, debug, currentTeam })
 
   if (id === 'ls') {
-    await list(scale)
-    process.exit(0)
+    console.error(error(`\`now scale ls\` has been deprecated. Use \`now ls\` and \`now inspect <url>\``))
+    process.exit(1)
   } else if (!id) {
-    console.error(error('Please specify a deployment: now scale <url> <min> [max]'))
+    console.error(error('Please specify a deployment: now scale <url> [dc] <min> [max]'))
     help()
     exit(1)
   }
 
   const deployment = await scale.findDeployment(id)
-  const { min, max } = guessParams()
-  // TODO parametrize
-  const dc = 'sfo1'
 
   if (
     !(Number.isInteger(min) || min === 'auto') &&
@@ -162,123 +149,17 @@ async function run({ token, sh: { currentTeam } }) {
     return exit(1)
   }
 
-  console.log(await scale.setScale(deployment.uid, {
-    [dc]: {
+  const scaleArgs = {}
+  for (const dc of dcs) {
+    scaleArgs[dc] = {
       min,
       max
     }
-  }))
+  }
 
-  await info(scale, deployment.host)
+  await scale.setScale(deployment.uid, scaleArgs)
 
   scale.close()
-}
-
-async function list(scale) {
-  let deployments
-  try {
-    const app = argv._[1]
-    deployments = await scale.list(app)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-
-  scale.close()
-
-  const apps = new Map()
-
-  for (const dep of deployments) {
-    const deps = apps.get(dep.name) || []
-    apps.set(dep.name, deps.concat(dep))
-  }
-
-  const timeNow = new Date()
-  const urlLength =
-    deployments.reduce((acc, i) => {
-      return Math.max(acc, (i.url && i.url.length) || 0)
-    }, 0) + 5
-
-  for (const app of apps) {
-    const depls = argv.all ? app[1] : app[1].slice(0, 5)
-    console.log(
-      `${chalk.bold(app[0])} ${chalk.gray(
-        '(' + depls.length + ' of ' + app[1].length + ' total)'
-      )}`
-    )
-    console.log()
-    const urlSpec = `%-${urlLength}s`
-    console.log(
-      printf(
-        ` ${chalk.grey(urlSpec + '  %8s %8s %8s %8s %8s')}`,
-        'url',
-        'cur',
-        'min',
-        'max',
-        'auto',
-        'age'
-      )
-    )
-    for (const instance of depls) {
-      if (!instance.scale) {
-        let spec
-        if (supportsColor) {
-          spec = ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`
-        } else {
-          spec = ` %-${urlLength + 1}s %8s %8s %8s %8s %8s`
-        }
-        const infinite = '∞'
-        console.log(
-          printf(
-            spec,
-            chalk.underline(instance.url),
-            infinite,
-            1,
-            infinite,
-            '✔',
-            ms(timeNow - instance.created)
-          )
-        )
-      } else if (instance.scale.current > 0) {
-        let spec
-        if (supportsColor) {
-          spec = ` %-${urlLength + 10}s %8s %8s %8s %8s %8s`
-        } else {
-          spec = ` %-${urlLength + 1}s %8s %8s %8s %8s %8s`
-        }
-        console.log(
-          printf(
-            spec,
-            chalk.underline(instance.url),
-            instance.scale.current,
-            instance.scale.min,
-            instance.scale.max,
-            instance.scale.max === instance.scale.min ? '✖' : '✔',
-            ms(timeNow - instance.created)
-          )
-        )
-      } else {
-        let spec
-        if (supportsColor) {
-          spec = ` %-${urlLength + 10}s ${chalk.gray('%8s %8s %8s %8s %8s')}`
-        } else {
-          spec = ` %-${urlLength + 1}s ${chalk.gray('%8s %8s %8s %8s %8s')}`
-        }
-        console.log(
-          printf(
-            spec,
-            chalk.underline(instance.url),
-            instance.scale.current,
-            instance.scale.min,
-            instance.scale.max,
-            instance.scale.max === instance.scale.min ? '✖' : '✔',
-            ms(timeNow - instance.created)
-          )
-        )
-      }
-    }
-    console.log()
-  }
 }
 
 process.on('uncaughtException', err => {
