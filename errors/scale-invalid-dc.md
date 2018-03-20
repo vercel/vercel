@@ -2,13 +2,13 @@
 
 #### Why This Error Occurred
 
-When supplying `regions` or `scale` settings, you
-used an unknown or invalid dc identifier.
+When supplying a region or DC identifier in `now scale`,
+we weren't able to recognize the value as valid.
 
 #### Possible Ways to Fix It
 
-Check your `now.json` or `--regions` flag and
-make sure you are using a valid string. Regions
+Check your `now scale` command make sure you are using a
+valid string after the URL. Regions
 and DCs have to be in *lowercase*.
 
 **Valid region identifiers**:
@@ -25,9 +25,8 @@ and `bru1` dc identifiers before being sent to our APIs.
 - `sfo1`
 - `bru1`
 
-When passing multiple `--regions` as a CLI parameter,
-make sure they're separated by a comma (`,`). For example:
+To pass multiple ones, use a comma:
 
-```console
-now --regions sfo,bru
+```
+now scale my-url-123.now.sh sfo,bru 1 5
 ```
