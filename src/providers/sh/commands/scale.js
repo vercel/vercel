@@ -2,8 +2,10 @@
 // @flow
 
 // Packages
+const ms = require('ms');
 const chalk = require('chalk')
 const arg = require('arg')
+const sleep = require('then-sleep');
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -70,7 +72,11 @@ module.exports = async function main (ctx) {
   let argv;
 
   try {
-    argv = arg(ctx.argv.slice(3), argCommon)
+    argv = arg(ctx.argv.slice(3), {
+      ...argCommon,
+      '--no-verify': Boolean,
+      '-n': '--no-verify'
+    })
   } catch (err) {
     handleError(err)
     return 1;
@@ -246,8 +252,44 @@ module.exports = async function main (ctx) {
   }
 
   success(`Deployment scale settings updated ${chalk.gray(`[${Date.now() - startScale}ms]`)}`);
+
+  if (argv['--no-verify']) {
+    debug('skip verification');
+    return 0;
+  }
+
+  const cancelVerifyWait = wait(`Waiting for instances to match constraints [optional]`)
+  const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
+
+  try {
+    await waitForScale(now, deployment.uid, scaleArgs);
+    cancelVerifyWait()
+  } catch (err) {
+    cancelVerifyWait()
+    throw err
+  } finally {
+    cancelExit();
+  }
+
   now.close();
   return 0;
+}
+
+// invokes the passed function upon process exit
+function onExit(fn: Function) {
+  let exit = false;
+
+  const onExit_ = () => {
+    if (exit) return;
+    fn();
+    exit = true;
+  }
+
+  return () => {
+    process.removeListener('SIGTERM', onExit_);
+    process.removeListener('SIGINT', onExit_);
+    process.removeListener('exit', onExit_);
+  }
 }
 
 function setScale(now, deploymentId, scale) {
@@ -258,6 +300,21 @@ function setScale(now, deploymentId, scale) {
       body: scale
     }
   )
+}
+
+async function waitForScale(now, deploymentId, scale) {
+  const start = Date.now()
+  const MAX = ms('5m');
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (start + MAX <= Date.now()) {
+      throw new Error('Timeout while verifying instance count (10m)');
+    }
+    const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
+    console.log('unimplemented',data,scale);
+    await sleep(1000);
+  }
 }
 
 // whether it's a numeric or "auto"
