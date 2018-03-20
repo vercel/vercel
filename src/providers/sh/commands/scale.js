@@ -14,6 +14,7 @@ const Now = require('../util/')
 const logo = require('../../../util/output/logo')
 const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
+const { tick } = require('../../../util/output/chars')
 const { normalizeRegionsList } = require('../util/dcs')
 const { handleError } = require('../util/error')
 
@@ -92,7 +93,8 @@ module.exports = async function main (ctx) {
 
   const apiUrl = ctx.apiUrl
   const debugEnabled = argv['--debug']
-  const { log, success, error, debug } = createOutput({ debug: debugEnabled })
+  const output = createOutput({ debug: debugEnabled })
+  const { log, success, error, debug } = output;
 
   // extract the first parameter
   id = argv._[0]
@@ -266,7 +268,7 @@ module.exports = async function main (ctx) {
     return 0;
   }
 
-  const cancelVerifyWait = wait(`Waiting for instances to match constraints [optional]`)
+  const cancelVerifyWait = waitDcs(scaleArgs, output)
   const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
 
   try {
@@ -274,7 +276,14 @@ module.exports = async function main (ctx) {
       now,
       deployment.uid,
       scaleArgs,
-      ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m')
+      output,
+      {
+        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
+        checkInterval: 1000,
+        onDCScaled(id, instanceCount) {
+          cancelVerifyWait(id, instanceCount);
+        }
+      }
     );
     cancelVerifyWait()
   } catch (err) {
@@ -286,6 +295,29 @@ module.exports = async function main (ctx) {
 
   now.close();
   return 0;
+}
+
+// version of wait() that also displays progress
+// for all dcs
+function waitDcs(scaleArgs, { log }) {
+  let cancelMainWait;
+  const remaining = new Set(Object.keys(scaleArgs));
+  const renderWait = () => {
+    cancelMainWait = wait(`Waiting for instances in ${
+      Array.from(remaining).map(id => chalk.bold(id)).join(', ')
+    } to match constraints [optional]`)
+  }
+  renderWait();
+  return (dcId = null, instanceCount = null) => {
+    if (dcId !== null && instanceCount !== null) {
+      remaining.delete(dcId);
+      cancelMainWait();
+      log(`${chalk.cyan(tick)} ${chalk.bold(dcId)} (${instanceCount})`);
+      renderWait();
+    } else {
+      cancelMainWait();
+    }
+  }
 }
 
 // invokes the passed function upon process exit
@@ -315,17 +347,44 @@ function setScale(now, deploymentId, scale) {
   )
 }
 
-async function waitForScale(now, deploymentId, scale, timeout: number) {
+async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('5m'), checkInterval = 1000, onDCScaled = null } = {}) {
   const start = Date.now()
+  const intendedScaleDcs = new Set(Object.keys(intendedScale));
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (start + timeout <= Date.now()) {
       throw new Error('Timeout while verifying instance count (10m)');
     }
+
     const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
-    console.log('unimplemented',data,scale);
-    await sleep(1000);
+
+    for (const dc of intendedScaleDcs) {
+      const currentScale = data[dc];
+
+      if (!currentScale) {
+        debug(`missing data for dc ${dc}`)
+        break;
+      }
+
+      const instanceCount = data[dc].instances.length;
+      const { min, max } = intendedScale[dc];
+      if (instanceCount >= min && instanceCount <= max) {
+        if (onDCScaled !== null) {
+          onDCScaled(dc, instanceCount);
+        }
+        intendedScaleDcs.delete(dc);
+        debug(`dc "${dc}" match`);
+      } else {
+        debug(`dc "${dc}" miss. intended: ${min}-${max}. current: ${instanceCount}`);
+      }
+    }
+
+    if (intendedScaleDcs.size === 0) {
+      return;
+    }
+
+    await sleep(checkInterval);
   }
 }
 
