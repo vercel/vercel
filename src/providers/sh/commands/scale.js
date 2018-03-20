@@ -210,7 +210,6 @@ module.exports = async function main (ctx) {
     }
   }
 
-  console.log(deployment)
   log(`Fetched deployment "${deployment.url}" ${chalk.gray(`[${Date.now() - depFetchStart}ms]`)}`);
 
   if (deployment.type === TYPE_STATIC) {

@@ -914,7 +914,6 @@ module.exports = class Now extends EventEmitter {
       }
       const res = await this._fetch(url, opts)
       if (res.ok) {
-        console.log(res.headers.get('content-type'))
         return false === opts.json ? res :
           res.headers.get('content-type').includes('application/json')
             ? res.json()
