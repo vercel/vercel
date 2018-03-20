@@ -17,6 +17,7 @@ const wait = require('../../../util/output/wait')
 const { tick } = require('../../../util/output/chars')
 const { normalizeRegionsList } = require('../util/dcs')
 const { handleError } = require('../util/error')
+const exit = require('../../../util/exit')
 
 // the "auto" value for scaling
 const AUTO = 'auto'
@@ -273,7 +274,11 @@ module.exports = async function main (ctx) {
   } else {
     const startVerification = Date.now()
     const cancelVerifyWait = waitDcs(scaleArgs, output)
-    const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
+    const cancelExit = onExit(() => {
+      cancelVerifyWait();
+      log('Verification aborted. Scale settings were saved')
+      exit(0);
+    });
 
     try {
       await waitForScale(
@@ -336,6 +341,10 @@ function onExit(fn: Function) {
     fn();
     exit = true;
   }
+
+  process.on('SIGTERM', onExit_);
+  process.on('SIGINT', onExit_);
+  process.on('exit', onExit_);
 
   return () => {
     process.removeListener('SIGTERM', onExit_);
