@@ -312,7 +312,7 @@ function waitDcs(scaleArgs, { log }) {
   const renderWait = () => {
     cancelMainWait = wait(`Waiting for instances in ${
       Array.from(remaining).map(id => chalk.bold(id)).join(', ')
-    } to match constraints [optional]`)
+    } to match constraints`)
   }
   renderWait();
   return (dcId = null, instanceCount = null) => {
