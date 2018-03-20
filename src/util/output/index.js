@@ -25,6 +25,10 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
+  function success(v) {
+    print(`${chalk.cyan('> Success')} ${v}\n`);
+  }
+
   function debug(v) {
     if (debugEnabled) log(chalk`{bold [debug]} ${v}`)
   }
@@ -53,6 +57,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     log,
     warn,
     error,
+    success,
     debug,
     time
   }
