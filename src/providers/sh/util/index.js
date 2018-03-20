@@ -20,11 +20,11 @@ const {
   docker: getDockerFiles
 } = require('./get-files')
 const Agent = require('./agent')
-const { responseError } = require('./error')
 const ua = require('./ua')
 const hash = require('./hash')
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
+const { responseError } = require('./error')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -470,7 +470,7 @@ module.exports = class Now extends EventEmitter {
           // No retry on 4xx
           if (res.status >= 400 && res.status < 500) {
             debug(`Bailing on getting a deployment due to ${res.status}`)
-            return bail(await responseError(res))
+            return bail(await responseError(res, `Failed to resolve deployment "${id}"`))
           }
 
           if (res.status !== 200) {
@@ -497,7 +497,7 @@ module.exports = class Now extends EventEmitter {
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
           debug(`Bailing on getting a deployment due to ${res.status}`)
-          return bail(await responseError(res))
+          return bail(await responseError(res, `Failed to resolve deployment "${id}"`))
         }
 
         if (res.status !== 200) {
@@ -892,6 +892,42 @@ module.exports = class Now extends EventEmitter {
     opts.headers['user-agent'] = ua
 
     return this._agent.fetch(_url, opts)
+  }
+
+  // public retry with built-in retrying that can be
+  // used from external utilities. it optioanlly
+  // receives a `retry` object in the opts that is
+  // passed to the retry utility
+  // it accepts a `json` option, which defaults to `true`
+  // which automatically returns the json response body
+  // if the response is ok and content-type json
+  // it does the same for JSON` body` in opts
+  async fetch(url, opts = {}) {
+    return this.retry(async (bail) => {
+      if (false !== opts.json && opts.body && 'object' == typeof opts.body) {
+        opts = Object.assign({}, opts, {
+          body: JSON.stringify(opts.body),
+          headers: Object.assign({}, opts.headers, {
+            'Content-Type': 'application/json'
+          })
+        })
+      }
+      const res = await this._fetch(url, opts)
+      if (res.ok) {
+        console.log(res.headers.get('content-type'))
+        return false === opts.json ? res :
+          res.headers.get('content-type').includes('application/json')
+            ? res.json()
+            : res
+      } else {
+        const err = await responseError(res);
+        if (res.status >= 400 && res.status < 500) {
+          return bail(err)
+        } else {
+          throw err;
+        }
+      }
+    }, opts.retry)
   }
 
   async getPlanMax() {
