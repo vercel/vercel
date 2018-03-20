@@ -26,7 +26,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function success(v) {
-    print(`${chalk.cyan('> Success')} ${v}\n`);
+    print(`${chalk.cyan('> Success!')} ${v}\n`);
   }
 
   function debug(v) {
