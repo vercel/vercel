@@ -127,12 +127,12 @@ module.exports = async function main (ctx) {
   let dcIdOrMin = argv._[1];
 
   if (isMinOrMaxArgument(dcIdOrMin)) {
-    min = toMinOrMax(dcIdOrMin)
+    min = toMin(dcIdOrMin)
 
     const maybeMax = argv._[2];
     if (maybeMax !== undefined) {
       if (isMinOrMaxArgument(maybeMax)) {
-        max = toMinOrMax(maybeMax);
+        max = toMax(maybeMax);
       } else {
         error(`Expected "${maybeMax}" to be a <max> argument, but it's not numeric or "auto" (<min> was supplied as "${min}")`)
         return 1
@@ -181,7 +181,7 @@ module.exports = async function main (ctx) {
   if (min === null) {
     if (argv._[2] != null) {
       if (isMinOrMaxArgument(argv._[2])) {
-        min = toMinOrMax(argv._[2]);
+        min = toMin(argv._[2]);
       } else {
         error(`Invalid <min> parameter "${argv._[2]}". A number or "auto" were expected`);
         return 1;
@@ -189,7 +189,7 @@ module.exports = async function main (ctx) {
 
       if (argv._[3] != null) {
         if (isMinOrMaxArgument(argv._[3])) {
-          max = toMinOrMax(argv._[3]);
+          max = toMax(argv._[3]);
         } else {
           error(`Invalid <max> parameter "${argv._[3]}". A number or "auto" were expected`);
           return 1;
@@ -268,29 +268,36 @@ module.exports = async function main (ctx) {
     return 0;
   }
 
-  const cancelVerifyWait = waitDcs(scaleArgs, output)
-  const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
+  if (argv['--no-verify']) {
+    log('Skipped verification. Scale settings were saved successfully.');
+  } else {
+    const startVerification = Date.now()
+    const cancelVerifyWait = waitDcs(scaleArgs, output)
+    const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
 
-  try {
-    await waitForScale(
-      now,
-      deployment.uid,
-      scaleArgs,
-      output,
-      {
-        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
-        checkInterval: 1000,
-        onDCScaled(id, instanceCount) {
-          cancelVerifyWait(id, instanceCount);
+    try {
+      await waitForScale(
+        now,
+        deployment.uid,
+        scaleArgs,
+        output,
+        {
+          timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
+          checkInterval: 1000,
+          onDCScaled(id, instanceCount) {
+            cancelVerifyWait(id, instanceCount);
+          }
         }
-      }
-    );
-    cancelVerifyWait()
-  } catch (err) {
-    cancelVerifyWait()
-    throw err
-  } finally {
-    cancelExit();
+      );
+      cancelVerifyWait()
+    } catch (err) {
+      cancelVerifyWait()
+      throw err
+    } finally {
+      cancelExit();
+    }
+
+    success(`Verification succeeded ${chalk.gray(`[${Date.now() - startVerification}ms]`)}`);
   }
 
   now.close();
@@ -347,6 +354,8 @@ function setScale(now, deploymentId, scale) {
   )
 }
 
+// waits until the deployment's instances count reflects the intended
+// scale that the user is configuring with the command
 async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('5m'), checkInterval = 1000, onDCScaled = null } = {}) {
   const start = Date.now()
   const intendedScaleDcs = new Set(Object.keys(intendedScale));
@@ -369,7 +378,7 @@ async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeo
 
       const instanceCount = data[dc].instances.length;
       const { min, max } = intendedScale[dc];
-      if (instanceCount >= min && instanceCount <= max) {
+      if (isInstanceCountBetween(instanceCount, min, max)) {
         if (onDCScaled !== null) {
           onDCScaled(dc, instanceCount);
         }
@@ -393,8 +402,25 @@ function isMinOrMaxArgument (v: string) {
   return v === AUTO || isNumeric(v);
 }
 
+function isInstanceCountBetween(v: number, min: number, max: number) {
+  if (v < min) {
+    return false;
+  }
+
+  if (v > (max === AUTO ? Infinity : max)) {
+    return false;
+  }
+
+  return true;
+}
+
+// converts "3" to 3, and "auto" to 0
+function toMin (v: string) {
+  return v === AUTO ? v : Number(v);
+}
+
 // converts "3" to 3, and "auto" to "auto"
-function toMinOrMax (v: string) {
+function toMax (v: string) {
   return v === AUTO ? v : Number(v);
 }
 
