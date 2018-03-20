@@ -11,8 +11,11 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${color('>')} ${v}\n`)
   }
 
-  function warn(v) {
-    log(chalk`{yellow.bold Warning!} ${v}`)
+  function warn(v, slug = null) {
+    log(chalk`{yellow.bold WARN!} ${v}`)
+    if (slug !== null) {
+      log(`More details: https://err.sh/now-cli/${slug}`)
+    }
   }
 
   function error(v, slug = null) {
