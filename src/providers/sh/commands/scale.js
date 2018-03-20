@@ -39,6 +39,7 @@ const help = () => {
     -d, --debug                    Debug mode [off]
     -T, --team                     Set a custom team scope
     -n, --no-verify                Skip step of waiting until instance count meets given constraints
+    -t, --verify-timeout           How long to wait for verification to complete [5m]
 
   ${chalk.dim('Examples:')}
 
@@ -75,7 +76,9 @@ module.exports = async function main (ctx) {
     argv = arg(ctx.argv.slice(3), {
       ...argCommon,
       '--no-verify': Boolean,
-      '-n': '--no-verify'
+      '-n': '--no-verify',
+      '--verify-timeout': String,
+      '-t': '--verify-timeout'
     })
   } catch (err) {
     handleError(err)
@@ -109,6 +112,11 @@ module.exports = async function main (ctx) {
   if (argv._.length > 4) {
     error(`${cmd('now scale <url> <dc> [min] [max]')} expects at most four arguments`)
     help();
+    return 1;
+  }
+
+  if (null != argv['--verify-timeout'] && !Number.isInteger(ms(argv['--verify-timeout']))) {
+    error('Invalid time string for `--verify-timeout`. Should be a number of miliseconds or a string like "3m"');
     return 1;
   }
 
@@ -155,7 +163,7 @@ module.exports = async function main (ctx) {
     if (err.code === 'INVALID_ID') {
       error(
         `The value "${err.id}" in \`--regions\` is not a valid region or DC identifier`,
-        'deploy-invalid-dc'
+        'scale-invalid-dc'
       )
       return 1;
     } else if (err.code === 'INVALID_ALL') {
@@ -262,7 +270,12 @@ module.exports = async function main (ctx) {
   const cancelExit = onExit(() => log('Verification skipped due to process exit, but scale settings saved'));
 
   try {
-    await waitForScale(now, deployment.uid, scaleArgs);
+    await waitForScale(
+      now,
+      deployment.uid,
+      scaleArgs,
+      ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m')
+    );
     cancelVerifyWait()
   } catch (err) {
     cancelVerifyWait()
@@ -302,13 +315,12 @@ function setScale(now, deploymentId, scale) {
   )
 }
 
-async function waitForScale(now, deploymentId, scale) {
+async function waitForScale(now, deploymentId, scale, timeout: number) {
   const start = Date.now()
-  const MAX = ms('5m');
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (start + MAX <= Date.now()) {
+    if (start + timeout <= Date.now()) {
       throw new Error('Timeout while verifying instance count (10m)');
     }
     const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
