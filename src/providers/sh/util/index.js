@@ -192,6 +192,7 @@ module.exports = class Now extends EventEmitter {
           engines,
           scale,
           sessionAffinity,
+          limits: nowConfig.limits,
           atlas
         }
       })
