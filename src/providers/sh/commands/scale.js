@@ -119,6 +119,11 @@ module.exports = async function main (ctx) {
     return 1;
   }
 
+  if (argv['--verify-timeout'] != null && argv['--no-verify']) {
+    error('The options `--verify-timeout` and `--no-verify` cannot be used at once');
+    return 1;
+  }
+
   if (null != argv['--verify-timeout'] && !Number.isInteger(ms(argv['--verify-timeout']))) {
     error('Invalid time string for `--verify-timeout`. Should be a number of miliseconds or a string like "3m"');
     return 1;
@@ -273,45 +278,41 @@ module.exports = async function main (ctx) {
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${chalk.gray(`[${Date.now() - startScale}ms]`)}`);
 
   if (argv['--no-verify']) {
-    debug('skip verification');
+    log('Skipped verification. Scale settings were saved successfully');
     return 0;
   }
 
-  if (argv['--no-verify']) {
-    log('Skipped verification. Scale settings were saved successfully.');
-  } else {
-    const startVerification = Date.now()
-    const cancelVerifyWait = waitDcs(scaleArgs, output)
-    const cancelExit = onExit(() => {
-      cancelVerifyWait();
-      log('Verification aborted. Scale settings were saved')
-      exit(0);
-    });
+  const startVerification = Date.now()
+  const cancelVerifyWait = waitDcs(scaleArgs, output)
+  const cancelExit = onExit(() => {
+    cancelVerifyWait();
+    log('Verification aborted. Scale settings were saved')
+    exit(0);
+  });
 
-    try {
-      await waitForScale(
-        now,
-        deployment.uid,
-        scaleArgs,
-        output,
-        {
-          timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
-          checkInterval: 1000,
-          onDCScaled(id, instanceCount) {
-            cancelVerifyWait(id, instanceCount);
-          }
+  try {
+    await waitForScale(
+      now,
+      deployment.uid,
+      scaleArgs,
+      output,
+      {
+        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
+        checkInterval: 1000,
+        onDCScaled(id, instanceCount) {
+          cancelVerifyWait(id, instanceCount);
         }
-      );
-      cancelVerifyWait()
-    } catch (err) {
-      cancelVerifyWait()
-      throw err
-    } finally {
-      cancelExit();
-    }
-
-    success(`Verification succeeded ${chalk.gray(`[${Date.now() - startVerification}ms]`)}`);
+      }
+    );
+    cancelVerifyWait()
+  } catch (err) {
+    cancelVerifyWait()
+    throw err
+  } finally {
+    cancelExit();
   }
+
+  success(`Verification succeeded ${chalk.gray(`[${Date.now() - startVerification}ms]`)}`);
 
   now.close();
   return 0;
