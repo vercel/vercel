@@ -62,7 +62,7 @@ module.exports = async function main(ctx) {
   let argv
 
   try {
-    argv = arg(ctx.argv.slice(2), {
+    argv = arg(ctx.argv.slice(3), {
       ...argCommon,
       '--all': Boolean,
       '-a': '--all',
@@ -71,8 +71,6 @@ module.exports = async function main(ctx) {
     handleError(err)
     return 1;
   }
-
-  argv._ = argv._.slice(1)
 
   const debugEnabled = argv['--debug']
   const { log, error, debug } = createOutput({ debug: debugEnabled })
