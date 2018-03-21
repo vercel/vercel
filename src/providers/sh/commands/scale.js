@@ -323,6 +323,7 @@ module.exports = async function main (ctx) {
 // for all dcs
 function waitDcs(scaleArgs, { log }) {
   let cancelMainWait;
+  const waitStart = Date.now();
   const remaining = new Set(Object.keys(scaleArgs));
   const renderWait = () => {
     cancelMainWait = wait(`Waiting for instances in ${
@@ -334,7 +335,7 @@ function waitDcs(scaleArgs, { log }) {
     if (dcId !== null && instanceCount !== null) {
       remaining.delete(dcId);
       cancelMainWait();
-      log(`${chalk.cyan(tick)} ${chalk.bold(dcId)} (${instanceCount})`);
+      log(`${chalk.cyan(tick)} ${chalk.bold(dcId)} (${instanceCount}) ${elapsed(Date.now() - waitStart)}`);
       renderWait();
     } else {
       cancelMainWait();
