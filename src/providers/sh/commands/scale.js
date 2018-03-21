@@ -266,7 +266,9 @@ module.exports = async function main (ctx) {
     throw err;
   }
 
-  success(`Deployment scale settings updated ${chalk.gray(`[${Date.now() - startScale}ms]`)}`);
+  success(`Scale rules for ${
+    dcIds.map(d => chalk.bold(d)).join(', ')
+  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${chalk.gray(`[${Date.now() - startScale}ms]`)}`);
 
   if (argv['--no-verify']) {
     debug('skip verification');
