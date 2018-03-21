@@ -196,7 +196,11 @@ module.exports = async function main (ctx) {
           return 1;
         }
       } else {
-        max = AUTO;
+        if (min === AUTO) {
+          max = AUTO;
+        } else {
+          max = min;
+        }
       }
     } else {
       min = 0;
