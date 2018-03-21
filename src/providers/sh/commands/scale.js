@@ -17,6 +17,7 @@ const wait = require('../../../util/output/wait')
 const { tick } = require('../../../util/output/chars')
 const { normalizeRegionsList } = require('../util/dcs')
 const { handleError } = require('../util/error')
+const getContextName = require('../util/get-context-name')
 const exit = require('../../../util/exit')
 
 // the "auto" value for scaling
@@ -211,19 +212,20 @@ module.exports = async function main (ctx) {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
   const { currentTeam } = sh;
+  const contextName = getContextName(sh);
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  const cancelWait = wait(`Fetching deployment "${id}"`);
+  const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
   try {
     deployment = await now.findDeployment(id)
     cancelWait();
   } catch (err) {
     cancelWait();
     if (err.status === 404) {
-      error(`Failed to find deployment "${id}"`)
+      error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
       return 1;
     } else {
       // unexpected
