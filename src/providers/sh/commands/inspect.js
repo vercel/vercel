@@ -1,9 +1,9 @@
-#!/usr/bin/env node
 // @flow
 
 // Packages
 const chalk = require('chalk')
 const arg = require('arg')
+const table = require('text-table')
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -14,6 +14,7 @@ const elapsed = require('../../../util/output/elapsed')
 const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
 const { handleError } = require('../util/error')
+const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
 
 
@@ -65,7 +66,7 @@ module.exports = async function main (ctx) {
   const apiUrl = ctx.apiUrl
   const debugEnabled = argv['--debug']
   const output = createOutput({ debug: debugEnabled })
-  const { log, error } = output;
+  const { print, log, error } = output;
 
   // extract the first parameter
   id = argv._[0]
@@ -89,7 +90,6 @@ module.exports = async function main (ctx) {
 
   try {
     deployment = await now.findDeployment(id)
-    cancelWait();
   } catch (err) {
     cancelWait();
     if (err.status === 404) {

@@ -2740,9 +2740,9 @@ fd-slicer@~1.0.1:
   dependencies:
     pend "~1.2.0"
 
-fetch-h2@0.0.12:
-  version "0.0.12"
-  resolved "https://registry.yarnpkg.com/fetch-h2/-/fetch-h2-0.0.12.tgz#984e43fe69f6ce0663e2176e2041abff98596feb"
+fetch-h2@0.2.5:
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/fetch-h2/-/fetch-h2-0.2.5.tgz#baba771eb3165cb15559cb7dd069c253d9191314"
   dependencies:
     already "0.x"
     callguard "1.x"
