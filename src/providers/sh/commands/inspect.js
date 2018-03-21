@@ -101,8 +101,76 @@ module.exports = async function main (ctx) {
     }
   }
 
+  const [scale/*, events*/] = await Promise.all([
+    caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(deployment.uid)}/instances`)),
+    // caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?type=state,build-start,build-complete,instance-start,instance-stop`)),
+  ])
+
+  cancelWait();
   log(`Fetched deployment "${deployment.url}" ${elapsed(Date.now() - depFetchStart)}`);
 
+  print('\n');
+  print(chalk.bold('  Meta\n'))
+  print(`    ${chalk.dim('name')}\t\t${deployment.name}\n`)
+  print(`    ${chalk.dim('state')}\t\t${stateString(deployment.state)}\n`)
+  print(`    ${chalk.dim('type')}\t\t${deployment.type}\n`)
+  print(`    ${chalk.dim('url')}\t\t\t${deployment.url}\n`)
+  print(`    ${chalk.dim('created')}\t\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
+
+  print('\n');
+  print(chalk.bold('  Scale\n'))
+
+  let exitCode = 0
+
+  if (scale instanceof Error) {
+    error(`Scale information unavailable: ${scale}`);
+    exitCode = 1;
+  } else {
+    const dcs = Object.keys(scale)
+    const t = [['dc', 'min', 'max', 'current'].map(v => chalk.gray(v))];
+    for (const dc of dcs) {
+      const { instances } = scale[dc];
+      const cfg = deployment.scale[dc] || {};
+      t.push([
+        dc,
+        cfg.min || 0,
+        cfg.max || 0,
+        instances.length
+      ])
+    }
+    print(table(t, {
+      align: ['l', 'c', 'c', 'c'],
+      hsep: ' '.repeat(8),
+      stringLength: strlen
+    }).replace(/^(.*)/gm, '    $1') + '\n');
+    print('\n')
+  }
+
   now.close();
-  return 0;
+  return exitCode;
+}
+
+// makes sure the promise never rejects, exposing the error
+// as the resolved value instead
+function caught (p) {
+  return new Promise(r => {
+    p.then(r).catch(r)
+  })
+}
+
+// renders the state string
+function stateString(s: string) {
+  switch (s) {
+    case 'INITIALIZING':
+      return chalk.yellow(s);
+
+    case 'ERROR':
+      return chalk.red(s);
+
+    case 'READY':
+      return s;
+
+    default:
+      return chalk.gray('UNKNOWN')
+  }
 }
