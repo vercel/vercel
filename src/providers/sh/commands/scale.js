@@ -12,6 +12,7 @@ const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
 const Now = require('../util/')
 const logo = require('../../../util/output/logo')
+const elapsed = require('../../../util/output/elapsed')
 const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
 const { tick } = require('../../../util/output/chars')
@@ -238,7 +239,7 @@ module.exports = async function main (ctx) {
     }
   }
 
-  log(`Fetched deployment "${deployment.url}" ${chalk.gray(`[${Date.now() - depFetchStart}ms]`)}`);
+  log(`Fetched deployment "${deployment.url}" ${elapsed(Date.now() - depFetchStart)}`);
 
   if (deployment.type === TYPE_STATIC) {
     error('Scaling rules cannot be set on static deployments');
@@ -275,7 +276,7 @@ module.exports = async function main (ctx) {
 
   success(`Scale rules for ${
     dcIds.map(d => chalk.bold(d)).join(', ')
-  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${chalk.gray(`[${Date.now() - startScale}ms]`)}`);
+  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`);
 
   if (argv['--no-verify']) {
     log('Skipped verification. Scale settings were saved successfully');
@@ -312,7 +313,7 @@ module.exports = async function main (ctx) {
     cancelExit();
   }
 
-  success(`Verification succeeded ${chalk.gray(`[${Date.now() - startVerification}ms]`)}`);
+  success(`Verification succeeded ${elapsed(Date.now() - startVerification)}`);
 
   now.close();
   return 0;

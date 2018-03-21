@@ -14,6 +14,7 @@ const createOutput = require('../../../util/output')
 const { handleError } = require('../util/error')
 const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
+const elapsed = require('../../../util/output/elapsed')
 const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
@@ -156,7 +157,7 @@ module.exports = async function main(ctx) {
   log(
     `${
       plural('total deployment', deployments.length, true)
-    } found under ${chalk.bold(contextName)} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
+    } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
   )
 
   // we don't output the table headers if we have no deployments
