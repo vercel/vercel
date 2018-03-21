@@ -66,7 +66,8 @@ module.exports = class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'ip',
-      isFile = false
+      isFile = false,
+      atlas = false
     }
   ) {
     const { log, warn, time } = this._output
@@ -191,7 +192,7 @@ module.exports = class Now extends EventEmitter {
           engines,
           scale,
           sessionAffinity,
-          atlas: hasNowJson && Boolean(nowConfig.atlas)
+          atlas
         }
       })
 

@@ -17,10 +17,12 @@ const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 const retry = require('async-retry')
 const jsonlines = require('jsonlines')
+const executable = require('executable')
 
 // Utilities
 const Logger = require('../util/build-logger')
 const Now = require('../util')
+const isELF = require('../util/is-elf')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError } = require('../util/error')
@@ -316,6 +318,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let deployment
     let deploymentType
     let isFile
+    let atlas = false
 
     if (paths.length === 1) {
       try {
@@ -324,6 +327,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         if (fsData.isFile()) {
           isFile = true
           deploymentType = 'static'
+          atlas = await isELF(paths[0]) && executable.checkMode(fsData.mode, fsData.gid, fsData.uid)
         }
       } catch (err) {
         let repo
@@ -690,7 +694,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile
+          isFile,
+          atlas: atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
         },
         meta
       )
