@@ -16,6 +16,7 @@ const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
 const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
+const getContextName = require('../util/get-context-name')
 const argCommon = require('../util/arg-common')()
 
 const help = () => {
@@ -88,11 +89,12 @@ module.exports = async function main(ctx) {
     return 0
   }
 
-  const stopSpinner = wait('Fetching deployments')
-
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
-  const { currentTeam, user } = sh;
+  const { currentTeam } = sh;
+  const contextName = getContextName(sh);
+
+  const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
 
   const now = new Now({ apiUrl, token, currentTeam })
   const start = new Date()
@@ -154,9 +156,7 @@ module.exports = async function main(ctx) {
   log(
     `${
       plural('total deployment', deployments.length, true)
-    } found under ${chalk.bold(
-      (currentTeam && currentTeam.slug) || user.username || user.email
-    )} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
+    } found under ${chalk.bold(contextName)} ${chalk.grey('[' + ms(Date.now() - start) + ']')}`
   )
 
   // we don't output the table headers if we have no deployments
