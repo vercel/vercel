@@ -30,7 +30,9 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function debug(v) {
-    if (debugEnabled) log(chalk`{bold [debug]} ${v}`)
+    if (debugEnabled) {
+      log(`${chalk.bold('[debug]')} ${chalk.gray(`[${new Date().toISOString()}]`)} ${v}`)
+    }
   }
 
   // This is pretty hacky, but since we control the version of Node.js
@@ -43,6 +45,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   async function time(label, fn) {
     const promise = !fn.then && typeof fn === 'function' ? fn() : fn
     if (debugEnabled) {
+      c.log(label);
       Console.prototype.time.call(c, label)
       const r = await promise
       Console.prototype.timeEnd.call(c, label)
