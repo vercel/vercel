@@ -318,7 +318,7 @@ module.exports = async function main (ctx) {
     cancelExit();
   }
 
-  success(`Verification succeeded ${elapsed(Date.now() - startVerification)}`);
+  success(`Scale state verified ${elapsed(Date.now() - startVerification)}`);
 
   now.close();
   return 0;
