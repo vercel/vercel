@@ -20,6 +20,7 @@ const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 const fetch = require('node-fetch')
+const chalk = require('chalk')
 const updateNotifier = require('@zeit/check-updates')
 
 // Utilities
@@ -71,7 +72,9 @@ const main = async (argv_) => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv.version) {
-      console.log(require('../package').version)
+      console.log(require('../package').version + ` ${
+        process.pkg ? '' : chalk.magenta('(dev)')
+      }`)
       return 0
     }
   }
