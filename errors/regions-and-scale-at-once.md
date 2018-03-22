@@ -3,7 +3,7 @@
 #### Why This Error Occurred
 
 Your deployment's configuration contains a `regions` and `scale`
-configuration simulatneously.
+configuration simultaneously.
 
 #### Possible Ways to Fix It
 
@@ -17,7 +17,7 @@ with default scale settings.
 }
 ```
 
-The `scale` object allows you to be more granular: you can decide
+The `scale` object allows you to be more granular: you can decide a
 `min` and `max` number of instances per region:
 
 ```json
