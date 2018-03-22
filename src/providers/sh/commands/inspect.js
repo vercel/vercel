@@ -4,6 +4,7 @@
 const chalk = require('chalk')
 const arg = require('arg')
 const table = require('text-table')
+const qs = require('querystring')
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -17,6 +18,15 @@ const { handleError } = require('../util/error')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
 
+const EVENT_TYPES = new Set([
+  'state',
+  'scale-set',
+  'alias',
+  'build-start',
+  'build-complete',
+  'instance-start',
+  'instance-stop'
+]);
 
 const help = () => {
   console.log(`
@@ -101,9 +111,9 @@ module.exports = async function main (ctx) {
     }
   }
 
-  const [scale/*, events*/] = await Promise.all([
+  const [scale, events] = await Promise.all([
     caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(deployment.uid)}/instances`)),
-    // caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?type=state,build-start,build-complete,instance-start,instance-stop`)),
+    caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?${qs.stringify({types: Array.from(EVENT_TYPES)})}`)),
   ])
 
   cancelWait();
