@@ -110,13 +110,24 @@ module.exports = async function main(ctx) {
     debug('Fetching deployments')
     deployments = await now.list(app, { version: 3 })
   } catch (err) {
-    handleError(err)
-    return 1;
+    stopSpinner();
+    throw err;
   }
 
   if (!deployments.length) {
     debug('No deployments: attempting to find deployment that matches supplied app name')
-    const match = await now.findDeployment(app)
+    let match
+
+    try {
+      await now.findDeployment(app)
+    } catch (err) {
+      if (err.status === 404) {
+        debug('Ignore findDeployment 404')
+      } else {
+        stopSpinner();
+        throw err;
+      }
+    }
 
     if (match !== null && typeof match !== 'undefined') {
       debug('Found deployment that matches app name');
