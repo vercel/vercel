@@ -95,7 +95,7 @@ module.exports = async function main(ctx) {
 
   const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
 
-  const now = new Now({ apiUrl, token, currentTeam })
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = new Date()
 
   if (argv['--all'] && !app) {
