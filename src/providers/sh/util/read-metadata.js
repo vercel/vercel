@@ -11,6 +11,7 @@ const determineType = require('deployment-type')
 
 // Utilities
 const getLocalConfigPath = require('../../../config/local-path')
+const { error } = require('../util/error')
 
 module.exports = readMetaData
 
@@ -109,6 +110,12 @@ async function readMetaData(
     }
 
     const labels = {}
+    const expose = dockerfile.find(cmd => cmd.name === 'EXPOSE')
+
+    if (expose === undefined || expose.args.length === 0 || expose.args[0] <= 0) {
+      console.error(error(`A port needs to be exposed in the dockerfile. https://err.sh/now-cli/missing-port-dockerfile`))
+      return process.exit(1)
+    }
 
     dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
       for (const key in args) {
