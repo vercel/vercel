@@ -28,6 +28,8 @@ const EVENT_TYPES = new Set([
   'instance-stop'
 ]);
 
+const STATIC = 'STATIC'
+
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now inspect`)} <url>
@@ -113,7 +115,7 @@ module.exports = async function main (ctx) {
 
   const [scale, events] = await Promise.all([
     caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(deployment.uid)}/instances`)),
-    caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?${qs.stringify({types: Array.from(EVENT_TYPES)})}`)),
+    deployment.type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?${qs.stringify({types: Array.from(EVENT_TYPES)})}`)),
   ])
 
   cancelWait();
@@ -128,6 +130,11 @@ module.exports = async function main (ctx) {
   print(`    ${chalk.dim('created')}\t\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
 
   print('\n');
+
+  if (deployment.type === STATIC) {
+    return 0
+  }
+
   print(chalk.bold('  Scale\n'))
 
   let exitCode = 0
