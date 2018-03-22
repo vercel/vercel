@@ -439,7 +439,7 @@ module.exports = class Now extends EventEmitter {
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '')
       if (host.slice(-1) === '/') {
-        host = id.slice(0, -1)
+        host = host.slice(0, -1)
       }
       const url = `/v3/now/hosts/${encodeURIComponent(host)}?resolve=1`
 
