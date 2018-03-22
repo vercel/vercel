@@ -323,7 +323,7 @@ module.exports = class Now extends EventEmitter {
             stream.write(data)
             stream.end()
 
-            const res = this._fetch('/v2/now/files', {
+            const res = await this._fetch('/v2/now/files', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
