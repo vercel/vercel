@@ -4,7 +4,6 @@
 const chalk = require('chalk')
 const arg = require('arg')
 const table = require('text-table')
-const qs = require('querystring')
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -17,16 +16,6 @@ const wait = require('../../../util/output/wait')
 const { handleError } = require('../util/error')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
-
-const EVENT_TYPES = new Set([
-  'state',
-  'scale-set',
-  'alias',
-  'build-start',
-  'build-complete',
-  'instance-start',
-  'instance-stop'
-]);
 
 const STATIC = 'STATIC'
 
@@ -115,7 +104,7 @@ module.exports = async function main (ctx) {
 
   const [scale, events] = await Promise.all([
     caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(deployment.uid)}/instances`)),
-    deployment.type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?${qs.stringify({types: Array.from(EVENT_TYPES)})}`)),
+    deployment.type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?types=event`)),
   ])
 
   cancelWait();
@@ -161,6 +150,19 @@ module.exports = async function main (ctx) {
       hsep: ' '.repeat(8),
       stringLength: strlen
     }).replace(/^(.*)/gm, '    $1') + '\n');
+    print('\n')
+  }
+
+  print(chalk.bold('  Events\n'))
+  if (events instanceof Error) {
+    error(`Events unavailable: ${scale}`);
+    exitCode = 1;
+  } else if (events) {
+    events.forEach(({ event, created, payload }) => {
+      print(`    ${chalk.gray(new Date(created).toISOString())} ${event}${
+        event === 'state' ? ` ${chalk.bold(payload.value)} ` : ''
+      }\n`);
+    })
     print('\n')
   }
 
