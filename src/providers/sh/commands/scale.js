@@ -278,6 +278,11 @@ module.exports = async function main (ctx) {
     dcIds.map(d => chalk.bold(d)).join(', ')
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`);
 
+  if (deployment.type === 'BINARY') {
+    // skip verification for now since we only allow 0-auto
+    return 0;
+  }
+
   if (argv['--no-verify']) {
     log('Skipped verification. Scale settings were saved successfully');
     return 0;
