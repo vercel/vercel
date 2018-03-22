@@ -79,7 +79,7 @@ const main = async (argv_) => {
       )
     )
 
-    return
+    return 1;
   }
 
   if (!nowDirExists) {
@@ -108,7 +108,7 @@ const main = async (argv_) => {
       )
     )
 
-    return
+    return 0;
   }
 
   let config
@@ -125,7 +125,7 @@ const main = async (argv_) => {
         )
       )
 
-      return
+      return 1;
     }
   } else {
     const results = await getDefaultCfg()
@@ -144,7 +144,7 @@ const main = async (argv_) => {
         )
       )
 
-      return
+      return 1;
     }
   }
 
@@ -161,7 +161,7 @@ const main = async (argv_) => {
       )
     )
 
-    return
+    return 1;
   }
 
   let authConfig = null
@@ -178,7 +178,7 @@ const main = async (argv_) => {
         )
       )
 
-      return
+      return 1;
     }
 
     if (!Array.isArray(authConfig.credentials)) {
@@ -188,7 +188,7 @@ const main = async (argv_) => {
             'No `credentials` list found inside'
         )
       )
-      return
+      return 1;
     }
 
     for (const [i, { provider }] of authConfig.credentials.entries()) {
@@ -199,7 +199,7 @@ const main = async (argv_) => {
               `Missing \`provider\` key in entry with index ${i}`
           )
         )
-        return
+        return 1;
       }
 
       if (!(provider in providers)) {
@@ -209,7 +209,7 @@ const main = async (argv_) => {
               `Unknown provider "${provider}"`
           )
         )
-        return
+        return 1;
       }
     }
   } else {
@@ -228,7 +228,7 @@ const main = async (argv_) => {
             err.message
         )
       )
-      return
+      return 1;
     }
   }
 
@@ -259,7 +259,7 @@ const main = async (argv_) => {
           `An unexpected error occurred in config ${subcommand}: ${err.stack}`
         )
       )
-      return
+      return 1;
     }
   }
 
@@ -278,7 +278,7 @@ const main = async (argv_) => {
             'Both a directory and a provider are known'
         )
       )
-      return
+      return 1;
     }
 
     suppliedProvider = targetOrSubcommand
@@ -302,7 +302,7 @@ const main = async (argv_) => {
               `"${NOW_CONFIG_PATH}" is not a valid provider`
           )
         )
-        return
+        return 1;
       }
     }
   }
@@ -328,7 +328,7 @@ const main = async (argv_) => {
             'Both a directory and a subcommand are known'
         )
       )
-      return
+      return 1;
     }
 
     if (subcommandExists) {
@@ -397,7 +397,7 @@ const main = async (argv_) => {
         slug: 'no-credentials-found'
       }))
 
-      await exit(1)
+      return 1;
     }
   }
 
@@ -407,7 +407,7 @@ const main = async (argv_) => {
       slug: 'no-token-allowed'
     }))
 
-    await exit(1)
+    return 1;
   }
 
   if (typeof argv.token === 'string') {
@@ -419,7 +419,7 @@ const main = async (argv_) => {
         slug: 'missing-token-value'
       }))
 
-      await exit(1)
+      return 1;
     }
 
     const obj = {
@@ -446,7 +446,7 @@ const main = async (argv_) => {
       })
     } catch (err) {
       console.error(error(err))
-      await exit(1)
+      return 1;
     }
 
     // Don't use team from config if `--token` was set
@@ -467,7 +467,7 @@ const main = async (argv_) => {
         slug: 'missing-team-value'
       }))
 
-      await exit(1)
+      return 1;
     }
 
     const cachedUser = sh && sh.user && sh.user.username === team
@@ -498,13 +498,13 @@ const main = async (argv_) => {
             slug: 'team-not-accessible'
           }))
 
-          await exit(1)
+          return 1;
         }
 
         body = await res.json()
       } catch (err) {
         console.error(error('Not able to load teams'))
-        await exit(1)
+        return 1;
       }
 
       if (!body || body.error) {
@@ -513,7 +513,7 @@ const main = async (argv_) => {
           slug: 'team-not-existent'
         }))
 
-        await exit(1)
+        return 1;
       }
 
       // $FlowFixMe
@@ -536,9 +536,7 @@ const main = async (argv_) => {
     )
   }
 
-  if (providerName === 'gcp') {
-    process.exit()
-  }
+  return 0
 }
 
 debug('start')
@@ -556,7 +554,7 @@ const handleRejection = err => {
     console.error(error('An unexpected empty rejection occurred'))
   }
 
-  process.exit(1)
+  exit(1)
 }
 
 const handleUnexpected = err => {
@@ -566,7 +564,7 @@ const handleUnexpected = err => {
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
 
-  process.exit(1)
+  exit(1)
 }
 
 process.on('unhandledRejection', handleRejection)
@@ -574,4 +572,6 @@ process.on('uncaughtException', handleUnexpected)
 
 // Don't use `.then` here. We need to shutdown gracefully, otherwise
 // sub commands waiting for further data won't work (like `logs` and `logout`)!
-main(process.argv).catch(handleUnexpected)
+main(process.argv)
+  .then(exit)
+  .catch(handleUnexpected)
