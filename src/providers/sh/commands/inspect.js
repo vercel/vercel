@@ -112,12 +112,12 @@ module.exports = async function main (ctx) {
 
   print('\n');
   print(chalk.bold('  Meta\n'))
-  print(`    ${chalk.dim('uid')}\t\t\t${deployment.uid}\n`)
-  print(`    ${chalk.dim('name')}\t\t${deployment.name}\n`)
-  print(`    ${chalk.dim('state')}\t\t${stateString(deployment.state)}\n`)
-  print(`    ${chalk.dim('type')}\t\t${deployment.type}\n`)
-  print(`    ${chalk.dim('url')}\t\t\t${deployment.url}\n`)
-  print(`    ${chalk.dim('created')}\t\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
+  print(`    ${chalk.dim('uid')}\t\t${deployment.uid}\n`)
+  print(`    ${chalk.dim('name')}\t${deployment.name}\n`)
+  print(`    ${chalk.dim('state')}\t${stateString(deployment.state)}\n`)
+  print(`    ${chalk.dim('type')}\t${deployment.type}\n`)
+  print(`    ${chalk.dim('url')}\t\t${deployment.url}\n`)
+  print(`    ${chalk.dim('created')}\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
 
   print('\n');
 
