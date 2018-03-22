@@ -123,6 +123,7 @@ module.exports = async function main (ctx) {
 
   print('\n');
   print(chalk.bold('  Meta\n'))
+  print(`    ${chalk.dim('uid')}\t\t\t${deployment.uid}\n`)
   print(`    ${chalk.dim('name')}\t\t${deployment.name}\n`)
   print(`    ${chalk.dim('state')}\t\t${stateString(deployment.state)}\n`)
   print(`    ${chalk.dim('type')}\t\t${deployment.type}\n`)
