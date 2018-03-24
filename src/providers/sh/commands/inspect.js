@@ -44,8 +44,7 @@ const help = () => {
   `)
 }
 
-// $FlowFixMe
-module.exports = async function main (ctx) {
+module.exports = async function main (ctx: any): Promise<number> {
   let id
   let deployment
   let argv;
@@ -172,14 +171,14 @@ module.exports = async function main (ctx) {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught (p) {
+function caught (p): Promise<any> {
   return new Promise(r => {
     p.then(r).catch(r)
   })
 }
 
 // renders the state string
-function stateString(s: string) {
+function stateString(s: string): string {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);
