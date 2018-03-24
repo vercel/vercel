@@ -180,6 +180,7 @@ module.exports = async function main (ctx: any): Promise<number>{
   // impacts this command, consistently
   //now.close()
   process.exit(0);
+  return 0
 }
 
 function readConfirmation(matches, output) {
