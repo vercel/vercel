@@ -172,7 +172,14 @@ module.exports = async function main (ctx: any): Promise<number>{
     log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`)
   })
 
-  now.close()
+  // if we close normally, we get a really odd error:
+  //  Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17) Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
+  // which seems fixable only by exiting directly here, and only
+  // impacts this command, consistently
+  //now.close()
+  process.exit(0);
 }
 
 function readConfirmation(matches, output) {
