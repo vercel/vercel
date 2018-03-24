@@ -34,7 +34,6 @@ const hp = require('./util/humanize-path')
 const providers = require('./providers')
 const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
-const exit = require('./util/exit')
 const pkg = require('./util/pkg')
 
 const NOW_DIR = getNowDir()
@@ -570,7 +569,7 @@ const handleRejection = err => {
     console.error(error('An unexpected empty rejection occurred'))
   }
 
-  exit(1)
+  process.exit(1)
 }
 
 const handleUnexpected = err => {
@@ -580,7 +579,7 @@ const handleUnexpected = err => {
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   )
 
-  exit(1)
+  process.exit(1)
 }
 
 process.on('unhandledRejection', handleRejection)
@@ -589,5 +588,9 @@ process.on('uncaughtException', handleUnexpected)
 // Don't use `.then` here. We need to shutdown gracefully, otherwise
 // sub commands waiting for further data won't work (like `logs` and `logout`)!
 main(process.argv)
-  .then(exit)
+  .then(exitCode => {
+    process.on('beforeExit', () => {
+      process.exit(exitCode);
+    })
+  })
   .catch(handleUnexpected)
