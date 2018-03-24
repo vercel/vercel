@@ -159,6 +159,7 @@ module.exports = async function main (ctx: any): Promise<number>{
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
+      now.close();
       return 1
     }
   }
