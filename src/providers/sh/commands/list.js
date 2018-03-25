@@ -73,7 +73,7 @@ module.exports = async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug']
-  const { log, error, debug } = createOutput({ debug: debugEnabled })
+  const { print, log, error, debug } = createOutput({ debug: debugEnabled })
 
   if (argv._.length > 1) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
@@ -181,9 +181,9 @@ module.exports = async function main(ctx) {
     log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
   }
 
-  console.log()
+  print('\n')
 
-  console.log(table([
+  print(table([
     ['app', 'url', 'inst #', 'state', 'age'].map(s => chalk.dim(s)),
     ...deployments
     .sort(sortRecent())
@@ -224,7 +224,7 @@ module.exports = async function main(ctx) {
     align: ['l','l','r','l','b'],
     hsep: ' '.repeat(4),
     stringLength: strlen
-  }))
+  }).replace(/^/gm, '  ') + '\n')
 }
 
 // renders the state string
