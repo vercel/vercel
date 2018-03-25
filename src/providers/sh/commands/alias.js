@@ -159,10 +159,7 @@ async function confirmDeploymentRemoval(alias, _alias) {
     }
   )
 
-  const msg =
-    '${chalk.gray('>')} The following alias will be removed permanently\n' +
-    `  ${tbl} \nAre you sure?`
-
+  const msg = `The following alias will be removed permanently\n  ${tbl} \n  Are you sure?`
   return promptBool(msg, {
     trailing: '\n'
   })
@@ -358,6 +355,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
 
     if (!confirmation) {
       log('Aborted')
+      alias.close();
       return 0
     }
 
@@ -371,9 +369,11 @@ async function rm (ctx, opts, args, output): Promise<number> {
     )
   } catch (err) {
     error(err)
+    alias.close();
     return 1
   }
 
+  alias.close();
   return 0
 }
 
