@@ -240,7 +240,7 @@ async function ls (ctx, opts, args, output): Promise<number> {
                 item.rules.map(rule => {
                   return [
                     '',
-                    rule.pathname ? rule.pathname : '',
+                    rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
                     rule.method ? rule.method : '*',
                     rule.dest
                   ]
