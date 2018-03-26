@@ -184,7 +184,7 @@ module.exports = async function main(ctx) {
   print('\n')
 
   print(table([
-    ['app', 'url', 'inst #', 'state', 'age'].map(s => chalk.dim(s)),
+    ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
     ...deployments
     .sort(sortRecent())
     .map(dep => (
@@ -192,7 +192,8 @@ module.exports = async function main(ctx) {
         [
           dep.name,
           chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-          dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.type === 'BINARY' || dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.type,
           stateString(dep.state),
           chalk.gray(ms(Date.now() - new Date(dep.created)))
         ],
