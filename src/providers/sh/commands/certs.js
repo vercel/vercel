@@ -260,7 +260,7 @@ function readX509File(file) {
 }
 
 async function getCerts(now) {
-  return now.fetch(`/v2/certs`)
+  return now.fetch(`/v3/certs`)
 }
 
 async function getCertById(now, id) {
@@ -269,7 +269,7 @@ async function getCertById(now, id) {
 }
 
 async function createCert(now, cns) {
-  return now.fetch('/v2/certs', {
+  return now.fetch('/v3/certs', {
     method: 'POST',
     body: JSON.stringify({
       domains: cns
@@ -278,7 +278,7 @@ async function createCert(now, cns) {
 }
 
 async function createCustomCert(now, key, cert, ca) {
-  return now.fetch('/v2/certs', {
+  return now.fetch('/v3/certs', {
     method: 'PUT',
     body: JSON.stringify({
       ca, cert, key
@@ -287,7 +287,7 @@ async function createCustomCert(now, key, cert, ca) {
 }
 
 async function deleteCertById(now, id) {
-  return now.fetch(`/v2/certs/${id}`, {
+  return now.fetch(`/v3/certs/${id}`, {
     method: 'DELETE',
   })
 }
