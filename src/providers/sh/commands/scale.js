@@ -232,6 +232,7 @@ module.exports = async function main (ctx) {
     cancelWait();
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
+      now.close();
       return 1;
     } else {
       // unexpected
@@ -243,11 +244,13 @@ module.exports = async function main (ctx) {
 
   if (deployment.type === TYPE_STATIC) {
     error('Scaling rules cannot be set on static deployments');
+    now.close();
     return 1;
   }
 
   if (deployment.state === STATE_ERROR) {
     error('Cannot scale a deployment in the ERROR state');
+    now.close();
     return 1;
   }
 
@@ -280,11 +283,13 @@ module.exports = async function main (ctx) {
 
   if (deployment.type === 'BINARY') {
     // skip verification for now since we only allow 0-auto
+    now.close();
     return 0;
   }
 
   if (argv['--no-verify']) {
     log('Skipped verification. Scale settings were saved successfully');
+    now.close();
     return 0;
   }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//@flow
 
 // Packages
 const mri = require('mri')
@@ -62,7 +63,7 @@ const help = () => {
 
 // Options
 
-module.exports = async function main (ctx) {
+module.exports = async function main (ctx: any): Promise<number>{
   let argv;
 
   argv = mri(ctx.argv.slice(2), {
@@ -158,6 +159,7 @@ module.exports = async function main (ctx) {
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
+      now.close();
       return 1
     }
   }
@@ -171,7 +173,15 @@ module.exports = async function main (ctx) {
     log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`)
   })
 
-  now.close()
+  // if we close normally, we get a really odd error:
+  //  Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17) Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
+  // which seems fixable only by exiting directly here, and only
+  // impacts this command, consistently
+  //now.close()
+  process.exit(0);
+  return 0
 }
 
 function readConfirmation(matches, output) {

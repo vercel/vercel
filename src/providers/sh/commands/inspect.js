@@ -44,8 +44,7 @@ const help = () => {
   `)
 }
 
-// $FlowFixMe
-module.exports = async function main (ctx) {
+module.exports = async function main (ctx: any): Promise<number> {
   let id
   let deployment
   let argv;
@@ -93,8 +92,13 @@ module.exports = async function main (ctx) {
     deployment = await now.findDeployment(id)
   } catch (err) {
     cancelWait();
+    now.close();
+
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
+      return 1;
+    } else if (err.status === 403) {
+      error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`)
       return 1;
     } else {
       // unexpected
@@ -122,6 +126,7 @@ module.exports = async function main (ctx) {
   print('\n');
 
   if (deployment.type === STATIC) {
+    now.close();
     return 0
   }
 
@@ -172,14 +177,14 @@ module.exports = async function main (ctx) {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught (p) {
+function caught (p): Promise<any> {
   return new Promise(r => {
     p.then(r).catch(r)
   })
 }
 
 // renders the state string
-function stateString(s: string) {
+function stateString(s: string): string {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

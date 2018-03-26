@@ -73,7 +73,7 @@ module.exports = async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug']
-  const { log, error, debug } = createOutput({ debug: debugEnabled })
+  const { print, log, error, debug } = createOutput({ debug: debugEnabled })
 
   if (argv._.length > 1) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
@@ -181,10 +181,10 @@ module.exports = async function main(ctx) {
     log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
   }
 
-  console.log()
+  print('\n')
 
-  console.log(table([
-    ['app', 'url', 'inst #', 'state', 'age'].map(s => chalk.dim(s)),
+  print(table([
+    ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
     ...deployments
     .sort(sortRecent())
     .map(dep => (
@@ -192,7 +192,8 @@ module.exports = async function main(ctx) {
         [
           dep.name,
           chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-          dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.type === 'BINARY' || dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.type,
           stateString(dep.state),
           chalk.gray(ms(Date.now() - new Date(dep.created)))
         ],
@@ -224,7 +225,7 @@ module.exports = async function main(ctx) {
     align: ['l','l','r','l','b'],
     hsep: ' '.repeat(4),
     stringLength: strlen
-  }))
+  }).replace(/^/gm, '  ') + '\n')
 }
 
 // renders the state string
