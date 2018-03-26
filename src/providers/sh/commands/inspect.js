@@ -92,9 +92,13 @@ module.exports = async function main (ctx: any): Promise<number> {
     deployment = await now.findDeployment(id)
   } catch (err) {
     cancelWait();
+    now.close();
+
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
-      now.close();
+      return 1;
+    } else if (err.status === 403) {
+      error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`)
       return 1;
     } else {
       // unexpected
