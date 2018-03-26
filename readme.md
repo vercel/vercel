@@ -14,6 +14,28 @@ npm install -g now
 
 For other installation methods, check out our [Download](https://zeit.co/download) page
 
+## Local Development
+
+To develop locally, clone the project and install the dependencies:
+
+```console
+yarn
+```
+
+To monitor changes in the filesystem and trigger a build, execute:
+
+```console
+yarn dev
+```
+
+To test it, we recommend linking your `now` to the one in development:
+
+```console
+yarn run link
+```
+
+_Note: `npm link` and `yarn link` don't work directly. You must execute your link script via `yarn run link` explicitly so that we can perform the necessary build steps._
+
 ## Documentation
 
 For our up-to-date complete documentation, check out our [Docs](https://zeit.co/docs) page.
