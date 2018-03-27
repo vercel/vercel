@@ -225,7 +225,7 @@ module.exports = async function main(ctx) {
     align: ['l','l','r','l','b'],
     hsep: ' '.repeat(4),
     stringLength: strlen
-  }).replace(/^/gm, '  ') + '\n')
+  }).replace(/^/gm, '  ') + '\n\n')
 }
 
 // renders the state string
