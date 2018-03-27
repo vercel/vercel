@@ -5,12 +5,14 @@ const chalk = require('chalk')
 const arg = require('arg')
 const table = require('text-table')
 const ms = require('ms')
+const fs = require('fs-extra')
 const plural = require('pluralize')
+const {resolve, basename} = require('path');
 
 // Utilities
 const strlen = require('../util/strlen')
+const Now = require('../util/')
 const NowAlias = require('../util/alias')
-const NowDomains = require('../util/domains')
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
 const argCommon = require('../util/arg-common')()
@@ -21,7 +23,7 @@ const logo = require('../../../util/output/logo')
 const elapsed = require('../../../util/output/elapsed')
 const promptBool = require('../../../util/input/prompt-bool')
 const getContextName = require('../util/get-context-name')
-const { responseError } = require('../util/error')
+const isValidDomain = require('../util/domains/is-valid-domain')
 
 const help = () => {
   console.log(`
@@ -31,7 +33,7 @@ const help = () => {
 
     ls    [app]                  Show all aliases (or per app name)
     set   <deployment> <alias>   Create a new alias
-    rm    <id>                   Remove an alias using its ID
+    rm    <alias>                Remove an alias using its hostname
 
   ${chalk.dim('Options:')}
 
@@ -127,15 +129,16 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   switch (subcommand) {
     case 'ls':
-    case 'list': {
+    case 'list':
       return ls(ctx, argv, args, output);
-    }
     case 'rm':
-    case 'remove': {
+    case 'remove':
       return rm(ctx, argv, args, output);
-    }
+    case 'set':
+      return set(ctx, argv, ['set', ...args], output);
+    // default to set, and populate it to emulate it as one of the args
     default:
-      return set(ctx, argv, args, output);
+      return set(ctx, argv, ['set', ...args], output);
   }
 }
 
@@ -278,7 +281,7 @@ async function ls (ctx, opts, args, output): Promise<number> {
     } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - fetchStart)}`
   )
 
-  console.log('')
+  print('\n')
 
   print(
     table(
@@ -304,7 +307,7 @@ async function ls (ctx, opts, args, output): Promise<number> {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ') + '\n'
+    ).replace(/^/gm, '  ') + '\n\n'
   )
 
   alias.close()
@@ -325,14 +328,14 @@ async function rm (ctx, opts, args, output): Promise<number> {
 
   const _target = String(args[0])
   if (!_target) {
-    error(`${cmd('now alias rm <id>')} expects one argument`)
+    error(`${cmd('now alias rm <alias>')} expects one argument`)
     return 1
   }
 
   if (args.length !== 1) {
     error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias rm <id>`'
+        '`now alias rm <alias>`'
       )}`
     )
     return 1
@@ -378,61 +381,196 @@ async function rm (ctx, opts, args, output): Promise<number> {
 }
 
 async function set(ctx, opts, args, output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
-  const { user, currentTeam } = sh;
-  // const contextName = getContextName(sh);
-
-  const { error } = output;
-  const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
-
-  const alias = new NowAlias({ apiUrl, token, debug: debugEnabled, currentTeam })
-  const domains = new NowDomains({ apiUrl, token, debug: debugEnabled, currentTeam })
-
-  if (opts['--rules']) {
-    await updatePathAlias(alias, args[0], opts['--rules'], domains, output)
-    return 0
-  }
-
-  if (args.length !== 2) {
-    error(
-      `Invalid number of arguments. Usage: ${cmd(
-        '`now alias set <id> <domain>`'
-      )}`
-    )
+  const { log, warn, error, debug } = output;
+  if (args.length > 2) {
+    error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
     return 1;
   }
 
-  await alias.set(
-    String(args[0]),
-    String(args[1]),
-    domains,
-    currentTeam,
-    user
-  )
+  // deployment id and target alias
+  let [id, target] = args;
+  let targets = [target]
 
-  alias.close();
-  domains.close();
+  // set up the context
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const {token} = credentials.find(item => item.provider === 'sh')
+  const { user, currentTeam } = sh;
+  const contextName = getContextName(sh);
+  const { apiUrl } = ctx;
+  const { ['--debug']: debugEnabled } = opts;
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
+  // we will attempt to fetch the deployment based on the
+  // current directory, if applicalbe
+  let deployment;
+
+  // there's a chance that the user did `now alias <target>`
+  // directly, because he is in a directory
+  // note: this entire branch will be deprecated soon
+  if (id != null && target == null) {
+    debug(`only got one argument, assuming ${id} is the target`);
+    target = id;
+    targets = [target];
+    id = null;
+  }
+
+  // if both are null, we attempt to determine if we are in a
+  // deployment directory
+  // note: this entire branch will be deprecated soon
+  if (id == null) {
+    debug('no known deployment id, attempting to get it from current directory');
+    const cfg = await maybeGetDeploymentConfig(process.cwd(), opts['--local-config']);
+    if (cfg) {
+      const aliases = cfg.aliases || cfg.alias;
+
+      if (cfg.aliases) {
+        warn('The `aliases` field has been deprecated in favor of `alias`');
+      }
+
+      if (!aliases) {
+        error('Attempted to alias the deployment in the current directory, but no `alias` found in config');
+        help();
+        now.close();
+        return 1;
+      }
+
+      if (aliases && typeof aliases !== 'string' && !Array.isArray(aliases)) {
+        error('Attempted to alias deployment, but the `alias` config is neither a string nor an array');
+        now.close();
+        return 1;
+      }
+
+      if (!aliases.length) {
+        error('Attempted to alias deployment, but the `alias` config is empty');
+        now.close();
+        return 1;
+      }
+
+      targets = Array.from(aliases);
+
+      const appName = cfg.name || basename(resolve(process.cwd(), opts['--local-config'] || ''));
+      debug(`will look for deployments matching app ${appName}`);
+      const deployments = await now.list(appName, { version: 3 });
+
+      // we select as a candidate the latest deployment of the same name
+      // as the current project / directory, deployed
+      deployment = deployments
+        .sort(sortRecent())
+        .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0]
+
+      if (deployment) {
+        debug(`deployment found "${deployment.url}"`);
+        id = deployment.id;
+      } else {
+        debug(`no deployment found matching app ${appName}`);
+        help();
+        now.close();
+        return 1;
+      }
+    } else {
+      error(`${cmd('now alias')} requires two arguments or to be run in a deployment with \`alias\` config`);
+      help();
+      now.close();
+      return 1;
+    }
+  }
+
+  // validate targets
+  // note: we have multiple targets because of the config. for now,
+  // CLI users can only set one target
+  for (const target of targets) {
+    if (!isValidDomain(target)) {
+      error(`The target alias domain "${target}" is not valid`);
+      now.close();
+      return 1;
+    }
+  }
+
+  // only fetch the deployment if we got it as a parameter,
+  // and we didn't guess it based on the local directory
+  if (!deployment) {
+    const depFetchStart = Date.now();
+    const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
+
+    try {
+      deployment = await now.findDeployment(id)
+      cancelWait();
+    } catch (err) {
+      cancelWait();
+      now.close();
+
+      if (err.status === 404) {
+        error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
+        return 1;
+      } else if (err.status === 403) {
+        error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`)
+        return 1;
+      } else {
+        // unexpected
+        throw err;
+      }
+    }
+
+    log(`Found deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+  }
+
+  if (id == null && !opts['--rules']) {
+    error(`Invalid number of arguments. Usage: ${cmd('`now alias set <deployment> <domain>`')}`)
+    help();
+    now.close();
+    return 1;
+  }
+
+  // attempt the alias directly
+  log('will alias')
+
+  now.close();
   return 0
 }
 
-async function updatePathAlias(alias, aliasName, rules, domains, output) {
-  const start = new Date()
-  const res = await alias.updatePathBasedroutes(
-    String(aliasName),
-    rules,
-    domains
-  )
-  const elapsed = ms(new Date() - start)
-  if (res.error) {
-    throw responseError(res);
+async function maybeGetDeploymentConfig (path, configFile) {
+  const read = async (file) => {
+    if (await fs.exists(file)) {
+      return JSON.parse(await fs.readFile(file));
+    } else {
+      return null;
+    }
+  }
+
+  // if the config file is supplied by the user
+  // via --local-config
+  if (configFile) {
+    return read(resolve(path, configFile));
   } else {
-    output.success(
-      `${res.ruleCount} rules configured for ${chalk.underline(
-        res.alias
-      )} [${elapsed}]`
-    )
+    const mainConfig = await read(resolve(path, 'now.json'));
+    if (mainConfig) return mainConfig;
+    const pkg = await read(resolve(path, 'package.json'));
+    return pkg ? pkg.now || null : null;
+  }
+}
+
+//async function updatePathAlias(alias, aliasName, rules, domains, output) {
+  //const start = new Date()
+  //const res = await alias.updatePathBasedroutes(
+    //String(aliasName),
+    //rules,
+    //domains
+  //)
+  //const elapsed = ms(new Date() - start)
+  //if (res.error) {
+    //throw responseError(res);
+  //} else {
+    //output.success(
+      //`${res.ruleCount} rules configured for ${chalk.underline(
+        //res.alias
+      //)} [${elapsed}]`
+    //)
+  //}
+//}
+
+// sorts by most recent deployment
+function sortRecent() {
+  return function recencySort(a, b) {
+    return b.created - a.created;
   }
 }
