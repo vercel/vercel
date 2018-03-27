@@ -1,20 +1,25 @@
 #!/usr/bin/env node
+// @flow
 
 // Native
 const path = require('path')
 
 // Packages
+const arg = require('arg')
 const chalk = require('chalk')
 const fs = require('fs-extra')
-const mri = require('mri')
 const ms = require('ms')
 const plural = require('pluralize')
 const psl = require('psl')
 const table = require('text-table')
-require('epipebomb')()
 
 // Utilities
+const { handleError } = require('../util/error')
+const argCommon = require('../util/arg-common')()
+const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
+const elapsed = require('../../../util/output/elapsed')
+const getContextName = require('../util/get-context-name')
 const logo = require('../../../util/output/logo')
 const Now = require('../util')
 const strlen = require('../util/strlen')
@@ -71,40 +76,42 @@ const help = () => {
   `)
 }
 
-module.exports = async function main(ctx) {
+module.exports = async function main(ctx: any): Promise<number> {
   let argv
-  let debugEnabled
-  let apiUrl
-  let subcommand
 
-  argv = mri(ctx.argv.slice(2), {
-    string: ['crt', 'key', 'ca'],
-    boolean: ['help', 'debug', 'overwrite'],
-    alias: {
-      help: 'h',
-      debug: 'd'
-    }
-  })
+  try {
+    argv = arg(ctx.argv.slice(3), {
+      '--overwrite': Boolean,
+      '--crt': String,
+      '--key': String,
+      '--ca': String,
+      ...argCommon
+    })
+  } catch (err) {
+    handleError(err)
+    return 1;
+  }
+  
+  const apiUrl = ctx.apiUrl
+  const debugEnabled = argv['--debug']
+  const subcommand = argv._[0];
+  const output = createOutput({ debug: debugEnabled });
+  const { success, log, print, error } = output;
 
-  argv._ = argv._.slice(1)
-
-  apiUrl = ctx.apiUrl
-  subcommand = argv._[0]
-  debugEnabled = argv.debug
-  const { success, log, print, error } = createOutput({ debug: debugEnabled })
-
-  if (argv.help || !subcommand) {
+  if (!subcommand) {
+    error(`${cmd('now cert <command>')} expects one command`)
     help()
-    return 0;
+    return 1;
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
-  const { currentTeam, user } = sh;
+  const { currentTeam } = sh;
+  const contextName = getContextName(sh);
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const args = argv._.slice(1)
-  const start = Date.now()
+  const startTime = Date.now()
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
@@ -114,15 +121,7 @@ module.exports = async function main(ctx) {
 
     // Get the list of certificates
     const certs = sortByCn(await caught(getCerts(now)))
-    const elapsed = ms(new Date() - start)
-    
-    log(
-      `${
-        plural('certificate', certs.length, true)
-      } found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )}`
-    )
+    log(`${plural('certificate', certs.length, true)} found ${elapsed(Date.now() - startTime)} under ${chalk.bold(contextName)}`)
 
     if (certs.length > 0) {
       console.log(formatCertsTable(certs))
@@ -179,8 +178,7 @@ module.exports = async function main(ctx) {
 
     // Print success
     const cns = chalk.bold(cert.cns.join(', '))
-    const elapsed = chalk.gray(`[${ms(new Date() - start)}]`)
-    success(`Certificate entry for ${cns} ${chalk.gray(`(${cert.uid})`)} created ${elapsed}`)
+    success(`Certificate entry for ${cns} ${chalk.gray(`(${cert.uid})`)} created ${elapsed(new Date() - startTime)}`)
   } else if (subcommand === 'renew') {
     error('Renewing certificates is deprecated, issue a new one.')
     return 1
@@ -195,14 +193,10 @@ module.exports = async function main(ctx) {
     }
 
     const id = args[0]
-    const cert = await getCertById(now, id, currentTeam, user)
+    const cert = await getCertById(now, id)
 
     if (!cert) {
-      error(
-        `No certificate found by id or cn "${id}" under ${chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )}`
-      )
+      error(`No certificate found by id or cn "${id}" under ${chalk.bold(contextName)}`)
       return 1
     }
 
@@ -213,11 +207,10 @@ module.exports = async function main(ctx) {
     }
 
     await deleteCertById(now, id)
-    const elapsed = ms(new Date() - start)
     success(
       `Certificate ${chalk.bold(
         cert.cns.join(', ')
-      )} ${chalk.gray(`(${id})`)} removed ${chalk.gray(`[${elapsed}]`)}`
+      )} ${chalk.gray(`(${id})`)} removed ${elapsed(new Date() - startTime)}`
     )
   } else {
     error('Please specify a valid subcommand: ls | add | rm')
@@ -270,9 +263,9 @@ async function getCerts(now) {
 async function createCert(now, cns) {
   return now.fetch('/v3/now/certs', {
     method: 'POST',
-    body: JSON.stringify({
+    body: {
       domains: cns
-    }),
+    },
     retry: {
       maxTimeout: 90000,
       minTimeout: 30000,
@@ -284,9 +277,9 @@ async function createCert(now, cns) {
 async function createCustomCert(now, key, cert, ca) {
   return now.fetch('/v3/now/certs', {
     method: 'PUT',
-    body: JSON.stringify({
+    body: {
       ca, cert, key
-    })
+    }
   })
 }
 
@@ -296,6 +289,11 @@ async function deleteCertById(now, id) {
   })
 }
 
+/**
+ * This function sorts the list of certs by root domain changing *
+ * to 'wildcard' since that will allow psl get the root domain
+ * properly to make the comparison.
+ */
 function sortByCn(certsList) {
   return certsList.concat().sort((a, b) => {
     const domainA = psl.get(a.cns[0].replace('*', 'wildcard'))
