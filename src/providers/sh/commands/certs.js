@@ -127,15 +127,15 @@ module.exports = async function main(ctx: any): Promise<number> {
       console.log(formatCertsTable(certs))
     }
   } else if (subcommand === 'add' || subcommand === 'create') {
-    if (argv.overwrite) {
+    if (argv['--overwrite']) {
       error('Overwrite option is deprecated')
       return 1;
     }
 
     let cert
 
-    if (argv.crt || argv.key || argv.ca) {
-      if ((args.length !== 0) || (!argv.crt || !argv.key || !argv.ca)) {
+    if (argv['--crt'] || argv['--key'] || argv['--ca']) {
+      if ((args.length !== 0) || (!argv['--crt'] || !argv['--key'] || !argv['--ca'])) {
         error(
           `Invalid number of arguments for a custom certificate entry. Usage: ${chalk.cyan(
             '`now certs add --crt DOMAIN.CRT --key DOMAIN.KEY --ca CA.CRT`'
@@ -145,9 +145,9 @@ module.exports = async function main(ctx: any): Promise<number> {
       }
 
       // Read the files provided
-      const crt = readX509File(argv.crt)
-      const key = readX509File(argv.key)
-      const ca = readX509File(argv.ca)
+      const crt = readX509File(argv['--crt'])
+      const key = readX509File(argv['--key'])
+      const ca = readX509File(argv['--ca'])
 
       // Create the certificate
       const cancelWait = wait('Adding your custom certificate');
