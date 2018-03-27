@@ -113,20 +113,19 @@ module.exports = async function main(ctx) {
     }
 
     // Get the list of certificates
-    const { certs } = await caught(getCerts(now))
-    const certsList = sortByCn(certs);
+    const certs = sortByCn(await caught(getCerts(now)))
     const elapsed = ms(new Date() - start)
     
     log(
       `${
-        plural('certificate', certsList.length, true)
+        plural('certificate', certs.length, true)
       } found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )}`
     )
 
-    if (certsList.length > 0) {
-      print(formatCertsTable(certsList))
+    if (certs.length > 0) {
+      console.log(formatCertsTable(certs))
     }
   } else if (subcommand === 'add' || subcommand === 'create') {
     if (argv.overwrite) {
@@ -259,26 +258,31 @@ function readX509File(file) {
   return fs.readFileSync(path.resolve(file), 'utf8')
 }
 
-async function getCerts(now) {
-  return now.fetch(`/v3/certs`)
+async function getCertById(now, id) {
+  return (await getCerts(now)).filter(c => c.uid === id)[0]
 }
 
-async function getCertById(now, id) {
-  const { certs } = await getCerts(now)
-  return certs.filter(c => c.uid === id)[0]
+async function getCerts(now) {
+  const { certs } = await now.fetch('/v3/now/certs')
+  return certs
 }
 
 async function createCert(now, cns) {
-  return now.fetch('/v3/certs', {
+  return now.fetch('/v3/now/certs', {
     method: 'POST',
     body: JSON.stringify({
       domains: cns
-    })
+    }),
+    retry: {
+      maxTimeout: 90000,
+      minTimeout: 30000,
+      retries: 3
+    }
   })
 }
 
 async function createCustomCert(now, key, cert, ca) {
-  return now.fetch('/v3/certs', {
+  return now.fetch('/v3/now/certs', {
     method: 'PUT',
     body: JSON.stringify({
       ca, cert, key
@@ -287,7 +291,7 @@ async function createCustomCert(now, key, cert, ca) {
 }
 
 async function deleteCertById(now, id) {
-  return now.fetch(`/v3/certs/${id}`, {
+  return now.fetch(`/v3/now/certs/${id}`, {
     method: 'DELETE',
   })
 }
