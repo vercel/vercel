@@ -838,7 +838,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
 
       try {
-        await printEvents(now, token, currentTeam, {
+        await printEvents(now, deployment, token, currentTeam, {
           onOpen: cancelWait
         })
       } catch (err) {
@@ -902,18 +902,18 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, token, currentTeam = null, {
+async function printEvents(now, { url } = {}, token, currentTeam = null, {
   onOpen = ()=>{}
 } = {}) {
-  const loggerWorkaround = new Logger(now.host, token, { debug: false, quiet: true })
+  const loggerWorkaround = new Logger(url, token, { debug: false, quiet: true })
 
-  let url = `/v1/now/deployments/${now.id}/events?follow=1`
+  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`
+    eventsUrl += `&teamId=${currentTeam.id}`
   }
 
-  debug(`Events ${url}`)
+  debug(`Events ${eventsUrl}`)
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -927,7 +927,7 @@ async function printEvents(now, token, currentTeam = null, {
     // if we are retrying, we clear past logs
     if (!quiet && o) process.stdout.write(eraseLines(0))
 
-    const res = await now._fetch(url)
+    const res = await now._fetch(eventsUrl)
     if (res.ok) {
       const readable = await res.readable();
 
