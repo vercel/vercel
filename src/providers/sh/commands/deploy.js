@@ -19,6 +19,7 @@ const jsonlines = require('jsonlines')
 
 // Utilities
 const Now = require('../util')
+const Logger = require('../util/build-logger')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError, error } = require('../util/error')
@@ -768,7 +769,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
 
       try {
-        await printEvents(now, currentTeam, {
+        await printEvents(now, token, currentTeam, {
           onOpen: cancelWait
         })
       } catch (err) {
@@ -832,9 +833,11 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, {
+async function printEvents(now, token, currentTeam = null, {
   onOpen = ()=>{}
 } = {}) {
+  const loggerWorkaround = new Logger(now.host, token, { debug: false, quiet: true })
+
   let url = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
@@ -862,6 +865,21 @@ async function printEvents(now, currentTeam = null, {
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
+        function cleanupAndResolve() {
+          // avoid lingering events
+          stream.removeListener('data', onData)
+          // close the stream and resolve
+          readable.end()
+          resolve()
+        }
+
+        loggerWorkaround.on('close', () => {
+          if (!quiet) {
+            log(chalk`{cyan Deployment complete!}`)
+          }
+          cleanupAndResolve()
+        });
+
         const stream = readable.pipe(jsonlines.parse())
         const onData = ({ type, event, text }) => {
           // fire the open callback and ensure it's only fired once
@@ -873,7 +891,7 @@ async function printEvents(now, currentTeam = null, {
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              resolve()
+              cleanupAndResolve()
             }
             return
           }
@@ -882,17 +900,9 @@ async function printEvents(now, currentTeam = null, {
             o++
             log('Building…')
           } else
-          if (event === 'build-complete' ||
-              event === 'instance-start') { // TODO
+          if (event === 'build-complete') {
             o++
             log(chalk`{cyan Success!} Build complete`)
-
-            // avoid lingering events
-            stream.removeListener('data', onData)
-
-            // close the stream and resolve
-            stream.end()
-            resolve()
           } else
           if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
             if (text.slice(-1) === '\n') text = text.slice(0, -1)
