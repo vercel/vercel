@@ -129,6 +129,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   } else if (subcommand === 'add' || subcommand === 'create') {
     if (argv['--overwrite']) {
       error('Overwrite option is deprecated')
+      now.close();
       return 1;
     }
 
@@ -141,6 +142,7 @@ module.exports = async function main(ctx: any): Promise<number> {
             '`now certs add --crt DOMAIN.CRT --key DOMAIN.KEY --ca CA.CRT`'
           )}`
         )
+        now.close();
         return 1
       }
 
@@ -161,6 +163,7 @@ module.exports = async function main(ctx: any): Promise<number> {
             '`now certs add <cn>[, <cn>]`'
           )}`
         )
+        now.close();
         return 1
       }
 
@@ -173,6 +176,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     // Check for errors
     if (cert instanceof Error) {
       error(cert.message);
+      now.close();
       return 1;
     }
 
@@ -188,8 +192,9 @@ module.exports = async function main(ctx: any): Promise<number> {
         `Invalid number of arguments. Usage: ${chalk.cyan(
           '`now certs rm <id>`'
         )}`
-      )
-      return 1
+      );
+      now.close();
+      return 1;
     }
 
     const id = args[0]
@@ -197,13 +202,15 @@ module.exports = async function main(ctx: any): Promise<number> {
 
     if (!cert) {
       error(`No certificate found by id or cn "${id}" under ${chalk.bold(contextName)}`)
-      return 1
+      now.close();
+      return 1;
     }
 
     const yes = await readConfirmation('The following certificate will be removed permanently', cert)
     if (!yes) {
-      error('User abort')
-      return 0
+      error('User abort');
+      now.close();
+      return 0;
     }
 
     await deleteCertById(now, id)
@@ -214,7 +221,8 @@ module.exports = async function main(ctx: any): Promise<number> {
     )
   } else {
     error('Please specify a valid subcommand: ls | add | rm')
-    help()
+    now.close();
+    help();
     return 2;
   }
 
