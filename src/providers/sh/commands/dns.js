@@ -5,11 +5,11 @@ const chalk = require('chalk')
 const mri = require('mri')
 const ms = require('ms')
 const table = require('text-table')
+const plural = require('pluralize')
 
 // Utilities
 const DomainRecords = require('../util/domain-records')
-const indent = require('../util/indent')
-const strlen = require('../util/strlen')
+const formatTable = require('../util/format-table');
 const { handleError, error } = require('../util/error')
 const exit = require('../../../util/exit')
 const logo = require('../../../util/output/logo')
@@ -134,58 +134,32 @@ async function run({ token, sh: { currentTeam, user } }) {
       return exit(1)
     }
 
-    const elapsed = ms(new Date() - start)
     const res = await domainRecords.ls(args[0])
-    const text = []
     let count = 0
+
+    const header = ['id', 'name', 'type', 'value', 'aux', 'created'].map(s => chalk.dim(s))
+    const align = ['l', 'r', 'l', 'l', 'l', 'l']
+    const timeNow = new Date()
+    const data = [];
     res.forEach((records, domain) => {
-      count += records.length
-      if (records.length > 0) {
-        const cur = Date.now()
-        const header = [
-          ['', 'id', 'name', 'type', 'value', 'aux', 'created'].map(s =>
-            chalk.dim(s)
-          )
-        ]
-        const out = table(
-          header.concat(
-            records.map(record => {
-              const time = chalk.gray(
-                ms(cur - new Date(Number(record.created))) + ' ago'
-              )
-              const aux = (() => {
-                if (record.mxPriority !== undefined) return record.mxPriority
-                if (record.priority !== undefined) return record.priority
-                return ''
-              })()
-              return [
-                '',
-                record.id,
-                record.name,
-                record.type,
-                record.value,
-                aux,
-                time
-              ]
-            })
-          ),
-          {
-            align: ['l', 'r', 'l', 'l', 'l', 'l'],
-            hsep: ' '.repeat(2),
-            stringLength: strlen
-          }
-        )
-        text.push(`\n\n${chalk.bold(domain)}\n${indent(out, 2)}`)
-      }
+      data.push({
+        name: `${chalk.bold(domain)}`,
+        rows: records.map((r) => {
+           count++;
+           const aux = (() => {
+             if (r.mxPriority !== undefined) return r.mxPriority
+             if (r.priority !== undefined) return r.priority
+             return ''
+           })()
+          const age = chalk.gray(ms(timeNow - r.created) + ' ago')
+          return [ r.id, r.name, r.type, r.value, aux, age ]
+        })
+      })
     })
-    console.log(
-      `> ${count} record${count === 1 ? '' : 's'} found ${chalk.gray(
-        `[${elapsed}]`
-      )} under ${chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )}`
-    )
-    console.log(text.join(''))
+
+    const elapsed = ms(new Date() - start)
+    console.log(`> ${plural('record', count, true)} found ${chalk.gray(`[${elapsed}]`)} under ${chalk.bold((currentTeam && currentTeam.slug) || user.username || user.email)}`)
+    console.log(formatTable(header, align, data))
   } else if (subcommand === 'add') {
     const param = parseAddArgs(args)
     if (!param) {
