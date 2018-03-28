@@ -4,6 +4,7 @@ const { join } = require('path')
 // Packages
 const { send } = require('micro')
 const test = require('ava')
+const sinon = require('sinon')
 const { asc: alpha } = require('alpha-sort')
 const loadJSON = require('load-json-file')
 const fetch = require('node-fetch')
@@ -14,6 +15,7 @@ const hash = require('../src/providers/sh/util/hash')
 const readMetadata = require('../src/providers/sh/util/read-metadata')
 const getLocalConfigPath = require('../src/config/local-path')
 const toHost = require('../src/providers/sh/util/to-host')
+const wait = require('../src/util/output/wait')
 const { responseError } = require('../src/providers/sh/util/error')
 const getURL = require('./helpers/get-url')
 
@@ -399,6 +401,69 @@ test('leading https:// and path to host', t => {
 
 test('simple and path to host', t => {
   t.is(toHost('zeit.co/test'), 'zeit.co')
+})
+
+test('`wait` utility does not invoke spinner before n miliseconds', async t => {
+  const oraStub = sinon.stub().returns({
+    color: '',
+    start: () => {},
+    stop: () => {}
+  })
+  
+  const timeOut = 200
+  const stop = wait('test', timeOut, oraStub)
+  
+  stop()
+
+  t.truthy(oraStub.notCalled)
+})
+
+test('`wait` utility invokes spinner after n miliseconds', async t => {
+  const oraStub = sinon.stub().returns({
+    color: '',
+    start: () => {},
+    stop: () => {}
+  })
+  
+  const timeOut = 200
+
+  const delayedWait = () => {
+    return new Promise((resolve) => {
+      const stop = wait('test', timeOut, oraStub)
+      
+      setTimeout(() => {
+        resolve()
+        stop()
+      }, timeOut + 100)
+    })
+  }
+
+  await delayedWait()
+  t.is(oraStub.calledOnce, true)
+})
+
+test('`wait` utility does not invoke spinner when stopped before delay', async t => {
+  const oraStub = sinon.stub().returns({
+    color: '',
+    start: () => {},
+    stop: () => {}
+  })
+  
+  const timeOut = 200
+
+  const delayedWait = () => {
+    return new Promise((resolve) => {
+      const stop = wait('test', timeOut, oraStub)
+      stop()
+      
+      setTimeout(() => {
+        resolve()
+      }, timeOut + 100)
+    })
+  }
+
+  await delayedWait()
+  t.is(oraStub.notCalled, true)
 })
 
 test('4xx response error with fallback message', async t => {

@@ -58,6 +58,7 @@ module.exports = class Now extends EventEmitter {
       followSymlinks = true,
       forceNew = false,
       forwardNpm = false,
+      scale = {},
 
       // From readMetaData
       name,
@@ -192,6 +193,7 @@ module.exports = class Now extends EventEmitter {
             registryAuthToken: authToken,
             files,
             engines,
+            scale,
             sessionAffinity,
             atlas: hasNowJson && Boolean(nowConfig.atlas)
           }
@@ -301,7 +303,7 @@ module.exports = class Now extends EventEmitter {
     this._missing = []
     this._fileCount = files.length
 
-    return this._url
+    return deployment
   }
 
   upload() {
