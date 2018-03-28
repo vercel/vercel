@@ -832,7 +832,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      let cancelWait;
+      let cancelWait = () => {};
       if (!quiet) {
         cancelWait = wait('Initializing…')
       }
@@ -995,6 +995,19 @@ async function printEvents(now, token, currentTeam = null, {
   }, {
     retries: 4
   })
+}
+
+// if supplied with a region (eg: `sfo`) it returns
+// the default dc for it (`sfo1`)
+// if supplied with a dc id, it just returns it
+function getDcId(r: string) {
+  return /\d$/.test(r) ? r : `${r}1`
+}
+
+// determines if the supplied string is a valid
+// region name or dc id
+function isValidRegionOrDcId(r: string) {
+  return REGIONS.has(r) || DCS.has(r);
 }
 
 module.exports = main
