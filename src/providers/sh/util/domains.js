@@ -161,12 +161,12 @@ module.exports = class Domains extends Now {
     })
   }
 
-  async buy({ name, coupon }) {
+  async buy({ name, coupon, expectedPrice }) {
     if (!name) {
       throw new Error('`name` is not defined')
     }
 
-    const body = JSON.stringify({ name, coupon })
+    const body = JSON.stringify({ name, coupon, expectedPrice })
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
