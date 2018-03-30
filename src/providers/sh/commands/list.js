@@ -15,7 +15,6 @@ const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const sort = require('../util/sort-deployments')
 const exit = require('../../../util/exit')
-const wait = require('../../../util/output/wait')
 
 const help = () => {
   console.log(`
@@ -58,7 +57,6 @@ let app
 let argv
 let debug
 let apiUrl
-let stopSpinner
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -80,15 +78,12 @@ const main = async ctx => {
     await exit(0)
   }
 
-  stopSpinner = wait('Fetching deployments')
-
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
     await list({ token, sh, includeScheme })
   } catch (err) {
-    stopSpinner()
     console.error(error(`Unknown error: ${err}\n${err.stack}`))
     process.exit(1)
   }
@@ -108,7 +103,6 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
   const start = new Date()
 
   if (argv.all && !app) {
-    stopSpinner()
     console.log('> You must define an app when using `--all`')
     process.exit(1)
   }
@@ -167,7 +161,6 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
       return Math.max(acc, (i.url && i.url.length) || 0)
     }, 0) + 5
   const timeNow = new Date()
-  stopSpinner()
   console.log(
     `> ${
       plural('deployment', deployments.length, true)

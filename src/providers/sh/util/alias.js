@@ -59,9 +59,13 @@ module.exports = class Alias extends Now {
 
   async rm(_alias) {
     return this.retry(async bail => {
+      const stopSpinner = wait(`Removing ${_alias}`)
+
       const res = await this._fetch(`/now/aliases/${_alias.uid}`, {
         method: 'DELETE'
       })
+
+      stopSpinner()
 
       if (res.status === 403) {
         return bail(new Error('Unauthorized'))
@@ -417,6 +421,8 @@ module.exports = class Alias extends Now {
 
   createAlias(depl, alias) {
     return this.retry(async (bail, attempt) => {
+      const stopSpinner = wait(`Creating alias for deployment ${depl}`)
+
       if (this._debug) {
         console.time(
           `> [debug] /now/deployments/${depl.uid}/aliases #${attempt}`
@@ -427,6 +433,8 @@ module.exports = class Alias extends Now {
         method: 'POST',
         body: { alias }
       })
+
+      stopSpinner()
 
       const body = await res.json()
       if (this._debug) {
@@ -534,8 +542,12 @@ module.exports = class Alias extends Now {
   async setupRecord(domain, name) {
     await this.setupDomain(domain)
 
+    const message = `Setting up record "${name}" for "${domain}"`
+
+    const stopSpinner = wait(message)
+
     if (this._debug) {
-      console.log(`> [debug] Setting up record "${name}" for "${domain}"`)
+      console.log(`> [debug] ${message}`)
     }
 
     const type = name === '' ? 'ALIAS' : 'CNAME'
@@ -548,6 +560,8 @@ module.exports = class Alias extends Now {
         method: 'POST',
         body: { type, name: name === '' ? name : '*', value: 'alias.zeit.co' }
       })
+
+      stopSpinner()
 
       if (this._debug) {
         console.timeEnd(`> [debug] /domains/${domain}/records #${attempt}`)
@@ -852,10 +866,12 @@ module.exports = class Alias extends Now {
       async bail => {
         const url = `http://${domain}`
         let res
+        const stopSpinner = wait(`Verifying domain ${domain}`)
 
         try {
           res = await fetch(url, { method: 'HEAD', redirect: 'manual' })
         } catch (err) {
+          stopSpinner()
           if (err.code === 'ENOTFOUND') {
             // This means that the domain resolves to nowhere
             // Therefore, it has no DNS records
@@ -868,6 +884,8 @@ module.exports = class Alias extends Now {
             throw new Error(`Failed to fetch "${url}"`)
           }
         }
+
+        stopSpinner()
 
         if (res.headers.get('server') !== 'now') {
           const err = new Error(DOMAIN_VERIFICATION_ERROR)
