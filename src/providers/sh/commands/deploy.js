@@ -938,7 +938,7 @@ async function printEvents(now, currentTeam = null, {
 
     const eventsRes = await now._fetch(eventsUrl)
     if (eventsRes.ok) {
-      const readable = await eventsRes.readable();
+      const readable = await eventsRes.readable()
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
@@ -951,22 +951,25 @@ async function printEvents(now, currentTeam = null, {
             if (pollRes.ok) {
               const json = await pollRes.json()
               if (json.state === 'READY') {
-                cleanupAndResolve();
-                return;
+                cleanupAndResolve()
+                return
               }
             }
-            poller = startPoller();
-          }, 5000);
-        })();
+            poller = startPoller()
+          }, 5000)
+        })()
 
+        let cleanupAndResolveCalled = false
         function cleanupAndResolve() {
+          if (cleanupAndResolveCalled) return
+          cleanupAndResolveCalled = true
           log(chalk`{cyan Success!} Build complete`)
           clearTimeout(poller)
           // avoid lingering events
           stream.removeListener('data', onData)
           // prevent partial json from being parsed and error emitted.
           // this can be reproduced by force placing stream.write('{{{') here
-          stream._emitInvalidLines = true;
+          stream._emitInvalidLines = true
           // close the stream and resolve
           stream.end()
           resolve()
