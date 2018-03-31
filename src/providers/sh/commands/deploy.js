@@ -915,6 +915,7 @@ async function readMeta(
 async function printEvents(now, currentTeam = null, {
   onOpen = ()=>{}
 } = {}) {
+  let pollUrl = `/v1/now/deployments/${now.id}`
   let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
@@ -935,16 +936,32 @@ async function printEvents(now, currentTeam = null, {
     // if we are retrying, we clear past logs
     if (!quiet && o) process.stdout.write(eraseLines(0))
 
-    const res = await now._fetch(eventsUrl)
-    if (res.ok) {
-      const readable = await res.readable();
+    const eventsRes = await now._fetch(eventsUrl)
+    if (eventsRes.ok) {
+      const readable = await eventsRes.readable();
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
         const stream = readable.pipe(jsonlines.parse())
 
+        let poller = (function startPoller() {
+          return setTimeout(async () => {
+            const pollRes = await now._fetch(pollUrl)
+            if (pollRes.ok) {
+              const json = await pollRes.json()
+              if (json.state === 'READY') {
+                cleanupAndResolve();
+                return;
+              }
+            }
+            poller = startPoller();
+          }, 5000);
+        })();
+
         function cleanupAndResolve() {
+          log(chalk`{cyan Success!} Build complete`)
+          clearTimeout(poller)
           // avoid lingering events
           stream.removeListener('data', onData)
           // close the stream and resolve
@@ -971,10 +988,7 @@ async function printEvents(now, currentTeam = null, {
             o++
             log('Building…')
           } else
-          if (event === 'build-stop' ||
-              event === 'build-complete') {
-            o++
-            log(chalk`{cyan Success!} Build complete`)
+          if (event === 'build-complete') {
             cleanupAndResolve()
           } else
           if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
@@ -982,15 +996,16 @@ async function printEvents(now, currentTeam = null, {
             log(text)
           }
         }
+
         stream.on('data', onData)
         stream.on('error', err => {
           reject(new Error(`Deployment event stream error: ${err.stack}`))
         })
       })
     } else {
-      const err = new Error(`Deployment events status ${res.status}`)
+      const err = new Error(`Deployment events status ${eventsRes.status}`)
 
-      if (res.status < 500) {
+      if (eventsRes.status < 500) {
         bail(err)
       } else {
         throw err
