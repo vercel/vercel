@@ -19,8 +19,8 @@ const retry = require('async-retry')
 const jsonlines = require('jsonlines')
 
 // Utilities
-const Logger = require('../util/build-logger')
 const Now = require('../util')
+const Logger = require('../util/build-logger')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
 const { handleError, error } = require('../util/error')
@@ -832,24 +832,21 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing...')
-
-        try {
-          await printEvents(now, currentTeam, { onOpen: cancelWait })
-        } catch (err) {
-          cancelWait()
-          throw err
-        }
-
-        await exit(0)
-      } else {
-        if (!quiet) {
-          log('Initializing…')
-        }
-
-        printLogs(deployment, token)
+      let cancelWait = () => {};
+      if (!quiet) {
+        cancelWait = wait('Initializing…')
       }
+
+      try {
+        await printEvents(now, deployment, token, currentTeam, {
+          onOpen: cancelWait
+        })
+      } catch (err) {
+        cancelWait()
+        throw err
+      }
+
+      await exit(0)
     }
   })
 }
@@ -905,14 +902,18 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+async function printEvents(now, { url } = {}, token, currentTeam = null, {
+  onOpen = ()=>{}
+} = {}) {
+  const loggerWorkaround = new Logger(url, token, { debug: false, quiet: true })
+
+  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`
+    eventsUrl += `&teamId=${currentTeam.id}`
   }
 
-  debug(`Events ${url}`)
+  debug(`Events ${eventsUrl}`)
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -926,54 +927,55 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
     // if we are retrying, we clear past logs
     if (!quiet && o) process.stdout.write(eraseLines(0))
 
-    const res = await now._fetch(url)
+    const res = await now._fetch(eventsUrl)
     if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen()
-      onOpen = ()=>{}
+      const readable = await res.readable();
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse())
-        const onData = ({ type, payload }) => {
+        function cleanupAndResolve() {
+          // avoid lingering events
+          stream.removeListener('data', onData)
+          // close the stream and resolve
+          readable.end()
+          resolve()
+        }
+
+        loggerWorkaround.on('close', () => {
+          if (!quiet) {
+            log(chalk`{cyan Deployment complete!}`)
+          }
+          cleanupAndResolve()
+        });
+
+        const stream = readable.pipe(jsonlines.parse())
+        const onData = ({ type, event, text }) => {
+          // fire the open callback and ensure it's only fired once
+          onOpen()
+          onOpen = ()=>{}
+
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              resolve()
+              cleanupAndResolve()
             }
             return
           }
 
-          switch (type) {
-            case 'build-start':
-              o++
-              log('Building…')
-              break
-
-            case 'stdout':
-            case 'stderr':
-              log(payload)
-              break
-
-            case 'build-complete':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-              break
-
-            case 'instance-start':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-
-              // avoid lingering events
-              stream.off('data', onData)
-
-              // close the stream and resolve
-              stream.end()
-              resolve()
-              break
+          if (event === 'build-start') {
+            o++
+            log('Building…')
+          } else
+          if (event === 'build-complete') {
+            o++
+            log(chalk`{cyan Success!} Build complete`)
+          } else
+          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+            if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            log(text)
           }
         }
         stream.on('data', onData)
@@ -992,54 +994,6 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
     }
   }, {
     retries: 4
-  })
-}
-
-function printLogs({ url, scale = {} } = {}, token) {
-  // Log build
-  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
-
-  logger.on('error', async err => {
-    if (!quiet) {
-      if (err && err.type === 'BUILD_ERROR') {
-        log(error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        ))
-      } else {
-        log(error('Deployment failed'))
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit(1)
-  })
-
-  logger.on('close', async () => {
-    if (!quiet) {
-      log(chalk`{cyan Deployment complete!}`)
-
-      const dcs = Object.keys(scale)
-      if (dcs.length > 0) {
-        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit()
   })
 }
 
