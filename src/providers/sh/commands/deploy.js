@@ -17,14 +17,14 @@ const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 const retry = require('async-retry')
 const jsonlines = require('jsonlines')
+const executable = require('executable')
 
 // Utilities
-const Logger = require('../util/build-logger')
 const Now = require('../util')
+const isELF = require('../util/is-elf')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
-const { handleError, error } = require('../util/error')
-const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
+const { handleError } = require('../util/error')
 const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
@@ -34,9 +34,7 @@ const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
-
-const REGIONS = new Set(["sfo", "bru"]);
-const DCS = new Set(["sfo1", "bru1"]);
+const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -78,9 +76,7 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
+      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       ls | list            [app]       List deployments
       rm | remove          [id]        Remove a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
@@ -173,6 +169,7 @@ let forceNew
 let deploymentName
 let sessionAffinity
 let log
+let error
 let debug
 let debugEnabled
 let clipboard
@@ -292,7 +289,7 @@ async function main(ctx: any) {
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, debug } = createOutput({ debug: debugEnabled }))
+  ;({ log, error, debug } = createOutput({ debug: debugEnabled }))
 
   if (argv.h || argv.help) {
     help()
@@ -320,6 +317,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     let deployment
     let deploymentType
     let isFile
+    let atlas = false
 
     if (paths.length === 1) {
       try {
@@ -328,10 +326,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         if (fsData.isFile()) {
           isFile = true
           deploymentType = 'static'
+          atlas = await isELF(paths[0]) && executable.checkMode(fsData.mode, fsData.gid, fsData.uid)
         }
       } catch (err) {
         let repo
         let isValidRepo = false
+
+        const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
 
         try {
           isValidRepo = isRepoPath(rawPath)
@@ -372,7 +373,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               gitRepo.main
             )}" ${gitRef}on ${gitRepo.type}`)
         } else {
-          log(error(`The specified directory "${basename(paths[0])}" doesn't exist.`))
+          error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           await exit(1)
         }
       }
@@ -400,11 +401,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     try {
       await Promise.all(checkers)
     } catch (err) {
-      log(error({
-        message: err.message,
-        slug: 'path-not-deployable'
-      }))
-
+      error(err.message, 'path-not-deployable')
       await exit(1)
     }
 
@@ -491,33 +488,44 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
-        log(error({
-          message: `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
-          slug: 'invalid-region-or-dc'
-        }))
+        error(
+          `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
+          'deploy-invalid-dc'
+        )
         await exit(1)
       }
     }
 
+    let dcIds = [];
+
     if (regions.length) {
       if (Object.keys(scale).length) {
-        log(error({
-          message: "Can't set both `regions` and `scale` options simultaneously",
-          slug: 'regions-and-scale-at-once'
-        }))
+        error(
+          "Can't set both `regions` and `scale` options simultaneously",
+          'regions-and-scale-at-once'
+        )
         await exit(1)
       }
 
-      for (const r of regions) {
-        if (!isValidRegionOrDcId(r)) {
-          log(error({
-            message: `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
-            slug: 'invalid-region-or-dc'
-          }))
+      try {
+        dcIds = normalizeRegionsList(regions);
+      } catch (err) {
+        if (err.code === 'INVALID_ID') {
+          error(
+            `The value "${err.id}" in \`--regions\` is not a valid region or DC identifier`,
+            'deploy-invalid-dc'
+          )
           await exit(1)
+        } else if (err.code === 'INVALID_ALL') {
+          error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
+          await exit(1)
+        } else {
+          throw err;
         }
+      }
 
-        scale[getDcId(r)] = { min: 0, max: 1 }
+      for (const dcId of dcIds) {
+        scale[dcId] = { min: 0, max: 1 }
       }
     }
 
@@ -541,10 +549,10 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          log(error({
-            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-            slug: 'missing-dotenv-target'
-          }))
+          error(
+            `--dotenv flag is set but ${dotenvFileName} file is missing`,
+            'missing-dotenv-target'
+          )
 
           await exit(1)
         } else {
@@ -581,20 +589,20 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          log(error({
-            message: 'Environment variable name is missing',
-            slug: 'missing-env-key-value'
-          }))
+          error(
+            'Environment variable name is missing',
+            'missing-env-key-value'
+          )
 
           await exit(1)
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          log(error(
+          error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
-          ))
+          )
 
           await exit(1)
         }
@@ -613,11 +621,11 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               val = process.env[key].replace(/^@/, '\\@')
             }
           } else {
-            log(error(
+            error(
               `No value specified for env ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
-            ))
+            )
 
             await exit(1)
           }
@@ -629,25 +637,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              log(error(
+              error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
-              ))
+              )
             } else {
-              log(error({
-                message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
-                slug: 'env-no-secret'
-              }))
+              error(
+                `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+                'env-no-secret'
+              )
             }
 
             await exit(1)
           } else if (_secrets.length > 1) {
-            log(error(
+            error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
-            ))
+            )
 
             await exit(1)
           }
@@ -685,7 +693,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile
+          isFile,
+          atlas: atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
         },
         meta
       )
@@ -725,7 +734,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           now.on('complete', () => resolve())
 
           now.on('error', err => {
-            log(error('Upload failed'))
+            error('Upload failed')
             reject(err)
           })
         })
@@ -757,7 +766,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `If you agree with that, please run again with ${cmd('--public')}.`
-              log(error(message))
+              error(message)
 
               await exit(1)
             } else {
@@ -790,7 +799,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         const message = regions.length
           ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
           : `Invalid DC name for the scale option: ${additionalProperty}`
-        log(error(message));
+        error(message)
         await exit(1)
       }
 
@@ -832,24 +841,22 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing...')
-
-        try {
-          await printEvents(now, currentTeam, { onOpen: cancelWait })
-        } catch (err) {
-          cancelWait()
-          throw err
-        }
-
-        await exit(0)
-      } else {
-        if (!quiet) {
-          log('Initializing…')
-        }
-
-        printLogs(deployment, token)
+      let cancelWait = () => {};
+      if (!quiet) {
+        cancelWait = wait('Initializing…')
       }
+
+      try {
+        require('assert')(deployment); // mute linter
+        await printEvents(now, currentTeam, {
+          onOpen: cancelWait
+        })
+      } catch (err) {
+        cancelWait()
+        throw err
+      }
+
+      await exit(0);
     }
   })
 }
@@ -905,14 +912,16 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+async function printEvents(now, currentTeam = null, {
+  onOpen = ()=>{}
+} = {}) {
+  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`
+    eventsUrl += `&teamId=${currentTeam.id}`
   }
 
-  debug(`Events ${url}`)
+  debug(`Events ${eventsUrl}`)
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -926,54 +935,51 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
     // if we are retrying, we clear past logs
     if (!quiet && o) process.stdout.write(eraseLines(0))
 
-    const res = await now._fetch(url)
+    const res = await now._fetch(eventsUrl)
     if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen()
-      onOpen = ()=>{}
+      const readable = await res.readable();
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse())
-        const onData = ({ type, payload }) => {
+        const stream = readable.pipe(jsonlines.parse())
+
+        function cleanupAndResolve() {
+          // avoid lingering events
+          stream.removeListener('data', onData)
+          // close the stream and resolve
+          stream.end()
+          resolve()
+        }
+
+        const onData = ({ type, event, text }) => {
+          // fire the open callback and ensure it's only fired once
+          onOpen()
+          onOpen = ()=>{}
+
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              resolve()
+              cleanupAndResolve()
             }
             return
           }
 
-          switch (type) {
-            case 'build-start':
-              o++
-              log('Building…')
-              break
-
-            case 'stdout':
-            case 'stderr':
-              log(payload)
-              break
-
-            case 'build-complete':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-              break
-
-            case 'instance-start':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-
-              // avoid lingering events
-              stream.off('data', onData)
-
-              // close the stream and resolve
-              stream.end()
-              resolve()
-              break
+          if (event === 'build-start') {
+            o++
+            log('Building…')
+          } else
+          if (event === 'build-stop' ||
+              event === 'build-complete') {
+            o++
+            log(chalk`{cyan Success!} Build complete`)
+            cleanupAndResolve()
+          } else
+          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+            if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            log(text)
           }
         }
         stream.on('data', onData)
@@ -993,67 +999,6 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
   }, {
     retries: 4
   })
-}
-
-function printLogs({ url, scale = {} } = {}, token) {
-  // Log build
-  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
-
-  logger.on('error', async err => {
-    if (!quiet) {
-      if (err && err.type === 'BUILD_ERROR') {
-        log(error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        ))
-      } else {
-        log(error('Deployment failed'))
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit(1)
-  })
-
-  logger.on('close', async () => {
-    if (!quiet) {
-      log(chalk`{cyan Deployment complete!}`)
-
-      const dcs = Object.keys(scale)
-      if (dcs.length > 0) {
-        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit()
-  })
-}
-
-// if supplied with a region (eg: `sfo`) it returns
-// the default dc for it (`sfo1`)
-// if supplied with a dc id, it just returns it
-function getDcId(r: string) {
-  return /\d$/.test(r) ? r : `${r}1`
-}
-
-// determines if the supplied string is a valid
-// region name or dc id
-function isValidRegionOrDcId(r: string) {
-  return REGIONS.has(r) || DCS.has(r);
 }
 
 module.exports = main

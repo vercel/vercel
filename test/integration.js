@@ -249,9 +249,11 @@ test('error on trying to auto-scale', async t => {
     '1',
     'auto',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
-  t.is(output, goal)
+  t.is(output.trim(), goal)
 })
 
 test('scale down the deployment directly', async t => {

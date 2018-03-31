@@ -84,8 +84,32 @@ async function responseError(res, fallbackMessage = null) {
   return err
 }
 
+async function responseErrorMessage(res, fallbackMessage = null) {
+  let message
+
+  if (res.status >= 400 && res.status < 500) {
+    let body
+
+    try {
+      body = await res.json()
+    } catch (err) {
+      body = {}
+    }
+
+    // Some APIs wrongly return `err` instead of `error`
+    message = (body.error || body.err || {}).message
+  }
+
+  if (message == null) {
+    message = fallbackMessage === null ? 'Response Error' : fallbackMessage
+  }
+
+  return `${message} (${res.status})`;
+}
+
 module.exports = {
   handleError,
   responseError,
+  responseErrorMessage,
   error
 }

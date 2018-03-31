@@ -15,7 +15,8 @@ const mainCommands = new Set([
   'scale',
   'login',
   'logout',
-  'whoami'
+  'whoami',
+  'inspect'
 ])
 
 const aliases = {

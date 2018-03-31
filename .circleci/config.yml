@@ -35,6 +35,8 @@ jobs:
       - run:
           name: Compiling Binaries
           command: yarn run pack
+      - store_artifacts:
+          path: packed
       - persist_to_workspace:
           root: .
           paths:
