@@ -964,6 +964,9 @@ async function printEvents(now, currentTeam = null, {
           clearTimeout(poller)
           // avoid lingering events
           stream.removeListener('data', onData)
+          // prevent partial json from being parsed and error emitted.
+          // this can be reproduced by force placing stream.write('{{{') here
+          stream._emitInvalidLines = true;
           // close the stream and resolve
           stream.end()
           resolve()
