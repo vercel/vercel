@@ -959,10 +959,18 @@ async function printEvents(now, currentTeam = null, {
           }, 5000)
         })()
 
+        let onOpenCalled = false
+        function callOnOpenOnce() {
+          if (onOpenCalled) return
+          onOpenCalled = true
+          onOpen()
+        }
+
         let cleanupAndResolveCalled = false
         function cleanupAndResolve() {
           if (cleanupAndResolveCalled) return
           cleanupAndResolveCalled = true
+          callOnOpenOnce()
           log(chalk`{cyan Success!} Build complete`)
           clearTimeout(poller)
           // avoid lingering events
@@ -976,10 +984,6 @@ async function printEvents(now, currentTeam = null, {
         }
 
         const onData = ({ type, event, text }) => {
-          // fire the open callback and ensure it's only fired once
-          onOpen()
-          onOpen = ()=>{}
-
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
@@ -992,6 +996,7 @@ async function printEvents(now, currentTeam = null, {
 
           if (event === 'build-start') {
             o++
+            callOnOpenOnce()
             log('Building…')
           } else
           if (event === 'build-complete') {
@@ -999,12 +1004,14 @@ async function printEvents(now, currentTeam = null, {
           } else
           if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
             if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            callOnOpenOnce()
             log(text)
           }
         }
 
         stream.on('data', onData)
         stream.on('error', err => {
+          callOnOpenOnce()
           reject(new Error(`Deployment event stream error: ${err.stack}`))
         })
       })
