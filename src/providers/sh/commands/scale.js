@@ -153,6 +153,8 @@ async function run({ token, sh: { currentTeam } }) {
   const scale = new NowScale({ apiUrl, token, debug, currentTeam })
   const start = Date.now()
 
+  let duplicateDeployments = []
+
   if (id === 'ls') {
     await list(scale)
     process.exit(0)
@@ -201,7 +203,11 @@ async function run({ token, sh: { currentTeam } }) {
       console.error(error(`Requested identifier is a path alias. https://err.sh/now-cli/scaling-path-alias`))
       return process.exit(1)
     }
-    
+
+    duplicateDeployments = (await scale.listAliases()).filter(
+      alias => alias.deploymentId === aliasDeployment.deploymentId
+    )
+
     match = deployments.find(d => {
       return d.uid === aliasDeployment.deploymentId
     })
@@ -242,6 +248,12 @@ async function run({ token, sh: { currentTeam } }) {
     // Nothing to do, let's print the rules
     printScaleingRules(match.url, currentCurrent, min, max)
     return
+  }
+
+  // Don't scale down the deployment if multiple aliases are linked to the same deploymentId
+  if (match.scale.current > scaleArg && duplicateDeployments.length > 1) {
+    console.log(`Scaling cannot be performed as there are multiple aliases linked to ${match.url}`)
+    return process.exit(0)
   }
 
   if ((match.state === 'FROZEN' || match.scale.current === 0) && min > 0) {
