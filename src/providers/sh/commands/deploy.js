@@ -934,7 +934,7 @@ async function printEvents(now, currentTeam = null, {
     onOpen()
   }
 
-  let pollUrl = `/v1/now/deployments/${now.id}`
+  let pollUrl = `/v4/now/deployments/${now.id}`
   let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
   if (currentTeam) {
@@ -950,13 +950,6 @@ async function printEvents(now, currentTeam = null, {
   await retry(async (bail, attemptNumber) => {
     if (attemptNumber > 1) {
       debug('Retrying events')
-    }
-
-    // if we are retrying, we clear past logs
-    if (!quiet && o) {
-      // o + 1 because current line is counted
-      process.stdout.write(eraseLines(o + 1))
-      o = 0
     }
 
     const eventsRes = await now._fetch(eventsUrl)
@@ -1051,7 +1044,17 @@ async function printEvents(now, currentTeam = null, {
       }
     }
   }, {
-    retries: 4
+    retries: 4,
+    onRetry: (err) => {
+      // if we are retrying, we clear past logs
+      if (!quiet && o) {
+        // o + 1 because current line is counted
+        process.stdout.write(eraseLines(o + 1))
+        o = 0
+      }
+
+      log(`Deployment state polling error: ${err.message}`)
+    }
   })
 }
 
