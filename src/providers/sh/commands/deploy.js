@@ -915,6 +915,13 @@ async function readMeta(
 async function printEvents(now, currentTeam = null, {
   onOpen = ()=>{}
 } = {}) {
+  let onOpenCalled = false
+  function callOnOpenOnce() {
+    if (onOpenCalled) return
+    onOpenCalled = true
+    onOpen()
+  }
+
   let pollUrl = `/v1/now/deployments/${now.id}`
   let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
 
@@ -947,24 +954,21 @@ async function printEvents(now, currentTeam = null, {
 
         let poller = (function startPoller() {
           return setTimeout(async () => {
-            const pollRes = await now._fetch(pollUrl)
-            if (pollRes.ok) {
-              const json = await pollRes.json()
-              if (json.state === 'READY') {
-                cleanupAndResolve()
-                return
+            try {
+              const pollRes = await now._fetch(pollUrl)
+              if (pollRes.ok) {
+                const json = await pollRes.json()
+                if (json.state === 'READY') {
+                  cleanupAndResolve()
+                  return
+                }
               }
+              poller = startPoller()
+            } catch (error) {
+              reject(error)
             }
-            poller = startPoller()
           }, 5000)
         })()
-
-        let onOpenCalled = false
-        function callOnOpenOnce() {
-          if (onOpenCalled) return
-          onOpenCalled = true
-          onOpen()
-        }
 
         let cleanupAndResolveCalled = false
         function cleanupAndResolve() {
@@ -1012,10 +1016,11 @@ async function printEvents(now, currentTeam = null, {
         stream.on('data', onData)
         stream.on('error', err => {
           callOnOpenOnce()
-          reject(new Error(`Deployment event stream error: ${err.stack}`))
+          log(`Deployment event stream error: ${err.message}`)
         })
       })
     } else {
+      callOnOpenOnce()
       const err = new Error(`Deployment events status ${eventsRes.status}`)
 
       if (eventsRes.status < 500) {
