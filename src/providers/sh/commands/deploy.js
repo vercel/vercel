@@ -20,7 +20,6 @@ const jsonlines = require('jsonlines')
 const executable = require('executable')
 
 // Utilities
-const Logger = require('../util/build-logger')
 const Now = require('../util')
 const isELF = require('../util/is-elf')
 const createOutput = require('../../../util/output')
@@ -842,24 +841,22 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing...')
-
-        try {
-          await printEvents(now, currentTeam, { onOpen: cancelWait })
-        } catch (err) {
-          cancelWait()
-          throw err
-        }
-
-        await exit(0)
-      } else {
-        if (!quiet) {
-          log('Initializing…')
-        }
-
-        printLogs(deployment, token)
+      let cancelWait = () => {};
+      if (!quiet) {
+        cancelWait = wait('Initializing…')
       }
+
+      try {
+        require('assert')(deployment); // mute linter
+        await printEvents(now, currentTeam, {
+          onOpen: cancelWait
+        })
+      } catch (err) {
+        cancelWait()
+        throw err
+      }
+
+      await exit(0);
     }
   })
 }
@@ -915,14 +912,36 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+function printEvent(type, text) {
+  if (type === 'command') {
+    log(`▲ ${text}`)
+  } else if (type === 'stdout' || type === 'stderr') {
+    text.split('\n').forEach(v => {
+      // strip out the beginning `>` if there is one because
+      // `log()` prepends its own and we don't want `> >`
+      log(v.replace(/^> /, ''))
+    })
+  }
+}
 
-  if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`
+async function printEvents(now, currentTeam = null, {
+  onOpen = ()=>{}
+} = {}) {
+  let onOpenCalled = false
+  function callOnOpenOnce() {
+    if (onOpenCalled) return
+    onOpenCalled = true
+    onOpen()
   }
 
-  debug(`Events ${url}`)
+  let pollUrl = `/v1/now/deployments/${now.id}`
+  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
+
+  if (currentTeam) {
+    eventsUrl += `&teamId=${currentTeam.id}`
+  }
+
+  debug(`Events ${eventsUrl}`)
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -934,67 +953,98 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
     }
 
     // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0))
+    if (!quiet && o) {
+      // o + 1 because current line is counted
+      process.stdout.write(eraseLines(o + 1))
+      o = 0
+    }
 
-    const res = await now._fetch(url)
-    if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen()
-      onOpen = ()=>{}
+    const eventsRes = await now._fetch(eventsUrl)
+    if (eventsRes.ok) {
+      const readable = await eventsRes.readable()
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
       return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse())
-        const onData = ({ type, payload }) => {
+        const stream = readable.pipe(jsonlines.parse())
+
+        let poller = (function startPoller() {
+          return setTimeout(async () => {
+            try {
+              const pollRes = await now._fetch(pollUrl)
+              if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
+              const json = await pollRes.json()
+              if (json.state === 'READY') {
+                cleanup()
+                return
+              }
+              poller = startPoller()
+            } catch (error) {
+              cleanup(error)
+            }
+          }, 5000)
+        })()
+
+        let cleanupAndResolveCalled = false
+        function cleanup(error) {
+          if (cleanupAndResolveCalled) return
+          cleanupAndResolveCalled = true
+          callOnOpenOnce()
+          if (!error) log(chalk`{cyan Success!} Build complete`)
+          clearTimeout(poller)
+          // avoid lingering events
+          stream.removeListener('data', onData)
+          // prevent partial json from being parsed and error emitted.
+          // this can be reproduced by force placing stream.write('{{{') here
+          stream._emitInvalidLines = true
+          // close the stream and resolve
+          stream.end()
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
+          }
+        }
+
+        const onData = ({ type, event, text }) => {
           // if we are 'quiet' because we are piping, simply
           // wait for the first instance to be started
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              resolve()
+              cleanup()
             }
             return
           }
 
-          switch (type) {
-            case 'build-start':
-              o++
-              log('Building…')
-              break
-
-            case 'stdout':
-            case 'stderr':
-              log(payload)
-              break
-
-            case 'build-complete':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-              break
-
-            case 'instance-start':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-
-              // avoid lingering events
-              stream.off('data', onData)
-
-              // close the stream and resolve
-              stream.end()
-              resolve()
-              break
+          if (event === 'build-start') {
+            o++
+            callOnOpenOnce()
+            log('Building…')
+          } else
+          if (event === 'build-complete') {
+            cleanup()
+          } else
+          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+            if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            o += text.split('\n').length
+            callOnOpenOnce()
+            printEvent(type, text)
           }
         }
+
         stream.on('data', onData)
         stream.on('error', err => {
-          reject(new Error(`Deployment event stream error: ${err.stack}`))
+          o++
+          callOnOpenOnce()
+          log(`Deployment event stream error: ${err.message}`)
         })
       })
     } else {
-      const err = new Error(`Deployment events status ${res.status}`)
+      callOnOpenOnce()
+      const err = new Error(`Deployment events status ${eventsRes.status}`)
 
-      if (res.status < 500) {
+      if (eventsRes.status < 500) {
         bail(err)
       } else {
         throw err
@@ -1002,54 +1052,6 @@ async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
     }
   }, {
     retries: 4
-  })
-}
-
-function printLogs({ url, scale = {} } = {}, token) {
-  // Log build
-  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
-
-  logger.on('error', async err => {
-    if (!quiet) {
-      if (err && err.type === 'BUILD_ERROR') {
-        error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        )
-      } else {
-        error('Deployment failed')
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit(1)
-  })
-
-  logger.on('close', async () => {
-    if (!quiet) {
-      log(chalk`{cyan Deployment complete!}`)
-
-      const dcs = Object.keys(scale)
-      if (dcs.length > 0) {
-        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit()
   })
 }
 
