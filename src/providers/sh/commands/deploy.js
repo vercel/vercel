@@ -940,9 +940,6 @@ async function printEvents(now, currentTeam = null, {
       debug('Retrying events')
     }
 
-    // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0))
-
     const eventsRes = await now._fetch(eventsUrl)
     if (eventsRes.ok) {
       const readable = await eventsRes.readable()
@@ -956,26 +953,25 @@ async function printEvents(now, currentTeam = null, {
           return setTimeout(async () => {
             try {
               const pollRes = await now._fetch(pollUrl)
-              if (pollRes.ok) {
-                const json = await pollRes.json()
-                if (json.state === 'READY') {
-                  cleanupAndResolve()
-                  return
-                }
+              if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
+              const json = await pollRes.json()
+              if (json.state === 'READY') {
+                cleanup()
+                return
               }
               poller = startPoller()
             } catch (error) {
-              reject(error)
+              cleanup(error)
             }
           }, 5000)
         })()
 
         let cleanupAndResolveCalled = false
-        function cleanupAndResolve() {
+        function cleanup(error) {
           if (cleanupAndResolveCalled) return
           cleanupAndResolveCalled = true
           callOnOpenOnce()
-          log(chalk`{cyan Success!} Build complete`)
+          if (!error) log(chalk`{cyan Success!} Build complete`)
           clearTimeout(poller)
           // avoid lingering events
           stream.removeListener('data', onData)
@@ -984,7 +980,11 @@ async function printEvents(now, currentTeam = null, {
           stream._emitInvalidLines = true
           // close the stream and resolve
           stream.end()
-          resolve()
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
+          }
         }
 
         const onData = ({ type, event, text }) => {
@@ -993,7 +993,7 @@ async function printEvents(now, currentTeam = null, {
           // and ignore everything else
           if (quiet) {
             if (type === 'instance-start') {
-              cleanupAndResolve()
+              cleanup()
             }
             return
           }
@@ -1004,10 +1004,11 @@ async function printEvents(now, currentTeam = null, {
             log('Building…')
           } else
           if (event === 'build-complete') {
-            cleanupAndResolve()
+            cleanup()
           } else
           if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
             if (text.slice(-1) === '\n') text = text.slice(0, -1)
+            o += text.split('\n').length
             callOnOpenOnce()
             log(text)
           }
@@ -1015,6 +1016,7 @@ async function printEvents(now, currentTeam = null, {
 
         stream.on('data', onData)
         stream.on('error', err => {
+          o++
           callOnOpenOnce()
           log(`Deployment event stream error: ${err.message}`)
         })
@@ -1030,7 +1032,12 @@ async function printEvents(now, currentTeam = null, {
       }
     }
   }, {
-    retries: 4
+    retries: 4,
+    onRetry: () => {
+      // $FlowFixMe
+      process.stdout.write(eraseLines(o + 1))
+      o = 0
+    }
   })
 }
 
