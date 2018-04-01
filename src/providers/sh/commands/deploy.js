@@ -912,6 +912,18 @@ async function readMeta(
   }
 }
 
+function printEvent(type, text) {
+  if (type === 'command') {
+    log(`▲ ${text}`)
+  } else if (type === 'stdout' || type === 'stderr') {
+    text.split('\n').forEach(v => {
+      // strip out the beginning `>` if there is one because
+      // `log()` prepends its own and we don't want `> >`
+      log(v.replace(/^> /, ''))
+    })
+  }
+}
+
 async function printEvents(now, currentTeam = null, {
   onOpen = ()=>{}
 } = {}) {
@@ -1017,7 +1029,7 @@ async function printEvents(now, currentTeam = null, {
             if (text.slice(-1) === '\n') text = text.slice(0, -1)
             o += text.split('\n').length
             callOnOpenOnce()
-            log(text)
+            printEvent(type, text)
           }
         }
 
