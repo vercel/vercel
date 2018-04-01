@@ -940,6 +940,13 @@ async function printEvents(now, currentTeam = null, {
       debug('Retrying events')
     }
 
+    // if we are retrying, we clear past logs
+    if (!quiet && o) {
+      // o + 1 because current line is counted
+      process.stdout.write(eraseLines(o + 1))
+      o = 0
+    }
+
     const eventsRes = await now._fetch(eventsUrl)
     if (eventsRes.ok) {
       const readable = await eventsRes.readable()
@@ -1032,12 +1039,7 @@ async function printEvents(now, currentTeam = null, {
       }
     }
   }, {
-    retries: 4,
-    onRetry: () => {
-      // $FlowFixMe
-      process.stdout.write(eraseLines(o + 1))
-      o = 0
-    }
+    retries: 4
   })
 }
 
