@@ -77,7 +77,9 @@ async function responseError(res, fallbackMessage = null) {
   
   // Copy every field that was added manually to the error
   for (const field of Object.keys(bodyError)) {
-    err[field] = bodyError[field]
+    if (field !== 'message') {
+      err[field] = bodyError[field]
+    }
   }
 
   if (res.status === 429) {
