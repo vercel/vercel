@@ -806,6 +806,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const { url } = now
+    // $FlowFixMe
     const dcs = Object.keys(deployment.scale).join(', ')
 
     if (isTTY) {
