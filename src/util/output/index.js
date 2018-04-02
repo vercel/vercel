@@ -16,7 +16,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function error(v) {
-    log(chalk`{red.bold Error!} ${v}`)
+    log(chalk`{red.bold Error!} ${v}`, chalk.red)
   }
 
   function debug(v) {
