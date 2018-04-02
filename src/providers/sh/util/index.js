@@ -45,8 +45,9 @@ module.exports = class Now extends EventEmitter {
     this._agent = new Agent(apiUrl, { debug })
     this._onRetry = this._onRetry.bind(this)
     this.currentTeam = currentTeam
-    process.on('nowExit', () => {
+    process.on('nowExit', function closeAgent() {
       this._agent.close();
+      process.removeListener('nowExit', closeAgent)
     })
   }
 
