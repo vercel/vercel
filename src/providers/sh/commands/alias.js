@@ -1372,7 +1372,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
       // If it doesn't resolve here it means that everything is setup but the
       // propagation is not done so we invite the user to try later.
       output.log(`DNS Configured! Verifying propagation…`)
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+      if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
         return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
       }
     }
@@ -1406,7 +1406,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         
         // Verify that the DNS records are ready
         output.log(`DNS Configured! Verifying propagation…`)
-        if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
           return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
         }
       }
