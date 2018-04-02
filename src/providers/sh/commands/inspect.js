@@ -92,8 +92,6 @@ module.exports = async function main (ctx: any): Promise<number> {
     deployment = await now.findDeployment(id)
   } catch (err) {
     cancelWait();
-    now.close();
-
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
       return 1;
@@ -126,7 +124,6 @@ module.exports = async function main (ctx: any): Promise<number> {
   print('\n');
 
   if (deployment.type === STATIC) {
-    now.close();
     return 0
   }
 
@@ -171,7 +168,6 @@ module.exports = async function main (ctx: any): Promise<number> {
     print('\n')
   }
 
-  now.close();
   return exitCode;
 }
 
