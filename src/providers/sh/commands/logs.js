@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// TODO TEMPORARY!
+/* eslint-disable no-unused-vars */
+
 // Native
 const qs = require('querystring')
 
@@ -15,6 +18,7 @@ const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
 const { compare, deserialize } = require('../util/logs')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
+const printEvents = require('../util/events')
 const exit = require('../../../util/exit')
 
 const help = () => {
@@ -147,6 +151,9 @@ module.exports = async ctx => {
 }
 
 function printLogs({ token, sh: { currentTeam } }) {
+  const now = new Now({ apiUrl, token, debug, currentTeam })
+  return printEvents(now, deploymentIdOrURL, currentTeam, { quiet: false, debug });
+/*
   return new Promise(async (resolve, reject) => {
     let buf = []
     let init = false
@@ -242,6 +249,7 @@ function printLogs({ token, sh: { currentTeam } }) {
       printLog(log)
     }
   })
+*/
 }
 
 function printLogShort(log) {
@@ -282,6 +290,7 @@ const logPrinters = {
   raw: printLogRaw
 }
 
+/*
 function printLog(log) {
   logPrinters[outputMode](log)
 }
@@ -308,6 +317,7 @@ async function fetchLogs({ token, currentTeam, since, until } = {}) {
 
   return logs.map(deserialize)
 }
+*/
 
 function repeat(s, n) {
   return new Array(n + 1).join(s)

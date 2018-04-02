@@ -19,10 +19,10 @@ function printEvent(log, type, text) {
   }
 }
 
-async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{}, quiet, debug
+async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
+  onOpen = ()=>{}, quiet, debugEnabled
 } = {}) {
-  const { log } = createOutput({ debug })
+  const { log, debug } = createOutput({ debug: debugEnabled })
 
   let onOpenCalled = false
   function callOnOpenOnce() {
@@ -31,8 +31,8 @@ async function printEvents(now, currentTeam = null, {
     onOpen()
   }
 
-  let pollUrl = `/v1/now/deployments/${now.id}`
-  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
+  let pollUrl = `/v1/now/deployments/${deploymentIdOrURL}`
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?follow=1`
 
   if (currentTeam) {
     eventsUrl += `&teamId=${currentTeam.id}`

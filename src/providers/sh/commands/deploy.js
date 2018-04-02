@@ -847,8 +847,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
       try {
         require('assert')(deployment); // mute linter
-        await printEvents(now, currentTeam, {
-          onOpen: cancelWait, quiet, debug
+        await printEvents(now, now.id, currentTeam, {
+          onOpen: cancelWait, quiet, debugEnabled
         })
       } catch (err) {
         cancelWait()
