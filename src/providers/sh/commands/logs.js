@@ -70,7 +70,6 @@ let deploymentIdOrURL
 
 let debug
 let apiUrl
-let limit
 let query
 let follow
 let types
@@ -103,14 +102,14 @@ const main = async ctx => {
   }
 
   try {
-    since = argv.since ? toSerial(argv.since) : null
+    since = argv.since ? toTimestamp(argv.since) : 0
   } catch (err) {
     error(`Invalid date string: ${argv.since}`)
     process.exit(1)
   }
 
   try {
-    until = argv.until ? toSerial(argv.until) : null
+    until = argv.until ? toTimestamp(argv.until) : 0
   } catch (err) {
     error(`Invalid date string: ${argv.until}`)
     process.exit(1)
@@ -129,7 +128,6 @@ const main = async ctx => {
   debug = argv.debug
   apiUrl = ctx.apiUrl
 
-  limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
@@ -144,6 +142,7 @@ const main = async ctx => {
 module.exports = async ctx => {
   try {
     await main(ctx)
+    await exit(0) // TODO how to exit cleanly. who is blocking?
   } catch (err) {
     handleError(err)
     process.exit(1)
@@ -152,106 +151,13 @@ module.exports = async ctx => {
 
 function printLogs({ token, sh: { currentTeam } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { query, types }
-  return printEvents(now, deploymentIdOrURL, currentTeam,
-    { mode: 'logs', printEvent, quiet: false, debug, findOpts });
-/*
-  return new Promise(async (resolve, reject) => {
-    let buf = []
-    let init = false
-    let lastLog
-
-    if (!follow) {
-      onLogs(await fetchLogs({ token, currentTeam, since, until }))
-      resolve()
-    }
-
-    const isURL = deploymentIdOrURL.includes('.')
-    const q = qs.stringify({
-      deploymentId: isURL ? '' : deploymentIdOrURL,
-      host: isURL ? deploymentIdOrURL : '',
-      instanceId,
-      types: types.join(','),
-      query
-    })
-
-    const socket = io(`https://log-io.zeit.co?${q}`)
-    socket.on('connect', () => {
-      if (debug) {
-        console.log('> [debug] Socket connected')
-      }
-    })
-
-    socket.on('auth', callback => {
-      if (debug) {
-        console.log('> [debug] Socket authenticate')
-      }
-      callback(token)
-    })
-
-    socket.on('ready', () => {
-      if (debug) {
-        console.log('> [debug] Socket ready')
-      }
-
-      // For the case socket reconnected
-      const _since = lastLog ? lastLog.serial : since
-
-      fetchLogs({ token, currentTeam, since: _since }).then(logs => {
-        init = true
-        const m = {}
-        logs.concat(buf.map(b => b.log)).forEach(l => {
-          m[l.id] = l
-        })
-        buf = []
-        onLogs(Object.values(m))
-      })
-    })
-
-    socket.on('logs', l => {
-      const log = deserialize(l)
-      let timer
-      if (init) {
-        // Wait for other logs for a while
-        // and sort them in the correct order
-        timer = setTimeout(() => {
-          buf.sort((a, b) => compare(a.log, b.log))
-          const idx = buf.findIndex(b => b.log.id === log.id)
-          buf.slice(0, idx + 1).forEach(b => {
-            clearTimeout(b.timer)
-            onLog(b.log)
-          })
-          buf = buf.slice(idx + 1)
-        }, 300)
-      }
-      buf.push({ log, timer })
-    })
-
-    socket.on('disconnect', () => {
-      if (debug) {
-        console.log('> [debug] Socket disconnect')
-      }
-      init = false
-      reject(new Error('Socket disconnected'))
-    })
-
-    socket.on('error', err => {
-      if (debug) {
-        console.log('> [debug] Socket error', err.stack)
-      }
-      reject(err)
-    })
-
-    function onLogs(logs) {
-      logs.sort(compare).forEach(onLog)
-    }
-
-    function onLog(log) {
-      lastLog = log
-      printLog(log)
-    }
-  })
-*/
+  const findOpts = { query, types, since, until, follow }
+  try {
+    return printEvents(now, deploymentIdOrURL, currentTeam,
+      { mode: 'logs', printEvent, quiet: false, debug, findOpts });
+  } finally {
+    now.close()
+  }
 }
 
 function printLogShort(log) {
@@ -278,7 +184,7 @@ function printLogShort(log) {
     if (i === 0) {
       console.log(`${chalk.dim(date)}  ${line}`)
     } else {
-      console.log(`${repeat(' ', date.length)}  ${line}`)
+      console.log(`${' '.repeat(date.length)}  ${line}`)
     }
   })
 
@@ -299,42 +205,10 @@ function printEvent(event) {
   return logPrinters[outputMode](event, () => {})
 }
 
-/*
-async function fetchLogs({ token, currentTeam, since, until } = {}) {
-  const now = new Now({ apiUrl, token, debug, currentTeam })
-
-  let logs
-  try {
-    logs = await now.logs(deploymentIdOrURL, {
-      instanceId,
-      types,
-      limit,
-      query,
-      since,
-      until
-    })
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  } finally {
-    now.close()
-  }
-
-  return logs.map(deserialize)
-}
-*/
-
-function repeat(s, n) {
-  return new Array(n + 1).join(s)
-}
-
-function toSerial(datestr) {
+function toTimestamp(datestr) {
   const t = Date.parse(datestr)
   if (isNaN(t)) {
     throw new TypeError('Invalid date string')
   }
-
-  const pidLen = 19
-  const seqLen = 19
-  return t + repeat('0', pidLen + seqLen)
+  return t
 }

@@ -8,7 +8,7 @@ const retry = require('async-retry')
 const createOutput = require('../../../util/output')
 
 async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
-  mode, printEvent, onOpen = ()=>{}, quiet, debugEnabled, findOpts = {}
+  mode, printEvent, onOpen = ()=>{}, quiet, debugEnabled, findOpts
 } = {}) {
   const { log, debug } = createOutput({ debug: debugEnabled })
 
@@ -21,7 +21,8 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
 
   const query = findOpts.query || ''
   const types = (findOpts.types || []).join(',')
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=1`
+  const follow = findOpts.follow ? '1' : ''
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=${follow}&format=lines`
   let pollUrl = `/v1/now/deployments/${deploymentIdOrURL}`
 
   if (currentTeam) {
@@ -59,21 +60,21 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
                 if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
                 const json = await pollRes.json()
                 if (json.state === 'READY') {
-                  cleanup()
+                  finish()
                   return
                 }
                 poller = startPoller()
               } catch (error) {
-                cleanup(error)
+                finish(error)
               }
             }, 5000)
           })()
         }
 
-        let cleanupAndResolveCalled = false
-        function cleanup(error) {
-          if (cleanupAndResolveCalled) return
-          cleanupAndResolveCalled = true
+        let finishCalled = false
+        function finish(error) {
+          if (finishCalled) return
+          finishCalled = true
           callOnOpenOnce()
 
           if (mode === 'deploy') {
@@ -99,13 +100,14 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           const { event } = data;
           if (event === 'build-complete') {
             if (mode === 'deploy') {
-              cleanup()
+              finish()
             }
           } else {
             o += printEvent(data, callOnOpenOnce)
           }
         }
 
+        stream.on('end', finish)
         stream.on('data', onData)
         stream.on('error', err => {
           o++
