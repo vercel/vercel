@@ -246,7 +246,6 @@ async function ls (ctx, opts, args, output): Promise<number> {
         cancelWait()
       }
       error(`Could not match path alias for: ${args[0]}`)
-      alias.close();
       return 1
     }
 
@@ -285,11 +284,9 @@ async function ls (ctx, opts, args, output): Promise<number> {
         print(text + '\n')
       }
     }
-    alias.close();
     return 0;
   } else if (args.length !== 0) {
     error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
-    alias.close();
     return 1
   }
 
@@ -381,7 +378,6 @@ async function rm (ctx, opts, args, output): Promise<number> {
 
     if (!confirmation) {
       log('Aborted')
-      alias.close();
       return 0
     }
 
@@ -395,11 +391,9 @@ async function rm (ctx, opts, args, output): Promise<number> {
     )
   } catch (err) {
     error(err)
-    alias.close();
     return 1
   }
 
-  alias.close();
   return 0
 }
 
@@ -414,145 +408,136 @@ async function set(ctx, opts, args, output): Promise<number> {
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = Date.now()
 
-  try {
-    // Get deployments and targets from opts and args
-    const params = await getTargetsAndDeployment(now, output, args, opts, user, contextName)
-    if (params instanceof NowError) {
-      switch (params.code) {
-        case 'CANT_FIND_CONFIG':
-          output.error(`Couldn't find a configuration file at \n    ${params.meta.paths.join('\n    ')}.`)
+  // Get deployments and targets from opts and args
+  const params = await getTargetsAndDeployment(now, output, args, opts, user, contextName)
+  if (params instanceof NowError) {
+    switch (params.code) {
+      case 'CANT_FIND_CONFIG':
+        output.error(`Couldn't find a configuration file at \n    ${params.meta.paths.join('\n    ')}.`)
+        break
+      case 'CANT_PARSE_CONFIG':
+        output.error(`Couldn't parse configuration file ${params.meta.file}.`);
+        break
+      case 'NO_ALIAS_IN_CONFIG':
+        output.error(`Could't find an alias property into the given configuration.`)
+        break
+      case 'WRONG_ALIAS_IN_CONFIG':
+        output.error(`Wrong value "${params.meta.value}" for alias found in config. It must be a string or array of string.`)
+        break
+      case 'CANT_FIND_A_DEPLOYMENT':
+        output.error(`Could't find a deployment to alias. Please specify one from the command line.`)
+        break
+      case 'DEPLOYMENT_NOT_FOUND':
+        output.error(`Failed to find deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
+        break
+      case 'DEPLOYMENT_PERMISSION_DENIED':
+        output.error(`No permission to access deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
+        break
+      case 'TOO_MANY_ARGS':
+        output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
+        break
+    }
+    return 1
+  }
+
+  // Now we are sure we have values for deployment and targets
+  const { deployment, targets } = params
+
+  // Validate the resolved targets
+  const targetError = targetsAreValid(targets)
+  if (targetError instanceof NowError) {
+    output.error(`Invalid target ${targetError.meta.target}`);
+    return 1
+  }
+
+  // Assign the alias for each of the targets in the array
+  for (const target of addZeitDomainIfNeeded(targets)) {
+    const result = await assignAlias(output, now, deployment, target, contextName)
+    if (result instanceof NowError) {
+      switch (result.code) {
+        case 'DOMAIN_VERIFICATION_FAILED':
+          output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
+          output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
+          output.print(`\n  Alternatively, make sure to:`)
+          output.print(`\n  ${chalk.gray('-')} Verify the domain by adding a TXT record on your DNS server: _now.${result.meta.domain}: ${result.meta.token}`)
+          output.print(
+            result.meta.subdomain === null
+              ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record for <domain>.\n`
+              : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
+          )
           break
-        case 'CANT_PARSE_CONFIG':
-          output.error(`Couldn't parse configuration file ${params.meta.file}.`);
+        case 'UNABLE_TO_RESOLVE_EXTERNAL':
+          output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
+          output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
+          output.print(`\n  Alternatively, make sure to:`)
+          output.print(
+            result.meta.subdomain === null
+              ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record.\n`
+              : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
+          )
           break
-        case 'NO_ALIAS_IN_CONFIG':
-          output.error(`Could't find an alias property into the given configuration.`)
+        case 'UNABLE_TO_RESOLVE_INTERNAL':
+          output.error(
+            `We configured the DNS settings for your alias, but we were unable to ` +
+            `verify that they've propagated. Please try the alias again later.`
+          )
           break
-        case 'WRONG_ALIAS_IN_CONFIG':
-          output.error(`Wrong value "${params.meta.value}" for alias found in config. It must be a string or array of string.`)
+        case 'SOURCE_NOT_FOUND':
+          output.error(`No credit cards found to buy ${result.meta.domain} – please run ${cmd('now cc add')}.`)
           break
-        case 'CANT_FIND_A_DEPLOYMENT':
-          output.error(`Could't find a deployment to alias. Please specify one from the command line.`)
+        case 'NO_DOMAIN_PERMISSIONS':
+          output.error(`You don't have permissions over domain ${result.meta.domain} under ${chalk.bold(contextName)}.`)
+          break
+        case 'USER_ABORT':
+          output.error(`User aborted.`)
+          break
+        case 'DOMAIN_IS_NOT_VERIFIED':
+          output.error(`We couldn't verify the domain ${result.meta.domain}. Please try again later`)
+          break
+        case 'ALIAS_IN_USE':
+          output.error(`The alias ${chalk.dim(target)} is in use by a different team.`)
           break
         case 'DEPLOYMENT_NOT_FOUND':
-          output.error(`Failed to find deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
+          output.error(`Failed to find deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
+          break
+        case 'INVALID_ALIAS':
+          output.error(`Invalid alias. Nested domains are not supported.`)
+          break
+        case 'NEED_UPGRADE':
+          output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+          break
+        case 'DOMAIN_PERMISSION_DENIED':
+          output.error(`You don't have permissions to access the domain ${target}`)
+          break
+        case 'NAMESERVERS_NOT_FOUND':
+          output.error(`Couldn't find nameservers for the domain ${target}`)
+          break
+        case 'DNS_ACCESS_UNAUTHORIZED':
+          output.error(`You don't have permissions to access the DNS records for ${target}`)
           break
         case 'DEPLOYMENT_PERMISSION_DENIED':
-          output.error(`No permission to access deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
+          output.error(`No permission to access deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
           break
-        case 'TOO_MANY_ARGS':
-          output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
+        default:
+          output.error(`Unhandled error ${result.code}`)
           break
       }
-      now.close()
+
       return 1
     }
 
-    // Now we are sure we have values for deployment and targets
-    const { deployment, targets } = params
-
-    // Validate the resolved targets
-    const targetError = targetsAreValid(targets)
-    if (targetError instanceof NowError) {
-      output.error(`Invalid target ${targetError.meta.target}`);
-      now.close()
-      return 1
-    }
-
-    // Assign the alias for each of the targets in the array
-    for (const target of addZeitDomainIfNeeded(targets)) {
-      const result = await assignAlias(output, now, deployment, target, contextName)
-      if (result instanceof NowError) {
-        switch (result.code) {
-          case 'DOMAIN_VERIFICATION_FAILED':
-            output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
-            output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
-            output.print(`\n  Alternatively, make sure to:`)
-            output.print(`\n  ${chalk.gray('-')} Verify the domain by adding a TXT record on your DNS server: _now.${result.meta.domain}: ${result.meta.token}`)
-            output.print(
-              result.meta.subdomain === null
-                ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record for <domain>.\n`
-                : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
-            )
-            break
-          case 'UNABLE_TO_RESOLVE_EXTERNAL':
-            output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
-            output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
-            output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
-            output.print(`\n  Alternatively, make sure to:`)
-            output.print(
-              result.meta.subdomain === null
-                ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record.\n`
-                : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
-            )
-            break
-          case 'UNABLE_TO_RESOLVE_INTERNAL':
-            output.error(
-              `We configured the DNS settings for your alias, but we were unable to ` +
-              `verify that they've propagated. Please try the alias again later.`
-            )
-            break
-          case 'SOURCE_NOT_FOUND':
-            output.error(`No credit cards found to buy ${result.meta.domain} – please run ${cmd('now cc add')}.`)
-            break
-          case 'NO_DOMAIN_PERMISSIONS':
-            output.error(`You don't have permissions over domain ${result.meta.domain} under ${chalk.bold(contextName)}.`)
-            break
-          case 'USER_ABORT':
-            output.error(`User aborted.`)
-            break
-          case 'DOMAIN_IS_NOT_VERIFIED':
-            output.error(`We couldn't verify the domain ${result.meta.domain}. Please try again later`)
-            break
-          case 'ALIAS_IN_USE':
-            output.error(`The alias ${chalk.dim(target)} is in use by a different team.`)
-            break
-          case 'DEPLOYMENT_NOT_FOUND':
-            output.error(`Failed to find deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
-            break
-          case 'INVALID_ALIAS':
-            output.error(`Invalid alias. Nested domains are not supported.`)
-            break
-          case 'NEED_UPGRADE':
-            output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
-            break
-          case 'DOMAIN_PERMISSION_DENIED':
-            output.error(`You don't have permissions to access the domain ${target}`)
-            break
-          case 'NAMESERVERS_NOT_FOUND':
-            output.error(`Couldn't find nameservers for the domain ${target}`)
-            break
-          case 'DNS_ACCESS_UNAUTHORIZED':
-            output.error(`You don't have permissions to access the DNS records for ${target}`)
-            break
-          case 'DEPLOYMENT_PERMISSION_DENIED':
-            output.error(`No permission to access deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
-            break
-          default:
-            output.error(`Unhandled error ${result.code}`)
-            break
-        }
-
-        now.close()
-        return 1
-      }
-
-      output.success(`${target} now points to ${
-        chalk.bold(deployment.url)
-      }! ${chalk.grey('[' + ms(Date.now() - start) + ']')}`)
-    }
-
-    now.close();
-    return 0
-  } catch (error) {
-    now.close();
-    throw error
+    output.success(`${target} now points to ${
+      chalk.bold(deployment.url)
+    }! ${chalk.grey('[' + ms(Date.now() - start) + ']')}`)
   }
+
+  return 0
 }
 
 type NowErrorArgs<T, M> = {
