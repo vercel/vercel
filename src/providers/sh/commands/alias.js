@@ -235,14 +235,17 @@ async function ls (ctx, opts, args, output): Promise<number> {
     if (!opts['--json']) {
       cancelWait = wait(`Fetching alias details for "${args[0]}" under ${chalk.bold(contextName)}`);
     }
-
+    
     const list = await alias.listAliases()
-    const item = list.find(
-      e => e.uid === args[0] || e.alias === args[0]
-    )
+    const item = list.find(listItem => {
+      return (listItem.uid === args[0] || listItem.alias === args[0])
+    })
+
     if (!item || !item.rules) {
-      error(`Could not match path alias for: ${args[1]}`)
-      alias.close();
+      if (cancelWait) {
+        cancelWait()
+      }
+      error(`Could not match path alias for: ${args[0]}`)
       return 1
     }
 
@@ -281,11 +284,9 @@ async function ls (ctx, opts, args, output): Promise<number> {
         print(text + '\n')
       }
     }
-    alias.close();
     return 0;
   } else if (args.length !== 0) {
     error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
-    alias.close();
     return 1
   }
 
@@ -302,7 +303,7 @@ async function ls (ctx, opts, args, output): Promise<number> {
 
   print('\n')
 
-  print(
+  console.log(
     table(
       [
         ['source', 'url', 'age'].map(h => chalk.gray(h)),
@@ -377,7 +378,6 @@ async function rm (ctx, opts, args, output): Promise<number> {
 
     if (!confirmation) {
       log('Aborted')
-      alias.close();
       return 0
     }
 
@@ -391,11 +391,9 @@ async function rm (ctx, opts, args, output): Promise<number> {
     )
   } catch (err) {
     error(err)
-    alias.close();
     return 1
   }
 
-  alias.close();
   return 0
 }
 
@@ -409,7 +407,7 @@ async function set(ctx, opts, args, output): Promise<number> {
   const { ['--debug']: debugEnabled } = opts;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = Date.now()
-    
+
   // Get deployments and targets from opts and args
   const params = await getTargetsAndDeployment(now, output, args, opts, user, contextName)
   if (params instanceof NowError) {
@@ -439,7 +437,6 @@ async function set(ctx, opts, args, output): Promise<number> {
         output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
         break
     }
-    now.close()
     return 1
   }
 
@@ -450,7 +447,6 @@ async function set(ctx, opts, args, output): Promise<number> {
   const targetError = targetsAreValid(targets)
   if (targetError instanceof NowError) {
     output.error(`Invalid target ${targetError.meta.target}`);
-    now.close()
     return 1
   }
 
@@ -508,19 +504,31 @@ async function set(ctx, opts, args, output): Promise<number> {
           output.error(`The alias ${chalk.dim(target)} is in use by a different team.`)
           break
         case 'DEPLOYMENT_NOT_FOUND':
+          output.error(`Failed to find deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
+          break
         case 'INVALID_ALIAS':
+          output.error(`Invalid alias. Nested domains are not supported.`)
+          break
         case 'NEED_UPGRADE':
+          output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+          break
         case 'DOMAIN_PERMISSION_DENIED':
+          output.error(`You don't have permissions to access the domain ${target}`)
+          break
         case 'NAMESERVERS_NOT_FOUND':
+          output.error(`Couldn't find nameservers for the domain ${target}`)
+          break
         case 'DNS_ACCESS_UNAUTHORIZED':
-        case 'UNABLE_TO_VERIFY':
-        case 'DEPLOYMENT_PERMISSION_DENIED': // includes id
+          output.error(`You don't have permissions to access the DNS records for ${target}`)
+          break
+        case 'DEPLOYMENT_PERMISSION_DENIED':
+          output.error(`No permission to access deployment "${result.meta.id}" under ${chalk.bold(contextName)}`)
+          break
         default:
           output.error(`Unhandled error ${result.code}`)
           break
       }
 
-      now.close()
       return 1
     }
 
@@ -529,7 +537,6 @@ async function set(ctx, opts, args, output): Promise<number> {
     }! ${chalk.grey('[' + ms(Date.now() - start) + ']')}`)
   }
 
-  now.close();
   return 0
 }
 
@@ -981,7 +988,7 @@ async function waitForScale(output, now, deploymentId, scale) {
   const timeout = ms('5m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
-  let cancelWait
+  let cancelWait = renderRemainingDCsWait(remainingMatches)
   
   while (true) { // eslint-disable-line
     if (start + timeout <= Date.now()) {
@@ -1280,8 +1287,7 @@ type SetupAliasDomainError =
   VerifyDomainErrors |
   GetDomainServersError |
   UserAbortError |
-  SetupDNSRecordError |
-  NowError<'UNABLE_TO_VERIFY'>
+  SetupDNSRecordError
 
 async function setupAliasDomain(output, now, alias, contextName): Promise<true | SetupAliasDomainError> {
   const { subdomain, domain } = psl.parse(alias)
@@ -1351,7 +1357,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
       // If it doesn't resolve here it means that everything is setup but the
       // propagation is not done so we invite the user to try later.
       output.log(`DNS Configured! Verifying propagation…`)
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+      if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
         return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
       }
     }
@@ -1385,7 +1391,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         
         // Verify that the DNS records are ready
         output.log(`DNS Configured! Verifying propagation…`)
-        if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
           return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
         }
       }
