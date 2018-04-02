@@ -112,7 +112,7 @@ module.exports = async function main (ctx: any): Promise<number> {
   ])
 
   cancelWait();
-  log(`Fetched deployment "${deployment.url}" ${elapsed(Date.now() - depFetchStart)}`);
+  log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
   print('\n');
   print(chalk.bold('  Meta\n'))
