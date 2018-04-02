@@ -1,3 +1,6 @@
+// Native
+const qs = require('querystring')
+
 // Packages
 const chalk = require('chalk')
 const { eraseLines } = require('ansi-escapes')
@@ -21,10 +24,18 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
 
   let counter = 0
   const limit = findOpts.limit || Number.POSITIVE_INFINITY
-  const query = findOpts.query || ''
-  const types = (findOpts.types || []).join(',')
-  const follow = findOpts.follow ? '1' : ''
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=${follow}&format=lines`
+
+  const q = qs.stringify({
+    query: findOpts.query,
+    types: (findOpts.types || []).join(','),
+    since: findOpts.since,
+    until: findOpts.until,
+    instanceId: findOpts.instanceId,
+    follow: findOpts.follow ? '1' : '',
+    format: 'lines'
+  })
+
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${q}`
   let pollUrl = `/v3/now/deployments/${deploymentIdOrURL}`
 
   if (currentTeam) {

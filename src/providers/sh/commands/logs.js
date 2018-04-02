@@ -4,7 +4,6 @@
 // Packages
 const mri = require('mri')
 const chalk = require('chalk')
-const dateformat = require('dateformat')
 
 // Utilities
 const Now = require('../util')
@@ -197,7 +196,7 @@ function printLogShort(log) {
       : (log.text || '').replace(/\n$/, '')
   }
 
-  const date = dateformat(log.date, 'mm/dd hh:MM:ss TT')
+  const date = (new Date(log.created)).toISOString()
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {
