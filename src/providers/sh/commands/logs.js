@@ -66,6 +66,7 @@ module.exports = async function main (ctx: any) {
 
   let debug
   let apiUrl
+  let limit
   let query
   let follow
   let types
@@ -126,6 +127,7 @@ module.exports = async function main (ctx: any) {
   debug = argv.debug
   apiUrl = ctx.apiUrl
 
+  limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
@@ -136,7 +138,7 @@ module.exports = async function main (ctx: any) {
 
   const { currentTeam } = sh;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { query, types, since, until, instanceId, follow }
+  const findOpts = { limit, query, types, since, until, instanceId, follow }
   const contextName = getContextName(sh);
 
   let deployment;

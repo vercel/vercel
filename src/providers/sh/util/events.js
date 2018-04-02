@@ -19,6 +19,8 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
     onOpen()
   }
 
+  let counter = 0
+  const limit = findOpts.limit || Number.POSITIVE_INFINITY
   const query = findOpts.query || ''
   const types = (findOpts.types || []).join(',')
   const follow = findOpts.follow ? '1' : ''
@@ -50,7 +52,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
       return new Promise((resolve, reject) => {
         const stream = readable.pipe(jsonlines.parse())
 
-        let poller;
+        let poller
 
         if (mode === 'deploy') {
           poller = (function startPoller() {
@@ -60,11 +62,13 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
                 if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
                 const json = await pollRes.json()
                 if (json.state === 'READY') {
+                  stream.end()
                   finish()
                   return
                 }
                 poller = startPoller()
               } catch (error) {
+                stream.end()
                 finish(error)
               }
             }, 5000)
@@ -82,13 +86,6 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           }
 
           clearTimeout(poller)
-          // avoid lingering events
-          stream.removeListener('data', onData)
-          // prevent partial json from being parsed and error emitted.
-          // this can be reproduced by force placing stream.write('{{{') here
-          stream._emitInvalidLines = true
-          // close the stream and resolve
-          stream.end()
           if (error) {
             reject(error)
           } else {
@@ -97,9 +94,17 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
         }
 
         const onData = (data) => {
-          const { event } = data;
+          counter += 1
+          if (counter === limit) {
+            stream.end()
+            finish()
+            return
+          }
+
+          const { event } = data
           if (event === 'build-complete') {
             if (mode === 'deploy') {
+              stream.end()
               finish()
             }
           } else {
@@ -107,13 +112,17 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           }
         }
 
-        stream.on('end', finish)
-        stream.on('data', onData)
-        stream.on('error', err => {
+        const onError = (err) => {
+          if (finishCalled) return
           o++
           callOnOpenOnce()
           log(`Deployment event stream error: ${err.message}`)
-        })
+        }
+
+        stream.on('end', finish)
+        stream.on('data', onData)
+        stream.on('error', onError)
+        readable.on('error', onError)
       })
     } else {
       callOnOpenOnce()
