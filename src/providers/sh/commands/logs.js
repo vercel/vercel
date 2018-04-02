@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @flow
 
 // Packages
 const mri = require('mri')
@@ -7,11 +8,13 @@ const dateformat = require('dateformat')
 
 // Utilities
 const Now = require('../util')
-const { handleError, error } = require('../util/error')
+const createOutput = require('../../../util/output')
 const logo = require('../../../util/output/logo')
+const elapsed = require('../../../util/output/elapsed')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
 const printEvents = require('../util/events')
-const exit = require('../../../util/exit')
+const wait = require('../../../util/output/wait')
+const getContextName = require('../util/get-context-name')
 
 const help = () => {
   console.log(`
@@ -57,21 +60,21 @@ const help = () => {
 `)
 }
 
-let argv
-let deploymentIdOrURL
+module.exports = async function main (ctx: any) {
+  let argv
+  let deploymentIdOrURL
 
-let debug
-let apiUrl
-let query
-let follow
-let types
-let outputMode
+  let debug
+  let apiUrl
+  let query
+  let follow
+  let types
+  let outputMode
 
-let since
-let until
-let instanceId
+  let since
+  let until
+  let instanceId
 
-const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until', 'output'],
     boolean: ['help', 'all', 'debug', 'follow'],
@@ -90,28 +93,31 @@ const main = async ctx => {
 
   if (argv.help || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help()
-    await exit(0)
+    return 2;
   }
+
+  const debugEnabled = argv.debug;
+  const output = createOutput({ debug: debugEnabled })
 
   try {
     since = argv.since ? toTimestamp(argv.since) : 0
   } catch (err) {
-    error(`Invalid date string: ${argv.since}`)
-    process.exit(1)
+    output.error(`Invalid date string: ${argv.since}`)
+    return 1;
   }
 
   try {
     until = argv.until ? toTimestamp(argv.until) : 0
   } catch (err) {
-    error(`Invalid date string: ${argv.until}`)
-    process.exit(1)
+    output.error(`Invalid date string: ${argv.until}`)
+    return 1;
   }
 
   if (maybeURL(deploymentIdOrURL)) {
     const normalizedURL = normalizeURL(deploymentIdOrURL)
     if (normalizedURL.includes('/')) {
-      error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`)
-      process.exit(1)
+      output.error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`)
+      return 1;
     }
 
     ;[deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL)
@@ -128,28 +134,47 @@ const main = async ctx => {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
-  return printLogs({ token, sh })
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-    await exit(0) // TODO how to exit cleanly. who is blocking?
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-}
-
-function printLogs({ token, sh: { currentTeam } }) {
+  const { currentTeam } = sh;
   const now = new Now({ apiUrl, token, debug, currentTeam })
   const findOpts = { query, types, since, until, instanceId, follow }
+  const contextName = getContextName(sh);
+
+  let deployment;
+  const id = deploymentIdOrURL;
+
+  const depFetchStart = Date.now();
+  const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
+
   try {
-    return printEvents(now, deploymentIdOrURL, currentTeam,
-      { mode: 'logs', printEvent, quiet: false, debug, findOpts });
-  } finally {
-    now.close()
+    deployment = await now.findDeployment(id)
+  } catch (err) {
+    cancelWait();
+    now.close();
+
+    if (err.status === 404) {
+      output.error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
+      return 1;
+    } else if (err.status === 403) {
+      output.error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`)
+      return 1;
+    } else {
+      // unexpected
+      throw err;
+    }
   }
+
+  cancelWait();
+  output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+
+  function printEvent(event) {
+    return logPrinters[outputMode](event)
+  }
+
+  await printEvents(now, deployment.uid, currentTeam,
+    { mode: 'logs', printEvent, quiet: false, debug, findOpts });
+
+  now.close();
+  return 0;
 }
 
 function printLogShort(log) {
@@ -170,7 +195,7 @@ function printLogShort(log) {
       : (log.text || '').replace(/\n$/, '')
   }
 
-  const date = dateformat(log.date, 'mm/dd hh:MM TT')
+  const date = dateformat(log.date, 'mm/dd hh:MM:ss TT')
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {
@@ -191,10 +216,6 @@ function printLogRaw(log) {
 const logPrinters = {
   short: printLogShort,
   raw: printLogRaw
-}
-
-function printEvent(event) {
-  return logPrinters[outputMode](event, () => {})
 }
 
 function toTimestamp(datestr) {
