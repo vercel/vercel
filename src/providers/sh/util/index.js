@@ -178,7 +178,7 @@ module.exports = class Now extends EventEmitter {
         )
       )
 
-      const res = await this._fetch('/v3/now/deployments', {
+      const res = await this._fetch('/v4/now/deployments', {
         method: 'POST',
         body: {
           env,
