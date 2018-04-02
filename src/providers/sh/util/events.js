@@ -22,10 +22,9 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
     onOpen()
   }
 
-  let counter = 0
-  const limit = findOpts.limit || Number.POSITIVE_INFINITY
-
   const q = qs.stringify({
+    direction: findOpts.direction,
+    limit: findOpts.limit,
     query: findOpts.query,
     types: (findOpts.types || []).join(','),
     since: findOpts.since,
@@ -105,13 +104,6 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
         }
 
         const onData = (data) => {
-          counter += 1
-          if (counter === limit) {
-            stream.end()
-            finish()
-            return
-          }
-
           const { event } = data
           if (event === 'build-complete') {
             if (mode === 'deploy') {

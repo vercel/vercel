@@ -137,7 +137,7 @@ module.exports = async function main (ctx: any) {
 
   const { currentTeam } = sh;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { limit, query, types, since, until, instanceId, follow }
+  const findOpts = { direction: 'backward', limit, query, types, since, until, instanceId, follow }
   const contextName = getContextName(sh);
 
   let deployment;
