@@ -591,6 +591,7 @@ process.on('uncaughtException', handleUnexpected)
 // sub commands waiting for further data won't work (like `logs` and `logout`)!
 main(process.argv)
   .then(exitCode => {
+    process.emit('nowExit');
     process.on('beforeExit', () => {
       process.exit(exitCode);
     })

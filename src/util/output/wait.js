@@ -17,7 +17,7 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
     running = true
   }, timeOut)
 
-  return () => {
+  const cancel = () => {
     stopped = true
     
     if (running) {
@@ -26,6 +26,9 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
       running = false
     }
   }
+
+  process.on('nowExit', cancel);
+  return cancel;
 }
 
 module.exports = wait
