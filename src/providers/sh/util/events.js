@@ -11,7 +11,7 @@ const retry = require('async-retry')
 const createOutput = require('../../../util/output')
 
 async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
-  mode, printEvent, onOpen = ()=>{}, quiet, debugEnabled, findOpts
+  mode, onOpen = ()=>{}, onEvent, quiet, debugEnabled, findOpts
 } = {}) {
   const { log, debug } = createOutput({ debug: debugEnabled })
 
@@ -111,7 +111,8 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
               finish()
             }
           } else {
-            o += printEvent(data, callOnOpenOnce)
+            const linesPrinted = onEvent(data, callOnOpenOnce)
+            o += linesPrinted || 0
           }
         }
 

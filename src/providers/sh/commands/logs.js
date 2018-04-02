@@ -137,7 +137,6 @@ module.exports = async function main (ctx: any) {
 
   const { currentTeam } = sh;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { direction: 'backward', limit, query, types, since, until, instanceId, follow }
   const contextName = getContextName(sh);
 
   let deployment;
@@ -167,15 +166,34 @@ module.exports = async function main (ctx: any) {
   cancelWait();
   output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
-  function printEvent(event) {
-    return logPrinters[outputMode](event)
-  }
+  const findOpts1 = { direction: 'backward', limit, query, types, instanceId, since, until } // no follow
+  const storage = [];
+  const storeEvent = (event) => storage.push(event);
 
   await printEvents(now, deployment.uid, currentTeam,
-    { mode: 'logs', printEvent, quiet: false, debug, findOpts });
+    { mode: 'logs', onEvent: storeEvent, quiet: false, debug, findOpts: findOpts1 });
+
+  const printEvent = (event) => logPrinters[outputMode](event);
+  storage.sort(compareEvents).forEach(printEvent);
+
+  if (follow) {
+    const lastEvent = storage[storage.length - 1];
+    const since2 = lastEvent ? lastEvent.created + 1 : Date.now();
+    const findOpts2 = { direction: 'forward', query, types, instanceId, since: since2, follow: true }
+    await printEvents(now, deployment.uid, currentTeam,
+      { mode: 'logs', onEvent: printEvent, quiet: false, debug, findOpts: findOpts2 });
+  }
 
   now.close();
   return 0;
+}
+
+function compareEvents(a, b) {
+  return (
+    a.serial.localeCompare(b.serial) ||
+    // For the case serials are a same value on old logs
+    (a.created - b.created)
+  )
 }
 
 function printLogShort(log) {
