@@ -112,7 +112,7 @@ module.exports = async function main (ctx: any): Promise<number> {
   ])
 
   cancelWait();
-  log(`Fetched deployment "${deployment.url}" ${elapsed(Date.now() - depFetchStart)}`);
+  log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
   print('\n');
   print(chalk.bold('  Meta\n'))
@@ -163,9 +163,9 @@ module.exports = async function main (ctx: any): Promise<number> {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
   } else if (events) {
-    events.forEach(({ event, created, payload }) => {
-      print(`    ${chalk.gray(new Date(created).toISOString())} ${event}${
-        event === 'state' ? ` ${chalk.bold(payload.value)} ` : ''
+    events.forEach((data) => {
+      print(`    ${chalk.gray(new Date(data.created).toISOString())} ${data.event} ${
+        getEventMetadata(data)
       }\n`);
     })
     print('\n')
@@ -173,6 +173,29 @@ module.exports = async function main (ctx: any): Promise<number> {
 
   now.close();
   return exitCode;
+}
+
+// gets the metadata that should be printed next to
+// each event
+
+type Event = {
+  event: string,
+  payload: any,
+  created: number
+}
+
+function getEventMetadata({ event, payload }: Event): string {
+  if (event === 'state') {
+    return chalk.bold(payload.value);
+  }
+
+  if (event === 'instance-start' || event === 'instance-stop') {
+    if (payload.dc != null) {
+      return chalk.green(`(${payload.dc})`);
+    }
+  }
+
+  return '';
 }
 
 // makes sure the promise never rejects, exposing the error

@@ -4,6 +4,7 @@
 // we only enable source maps while developing, since
 // they have a small performance hit. for this, we
 // look for `pkg`, which is only present in the final bin
+// $FlowFixMe
 if (!process.pkg) {
   require('@zeit/source-map-support').install();
 }
@@ -72,6 +73,7 @@ const main = async (argv_) => {
   if (!targetOrSubcommand) {
     if (argv.version) {
       console.log(require('../package').version + ` ${
+        // $FlowFixMe
         process.pkg ? '' : chalk.magenta('(dev)')
       }`)
       return 0
