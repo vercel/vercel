@@ -10,7 +10,6 @@ const fs = require('fs-extra')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const mri = require('mri')
-const ms = require('ms')
 const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
@@ -28,6 +27,7 @@ const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
 const wait = require('../../../util/output/wait')
+const stamp = require('../../../util/output/stamp')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
@@ -310,7 +310,7 @@ async function main(ctx: any) {
 
 async function sync({ token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
-    const start = Date.now()
+    const deployStamp = stamp()
     const rawPath = argv._[0]
 
     let deployment
@@ -806,22 +806,19 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const { url } = now
-    const elapsed = ms(new Date() - start)
+    const dcs = Object.keys(deployment.scale).join(', ')
 
     if (isTTY) {
       if (clipboard) {
         try {
           await copy(url)
-
-          log(
-            chalk`{cyan Ready!} {bold ${url}} (copied to clipboard) [${elapsed}]`
-          )
+          log(chalk`{bold ${url}} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`)
-          log(chalk`{cyan Ready!} {bold ${url}} [${elapsed}]`)
+          log(chalk`{bold ${url}} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
         }
       } else {
-        log(`${url} [${elapsed}]`)
+        log(`${chalk.bold(url)} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
       }
     } else {
       process.stdout.write(url)
@@ -829,7 +826,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     if (!quiet) {
       if (syncCount) {
-        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsed}]`)
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
       }
     }
 
