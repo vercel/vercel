@@ -1,22 +1,14 @@
 #!/usr/bin/env node
 
-// TODO TEMPORARY!
-/* eslint-disable no-unused-vars */
-
-// Native
-const qs = require('querystring')
-
 // Packages
 const mri = require('mri')
 const chalk = require('chalk')
 const dateformat = require('dateformat')
-const io = require('socket.io-client')
 
 // Utilities
 const Now = require('../util')
 const { handleError, error } = require('../util/error')
 const logo = require('../../../util/output/logo')
-const { compare, deserialize } = require('../util/logs')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
 const printEvents = require('../util/events')
 const exit = require('../../../util/exit')
@@ -151,7 +143,7 @@ module.exports = async ctx => {
 
 function printLogs({ token, sh: { currentTeam } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { query, types, since, until, follow }
+  const findOpts = { query, types, since, until, instanceId, follow }
   try {
     return printEvents(now, deploymentIdOrURL, currentTeam,
       { mode: 'logs', printEvent, quiet: false, debug, findOpts });

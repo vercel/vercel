@@ -23,7 +23,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
   const types = (findOpts.types || []).join(',')
   const follow = findOpts.follow ? '1' : ''
   let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=${follow}&format=lines`
-  let pollUrl = `/v1/now/deployments/${deploymentIdOrURL}`
+  let pollUrl = `/v4/now/deployments/${deploymentIdOrURL}`
 
   if (currentTeam) {
     eventsUrl += `&teamId=${currentTeam.id}`
