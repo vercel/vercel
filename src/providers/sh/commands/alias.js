@@ -1003,7 +1003,7 @@ async function waitForScale(output, now, deploymentId, scale) {
   const timeout = ms('5m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
-  let cancelWait
+  let cancelWait = renderRemainingDCsWait(remainingMatches)
   
   while (true) { // eslint-disable-line
     if (start + timeout <= Date.now()) {
