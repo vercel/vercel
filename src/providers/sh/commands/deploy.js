@@ -15,8 +15,6 @@ const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
-const retry = require('async-retry')
-const jsonlines = require('jsonlines')
 const executable = require('executable')
 
 // Utilities
@@ -35,6 +33,7 @@ const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
 const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
+const printEvents = require('../util/events')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -484,7 +483,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     // get all the region or dc identifiers from the scale settings
-    const scaleKeys = Object.keys(scale);
+    const scaleKeys = Object.keys(scale)
 
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
@@ -496,7 +495,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    let dcIds = [];
+    let dcIds = []
 
     if (regions.length) {
       if (Object.keys(scale).length) {
@@ -508,7 +507,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
 
       try {
-        dcIds = normalizeRegionsList(regions);
+        dcIds = normalizeRegionsList(regions)
       } catch (err) {
         if (err.code === 'INVALID_ID') {
           error(
@@ -520,7 +519,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
           await exit(1)
         } else {
-          throw err;
+          throw err
         }
       }
 
@@ -841,22 +840,23 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      let cancelWait = () => {};
+      let cancelWait = () => {}
       if (!quiet) {
         cancelWait = wait('Initializing…')
       }
 
       try {
-        require('assert')(deployment); // mute linter
-        await printEvents(now, currentTeam, {
-          onOpen: cancelWait
+        require('assert')(deployment) // mute linter
+        await printEvents(now, now.id, currentTeam, {
+          mode: 'deploy', printEvent, onOpen: cancelWait, quiet, debugEnabled,
+          findOpts: { follow: true }
         })
       } catch (err) {
         cancelWait()
         throw err
       }
 
-      await exit(0);
+      await exit(0)
     }
   })
 }
@@ -912,145 +912,31 @@ async function readMeta(
   }
 }
 
-function printEvent(type, text) {
-  if (type === 'command') {
-    log(`▲ ${text}`)
-  } else if (type === 'stdout' || type === 'stderr') {
-    text.split('\n').forEach(v => {
-      // strip out the beginning `>` if there is one because
-      // `log()` prepends its own and we don't want `> >`
-      log(v.replace(/^> /, ''))
-    })
-  }
-}
+function printEvent({ type, event, text }, callOnOpenOnce) {
+  if (event === 'build-start') {
+    callOnOpenOnce()
+    log('Building…')
+    return 1
+  } else
+  if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+    if (text.slice(-1) === '\n') text = text.slice(0, -1)
+    callOnOpenOnce()
+    const lines = text.split('\n')
 
-async function printEvents(now, currentTeam = null, {
-  onOpen = ()=>{}
-} = {}) {
-  let onOpenCalled = false
-  function callOnOpenOnce() {
-    if (onOpenCalled) return
-    onOpenCalled = true
-    onOpen()
-  }
-
-  const pollUrl = `/v3/now/deployments/${encodeURIComponent(now.id)}`
-  const eventsUrl = `/v1/now/deployments/${encodeURIComponent(now.id)}/events?follow=1${
-    currentTeam ? `&teamId=${encodeURIComponent(currentTeam.id)}` : ''
-  }`
-
-  debug(`Events ${eventsUrl}`)
-
-  // we keep track of how much we log in case we
-  // drop the connection and have to start over
-  let o = 0
-
-  await retry(async (bail, attemptNumber) => {
-    if (attemptNumber > 1) {
-      debug('Retrying events')
-    }
-
-    // if we are retrying, we clear past logs
-    if (!quiet && o) {
-      // o + 1 because current line is counted
-      process.stdout.write(eraseLines(o + 1))
-      o = 0
-    }
-
-    const eventsRes = await now._fetch(eventsUrl)
-    if (eventsRes.ok) {
-      const readable = await eventsRes.readable()
-
-      // handle the event stream and make the promise get rejected
-      // if errors occur so we can retry
-      return new Promise((resolve, reject) => {
-        const stream = readable.pipe(jsonlines.parse())
-
-        let poller = (function startPoller() {
-          return setTimeout(async () => {
-            try {
-              const pollRes = await now._fetch(pollUrl)
-              if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
-              const json = await pollRes.json()
-              if (json.state === 'READY') {
-                cleanup()
-                return
-              }
-              poller = startPoller()
-            } catch (error) {
-              cleanup(error)
-            }
-          }, 5000)
-        })()
-
-        let cleanupAndResolveCalled = false
-        function cleanup(error) {
-          if (cleanupAndResolveCalled) return
-          cleanupAndResolveCalled = true
-          callOnOpenOnce()
-          if (!error) log(chalk`{cyan Success!} Build complete`)
-          clearTimeout(poller)
-          // avoid lingering events
-          stream.removeListener('data', onData)
-          // prevent partial json from being parsed and error emitted.
-          // this can be reproduced by force placing stream.write('{{{') here
-          stream._emitInvalidLines = true
-          // close the stream and resolve
-          stream.end()
-          if (error) {
-            reject(error)
-          } else {
-            resolve()
-          }
-        }
-
-        const onData = ({ type, event, text }) => {
-          // if we are 'quiet' because we are piping, simply
-          // wait for the first instance to be started
-          // and ignore everything else
-          if (quiet) {
-            if (type === 'instance-start') {
-              cleanup()
-            }
-            return
-          }
-
-          if (event === 'build-start') {
-            o++
-            callOnOpenOnce()
-            log('Building…')
-          } else
-          if (event === 'build-complete') {
-            cleanup()
-          } else
-          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
-            if (text.slice(-1) === '\n') text = text.slice(0, -1)
-            o += text.split('\n').length
-            callOnOpenOnce()
-            printEvent(type, text)
-          }
-        }
-
-        stream.on('data', onData)
-        stream.on('error', err => {
-          o++
-          callOnOpenOnce()
-          log(`Deployment event stream error: ${err.message}`)
-        })
+    if (type === 'command') {
+      log(`▲ ${text}`)
+    } else if (type === 'stdout' || type === 'stderr') {
+      lines.forEach(v => {
+        // strip out the beginning `>` if there is one because
+        // `log()` prepends its own and we don't want `> >`
+        log(v.replace(/^> /, ''))
       })
-    } else {
-      callOnOpenOnce()
-      const err = new Error(`Deployment events status ${eventsRes.status}`)
-
-      if (eventsRes.status < 500) {
-        bail(err)
-      } else {
-        throw err
-      }
     }
-  }, {
-    retries: 3
-  })
+
+    return lines.length
+  }
+
+  return 0
 }
 
 module.exports = main
