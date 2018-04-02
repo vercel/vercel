@@ -934,12 +934,10 @@ async function printEvents(now, currentTeam = null, {
     onOpen()
   }
 
-  let pollUrl = `/v1/now/deployments/${now.id}`
-  let eventsUrl = `/v1/now/deployments/${now.id}/events?follow=1`
-
-  if (currentTeam) {
-    eventsUrl += `&teamId=${currentTeam.id}`
-  }
+  const pollUrl = `/v3/now/deployments/${encodeURIComponent(now.id)}`
+  const eventsUrl = `/v1/now/deployments/${encodeURIComponent(now.id)}/events?follow=1${
+    currentTeam ? `&teamId=${encodeURIComponent(currentTeam.id)}` : ''
+  }`
 
   debug(`Events ${eventsUrl}`)
 
@@ -1051,7 +1049,7 @@ async function printEvents(now, currentTeam = null, {
       }
     }
   }, {
-    retries: 4
+    retries: 3
   })
 }
 
