@@ -152,7 +152,9 @@ module.exports = async ctx => {
 
 function printLogs({ token, sh: { currentTeam } }) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  return printEvents(now, deploymentIdOrURL, currentTeam, { quiet: false, debug });
+  const findOpts = { query, types }
+  return printEvents(now, deploymentIdOrURL, currentTeam,
+    { mode: 'logs', printEvent, quiet: false, debug, findOpts });
 /*
   return new Promise(async (resolve, reject) => {
     let buf = []
@@ -279,10 +281,13 @@ function printLogShort(log) {
       console.log(`${repeat(' ', date.length)}  ${line}`)
     }
   })
+
+  return 0
 }
 
 function printLogRaw(log) {
   console.log(log.object ? JSON.stringify(log.object) : log.text)
+  return 0
 }
 
 const logPrinters = {
@@ -290,11 +295,11 @@ const logPrinters = {
   raw: printLogRaw
 }
 
-/*
-function printLog(log) {
-  logPrinters[outputMode](log)
+function printEvent(event) {
+  return logPrinters[outputMode](event, () => {})
 }
 
+/*
 async function fetchLogs({ token, currentTeam, since, until } = {}) {
   const now = new Now({ apiUrl, token, debug, currentTeam })
 

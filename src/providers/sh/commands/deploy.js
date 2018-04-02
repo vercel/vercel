@@ -483,7 +483,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     // get all the region or dc identifiers from the scale settings
-    const scaleKeys = Object.keys(scale);
+    const scaleKeys = Object.keys(scale)
 
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
@@ -495,7 +495,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
     }
 
-    let dcIds = [];
+    let dcIds = []
 
     if (regions.length) {
       if (Object.keys(scale).length) {
@@ -507,7 +507,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
 
       try {
-        dcIds = normalizeRegionsList(regions);
+        dcIds = normalizeRegionsList(regions)
       } catch (err) {
         if (err.code === 'INVALID_ID') {
           error(
@@ -519,7 +519,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
           await exit(1)
         } else {
-          throw err;
+          throw err
         }
       }
 
@@ -840,22 +840,22 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      let cancelWait = () => {};
+      let cancelWait = () => {}
       if (!quiet) {
         cancelWait = wait('Initializing…')
       }
 
       try {
-        require('assert')(deployment); // mute linter
+        require('assert')(deployment) // mute linter
         await printEvents(now, now.id, currentTeam, {
-          onOpen: cancelWait, quiet, debugEnabled
+          mode: 'deploy', printEvent, onOpen: cancelWait, quiet, debugEnabled
         })
       } catch (err) {
         cancelWait()
         throw err
       }
 
-      await exit(0);
+      await exit(0)
     }
   })
 }
@@ -909,6 +909,33 @@ async function readMeta(
     }
     throw err
   }
+}
+
+function printEvent({ type, event, text }, callOnOpenOnce) {
+  if (event === 'build-start') {
+    callOnOpenOnce()
+    log('Building…')
+    return 1
+  } else
+  if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+    if (text.slice(-1) === '\n') text = text.slice(0, -1)
+    callOnOpenOnce()
+    const lines = text.split('\n')
+
+    if (type === 'command') {
+      log(`▲ ${text}`)
+    } else if (type === 'stdout' || type === 'stderr') {
+      lines.forEach(v => {
+        // strip out the beginning `>` if there is one because
+        // `log()` prepends its own and we don't want `> >`
+        log(v.replace(/^> /, ''))
+      })
+    }
+
+    return lines.length
+  }
+
+  return 0
 }
 
 module.exports = main

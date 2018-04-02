@@ -7,20 +7,8 @@ const retry = require('async-retry')
 // Utilities
 const createOutput = require('../../../util/output')
 
-function printEvent(log, type, text) {
-  if (type === 'command') {
-    log(`▲ ${text}`)
-  } else if (type === 'stdout' || type === 'stderr') {
-    text.split('\n').forEach(v => {
-      // strip out the beginning `>` if there is one because
-      // `log()` prepends its own and we don't want `> >`
-      log(v.replace(/^> /, ''))
-    })
-  }
-}
-
 async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
-  onOpen = ()=>{}, quiet, debugEnabled
+  mode, printEvent, onOpen = ()=>{}, quiet, debugEnabled, findOpts = {}
 } = {}) {
   const { log, debug } = createOutput({ debug: debugEnabled })
 
@@ -31,11 +19,14 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
     onOpen()
   }
 
+  const query = findOpts.query || ''
+  const types = (findOpts.types || []).join(',')
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=1`
   let pollUrl = `/v1/now/deployments/${deploymentIdOrURL}`
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?follow=1`
 
   if (currentTeam) {
     eventsUrl += `&teamId=${currentTeam.id}`
+    pollUrl += `?teamId=${currentTeam.id}`
   }
 
   debug(`Events ${eventsUrl}`)
@@ -58,29 +49,37 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
       return new Promise((resolve, reject) => {
         const stream = readable.pipe(jsonlines.parse())
 
-        let poller = (function startPoller() {
-          return setTimeout(async () => {
-            try {
-              const pollRes = await now._fetch(pollUrl)
-              if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
-              const json = await pollRes.json()
-              if (json.state === 'READY') {
-                cleanup()
-                return
+        let poller;
+
+        if (mode === 'deploy') {
+          poller = (function startPoller() {
+            return setTimeout(async () => {
+              try {
+                const pollRes = await now._fetch(pollUrl)
+                if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
+                const json = await pollRes.json()
+                if (json.state === 'READY') {
+                  cleanup()
+                  return
+                }
+                poller = startPoller()
+              } catch (error) {
+                cleanup(error)
               }
-              poller = startPoller()
-            } catch (error) {
-              cleanup(error)
-            }
-          }, 5000)
-        })()
+            }, 5000)
+          })()
+        }
 
         let cleanupAndResolveCalled = false
         function cleanup(error) {
           if (cleanupAndResolveCalled) return
           cleanupAndResolveCalled = true
           callOnOpenOnce()
-          if (!error) log(chalk`{cyan Success!} Build complete`)
+
+          if (mode === 'deploy') {
+            if (!error) log(chalk`{cyan Success!} Build complete`)
+          }
+
           clearTimeout(poller)
           // avoid lingering events
           stream.removeListener('data', onData)
@@ -96,30 +95,14 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           }
         }
 
-        const onData = ({ type, event, text }) => {
-          // if we are 'quiet' because we are piping, simply
-          // wait for the first instance to be started
-          // and ignore everything else
-          if (quiet) {
-            if (type === 'instance-start') {
+        const onData = (data) => {
+          const { event } = data;
+          if (event === 'build-complete') {
+            if (mode === 'deploy') {
               cleanup()
             }
-            return
-          }
-
-          if (event === 'build-start') {
-            o++
-            callOnOpenOnce()
-            log('Building…')
-          } else
-          if (event === 'build-complete') {
-            cleanup()
-          } else
-          if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
-            if (text.slice(-1) === '\n') text = text.slice(0, -1)
-            o += text.split('\n').length
-            callOnOpenOnce()
-            printEvent(log, type, text)
+          } else {
+            o += printEvent(data, callOnOpenOnce)
           }
         }
 
