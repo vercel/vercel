@@ -3,18 +3,25 @@
 // Packages
 const arg = require('arg')
 const chalk = require('chalk')
+const fetch = require('node-fetch')
 const fs = require('fs-extra')
 const ms = require('ms')
 const path = require('path');
 const plural = require('pluralize')
+const psl = require('psl');
+const qs = require('querystring')
+const retry = require('async-retry')
+const sleep = require('then-sleep');
 const table = require('text-table')
 
 // Utilities
 const { handleError } = require('../util/error')
+const { tick } = require('../../../util/output/chars')
 const argCommon = require('../util/arg-common')()
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
 const elapsed = require('../../../util/output/elapsed')
+const eraseLines = require('../../../util/output/erase-lines')
 const getContextName = require('../util/get-context-name')
 const humanizePath = require('../../../util/humanize-path')
 const isValidDomain = require('../util/domains/is-valid-domain')
@@ -22,9 +29,17 @@ const logo = require('../../../util/output/logo')
 const Now = require('../util/')
 const NowAlias = require('../util/alias')
 const promptBool = require('../../../util/input/prompt-bool')
+const stamp = require('../../../util/output/stamp')
 const strlen = require('../util/strlen')
 const toHost = require('../util/to-host')
 const wait = require('../../../util/output/wait')
+
+// $FlowFixMe
+const isTTY = process.stdout.isTTY
+
+// the "auto" value for scaling
+const AUTO = 'auto'
+const USE_WILDCARD_CERTS = false
 
 const help = () => {
   console.log(`
@@ -393,7 +408,8 @@ async function set(ctx, opts, args, output): Promise<number> {
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
-
+  const start = Date.now()
+    
   // Get deployments and targets from opts and args
   const params = await getTargetsAndDeployment(now, output, args, opts, user, contextName)
   if (params instanceof NowError) {
@@ -438,7 +454,81 @@ async function set(ctx, opts, args, output): Promise<number> {
     return 1
   }
 
-  console.log({ deployment, targets })
+  // Assign the alias for each of the targets in the array
+  for (const target of addZeitDomainIfNeeded(targets)) {
+    const result = await assignAlias(output, now, deployment, target, contextName)
+    if (result instanceof NowError) {
+      switch (result.code) {
+        case 'DOMAIN_VERIFICATION_FAILED':
+          output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
+          output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
+          output.print(`\n  Alternatively, make sure to:`)
+          output.print(`\n  ${chalk.gray('-')} Verify the domain by adding a TXT record on your DNS server: _now.${result.meta.domain}: ${result.meta.token}`)
+          output.print(
+            result.meta.subdomain === null
+              ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record for <domain>.\n`
+              : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
+          )
+          break
+        case 'UNABLE_TO_RESOLVE_EXTERNAL':
+          output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
+          output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
+          output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
+          output.print(`\n  Alternatively, make sure to:`)
+          output.print(
+            result.meta.subdomain === null
+              ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record.\n`
+              : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${result.meta.subdomain}'.\n`
+          )
+          break
+        case 'UNABLE_TO_RESOLVE_INTERNAL':
+          output.error(
+            `We configured the DNS settings for your alias, but we were unable to ` +
+            `verify that they've propagated. Please try the alias again later.`
+          )
+          break
+        case 'SOURCE_NOT_FOUND':
+          output.error(`No credit cards found to buy ${result.meta.domain} – please run ${cmd('now cc add')}.`)
+          break
+        case 'NO_DOMAIN_PERMISSIONS':
+          output.error(`You don't have permissions over domain ${result.meta.domain} under ${chalk.bold(contextName)}.`)
+          break
+        case 'USER_ABORT':
+          output.error(`User aborted.`)
+          break
+        case 'DOMAIN_IS_NOT_VERIFIED':
+          output.error(`We couldn't verify the domain ${result.meta.domain}. Please try again later`)
+          break
+        case 'ALIAS_IN_USE':
+          output.error(`The alias ${chalk.dim(target)} is in use by a different team.`)
+          break
+        case 'DEPLOYMENT_NOT_FOUND':
+        case 'INVALID_ALIAS':
+        case 'NEED_UPGRADE':
+        case 'DOMAIN_PERMISSION_DENIED':
+        case 'NAMESERVERS_NOT_FOUND':
+        case 'DNS_ACCESS_UNAUTHORIZED':
+        case 'UNABLE_TO_VERIFY':
+        case 'DEPLOYMENT_PERMISSION_DENIED': // includes id
+        default:
+          output.error(`Unhandled error ${result.code}`)
+          break
+      }
+
+      now.close()
+      return 1
+    }
+
+    output.success(`${target} now points to ${
+      chalk.bold(deployment.url)
+    }! ${chalk.grey('[' + ms(Date.now() - start) + ']')}`)
+  }
+
   now.close();
   return 0
 }
@@ -598,29 +688,24 @@ async function getAppName(output, opts): Promise<string> {
     : config.name
 }
 
+type FetchDeploymentErrors =
+  NowError<'DEPLOYMENT_NOT_FOUND', { id: string }> |
+  NowError<'DEPLOYMENT_PERMISSION_DENIED', { id: string }>
+
+type Scale = { min: number, max: number }
+type DeploymentScale = { [dc: string]: Scale }
+
 type Deployment = {
   uid: string,
   url: string,
   name: string,
-  created: number,
-  creator: { uid: string, },
-  state: 'FROZEN' | 'READY',
   type: 'NPM',
+  state: 'FROZEN' | 'READY',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale
 }
-
-async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | null> {
-  output.debug(`Looking for deployments matching app ${appName}`)
-  const cancelWait = wait(`Fetching user deployments in ${chalk.bold(contextName)}`);
-  const deployments: Array<Deployment> = await now.list(appName, { version: 3 });
-  cancelWait()
-  return deployments
-    .sort((a, b) => b.created - a.created)
-    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0]
-}
-
-type FetchDeploymentErrors =
-  NowError<'DEPLOYMENT_NOT_FOUND', { id: string }> |
-  NowError<'DEPLOYMENT_PERMISSION_DENIED', { id: string }>
 
 async function fetchDeployment(output, now, contextName, id): Promise<Deployment | FetchDeploymentErrors> {
   const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
@@ -640,15 +725,55 @@ async function fetchDeployment(output, now, contextName, id): Promise<Deployment
   }
 }
 
+type DeploymentItem = {
+  uid: string,
+  url: string,
+  name: string,
+  created: number,
+  creator: { uid: string, },
+  state: 'FROZEN' | 'READY',
+  type: 'NPM',
+}
+
+async function fetchDeploymentsByAppName(now, appName): Promise<Array<DeploymentItem>> {
+  return now.list(appName, { version: 3 });
+}
+
+type GetAppLastDeploymentErrors = 
+  NowError<'CANT_FIND_A_DEPLOYMENT'> |
+  FetchDeploymentErrors
+
+async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | GetAppLastDeploymentErrors> {
+  output.debug(`Looking for deployments matching app ${appName}`)
+  const cancelWait = wait(`Fetching user deployments in ${chalk.bold(contextName)}`)
+  let deployments  
+  try {
+    deployments = await fetchDeploymentsByAppName(now, appName)
+    cancelWait()
+  } catch (error) {
+    cancelWait()
+    throw error
+  }
+
+  const deploymentItem = deployments
+    .sort((a, b) => b.created - a.created)
+    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0]
+
+  // Try to fetch deployment details
+  return deploymentItem
+    ? await fetchDeployment(output, now, contextName, deploymentItem.uid)
+    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT' })
+}
+
 type SetAliasArgs = {
   deployment: Deployment,
   targets: Array<string>,
 }
 
 type SetAliasErrors = 
-  NowError<'CANT_FIND_DEPLOYMENT'> |
   NowError<'TOO_MANY_ARGS'> |
   GetInferredTargetsError | 
+  GetAppLastDeploymentErrors |
   FetchDeploymentErrors
 
 async function getTargetsAndDeployment(now, output, args: Array<string>, opts, user, contextName): Promise<SetAliasArgs | SetAliasErrors> {
@@ -661,10 +786,10 @@ async function getTargetsAndDeployment(now, output, args: Array<string>, opts, u
     }
 
     const appName = await getAppName(output, opts)
-    const deployment = await getAppLastDeployment(output, now, appName, user)
-    return !deployment 
-      ? new NowError({ code: 'CANT_FIND_A_DEPLOYMENT' })
-      : { deployment, targets }
+    const deployment = await getAppLastDeployment(output, now, appName, user, contextName)
+    return !(deployment instanceof NowError)
+      ? { deployment, targets }
+      : deployment
   }
 
   // When there is one arg we assume the user typed `now alias <target> because
@@ -672,10 +797,10 @@ async function getTargetsAndDeployment(now, output, args: Array<string>, opts, u
   if (args.length === 1) {
     const targets = [args[0]]
     const appName = await getAppName(output, opts)
-    const deployment = await getAppLastDeployment(output, now, appName, user)
-    return !deployment
-      ? new NowError({ code: 'CANT_FIND_A_DEPLOYMENT' })
-      : { deployment, targets }
+    const deployment = await getAppLastDeployment(output, now, appName, user, contextName)
+    return !(deployment instanceof NowError)
+      ? { deployment, targets }
+      : deployment
   }
 
   // In any other case the user provided both id and deployment id so we can just
@@ -695,7 +820,7 @@ type DomainValidationError = NowError<'INVALID_TARGET_DOMAIN', { target: string 
 
 function targetsAreValid(targets): Array<string> | DomainValidationError {
   for (const target of targets) {
-    if (!isValidDomain(target)) {
+    if (target.indexOf('.') !== -1 && !isValidDomain(target)) {
       return new NowError({
         code: 'INVALID_TARGET_DOMAIN',
         meta: { target }
@@ -704,4 +829,738 @@ function targetsAreValid(targets): Array<string> | DomainValidationError {
   }
 
   return targets
+}
+
+function addZeitDomainIfNeeded(targets) {
+  return targets.map(target => {
+    return target.indexOf('.') === -1
+      ? `${target}.now.sh`
+      : target
+  })
+}
+
+type Alias = {
+  uid: string,
+  alias: string,
+  created: string,
+  deployment: {
+    id: string,
+    url: string
+  },
+  creator: {
+    uid: string,
+    username: string,
+    email: string
+  },
+  deploymentId: string,
+  rules: Array<{
+    pathname: string,
+    method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
+    dest: string,
+  }>
+}
+
+function getSafeAlias(alias: string) {
+  const _alias = alias
+    .replace(/^https:\/\//i, '')
+    .replace(/^\.+/, '')
+    .replace(/\.+$/, '')
+    .toLowerCase()
+
+  return _alias.indexOf('.') === -1
+    ? `${_alias}.now.sh`
+    : _alias
+}
+
+async function getPreviousAlias(now, alias): Promise<Alias | null> {
+  const aliases = await now.listAliases()
+  return aliases.find(a => a.alias === alias)
+}
+
+type UserAbortError = NowError<'USER_ABORT'>
+
+async function warnAliasOverwrite(output, alias: Alias): Promise<true | UserAbortError> {
+  if (isTTY) {
+    const confirmed = await promptBool(chalk.bold.red('Are you sure?'))
+    return !!confirmed || new NowError({ code: 'USER_ABORT' })
+  } else {
+    output.log(
+      `Overwriting path alias with ${
+        plural('rule', alias.rules.length, true)
+      } to be a normal alias.`
+    )
+    return true
+  }
+}
+
+function getScaleForDC(dc: string, deployment: Deployment): Scale {
+  const dcAttrs = deployment.scale[dc] || {}
+  return { min: dcAttrs.min, max: dcAttrs.max }
+}
+
+function shouldCopyScalingAttributes(origin: Deployment, dest: Deployment) {
+  return getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min ||
+    getScaleForDC('bru1', origin).max !== getScaleForDC('bru1', dest).max ||
+    getScaleForDC('sfo1', origin).min !== getScaleForDC('sfo1', dest).min ||
+    getScaleForDC('sfo1', origin).max !== getScaleForDC('sfo1', dest).max
+}
+
+function formatScaleArgs(scaleArgs) {
+  return Object.keys(scaleArgs).map(dc => {
+    return `${chalk.bold(dc)}`
+  }).join(', ')
+}
+
+async function setScale(output, now, deploymentId, scaleArgs) {
+  const start = Date.now();
+  const scalesMsg = formatScaleArgs(scaleArgs)
+  const cancelWait = wait(`Setting scale rules for ${scalesMsg}`)
+
+  try {
+    await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`, {
+      method: 'PATCH',
+      body: scaleArgs
+    })
+    cancelWait()
+  } catch (error) {
+    cancelWait()
+    throw error
+  }
+
+  output.success(`Scale rules for ${scalesMsg} saved ${elapsed(Date.now() - start)}`);
+}
+
+type InstancesInfo = {
+  [dc: string]: {
+    instances: Array<{}>
+  }
+}
+
+async function getDeploymentInstances(now, deploymentId): Promise<InstancesInfo> {
+  return now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
+}
+
+function isInstanceCountBetween(value: number, min: number, max: number) {
+  const safeMax = max === AUTO ? Infinity : max
+  return value >= min && value <= safeMax
+}
+
+async function matchDeploymentScale(output, now, deploymentId, scale): Promise<Map<string, number>> {
+  const currentInstances = await getDeploymentInstances(now, deploymentId)
+  const dcsToScale = new Set(Object.keys(scale))
+  const matches: Map<string, number> = new Map()
+
+  for (const dc of dcsToScale) {
+    const currentScale = currentInstances[dc]
+    if (!currentScale) {
+      output.debug(`Still no data for DC ${dc}`)
+      break;
+    }
+
+    const currentInstancesCount = currentScale.instances.length
+    const { min, max } = scale[dc]
+    if (isInstanceCountBetween(currentInstancesCount, min, max)) {
+      matches.set(dc, currentInstancesCount)
+      output.debug(`DC ${dc} matched scale.`)
+    } else {
+      output.debug(`DC ${dc} missing scale. Inteded (${min}, ${max}). Current ${currentInstancesCount}`)
+    }
+  }
+
+  return matches
+}
+
+function renderRemainingDCsWait(remainingDcs) {
+  return wait(`Waiting for instances in ${
+    Array.from(remainingDcs).map(id => chalk.bold(id)).join(', ')
+  } to match constraints`)
+}
+
+async function waitForScale(output, now, deploymentId, scale) {
+  const checkInterval = 1000
+  const timeout = ms('5m')
+  const start = Date.now()
+  let remainingMatches = new Set(Object.keys(scale))
+  let cancelWait
+  
+  while (true) { // eslint-disable-line
+    if (start + timeout <= Date.now()) {
+      throw new Error('Timeout while verifying instance count (10m)');
+    }
+
+    // Get the matches for deployment scale args
+    const matches = await matchDeploymentScale(output, now, deploymentId, scale)
+    const newMatches = new Set([...remainingMatches].filter(dc => matches.has(dc)))
+    remainingMatches = new Set([...remainingMatches].filter(dc => !matches.has(dc)))
+
+    // When there are new matches we print and check if we are done
+    if (newMatches.size !== 0) {
+      if (cancelWait) {
+        cancelWait()
+      }
+
+      // Print the new matches that we got
+      for (const dc of newMatches) {
+        // $FlowFixMe
+        output.log(`${chalk.cyan(tick)} Scaled ${chalk.bold(dc)} (${matches.get(dc)} instance) ${elapsed(Date.now() - start)}`);
+      }  
+
+      // If we are done return, otherwise put the spinner back
+      if (remainingMatches.size === 0) {
+        return null
+      } else {
+        cancelWait = renderRemainingDCsWait(remainingMatches)
+      }
+    }
+
+    // Sleep for the given interval until the next poll
+    await sleep(checkInterval);
+  }
+}
+
+async function getDomainStatus(now, domain) {
+  return now.fetch(`/domains/status?${qs.stringify({ name: domain })}`)
+}
+
+async function getDomainPrice(now, domain) {
+  return now.fetch(`/domains/price?${qs.stringify({ name: domain })}`)
+}
+
+type DomainInfo = {
+  uid: string,
+  creator: {
+    email: string,
+    uid: string,
+    username: string
+  },
+  created: string,
+  boughtAt?: string,
+  expiresAt: string,
+  isExternal: boolean,
+  serviceType: string,
+  verified: boolean,
+  aliases: Array<string>,
+  certs: Array<string>
+}
+
+type GetDomainErrors =
+  NowError<'NO_DOMAIN_PERMISSIONS', { domain: string }>
+
+async function getDomainInfo(now, domain): Promise<null | DomainInfo | GetDomainErrors> {
+  const cancelMessage = wait(`Fetching domain info`)
+  try {
+    const info = await now.fetch(`/domains/${domain}`)
+    cancelMessage()
+    return info
+  } catch (error) {
+    cancelMessage()
+    if (error.code === 'forbidden') {
+      return new NowError({ code: 'NO_DOMAIN_PERMISSIONS', meta: { domain } })
+    } else if (error.status === 404) {
+      return null
+    } else {
+      throw error
+    }
+  }
+}
+
+type GetDomainServersError = 
+  NowError<'NAMESERVERS_NOT_FOUND'>
+
+async function getDomainNameservers(now, domain: string): Promise<Array<string> | GetDomainServersError> {
+  const cancelFetchingMessage = wait(`Fetching DNS nameservers for ${domain}`)
+  try {
+    let { nameservers } = await now.fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`)
+    cancelFetchingMessage()
+    return nameservers.filter(ns => {
+      // Temporary hack:
+      // sometimes we get a response that looks like:
+      // ['ns', 'ns', '', '']
+      // so we filter the empty ones
+      return ns.length > 0
+    })
+  } catch (error) {
+    cancelFetchingMessage()
+    if (error.status === 404) {
+      return new NowError({ code: 'NAMESERVERS_NOT_FOUND' })
+    } else {
+      throw error
+    }
+  }
+}
+
+type BuyDomainErrors =
+  NowError<'SOURCE_NOT_FOUND', { domain: string }>
+
+async function purchaseDomain(output, now, domain): Promise<null | BuyDomainErrors> {
+  const purchaseStamp = stamp()
+  const cancelWait = wait('Purchasing')
+  try {
+    const { uid } = await now.fetch('/domains/buy', {
+      body: { name: domain },
+      method: 'POST'
+    })
+    cancelWait()
+    output.log(`Domain purchased and created ${chalk.gray(`(${uid})`)} ${purchaseStamp()}`)
+  } catch (error) {
+    cancelWait()
+    if (error.code === 'source_not_found') {
+      return new NowError({ code: 'SOURCE_NOT_FOUND', meta: { domain } })
+    } else {
+      throw error
+    }
+  }
+
+  return null
+}
+
+async function purchaseDomainIfAvailable(output, now, domain, contextName): Promise<boolean | BuyDomainErrors> {
+  const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`)
+  const buyDomainStamp = stamp()
+  const { available } = await getDomainStatus(now, domain)
+  
+  if (available) {
+    const { price, period } = await getDomainPrice(now, domain)
+    cancelWait()
+    output.log(
+      `The domain ${domain} is ${chalk.italic('available')} to buy under ${
+        chalk.bold(contextName)
+      }! ${buyDomainStamp()}`
+    )
+
+    if (!await promptBool(`Buy now for ${chalk.bold(`$${price}`)} (${plural('yr', period, true)})?`)) {
+      output.print(eraseLines(1))
+      return new NowError({ code: 'USER_ABORT' })
+    }
+
+    output.print(eraseLines(1))
+    const result = await purchaseDomain(output, now, domain)
+    if (result instanceof NowError) {
+      return result
+    }
+
+    return true
+  } else {
+    cancelWait()
+    return false
+  }
+}
+
+
+
+
+
+async function domainResolvesToNow(output, alias, retryConfig = {}): Promise<boolean> {
+  output.debug(`Checking if ${alias} resolves to now`)
+  const cancelMessage = wait(`Checking ${alias} DNS resolution`)
+  let response
+  try {
+    response = await retry(async () => {
+      return fetch(`http://${alias}`, {
+        method: 'HEAD',
+        redirect: 'manual'
+      })
+    }, { retries: 2, maxTimeout: 8000, ...retryConfig })
+    cancelMessage()
+  } catch (error) {
+    cancelMessage()
+    if (error.code === 'ENOTFOUND') {
+      return false
+    } else {
+      throw error
+    }
+  }
+
+  return response.headers.get('server') === 'now'
+}
+
+type VerifyDomainErrors =
+  NowError<'NEED_UPGRADE'> |
+  NowError<'DOMAIN_PERMISSION_DENIED'> |
+  NowError<'DOMAIN_IS_NOT_VERIFIED', { domain: string }> |
+  NowError<'DOMAIN_VERIFICATION_FAILED', { domain: string, subdomain: string, token: string }>
+
+async function verifyDomain(now, alias, { isExternal = false } = {}): Promise<boolean | VerifyDomainErrors> {
+  const cancelMessage = wait('Setting up and verifying the domain')
+  const { domain, subdomain } = psl.parse(alias)
+  try {
+    const { verified } = await retry(async (bail) => {
+      try {
+        return await now.fetch('/domains', {
+          body: { name: domain, isExternal },
+          method: 'POST',
+        })
+      } catch (err) {
+        // retry in case the user has to setup a TXT record
+        if (err.code !== 'verification_failed') {
+          bail(err)
+        } else {
+          throw err
+        }
+      }
+    }, { retries: 5, maxTimeout: 8000 })
+    cancelMessage()
+
+    if (verified === false) {
+      return new NowError({
+        code: 'DOMAIN_IS_NOT_VERIFIED',
+        meta: { domain },
+      })
+    }
+
+    return verified
+  } catch (error) {
+    cancelMessage()
+    if (error.status === 403) {
+      return error.code === 'custom_domain_needs_upgrade'
+        ? new NowError({ code: 'NEED_UPGRADE' })
+        : new NowError({ code: 'DOMAIN_PERMISSION_DENIED' })
+    }
+
+    if (error.status === 401 && error.code === 'verification_failed') {
+      return new NowError({
+        code: 'DOMAIN_VERIFICATION_FAILED',
+        meta: { subdomain, domain, token: error.verifyToken },
+      })
+    }
+
+    if (error.status !== 409) {
+      // we can ignore the 409 errors since it means the domain
+      // is already setup
+      throw error
+    }
+  }
+
+  return true
+}
+
+type SetupDNSRecordError =
+  NowError<'DNS_ACCESS_UNAUTHORIZED'>
+
+async function setupDNSRecord(output, now, type, name, domain): Promise<null | SetupDNSRecordError> {
+  output.debug(`Trying to setup ${type} record with name ${name} for domain ${domain}`)
+  try {
+    await now.fetch(`/domains/${domain}/records`, {
+      body: { type, name, value: 'alias.zeit.co' },
+      method: 'POST'
+    })
+  } catch (error) {
+    console.log('THERE WAS ERROR', error)
+
+    if (error.status === 403) {
+      return new NowError({ code: 'DNS_ACCESS_UNAUTHORIZED' })
+    }
+
+    if (error.status !== 409) {
+      // ignore the record conflict to make it idempotent
+      throw error
+    }
+  }
+
+  return null
+}
+
+async function setupDNSRecords(output, now, alias, domain): Promise<true | SetupDNSRecordError> {
+  const cnameResult = await setupDNSRecord(output, now, 'CNAME', '*', domain)
+  if (cnameResult instanceof NowError) {
+    return cnameResult
+  }
+
+  const aliasResult = await setupDNSRecord(output, now, 'ALIAS', '', domain)
+  if (aliasResult instanceof NowError) {
+    return aliasResult
+  }
+
+  return true
+}
+
+type SetupAliasDomainError =
+  GetDomainErrors |
+  BuyDomainErrors |
+  VerifyDomainErrors |
+  GetDomainServersError |
+  UserAbortError |
+  SetupDNSRecordError |
+  NowError<'UNABLE_TO_VERIFY'>
+
+async function setupAliasDomain(output, now, alias, contextName): Promise<true | SetupAliasDomainError> {
+  const { subdomain, domain } = psl.parse(alias)
+
+  // In case the domain is avilable, we have to purchase
+  const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
+  if (purchased instanceof NowError) {
+    return purchased
+  }
+
+  // Now the domain shouldn't be available and it might or might not belong to the user
+  const info = await getDomainInfo(now, domain)
+  if (info instanceof NowError) {
+    return info
+  }
+
+  if (!info) {
+
+    // If we have no info it means that it's an unknown domain. We have to check the
+    // nameservers to register and verify it as an external or non-external domain
+    const nameservers = await getDomainNameservers(now, domain)
+    if (nameservers instanceof NowError) {
+      return nameservers
+    }
+
+    output.log(
+      `Nameservers: ${nameservers && nameservers.length
+        ? nameservers.map(ns => chalk.underline(ns)).join(', ')
+        : chalk.dim('none')}`
+    )
+
+    if (!nameservers.every(ns => ns.endsWith('.zeit.world'))) {
+      // If it doesn't have the nameserver pointing to now we have to create the 
+      // domain knowing that it should be verified via a DNS TXT record.
+      const setupResult = await verifyDomain(now, alias, { isExternal: true })
+      if (setupResult instanceof NowError) {
+        return setupResult
+      } else {
+        output.success(`Domain ${domain} added!`)
+      }
+
+      // The domain is verified and added so if alias doesn't resolve to now 
+      // it means that the user has to configure the CNAME, the ALIAS or to 
+      // change the nameservers or wait for propagation.
+      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        return new NowError({
+          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
+          meta: { domain, subdomain }
+        })
+      }
+    } else {
+      // We have to create the domain knowing that the nameservers are zeit.world
+      output.log(`Detected ${chalk.bold(chalk.underline('zeit.world'))} nameservers! Setting up domain...`)
+      const setupResult = await verifyDomain(now, alias, { isExternal: false })
+      if (setupResult instanceof NowError) {
+        return setupResult
+      } else {
+        output.success(`Domain ${domain} added!`)
+      }
+
+      // Since it's pointing to our nameservers we can configure the DNS records
+      const result = await setupDNSRecords(output, now, alias, domain)
+      if (result instanceof NowError) {
+        return result
+      }
+
+      // If it doesn't resolve here it means that everything is setup but the
+      // propagation is not done so we invite the user to try later.
+      output.log(`DNS Configured! Verifying propagation…`)
+      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
+      }
+    }
+  } else {
+    if (info.isExternal) {
+      // If the domain was added as an external domain, it means that we have no access
+      // to the DNS records so we can only check if it's verified and fail otherwise
+      if (!info.verified) {
+        const verified = await verifyDomain(now, alias, { isExternal: true })
+        if (verified instanceof NowError) {
+          return verified
+        }
+      }
+
+      // If it doesn't resolve to now it means that the user has to configure
+      // the CNAME, the ALIAS or to change the nameservers or wait a little.
+      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        return new NowError({
+          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
+          meta: { domain, subdomain }
+        })
+      }
+    } else {
+      // If the domain is an internal domain it means that it's pointing to zeit.world and
+      // we can configure the DNS records in case it is not resolving properly.
+      if (!await domainResolvesToNow(output, alias)) {
+        const result = await setupDNSRecords(output, now, alias, domain)
+        if (result instanceof NowError) {
+          return result
+        }
+        
+        // Verify that the DNS records are ready
+        output.log(`DNS Configured! Verifying propagation…`)
+        if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+          return new NowError({ code: 'UNABLE_TO_RESOLVE_INTERNAL' })
+        }
+      }
+    }
+  }
+
+  return true
+}
+
+type Certificate = {
+  uid: string,
+  created: string,
+  expiration: string,
+  autoRenew: boolean,
+  cns: Array<string>
+}
+
+async function createCertificate(now, cns): Promise<Certificate> {
+  const cancelMessage = wait(`Generating a certificate...`)
+  const certificate = await now.fetch('/v3/now/certs', {
+    method: 'POST',
+    body: { domains: cns },
+    retry: {
+      maxTimeout: 90000,
+      minTimeout: 30000,
+      retries: 3
+    }
+  })
+  cancelMessage()
+  return certificate
+}
+
+type AliasRecord = {
+  uid: string,
+  alias: string,
+  created?: string
+}
+
+type CreateAliasError = 
+  NowError<'ALIAS_IN_USE'> |
+  NowError<'DEPLOYMENT_NOT_FOUND', { id: string }> |
+  NowError<'INVALID_ALIAS'> |
+  NowError<'NEED_UPGRADE'> |
+  NowError<'NO_DOMAIN_PERMISSIONS'>
+
+async function createAlias(output, now, deployment, alias): Promise<AliasRecord | CreateAliasError> {
+  const cancelMessage = wait(`Creating alias`)
+  const { domain } = psl.parse(alias)
+
+  try {
+    const data = await now.fetch(`/now/deployments/${deployment.uid}/aliases`, {
+      method: 'POST',
+      body: { alias }
+    })
+
+    cancelMessage()
+    return data
+  } catch (error) {
+    cancelMessage()
+    
+    // If the certificate is missing we create it without expecting failures
+    // then we call back the createAlias function
+    if (error.code === 'cert_missing' || error.code === 'cert_expired') {
+      const cns = USE_WILDCARD_CERTS ? [domain, `*.${domain}`] : [alias]
+      await createCertificate(now, cns)
+      output.success(`Certificate for ${alias} successfuly created`)
+      return createAlias(output, now, deployment, alias)
+    }
+
+    // The alias already exists so we fail in silence returning the id
+    if (error.status === 409) {
+      const record: AliasRecord = { uid: error.uid, alias: error.alias }
+      return record
+    }
+
+    if (error.code === 'deployment_not_found') {
+      return new NowError({
+        code: 'DEPLOYMENT_NOT_FOUND',
+        meta: { id: deployment.uid }
+      })
+    }
+
+    // We do not support nested subdomains
+    if (error.code === 'invalid_alias') {
+      return new NowError({ code: 'INVALID_ALIAS' })
+    }
+
+    if (error.status === 403) {
+      if (error.code === 'custom_domain_needs_upgrade') {
+        return new NowError({ code: 'NEED_UPGRADE' })
+      }
+
+      if (error.code === 'alias_in_use') {
+        return new NowError({ code: 'ALIAS_IN_USE' })
+      }
+
+      if (error.code === 'forbidden') {
+        return new NowError({ code: 'NO_DOMAIN_PERMISSIONS', meta: { domain } })
+      }
+    }
+
+    throw error
+  }
+}
+
+async function fetchDeploymentFromAlias(output, now, contextName, prevAlias): Promise<Deployment | null | FetchDeploymentErrors> {
+  return prevAlias
+    ? fetchDeployment(output, now, contextName, prevAlias.deploymentId)
+    : null
+}
+
+function shouldDownscaleDeployment(deployment: Deployment): boolean {
+  return Object.keys(deployment.scale).reduce((result, dc) => {
+    return result || getScaleForDC(dc, deployment).min !== 0 ||
+      getScaleForDC(dc, deployment).max !== 1
+  }, false)
+}
+
+function getDownscalePresets(deployment: Deployment): DeploymentScale {
+  return Object.keys(deployment.scale).reduce((result, dc) => {
+    return Object.assign(result, {
+      [dc]: { min: 0, max: 1 }
+    })
+  }, {})
+}
+
+type AssignAliasError =
+  CreateAliasError |
+  FetchDeploymentErrors |
+  SetupAliasDomainError
+
+async function assignAlias(output, now, deployment: Deployment, alias: string, contextName): Promise<true | AssignAliasError> {
+  output.log(`Asigning alias ${alias} to deployment ${deployment.url}`)
+  const prevAlias = await getPreviousAlias(now, getSafeAlias(alias))
+  
+  // Ask for a confirmation if there are rules defined
+  if (prevAlias && prevAlias.rules) {
+    await warnAliasOverwrite(output, prevAlias)
+  }
+
+  // If there was a previous deployment, we should fetch it to scale and downscale later
+  const prevDeployment = await fetchDeploymentFromAlias(output, now, contextName, prevAlias)
+  if (prevDeployment instanceof NowError) {
+    return prevDeployment
+  }
+
+  // If there was a prev deployment we have to check if we should scale
+  if (prevDeployment !== null && shouldCopyScalingAttributes(prevDeployment, deployment)) {
+    await setScale(output, now, deployment.uid, prevDeployment.scale)
+    await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+  } else {
+    output.debug(`Both deployments have the same scaling rules.`)
+  }
+
+  // Check if the alias is a custom domain and if case we have a positive
+  // we have to configure the DNS records and certificate
+  if (!/\.now\.sh$/.test(alias)) {
+    output.log(`${chalk.bold(chalk.underline(alias))} is a custom domain.`)
+    const result = await setupAliasDomain(output, now, alias, contextName)
+    if (result instanceof NowError) {
+      return result
+    }
+  }
+
+  // Create the alias and the certificate if it's missing
+  const aliased = await createAlias(output, now, deployment, alias)
+  if (aliased instanceof NowError) {
+    return aliased
+  }
+  
+  // Downscale if the previous deployment doesn't have the minimal presets
+  if (prevDeployment !== null && shouldDownscaleDeployment(prevDeployment)) {
+    await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
+    output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+  }
+
+  return true
 }
