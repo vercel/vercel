@@ -131,6 +131,7 @@ const help = () => {
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
     --regions                      Set default regions or DCs to enable the deployment on
+    --no-verify                    Skip step of waiting until instance count meets given constraints
 
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
@@ -180,6 +181,7 @@ let forwardNpm
 let followSymlinks
 let wantsPublic
 let regions
+let noVerify
 let apiUrl
 let isTTY
 let quiet
@@ -287,6 +289,7 @@ async function main(ctx: any) {
   followSymlinks = !argv.links
   wantsPublic = argv.public
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
+  noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
@@ -861,8 +864,11 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
       }
 
       if (deployment) {
-        // Verify at least one instance running before exiting
-        await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+        if (!noVerify) {
+          output.log(`Build completed`)
+          await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+        }
+        output.success(`Deployment ready!`)
       }
 
       await exit(0)

@@ -2,7 +2,6 @@
 const qs = require('querystring')
 
 // Packages
-const chalk = require('chalk')
 const { eraseLines } = require('ansi-escapes')
 const jsonlines = require('jsonlines')
 const retry = require('async-retry')
@@ -90,11 +89,6 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           if (finishCalled) return
           finishCalled = true
           callOnOpenOnce()
-
-          if (mode === 'deploy') {
-            if (!error) log(chalk`{cyan Success!} Deployment ready`)
-          }
-
           clearTimeout(poller)
           if (error) {
             reject(error)
@@ -105,7 +99,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
 
         const onData = (data) => {
           const { event } = data
-          if (event === 'state' && data.payload.state === 'READY') {
+          if (event === 'state' && data.payload.value === 'READY') {
             if (mode === 'deploy') {
               stream.end()
               finish()
