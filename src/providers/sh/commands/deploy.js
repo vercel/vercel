@@ -877,8 +877,6 @@ async function waitForScale(output, now, deploymentId, scale) {
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
   let cancelWait = renderRemainingDCsWait(Object.keys(scale))
-  const instances = await getDeploymentInstances(now, deploymentId)
-  
   
   while (true) { // eslint-disable-line
     if (start + timeout <= Date.now()) {
@@ -886,6 +884,7 @@ async function waitForScale(output, now, deploymentId, scale) {
     }
 
     // Get the matches for deployment scale args
+    const instances = await getDeploymentInstances(now, deploymentId)
     const matches = new Set(await getMatchingScalePresets(scale, instances, matchMinPresets))
     const newMatches = new Set([...remainingMatches].filter(dc => matches.has(dc)))
     remainingMatches = new Set([...remainingMatches].filter(dc => !matches.has(dc)))
