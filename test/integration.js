@@ -133,7 +133,7 @@ test('deploy a node microservice', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(String(stdout).trim())
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
