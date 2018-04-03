@@ -326,7 +326,7 @@ module.exports = async function main (ctx) {
       output,
       {
         timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
-        checkInterval: 1000,
+        checkInterval: 500,
         onDCScaled(id, instanceCount) {
           cancelVerifyWait(id, instanceCount);
         }
@@ -403,7 +403,7 @@ function setScale(now, deploymentId, scale) {
 
 // waits until the deployment's instances count reflects the intended
 // scale that the user is configuring with the command
-async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('5m'), checkInterval = 1000, onDCScaled = null } = {}) {
+async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('5m'), checkInterval = 500, onDCScaled = null } = {}) {
   const start = Date.now()
   const intendedScaleDcs = new Set(Object.keys(intendedScale));
 

@@ -819,13 +819,13 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
       if (clipboard) {
         try {
           await copy(url)
-          log(chalk`{bold ${url}} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard] ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`)
-          log(chalk`{bold ${url}} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard] ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
         }
       } else {
-        log(`${chalk.bold(url)} [in clipboard] ${chalk.green(`(${dcs})`)} ${deployStamp()}`)
+        log(`${chalk.bold(chalk.cyan(url))} ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
       }
     } else {
       process.stdout.write(url)
@@ -872,7 +872,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
 
 // TODO: refactor this funtion to use something similar in alias and scale
 async function waitForScale(output, now, deploymentId, scale) {
-  const checkInterval = 1000
+  const checkInterval = 500
   const timeout = ms('5m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))

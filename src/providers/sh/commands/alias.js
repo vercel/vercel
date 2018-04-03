@@ -984,7 +984,7 @@ function renderRemainingDCsWait(remainingDcs) {
 }
 
 async function waitForScale(output, now, deploymentId, scale) {
-  const checkInterval = 1000
+  const checkInterval = 500
   const timeout = ms('5m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
