@@ -1153,10 +1153,6 @@ async function purchaseDomainIfAvailable(output, now, domain, contextName): Prom
   }
 }
 
-
-
-
-
 async function domainResolvesToNow(output, alias, retryConfig = {}): Promise<boolean> {
   output.debug(`Checking if ${alias} resolves to now`)
   const cancelMessage = wait(`Checking ${alias} DNS resolution`)
@@ -1362,17 +1358,17 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
       }
     }
   } else {
-    if (info.isExternal) {
-      // If the domain was added as an external domain, it means that we have no access
-      // to the DNS records so we can only check if it's verified and fail otherwise
-      if (!info.verified) {
-        const verified = await verifyDomain(now, alias, { isExternal: true })
+    // If we have records from the domain we have to try to verify in case it is not
+    // verified and from this point we can be sure about its verification
+    if (!info.verified) {
+      const verified = await verifyDomain(now, alias, { isExternal: info.isExternal })
         if (verified instanceof NowError) {
           return verified
         }
-      }
+    }
 
-      // If it doesn't resolve to now it means that the user has to configure
+    if (info.isExternal) {
+      // If the domain is external and verified the user had to configure
       // the CNAME, the ALIAS or to change the nameservers or wait a little.
       if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
         return new NowError({
@@ -1411,15 +1407,20 @@ type Certificate = {
 
 async function createCertificate(now, cns): Promise<Certificate> {
   const cancelMessage = wait(`Generating a certificate...`)
-  const certificate = await now.fetch('/v3/now/certs', {
-    method: 'POST',
-    body: { domains: cns },
-    retry: {
-      maxTimeout: 90000,
-      minTimeout: 30000,
-      retries: 3
+  const certificate = await retry(async (bail) => {
+    try {
+      return await now.fetch('/v3/now/certs', {
+        method: 'POST',
+        body: { domains: cns },
+      })
+    } catch (error) {
+      if (error.code !== 'configuration_error') {
+        bail(error)
+      } else {
+        throw error
+      }
     }
-  })
+  }, { retries: 3, minTimeout: 30000, maxTimeout: 90000 })
   cancelMessage()
   return certificate
 }
