@@ -846,8 +846,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       try {
         require('assert')(deployment) // mute linter
         await printEvents(now, now.id, currentTeam, {
-          mode: 'deploy', printEvent, onOpen: cancelWait, quiet, debugEnabled,
-          findOpts: { follow: true }
+          mode: 'deploy', onEvent: printEvent, onOpen: cancelWait, quiet, debugEnabled,
+          findOpts: { direction: 'forward', follow: true }
         })
       } catch (err) {
         cancelWait()
@@ -917,7 +917,7 @@ function printEvent({ type, event, text }, callOnOpenOnce) {
     return 1
   } else
   if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
-    if (text.slice(-1) === '\n') text = text.slice(0, -1)
+    text = text.replace(/\n$/, '').replace(/^\n/, '')
     callOnOpenOnce()
     const lines = text.split('\n')
 

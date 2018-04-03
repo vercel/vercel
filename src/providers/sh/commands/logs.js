@@ -4,7 +4,6 @@
 // Packages
 const mri = require('mri')
 const chalk = require('chalk')
-const dateformat = require('dateformat')
 
 // Utilities
 const Now = require('../util')
@@ -66,6 +65,8 @@ module.exports = async function main (ctx: any) {
 
   let debug
   let apiUrl
+  let head
+  let limit
   let query
   let follow
   let types
@@ -77,7 +78,7 @@ module.exports = async function main (ctx: any) {
 
   argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until', 'output'],
-    boolean: ['help', 'all', 'debug', 'follow'],
+    boolean: ['help', 'all', 'debug', 'head', 'follow'],
     alias: {
       help: 'h',
       all: 'a',
@@ -126,6 +127,8 @@ module.exports = async function main (ctx: any) {
   debug = argv.debug
   apiUrl = ctx.apiUrl
 
+  head = argv.head
+  limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
@@ -136,7 +139,6 @@ module.exports = async function main (ctx: any) {
 
   const { currentTeam } = sh;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const findOpts = { query, types, since, until, instanceId, follow }
   const contextName = getContextName(sh);
 
   let deployment;
@@ -166,15 +168,36 @@ module.exports = async function main (ctx: any) {
   cancelWait();
   output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
-  function printEvent(event) {
-    return logPrinters[outputMode](event)
-  }
+  let direction = head ? 'forward' : 'backward'
+  if (since && !until) direction = 'forward'
+  const findOpts1 = { direction, limit, query, types, instanceId, since, until } // no follow
+  const storage = [];
+  const storeEvent = (event) => storage.push(event);
 
   await printEvents(now, deployment.uid, currentTeam,
-    { mode: 'logs', printEvent, quiet: false, debug, findOpts });
+    { mode: 'logs', onEvent: storeEvent, quiet: false, debug, findOpts: findOpts1 });
+
+  const printEvent = (event) => logPrinters[outputMode](event);
+  storage.sort(compareEvents).forEach(printEvent);
+
+  if (follow) {
+    const lastEvent = storage[storage.length - 1];
+    const since2 = lastEvent ? lastEvent.created + 1 : Date.now();
+    const findOpts2 = { direction: 'forward', query, types, instanceId, since: since2, follow: true }
+    await printEvents(now, deployment.uid, currentTeam,
+      { mode: 'logs', onEvent: printEvent, quiet: false, debug, findOpts: findOpts2 });
+  }
 
   now.close();
   return 0;
+}
+
+function compareEvents(a, b) {
+  return (
+    a.serial.localeCompare(b.serial) ||
+    // For the case serials are a same value on old logs
+    (a.created - b.created)
+  )
 }
 
 function printLogShort(log) {
@@ -192,10 +215,12 @@ function printLogShort(log) {
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
-      : (log.text || '').replace(/\n$/, '')
+      : (log.text || '').replace(/\n$/, '').replace(/^\n/, '')
+          // eslint-disable-next-line no-control-regex
+          .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, '')
   }
 
-  const date = dateformat(log.date, 'mm/dd hh:MM:ss TT')
+  const date = (new Date(log.created)).toISOString()
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {

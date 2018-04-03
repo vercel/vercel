@@ -1,3 +1,6 @@
+// Native
+const qs = require('querystring')
+
 // Packages
 const chalk = require('chalk')
 const { eraseLines } = require('ansi-escapes')
@@ -8,7 +11,7 @@ const retry = require('async-retry')
 const createOutput = require('../../../util/output')
 
 async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
-  mode, printEvent, onOpen = ()=>{}, quiet, debugEnabled, findOpts
+  mode, onOpen = ()=>{}, onEvent, quiet, debugEnabled, findOpts
 } = {}) {
   const { log, debug } = createOutput({ debug: debugEnabled })
 
@@ -19,10 +22,19 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
     onOpen()
   }
 
-  const query = findOpts.query || ''
-  const types = (findOpts.types || []).join(',')
-  const follow = findOpts.follow ? '1' : ''
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?query=${query}&types=${types}&follow=${follow}&format=lines`
+  const q = qs.stringify({
+    direction: findOpts.direction,
+    limit: findOpts.limit,
+    q: findOpts.query,
+    types: (findOpts.types || []).join(','),
+    since: findOpts.since,
+    until: findOpts.until,
+    instanceId: findOpts.instanceId,
+    follow: findOpts.follow ? '1' : '',
+    format: 'lines'
+  })
+
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${q}`
   let pollUrl = `/v3/now/deployments/${deploymentIdOrURL}`
 
   if (currentTeam) {
@@ -50,7 +62,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
       return new Promise((resolve, reject) => {
         const stream = readable.pipe(jsonlines.parse())
 
-        let poller;
+        let poller
 
         if (mode === 'deploy') {
           poller = (function startPoller() {
@@ -60,11 +72,13 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
                 if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`)
                 const json = await pollRes.json()
                 if (json.state === 'READY') {
+                  stream.end()
                   finish()
                   return
                 }
                 poller = startPoller()
               } catch (error) {
+                stream.end()
                 finish(error)
               }
             }, 5000)
@@ -82,13 +96,6 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           }
 
           clearTimeout(poller)
-          // avoid lingering events
-          stream.removeListener('data', onData)
-          // prevent partial json from being parsed and error emitted.
-          // this can be reproduced by force placing stream.write('{{{') here
-          stream._emitInvalidLines = true
-          // close the stream and resolve
-          stream.end()
           if (error) {
             reject(error)
           } else {
@@ -97,23 +104,29 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
         }
 
         const onData = (data) => {
-          const { event } = data;
+          const { event } = data
           if (event === 'build-complete') {
             if (mode === 'deploy') {
+              stream.end()
               finish()
             }
           } else {
-            o += printEvent(data, callOnOpenOnce)
+            const linesPrinted = onEvent(data, callOnOpenOnce)
+            o += linesPrinted || 0
           }
+        }
+
+        const onError = (err) => {
+          if (finishCalled) return
+          o++
+          callOnOpenOnce()
+          log(`Deployment event stream error: ${err.message}`)
         }
 
         stream.on('end', finish)
         stream.on('data', onData)
-        stream.on('error', err => {
-          o++
-          callOnOpenOnce()
-          log(`Deployment event stream error: ${err.message}`)
-        })
+        stream.on('error', onError)
+        readable.on('error', onError)
       })
     } else {
       callOnOpenOnce()
