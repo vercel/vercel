@@ -418,7 +418,7 @@ async function set(ctx, opts, args, output): Promise<number> {
         output.error(`Wrong value "${params.meta.value}" for alias found in config. It must be a string or array of string.`)
         break
       case 'CANT_FIND_A_DEPLOYMENT':
-        output.error(`Could't find a deployment to alias. Please specify one from the command line.`)
+        output.error(`Could't find a deployment to alias for app '${params.meta.appName}'. Please specify one from the command line.`)
         break
       case 'DEPLOYMENT_NOT_FOUND':
         output.error(`Failed to find deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
@@ -583,20 +583,35 @@ async function readConfigFromFile(file): Promise<Config | null | ReadConfigError
   }
 }
 
-async function readConfigFromPackage(file): Promise<Config | null | ReadConfigErrors> {
-  const content = await readFileSafe(file)
+type Package = {
+  name: string,
+  now?: Config
+}
+
+async function readPackage(file?: string): Promise<Package | null | ReadConfigErrors> {
+  const pkgFilePath = file || path.resolve(process.cwd(), 'package.json')
+  const content = await readFileSafe(pkgFilePath)
   if (content === null) {
     return content
   }
 
   try {
-    return JSON.parse(content).now;
+    return JSON.parse(content);
   } catch (error) {
     return new NowError({
       code: 'CANT_PARSE_CONFIG',
       meta: { file }
     })
   }
+}
+
+async function readConfigFromPackage(file): Promise<Config | null | ReadConfigErrors> {
+  const pkg = await readPackage(file)
+  if (pkg instanceof NowError || pkg === null) {
+    return pkg
+  }
+
+  return pkg.now || null
 }
 
 type GetConfigErrors =
@@ -683,9 +698,20 @@ async function getInferredTargets(output, opts): Promise<Array<string> | GetInfe
 
 async function getAppName(output, opts): Promise<string> {
   const config = await getConfig(output, opts['--local-config'])
-  return config instanceof NowError || !config.name
-    ? path.basename(path.resolve(process.cwd(), opts['--local-config'] || ''))
-    : config.name
+
+  // If the name is in the configuration, return it
+  if (!(config instanceof NowError) && config.name) {
+    return config.name
+  }
+
+  // Otherwise try to get it from the package
+  const pkg = await readPackage()
+  if (!(pkg instanceof NowError) && pkg !== null && pkg.name) {
+    return pkg.name
+  }
+
+  // Finally fallback to directory
+  return path.basename(path.resolve(process.cwd(), opts['--local-config'] || ''))
 }
 
 type FetchDeploymentErrors =
@@ -768,7 +794,7 @@ async function fetchDeploymentsByAppName(now, appName): Promise<Array<Deployment
 }
 
 type GetAppLastDeploymentErrors = 
-  NowError<'CANT_FIND_A_DEPLOYMENT'> |
+  NowError<'CANT_FIND_A_DEPLOYMENT', {appName: string}> |
   FetchDeploymentErrors
 
 async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | GetAppLastDeploymentErrors> {
@@ -790,7 +816,7 @@ async function getAppLastDeployment(output, now, appName, user, contextName): Pr
   // Try to fetch deployment details
   return deploymentItem
     ? await fetchDeployment(output, now, contextName, deploymentItem.uid)
-    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT' })
+    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT', meta: { appName } })
 }
 
 type SetAliasArgs = {
