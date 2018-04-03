@@ -183,7 +183,7 @@ module.exports = async function main(ctx) {
 
   print('\n')
 
-  print(table([
+  console.log(table([
     ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
     ...deployments
     .sort(sortRecent())
