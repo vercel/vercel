@@ -2,6 +2,7 @@
 const path = require('path')
 const { homedir } = require('os')
 const { URL } = require('url')
+const { randomBytes } = require('crypto')
 
 // Packages
 const test = require('ava')
@@ -72,9 +73,11 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
+  const id = randomBytes(20).toString('hex')
+
   const { stdout } = await execa(binaryPath, [
     'login',
-    'now-cli@zeit.pub',
+    `now-cli-${id}@zeit.pub`,
     ...defaultArgs
   ])
 
