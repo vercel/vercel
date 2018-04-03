@@ -1572,7 +1572,7 @@ type AssignAliasError =
   SetupAliasDomainError
 
 async function assignAlias(output, now, deployment: Deployment, alias: string, contextName): Promise<true | AssignAliasError> {
-  output.log(`Asigning alias ${alias} to deployment ${deployment.url}`)
+  output.log(`Assigning alias ${alias} to deployment ${deployment.url}`)
   const prevAlias = await getPreviousAlias(now, getSafeAlias(alias))
   
   // Ask for a confirmation if there are rules defined
