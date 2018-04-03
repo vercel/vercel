@@ -785,6 +785,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
         wantsPublic = true
 
         sync({
+          output,
           token,
           config: {
             currentTeam,
@@ -859,8 +860,11 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
         throw err
       }
 
-      // Verify at least one instance running before exiting
-      await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+      if (deployment) {
+        // Verify at least one instance running before exiting
+        await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+      }
+
       await exit(0)
     }
   })
