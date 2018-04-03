@@ -1,7 +1,7 @@
 // Native
 const path = require('path')
 const { homedir } = require('os')
-const { URL } = require('url')
+const URL = require('url-parse')
 const { randomBytes } = require('crypto')
 
 // Packages
