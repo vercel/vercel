@@ -413,7 +413,7 @@ async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeo
       throw new Error('Timeout while verifying instance count (10m)');
     }
 
-    const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
+    const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances?init=1`)
 
     for (const dc of intendedScaleDcs) {
       const currentScale = data[dc];

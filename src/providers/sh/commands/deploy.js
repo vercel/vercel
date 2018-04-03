@@ -7,6 +7,7 @@ const { resolve, basename } = require('path')
 // Packages
 const Progress = require('progress')
 const fs = require('fs-extra')
+const ms = require('ms')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const mri = require('mri')
@@ -15,6 +16,9 @@ const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 const executable = require('executable')
+const { tick } = require('../../../util/output/chars')
+const elapsed = require('../../../util/output/elapsed')
+const sleep = require('then-sleep');
 
 // Utilities
 const Now = require('../util')
@@ -288,7 +292,8 @@ async function main(ctx: any) {
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, error, debug } = createOutput({ debug: debugEnabled }))
+  const output = createOutput({ debug: debugEnabled })
+  ;({ log, error, debug } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -302,13 +307,13 @@ async function main(ctx: any) {
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ token, config, showMessage: true })
+    return sync({ output, token, config, showMessage: true })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ token, config: { currentTeam, user }, showMessage }) {
+async function sync({ output, token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const deployStamp = stamp()
     const rawPath = argv._[0]
@@ -854,9 +859,80 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         throw err
       }
 
+      // Verify at least one instance running before exiting
+      await waitForScale(output, now, deployment.deploymentId, deployment.scale)
       await exit(0)
     }
   })
+}
+
+// TODO: refactor this funtion to use something similar in alias and scale
+async function waitForScale(output, now, deploymentId, scale) {
+  const checkInterval = 1000
+  const timeout = ms('5m')
+  const start = Date.now()
+  let remainingMatches = new Set(Object.keys(scale))
+  let cancelWait = renderRemainingDCsWait(Object.keys(scale))
+  const instances = await getDeploymentInstances(now, deploymentId)
+  
+  
+  while (true) { // eslint-disable-line
+    if (start + timeout <= Date.now()) {
+      throw new Error('Timeout while verifying instance count (10m)');
+    }
+
+    // Get the matches for deployment scale args
+    const matches = new Set(await getMatchingScalePresets(scale, instances, matchMinPresets))
+    const newMatches = new Set([...remainingMatches].filter(dc => matches.has(dc)))
+    remainingMatches = new Set([...remainingMatches].filter(dc => !matches.has(dc)))
+
+    // When there are new matches we print and check if we are done
+    if (newMatches.size !== 0) {
+      if (cancelWait) {
+        cancelWait()
+      }
+
+      // Print the new matches that we got
+      for (const dc of newMatches) {
+        // $FlowFixMe
+        output.log(`${chalk.cyan(tick)} Verified ${chalk.bold(dc)} (${instances[dc].instances.length}) ${elapsed(Date.now() - start)}`);
+      }  
+
+      // If we are done return, otherwise put the spinner back
+      if (remainingMatches.size === 0) {
+        return null
+      } else {
+        cancelWait = renderRemainingDCsWait(Array.from(remainingMatches))
+      }
+    }
+
+    // Sleep for the given interval until the next poll
+    await sleep(checkInterval);
+  }
+}
+
+// TODO: reuse this function in alias and scale commands
+function getMatchingScalePresets(scale, instances, predicate) {
+  return Object.keys(scale).reduce((result, dc) => {
+    return predicate(scale[dc], instances[dc])
+      ? [...result, dc]
+      : result
+  }, [])
+}
+
+function renderRemainingDCsWait(remainingDcs) {
+  return wait(`Verifying instances in ${
+    remainingDcs.map(id => chalk.bold(id)).join(', ')
+  }`)
+}
+
+function matchMinPresets(scalePreset, instancesObj) {
+  const value = Math.max(1, scalePreset.min)
+  return instancesObj.instances.length >= value
+}
+
+async function getDeploymentInstances(now, deploymentId) {
+  return now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances?init=1`)
 }
 
 async function readMeta(

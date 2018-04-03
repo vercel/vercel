@@ -944,7 +944,7 @@ type InstancesInfo = {
 }
 
 async function getDeploymentInstances(now, deploymentId): Promise<InstancesInfo> {
-  return now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`)
+  return now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances?init=1`)
 }
 
 function isInstanceCountBetween(value: number, min: number, max: number) {
