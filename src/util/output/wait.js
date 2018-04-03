@@ -17,15 +17,18 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
     running = true
   }, timeOut)
 
-  return () => {
+  const cancel = () => {
     stopped = true
-    
     if (running) {
       spinner.stop()
       process.stdout.write(eraseLines(1))
       running = false
     }
+    process.removeListener('nowExit', cancel)
   }
+
+  process.on('nowExit', cancel);
+  return cancel;
 }
 
 module.exports = wait

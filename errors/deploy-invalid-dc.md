@@ -13,6 +13,7 @@ and DCs have to be in *lowercase*.
 
 **Valid region identifiers**:
 
+- `all` (special, used to scale to all DCs, can only appear once)
 - `sfo`
 - `bru`
 
