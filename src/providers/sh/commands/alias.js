@@ -532,9 +532,9 @@ async function set(ctx, opts, args, output): Promise<number> {
       return 1
     }
 
-    output.success(`${target} now points to ${
-      chalk.bold(deployment.url)
-    }! ${chalk.grey('[' + ms(Date.now() - start) + ']')}`)
+    console.log(`${chalk.cyan('> Success!')} ${target} now points to ${chalk.bold(deployment.url)}! ${chalk.grey(
+      '[' + ms(Date.now() - start) + ']'
+    )}`)
   }
 
   return 0
