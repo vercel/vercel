@@ -65,6 +65,7 @@ module.exports = async function main (ctx: any) {
 
   let debug
   let apiUrl
+  let head
   let limit
   let query
   let follow
@@ -77,7 +78,7 @@ module.exports = async function main (ctx: any) {
 
   argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until', 'output'],
-    boolean: ['help', 'all', 'debug', 'follow'],
+    boolean: ['help', 'all', 'debug', 'head', 'follow'],
     alias: {
       help: 'h',
       all: 'a',
@@ -126,6 +127,7 @@ module.exports = async function main (ctx: any) {
   debug = argv.debug
   apiUrl = ctx.apiUrl
 
+  head = argv.head
   limit = typeof argv.n === 'number' ? argv.n : 1000
   query = argv.query || ''
   follow = argv.f
@@ -166,8 +168,9 @@ module.exports = async function main (ctx: any) {
   cancelWait();
   output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
-  const findOpts1 = { direction: 'backward', limit, query, types, instanceId, since, until } // no follow
-  if (since && !until) findOpts1.direction = 'forward'
+  let direction = head ? 'forward' : 'backward'
+  if (since && !until) direction = 'forward'
+  const findOpts1 = { direction, limit, query, types, instanceId, since, until } // no follow
   const storage = [];
   const storeEvent = (event) => storage.push(event);
 
