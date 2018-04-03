@@ -1,21 +1,19 @@
 #!/usr/bin/env node
-
-// Native
-const qs = require('querystring')
+// @flow
 
 // Packages
 const mri = require('mri')
 const chalk = require('chalk')
-const dateformat = require('dateformat')
-const io = require('socket.io-client')
 
 // Utilities
 const Now = require('../util')
-const { handleError, error } = require('../util/error')
+const createOutput = require('../../../util/output')
 const logo = require('../../../util/output/logo')
-const { compare, deserialize } = require('../util/logs')
+const elapsed = require('../../../util/output/elapsed')
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
-const exit = require('../../../util/exit')
+const printEvents = require('../util/events')
+const wait = require('../../../util/output/wait')
+const getContextName = require('../util/get-context-name')
 
 const help = () => {
   console.log(`
@@ -33,7 +31,7 @@ const help = () => {
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --follow                   Wait for additional data [off]
-    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [1000]
+    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [100]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
   )}        Search query
@@ -61,25 +59,26 @@ const help = () => {
 `)
 }
 
-let argv
-let deploymentIdOrURL
+module.exports = async function main (ctx: any) {
+  let argv
+  let deploymentIdOrURL
 
-let debug
-let apiUrl
-let limit
-let query
-let follow
-let types
-let outputMode
+  let debug
+  let apiUrl
+  let head
+  let limit
+  let query
+  let follow
+  let types
+  let outputMode
 
-let since
-let until
-let instanceId
+  let since
+  let until
+  let instanceId
 
-const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     string: ['query', 'since', 'until', 'output'],
-    boolean: ['help', 'all', 'debug', 'follow'],
+    boolean: ['help', 'all', 'debug', 'head', 'follow'],
     alias: {
       help: 'h',
       all: 'a',
@@ -95,28 +94,31 @@ const main = async ctx => {
 
   if (argv.help || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help()
-    await exit(0)
+    return 2;
+  }
+
+  const debugEnabled = argv.debug;
+  const output = createOutput({ debug: debugEnabled })
+
+  try {
+    since = argv.since ? toTimestamp(argv.since) : 0
+  } catch (err) {
+    output.error(`Invalid date string: ${argv.since}`)
+    return 1;
   }
 
   try {
-    since = argv.since ? toSerial(argv.since) : null
+    until = argv.until ? toTimestamp(argv.until) : 0
   } catch (err) {
-    error(`Invalid date string: ${argv.since}`)
-    process.exit(1)
-  }
-
-  try {
-    until = argv.until ? toSerial(argv.until) : null
-  } catch (err) {
-    error(`Invalid date string: ${argv.until}`)
-    process.exit(1)
+    output.error(`Invalid date string: ${argv.until}`)
+    return 1;
   }
 
   if (maybeURL(deploymentIdOrURL)) {
     const normalizedURL = normalizeURL(deploymentIdOrURL)
     if (normalizedURL.includes('/')) {
-      error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`)
-      process.exit(1)
+      output.error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`)
+      return 1;
     }
 
     ;[deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL)
@@ -125,123 +127,81 @@ const main = async ctx => {
   debug = argv.debug
   apiUrl = ctx.apiUrl
 
-  limit = typeof argv.n === 'number' ? argv.n : 1000
+  head = argv.head
+  limit = typeof argv.n === 'number' ? argv.n : 100
   query = argv.query || ''
   follow = argv.f
+  if (follow) until = 0
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
   outputMode = argv.output in logPrinters ? argv.output : 'short'
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
-  return printLogs({ token, sh })
-}
+  const { currentTeam } = sh;
+  const now = new Now({ apiUrl, token, debug, currentTeam })
+  const contextName = getContextName(sh);
 
-module.exports = async ctx => {
+  let deployment;
+  const id = deploymentIdOrURL;
+
+  const depFetchStart = Date.now();
+  const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
+
   try {
-    await main(ctx)
+    deployment = await now.findDeployment(id)
   } catch (err) {
-    handleError(err)
-    process.exit(1)
+    cancelWait();
+    now.close();
+
+    if (err.status === 404) {
+      output.error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`)
+      return 1;
+    } else if (err.status === 403) {
+      output.error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`)
+      return 1;
+    } else {
+      // unexpected
+      throw err;
+    }
   }
+
+  cancelWait();
+  output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+
+  let direction = head ? 'forward' : 'backward'
+  if (since && !until) direction = 'forward'
+  const findOpts1 = { direction, limit, query, types, instanceId, since, until } // no follow
+  const storage = [];
+  const storeEvent = (event) => storage.push(event);
+
+  await printEvents(now, deployment.uid, currentTeam,
+    { mode: 'logs', onEvent: storeEvent, quiet: false, debug, findOpts: findOpts1 });
+
+  const printEvent = (event) => logPrinters[outputMode](event);
+  storage.sort(compareEvents).forEach(printEvent);
+
+  if (follow) {
+    const lastEvent = storage[storage.length - 1];
+    const since2 = lastEvent ? lastEvent.created + 1 : Date.now();
+    const findOpts2 = { direction: 'forward', query, types, instanceId, since: since2, follow: true }
+    await printEvents(now, deployment.uid, currentTeam,
+      { mode: 'logs', onEvent: printEvent, quiet: false, debug, findOpts: findOpts2 });
+  }
+
+  now.close();
+  return 0;
 }
 
-function printLogs({ token, sh: { currentTeam } }) {
-  return new Promise(async (resolve, reject) => {
-    let buf = []
-    let init = false
-    let lastLog
-
-    if (!follow) {
-      onLogs(await fetchLogs({ token, currentTeam, since, until }))
-      resolve()
-    }
-
-    const isURL = deploymentIdOrURL.includes('.')
-    const q = qs.stringify({
-      deploymentId: isURL ? '' : deploymentIdOrURL,
-      host: isURL ? deploymentIdOrURL : '',
-      instanceId,
-      types: types.join(','),
-      query
-    })
-
-    const socket = io(`https://log-io.zeit.co?${q}`)
-    socket.on('connect', () => {
-      if (debug) {
-        console.log('> [debug] Socket connected')
-      }
-    })
-
-    socket.on('auth', callback => {
-      if (debug) {
-        console.log('> [debug] Socket authenticate')
-      }
-      callback(token)
-    })
-
-    socket.on('ready', () => {
-      if (debug) {
-        console.log('> [debug] Socket ready')
-      }
-
-      // For the case socket reconnected
-      const _since = lastLog ? lastLog.serial : since
-
-      fetchLogs({ token, currentTeam, since: _since }).then(logs => {
-        init = true
-        const m = {}
-        logs.concat(buf.map(b => b.log)).forEach(l => {
-          m[l.id] = l
-        })
-        buf = []
-        onLogs(Object.values(m))
-      })
-    })
-
-    socket.on('logs', l => {
-      const log = deserialize(l)
-      let timer
-      if (init) {
-        // Wait for other logs for a while
-        // and sort them in the correct order
-        timer = setTimeout(() => {
-          buf.sort((a, b) => compare(a.log, b.log))
-          const idx = buf.findIndex(b => b.log.id === log.id)
-          buf.slice(0, idx + 1).forEach(b => {
-            clearTimeout(b.timer)
-            onLog(b.log)
-          })
-          buf = buf.slice(idx + 1)
-        }, 300)
-      }
-      buf.push({ log, timer })
-    })
-
-    socket.on('disconnect', () => {
-      if (debug) {
-        console.log('> [debug] Socket disconnect')
-      }
-      init = false
-      reject(new Error('Socket disconnected'))
-    })
-
-    socket.on('error', err => {
-      if (debug) {
-        console.log('> [debug] Socket error', err.stack)
-      }
-      reject(err)
-    })
-
-    function onLogs(logs) {
-      logs.sort(compare).forEach(onLog)
-    }
-
-    function onLog(log) {
-      lastLog = log
-      printLog(log)
-    }
-  })
+function compareEvents(d1, d2) {
+  const c1 = d1.date || d1.created;
+  const c2 = d2.date || d2.created;
+  if (c1 !== c2) return c1 - c2;
+  const s1 = d1.serial || '';
+  const s2 = d2.serial || '';
+  const sc = s1.localeCompare(s2);
+  if (sc !== 0) return sc;
+  return d1.created - d2.created; // if date are equal and no serial
 }
 
 function printLogShort(log) {
@@ -256,25 +216,40 @@ function printLogShort(log) {
     data =
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`
+  } else if (log.type === 'event') {
+    data =
+      `EVENT ${log.event} ${JSON.stringify(log.payload)}`
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
-      : (log.text || '').replace(/\n$/, '')
+      : (log.text || '').replace(/\n$/, '').replace(/^\n/, '')
+          // eslint-disable-next-line no-control-regex
+          .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, '')
   }
 
-  const date = dateformat(log.date, 'mm/dd hh:MM TT')
+  const date = (new Date(log.created)).toISOString()
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {
       console.log(`${chalk.dim(date)}  ${line}`)
     } else {
-      console.log(`${repeat(' ', date.length)}  ${line}`)
+      console.log(`${' '.repeat(date.length)}  ${line}`)
     }
   })
+
+  return 0
 }
 
 function printLogRaw(log) {
-  console.log(log.object ? JSON.stringify(log.object) : log.text)
+  if (log.object) {
+    console.log(log.object)
+  } else {
+    console.log(log.text.replace(/\n$/, '').replace(/^\n/, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, ''))
+  }
+
+  return 0
 }
 
 const logPrinters = {
@@ -282,44 +257,10 @@ const logPrinters = {
   raw: printLogRaw
 }
 
-function printLog(log) {
-  logPrinters[outputMode](log)
-}
-
-async function fetchLogs({ token, currentTeam, since, until } = {}) {
-  const now = new Now({ apiUrl, token, debug, currentTeam })
-
-  let logs
-  try {
-    logs = await now.logs(deploymentIdOrURL, {
-      instanceId,
-      types,
-      limit,
-      query,
-      since,
-      until
-    })
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  } finally {
-    now.close()
-  }
-
-  return logs.map(deserialize)
-}
-
-function repeat(s, n) {
-  return new Array(n + 1).join(s)
-}
-
-function toSerial(datestr) {
+function toTimestamp(datestr) {
   const t = Date.parse(datestr)
   if (isNaN(t)) {
     throw new TypeError('Invalid date string')
   }
-
-  const pidLen = 19
-  const seqLen = 19
-  return t + repeat('0', pidLen + seqLen)
+  return t
 }

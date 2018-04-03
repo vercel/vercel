@@ -6,14 +6,12 @@ const qs = require('querystring')
 const { parse: parseUrl } = require('url')
 
 // Packages
-const fetch = require('node-fetch')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const through2 = require('through2')
 const retry = require('async-retry')
 const { parse: parseIni } = require('ini')
 const { readFile, stat, lstat } = require('fs-extra')
-const ms = require('ms')
 
 // Utilities
 const {
@@ -22,12 +20,11 @@ const {
   docker: getDockerFiles
 } = require('./get-files')
 const Agent = require('./agent')
-const toHost = require('./to-host')
-const { responseError } = require('./error')
 const ua = require('./ua')
 const hash = require('./hash')
 const cmd = require('../../../util/output/cmd')
 const createOutput = require('../../../util/output')
+const { responseError } = require('./error')
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50
@@ -44,9 +41,15 @@ module.exports = class Now extends EventEmitter {
     this._debug = debug
     this._forceNew = forceNew
     this._output = createOutput({ debug })
+    this._apiUrl = apiUrl;
     this._agent = new Agent(apiUrl, { debug })
     this._onRetry = this._onRetry.bind(this)
     this.currentTeam = currentTeam
+    const closeAgent = () => {
+      this._agent.close()
+      process.removeListener('nowExit', closeAgent)
+    }
+    process.on('nowExit', closeAgent)
   }
 
   async create(
@@ -68,7 +71,8 @@ module.exports = class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'ip',
-      isFile = false
+      isFile = false,
+      atlas = false
     }
   ) {
     const { log, warn, time } = this._output
@@ -179,26 +183,24 @@ module.exports = class Now extends EventEmitter {
         )
       )
 
-      const res = await time(
-        'POST /v3/now/deployments',
-        this._fetch('/v3/now/deployments', {
-          method: 'POST',
-          body: {
-            env,
-            public: wantsPublic || nowConfig.public,
-            forceNew,
-            name,
-            description,
-            deploymentType: type,
-            registryAuthToken: authToken,
-            files,
-            engines,
-            scale,
-            sessionAffinity,
-            atlas: hasNowJson && Boolean(nowConfig.atlas)
-          }
-        })
-      )
+      const res = await this._fetch('/v4/now/deployments', {
+        method: 'POST',
+        body: {
+          env,
+          public: wantsPublic || nowConfig.public,
+          forceNew,
+          name,
+          description,
+          deploymentType: type,
+          registryAuthToken: authToken,
+          files,
+          engines,
+          scale,
+          sessionAffinity,
+          limits: nowConfig.limits,
+          atlas
+        }
+      })
 
       // No retry on 4xx
       let body
@@ -318,27 +320,24 @@ module.exports = class Now extends EventEmitter {
     time('Uploading files', Promise.all(
       this._missing.map(sha =>
         retry(
-          async (bail, attempt) => {
+          async (bail) => {
             const file = this._files.get(sha)
-            const { data, names } = file
+            const { data } = file
             const stream = through2()
 
             stream.write(data)
             stream.end()
 
-            const res = await time(
-              `POST /v2/now/files #${attempt} ${names.join(' ')}`,
-              this._fetch('/v2/now/files', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
-                  'x-now-digest': sha,
-                  'x-now-size': data.length
-                },
-                body: stream
-              })
-            )
+            const res = await this._fetch('/v2/now/files', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': data.length,
+                'x-now-digest': sha,
+                'x-now-size': data.length
+              },
+              body: stream
+            })
 
             if (res.status === 200) {
               // What we want
@@ -366,13 +365,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listSecrets() {
-    const { time } = this._output
-
-    const { secrets } = await this.retry(async (bail, attempt) => {
-      const res = await time(
-        `#${attempt} GET /secrets`,
-        this._fetch('/now/secrets')
-      )
+    const { secrets } = await this.retry(async (bail) => {
+      const res = await this._fetch('/now/secrets')
 
       if (res.status === 200) {
         // What we want
@@ -389,16 +383,12 @@ module.exports = class Now extends EventEmitter {
     return secrets
   }
 
-  async list(app) {
-    const { time } = this._output
+  async list(app, { version = 2 } = {}) {
     const query = app ? `?app=${encodeURIComponent(app)}` : ''
 
     const { deployments } = await this.retry(
       async bail => {
-        const res = await time(
-          'GET /v2/now/deployments',
-          this._fetch('/v2/now/deployments' + query)
-        )
+        const res = await this._fetch(`/v${version}/now/deployments${query}`)
 
         if (res.status === 200) {
           // What we want
@@ -422,14 +412,9 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listInstances(deploymentId) {
-    const { time } = this._output
-
     const { instances } = await this.retry(
       async bail => {
-        const res = await time(
-          `/deployments/${deploymentId}/instances`,
-          this._fetch(`/now/deployments/${deploymentId}/instances`)
-        )
+        const res = await this._fetch(`/now/deployments/${deploymentId}/instances`)
 
         if (res.status === 200) {
           // What we want
@@ -452,45 +437,65 @@ module.exports = class Now extends EventEmitter {
     return instances
   }
 
-  async findDeployment(deployment) {
+  async findDeployment(hostOrId) {
     const { debug } = this._output
-    const list = await this.list()
+    let id = !hostOrId.includes('.') && hostOrId;
 
-    let key
-    let val
+    if (!id) {
+      let host = hostOrId.replace(/^https:\/\//i, '')
+      if (host.slice(-1) === '/') {
+        host = host.slice(0, -1)
+      }
+      const url = `/v3/now/hosts/${encodeURIComponent(host)}?resolve=1`
 
-    if (/\./.test(deployment)) {
-      val = toHost(deployment)
-      key = 'url'
-    } else {
-      val = deployment
-      key = 'uid'
+      const { deployment } = await this.retry(
+        async bail => {
+          const res = await this._fetch(url)
+
+          // No retry on 4xx
+          if (res.status >= 400 && res.status < 500) {
+            debug(`Bailing on getting a deployment due to ${res.status}`)
+            return bail(await responseError(res, `Failed to resolve deployment "${id}"`))
+          }
+
+          if (res.status !== 200) {
+            throw new Error('Fetching a deployment failed')
+          }
+
+          return res.json()
+        },
+        { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      )
+
+      id = deployment.id;
     }
 
-    const depl = list.find(d => {
-      if (d[key] === val) {
-        debug(`Matched deployment ${d.uid} by ${key} ${val}`)
-        return true
-      }
+    const url = `/v3/now/deployments/${encodeURIComponent(id)}`
 
-      // Match prefix
-      if (`${val}.now.sh` === d.url) {
-        debug(`Matched deployment ${d.uid} by url ${d.url}`)
-        return true
-      }
+    return this.retry(
+      async bail => {
+        const res = await this._fetch(url)
 
-      return false
-    })
+        // No retry on 4xx
+        if (res.status >= 400 && res.status < 500) {
+          debug(`Bailing on getting a deployment due to ${res.status}`)
+          return bail(await responseError(res, `Failed to resolve deployment "${id}"`))
+        }
 
-    return depl
+        if (res.status !== 200) {
+          throw new Error('Fetching a deployment failed')
+        }
+
+        return res.json()
+      },
+      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+    )
   }
 
   async logs(
     deploymentIdOrURL,
     { instanceId, types, limit, query, since, until } = {}
   ) {
-    const { time } = this._output
-
     const q = qs.stringify({
       instanceId,
       types: types.join(','),
@@ -506,7 +511,7 @@ module.exports = class Now extends EventEmitter {
           deploymentIdOrURL
         )}/logs?${q}`
 
-        const res = await time('GET /logs', this._fetch(url))
+        const res = await this._fetch(url)
 
         if (res.status === 200) {
           // What we want
@@ -571,13 +576,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listDomains() {
-    const { time } = this._output
-
-    const { domains } = await this.retry(async (bail, attempt) => {
-      const res = await time(
-        `#${attempt} GET /domains`,
-        this._fetch('/domains')
-      )
+    const { domains } = await this.retry(async (bail) => {
+      const res = await this._fetch('/domains')
 
       if (res.status === 200) {
         // What we want
@@ -595,13 +595,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async getDomain(domain) {
-    const { time } = this._output
-
-    return this.retry(async (bail, attempt) => {
-      const res = await time(
-        `#${attempt} GET /domains/${domain}`,
-        this._fetch(`/domains/${domain}`)
-      )
+    return this.retry(async (bail) => {
+      const res = await this._fetch(`/domains/${domain}`)
 
       if (res.status === 200) {
         // What we want
@@ -617,13 +612,8 @@ module.exports = class Now extends EventEmitter {
   }
 
   async getNameservers(domain) {
-    const { time } = this._output
-
-    const body = await this.retry(async (bail, attempt) => {
-      const res = await time(
-        `#${attempt} GET /whois-ns`,
-        this._fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`)
-      )
+    const body = await this.retry(async () => {
+      const res = await this._fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`)
 
       const body = await res.json()
 
@@ -647,16 +637,13 @@ module.exports = class Now extends EventEmitter {
 
   // _ensures_ the domain is setup (idempotent)
   setupDomain(name, { isExternal } = {}) {
-    const { debug, time } = this._output
+    const { debug } = this._output
 
-    return this.retry(async (bail, attempt) => {
-      const res = await time(
-        `#${attempt} POST /domains`,
-        this._fetch('/domains', {
-          method: 'POST',
-          body: { name, isExternal: Boolean(isExternal) }
-        })
-      )
+    return this.retry(async (bail) => {
+      const res = await this._fetch('/domains', {
+        method: 'POST',
+        body: { name, isExternal: Boolean(isExternal) }
+      })
 
       const body = await res.json()
 
@@ -694,21 +681,18 @@ module.exports = class Now extends EventEmitter {
   }
 
   createCert(domain, { renew, overwriteCustom } = {}) {
-    const { log, time } = this._output
+    const { log } = this._output
 
     return this.retry(
-      async (bail, attempt) => {
-        const res = await time(
-          `/now/certs #${attempt}`,
-          this._fetch('/now/certs', {
-            method: 'POST',
-            body: {
-              domains: [domain],
-              renew,
-              overwriteCustom
-            }
-          })
-        )
+      async (bail) => {
+        const res = await this._fetch('/now/certs', {
+          method: 'POST',
+          body: {
+            domains: [domain],
+            renew,
+            overwriteCustom
+          }
+        })
 
         if (res.status === 304) {
           log('Certificate already issued.')
@@ -753,16 +737,11 @@ module.exports = class Now extends EventEmitter {
   }
 
   deleteCert(domain) {
-    const { time } = this._output
-
     return this.retry(
-      async (bail, attempt) => {
-        const res = await time(
-          `/now/certs #${attempt}`,
-          this._fetch(`/now/certs/${domain}`, {
-            method: 'DELETE'
-          })
-        )
+      async (bail) => {
+        const res = this._fetch(`/now/certs/${domain}`, {
+          method: 'DELETE'
+        })
 
         if (res.status !== 200) {
           const err = new Error(res.body.error.message)
@@ -780,16 +759,12 @@ module.exports = class Now extends EventEmitter {
   }
 
   async remove(deploymentId, { hard }) {
-    const { time } = this._output
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`
 
     await this.retry(async bail => {
-      const res = await time(
-        `DELETE ${url}`,
-        this._fetch(url, {
-          method: 'DELETE'
-        })
-      )
+      const res = await this._fetch(url, {
+        method: 'DELETE'
+      })
 
       if (res.status === 200) {
         // What we want
@@ -866,72 +841,45 @@ module.exports = class Now extends EventEmitter {
     opts.headers.authorization = `Bearer ${this._token}`
     opts.headers['user-agent'] = ua
 
-    return this._agent.fetch(_url, opts)
-  }
-
-  setScale(nameOrId, scale) {
-    const { time } = this._output
-
-    return this.retry(
-      async (bail, attempt) => {
-        const res = await time(
-          `#${attempt} POST /deployments/${nameOrId}/instances`,
-          this._fetch(`/now/deployments/${nameOrId}/instances`, {
-            method: 'POST',
-            body: scale
-          })
-        )
-
-        if (res.status === 403) {
-          return bail(new Error('Unauthorized'))
-        }
-
-        const body = await res.json()
-
-        if (res.status !== 200) {
-          if (res.status === 404 || res.status === 400) {
-            if (
-              body &&
-              body.error &&
-              body.error.code &&
-              body.error.code === 'not_snapshotted'
-            ) {
-              throw new Error(body.error.message)
-            }
-            const err = new Error(body.error.message)
-            err.userError = true
-            return bail(err)
-          }
-
-          if (body.error && body.error.message) {
-            const err = new Error(body.error.message)
-            err.userError = true
-            return bail(err)
-          }
-          throw new Error(
-            `Error occurred while scaling. Please try again later`
-          )
-        }
-
-        return body
-      },
-      {
-        retries: 300,
-        maxTimeout: ms('5s'),
-        factor: 1.1
-      }
+    return this._output.time(
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
+      this._agent.fetch(_url, opts)
     )
   }
 
-  async unfreeze(depl) {
-    return this.retry(async bail => {
-      const res = await fetch(`https://${depl.url}`)
-
-      if ([500, 502, 503].includes(res.status)) {
-        const err = new Error('Unfreeze failed. Try again later.')
-        bail(err)
+  // public retry with built-in retrying that can be
+  // used from external utilities. it optioanlly
+  // receives a `retry` object in the opts that is
+  // passed to the retry utility
+  // it accepts a `json` option, which defaults to `true`
+  // which automatically returns the json response body
+  // if the response is ok and content-type json
+  // it does the same for JSON` body` in opts
+  async fetch(url, opts = {}) {
+    return this.retry(async (bail) => {
+      if (false !== opts.json && opts.body && 'object' == typeof opts.body) {
+        opts = Object.assign({}, opts, {
+          body: JSON.stringify(opts.body),
+          headers: Object.assign({}, opts.headers, {
+            'Content-Type': 'application/json'
+          })
+        })
       }
-    })
+      const res = await this._fetch(url, opts)
+      if (res.ok) {
+        return false === opts.json ? res :
+          res.headers.get('content-type').includes('application/json')
+            ? res.json()
+            : res
+      } else {
+        const err = await responseError(res);
+        if (res.status >= 400 && res.status < 500) {
+          return bail(err)
+        } else {
+          throw err;
+        }
+      }
+    }, opts.retry)
   }
 
   async getPlanMax() {

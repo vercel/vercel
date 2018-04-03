@@ -26,6 +26,7 @@ const isValidDomain = require('./domains/is-valid-domain')
 const toHost = require('./to-host')
 const exit = require('../../../util/exit')
 const Now = require('./')
+const NowScale = require('../util/scale')
 
 const argv = mri(process.argv.slice(2), {
   boolean: ['no-clipboard'],
@@ -37,6 +38,11 @@ const clipboard = !argv['no-clipboard']
 const domainRegex = /^((?=[a-z0-9-]{1,63}\.)(xn--)?[a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,63}$/
 
 module.exports = class Alias extends Now {
+  constructor(args) {
+    super(args)
+    this.scale = new NowScale(args)
+  }
+
   async ls(deployment) {
     if (deployment) {
       const target = await this.findDeployment(deployment)
@@ -322,34 +328,12 @@ module.exports = class Alias extends Now {
           )} atomically` // Not a typo
         )
         if (depl.scale.current !== aliasedDeployment.scale.current) {
-          if (depl.scale.max < 1) {
-            if (this._debug) {
-              console.log(
-                'Updating max scale to 1 so that deployment may be unfrozen.'
-              )
-            }
-            await this.setScale(depl.uid, {
-              min: depl.scale.min,
-              max: Math.max(aliasedDeployment.scale.max, 1)
-            })
-          }
-          if (depl.scale.current < 1) {
-            if (this._debug) {
-              console.log(`> Deployment ${depl.url} is frozen, unfreezing...`)
-            }
-            await this.unfreeze(depl)
-            if (this._debug) {
-              console.log(
-                `> Deployment is now unfrozen, scaling it to match current instance count`
-              )
-            }
-          }
           // Scale it to current limit
           if (depl.scale.current !== aliasedDeployment.scale.current) {
             if (this._debug) {
               console.log(`> Scaling deployment to match current scale.`)
             }
-            await this.setScale(depl.uid, {
+            await this.scale.setScale(depl.uid, {
               min: aliasedDeployment.scale.current,
               max: aliasedDeployment.scale.current
             })
@@ -360,7 +344,7 @@ module.exports = class Alias extends Now {
           }
         }
 
-        await this.setScale(depl.uid, {
+        await this.scale.setScale(depl.uid, {
           min: Math.max(aliasedDeployment.scale.min, depl.scale.min),
           max: Math.max(aliasedDeployment.scale.max, depl.scale.max)
         })
@@ -404,7 +388,7 @@ module.exports = class Alias extends Now {
     }
     if (aliasedDeployment && shouldScaleDown) {
       const scaleDown = Date.now()
-      await this.setScale(aliasedDeployment.uid, { min: 0, max: 1 })
+      await this.scale.setScale(aliasedDeployment.uid, { min: 0, max: 1 })
       console.log(
         `> Scaled ${chalk.gray(
           aliasedDeployment.url

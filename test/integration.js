@@ -10,6 +10,7 @@ const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
+const strip = require('strip-ansi')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -74,7 +75,7 @@ test('output the version', async t => {
 test('log in', async t => {
   const { stdout } = await execa(binaryPath, [
     'login',
-    'now-cli@zeit.pub',
+    `now-cli-${session}@zeit.pub`,
     ...defaultArgs
   ])
 
@@ -130,7 +131,7 @@ test('deploy a node microservice', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(strip(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -177,7 +178,7 @@ test('create alias for deployment', async t => {
   ])
 
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
-  t.true(stdout.startsWith(goal))
+  t.true(strip(stdout).startsWith(goal))
 
   // Send a test request to the alias
   const response = await fetch(`https://${hosts.alias}`)
@@ -202,8 +203,6 @@ test('list the aliases', async t => {
 })
 
 test('scale the alias', async t => {
-  const goal = `${context.deployment} (1 current)`
-
   const { stdout } = await execa(binaryPath, [
     'scale',
     context.alias,
@@ -211,8 +210,7 @@ test('scale the alias', async t => {
     ...defaultArgs
   ])
 
-  t.true(stdout.includes(goal))
-  t.true(stdout.includes(`auto ✖`))
+  t.true(strip(stdout).includes(`(min: 1, max: 1)`))
 })
 
 test('remove the alias', async t => {
@@ -226,40 +224,10 @@ test('remove the alias', async t => {
     ...defaultArgs
   ])
 
-  t.true(stdout.startsWith(goal))
-})
-
-test('find deployment in scaling list', async t => {
-  const { stdout } = await execa(binaryPath, [
-    'scale',
-    'ls',
-    ...defaultArgs
-  ])
-
-  const list = parseList(stdout)
-  t.true(list.includes(context.deployment))
-})
-
-test('error on trying to auto-scale', async t => {
-  const goal = `> Error! Autoscaling requires pro or max plan`
-
-  const output = await execa.stderr(binaryPath, [
-    'scale',
-    context.deployment,
-    '1',
-    'auto',
-    ...defaultArgs
-  ])
-
-  t.is(output, goal)
+  t.true(strip(stdout).startsWith(goal))
 })
 
 test('scale down the deployment directly', async t => {
-  const goals = {
-    first: `${context.deployment} (1 current)`,
-    second: 'min 0'
-  }
-
   const { stdout } = await execa(binaryPath, [
     'scale',
     context.deployment,
@@ -267,9 +235,7 @@ test('scale down the deployment directly', async t => {
     ...defaultArgs
   ])
 
-  t.true(stdout.includes(goals.first))
-  t.true(stdout.includes(goals.second))
-
+  t.true(strip(stdout).includes(`(min: 0, max: 0)`))
   await removeDeployment(t, binaryPath, defaultArgs, context.deployment)
 })
 
@@ -294,7 +260,7 @@ test('deploy multiple static files', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(strip(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -332,7 +298,7 @@ test('deploy single static file', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(strip(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -360,7 +326,7 @@ test('deploy a static directory', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(strip(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -383,6 +349,7 @@ test('deploy a dockerfile project', async t => {
     '--name',
     session,
     '--docker',
+    '--no-verify',
     ...defaultArgs
   ])
 

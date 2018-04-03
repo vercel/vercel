@@ -47,6 +47,7 @@ function handleError(err, { debug = false } = {}) {
 async function responseError(res, fallbackMessage = null) {
   let message
   let userError
+  let bodyError
 
   if (res.status >= 400 && res.status < 500) {
     let body
@@ -58,7 +59,8 @@ async function responseError(res, fallbackMessage = null) {
     }
 
     // Some APIs wrongly return `err` instead of `error`
-    message = (body.error || body.err || {}).message
+    bodyError = (body.error || body.err || {})
+    message = bodyError.message
     userError = true
   } else {
     userError = false
@@ -69,9 +71,18 @@ async function responseError(res, fallbackMessage = null) {
   }
 
   const err = new Error(`${message} (${res.status})`)
-
+  
   err.status = res.status
   err.userError = userError
+  
+  // Copy every field that was added manually to the error
+  if (bodyError) {
+    for (const field of Object.keys(bodyError)) {
+      if (field !== 'message') {
+        err[field] = bodyError[field]
+      }
+    }
+  }
 
   if (res.status === 429) {
     const retryAfter = res.headers.get('Retry-After')
@@ -84,8 +95,32 @@ async function responseError(res, fallbackMessage = null) {
   return err
 }
 
+async function responseErrorMessage(res, fallbackMessage = null) {
+  let message
+
+  if (res.status >= 400 && res.status < 500) {
+    let body
+
+    try {
+      body = await res.json()
+    } catch (err) {
+      body = {}
+    }
+
+    // Some APIs wrongly return `err` instead of `error`
+    message = (body.error || body.err || {}).message
+  }
+
+  if (message == null) {
+    message = fallbackMessage === null ? 'Response Error' : fallbackMessage
+  }
+
+  return `${message} (${res.status})`;
+}
+
 module.exports = {
   handleError,
   responseError,
+  responseErrorMessage,
   error
 }
