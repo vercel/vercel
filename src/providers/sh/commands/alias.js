@@ -695,7 +695,7 @@ type FetchDeploymentErrors =
 type Scale = { min: number, max: number }
 type DeploymentScale = { [dc: string]: Scale }
 
-type Deployment = {
+type NpmDeployment = {
   uid: string,
   url: string,
   name: string,
@@ -706,6 +706,34 @@ type Deployment = {
   sessionAffinity: string,
   scale: DeploymentScale
 }
+
+type StaticDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'STATIC',
+  state: 'FROZEN' | 'READY',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+}
+
+type BinaryDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'BINARY',
+  state: 'FROZEN' | 'READY',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale
+}
+
+type Deployment =
+  NpmDeployment |
+  StaticDeployment |
+  BinaryDeployment;
 
 async function fetchDeployment(output, now, contextName, id): Promise<Deployment | FetchDeploymentErrors> {
   const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
@@ -893,12 +921,12 @@ async function warnAliasOverwrite(output, alias: Alias): Promise<true | UserAbor
   }
 }
 
-function getScaleForDC(dc: string, deployment: Deployment): Scale {
-  const dcAttrs = deployment.scale[dc] || {}
+function getScaleForDC(dc: string, deployment: NpmDeployment | BinaryDeployment): Scale {
+  const dcAttrs = deployment.scale && deployment.scale[dc] || {}
   return { min: dcAttrs.min, max: dcAttrs.max }
 }
 
-function shouldCopyScalingAttributes(origin: Deployment, dest: Deployment) {
+function shouldCopyScalingAttributes(origin: NpmDeployment | BinaryDeployment, dest: NpmDeployment | BinaryDeployment) {
   return getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min ||
     getScaleForDC('bru1', origin).max !== getScaleForDC('bru1', dest).max ||
     getScaleForDC('sfo1', origin).min !== getScaleForDC('sfo1', dest).min ||
@@ -1497,14 +1525,14 @@ async function fetchDeploymentFromAlias(output, now, contextName, prevAlias): Pr
     : null
 }
 
-function shouldDownscaleDeployment(deployment: Deployment): boolean {
+function shouldDownscaleDeployment(deployment: NpmDeployment | BinaryDeployment): boolean {
   return Object.keys(deployment.scale).reduce((result, dc) => {
     return result || getScaleForDC(dc, deployment).min !== 0 ||
       getScaleForDC(dc, deployment).max !== 1
   }, false)
 }
 
-function getDownscalePresets(deployment: Deployment): DeploymentScale {
+function getDownscalePresets(deployment: NpmDeployment | BinaryDeployment): DeploymentScale {
   return Object.keys(deployment.scale).reduce((result, dc) => {
     return Object.assign(result, {
       [dc]: { min: 0, max: 1 }
@@ -1532,12 +1560,14 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
     return prevDeployment
   }
 
-  // If there was a prev deployment we have to check if we should scale
-  if (prevDeployment !== null && shouldCopyScalingAttributes(prevDeployment, deployment)) {
-    await setScale(output, now, deployment.uid, prevDeployment.scale)
-    await waitForScale(output, now, deployment.uid, prevDeployment.scale)
-  } else {
-    output.debug(`Both deployments have the same scaling rules.`)
+  // If there was a prev deployment  that wasn't static we have to check if we should scale
+  if (prevDeployment !== null && prevDeployment.type !== 'STATIC' && deployment.type !== 'STATIC') {
+    if (shouldCopyScalingAttributes(prevDeployment, deployment)) {
+      await setScale(output, now, deployment.uid, prevDeployment.scale)
+      await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+    } else {
+      output.debug(`Both deployments have the same scaling rules.`)
+    }
   }
 
   // Check if the alias is a custom domain and if case we have a positive
@@ -1556,10 +1586,12 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
     return aliased
   }
   
-  // Downscale if the previous deployment doesn't have the minimal presets
-  if (prevDeployment !== null && shouldDownscaleDeployment(prevDeployment)) {
-    await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
-    output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+  // Downscale if the previous deployment is not static and doesn't have the minimal presets
+  if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
+    if (shouldDownscaleDeployment(prevDeployment)) {
+      await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
+      output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+    }
   }
 
   return true
