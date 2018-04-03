@@ -178,7 +178,7 @@ test('create alias for deployment', async t => {
   ])
 
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
-  t.true(stdout.startsWith(goal))
+  t.true(clearURL(stdout).startsWith(goal))
 
   // Send a test request to the alias
   const response = await fetch(`https://${hosts.alias}`)
