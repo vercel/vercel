@@ -7,36 +7,37 @@ const { resolve, basename } = require('path')
 // Packages
 const Progress = require('progress')
 const fs = require('fs-extra')
+const ms = require('ms')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const mri = require('mri')
-const ms = require('ms')
 const dotenv = require('dotenv')
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
-const retry = require('async-retry')
-const jsonlines = require('jsonlines')
+const executable = require('executable')
+const { tick } = require('../../../util/output/chars')
+const elapsed = require('../../../util/output/elapsed')
+const sleep = require('then-sleep');
 
 // Utilities
-const Logger = require('../util/build-logger')
 const Now = require('../util')
+const isELF = require('../util/is-elf')
 const createOutput = require('../../../util/output')
 const toHumanPath = require('../../../util/humanize-path')
-const { handleError, error } = require('../util/error')
-const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
+const { handleError } = require('../util/error')
 const readMetaData = require('../util/read-metadata')
 const checkPath = require('../util/check-path')
 const logo = require('../../../util/output/logo')
 const cmd = require('../../../util/output/cmd')
 const wait = require('../../../util/output/wait')
+const stamp = require('../../../util/output/stamp')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
 const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
-
-const REGIONS = new Set(["sfo", "bru"]);
-const DCS = new Set(["sfo1", "bru1"]);
+const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
+const printEvents = require('../util/events')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -78,9 +79,7 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
+      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       ls | list            [app]       List deployments
       rm | remove          [id]        Remove a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
@@ -132,6 +131,7 @@ const help = () => {
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
     --regions                      Set default regions or DCs to enable the deployment on
+    --no-verify                    Skip step of waiting until instance count meets given constraints
 
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
 
@@ -173,6 +173,7 @@ let forceNew
 let deploymentName
 let sessionAffinity
 let log
+let error
 let debug
 let debugEnabled
 let clipboard
@@ -180,6 +181,7 @@ let forwardNpm
 let followSymlinks
 let wantsPublic
 let regions
+let noVerify
 let apiUrl
 let isTTY
 let quiet
@@ -287,12 +289,14 @@ async function main(ctx: any) {
   followSymlinks = !argv.links
   wantsPublic = argv.public
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
+  noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, debug } = createOutput({ debug: debugEnabled }))
+  const output = createOutput({ debug: debugEnabled })
+  ;({ log, error, debug } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -306,20 +310,21 @@ async function main(ctx: any) {
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ token, config, showMessage: true })
+    return sync({ output, token, config, showMessage: true })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ token, config: { currentTeam, user }, showMessage }) {
+async function sync({ output, token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
-    const start = Date.now()
+    const deployStamp = stamp()
     const rawPath = argv._[0]
 
     let deployment
     let deploymentType
     let isFile
+    let atlas = false
 
     if (paths.length === 1) {
       try {
@@ -328,10 +333,13 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         if (fsData.isFile()) {
           isFile = true
           deploymentType = 'static'
+          atlas = await isELF(paths[0]) && executable.checkMode(fsData.mode, fsData.gid, fsData.uid)
         }
       } catch (err) {
         let repo
         let isValidRepo = false
+
+        const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
 
         try {
           isValidRepo = isRepoPath(rawPath)
@@ -372,7 +380,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               gitRepo.main
             )}" ${gitRef}on ${gitRepo.type}`)
         } else {
-          log(error(`The specified directory "${basename(paths[0])}" doesn't exist.`))
+          error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           await exit(1)
         }
       }
@@ -400,11 +408,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     try {
       await Promise.all(checkers)
     } catch (err) {
-      log(error({
-        message: err.message,
-        slug: 'path-not-deployable'
-      }))
-
+      error(err.message, 'path-not-deployable')
       await exit(1)
     }
 
@@ -487,37 +491,48 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     // get all the region or dc identifiers from the scale settings
-    const scaleKeys = Object.keys(scale);
+    const scaleKeys = Object.keys(scale)
 
     for (const scaleKey of scaleKeys) {
       if (!isValidRegionOrDcId(scaleKey)) {
-        log(error({
-          message: `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
-          slug: 'invalid-region-or-dc'
-        }))
+        error(
+          `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
+          'deploy-invalid-dc'
+        )
         await exit(1)
       }
     }
 
+    let dcIds = []
+
     if (regions.length) {
       if (Object.keys(scale).length) {
-        log(error({
-          message: "Can't set both `regions` and `scale` options simultaneously",
-          slug: 'regions-and-scale-at-once'
-        }))
+        error(
+          "Can't set both `regions` and `scale` options simultaneously",
+          'regions-and-scale-at-once'
+        )
         await exit(1)
       }
 
-      for (const r of regions) {
-        if (!isValidRegionOrDcId(r)) {
-          log(error({
-            message: `The value "${r}" in \`--regions\` is not a valid region or DC identifier`,
-            slug: 'invalid-region-or-dc'
-          }))
+      try {
+        dcIds = normalizeRegionsList(regions)
+      } catch (err) {
+        if (err.code === 'INVALID_ID') {
+          error(
+            `The value "${err.id}" in \`--regions\` is not a valid region or DC identifier`,
+            'deploy-invalid-dc'
+          )
           await exit(1)
+        } else if (err.code === 'INVALID_ALL') {
+          error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
+          await exit(1)
+        } else {
+          throw err
         }
+      }
 
-        scale[getDcId(r)] = { min: 0, max: 1 }
+      for (const dcId of dcIds) {
+        scale[dcId] = { min: 0, max: 1 }
       }
     }
 
@@ -541,10 +556,10 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          log(error({
-            message: `--dotenv flag is set but ${dotenvFileName} file is missing`,
-            slug: 'missing-dotenv-target'
-          }))
+          error(
+            `--dotenv flag is set but ${dotenvFileName} file is missing`,
+            'missing-dotenv-target'
+          )
 
           await exit(1)
         } else {
@@ -581,20 +596,20 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          log(error({
-            message: 'Environment variable name is missing',
-            slug: 'missing-env-key-value'
-          }))
+          error(
+            'Environment variable name is missing',
+            'missing-env-key-value'
+          )
 
           await exit(1)
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          log(error(
+          error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
-          ))
+          )
 
           await exit(1)
         }
@@ -613,11 +628,11 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
               val = process.env[key].replace(/^@/, '\\@')
             }
           } else {
-            log(error(
+            error(
               `No value specified for env ${chalk.bold(
                 `"${chalk.bold(key)}"`
               )} and it was not found in your env.`
-            ))
+            )
 
             await exit(1)
           }
@@ -629,25 +644,25 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              log(error(
+              error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
-              ))
+              )
             } else {
-              log(error({
-                message: `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
-                slug: 'env-no-secret'
-              }))
+              error(
+                `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+                'env-no-secret'
+              )
             }
 
             await exit(1)
           } else if (_secrets.length > 1) {
-            log(error(
+            error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
-            ))
+            )
 
             await exit(1)
           }
@@ -685,7 +700,8 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile
+          isFile,
+          atlas: atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
         },
         meta
       )
@@ -725,7 +741,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           now.on('complete', () => resolve())
 
           now.on('error', err => {
-            log(error('Upload failed'))
+            error('Upload failed')
             reject(err)
           })
         })
@@ -757,7 +773,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `If you agree with that, please run again with ${cmd('--public')}.`
-              log(error(message))
+              error(message)
 
               await exit(1)
             } else {
@@ -772,6 +788,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         wantsPublic = true
 
         sync({
+          output,
           token,
           config: {
             currentTeam,
@@ -790,7 +807,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
         const message = regions.length
           ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
           : `Invalid DC name for the scale option: ${additionalProperty}`
-        log(error(message));
+        error(message)
         await exit(1)
       }
 
@@ -798,22 +815,21 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
     }
 
     const { url } = now
-    const elapsed = ms(new Date() - start)
+    // $FlowFixMe
+    const dcs = deploymentType !== 'static' ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})` : ''
+
 
     if (isTTY) {
       if (clipboard) {
         try {
           await copy(url)
-
-          log(
-            chalk`{cyan Ready!} {bold ${url}} (copied to clipboard) [${elapsed}]`
-          )
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`)
-          log(chalk`{cyan Ready!} {bold ${url}} [${elapsed}]`)
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
         }
       } else {
-        log(`${url} [${elapsed}]`)
+        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`)
       }
     } else {
       process.stdout.write(url)
@@ -821,7 +837,7 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
 
     if (!quiet) {
       if (syncCount) {
-        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) [${elapsed}]`)
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
       }
     }
 
@@ -832,26 +848,101 @@ async function sync({ token, config: { currentTeam, user }, showMessage }) {
       }
       await exit(0)
     } else {
-      if (nowConfig && nowConfig.atlas) {
-        const cancelWait = wait('Initializing...')
-
-        try {
-          await printEvents(now, currentTeam, { onOpen: cancelWait })
-        } catch (err) {
-          cancelWait()
-          throw err
-        }
-
-        await exit(0)
-      } else {
-        if (!quiet) {
-          log('Initializing…')
-        }
-
-        printLogs(deployment, token)
+      let cancelWait = () => {}
+      if (!quiet) {
+        cancelWait = wait('Initializing…')
       }
+
+      try {
+        require('assert')(deployment) // mute linter
+        await printEvents(now, now.id, currentTeam, {
+          mode: 'deploy', onEvent: printEvent, onOpen: cancelWait, quiet, debugEnabled,
+          findOpts: { direction: 'forward', follow: true }
+        })
+      } catch (err) {
+        cancelWait()
+        throw err
+      }
+
+      if (deployment) {
+        if (!noVerify) {
+          output.log(`Build completed`)
+          await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+        }
+        output.success(`Deployment ready!`)
+      }
+
+      await exit(0)
     }
   })
+}
+
+// TODO: refactor this funtion to use something similar in alias and scale
+async function waitForScale(output, now, deploymentId, scale) {
+  const checkInterval = 500
+  const timeout = ms('5m')
+  const start = Date.now()
+  let remainingMatches = new Set(Object.keys(scale))
+  let cancelWait = renderRemainingDCsWait(Object.keys(scale))
+  
+  while (true) { // eslint-disable-line
+    if (start + timeout <= Date.now()) {
+      throw new Error('Timeout while verifying instance count (10m)');
+    }
+
+    // Get the matches for deployment scale args
+    const instances = await getDeploymentInstances(now, deploymentId)
+    const matches = new Set(await getMatchingScalePresets(scale, instances, matchMinPresets))
+    const newMatches = new Set([...remainingMatches].filter(dc => matches.has(dc)))
+    remainingMatches = new Set([...remainingMatches].filter(dc => !matches.has(dc)))
+
+    // When there are new matches we print and check if we are done
+    if (newMatches.size !== 0) {
+      if (cancelWait) {
+        cancelWait()
+      }
+
+      // Print the new matches that we got
+      for (const dc of newMatches) {
+        // $FlowFixMe
+        output.log(`${chalk.cyan(tick)} Verified ${chalk.bold(dc)} (${instances[dc].instances.length}) ${elapsed(Date.now() - start)}`);
+      }  
+
+      // If we are done return, otherwise put the spinner back
+      if (remainingMatches.size === 0) {
+        return null
+      } else {
+        cancelWait = renderRemainingDCsWait(Array.from(remainingMatches))
+      }
+    }
+
+    // Sleep for the given interval until the next poll
+    await sleep(checkInterval);
+  }
+}
+
+// TODO: reuse this function in alias and scale commands
+function getMatchingScalePresets(scale, instances, predicate) {
+  return Object.keys(scale).reduce((result, dc) => {
+    return predicate(scale[dc], instances[dc])
+      ? [...result, dc]
+      : result
+  }, [])
+}
+
+function renderRemainingDCsWait(remainingDcs) {
+  return wait(`Verifying instances in ${
+    remainingDcs.map(id => chalk.bold(id)).join(', ')
+  }`)
+}
+
+function matchMinPresets(scalePreset, instancesObj) {
+  const value = Math.max(1, scalePreset.min)
+  return instancesObj.instances.length >= value
+}
+
+async function getDeploymentInstances(now, deploymentId) {
+  return now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances?init=1`)
 }
 
 async function readMeta(
@@ -905,155 +996,31 @@ async function readMeta(
   }
 }
 
-async function printEvents(now, currentTeam = null, { onOpen = ()=>{} } = {}) {
-  let url = `${apiUrl}/v1/now/deployments/${now.id}/events?follow=1`
+function printEvent({ type, event, text }, callOnOpenOnce) {
+  if (event === 'build-start') {
+    callOnOpenOnce()
+    log('Building…')
+    return 1
+  } else
+  if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
+    text = text.replace(/\n$/, '').replace(/^\n/, '')
+    callOnOpenOnce()
+    const lines = text.split('\n')
 
-  if (currentTeam) {
-    url += `&teamId=${currentTeam.id}`
+    if (type === 'command') {
+      log(`▲ ${text}`)
+    } else if (type === 'stdout' || type === 'stderr') {
+      lines.forEach(v => {
+        // strip out the beginning `>` if there is one because
+        // `log()` prepends its own and we don't want `> >`
+        log(v.replace(/^> /, ''))
+      })
+    }
+
+    return lines.length
   }
 
-  debug(`Events ${url}`)
-
-  // we keep track of how much we log in case we
-  // drop the connection and have to start over
-  let o = 0
-
-  await retry(async (bail, attemptNumber) => {
-    if (attemptNumber > 1) {
-      debug('Retrying events')
-    }
-
-    // if we are retrying, we clear past logs
-    if (!quiet && o) process.stdout.write(eraseLines(0))
-
-    const res = await now._fetch(url)
-    if (res.ok) {
-      // fire the open callback and ensure it's only fired once
-      onOpen()
-      onOpen = ()=>{}
-
-      // handle the event stream and make the promise get rejected
-      // if errors occur so we can retry
-      return new Promise((resolve, reject) => {
-        const stream = res.body.pipe(jsonlines.parse())
-        const onData = ({ type, payload }) => {
-          // if we are 'quiet' because we are piping, simply
-          // wait for the first instance to be started
-          // and ignore everything else
-          if (quiet) {
-            if (type === 'instance-start') {
-              resolve()
-            }
-            return
-          }
-
-          switch (type) {
-            case 'build-start':
-              o++
-              log('Building…')
-              break
-
-            case 'stdout':
-            case 'stderr':
-              log(payload)
-              break
-
-            case 'build-complete':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-              break
-
-            case 'instance-start':
-              o++
-              log(chalk`{cyan Success!} Build complete`)
-
-              // avoid lingering events
-              stream.off('data', onData)
-
-              // close the stream and resolve
-              stream.end()
-              resolve()
-              break
-          }
-        }
-        stream.on('data', onData)
-        stream.on('error', err => {
-          reject(new Error(`Deployment event stream error: ${err.stack}`))
-        })
-      })
-    } else {
-      const err = new Error(`Deployment events status ${res.status}`)
-
-      if (res.status < 500) {
-        bail(err)
-      } else {
-        throw err
-      }
-    }
-  }, {
-    retries: 4
-  })
-}
-
-function printLogs({ url, scale = {} } = {}, token) {
-  // Log build
-  const logger = new Logger(url, token, { debug: debugEnabled, quiet })
-
-  logger.on('error', async err => {
-    if (!quiet) {
-      if (err && err.type === 'BUILD_ERROR') {
-        log(error(
-          `The build step of your project failed. To retry, run ${cmd(
-            'now --force'
-          )}.`
-        ))
-      } else {
-        log(error('Deployment failed'))
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit(1)
-  })
-
-  logger.on('close', async () => {
-    if (!quiet) {
-      log(chalk`{cyan Deployment complete!}`)
-
-      const dcs = Object.keys(scale)
-      if (dcs.length > 0) {
-        log(`Running in ${dcs.map(dc => chalk.green(dc)).join(', ')}`)
-      }
-    }
-
-    if (gitRepo && gitRepo.cleanup) {
-      // Delete temporary directory that contains repository
-      gitRepo.cleanup()
-
-      debug(`Removed temporary repo directory`)
-    }
-
-    await exit()
-  })
-}
-
-// if supplied with a region (eg: `sfo`) it returns
-// the default dc for it (`sfo1`)
-// if supplied with a dc id, it just returns it
-function getDcId(r: string) {
-  return /\d$/.test(r) ? r : `${r}1`
-}
-
-// determines if the supplied string is a valid
-// region name or dc id
-function isValidRegionOrDcId(r: string) {
-  return REGIONS.has(r) || DCS.has(r);
+  return 0
 }
 
 module.exports = main

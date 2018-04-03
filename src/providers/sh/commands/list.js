@@ -1,21 +1,24 @@
 #!/usr/bin/env node
+//@flow
 
 // Packages
-const mri = require('mri')
+const arg = require('arg')
 const chalk = require('chalk')
 const ms = require('ms')
-const printf = require('printf')
 const plural = require('pluralize')
-require('epipebomb')()
-const supportsColor = require('supports-color')
+const table = require('text-table')
 
 // Utilities
 const Now = require('../util')
-const { handleError, error } = require('../util/error')
+const createOutput = require('../../../util/output')
+const { handleError } = require('../util/error')
+const cmd = require('../../../util/output/cmd')
 const logo = require('../../../util/output/logo')
-const sort = require('../util/sort-deployments')
-const exit = require('../../../util/exit')
+const elapsed = require('../../../util/output/elapsed')
 const wait = require('../../../util/output/wait')
+const strlen = require('../util/strlen')
+const getContextName = require('../util/get-context-name')
+const argCommon = require('../util/arg-common')()
 
 const help = () => {
   console.log(`
@@ -35,7 +38,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
-    --all                          See all instances for an app
+    -a, --all                      See all instances for each deployment (requires [app])
 
   ${chalk.dim('Examples:')}
 
@@ -54,87 +57,91 @@ const help = () => {
 }
 
 // Options
-let app
-let argv
-let debug
-let apiUrl
-let stopSpinner
+// $FlowFixMe
+module.exports = async function main(ctx) {
+  let argv
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug', 'all'],
-    alias: {
-      help: 'h',
-      debug: 'd'
-    }
-  })
-
-  argv._ = argv._.slice(1)
-
-  app = argv._[0]
-  debug = argv.debug
-  apiUrl = ctx.apiUrl
-
-  if (argv.help || app === 'help') {
-    help()
-    await exit(0)
+  try {
+    argv = arg(ctx.argv.slice(3), {
+      ...argCommon,
+      '--all': Boolean,
+      '-a': '--all',
+    })
+  } catch (err) {
+    handleError(err)
+    return 1;
   }
 
-  stopSpinner = wait('Fetching deployments')
+  const debugEnabled = argv['--debug']
+  const { print, log, error, debug } = createOutput({ debug: debugEnabled })
+
+  if (argv._.length > 1) {
+    error(`${cmd('now ls [app]')} accepts at most one argument`);
+    return 1;
+  }
+
+  const app = argv._[0]
+  const apiUrl = ctx.apiUrl
+
+  if (argv['--help']) {
+    help()
+    return 0
+  }
 
   const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
+  const { currentTeam } = sh;
+  const contextName = getContextName(sh);
 
-  try {
-    await list({ token, sh, includeScheme })
-  } catch (err) {
-    stopSpinner()
-    console.error(error(`Unknown error: ${err}\n${err.stack}`))
-    process.exit(1)
-  }
-}
+  const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
 
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-}
-
-async function list({ token, sh: { currentTeam, user }, includeScheme }) {
-  const now = new Now({ apiUrl, token, debug, currentTeam })
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = new Date()
 
-  if (argv.all && !app) {
+  if (argv['--all'] && !app) {
     stopSpinner()
-    console.log('> You must define an app when using `--all`')
-    process.exit(1)
+    error('You must define an app when using `-a` / `--all`')
+    return 1;
   }
 
   let deployments
 
   try {
-    deployments = await now.list(app)
+    debug('Fetching deployments')
+    deployments = await now.list(app, { version: 3 })
   } catch (err) {
-    handleError(err)
-    process.exit(1)
+    stopSpinner();
+    throw err;
   }
 
-  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
-    const match = await now.findDeployment(app)
+  if (!deployments.length) {
+    debug('No deployments: attempting to find deployment that matches supplied app name')
+    let match
+
+    try {
+      await now.findDeployment(app)
+    } catch (err) {
+      if (err.status === 404) {
+        debug('Ignore findDeployment 404')
+      } else {
+        stopSpinner();
+        throw err;
+      }
+    }
 
     if (match !== null && typeof match !== 'undefined') {
+      debug('Found deployment that matches app name');
       deployments = Array.of(match)
     }
   }
 
-  if (!deployments || (Array.isArray(deployments) && deployments.length <= 0)) {
+  if (!deployments.length) {
+    debug('No deployments: attempting to find aliases that matches supplied app name')
     const aliases = await now.listAliases()
     const item = aliases.find(e => e.uid === app || e.alias === app)
 
     if (item) {
+      debug('Found alias that matches app name');
       const match = await now.findDeployment(item.deploymentId)
 
       if (match !== null && typeof match !== 'undefined') {
@@ -145,126 +152,117 @@ async function list({ token, sh: { currentTeam, user }, includeScheme }) {
 
   now.close()
 
-  const apps = new Map()
-
-  if (argv.all) {
+  if (argv['--all']) {
     await Promise.all(
-      deployments.map(async ({ uid }, i) => {
-        deployments[i].instances = await now.listInstances(uid)
+      deployments.map(async ({ uid, instanceCount }, i) => {
+        deployments[i].instances = instanceCount > 0
+          ? await now.listInstances(uid)
+          : []
       })
     )
   }
 
-  for (const dep of deployments) {
-    const deps = apps.get(dep.name) || []
-    apps.set(dep.name, deps.concat(dep))
-  }
-
-  const sorted = await sort([...apps])
-
-  const urlLength =
-    deployments.reduce((acc, i) => {
-      return Math.max(acc, (i.url && i.url.length) || 0)
-    }, 0) + 5
-  const timeNow = new Date()
   stopSpinner()
-  console.log(
-    `> ${
-      plural('deployment', deployments.length, true)
-    } found under ${chalk.bold(
-      (currentTeam && currentTeam.slug) || user.username || user.email
-    )} ${chalk.grey('[' + ms(timeNow - start) + ']')}`
+  log(
+    `${
+      plural('total deployment', deployments.length, true)
+    } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
   )
 
-  let shouldShowAllInfo = false
+  // we don't output the table headers if we have no deployments
+  if (!deployments.length) {
+    return 0;
+  }
 
-  for (const app of apps) {
-    shouldShowAllInfo =
-      app[1].length > 5 ||
-      app.find(depl => {
-        return depl.scale && depl.scale.current > 1
-      })
-    if (shouldShowAllInfo) {
-      break
+  // information to help the user find other deployments or instances
+  if (app == null) {
+    log(`To list more deployments for an app run ${cmd('now ls [app]')}`)
+  } else if (!argv['--all']) {
+    log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
+  }
+
+  print('\n')
+
+  console.log(table([
+    ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+    ...deployments
+    .sort(sortRecent())
+    .map(dep => (
+      [
+        [
+          dep.name,
+          chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+          dep.type === 'BINARY' || dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.type,
+          stateString(dep.state),
+          chalk.gray(ms(Date.now() - new Date(dep.created)))
+        ],
+        ...(argv['--all']
+          ? dep.instances.map(
+              (i) => [
+                '',
+                ` ${chalk.gray('-')} ${i.url} `,
+                '',
+                '',
+                ''
+              ]
+            )
+          : []
+        )
+      ]
+    ))
+    // flatten since the previous step returns a nested
+    // array of the deployment and (optionally) its instances
+    .reduce((ac, c) => ac.concat(c), [])
+    .filter(
+      app == null
+        // if an app wasn't supplied to filter by,
+        // we only want to render one deployment per app
+        ? filterUniqueApps()
+        : () => true
+    )
+  ], {
+    align: ['l','l','r','l','b'],
+    hsep: ' '.repeat(4),
+    stringLength: strlen
+  }).replace(/^/gm, '  ') + '\n\n')
+}
+
+// renders the state string
+function stateString(s: string) {
+  switch (s) {
+    case 'INITIALIZING':
+      return chalk.yellow(s);
+
+    case 'ERROR':
+      return chalk.red(s);
+
+    case 'READY':
+      return s;
+
+    default:
+      return chalk.gray('UNKNOWN')
+  }
+}
+
+// sorts by most recent deployment
+function sortRecent() {
+  return function recencySort(a, b) {
+    return b.created - a.created;
+  }
+}
+
+// filters only one deployment per app, so that
+// the user doesn't see so many deployments at once.
+// this mode can be bypassed by supplying an app name
+function filterUniqueApps() {
+  const uniqueApps = new Set()
+  return function uniqueAppFilter([appName]) {
+    if (uniqueApps.has(appName)) {
+      return false;
+    } else {
+      uniqueApps.add(appName);
+      return true;
     }
   }
-
-  if (!argv.all && shouldShowAllInfo) {
-    console.log(
-      `> To expand the list and see instances run ${chalk.cyan(
-        '`now ls --all [app]`'
-      )}`
-    )
-  }
-
-  console.log()
-
-  sorted.forEach(([name, deps]) => {
-    const listedDeployments = argv.all ? deps : deps.slice(0, 5)
-
-    console.log(
-      `${chalk.bold(name)} ${chalk.gray(
-        '(' + listedDeployments.length + ' of ' + deps.length + ' total)'
-      )}`
-    )
-
-    const urlSpec = `%-${urlLength}s`
-
-    console.log(
-      printf(
-        ` ${chalk.grey(urlSpec + '  %8s    %-16s %8s')}`,
-        'url',
-        'inst #',
-        'state',
-        'age'
-      )
-    )
-
-    listedDeployments.forEach(dep => {
-      let state = dep.state
-      let extraSpaceForState = 0
-
-      if (state === null || typeof state === 'undefined') {
-        state = 'DEPLOYMENT_ERROR'
-      }
-
-      if (/ERROR/.test(state)) {
-        state = chalk.red(state)
-        extraSpaceForState = 10
-      } else if (state === 'FROZEN') {
-        state = chalk.grey(state)
-        extraSpaceForState = 10
-      }
-
-      let spec
-
-      if (supportsColor) {
-        spec = ` %-${urlLength + 10}s %8s    %-${extraSpaceForState + 16}s %8s`
-      } else {
-        spec = ` %-${urlLength + 1}s %8s    %-${16}s %8s`
-      }
-
-      console.log(
-        printf(
-          spec,
-          chalk.underline((includeScheme ? 'https://' : '') + dep.url),
-          dep.scale ? dep.scale.current : '✖',
-          state,
-          dep.created ? ms(timeNow - dep.created) : 'n/a'
-        )
-      )
-
-      if (Array.isArray(dep.instances) && dep.instances.length > 0) {
-        dep.instances.forEach(i => {
-          console.log(
-            printf(` %-${urlLength + 10}s`, ` - ${chalk.underline(i.url)}`)
-          )
-        })
-
-        console.log()
-      }
-    })
-
-    console.log()
-  })
 }

@@ -3,7 +3,6 @@ const execa = require('execa')
 
 module.exports = async (t, binaryPath, defaultArgs, deployment) => {
   const host = deployment.replace('https://', '')
-  const goal = `> Deployment ${host} removed`
 
   const { stdout } = await execa(binaryPath, [
     'rm',
@@ -13,5 +12,5 @@ module.exports = async (t, binaryPath, defaultArgs, deployment) => {
   ])
 
   t.truthy(stdout)
-  t.true(stdout.includes(goal))
+  t.true(stdout.includes(host))
 }

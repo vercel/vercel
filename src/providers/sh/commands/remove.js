@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//@flow
 
 // Packages
 const mri = require('mri')
@@ -9,11 +10,13 @@ const table = require('text-table')
 
 // Utilities
 const Now = require('../util')
-const { handleError, error } = require('../util/error')
+const createOutput = require('../../../util/output')
+const wait = require('../../../util/output/wait')
 const logo = require('../../../util/output/logo')
-const info = require('../../../util/output/info')
+const cmd = require('../../../util/output/cmd')
+const elapsed = require('../../../util/output/elapsed')
 const { normalizeURL } = require('../../../util/url')
-const exit = require('../../../util/exit')
+const getContextName = require('../util/get-context-name')
 
 const help = () => {
   console.log(`
@@ -59,14 +62,10 @@ const help = () => {
 }
 
 // Options
-let argv
-let debug
-let apiUrl
-let hard
-let skipConfirmation
-let ids
 
-const main = async ctx => {
+module.exports = async function main (ctx: any): Promise<number>{
+  let argv;
+
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
     alias: {
@@ -79,83 +78,43 @@ const main = async ctx => {
 
   argv._ = argv._.slice(1)
 
-  debug = argv.debug
-  apiUrl = ctx.apiUrl
-  hard = argv.hard || false
-  skipConfirmation = argv.yes || false
-  ids = argv._
+  const apiUrl = ctx.apiUrl
+  const hard = argv.hard || false
+  const skipConfirmation = argv.yes || false
+  const ids = argv._
+  const debugEnabled = argv.debug
+  const output = createOutput({ debug: debugEnabled })
+  const { success, error, log } = output;
 
-  if (argv.help || ids.length === 0 || ids[0] === 'help') {
+  if (ids.length < 1) {
+    error(`${cmd('now rm')} expects at least one argument`);
+    help();
+    return 1;
+  }
+
+  if (argv.help || ids[0] === 'help') {
     help()
-    await exit(0)
+    return 2;
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
+  const {currentTeam} = sh;
+  const contextName = getContextName(sh);
+
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
+
+  const cancelWait = wait(`Fetching deployment(s) ${ids.map(id => `"${id}"`).join(' ')} in ${chalk.bold(contextName)}`);
+
+  let deployments;
+  const findStart = Date.now();
 
   try {
-    await remove({ token, sh })
+    deployments = await now.list(null, { version: 3 })
   } catch (err) {
-    console.error(error(`Unknown error: ${err}\n${err.stack}`))
-    process.exit(1)
+    cancelWait();
+    throw err;
   }
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
-}
-
-function readConfirmation(matches) {
-  return new Promise(resolve => {
-    console.log(info(
-      `> The following ${
-        plural('deployment', matches.length, true)
-      } will be removed permanently:`
-    ))
-
-    const tbl = table(
-      matches.map(depl => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
-        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
-        return [depl.uid, url, time]
-      }),
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    )
-    process.stdout.write(tbl + '\n')
-
-    for (const depl of matches) {
-      for (const alias of depl.aliases) {
-        process.stdout.write(
-          `> ${chalk.yellow('Warning!')} Deployment ${chalk.bold(depl.uid)} ` +
-            `is an alias for ${chalk.underline(
-              `https://${alias.alias}`
-            )} and will be removed.\n`
-        )
-      }
-    }
-
-    process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    )
-
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause()
-        resolve(d.toString().trim())
-      })
-      .resume()
-  })
-}
-
-async function remove({ token, sh: { currentTeam } }) {
-  const now = new Now({ apiUrl, token, debug, currentTeam })
-
-  const deployments = await now.list()
 
   let matches = deployments.filter(d => {
     return ids.some(id => {
@@ -163,9 +122,15 @@ async function remove({ token, sh: { currentTeam } }) {
     })
   })
 
-  const aliases = await Promise.all(
-    matches.map(depl => now.listAliases(depl.uid))
-  )
+  let aliases;
+
+  try {
+    aliases = await Promise.all(matches.map(depl => now.listAliases(depl.uid)))
+    cancelWait();
+  } catch (err) {
+    cancelWait();
+    throw err;
+  }
 
   matches = matches.filter((match, i) => {
     if (argv.safe && aliases[i].length > 0) {
@@ -177,43 +142,86 @@ async function remove({ token, sh: { currentTeam } }) {
   })
 
   if (matches.length === 0) {
-    console.log(info(
-      `> Could not find ${argv.safe
+    error(
+      `Could not find ${argv.safe
         ? 'unaliased'
         : 'any'} deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
-        .join(', ')}. Run ${chalk.dim(`\`now ls\``)} to list.`
-    ))
-    return process.exit(0)
+        .join(', ')}. Run ${cmd('now ls')} to list.`
+    )
+    return 1;
   }
 
-  try {
-    if (!skipConfirmation) {
-      const confirmation = (await readConfirmation(matches)).toLowerCase()
+  log(`Found ${plural('deployment', matches.length, true)} for removal in ${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`);
 
-      if (confirmation !== 'y' && confirmation !== 'yes') {
-        console.log('\n> Aborted')
-        process.exit(0)
+  if (!skipConfirmation) {
+    const confirmation = (await readConfirmation(matches, output)).toLowerCase()
+
+    if (confirmation !== 'y' && confirmation !== 'yes') {
+      output.log('Aborted');
+      now.close();
+      return 1
+    }
+  }
+
+  const start = new Date()
+
+  await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })))
+
+  success(`${plural('deployment', matches.length, true)} removed ${elapsed(Date.now() - start)}`)
+  matches.forEach(depl => {
+    console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`)
+  })
+
+  // if we close normally, we get a really odd error:
+  //  Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17) Error: unexpected end of file
+  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
+  // which seems fixable only by exiting directly here, and only
+  // impacts this command, consistently
+  //now.close()
+  process.exit(0);
+  return 0
+}
+
+function readConfirmation(matches, output) {
+  return new Promise(resolve => {
+    output.log(
+      `The following ${
+        plural('deployment', matches.length, true)
+      } will be permanently removed:`
+    )
+
+    const tbl = table(
+      matches.map(depl => {
+        const time = chalk.gray(ms(new Date() - depl.created) + ' ago')
+        const url = depl.url ? chalk.underline(`https://${depl.url}`) : ''
+        return ['  ' + depl.uid, url, time]
+      }),
+      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+    )
+    output.print(tbl + '\n')
+
+    for (const depl of matches) {
+      for (const alias of depl.aliases) {
+        output.warn(
+          `Deployment ${chalk.bold(depl.url)} ` +
+            `is an alias for ${chalk.underline(
+              `https://${alias.alias}`
+            )} and will be removed.`
+        )
       }
     }
 
-    const start = new Date()
-
-    await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })))
-
-    const elapsed = ms(new Date() - start)
-    console.log(`${chalk.cyan('> Success!')} [${elapsed}]`)
-    console.log(
-      table(
-        matches.map(depl => {
-          return [info(`Deployment ${chalk.bold(depl.url)} removed`)]
-        })
-      )
+    output.print(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
     )
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
-  }
 
-  now.close()
+    process.stdin
+      .on('data', d => {
+        process.stdin.pause()
+        resolve(d.toString().trim())
+      })
+      .resume()
+  })
 }

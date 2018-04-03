@@ -3,7 +3,7 @@ jobs:
 
   install:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -26,7 +26,7 @@ jobs:
 
   build:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -35,6 +35,8 @@ jobs:
       - run:
           name: Compiling Binaries
           command: yarn run pack
+      - store_artifacts:
+          path: packed
       - persist_to_workspace:
           root: .
           paths:
@@ -42,7 +44,7 @@ jobs:
 
   test-lint:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -54,7 +56,7 @@ jobs:
 
   test-unit:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -73,12 +75,15 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Output version
+          command: node --version
+      - run:
           name: Running Integration Tests
           command: yarn test-integration
 
   test-integration-linux:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -90,7 +95,7 @@ jobs:
 
   compress:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -133,7 +138,7 @@ jobs:
 
   publish-stable:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -148,7 +153,7 @@ jobs:
 
   publish-canary:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout

@@ -11,16 +11,28 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${color('>')} ${v}\n`)
   }
 
-  function warn(v) {
-    log(chalk`{yellow.bold Warning!} ${v}`)
+  function warn(v, slug = null) {
+    log(chalk`{yellow.bold WARN!} ${v}`)
+    if (slug !== null) {
+      log(`More details: https://err.sh/now-cli/${slug}`)
+    }
   }
 
-  function error(v) {
-    log(chalk`{red.bold Error!} ${v}`)
+  function error(v, slug = null) {
+    log(chalk`{red.bold Error!} ${v}`, chalk.red)
+    if (slug !== null) {
+      log(`More details: https://err.sh/now-cli/${slug}`)
+    }
+  }
+
+  function success(v) {
+    print(`${chalk.cyan('> Success!')} ${v}\n`);
   }
 
   function debug(v) {
-    if (debugEnabled) log(chalk`{bold [debug]} ${v}`)
+    if (debugEnabled) {
+      log(`${chalk.bold('[debug]')} ${chalk.gray(`[${new Date().toISOString()}]`)} ${v}`)
+    }
   }
 
   // This is pretty hacky, but since we control the version of Node.js
@@ -33,6 +45,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   async function time(label, fn) {
     const promise = !fn.then && typeof fn === 'function' ? fn() : fn
     if (debugEnabled) {
+      c.log(label);
       Console.prototype.time.call(c, label)
       const r = await promise
       Console.prototype.timeEnd.call(c, label)
@@ -47,6 +60,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     log,
     warn,
     error,
+    success,
     debug,
     time
   }
