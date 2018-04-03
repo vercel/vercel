@@ -167,6 +167,7 @@ module.exports = async function main (ctx: any) {
   output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
   const findOpts1 = { direction: 'backward', limit, query, types, instanceId, since, until } // no follow
+  if (since && !until) findOpts1.direction = 'forward'
   const storage = [];
   const storeEvent = (event) => storage.push(event);
 
@@ -211,7 +212,9 @@ function printLogShort(log) {
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
-      : (log.text || '').replace(/\n$/, '')
+      : (log.text || '').replace(/\n$/, '').replace(/^\n/, '')
+          // eslint-disable-next-line no-control-regex
+          .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, '')
   }
 
   const date = (new Date(log.created)).toISOString()

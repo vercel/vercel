@@ -25,7 +25,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
   const q = qs.stringify({
     direction: findOpts.direction,
     limit: findOpts.limit,
-    query: findOpts.query,
+    q: findOpts.query,
     types: (findOpts.types || []).join(','),
     since: findOpts.since,
     until: findOpts.until,

@@ -919,7 +919,7 @@ function printEvent({ type, event, text }, callOnOpenOnce) {
     return 1
   } else
   if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
-    if (text.slice(-1) === '\n') text = text.slice(0, -1)
+    text = text.replace(/\n$/, '').replace(/^\n/, '')
     callOnOpenOnce()
     const lines = text.split('\n')
 
