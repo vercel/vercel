@@ -10,6 +10,7 @@ const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
+const clearURL = require('strip-ansi')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -28,12 +29,6 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
-
-const clearURL = url => {
-  const inJSON = JSON.stringify(url)
-  console.log(inJSON)
-  return JSON.parse(inJSON)
-}
 
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
