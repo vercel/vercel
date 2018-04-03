@@ -479,6 +479,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
     }
 
     const nowConfig = meta.nowConfig
+    atlas = atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
 
     let scale
     if (regions.length) {
@@ -701,7 +702,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
           wantsPublic,
           sessionAffinity,
           isFile,
-          atlas: atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
+          atlas
         },
         meta
       )
@@ -729,7 +730,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
             }
           )
 
-          now.upload()
+          now.upload({ atlas, scale })
 
           now.on('upload', ({ names, data }) => {
             const amount = data.length
@@ -842,7 +843,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
     }
 
     // Show build logs
-    if (deploymentType === 'static') {
+    if (deploymentType === 'static' || atlas) {
       if (!quiet) {
         log(chalk`{cyan Deployment complete!}`)
       }
