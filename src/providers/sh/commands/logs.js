@@ -31,7 +31,7 @@ const help = () => {
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --follow                   Wait for additional data [off]
-    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [1000]
+    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [100]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
   )}        Search query
@@ -128,7 +128,7 @@ module.exports = async function main (ctx: any) {
   apiUrl = ctx.apiUrl
 
   head = argv.head
-  limit = typeof argv.n === 'number' ? argv.n : 1000
+  limit = typeof argv.n === 'number' ? argv.n : 100
   query = argv.query || ''
   follow = argv.f
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
