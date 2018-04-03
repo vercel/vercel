@@ -294,22 +294,17 @@ module.exports = async function main (ctx) {
     }
   }
 
-  success(`Scale rules for ${
+  const successMsg = `Scale rules for ${
     dcIds.map(d => chalk.bold(d)).join(', ')
-  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`);
+  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`
 
-  if (deployment.type === 'BINARY') {
-    // skip verification for now since we only allow 0-auto
+  if (deployment.type === 'BINARY' || argv['--no-verify']) {
+    success(successMsg)
     now.close();
     return 0;
   }
 
-  if (argv['--no-verify']) {
-    log('Skipped verification. Scale settings were saved successfully');
-    now.close();
-    return 0;
-  }
-
+  log(successMsg)
   const startVerification = Date.now()
   const cancelVerifyWait = waitDcs(scaleArgs, output)
   const cancelExit = onExit(() => {
@@ -362,7 +357,7 @@ function waitDcs(scaleArgs, { log }) {
     if (dcId !== null && instanceCount !== null) {
       remaining.delete(dcId);
       cancelMainWait();
-      log(`${chalk.cyan(tick)} ${chalk.bold(dcId)} (${instanceCount}) ${elapsed(Date.now() - waitStart)}`);
+      log(`${chalk.cyan(tick)} Verified ${chalk.bold(dcId)} (${instanceCount}) ${elapsed(Date.now() - waitStart)}`);
       renderWait();
     } else {
       cancelMainWait();
