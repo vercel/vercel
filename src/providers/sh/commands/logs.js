@@ -131,6 +131,7 @@ module.exports = async function main (ctx: any) {
   limit = typeof argv.n === 'number' ? argv.n : 100
   query = argv.query || ''
   follow = argv.f
+  if (follow) until = 0
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
   outputMode = argv.output in logPrinters ? argv.output : 'short'
 
@@ -192,12 +193,15 @@ module.exports = async function main (ctx: any) {
   return 0;
 }
 
-function compareEvents(a, b) {
-  return (
-    a.serial.localeCompare(b.serial) ||
-    // For the case serials are a same value on old logs
-    (a.created - b.created)
-  )
+function compareEvents(d1, d2) {
+  const c1 = d1.date || d1.created;
+  const c2 = d2.date || d2.created;
+  if (c1 !== c2) return c1 - c2;
+  const s1 = d1.serial || '';
+  const s2 = d2.serial || '';
+  const sc = s1.localeCompare(s2);
+  if (sc !== 0) return sc;
+  return d1.created - d2.created; // if date are equal and no serial
 }
 
 function printLogShort(log) {
@@ -212,6 +216,9 @@ function printLogShort(log) {
     data =
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`
+  } else if (log.type === 'event') {
+    data =
+      `EVENT ${log.event} ${JSON.stringify(log.payload)}`
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
@@ -234,7 +241,14 @@ function printLogShort(log) {
 }
 
 function printLogRaw(log) {
-  console.log(log.object ? JSON.stringify(log.object) : log.text)
+  if (log.object) {
+    console.log(log.object)
+  } else {
+    console.log(log.text.replace(/\n$/, '').replace(/^\n/, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, ''))
+  }
+
   return 0
 }
 
