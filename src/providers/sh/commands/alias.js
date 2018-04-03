@@ -161,7 +161,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
 }
 
-async function confirmDeploymentRemoval(alias, _alias) {
+async function confirmDeploymentRemoval(_alias) {
   const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
   const _sourceUrl = _alias.deployment
     ? chalk.underline(_alias.deployment.url)
@@ -339,14 +339,12 @@ async function rm (ctx, opts, args, output): Promise<number> {
   const {token} = credentials.find(item => item.provider === 'sh')
   const { currentTeam } = sh;
   const contextName = getContextName(sh);
-
   const {log, error} = output;
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
-
-  const alias = new NowAlias({ apiUrl, token, debug: debugEnabled, currentTeam })
-
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const _target = String(args[0])
+
   if (!_target) {
     error(`${cmd('now alias rm <alias>')} expects one argument`)
     return 1
@@ -361,10 +359,10 @@ async function rm (ctx, opts, args, output): Promise<number> {
     return 1
   }
 
-  const _aliases = await alias.ls()
-  const _alias = findAlias(_target, _aliases, output)
+  const _aliases = await now.listAliases()
+  const alias = findAlias(_target, _aliases, output)
 
-  if (!_alias) {
+  if (!alias) {
     error(
       `Alias not found by "${_target}" under ${chalk.bold(contextName)}.
       Run ${cmd('`now alias ls`')} to see your aliases.`
@@ -372,28 +370,23 @@ async function rm (ctx, opts, args, output): Promise<number> {
     return 1;
   }
 
-  try {
-    const confirmation = opts['--yes'] ||
-      await confirmDeploymentRemoval(alias, _alias)
+  const start = new Date()
 
+  try {
+    const confirmation = opts['--yes'] || await confirmDeploymentRemoval(alias)
     if (!confirmation) {
       log('Aborted')
       return 0
     }
 
-    const start = new Date()
-    await alias.rm(_alias)
-    const elapsed = ms(new Date() - start)
-    console.log(
-      `Alias ${chalk.bold(
-        _alias.alias
-      )} removed [${elapsed}]`
-    )
+    await now.fetch(`/now/aliases/${alias.uid}`, { method: 'DELETE' })
   } catch (err) {
     error(err)
     return 1
   }
 
+  const elapsed = ms(new Date() - start)
+  console.log(`Alias ${chalk.bold(alias.alias)} removed [${elapsed}]`)
   return 0
 }
 
