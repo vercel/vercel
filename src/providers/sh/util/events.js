@@ -92,7 +92,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
           callOnOpenOnce()
 
           if (mode === 'deploy') {
-            if (!error) log(chalk`{cyan Success!} Build complete`)
+            if (!error) log(chalk`{cyan Success!} Deployment ready`)
           }
 
           clearTimeout(poller)
@@ -105,7 +105,7 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
 
         const onData = (data) => {
           const { event } = data
-          if (event === 'build-complete') {
+          if (event === 'state' && data.payload.state === 'READY') {
             if (mode === 'deploy') {
               stream.end()
               finish()

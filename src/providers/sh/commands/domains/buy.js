@@ -106,7 +106,7 @@ module.exports = async function({ domains, args, currentTeam, user, coupon }) {
   stopSpinner = wait('Purchasing')
   elapsed = stamp()
   try {
-    await domains.buy({ name, coupon })
+    await domains.buy({ name, coupon, expectedPrice: price })
   } catch (err) {
     stopSpinner()
     return treatBuyError(err)
