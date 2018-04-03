@@ -53,8 +53,9 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
     }
 
     const eventsRes = await now._fetch(eventsUrl)
+
     if (eventsRes.ok) {
-      const readable = await eventsRes.readable()
+      const readable = eventsRes.readable ? await eventsRes.readable() : eventsRes.body
 
       // handle the event stream and make the promise get rejected
       // if errors occur so we can retry
