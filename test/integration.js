@@ -1,8 +1,7 @@
 // Native
 const path = require('path')
 const { homedir } = require('os')
-const URL = require('url-parse')
-const { randomBytes } = require('crypto')
+const { URL } = require('url')
 
 // Packages
 const test = require('ava')
@@ -29,6 +28,12 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
+
+const clearURL = url => {
+  const inJSON = JSON.stringify(url)
+  console.log(inJSON)
+  return JSON.parse(inJSON)
+}
 
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
@@ -73,11 +78,9 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
-  const id = randomBytes(20).toString('hex')
-
   const { stdout } = await execa(binaryPath, [
     'login',
-    `now-cli-${id}@zeit.pub`,
+    `now-cli-${session}@zeit.pub`,
     ...defaultArgs
   ])
 
@@ -133,7 +136,7 @@ test('deploy a node microservice', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(String(stdout).trim())
+  const { href, host } = new URL(clearURL(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -299,7 +302,7 @@ test('deploy multiple static files', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(clearURL(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -337,7 +340,7 @@ test('deploy single static file', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(clearURL(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -365,7 +368,7 @@ test('deploy a static directory', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout)
+  const { href, host } = new URL(clearURL(stdout))
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
