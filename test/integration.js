@@ -224,42 +224,10 @@ test('remove the alias', async t => {
     ...defaultArgs
   ])
 
-  t.true(stdout.startsWith(goal))
-})
-
-test('find deployment in scaling list', async t => {
-  const { stdout } = await execa(binaryPath, [
-    'scale',
-    'ls',
-    ...defaultArgs
-  ])
-
-  const list = parseList(stdout)
-  t.true(list.includes(context.deployment))
-})
-
-test('error on trying to auto-scale', async t => {
-  const goal = `> Error! Autoscaling requires pro or max plan`
-
-  const output = await execa.stderr(binaryPath, [
-    'scale',
-    context.deployment,
-    '1',
-    'auto',
-    ...defaultArgs
-  ], {
-    reject: false
-  })
-
-  t.is(output.trim(), goal)
+  t.true(strip(stdout).startsWith(goal))
 })
 
 test('scale down the deployment directly', async t => {
-  const goals = {
-    first: `${context.deployment} (1 current)`,
-    second: 'min 0'
-  }
-
   const { stdout } = await execa(binaryPath, [
     'scale',
     context.deployment,
@@ -267,9 +235,7 @@ test('scale down the deployment directly', async t => {
     ...defaultArgs
   ])
 
-  t.true(stdout.includes(goals.first))
-  t.true(stdout.includes(goals.second))
-
+  t.true(strip(stdout).includes(`(min: 0, max: 0)`))
   await removeDeployment(t, binaryPath, defaultArgs, context.deployment)
 })
 
@@ -383,6 +349,7 @@ test('deploy a dockerfile project', async t => {
     '--name',
     session,
     '--docker',
+    '--no-verify',
     ...defaultArgs
   ])
 

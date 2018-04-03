@@ -386,7 +386,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
   }
 
   const elapsed = ms(new Date() - start)
-  console.log(`Alias ${chalk.bold(alias.alias)} removed [${elapsed}]`)
+  console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(alias.alias)} removed [${elapsed}]`)
   return 0
 }
 

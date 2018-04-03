@@ -816,19 +816,20 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
 
     const { url } = now
     // $FlowFixMe
-    const dcs = Object.keys(deployment.scale).join(', ')
+    const dcs = deploymentType !== 'static' ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})` : ''
+
 
     if (isTTY) {
       if (clipboard) {
         try {
           await copy(url)
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard] ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`)
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard] ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
+          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
         }
       } else {
-        log(`${chalk.bold(chalk.cyan(url))} ${chalk.bold(`(${dcs})`)} ${deployStamp()}`)
+        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`)
       }
     } else {
       process.stdout.write(url)

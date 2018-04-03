@@ -170,7 +170,7 @@ module.exports = async function main (ctx: any): Promise<number>{
 
   success(`${plural('deployment', matches.length, true)} removed ${elapsed(Date.now() - start)}`)
   matches.forEach(depl => {
-    log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`)
+    console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`)
   })
 
   // if we close normally, we get a really odd error:
