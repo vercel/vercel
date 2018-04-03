@@ -274,7 +274,24 @@ module.exports = async function main (ctx) {
     cancelScaleWait();
   } catch (err) {
     cancelScaleWait();
-    throw err;
+    if (err.status === 400) {
+      switch (err.code) {
+        case 'forbidden_min_instances':
+          error(`You can't scale to more than ${err.max} min instances with your current plan.`);
+          break;
+        case 'forbidden_max_instances':
+          error(`You can't scale to more than ${err.max} max instances with your current plan.`);
+          break;
+        case 'wrong_min_max_relation':
+          error(`Min number of instances can't be higher than max.`);
+          break;
+        default:
+          throw err;
+      }
+      return 1;
+    } else {
+      throw err;
+    }
   }
 
   success(`Scale rules for ${
