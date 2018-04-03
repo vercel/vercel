@@ -693,7 +693,7 @@ async function getInferredTargets(output, opts): Promise<Array<string> | GetInfe
   }
 
   // Always resolve with an array
-  return (Array.from(aliases): Array<string>)
+  return typeof aliases === 'string' ? [aliases] : aliases
 }
 
 async function getAppName(output, opts): Promise<string> {
