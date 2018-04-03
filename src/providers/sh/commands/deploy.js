@@ -816,7 +816,9 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
 
     const { url } = now
     // $FlowFixMe
-    const dcs = deploymentType !== 'static' ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})` : ''
+    const dcs = (deploymentType !== 'static' && deployment.scale)
+      ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
+      : ''
 
 
     if (isTTY) {
