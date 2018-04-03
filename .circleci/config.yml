@@ -3,7 +3,7 @@ jobs:
 
   install:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -26,7 +26,7 @@ jobs:
 
   build:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -44,7 +44,7 @@ jobs:
 
   test-lint:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -56,7 +56,7 @@ jobs:
 
   test-unit:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -66,7 +66,7 @@ jobs:
           name: Running Unit Tests
           command: yarn test-unit
 
-  test-integration:
+  test-integration-mac:
     macos:
       xcode: '9.2.0'
     working_directory: ~/repo
@@ -78,9 +78,21 @@ jobs:
           name: Running Integration Tests
           command: yarn test-integration
 
+  test-integration-linux:
+    docker:
+      - image: circleci/node:9.10.0
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Running Integration Tests
+          command: yarn test-integration
+
   compress:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -123,7 +135,7 @@ jobs:
 
   publish-stable:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -138,7 +150,7 @@ jobs:
 
   publish-canary:
     docker:
-      - image: circleci/node:9.7.1
+      - image: circleci/node:9.10.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -167,7 +179,7 @@ workflows:
       - build:
           requires:
             - install
-      - test-integration:
+      - test-integration-linux:
           requires:
             - build
   unscheduled:
@@ -194,7 +206,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-integration:
+      - test-integration-mac:
           requires:
             - build
           filters:
@@ -203,7 +215,7 @@ workflows:
       - compress:
           requires:
             - test-lint
-            - test-integration
+            - test-integration-mac
             - test-unit
           filters:
             tags:
