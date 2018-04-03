@@ -340,7 +340,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
   const { currentTeam } = sh;
   const contextName = getContextName(sh);
 
-  const {success, log, error} = output;
+  const {log, error} = output;
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
 
@@ -384,7 +384,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
     const start = new Date()
     await alias.rm(_alias)
     const elapsed = ms(new Date() - start)
-    success(
+    console.log(
       `Alias ${chalk.bold(
         _alias.alias
       )} removed [${elapsed}]`
