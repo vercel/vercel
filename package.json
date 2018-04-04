@@ -53,7 +53,7 @@
   "eslintConfig": {
     "parserOptions": {
       "ecmaVersion": 2018,
-      "sourceType": "script"
+      "sourceType": "module"
     },
     "parser": "babel-eslint",
     "extends": [
@@ -76,6 +76,16 @@
     }
   },
   "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ]
+    ],
     "plugins": [
       "transform-flow-comments",
       [
