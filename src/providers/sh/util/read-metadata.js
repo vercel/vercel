@@ -2,6 +2,7 @@
 const { basename, resolve: resolvePath } = require('path')
 
 // Packages
+const Ajv = require('ajv')
 const chalk = require('chalk')
 const loadJSON = require('load-json-file')
 const loadPackageJSON = require('read-pkg')
@@ -11,6 +12,7 @@ const determineType = require('deployment-type')
 
 // Utilities
 const getLocalConfigPath = require('../../../config/local-path')
+const nowSchema = require('../../../schema/now-schema.json')
 
 module.exports = readMetaData
 
@@ -50,6 +52,10 @@ async function readMetaData(
     } else {
       nowConfig = pkg.now
     }
+  }
+
+  if (nowConfig) {
+    validateNowJson(nowConfig)
   }
 
   // We can remove this once the prompt for choosing `--npm` or `--docker` is gone
@@ -194,3 +200,16 @@ const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
     const contents = await readFile(resolvePath(path, name), 'utf8')
     return parseDockerfile(contents, { includeComments: true })
 })
+
+function validateNowJson(nowConfig) {
+  const ajv = new Ajv({ allErrors: true })
+  const validJson = ajv.validate(nowSchema, nowConfig)
+  if (!validJson) {
+    const err = new Error(
+      'You have the following errors inside `now.json` ' +
+        JSON.stringify(ajv.errors)
+    )
+    err.userError = true
+    throw err
+  }
+}

@@ -100,6 +100,7 @@
     "@google/maps": "0.4.3",
     "@zeit/check-updates": "1.1.0",
     "@zeit/source-map-support": "0.6.2",
+    "ajv": "6.4.0",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "ansi-regex": "3.0.0",
