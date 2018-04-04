@@ -10,7 +10,6 @@ const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
-const strip = require('strip-ansi')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -53,7 +52,9 @@ test('print the deploy help message', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'help',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   t.is(code, 0)
   t.true(stdout.includes(deployHelpMessage))
@@ -63,7 +64,9 @@ test('output the version', async t => {
   const { stdout, code } = await execa(binaryPath, [
     '--version',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   const version = stdout.trim()
 
@@ -73,17 +76,20 @@ test('output the version', async t => {
 })
 
 test('log in', async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'login',
     `now-cli-${session}@zeit.pub`,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   const location = path.join(tmpDir ? tmpDir.name : '~', '.now')
   const goal = `> Ready! Authentication token and personal details saved in "${location}"`
   const lines = stdout.trim().split('\n')
   const last = lines[lines.length - 1]
 
+  t.is(code, 0)
   t.is(last, goal)
 })
 
@@ -91,17 +97,15 @@ test('trigger OSS confirmation message', async t => {
   const target = fixture('node')
   const goal = `Your deployment's code and logs will be publicly accessible`
 
-  try {
-    await execa(binaryPath, [
-      target,
-      ...defaultArgs
-    ])
-  } catch (err) {
-    t.true(err.stderr.includes(goal))
-    return
-  }
+  const { stderr, code } = await execa(binaryPath, [
+    target,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
 
-  t.fail(`Didn't print to stderr`)
+  t.is(code, 1)
+  t.true(stderr.includes(goal))
 })
 
 test('try to deploy user directory', async t => {
@@ -125,13 +129,15 @@ test('deploy a node microservice', async t => {
     '--name',
     session,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   // Ensure the exit code is right
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -144,24 +150,27 @@ test('deploy a node microservice', async t => {
 })
 
 test('find deployment in list', async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'ls',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   const deployments = parseList(stdout)
+
   t.true(deployments.length > 0)
+  t.is(code, 0)
 
   const target = deployments.find(deployment => {
     return deployment.includes(`${session}-`)
   })
 
-  if (!target) {
-    t.fail('Deployment not found')
-  }
+  t.truthy(target)
 
-  t.pass('Found it')
-  context.deployment = target
+  if (target) {
+    context.deployment = target
+  }
 })
 
 test('create alias for deployment', async t => {
@@ -170,15 +179,19 @@ test('create alias for deployment', async t => {
     alias: `${session}.now.sh`
   }
 
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'alias',
     hosts.deployment,
     hosts.alias,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
-  t.true(strip(stdout).startsWith(goal))
+
+  t.is(code, 0)
+  t.true(stdout.startsWith(goal))
 
   // Send a test request to the alias
   const response = await fetch(`https://${hosts.alias}`)
@@ -192,50 +205,64 @@ test('create alias for deployment', async t => {
 })
 
 test('list the aliases', async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'alias',
     'ls',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   const results = parseList(stdout)
+
+  t.is(code, 0)
   t.true(results.includes(context.deployment))
 })
 
 test('scale the alias', async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.alias,
     '1',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
-  t.true(strip(stdout).includes(`(min: 1, max: 1)`))
+  t.is(code, 0)
+  t.true(stdout.includes(`(min: 1, max: 1)`))
 })
 
 test('remove the alias', async t => {
   const goal = `> Success! Alias ${context.alias} removed`
 
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'alias',
     'rm',
     context.alias,
     '--yes',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
-  t.true(strip(stdout).startsWith(goal))
+  t.is(code, 0)
+  t.true(stdout.startsWith(goal))
 })
 
 test('scale down the deployment directly', async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.deployment,
     '0',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
-  t.true(strip(stdout).includes(`(min: 0, max: 0)`))
+  t.is(code, 0)
+  t.true(stdout.includes(`(min: 0, max: 0)`))
+
   await removeDeployment(t, binaryPath, defaultArgs, context.deployment)
 })
 
@@ -254,13 +281,15 @@ test('deploy multiple static files', async t => {
     '--name',
     session,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   // Ensure the exit code is right
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -292,13 +321,15 @@ test('deploy single static file', async t => {
     '--name',
     session,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   // Ensure the exit code is right
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -320,13 +351,15 @@ test('deploy a static directory', async t => {
     '--name',
     session,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   // Ensure the exit code is right
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -351,7 +384,9 @@ test('deploy a dockerfile project', async t => {
     '--docker',
     '--no-verify',
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
 
   // Ensure the exit code is right
   t.is(code, 0)
@@ -403,11 +438,15 @@ test('try to deploy with non-existing team', async t => {
 })
 
 test.after.always(async t => {
-  const { stdout } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'ls',
     session,
     ...defaultArgs
-  ])
+  ], {
+    reject: false
+  })
+
+  t.is(code, 0)
 
   const deployments = parseList(stdout)
   const removers = []
