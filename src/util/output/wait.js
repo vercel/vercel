@@ -1,6 +1,5 @@
 const ora2 = require('ora')
 const { gray } = require('chalk')
-const eraseLines = require('./erase-lines')
 
 const wait = (msg, timeOut = 300, ora = ora2) => {
   let running = false
@@ -21,7 +20,6 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
     stopped = true
     if (running) {
       spinner.stop()
-      process.stdout.write(eraseLines(1))
       running = false
     }
     process.removeListener('nowExit', cancel)
