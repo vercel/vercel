@@ -1535,8 +1535,8 @@ async function createAlias(output, now, deployment, alias): Promise<AliasRecord 
   }
 }
 
-async function fetchDeploymentFromAlias(output, now, contextName, prevAlias): Promise<Deployment | null | FetchDeploymentErrors> {
-  return prevAlias
+async function fetchDeploymentFromAlias(output, now, contextName: string, prevAlias: Alias | null, currentDeployment: Deployment): Promise<Deployment | null | FetchDeploymentErrors> {
+  return (prevAlias && prevAlias.deploymentId !== currentDeployment.uid)
     ? fetchDeployment(output, now, contextName, prevAlias.deploymentId)
     : null
 }
@@ -1564,14 +1564,14 @@ type AssignAliasError =
 async function assignAlias(output, now, deployment: Deployment, alias: string, contextName): Promise<true | AssignAliasError> {
   output.log(`Assigning alias ${alias} to deployment ${deployment.url}`)
   const prevAlias = await getPreviousAlias(now, getSafeAlias(alias))
-  
+
   // Ask for a confirmation if there are rules defined
   if (prevAlias && prevAlias.rules) {
     await warnAliasOverwrite(output, prevAlias)
   }
 
   // If there was a previous deployment, we should fetch it to scale and downscale later
-  const prevDeployment = await fetchDeploymentFromAlias(output, now, contextName, prevAlias)
+  const prevDeployment = await fetchDeploymentFromAlias(output, now, contextName, prevAlias, deployment)
   if (prevDeployment instanceof NowError) {
     return prevDeployment
   }
