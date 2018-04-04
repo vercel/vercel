@@ -1363,6 +1363,15 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
     )
 
     if (!nameservers.every(ns => ns.endsWith('.zeit.world'))) {
+      // The nameservers are not pointing to zeit world so we have to check if the
+      // DNS are resolving to now. In case they are we can proceed to add and verify
+      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        return new NowError({
+          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
+          meta: { domain, subdomain }
+        })
+      }
+
       // If it doesn't have the nameserver pointing to now we have to create the 
       // domain knowing that it should be verified via a DNS TXT record.
       const setupResult = await verifyDomain(now, alias, { isExternal: true })
@@ -1370,16 +1379,6 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         return setupResult
       } else {
         output.success(`Domain ${domain} added!`)
-      }
-
-      // The domain is verified and added so if alias doesn't resolve to now 
-      // it means that the user has to configure the CNAME, the ALIAS or to 
-      // change the nameservers or wait for propagation.
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
-        return new NowError({
-          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
-          meta: { domain, subdomain }
-        })
       }
     } else {
       // We have to create the domain knowing that the nameservers are zeit.world
@@ -1414,16 +1413,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         }
     }
 
-    if (info.isExternal) {
-      // If the domain is external and verified the user had to configure
-      // the CNAME, the ALIAS or to change the nameservers or wait a little.
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
-        return new NowError({
-          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
-          meta: { domain, subdomain }
-        })
-      }
-    } else {
+    if (!info.isExternal) {
       // If the domain is an internal domain it means that it's pointing to zeit.world and
       // we can configure the DNS records in case it is not resolving properly.
       if (!await domainResolvesToNow(output, alias)) {
