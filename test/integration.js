@@ -10,7 +10,6 @@ const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
-const strip = require('strip-ansi')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -138,7 +137,7 @@ test('deploy a node microservice', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -192,7 +191,7 @@ test('create alias for deployment', async t => {
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
 
   t.is(code, 0)
-  t.true(strip(stdout).startsWith(goal))
+  t.true(stdout.startsWith(goal))
 
   // Send a test request to the alias
   const response = await fetch(`https://${hosts.alias}`)
@@ -231,7 +230,7 @@ test('scale the alias', async t => {
   })
 
   t.is(code, 0)
-  t.true(strip(stdout).includes(`(min: 1, max: 1)`))
+  t.true(stdout.includes(`(min: 1, max: 1)`))
 })
 
 test('remove the alias', async t => {
@@ -248,7 +247,7 @@ test('remove the alias', async t => {
   })
 
   t.is(code, 0)
-  t.true(strip(stdout).startsWith(goal))
+  t.true(stdout.startsWith(goal))
 })
 
 test('scale down the deployment directly', async t => {
@@ -262,7 +261,7 @@ test('scale down the deployment directly', async t => {
   })
 
   t.is(code, 0)
-  t.true(strip(stdout).includes(`(min: 0, max: 0)`))
+  t.true(stdout.includes(`(min: 0, max: 0)`))
 
   await removeDeployment(t, binaryPath, defaultArgs, context.deployment)
 })
@@ -290,7 +289,7 @@ test('deploy multiple static files', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -330,7 +329,7 @@ test('deploy single static file', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
@@ -360,7 +359,7 @@ test('deploy a static directory', async t => {
   t.is(code, 0)
 
   // Test if the output is really a URL
-  const { href, host } = new URL(strip(stdout))
+  const { href, host } = new URL(stdout)
   t.is(host.split('-')[0], session)
 
   // Send a test request to the deployment
