@@ -186,7 +186,6 @@ let apiUrl
 let isTTY
 let quiet
 let alwaysForwardNpm
-let meta
 
 // If the current deployment is a repo
 const gitRepo = {}
@@ -321,6 +320,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
     const deployStamp = stamp()
     const rawPath = argv._[0]
 
+    let meta
     let deployment
     let deploymentType
     let isFile
