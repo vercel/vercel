@@ -1541,8 +1541,13 @@ async function fetchDeploymentFromAlias(output, now, contextName: string, prevAl
     : null
 }
 
-function shouldDownscaleDeployment(deployment: NpmDeployment | BinaryDeployment): boolean {
-  return Object.keys(deployment.scale).reduce((result, dc) => {
+async function deploymentIsAliased(now, deployment: Deployment): Promise<boolean> {
+  const aliases: Array<Alias> = await now.listAliases()
+  return aliases.some(alias => alias.deploymentId === deployment.uid)
+}
+
+function shouldDownscaleDeployment(now, deployment: NpmDeployment | BinaryDeployment): boolean {
+  return !deploymentIsAliased(now, deployment) && Object.keys(deployment.scale).reduce((result, dc) => {
     return result || getScaleForDC(dc, deployment).min !== 0 ||
       getScaleForDC(dc, deployment).max !== 1
   }, false)
@@ -1604,7 +1609,7 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
   
   // Downscale if the previous deployment is not static and doesn't have the minimal presets
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
-    if (shouldDownscaleDeployment(prevDeployment)) {
+    if (shouldDownscaleDeployment(now, prevDeployment)) {
       await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
       output.success(`Previous deployment ${prevDeployment.url} downscaled`);
     }
