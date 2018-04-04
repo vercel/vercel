@@ -418,7 +418,7 @@ async function set(ctx, opts, args, output): Promise<number> {
         output.error(`Wrong value "${params.meta.value}" for alias found in config. It must be a string or array of string.`)
         break
       case 'CANT_FIND_A_DEPLOYMENT':
-        output.error(`Could't find a deployment to alias. Please specify one from the command line.`)
+        output.error(`Could't find a deployment to alias for app '${params.meta.appName}'. Please specify one from the command line.`)
         break
       case 'DEPLOYMENT_NOT_FOUND':
         output.error(`Failed to find deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
@@ -583,20 +583,35 @@ async function readConfigFromFile(file): Promise<Config | null | ReadConfigError
   }
 }
 
-async function readConfigFromPackage(file): Promise<Config | null | ReadConfigErrors> {
-  const content = await readFileSafe(file)
+type Package = {
+  name: string,
+  now?: Config
+}
+
+async function readPackage(file?: string): Promise<Package | null | ReadConfigErrors> {
+  const pkgFilePath = file || path.resolve(process.cwd(), 'package.json')
+  const content = await readFileSafe(pkgFilePath)
   if (content === null) {
     return content
   }
 
   try {
-    return JSON.parse(content).now;
+    return JSON.parse(content);
   } catch (error) {
     return new NowError({
       code: 'CANT_PARSE_CONFIG',
       meta: { file }
     })
   }
+}
+
+async function readConfigFromPackage(file): Promise<Config | null | ReadConfigErrors> {
+  const pkg = await readPackage(file)
+  if (pkg instanceof NowError || pkg === null) {
+    return pkg
+  }
+
+  return pkg.now || null
 }
 
 type GetConfigErrors =
@@ -678,14 +693,25 @@ async function getInferredTargets(output, opts): Promise<Array<string> | GetInfe
   }
 
   // Always resolve with an array
-  return (Array.from(aliases): Array<string>)
+  return typeof aliases === 'string' ? [aliases] : aliases
 }
 
 async function getAppName(output, opts): Promise<string> {
   const config = await getConfig(output, opts['--local-config'])
-  return config instanceof NowError || !config.name
-    ? path.basename(path.resolve(process.cwd(), opts['--local-config'] || ''))
-    : config.name
+
+  // If the name is in the configuration, return it
+  if (!(config instanceof NowError) && config.name) {
+    return config.name
+  }
+
+  // Otherwise try to get it from the package
+  const pkg = await readPackage()
+  if (!(pkg instanceof NowError) && pkg !== null && pkg.name) {
+    return pkg.name
+  }
+
+  // Finally fallback to directory
+  return path.basename(path.resolve(process.cwd(), opts['--local-config'] || ''))
 }
 
 type FetchDeploymentErrors =
@@ -695,7 +721,7 @@ type FetchDeploymentErrors =
 type Scale = { min: number, max: number }
 type DeploymentScale = { [dc: string]: Scale }
 
-type Deployment = {
+type NpmDeployment = {
   uid: string,
   url: string,
   name: string,
@@ -706,6 +732,34 @@ type Deployment = {
   sessionAffinity: string,
   scale: DeploymentScale
 }
+
+type StaticDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'STATIC',
+  state: 'FROZEN' | 'READY',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+}
+
+type BinaryDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'BINARY',
+  state: 'FROZEN' | 'READY',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale
+}
+
+type Deployment =
+  NpmDeployment |
+  StaticDeployment |
+  BinaryDeployment;
 
 async function fetchDeployment(output, now, contextName, id): Promise<Deployment | FetchDeploymentErrors> {
   const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
@@ -740,7 +794,7 @@ async function fetchDeploymentsByAppName(now, appName): Promise<Array<Deployment
 }
 
 type GetAppLastDeploymentErrors = 
-  NowError<'CANT_FIND_A_DEPLOYMENT'> |
+  NowError<'CANT_FIND_A_DEPLOYMENT', {appName: string}> |
   FetchDeploymentErrors
 
 async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | GetAppLastDeploymentErrors> {
@@ -762,7 +816,7 @@ async function getAppLastDeployment(output, now, appName, user, contextName): Pr
   // Try to fetch deployment details
   return deploymentItem
     ? await fetchDeployment(output, now, contextName, deploymentItem.uid)
-    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT' })
+    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT', meta: { appName } })
 }
 
 type SetAliasArgs = {
@@ -893,12 +947,12 @@ async function warnAliasOverwrite(output, alias: Alias): Promise<true | UserAbor
   }
 }
 
-function getScaleForDC(dc: string, deployment: Deployment): Scale {
-  const dcAttrs = deployment.scale[dc] || {}
+function getScaleForDC(dc: string, deployment: NpmDeployment | BinaryDeployment): Scale {
+  const dcAttrs = deployment.scale && deployment.scale[dc] || {}
   return { min: dcAttrs.min, max: dcAttrs.max }
 }
 
-function shouldCopyScalingAttributes(origin: Deployment, dest: Deployment) {
+function shouldCopyScalingAttributes(origin: NpmDeployment | BinaryDeployment, dest: NpmDeployment | BinaryDeployment) {
   return getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min ||
     getScaleForDC('bru1', origin).max !== getScaleForDC('bru1', dest).max ||
     getScaleForDC('sfo1', origin).min !== getScaleForDC('sfo1', dest).min ||
@@ -1309,6 +1363,15 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
     )
 
     if (!nameservers.every(ns => ns.endsWith('.zeit.world'))) {
+      // The nameservers are not pointing to zeit world so we have to check if the
+      // DNS are resolving to now. In case they are we can proceed to add and verify
+      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
+        return new NowError({
+          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
+          meta: { domain, subdomain }
+        })
+      }
+
       // If it doesn't have the nameserver pointing to now we have to create the 
       // domain knowing that it should be verified via a DNS TXT record.
       const setupResult = await verifyDomain(now, alias, { isExternal: true })
@@ -1316,16 +1379,6 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         return setupResult
       } else {
         output.success(`Domain ${domain} added!`)
-      }
-
-      // The domain is verified and added so if alias doesn't resolve to now 
-      // it means that the user has to configure the CNAME, the ALIAS or to 
-      // change the nameservers or wait for propagation.
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
-        return new NowError({
-          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
-          meta: { domain, subdomain }
-        })
       }
     } else {
       // We have to create the domain knowing that the nameservers are zeit.world
@@ -1360,16 +1413,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         }
     }
 
-    if (info.isExternal) {
-      // If the domain is external and verified the user had to configure
-      // the CNAME, the ALIAS or to change the nameservers or wait a little.
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
-        return new NowError({
-          code: 'UNABLE_TO_RESOLVE_EXTERNAL',
-          meta: { domain, subdomain }
-        })
-      }
-    } else {
+    if (!info.isExternal) {
       // If the domain is an internal domain it means that it's pointing to zeit.world and
       // we can configure the DNS records in case it is not resolving properly.
       if (!await domainResolvesToNow(output, alias)) {
@@ -1497,14 +1541,14 @@ async function fetchDeploymentFromAlias(output, now, contextName, prevAlias): Pr
     : null
 }
 
-function shouldDownscaleDeployment(deployment: Deployment): boolean {
+function shouldDownscaleDeployment(deployment: NpmDeployment | BinaryDeployment): boolean {
   return Object.keys(deployment.scale).reduce((result, dc) => {
     return result || getScaleForDC(dc, deployment).min !== 0 ||
       getScaleForDC(dc, deployment).max !== 1
   }, false)
 }
 
-function getDownscalePresets(deployment: Deployment): DeploymentScale {
+function getDownscalePresets(deployment: NpmDeployment | BinaryDeployment): DeploymentScale {
   return Object.keys(deployment.scale).reduce((result, dc) => {
     return Object.assign(result, {
       [dc]: { min: 0, max: 1 }
@@ -1518,7 +1562,7 @@ type AssignAliasError =
   SetupAliasDomainError
 
 async function assignAlias(output, now, deployment: Deployment, alias: string, contextName): Promise<true | AssignAliasError> {
-  output.log(`Asigning alias ${alias} to deployment ${deployment.url}`)
+  output.log(`Assigning alias ${alias} to deployment ${deployment.url}`)
   const prevAlias = await getPreviousAlias(now, getSafeAlias(alias))
   
   // Ask for a confirmation if there are rules defined
@@ -1532,12 +1576,14 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
     return prevDeployment
   }
 
-  // If there was a prev deployment we have to check if we should scale
-  if (prevDeployment !== null && shouldCopyScalingAttributes(prevDeployment, deployment)) {
-    await setScale(output, now, deployment.uid, prevDeployment.scale)
-    await waitForScale(output, now, deployment.uid, prevDeployment.scale)
-  } else {
-    output.debug(`Both deployments have the same scaling rules.`)
+  // If there was a prev deployment  that wasn't static we have to check if we should scale
+  if (prevDeployment !== null && prevDeployment.type !== 'STATIC' && deployment.type !== 'STATIC') {
+    if (shouldCopyScalingAttributes(prevDeployment, deployment)) {
+      await setScale(output, now, deployment.uid, prevDeployment.scale)
+      await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+    } else {
+      output.debug(`Both deployments have the same scaling rules.`)
+    }
   }
 
   // Check if the alias is a custom domain and if case we have a positive
@@ -1556,10 +1602,12 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
     return aliased
   }
   
-  // Downscale if the previous deployment doesn't have the minimal presets
-  if (prevDeployment !== null && shouldDownscaleDeployment(prevDeployment)) {
-    await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
-    output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+  // Downscale if the previous deployment is not static and doesn't have the minimal presets
+  if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
+    if (shouldDownscaleDeployment(prevDeployment)) {
+      await setScale(output, now, prevDeployment.uid, getDownscalePresets(prevDeployment))
+      output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+    }
   }
 
   return true

@@ -21,7 +21,7 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
     stopped = true
     if (running) {
       spinner.stop()
-      process.stdout.write(eraseLines(1))
+      process.stderr.write(eraseLines(1))
       running = false
     }
     process.removeListener('nowExit', cancel)
