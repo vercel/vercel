@@ -334,6 +334,9 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
           isFile = true
           deploymentType = 'static'
           atlas = await isELF(paths[0]) && executable.checkMode(fsData.mode, fsData.gid, fsData.uid)
+        } else {
+          isFile = false
+          deploymentType = 'static'
         }
       } catch (err) {
         let repo
