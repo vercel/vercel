@@ -235,7 +235,7 @@ async function ls (ctx, opts, args, output): Promise<number> {
     if (!opts['--json']) {
       cancelWait = wait(`Fetching alias details for "${args[0]}" under ${chalk.bold(contextName)}`);
     }
-    
+
     const list = await alias.listAliases()
     const item = list.find(listItem => {
       return (listItem.uid === args[0] || listItem.alias === args[0])
@@ -572,7 +572,7 @@ async function readConfigFromFile(file): Promise<Config | null | ReadConfigError
   if (content === null) {
     return content
   }
-  
+
   try {
     return (JSON.parse(content): Config);
   } catch (error) {
@@ -622,7 +622,7 @@ let config
 
 async function getConfig(output, configFile): Promise<Config | GetConfigErrors> {
   const localPath = process.cwd()
-  
+
   // If config was already read, just return it
   if (config) {
     return config
@@ -647,7 +647,7 @@ async function getConfig(output, configFile): Promise<Config | GetConfigErrors> 
     config = mainConfig
     return mainConfig;
   }
-  
+
   // Finally try with the package
   const pkgFilePath = path.resolve(localPath, 'package.json')
   const pkgConfig = await readConfigFromPackage(pkgFilePath);
@@ -669,7 +669,7 @@ type GetInferredTargetsError =
   NowError<'NO_ALIAS_IN_CONFIG'> |
   NowError<'WRONG_ALIAS_IN_CONFIG', {value: any}>
 
-async function getInferredTargets(output, opts): Promise<Array<string> | GetInferredTargetsError> {  
+async function getInferredTargets(output, opts): Promise<Array<string> | GetInferredTargetsError> {
   // Read the configuration file from the best guessed location
   const configResult = await getConfig(output, opts['--local-config']);
   if (configResult instanceof NowError) {
@@ -793,14 +793,14 @@ async function fetchDeploymentsByAppName(now, appName): Promise<Array<Deployment
   return now.list(appName, { version: 3 });
 }
 
-type GetAppLastDeploymentErrors = 
+type GetAppLastDeploymentErrors =
   NowError<'CANT_FIND_A_DEPLOYMENT', {appName: string}> |
   FetchDeploymentErrors
 
 async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | GetAppLastDeploymentErrors> {
   output.debug(`Looking for deployments matching app ${appName}`)
   const cancelWait = wait(`Fetching user deployments in ${chalk.bold(contextName)}`)
-  let deployments  
+  let deployments
   try {
     deployments = await fetchDeploymentsByAppName(now, appName)
     cancelWait()
@@ -824,9 +824,9 @@ type SetAliasArgs = {
   targets: Array<string>,
 }
 
-type SetAliasErrors = 
+type SetAliasErrors =
   NowError<'TOO_MANY_ARGS'> |
-  GetInferredTargetsError | 
+  GetInferredTargetsError |
   GetAppLastDeploymentErrors |
   FetchDeploymentErrors
 
@@ -874,12 +874,17 @@ type DomainValidationError = NowError<'INVALID_TARGET_DOMAIN', { target: string 
 
 function targetsAreValid(targets): Array<string> | DomainValidationError {
   for (const target of targets) {
-    if (target.indexOf('.') !== -1 && !isValidDomain(target)) {
+    const index = targets.indexOf(target)
+    const asHost = toHost(target)
+
+    if (asHost.indexOf('.') !== -1 && !isValidDomain(asHost)) {
       return new NowError({
         code: 'INVALID_TARGET_DOMAIN',
         meta: { target }
       })
     }
+
+    targets[index] = asHost
   }
 
   return targets
@@ -1036,7 +1041,7 @@ async function waitForScale(output, now, deploymentId, scale) {
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
   let cancelWait = renderRemainingDCsWait(remainingMatches)
-  
+
   while (true) { // eslint-disable-line
     if (start + timeout <= Date.now()) {
       throw new Error('Timeout while verifying instance count (10m)');
@@ -1057,7 +1062,7 @@ async function waitForScale(output, now, deploymentId, scale) {
       for (const dc of newMatches) {
         // $FlowFixMe
         output.log(`${chalk.cyan(tick)} Scaled ${chalk.bold(dc)} (${matches.get(dc)} instance) ${elapsed(Date.now() - start)}`);
-      }  
+      }
 
       // If we are done return, otherwise put the spinner back
       if (remainingMatches.size === 0) {
@@ -1118,7 +1123,7 @@ async function getDomainInfo(now, domain): Promise<null | DomainInfo | GetDomain
   }
 }
 
-type GetDomainServersError = 
+type GetDomainServersError =
   NowError<'NAMESERVERS_NOT_FOUND'>
 
 async function getDomainNameservers(now, domain: string): Promise<Array<string> | GetDomainServersError> {
@@ -1172,7 +1177,7 @@ async function purchaseDomainIfAvailable(output, now, domain, contextName): Prom
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`)
   const buyDomainStamp = stamp()
   const { available } = await getDomainStatus(now, domain)
-  
+
   if (available) {
     const { price, period } = await getDomainPrice(now, domain)
     cancelWait()
@@ -1372,7 +1377,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         })
       }
 
-      // If it doesn't have the nameserver pointing to now we have to create the 
+      // If it doesn't have the nameserver pointing to now we have to create the
       // domain knowing that it should be verified via a DNS TXT record.
       const setupResult = await verifyDomain(now, alias, { isExternal: true })
       if (setupResult instanceof NowError) {
@@ -1421,7 +1426,7 @@ async function setupAliasDomain(output, now, alias, contextName): Promise<true |
         if (result instanceof NowError) {
           return result
         }
-        
+
         // Verify that the DNS records are ready
         output.log(`DNS Configured! Verifying propagation…`)
         if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
@@ -1468,7 +1473,7 @@ type AliasRecord = {
   created?: string
 }
 
-type CreateAliasError = 
+type CreateAliasError =
   NowError<'ALIAS_IN_USE'> |
   NowError<'DEPLOYMENT_NOT_FOUND', { id: string }> |
   NowError<'INVALID_ALIAS'> |
@@ -1489,7 +1494,7 @@ async function createAlias(output, now, deployment, alias): Promise<AliasRecord 
     return data
   } catch (error) {
     cancelMessage()
-    
+
     // If the certificate is missing we create it without expecting failures
     // then we call back the createAlias function
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
@@ -1606,7 +1611,7 @@ async function assignAlias(output, now, deployment: Deployment, alias: string, c
   if (aliased instanceof NowError) {
     return aliased
   }
-  
+
   // Downscale if the previous deployment is not static and doesn't have the minimal presets
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
     if (shouldDownscaleDeployment(now, prevDeployment)) {
