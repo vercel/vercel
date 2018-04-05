@@ -114,7 +114,7 @@ module.exports = async function main(ctx) {
     throw err;
   }
 
-  if (!deployments.length) {
+  if (app && !deployments.length) {
     debug('No deployments: attempting to find deployment that matches supplied app name')
     let match
 
@@ -135,7 +135,7 @@ module.exports = async function main(ctx) {
     }
   }
 
-  if (!deployments.length) {
+  if (app && !deployments.length) {
     debug('No deployments: attempting to find aliases that matches supplied app name')
     const aliases = await now.listAliases()
     const item = aliases.find(e => e.uid === app || e.alias === app)
