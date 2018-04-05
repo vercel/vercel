@@ -102,7 +102,6 @@ module.exports = async function main(ctx) {
   const start = new Date()
 
   if (argv['--all'] && !app) {
-    stopSpinner()
     error('You must define an app when using `-a` / `--all`')
     return 1;
   }
@@ -121,7 +120,7 @@ module.exports = async function main(ctx) {
       return 1
     }
 
-    app = hostParts[0]
+    app = null
     host = asHost
   }
 
