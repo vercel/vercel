@@ -401,50 +401,56 @@ async function set(ctx, opts, args, output): Promise<number> {
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = Date.now()
 
-  // Get deployments and targets from opts and args
-  const params = await getTargetsAndDeployment(now, output, args, opts, user, contextName)
-  if (params instanceof NowError) {
-    switch (params.code) {
-      case 'CANT_FIND_CONFIG':
-        output.error(`Couldn't find a configuration file at \n    ${params.meta.paths.join('\n    ')}.`)
-        break
-      case 'CANT_PARSE_CONFIG':
-        output.error(`Couldn't parse configuration file ${params.meta.file}.`);
-        break
-      case 'NO_ALIAS_IN_CONFIG':
-        output.error(`Could't find an alias property into the given configuration.`)
-        break
-      case 'WRONG_ALIAS_IN_CONFIG':
-        output.error(`Wrong value "${params.meta.value}" for alias found in config. It must be a string or array of string.`)
-        break
-      case 'CANT_FIND_A_DEPLOYMENT':
-        output.error(`Could't find a deployment to alias for app '${params.meta.appName}'. Please specify one from the command line.`)
-        break
+  // If there are more than two args we have to error
+  if (args.length > 2) {
+    output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
+    return 1;
+  }
+
+  // Find a deployment to perform the alias
+  const deployment = await getDeploymentForAlias(now, output, args, opts, user, contextName)
+  if (deployment instanceof NowError) {
+    switch (deployment.code) {
       case 'DEPLOYMENT_NOT_FOUND':
-        output.error(`Failed to find deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
+        output.error(`Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(contextName)}`)
         break
       case 'DEPLOYMENT_PERMISSION_DENIED':
-        output.error(`No permission to access deployment "${params.meta.id}" under ${chalk.bold(contextName)}`)
-        break
-      case 'TOO_MANY_ARGS':
-        output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
+        output.error(`No permission to access deployment "${deployment.meta.id}" under ${chalk.bold(contextName)}`)
         break
     }
     return 1
   }
 
-  // Now we are sure we have values for deployment and targets
-  const { deployment, targets } = params
+  // Find the targets to perform the alias
+  const targets = await getTargetsForAlias(output, args, opts)
+  if (targets instanceof NowError) {
+    switch (targets.code) {
+      case 'CANT_FIND_CONFIG':
+        output.error(`Couldn't find a configuration file at \n    ${targets.meta.paths.join('\n    ')}.`)
+        break
+      case 'NO_ALIAS_IN_CONFIG':
+        output.error(`Could't find an alias property into the given configuration.`)
+        break
+      case 'WRONG_ALIAS_IN_CONFIG':
+        output.error(`Wrong value "${targets.meta.value}" for alias found in config. It must be a string or array of string.`)
+        break
+      case 'CANT_PARSE_CONFIG':
+        output.error(`Couldn't parse configuration file ${targets.meta.file}.`);
+        break
+      case 'INVALID_TARGET_DOMAIN':
+        output.error(`Invalid target to alias ${targets.meta.target}`);
+        break
+    }
+    return 1
+  }
 
-  // Validate the resolved targets
-  const targetError = targetsAreValid(targets)
-  if (targetError instanceof NowError) {
-    output.error(`Invalid target ${targetError.meta.target}`);
+  if (deployment === null) {
+    output.error(`Couldn't find a deployment to alias. Please provide one from the command line.`);
     return 1
   }
 
   // Assign the alias for each of the targets in the array
-  for (const target of addZeitDomainIfNeeded(targets)) {
+  for (const target of targets) {
     const result = await assignAlias(output, now, deployment, target, contextName)
     if (result instanceof NowError) {
       switch (result.code) {
@@ -714,7 +720,7 @@ async function getAppName(output, opts): Promise<string> {
   return path.basename(path.resolve(process.cwd(), opts['--local-config'] || ''))
 }
 
-type FetchDeploymentErrors =
+type FetchDeploymentError =
   NowError<'DEPLOYMENT_NOT_FOUND', { id: string }> |
   NowError<'DEPLOYMENT_PERMISSION_DENIED', { id: string }>
 
@@ -761,7 +767,7 @@ type Deployment =
   StaticDeployment |
   BinaryDeployment;
 
-async function fetchDeployment(output, now, contextName, id): Promise<Deployment | FetchDeploymentErrors> {
+async function fetchDeployment(output, now, contextName, id): Promise<Deployment | FetchDeploymentError> {
   const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
   try {
     const deployment = await now.findDeployment(id)
@@ -793,11 +799,9 @@ async function fetchDeploymentsByAppName(now, appName): Promise<Array<Deployment
   return now.list(appName, { version: 3 });
 }
 
-type GetAppLastDeploymentErrors =
-  NowError<'CANT_FIND_A_DEPLOYMENT', {appName: string}> |
-  FetchDeploymentErrors
+type GetAppLastDeploymentError = FetchDeploymentError
 
-async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | GetAppLastDeploymentErrors> {
+async function getAppLastDeployment(output, now, appName, user, contextName): Promise<Deployment | null | GetAppLastDeploymentError> {
   output.debug(`Looking for deployments matching app ${appName}`)
   const cancelWait = wait(`Fetching user deployments in ${chalk.bold(contextName)}`)
   let deployments
@@ -816,86 +820,48 @@ async function getAppLastDeployment(output, now, appName, user, contextName): Pr
   // Try to fetch deployment details
   return deploymentItem
     ? await fetchDeployment(output, now, contextName, deploymentItem.uid)
-    : new NowError({ code: 'CANT_FIND_A_DEPLOYMENT', meta: { appName } })
+    : null
 }
 
-type SetAliasArgs = {
-  deployment: Deployment,
-  targets: Array<string>,
-}
+type GetDeploymentForAliasError = FetchDeploymentError | GetAppLastDeploymentError
 
-type SetAliasErrors =
-  NowError<'TOO_MANY_ARGS'> |
-  GetInferredTargetsError |
-  GetAppLastDeploymentErrors |
-  FetchDeploymentErrors
-
-async function getTargetsAndDeployment(now, output, args: Array<string>, opts, user, contextName): Promise<SetAliasArgs | SetAliasErrors> {
+async function getDeploymentForAlias(now, output, args: Array<string>, opts, user, contextName): Promise<Deployment | null | GetDeploymentForAliasError> {
   // When there are no args at all we try to get the targets from the config
-  if (args.length === 0) {
-    output.debug('Looking for targets in the configuration directory');
-    const targets = await getInferredTargets(output, opts)
-    if (targets instanceof NowError) {
-      return targets
-    }
-
-    const appName = await getAppName(output, opts)
-    const deployment = await getAppLastDeployment(output, now, appName, user, contextName)
-    return !(deployment instanceof NowError)
-      ? { deployment, targets }
-      : deployment
-  }
-
-  // When there is one arg we assume the user typed `now alias <target> because
-  // he is in the app directory so we can infer the deployment
-  if (args.length === 1) {
-    const targets = [args[0]]
-    const appName = await getAppName(output, opts)
-    const deployment = await getAppLastDeployment(output, now, appName, user, contextName)
-    return !(deployment instanceof NowError)
-      ? { deployment, targets }
-      : deployment
-  }
-
-  // In any other case the user provided both id and deployment id so we can just
-  // fetch the deployment id to ensure it exists
   if (args.length === 2) {
-    const [deploymentId, target] = args
-    const deployment = await fetchDeployment(output, now, contextName, deploymentId)
-    return !(deployment instanceof NowError)
-      ? { deployment, targets: [target] }
-      : deployment
+    const [deploymentId] = args
+    return await fetchDeployment(output, now, contextName, deploymentId)
+  } else {
+    const appName = await getAppName(output, opts)
+    return await getAppLastDeployment(output, now, appName, user, contextName)
   }
-
-  return new NowError({ code: 'TOO_MANY_ARGS' })
 }
 
-type DomainValidationError = NowError<'INVALID_TARGET_DOMAIN', { target: string }>
+type GetTargetsForAliasError = GetInferredTargetsError | NowError<'INVALID_TARGET_DOMAIN', { target: string }>
 
-function targetsAreValid(targets): Array<string> | DomainValidationError {
-  for (const target of targets) {
-    const index = targets.indexOf(target)
-    const asHost = toHost(target)
+async function getTargetsForAlias(output, args: Array<string>, opts): Promise<Array<string> | GetTargetsForAliasError> {
+  const targets = args.length === 0 ? (await getInferredTargets(output, opts)) : [args[args.length - 1]]
+  if (targets instanceof NowError) {
+    return targets
+  }
+  
+  // Append zeit if needed or convert to host in case is a full URL
+  const hostTargets = targets.map(target => {
+    return target.indexOf('.') === -1
+      ? `${target}.now.sh`
+      : toHost(target)
+  })
 
-    if (asHost.indexOf('.') !== -1 && !isValidDomain(asHost)) {
+  // Validate the targets
+  for (const target of hostTargets) {
+    if (!isValidDomain(target)) {
       return new NowError({
         code: 'INVALID_TARGET_DOMAIN',
         meta: { target }
       })
     }
-
-    targets[index] = asHost
   }
 
-  return targets
-}
-
-function addZeitDomainIfNeeded(targets) {
-  return targets.map(target => {
-    return target.indexOf('.') === -1
-      ? `${target}.now.sh`
-      : target
-  })
+  return hostTargets
 }
 
 type Alias = {
@@ -1540,7 +1506,7 @@ async function createAlias(output, now, deployment, alias): Promise<AliasRecord 
   }
 }
 
-async function fetchDeploymentFromAlias(output, now, contextName: string, prevAlias: Alias | null, currentDeployment: Deployment): Promise<Deployment | null | FetchDeploymentErrors> {
+async function fetchDeploymentFromAlias(output, now, contextName: string, prevAlias: Alias | null, currentDeployment: Deployment): Promise<Deployment | null | FetchDeploymentError> {
   return (prevAlias && prevAlias.deploymentId !== currentDeployment.uid)
     ? fetchDeployment(output, now, contextName, prevAlias.deploymentId)
     : null
@@ -1568,7 +1534,7 @@ function getDownscalePresets(deployment: NpmDeployment | BinaryDeployment): Depl
 
 type AssignAliasError =
   CreateAliasError |
-  FetchDeploymentErrors |
+  FetchDeploymentError |
   SetupAliasDomainError
 
 async function assignAlias(output, now, deployment: Deployment, alias: string, contextName): Promise<true | AssignAliasError> {
