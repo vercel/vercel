@@ -18,7 +18,6 @@ const elapsed = require('../../../util/output/elapsed')
 const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
-const isValidDomain = require('../util/domains/is-valid-domain')
 const toHost = require('../util/to-host')
 const argCommon = require('../util/arg-common')()
 
@@ -103,21 +102,16 @@ module.exports = async function main(ctx) {
   const start = new Date()
 
   if (argv['--all'] && !app) {
-    stopSpinner()
     error('You must define an app when using `-a` / `--all`')
     return 1;
   }
 
-  if (app && isValidDomain(app)) {
-    const asHost = toHost(app)
-
-    if (!asHost.endsWith('.now.sh')) {
-      stopSpinner()
-      error('Only deployment hostnames are allowed')
-      return 1
-    }
-
+  // Some people are using entire domains as app names, so
+  // we need to account for this here
+  if (app && toHost(app).endsWith('.now.sh')) {
     note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment')
+
+    const asHost = toHost(app)
     const hostParts = asHost.split('-')
 
     if (hostParts < 2) {
@@ -126,7 +120,7 @@ module.exports = async function main(ctx) {
       return 1
     }
 
-    app = hostParts[0]
+    app = null
     host = asHost
   }
 
