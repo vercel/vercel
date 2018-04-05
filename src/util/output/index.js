@@ -18,6 +18,10 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
+  function note(v) {
+    log(chalk`{yellow.bold NOTE:} ${v}`, chalk.yellow)
+  }
+
   function error(v, slug = null) {
     log(chalk`{red.bold Error!} ${v}`, chalk.red)
     if (slug !== null) {
@@ -62,7 +66,8 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     error,
     success,
     debug,
-    time
+    time,
+    note
   }
 }
 

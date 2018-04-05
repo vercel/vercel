@@ -34,7 +34,6 @@ const wait = require('../../../util/output/wait')
 const stamp = require('../../../util/output/stamp')
 const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../util/prompt-options')
-const note = require('../../../util/output/note')
 const exit = require('../../../util/exit')
 const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
 const printEvents = require('../util/events')
@@ -175,6 +174,7 @@ let sessionAffinity
 let log
 let error
 let debug
+let note
 let debugEnabled
 let clipboard
 let forwardNpm
@@ -295,7 +295,7 @@ async function main(ctx: any) {
   isTTY = process.stdout.isTTY
   quiet = !isTTY
   const output = createOutput({ debug: debugEnabled })
-  ;({ log, error, debug } = output)
+  ;({ log, error, note, debug } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -678,9 +678,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
-        log(
           note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`)
-        )
       }
 
       env[key] = val
@@ -768,7 +766,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
             url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
           }
 
-          log(note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`))
+          note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`)
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
