@@ -7,6 +7,7 @@ const chalk = require('chalk')
 const ms = require('ms')
 const plural = require('pluralize')
 const table = require('text-table')
+const psl = require('psl')
 
 // Utilities
 const Now = require('../util')
@@ -18,8 +19,6 @@ const elapsed = require('../../../util/output/elapsed')
 const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
-const isValidDomain = require('../util/domains/is-valid-domain')
-const toHost = require('../util/to-host')
 const argCommon = require('../util/arg-common')()
 
 const help = () => {
@@ -101,6 +100,7 @@ module.exports = async function main(ctx) {
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = new Date()
+  const DEPLOYMENT_REGEX = /(.+)(-.+)$/
 
   if (argv['--all'] && !app) {
     stopSpinner()
@@ -108,26 +108,12 @@ module.exports = async function main(ctx) {
     return 1;
   }
 
-  if (app && isValidDomain(app)) {
-    const asHost = toHost(app)
-
-    if (!asHost.endsWith('.now.sh')) {
-      stopSpinner()
-      error('Only deployment hostnames are allowed')
-      return 1
-    }
-
-    note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment')
-    const hostParts = asHost.split('-')
-
-    if (hostParts < 2) {
-      stopSpinner()
-      error('Only deployment hostnames are allowed, no aliases')
-      return 1
-    }
-
-    app = hostParts[0]
-    host = asHost
+  if (app) {
+    const { sld, tld } = psl.parse(app.replace(/^https:\/\//i, ''))
+    if (tld === 'now.sh') {
+      note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment')
+      app = sld.match(DEPLOYMENT_REGEX)[1]
+    }    
   }
 
   let deployments
