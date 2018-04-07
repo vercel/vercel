@@ -1,6 +1,6 @@
 // @flow
 import psl from 'psl'
-import retry from 'retry'
+import retry from 'async-retry'
 import wait from '../../../../util/output/wait'
 
 import { Now } from './types'

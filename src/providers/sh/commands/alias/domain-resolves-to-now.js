@@ -11,7 +11,7 @@ type RetryConfig = {
 
 async function domainResolvesToNow(output: Output, alias: string, retryConfig?: RetryConfig = {}): Promise<boolean> {
   output.debug(`Checking if ${alias} resolves to now`)
-  const cancelMessage = wait(`Checking ${alias} DNS resolution`)
+  const cancelMessage = wait(`Checking ${alias} DNS resolution, this may take a while...`)
   let response
   try {
     response = await retry(async () => {
