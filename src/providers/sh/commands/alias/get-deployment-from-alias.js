@@ -10,7 +10,7 @@ async function fetchDeploymentFromAlias(
   prevAlias: Alias | void,
   currentDeployment: Deployment
 ) {
-  return (prevAlias && prevAlias.deploymentId !== currentDeployment.uid)
+  return (prevAlias && prevAlias.deploymentId && prevAlias.deploymentId !== currentDeployment.uid)
     ? fetchDeployment(output, now, contextName, prevAlias.deploymentId)
     : null
 }
