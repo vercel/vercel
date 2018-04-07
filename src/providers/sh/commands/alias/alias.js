@@ -30,6 +30,7 @@ import getDeploymentForAlias from './get-deployment-for-alias'
 import getRulesFromFile from './get-rules-from-file'
 import getTargetsForAlias from './get-targets-for-alias'
 import upsertPathAlias from './upsert-path-alias'
+import getSubcommand from './get-subcommand'
 
 const help = () => {
   console.log(`
@@ -102,12 +103,17 @@ const help = () => {
 `)
 }
 
+const COMMAND_CONFIG = {
+  default: 'set',
+  ls: ['ls', 'list'],
+  rm: ['rm', 'remove'],
+  set: ['set'],
+}
+
 module.exports = async function main(ctx: any): Promise<number> {
   let argv
-  let subcommand
-
   try {
-    argv = arg(ctx.argv.slice(3), {
+    argv = arg(ctx.argv.slice(2), {
       ...argCommon,
       '--yes': Boolean,
       '-y': '--yes',
@@ -122,31 +128,19 @@ module.exports = async function main(ctx: any): Promise<number> {
     return 1;
   }
 
-  subcommand = argv._[0]
-
   if (argv['--help']) {
     help()
     return 2;
   }
 
-  const debugEnabled = argv['--debug']
-  const output = createOutput({ debug: debugEnabled })
-  let args
-
+  const output: Output = createOutput({ debug: argv['--debug'] })
+  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
   switch (subcommand) {
     case 'ls':
-    case 'list':
-      args = argv._.slice(1);
       return ls(ctx, argv, args, output);
     case 'rm':
-    case 'remove':
-      args = argv._.slice(1)
       return rm(ctx, argv, args, output);
-    case 'set':
-      args = argv._.slice(1)
-      return set(ctx, argv, args, output);
     default:
-      args = argv._
       return set(ctx, argv, args, output);
   }
 }
