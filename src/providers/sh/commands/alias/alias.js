@@ -17,7 +17,6 @@ const humanizePath = require('../../../../util/humanize-path')
 const logo = require('../../../../util/output/logo')
 const Now = require('../../util/')
 const NowAlias = require('../../util/alias')
-const promptBool = require('../../../../util/input/prompt-bool')
 const stamp = require('../../../../util/output/stamp')
 const strlen = require('../../util/strlen')
 const toHost = require('../../util/to-host')
@@ -28,9 +27,10 @@ import * as Errors from './errors'
 import assignAlias from './assign-alias'
 import getDeploymentForAlias from './get-deployment-for-alias'
 import getRulesFromFile from './get-rules-from-file'
-import getTargetsForAlias from './get-targets-for-alias'
-import upsertPathAlias from './upsert-path-alias'
 import getSubcommand from './get-subcommand'
+import getTargetsForAlias from './get-targets-for-alias'
+import promptBool from './prompt-bool'
+import upsertPathAlias from './upsert-path-alias'
 
 const help = () => {
   console.log(`
@@ -145,11 +145,9 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
 }
 
-async function confirmDeploymentRemoval(_alias) {
+async function confirmDeploymentRemoval(output, _alias) {
   const time = chalk.gray(ms(new Date() - new Date(_alias.created)) + ' ago')
-  const _sourceUrl = _alias.deployment
-    ? chalk.underline(_alias.deployment.url)
-    : null
+  const _sourceUrl = _alias.deployment ? chalk.underline(_alias.deployment.url) : null
   const tbl = table(
     [
       [
@@ -157,18 +155,13 @@ async function confirmDeploymentRemoval(_alias) {
         chalk.underline(_alias.alias),
         time
       ]
-    ],
-    {
-      align: ['l', 'l', 'r'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen
-    }
-  )
-
-  const msg = `The following alias will be removed permanently\n  ${tbl} \n  Are you sure?`
-  return promptBool(msg, {
-    trailing: '\n'
+    ], {
+    align: ['l', 'l', 'r'],
+    hsep: ' '.repeat(4),
+    stringLength: strlen
   })
+
+  return promptBool(output, `The following alias will be removed permanently\n  ${tbl} \n  ${chalk.red('Are you sure?')}`)
 }
 
 function findAlias(alias, list, output) {
@@ -322,19 +315,18 @@ async function rm (ctx, opts, args, output): Promise<number> {
   const {token} = credentials.find(item => item.provider === 'sh')
   const { currentTeam } = sh;
   const contextName = getContextName(sh);
-  const {log, error} = output;
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const _target = String(args[0])
 
   if (!_target) {
-    error(`${cmd('now alias rm <alias>')} expects one argument`)
+    output.error(`${cmd('now alias rm <alias>')} expects one argument`)
     return 1
   }
 
   if (args.length !== 1) {
-    error(
+    output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         '`now alias rm <alias>`'
       )}`
@@ -346,7 +338,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
   const alias = findAlias(_target, _aliases, output)
 
   if (!alias) {
-    error(
+    output.error(
       `Alias not found by "${_target}" under ${chalk.bold(contextName)}.
       Run ${cmd('`now alias ls`')} to see your aliases.`
     )
@@ -355,15 +347,15 @@ async function rm (ctx, opts, args, output): Promise<number> {
 
   const removeStamp = stamp()
   try {
-    const confirmation = opts['--yes'] || await confirmDeploymentRemoval(alias)
+    const confirmation = opts['--yes'] || await confirmDeploymentRemoval(output, alias)
     if (!confirmation) {
-      log('Aborted')
+      output.log('Aborted')
       return 0
     }
 
     await now.fetch(`/now/aliases/${alias.uid}`, { method: 'DELETE' })
   } catch (err) {
-    error(err)
+    output.error(err)
     return 1
   }
 
