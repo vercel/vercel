@@ -98,7 +98,6 @@
   },
   "devDependencies": {
     "@google/maps": "0.4.3",
-    "@zeit/check-updates": "1.1.0",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.4.0",
     "alpha-sort": "2.0.1",
@@ -182,6 +181,7 @@
     "through2": "2.0.3",
     "tmp-promise": "1.0.3",
     "uid-promise": "1.0.0",
+    "update-check": "1.2.0",
     "webpack": "3.6.0",
     "webpack-node-externals": "1.6.0",
     "which-promise": "1.0.0",
