@@ -18,6 +18,7 @@ const elapsed = require('../../../util/output/elapsed')
 const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
+const toHost = require('../util/to-host')
 const argCommon = require('../util/arg-common')()
 
 const help = () => {
@@ -73,14 +74,16 @@ module.exports = async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug']
-  const { print, log, error, debug } = createOutput({ debug: debugEnabled })
+  const { print, log, error, note, debug } = createOutput({ debug: debugEnabled })
 
   if (argv._.length > 1) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
     return 1;
   }
 
-  const app = argv._[0]
+  let app = argv._[0]
+  let host = null
+
   const apiUrl = ctx.apiUrl
 
   if (argv['--help']) {
@@ -99,9 +102,26 @@ module.exports = async function main(ctx) {
   const start = new Date()
 
   if (argv['--all'] && !app) {
-    stopSpinner()
     error('You must define an app when using `-a` / `--all`')
     return 1;
+  }
+
+  // Some people are using entire domains as app names, so
+  // we need to account for this here
+  if (app && toHost(app).endsWith('.now.sh')) {
+    note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment')
+
+    const asHost = toHost(app)
+    const hostParts = asHost.split('-')
+
+    if (hostParts < 2) {
+      stopSpinner()
+      error('Only deployment hostnames are allowed, no aliases')
+      return 1
+    }
+
+    app = null
+    host = asHost
   }
 
   let deployments
@@ -114,7 +134,7 @@ module.exports = async function main(ctx) {
     throw err;
   }
 
-  if (!deployments.length) {
+  if (app && !deployments.length) {
     debug('No deployments: attempting to find deployment that matches supplied app name')
     let match
 
@@ -135,7 +155,7 @@ module.exports = async function main(ctx) {
     }
   }
 
-  if (!deployments.length) {
+  if (app && !deployments.length) {
     debug('No deployments: attempting to find aliases that matches supplied app name')
     const aliases = await now.listAliases()
     const item = aliases.find(e => e.uid === app || e.alias === app)
@@ -160,6 +180,12 @@ module.exports = async function main(ctx) {
           : []
       })
     )
+  }
+
+  if (host) {
+    deployments = deployments.filter(deployment => {
+      return deployment.url === host
+    })
   }
 
   stopSpinner()

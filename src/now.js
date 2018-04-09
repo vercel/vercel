@@ -22,7 +22,8 @@ const mkdirp = require('mkdirp-promise')
 const mri = require('mri')
 const fetch = require('node-fetch')
 const chalk = require('chalk')
-const updateNotifier = require('@zeit/check-updates')
+const checkForUpdate = require('update-check')
+const ms = require('ms')
 
 // Utilities
 const error = require('./util/output/error')
@@ -44,7 +45,15 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 const GLOBAL_COMMANDS = new Set(['help'])
 
 const main = async (argv_) => {
-  updateNotifier(pkg, 'Now CLI')
+  const update = await checkForUpdate(pkg, {
+    interval: ms('1d'),
+    distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+  })
+
+  if (update) {
+    console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`))
+    console.log(info(`Read more about how to update here: https://zeit.co/update-cli`))
+  }
 
   const argv = mri(argv_, {
     boolean: [

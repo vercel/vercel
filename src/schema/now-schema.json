@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "alias": {
+      "type": [
+        "string",
+        "array"
+      ]
+    },
+    "env": {
+      "type": [
+        "object",
+        "array"
+      ]
+    },
+    "scale": {
+      "type": "object"
+    },
+    "dotenv": {
+      "type": [
+        "boolean",
+        "string"
+      ]
+    },
+    "files": {
+      "type": "array"
+    },
+    "type": {
+      "type": "string"
+    },
+    "forwardNpm": {
+      "type": "boolean"
+    },
+    "public": {
+      "type": "boolean"
+    },
+    "engines": {
+      "type": "object"
+    },
+    "api": {
+      "type": "string"
+    }
+  }
+}
