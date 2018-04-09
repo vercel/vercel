@@ -26,7 +26,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
 
   // Ask for a confirmation if there are rules defined
   if (prevAlias && prevAlias.rules) {
-    const aborted = await warnAliasOverwrite(output, prevAlias)
+    const aborted = await warnAliasOverwrite(output, prevAlias, deployment)
     if (aborted) {
       return aborted
     }
@@ -95,9 +95,9 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   return record
 }
 
-async function warnAliasOverwrite(output: Output, alias: Alias) {
+async function warnAliasOverwrite(output: Output, alias: Alias, deployment: Deployment) {
   if (isTTY) {
-    const msg = `Are you sure you want to update ${alias.alias} to be a normal alias?`
+    const msg = `The alias ${alias.alias} has rules configured. Are you sure you want to remove them and use ${deployment.url}?`
     const confirmed: boolean = await promptBool(output, msg)
     if (!confirmed) {
       return new Errors.UserAborted()

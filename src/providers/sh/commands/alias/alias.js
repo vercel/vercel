@@ -435,7 +435,7 @@ async function set(ctx, opts, args, output): Promise<number> {
       output.log(`Assigning path alias rules from ${humanizePath(rulesPath)} to ${target}`)
       const pathAlias = await upsertPathAlias(output, now, rules, target, contextName)
       if (handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, pathAlias)) !== 1) {
-        console.log(`${chalk.cyan('> Success!')} x rules configured for ${chalk.underline(target)} ${chalk.grey(
+        console.log(`${chalk.cyan('> Success!')} ${rules.length} rules configured for ${chalk.underline(target)} ${chalk.grey(
           '[' + ms(Date.now() - start) + ']'
         )}`)
       }
