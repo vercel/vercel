@@ -6,8 +6,12 @@ import wait from '../../../../util/output/wait'
 import { Now } from './types'
 import { DomainNotVerified, DomainPermissionDenied, DomainVerificationFailed, NeedUpgrade } from './errors'
 
-type VerifyInfo = { verified: boolean }
 type VerifyOptions = { isExternal: boolean }
+type VerifyInfo = {
+  uid: string,
+  verified: boolean,
+  created: string
+}
 
 async function verifyDomain(now: Now, alias: string, contextName: string, opts: VerifyOptions) {
   const cancelMessage = wait('Setting up and verifying the domain')

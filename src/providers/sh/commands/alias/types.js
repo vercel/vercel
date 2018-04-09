@@ -6,8 +6,7 @@ type FetchOptions = {
 
 export interface Now {
   fetch(url: string, options?: FetchOptions): Promise<any>,
-  findDeployment(id: string): Deployment,
-  list(appName: string, {version: number}): DeploymentItem[],
+  list(appName: string, {version: number}): Deployment[],
   listAliases(): Alias[]
 }
 
@@ -82,16 +81,6 @@ export type Deployment =
   NpmDeployment |
   StaticDeployment |
   BinaryDeployment
-
-export type DeploymentItem = {
-  uid: string,
-  url: string,
-  name: string,
-  created: number,
-  creator: { uid: string, },
-  state: 'FROZEN' | 'READY',
-  type: 'NPM',
-} 
 
 export type Alias = {
   uid: string,

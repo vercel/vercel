@@ -12,13 +12,13 @@ const { handleError } = require('../../util/error')
 const argCommon = require('../../util/arg-common')()
 const cmd = require('../../../../util/output/cmd')
 const createOutput = require('../../../../util/output')
-const elapsed = require('../../../../util/output/elapsed')
 const getContextName = require('../../util/get-context-name')
 const humanizePath = require('../../../../util/humanize-path')
 const logo = require('../../../../util/output/logo')
 const Now = require('../../util/')
 const NowAlias = require('../../util/alias')
 const promptBool = require('../../../../util/input/prompt-bool')
+const stamp = require('../../../../util/output/stamp')
 const strlen = require('../../util/strlen')
 const toHost = require('../../util/to-host')
 const wait = require('../../../../util/output/wait')
@@ -274,15 +274,14 @@ async function ls (ctx, opts, args, output): Promise<number> {
     return 1
   }
 
-  const fetchStart = new Date()
+  
+  const fetchStamp = stamp()
   const aliases = await alias.ls()
-
   aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
-
   log(
     `${
       plural('alias', aliases.length, true)
-    } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - fetchStart)}`
+    } found under ${chalk.bold(contextName)} ${fetchStamp()}`
   )
 
   print('\n')
@@ -354,8 +353,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
     return 1;
   }
 
-  const start = new Date()
-
+  const removeStamp = stamp()
   try {
     const confirmation = opts['--yes'] || await confirmDeploymentRemoval(alias)
     if (!confirmation) {
@@ -369,8 +367,7 @@ async function rm (ctx, opts, args, output): Promise<number> {
     return 1
   }
 
-  const elapsed = ms(new Date() - start)
-  console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(alias.alias)} removed [${elapsed}]`)
+  console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`)
   return 0
 }
 
@@ -410,7 +407,7 @@ async function set(ctx, opts, args, output): Promise<number> {
   // Find the targets to perform the alias
   const targets = await getTargetsForAlias(output, args, opts['--local-config'])
   if (targets instanceof Errors.CantFindConfig) {
-    output.error(`Couldn't find a configuration file at \n    ${targets.meta.paths.join('\n    ')}.`)
+    output.error(`Couldn't find a project configuration file at \n    ${targets.meta.paths.join('\n    ')}`)
     return 1
   } else if (targets instanceof Errors.NoAliasInConfig) {
     output.error(`Couldn't find a an alias in config`)
@@ -447,7 +444,7 @@ async function set(ctx, opts, args, output): Promise<number> {
       output.error(`No permission to access deployment "${deployment.meta.id}" under ${chalk.bold(deployment.meta.context)}`)
       return 1
     } else if (deployment === null) {
-      output.error(`Couldn't find a deployment to alias. Please provide one from the command line.`);
+      output.error(`Couldn't find a deployment to alias. Please provide one as an argument.`);
       return 1
     }
 
@@ -474,46 +471,24 @@ export type SetupDomainError =
   Errors.DomainVerificationFailed |
   Errors.NeedUpgrade |
   Errors.PaymentSourceNotFound |
-  Errors.UnableToResolveDNSExternal |
-  Errors.UnableToResolveDNSInternal |
   Errors.UserAborted
 
 function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainError | Other): 1 | Other {
   if (error instanceof Errors.DomainVerificationFailed) {
-    output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
+    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`)
+    output.print(`  Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.\n`)
     output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
-    output.print(`\n  Alternatively, make sure to:`)
-    output.print(`\n  ${chalk.gray('-')} Verify the domain by adding a TXT record on your DNS server: _now.${error.meta.domain}: ${error.meta.token}`)
-    output.print(
+    output.print(zeitWorldTable() + '\n');
+    output.print(`\n  As an alternative, you can add following records to your DNS settings:\n`)
+    output.print(dnsTable([
+      ['_now', 'TXT', error.meta.token],
       error.meta.subdomain === null
-      ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record for <domain>.\n`
-      : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${error.meta.subdomain}'.\n`
-    )
-    return 1
-  } else if (error instanceof Errors.UnableToResolveDNSExternal) {
-    output.error(`Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.`)
-    output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim('96.45.80.1')}\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim('46.31.236.1')}\n`)
-    output.print(`  ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim('43.247.170.1')}\n`)
-    output.print(`\n  Alternatively, make sure to:`)
-    output.print(
-      error.meta.subdomain === null
-        ? `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding an ${chalk.dim('ALIAS')} record.\n`
-        : `\n  ${chalk.gray('-')} Ensure it resolves to ${chalk.underline('alias.zeit.co')} by adding a ${chalk.dim('CNAME')} record with name '${error.meta.subdomain}'.\n`
-    )
-    return 1
-  } else if (error instanceof Errors.UnableToResolveDNSInternal) {
-    output.error(
-      `We configured the DNS settings for your alias, but we were unable to ` +
-      `verify that they've propagated. Please try the alias again later.`
-    )
+        ? ['', 'ALIAS', 'alias.zeit.co']
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+    ], '  ') + '\n');
     return 1
   } else if (error instanceof Errors.DomainPermissionDenied) {
-    output.error(`You don't have permissions over domain ${error.meta.domain} under ${chalk.bold(error.meta.context)}.`)
+    output.error(`You don't have permissions over domain ${chalk.underline(error.meta.domain)} under ${chalk.bold(error.meta.context)}.`)
     return 1
   } else if (error instanceof Errors.PaymentSourceNotFound) {
     output.error(`No credit cards found to buy the domain. Please run ${cmd('now cc add')}.`)
@@ -522,47 +497,93 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
     return 1
   } else if (error instanceof Errors.DomainNotVerified) {
-    output.error(`We couldn't verify the domain ${error.meta.domain}. Please try again later`)
+    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}. Please try again later`)
     return 1
   } else if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(`Couldn't find nameservers for the domain ${error.meta.domain}`)
-    return 1
-  } else if (error instanceof Errors.UserAborted) {
+    output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`)
     return 1
   } else if (error instanceof Errors.DNSPermissionDenied) {
-    output.error(`You don't have permissions to access the DNS records for ${error.meta.domain}`)
+    output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
+    return 1
+  } else if (error instanceof Errors.UserAborted) {
     return 1
   } else {
     return error
   }
 }
 
+function zeitWorldTable() {
+  return table([
+    [chalk.underline('a.zeit.world'), chalk.dim('96.45.80.1')],
+    [chalk.underline('b.zeit.world'), chalk.dim('46.31.236.1')],
+    [chalk.underline('c.zeit.world'), chalk.dim('43.247.170.1')],
+  ], {
+    align: ['l', 'l'],
+    hsep: ' '.repeat(8),
+    stringLength: strlen
+  }).replace(/^(.*)/gm, '    $1')
+}
+
+function dnsTable(rows, extraSpace = '') {
+  return table([
+    ['name', 'type', 'value'].map(v => chalk.gray(v)),
+    ...rows
+  ], {
+    align: ['l', 'l', 'l'],
+    hsep: ' '.repeat(8),
+    stringLength: strlen
+  }).replace(/^(.*)/gm, `${extraSpace}  $1`)
+}
+
 type CreateAliasError =
   Errors.AliasInUse |
   Errors.DeploymentNotFound |
-  Errors.InvalidAlias | 
-  Errors.DomainPermissionDenied |
   Errors.DeploymentPermissionDenied |
-  Errors.NeedUpgrade
+  Errors.DomainConfigurationError |
+  Errors.DomainPermissionDenied |
+  Errors.DomainValidationRunning |
+  Errors.InvalidAlias | 
+  Errors.NeedUpgrade |
+  Errors.TooManyCertificates
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
   if (error instanceof Errors.AliasInUse) {
     output.error(`The alias ${chalk.dim(error.meta.alias)} is a deployment URL or it's in use by a different team.`)
     return 1
   } else if (error instanceof Errors.DeploymentNotFound) {
-    output.error(`Failed to find deployment "${error.meta.id}" under ${chalk.bold(error.meta.context)}`)
+    output.error(`Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(error.meta.context)}`)
     return 1
   } else if (error instanceof Errors.InvalidAlias ) {
     output.error(`Invalid alias. Nested domains are not supported.`)
     return 1
   } else if (error instanceof Errors.DomainPermissionDenied) {
-    output.error(`No permission to access domain "${error.meta.domain}" under ${chalk.bold(error.meta.context)}`)
+    output.error(`No permission to access domain ${chalk.underline(error.meta.domain)} under ${chalk.bold(error.meta.context)}`)
     return 1
   } else if (error instanceof Errors.DeploymentPermissionDenied) {
-    output.error(`No permission to access deployment "${error.meta.id}" under ${chalk.bold(error.meta.context)}`)
+    output.error(`No permission to access deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(error.meta.context)}`)
     return 1
   } else if (error instanceof Errors.NeedUpgrade) {
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+    return 1
+  } else if (error instanceof Errors.DomainConfigurationError) {
+    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`)
+    if (error.meta.external) {
+      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`)
+      output.print(dnsTable([
+        error.meta.subdomain === null
+          ? ['', 'ALIAS', 'alias.zeit.co']
+          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+      ]) + '\n');
+    } else {
+      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
+      output.print(`  Please try again later.\n`)
+    }
+    return 1
+  } else if (error instanceof Errors.TooManyCertificates) {
+    output.error(`Too many certificates requested for the domain ${chalk.underline(error.meta.domain)}`)
+    return 1
+  } else if (error instanceof Errors.DomainValidationRunning) {
+    output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`)
     return 1
   } else {
     return error

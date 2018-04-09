@@ -1,7 +1,7 @@
 // @flow
 import chalk from 'chalk'
 import plural from 'pluralize'
-import promptBool from './prompt-bool'
+import stamp from '../../../../util/output/stamp'
 
 import * as Errors from './errors'
 import { Now, Output } from './types'
@@ -13,6 +13,7 @@ import getDeploymentDownscalePresets from './get-deployment-downscale-presets'
 import getPreviousAlias from './get-previous-alias'
 import setDeploymentScale from './set-deployment-scale'
 import setupDomain from './setup-domain'
+import promptBool from './prompt-bool'
 import waitForScale from './wait-for-scale'
 import type { Alias, Deployment } from './types'
 
@@ -40,8 +41,10 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   // If there was a prev deployment  that wasn't static we have to check if we should scale
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC' && deployment.type !== 'STATIC') {
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
+      const scaleStamp = stamp()
       await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale)
       await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+      output.success(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
     } else {
       output.debug(`Both deployments have the same scaling rules.`)
     }
@@ -60,8 +63,6 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
       (result instanceof Errors.DomainVerificationFailed) ||
       (result instanceof Errors.NeedUpgrade) ||
       (result instanceof Errors.PaymentSourceNotFound) ||
-      (result instanceof Errors.UnableToResolveDNSExternal) ||
-      (result instanceof Errors.UnableToResolveDNSInternal) ||
       (result instanceof Errors.UserAborted)
     ) {
       return result
@@ -71,18 +72,21 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   // Create the alias and the certificate if it's missing
   const record = await createAlias(output, now, deployment, alias, contextName)
   if (
-    (record instanceof Errors.DomainPermissionDenied) ||
+    (record instanceof Errors.AliasInUse) ||
     (record instanceof Errors.DeploymentNotFound) ||
-    (record instanceof Errors.NeedUpgrade) ||
+    (record instanceof Errors.DomainConfigurationError) ||
+    (record instanceof Errors.DomainPermissionDenied) ||
+    (record instanceof Errors.DomainValidationRunning) ||
     (record instanceof Errors.InvalidAlias) ||
-    (record instanceof Errors.AliasInUse)
+    (record instanceof Errors.NeedUpgrade) ||
+    (record instanceof Errors.TooManyCertificates)
   ) {
     return record
   }
 
   // Downscale if the previous deployment is not static and doesn't have the minimal presets
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
-    if (deploymentShouldDowscale(now, prevDeployment)) {
+    if (await deploymentShouldDowscale(output, now, prevDeployment)) {
       await setDeploymentScale(output, now, prevDeployment.uid, getDeploymentDownscalePresets(prevDeployment))
       output.success(`Previous deployment ${prevDeployment.url} downscaled`);
     }

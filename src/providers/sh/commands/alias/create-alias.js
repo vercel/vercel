@@ -21,8 +21,16 @@ async function createAlias(output: Output, now: Now, deployment: Deployment, ali
     // If the certificate is missing we create it without expecting failures
     // then we call back the createAlias function
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      await createCertificate(output, now, alias)
-      return createAlias(output, now, deployment, alias, contextName)
+      const cert = await createCertificate(output, now, alias)
+      if (
+        (cert instanceof Errors.DomainConfigurationError) ||
+        (cert instanceof Errors.DomainValidationRunning) ||
+        (cert instanceof Errors.TooManyCertificates)
+      ) {
+        return cert
+      } else {
+        return createAlias(output, now, deployment, alias, contextName)
+      }
     }
 
     // The alias already exists so we fail in silence returning the id

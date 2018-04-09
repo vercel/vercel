@@ -47,26 +47,6 @@ export class DeploymentNotFound extends NowError<'DEPLOYMENT_NOT_FOUND', {id: st
 /**
  * SetupDomainErrors
  */
-export class UnableToResolveDNSInternal extends NowError<'UNABLE_TO_RESOLVE_INTERNAL', {domain: string}> {
-  constructor(domain: string) {
-    super({
-      code: 'UNABLE_TO_RESOLVE_INTERNAL',
-      meta: { domain },
-      message: `We have configure the DNS settings for ${domain} but couldn't verify its propagation`
-    })
-  }
-}
-
-export class UnableToResolveDNSExternal extends NowError<'UNABLE_TO_RESOLVE_EXTERNAL', {domain: string, subdomain: string}> {
-  constructor(domain: string, subdomain: string) {
-    super({
-      code: 'UNABLE_TO_RESOLVE_EXTERNAL',
-      meta: { domain, subdomain },
-      message: `We can't verify that the DNS records for ${subdomain}.${domain} are resolving to now.`
-    })
-  }
-}
-
 export class DomainPermissionDenied extends NowError<'DOMAIN_PERMISSION_DENIED', {domain: string, context: string}> {
   constructor(domain: string, context: string) {
     super({
@@ -206,6 +186,46 @@ export class CantParseJSONFile extends NowError<'CANT_PARSE_JSON_FILE', {file: s
       code: 'CANT_PARSE_JSON_FILE',
       meta: { file },
       message: `Can't parse json file`
+    })
+  }
+}
+
+export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERROR', {domain: string, subdomain: string, external: boolean}> {
+  constructor(domain: string, subdomain: string, external: boolean) {
+    super({
+      code: 'DOMAIN_CONFIGURATION_ERROR',
+      meta: { domain, subdomain, external },
+      message: `The domain is unreachable to solve the HTTP challenge needed for the certificate.`
+    })
+  }
+}
+
+export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_CERT', {}> {
+  constructor() {
+    super({
+      code: 'CANT_GENERATE_WILDCARD_CERT',
+      meta: {},
+      message: `We can't generate a certificate for an external domain`
+    })
+  }
+}
+
+export class TooManyCertificates extends NowError<'TOO_MANY_CERTIFICATES', {domain: string}> {
+  constructor(domain: string) {
+    super({
+      code: 'TOO_MANY_CERTIFICATES',
+      meta: { domain },
+      message: `Too many certificates requested for the same domain ${domain}`
+    })
+  }
+}
+
+export class DomainValidationRunning extends NowError<'DOMAIN_VALIDATION_RUNNING', {domain: string}> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_VALIDATION_RUNNING',
+      meta: { domain },
+      message: `A domain verification is already in course for ${domain}`
     })
   }
 }

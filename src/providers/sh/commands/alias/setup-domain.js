@@ -15,7 +15,7 @@ import { Output, Now } from './types'
 import * as Errors from './errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { subdomain, domain } = psl.parse(alias)
+  const { domain } = psl.parse(alias)
 
   // In case the domain is avilable, we have to purchase
   const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
@@ -45,12 +45,6 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     )
 
     if (!nameservers.every(ns => ns.endsWith('.zeit.world'))) {
-      // The nameservers are not pointing to zeit world so we have to check if the
-      // DNS are resolving to now. In case they are we can proceed to add and verify
-      if (!await domainResolvesToNow(output, alias, { retries: 5 })) {
-        return new Errors.UnableToResolveDNSExternal(domain, subdomain)
-      }
-
       // If it doesn't have the nameserver pointing to now we have to create the
       // domain knowing that it should be verified via a DNS TXT record.
       const verified = await verifyDomain(now, alias, contextName, { isExternal: true })
@@ -66,7 +60,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       }
     } else {
       // We have to create the domain knowing that the nameservers are zeit.world
-      output.log(`Detected ${chalk.bold(chalk.underline('zeit.world'))} nameservers! Setting up domain...`)
+      output.debug(`Detected ${chalk.bold(chalk.underline('zeit.world'))} nameservers! Setting up domain...`)
       const verified = await verifyDomain(now, alias, contextName, { isExternal: false })
       if (
         (verified instanceof Errors.DomainNotVerified) ||
@@ -83,13 +77,6 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       const result = await setupDNSRecords(output, now, alias, domain)
       if (result instanceof Errors.DNSPermissionDenied) {
         return result
-      }
-
-      // If it doesn't resolve here it means that everything is setup but the
-      // propagation is not done so we invite the user to try later.
-      output.log(`DNS Configured! Verifying propagation…`)
-      if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
-        return new Errors.UnableToResolveDNSInternal(alias)
       }
     }
   } else {
@@ -115,12 +102,6 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         const result = await setupDNSRecords(output, now, alias, domain)
         if (result instanceof Errors.DNSPermissionDenied) {
           return result
-        }
-
-        // Verify that the DNS records are ready
-        output.log(`DNS Configured! Verifying propagation…`)
-        if (!await domainResolvesToNow(output, alias, { retries: 10 })) {
-          return new Errors.UnableToResolveDNSInternal(alias)
         }
       }
     }

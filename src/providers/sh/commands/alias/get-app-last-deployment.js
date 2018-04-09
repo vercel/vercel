@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import wait from '../../../../util/output/wait'
 
 import { Output, Now } from './types'
-import fetchDeployment from './get-deployment'
+import fetchDeploymentByIdOrHost from './get-deployment-by-id-or-host'
 import fetchDeploymentsByAppName from './get-deployments-by-appname'
 import type { User } from './types'
 
@@ -25,7 +25,7 @@ async function getAppLastDeployment(output: Output, now: Now, appName: string, u
 
   // Try to fetch deployment details
   return deploymentItem
-    ? await fetchDeployment(output, now, contextName, deploymentItem.uid)
+    ? await fetchDeploymentByIdOrHost(output, now, contextName, deploymentItem.uid)
     : null
 }
 

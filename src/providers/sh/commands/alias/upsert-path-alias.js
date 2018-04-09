@@ -22,8 +22,6 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[],alias:
       (result instanceof Errors.DomainVerificationFailed) ||
       (result instanceof Errors.NeedUpgrade) ||
       (result instanceof Errors.PaymentSourceNotFound) ||
-      (result instanceof Errors.UnableToResolveDNSExternal) ||
-      (result instanceof Errors.UnableToResolveDNSInternal) ||
       (result instanceof Errors.UserAborted)
     ) {
       return result
@@ -44,8 +42,16 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[],alias:
     // If the certificate is missing we create it without expecting failures
     // then we call back upsertPathAliasRules
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      await createCertificate(output, now, alias)
-      return upsertPathAlias(output, now, rules, alias, contextName)
+      const cert = await createCertificate(output, now, alias)
+      if (
+        (cert instanceof Errors.DomainConfigurationError) ||
+        (cert instanceof Errors.DomainValidationRunning) ||
+        (cert instanceof Errors.TooManyCertificates)
+      ) {
+        return cert
+      } else {
+        return upsertPathAlias(output, now, rules, alias, contextName)
+      }
     }
 
     // The alias already exists so we fail in silence returning the id
