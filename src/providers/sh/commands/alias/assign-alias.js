@@ -21,7 +21,7 @@ import type { Alias, Deployment } from './types'
 const isTTY = process.stdout.isTTY
 const NOW_SH_REGEX = /\.now\.sh$/
 
-async function assignAlias(output: Output, now: Now, deployment: Deployment, alias: string, contextName: string) {
+async function assignAlias(output: Output, now: Now, deployment: Deployment, alias: string, contextName: string, noVerify: boolean) {
   const prevAlias = await getPreviousAlias(now, alias)
 
   // Ask for a confirmation if there are rules defined
@@ -43,7 +43,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
       const scaleStamp = stamp()
       await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale)
-      await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+      if (!noVerify) { await waitForScale(output, now, deployment.uid, prevDeployment.scale) }
       output.success(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
     } else {
       output.debug(`Both deployments have the same scaling rules.`)

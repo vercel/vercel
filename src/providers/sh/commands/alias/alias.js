@@ -59,6 +59,7 @@ const help = () => {
     'TOKEN'
   )}             Login token
     -T, --team                          Set a custom team scope
+    -n, --no-verify                     Don't wait until instance count meets the previous alias constraints
 
   ${chalk.dim('Examples:')}
 
@@ -121,6 +122,8 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--json': Boolean,
 
       '--rules': String,
+      '--no-verify': Boolean,
+      '-n': '--no-verify',
       '-r': '--rules'
     })
   } catch (err) {
@@ -370,7 +373,7 @@ async function set(ctx, opts, args, output): Promise<number> {
   const { user, currentTeam } = sh;
   const contextName = getContextName(sh);
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled, ['--rules']: rulesPath } = opts;
+  const { ['--debug']: debugEnabled, ['--rules']: rulesPath, ['--no-verify']: noVerify } = opts;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const start = Date.now()
 
@@ -449,7 +452,7 @@ async function set(ctx, opts, args, output): Promise<number> {
     // Assign the alias for each of the targets in the array
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`)
-      const record = await assignAlias(output, now, deployment, target, contextName)
+      const record = await assignAlias(output, now, deployment, target, contextName, noVerify)
       if (handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, record)) !== 1) {
         console.log(`${chalk.cyan('> Success!')} ${target} now points to ${chalk.bold(deployment.url)}! ${chalk.grey(
           '[' + ms(Date.now() - start) + ']'
