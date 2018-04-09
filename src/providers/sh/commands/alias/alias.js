@@ -391,10 +391,16 @@ async function set(ctx, opts, args, output): Promise<number> {
   // Read the path alias rules in case there is is given
   const rules = await getRulesFromFile(rulesPath)
   if (rules instanceof Errors.FileNotFound) {
-    output.error(`Can't find the provided rules file at location '${rules.meta.file}'.`);    
+    output.error(`Can't find the provided rules file at location:`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`)
     return 1
   } else if (rules instanceof Errors.CantParseJSONFile) {
-    output.error(`Error parsing provided rules.json file at location '${rules.meta.file}'.`);
+    output.error(`Error parsing provided rules.json file at location:`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`)
+    return 1
+  } else if (rules instanceof Errors.RulesFileValidationError) {
+    output.error(`Path Alias validation error: ${rules.meta.message}`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.location}\n`)
     return 1
   }
 
@@ -407,7 +413,7 @@ async function set(ctx, opts, args, output): Promise<number> {
   // Find the targets to perform the alias
   const targets = await getTargetsForAlias(output, args, opts['--local-config'])
   if (targets instanceof Errors.CantFindConfig) {
-    output.error(`Couldn't find a project configuration file at \n    ${targets.meta.paths.join('\n    ')}`)
+    output.error(`Couldn't find a project configuration file at \n    ${targets.meta.paths.join(' or\n    ')}`)
     return 1
   } else if (targets instanceof Errors.NoAliasInConfig) {
     output.error(`Couldn't find a an alias in config`)
@@ -544,6 +550,7 @@ type CreateAliasError =
   Errors.DomainValidationRunning |
   Errors.InvalidAlias | 
   Errors.NeedUpgrade |
+  Errors.RuleValidationFailed |
   Errors.TooManyCertificates
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
@@ -584,6 +591,10 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     return 1
   } else if (error instanceof Errors.DomainValidationRunning) {
     output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`)
+    return 1
+  } else if (error instanceof Errors.RuleValidationFailed) {
+    output.error(`Rule validation error: ${error.meta.message}.`)
+    output.print(`  Make sure your rules file is written correctly.\n`)
     return 1
   } else {
     return error

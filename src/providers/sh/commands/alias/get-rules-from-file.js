@@ -1,7 +1,8 @@
 // @flow
 import path from 'path'
-import { FileNotFound } from './errors'
-import { NowError } from './now-error'
+import humanizePath from '../../../../util/humanize-path'
+import { CantParseJSONFile, FileNotFound, RulesFileValidationError } from './errors'
+import validatePathAliasRules from './validate-path-alias-rules'
 import readJSONFile from './read-json-file'
 import type { PathRule } from './types'
 
@@ -18,12 +19,17 @@ async function getRulesFromFile(filePath: string) {
 async function readRulesFile(rulesPath: string) {
   const fullPath = path.resolve(process.cwd(), rulesPath)
   const result = await readJSONFile(fullPath)
-  if (result instanceof NowError) {
+  if (result instanceof CantParseJSONFile) {
     return result
+  } else if  (result === null) {
+    return new FileNotFound(fullPath)
+  } else if (!result.rules) {
+    return new RulesFileValidationError(humanizePath(fullPath), 'Your rules file must include a rules field')
   }
 
-  if (result === null) {
-    return new FileNotFound(fullPath)
+  const error = validatePathAliasRules(humanizePath(fullPath), result.rules)
+  if (error instanceof RulesFileValidationError) {
+    return error
   }
 
   const json: JSONRules = result

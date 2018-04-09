@@ -4,7 +4,7 @@ import { Output } from './types'
 
 async function promptBool(output: Output, message: string) {
   return new Promise((resolve) => {
-    output.print(`${chalk.gray('>')} ${chalk.bold.red(message)} ${chalk.gray('[y/N] ')}`)
+    output.print(`${chalk.gray('>')} ${message} ${chalk.gray('[y/N] ')}`)
     process.stdin
       .on('data', d => {
         process.stdin.pause()

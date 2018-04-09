@@ -229,3 +229,23 @@ export class DomainValidationRunning extends NowError<'DOMAIN_VALIDATION_RUNNING
     })
   }
 }
+
+export class RulesFileValidationError extends NowError<'PATH_ALIAS_VALIDATION_ERROR', {location: string, message: string}> {
+  constructor(location: string, message: string) {
+    super({
+      code: 'PATH_ALIAS_VALIDATION_ERROR',
+      meta: { location, message },
+      message: `The provided rules format in file for path alias are invalid`
+    })
+  }
+}
+
+export class RuleValidationFailed extends NowError<'RULE_VALIDATION_FAILED', { message: string }> {
+  constructor(message: string) {
+    super({
+      code: 'RULE_VALIDATION_FAILED',
+      meta: { message },
+      message: `The server validation for rules failed`
+    })
+  }
+}

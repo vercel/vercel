@@ -97,7 +97,8 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
 
 async function warnAliasOverwrite(output: Output, alias: Alias) {
   if (isTTY) {
-    const confirmed: boolean = await promptBool(output, chalk.bold.red('Are you sure?'))
+    const msg = `Are you sure you want to update ${alias.alias} to be a normal alias?`
+    const confirmed: boolean = await promptBool(output, msg)
     if (!confirmed) {
       return new Errors.UserAborted()
     }

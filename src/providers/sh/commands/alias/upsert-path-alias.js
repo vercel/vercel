@@ -10,7 +10,7 @@ import setupDomain from './setup-domain'
 
 const NOW_SH_REGEX = /\.now\.sh$/
 
-async function upsertPathAlias(output: Output,now: Now, rules: PathRule[],alias: string,contextName: string) {
+async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias: string,contextName: string) {
   if (!NOW_SH_REGEX.test(alias)) {
     output.log(`${chalk.bold(chalk.underline(alias))} is a custom domain.`)
     const result = await setupDomain(output, now, alias, contextName)
@@ -58,6 +58,11 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[],alias:
     if (error.status === 409) {
       const sameRecord: AliasRecord = { uid: error.uid, alias: error.alias }
       return sameRecord
+    }
+
+    // There was a validation error for a rule
+    if (error.code === 'rule_validation_failed') {
+      return new Errors.RuleValidationFailed(error.serverMessage)
     }
 
     // We do not support nested subdomains
