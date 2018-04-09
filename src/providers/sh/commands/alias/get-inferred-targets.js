@@ -1,7 +1,7 @@
 // @flow
 import getConfig from './get-config'
-import { Output } from './types'
-import { NoAliasInConfig, InvalidAliasInConfig, CantParseJSONFile, CantFindConfig } from './errors'
+import { Output } from '../../util/types'
+import { NoAliasInConfig, InvalidAliasInConfig, CantParseJSONFile, CantFindConfig } from '../../util/errors'
 
 async function getInferredTargets(output: Output, localConfigPath: string | void) {
   // Read the configuration file from the best guessed location

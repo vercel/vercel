@@ -1,8 +1,7 @@
 // @flow
 import wait from '../../../../util/output/wait'
-
-import { Now } from './types'
-import { DomainPermissionDenied } from './errors'
+import { DomainPermissionDenied } from '../../util/errors'
+import { Now } from '../../util/types'
 
 export type DomainInfo = {
   uid: string,

@@ -11,8 +11,8 @@ import setupDNSRecords from './setup-dns-records'
 import verifyDomain from './verify-domain'
 
 // Types and errors
-import { Output, Now } from './types'
-import * as Errors from './errors'
+import { Output, Now } from '../../util/types'
+import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
   const { domain } = psl.parse(alias)

@@ -1,5 +1,5 @@
 // @flow
-import type { NpmDeployment, BinaryDeployment, DeploymentScale } from './types'
+import type { NpmDeployment, BinaryDeployment, DeploymentScale } from '../../util/types'
 
 function getDeploymentDownscalePresets(deployment: NpmDeployment | BinaryDeployment): DeploymentScale {
   return Object.keys(deployment.scale).reduce((result, dc) => {

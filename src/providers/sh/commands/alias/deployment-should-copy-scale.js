@@ -1,5 +1,5 @@
 // @flow
-import type { NpmDeployment, BinaryDeployment } from './types'
+import type { NpmDeployment, BinaryDeployment } from '../../util/types'
 import getScaleForDC from './get-scale-for-dc'
 
 function shouldCopyScalingAttributes(origin: NpmDeployment | BinaryDeployment, dest: NpmDeployment | BinaryDeployment) {

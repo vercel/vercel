@@ -1,5 +1,5 @@
 // @flow
-import { Now } from './types'
+import { Now } from '../../util/types'
 
 type InstancesInfo = {
   [dc: string]: {

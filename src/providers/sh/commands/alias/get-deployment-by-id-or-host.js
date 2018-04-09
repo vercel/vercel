@@ -3,9 +3,9 @@ import chalk from 'chalk'
 import toHost from '../../util/to-host'
 import wait from '../../../../util/output/wait'
 
-import { Output, Now } from './types'
-import type { Deployment } from './types'
-import { DeploymentNotFound, DeploymentPermissionDenied } from './errors'
+import { Output, Now } from '../../util/types'
+import type { Deployment } from '../../util/types'
+import { DeploymentNotFound, DeploymentPermissionDenied } from '../../util/errors'
 
 async function getDeploymentByIdOrHost(output: Output, now: Now, contextName: string, idOrHost: string) {
   const cancelWait = wait(`Fetching deployment "${idOrHost}" in ${chalk.bold(contextName)}`);

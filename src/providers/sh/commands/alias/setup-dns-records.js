@@ -1,6 +1,6 @@
 // @flow
-import { Now, Output } from './types'
-import { DNSPermissionDenied } from './errors'
+import { Now, Output } from '../../util/types'
+import { DNSPermissionDenied } from '../../util/errors'
 
 type DNSRecord = 'ALIAS' | 'CNAME'
 

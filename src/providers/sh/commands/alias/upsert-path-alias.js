@@ -1,11 +1,11 @@
 // @flow
 import chalk from 'chalk'
 import wait from '../../../../util/output/wait'
+import { Now, Output } from '../../util/types'
+import type { AliasRecord, PathRule } from '../../util/types'
 
-import { Now, Output } from './types'
-import * as Errors from './errors'
-import createCertificate from './create-certificate'
-import type { AliasRecord, PathRule } from './types'
+import * as Errors from '../../util/errors'
+import createCertForAlias from './create-cert-for-alias'
 import setupDomain from './setup-domain'
 
 const NOW_SH_REGEX = /\.now\.sh$/
@@ -42,11 +42,15 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     // If the certificate is missing we create it without expecting failures
     // then we call back upsertPathAliasRules
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertificate(output, now, alias)
+      const cert = await createCertForAlias(output, now, alias, contextName)
       if (
         (cert instanceof Errors.DomainConfigurationError) ||
+        (cert instanceof Errors.DomainPermissionDenied) ||
+        (cert instanceof Errors.DomainsShouldShareRoot) ||
         (cert instanceof Errors.DomainValidationRunning) ||
-        (cert instanceof Errors.TooManyCertificates)
+        (cert instanceof Errors.InvalidWildcardDomain) ||
+        (cert instanceof Errors.TooManyCertificates) ||
+        (cert instanceof Errors.TooManyRequests)
       ) {
         return cert
       } else {

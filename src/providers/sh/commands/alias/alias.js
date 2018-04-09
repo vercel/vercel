@@ -22,8 +22,8 @@ const strlen = require('../../util/strlen')
 const toHost = require('../../util/to-host')
 const wait = require('../../../../util/output/wait')
 
-import { Output } from './types'
-import * as Errors from './errors'
+import { Output } from '../../util/types'
+import * as Errors from '../../util/errors'
 import assignAlias from './assign-alias'
 import getDeploymentForAlias from './get-deployment-for-alias'
 import getRulesFromFile from './get-rules-from-file'
@@ -542,11 +542,14 @@ type CreateAliasError =
   Errors.DeploymentPermissionDenied |
   Errors.DomainConfigurationError |
   Errors.DomainPermissionDenied |
+  Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
   Errors.InvalidAlias | 
+  Errors.InvalidWildcardDomain |
   Errors.NeedUpgrade |
   Errors.RuleValidationFailed |
-  Errors.TooManyCertificates
+  Errors.TooManyCertificates |
+  Errors.TooManyRequests
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
   if (error instanceof Errors.AliasInUse) {
@@ -582,7 +585,7 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     }
     return 1
   } else if (error instanceof Errors.TooManyCertificates) {
-    output.error(`Too many certificates requested for the domain ${chalk.underline(error.meta.domain)}`)
+    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
     return 1
   } else if (error instanceof Errors.DomainValidationRunning) {
     output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`)
@@ -590,6 +593,17 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.RuleValidationFailed) {
     output.error(`Rule validation error: ${error.meta.message}.`)
     output.print(`  Make sure your rules file is written correctly.\n`)
+    return 1
+  } else if (error instanceof Errors.TooManyRequests) {
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    return 1
+  } else if (error instanceof Errors.InvalidWildcardDomain) {
+    // this should never happen
+    output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
+    return 1
+  } else if (error instanceof Errors.DomainsShouldShareRoot) {
+    // this should never happen either
+    output.error(`All given common names should share the same root domain.`)
     return 1
   } else {
     return error

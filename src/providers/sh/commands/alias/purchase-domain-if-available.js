@@ -9,9 +9,9 @@ import stamp from '../../../../util/output/stamp'
 import wait from '../../../../util/output/wait'
 
 // Internal utils
-import { Now, Output } from './types'
-import { NowError } from './now-error'
-import { UserAborted } from './errors'
+import { Now, Output } from '../../util/types'
+import { NowError } from '../../util/now-error'
+import { UserAborted } from '../../util/errors'
 import getDomainPrice from './get-domain-price'
 import getDomainStatus from './get-domain-status'
 import purchaseDomain from './purchase-domain'

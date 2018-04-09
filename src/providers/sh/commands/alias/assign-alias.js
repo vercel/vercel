@@ -2,9 +2,10 @@
 import chalk from 'chalk'
 import plural from 'pluralize'
 import stamp from '../../../../util/output/stamp'
+import { Now, Output } from '../../util/types'
+import type { Alias, Deployment } from '../../util/types'
+import * as Errors from '../../util/errors'
 
-import * as Errors from './errors'
-import { Now, Output } from './types'
 import createAlias from './create-alias'
 import deploymentShouldCopyScale from './deployment-should-copy-scale'
 import deploymentShouldDowscale from './deployment-should-dowscale'
@@ -15,7 +16,6 @@ import setDeploymentScale from './set-deployment-scale'
 import setupDomain from './setup-domain'
 import promptBool from './prompt-bool'
 import waitForScale from './wait-for-scale'
-import type { Alias, Deployment } from './types'
 
 // $FlowFixMe
 const isTTY = process.stdout.isTTY
@@ -76,10 +76,13 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     (record instanceof Errors.DeploymentNotFound) ||
     (record instanceof Errors.DomainConfigurationError) ||
     (record instanceof Errors.DomainPermissionDenied) ||
+    (record instanceof Errors.DomainsShouldShareRoot) ||
     (record instanceof Errors.DomainValidationRunning) ||
     (record instanceof Errors.InvalidAlias) ||
+    (record instanceof Errors.InvalidWildcardDomain) ||
     (record instanceof Errors.NeedUpgrade) ||
-    (record instanceof Errors.TooManyCertificates)
+    (record instanceof Errors.TooManyCertificates) ||
+    (record instanceof Errors.TooManyRequests)
   ) {
     return record
   }

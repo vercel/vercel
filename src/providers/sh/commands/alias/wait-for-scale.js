@@ -7,8 +7,8 @@ import { tick } from '../../../../util/output/chars'
 import elapsed from '../../../../util/output/elapsed'
 import wait from '../../../../util/output/wait'
 
-import { Output, Now } from './types'
-import type { DeploymentScale } from './types'
+import { Output, Now } from '../../util/types'
+import type { DeploymentScale } from '../../util/types'
 import matchDeploymentScale from './match-deployment-scale'
 
 async function waitForScale(output: Output, now: Now, deploymentId: string, scale: DeploymentScale) {

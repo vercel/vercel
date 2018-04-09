@@ -2,7 +2,7 @@
 import fetch from 'node-fetch'
 import retry from 'async-retry'
 import wait from '../../../../util/output/wait'
-import { Output } from './types'
+import { Output } from '../../util/types'
 
 type RetryConfig = {
   retries?: number,

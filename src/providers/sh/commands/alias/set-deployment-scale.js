@@ -1,8 +1,8 @@
 // @flow
 import chalk from 'chalk'
 import wait from '../../../../util/output/wait'
-import { Output, Now } from './types'
-import type { DeploymentScale } from './types'
+import { Output, Now } from '../../util/types'
+import type { DeploymentScale } from '../../util/types'
 
 async function setScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScale) {
   const scalesMsg = formatScaleArgs(scaleArgs)

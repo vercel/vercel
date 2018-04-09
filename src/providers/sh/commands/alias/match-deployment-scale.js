@@ -1,6 +1,6 @@
 // @flow
-import { Output, Now } from './types'
-import type { DeploymentScale } from './types'
+import { Output, Now } from '../../util/types'
+import type { DeploymentScale } from '../../util/types'
 import getDeploymentInstances from './get-deployment-instances'
 
 const AUTO = 'auto'

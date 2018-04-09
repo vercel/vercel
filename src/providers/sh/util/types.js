@@ -33,6 +33,38 @@ export type Config = {
   name?: string,
 }
 
+export interface CLIContext {
+  authConfig: {
+    credentials: Array<{
+      provider: 'sh',
+      token: string,
+    }>,
+  },
+  argv: string[],
+  apiUrl: string,
+  config: {
+    updateChannel: string,
+    type: string,
+    files: string[],
+    forwardNpm: boolean,
+    sh: {
+      user: {
+        uid: string,
+        email: string,
+        username: string,
+        avatar: string
+      },
+      currentTeam: {
+        id: string,
+        slug: string,
+        name: string,
+        creatorId: string,
+        avatar: string,
+      }
+    }
+  },
+}
+
 export type Scale = {
   min: number,
   max: number
@@ -115,3 +147,28 @@ export type PathRule = {
   pathname?: string,
   method?: Array<string>,
 }
+
+export type Certificate = {
+  uid: string,
+  autoRenew: boolean,
+  cns: string[],
+  created: string,
+  expiration: string
+}
+
+export type CLIOptions<T> = {
+  '--help'?: string,
+  '--debug'?: string,
+  '--token'?: string,
+  '--team'?: string,
+  '--local-config'?: string,
+  '--global-config'?: string,
+  '--api'?: string,
+} & T
+
+export type CLICertsOptions = CLIOptions<{
+  '--overwrite': string,
+  '--crt': string,
+  '--key': string,
+  '--ca': string,
+}>
