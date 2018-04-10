@@ -12,7 +12,6 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
   const wildcardCns = [domain, `*.${domain}`]
   let cert = await createCertForCns(now, wildcardCns, context)
   if (
-    (cert instanceof Errors.DomainConfigurationError) ||
     (cert instanceof Errors.DomainPermissionDenied) ||
     (cert instanceof Errors.DomainsShouldShareRoot) ||
     (cert instanceof Errors.DomainValidationRunning) ||
@@ -24,7 +23,12 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
     return cert
   }
 
-  if (cert instanceof Errors.CantGenerateWildcardCert) {
+  // When we can't generate a wildcard or the DNS settings are not
+  // valid we can fallback to try to generate a normal certificate
+  if (
+    (cert instanceof Errors.CantGenerateWildcardCert) ||
+    (cert instanceof Errors.DomainConfigurationError)
+  ) {
     output.debug(`Falling back to a normal certificate`)
     cert = await createCertForCns(now, [alias], context)
     if (
