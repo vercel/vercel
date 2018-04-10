@@ -33,6 +33,38 @@ export type Config = {
   name?: string,
 }
 
+export interface CLIContext {
+  authConfig: {
+    credentials: Array<{
+      provider: 'sh',
+      token: string,
+    }>,
+  },
+  argv: string[],
+  apiUrl: string,
+  config: {
+    updateChannel: string,
+    type: string,
+    files: string[],
+    forwardNpm: boolean,
+    sh: {
+      user: {
+        uid: string,
+        email: string,
+        username: string,
+        avatar: string
+      },
+      currentTeam: {
+        id: string,
+        slug: string,
+        name: string,
+        creatorId: string,
+        avatar: string,
+      }
+    }
+  },
+}
+
 export type Scale = {
   min: number,
   max: number
@@ -110,8 +142,51 @@ export type AliasRecord = {
   oldDeploymentId?: string
 }
 
+export type HTTPChallengeInfo = {
+  canSolveForRootDomain: boolean,
+  canSolveForSubdomain: boolean,
+}
+
 export type PathRule = {
   dest: string,
   pathname?: string,
   method?: Array<string>,
 }
+
+export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT'
+
+export type DNSRecord = {
+  id: string,
+  slug: string,
+  name: string,
+  type: DNSRecordType,
+  value: string,
+  creator: string,
+  created: number,
+  updated: number
+}
+
+export type Certificate = {
+  uid: string,
+  autoRenew: boolean,
+  cns: string[],
+  created: string,
+  expiration: string
+}
+
+export type CLIOptions<T> = {
+  '--help'?: string,
+  '--debug'?: string,
+  '--token'?: string,
+  '--team'?: string,
+  '--local-config'?: string,
+  '--global-config'?: string,
+  '--api'?: string,
+} & T
+
+export type CLICertsOptions = CLIOptions<{
+  '--overwrite': string,
+  '--crt': string,
+  '--key': string,
+  '--ca': string,
+}>

@@ -1,6 +1,6 @@
 // @flow
 import fs from 'fs-extra'
-import { CantParseJSONFile } from './errors'
+import { CantParseJSONFile } from '../../util/errors'
 
 async function readJSONFile(file: string): Promise<Object | null | CantParseJSONFile> {
   const content = await readFileSafe(file)

@@ -1,12 +1,18 @@
 // @flow
 import wait from '../../../../util/output/wait'
+import type { AliasRecord, Deployment, HTTPChallengeInfo } from '../../util/types'
+import { Now, Output } from '../../util/types'
+import * as Errors from '../../util/errors'
+import createCertForAlias from './create-cert-for-alias'
 
-import * as Errors from './errors'
-import { Now, Output } from './types'
-import createCertificate from './create-certificate'
-import type { AliasRecord, Deployment } from './types'
-
-async function createAlias(output: Output, now: Now, deployment: Deployment, alias: string, contextName: string) {
+async function createAlias(
+  output: Output, 
+  now: Now, 
+  deployment: Deployment, 
+  alias: string, 
+  contextName: string, 
+  httpChallengeInfo?: HTTPChallengeInfo,
+) {
   const cancelMessage = wait(`Creating alias`)
   try {
     const record: AliasRecord = await now.fetch(`/now/deployments/${deployment.uid}/aliases`, {
@@ -21,15 +27,19 @@ async function createAlias(output: Output, now: Now, deployment: Deployment, ali
     // If the certificate is missing we create it without expecting failures
     // then we call back the createAlias function
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertificate(output, now, alias)
+      const cert = await createCertForAlias(output, now, alias, contextName, httpChallengeInfo)
       if (
         (cert instanceof Errors.DomainConfigurationError) ||
+        (cert instanceof Errors.DomainPermissionDenied) ||
+        (cert instanceof Errors.DomainsShouldShareRoot) ||
         (cert instanceof Errors.DomainValidationRunning) ||
-        (cert instanceof Errors.TooManyCertificates)
+        (cert instanceof Errors.InvalidWildcardDomain) ||
+        (cert instanceof Errors.TooManyCertificates) ||
+        (cert instanceof Errors.TooManyRequests)
       ) {
         return cert
       } else {
-        return createAlias(output, now, deployment, alias, contextName)
+        return createAlias(output, now, deployment, alias, contextName, httpChallengeInfo)
       }
     }
 

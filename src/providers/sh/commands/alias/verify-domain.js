@@ -3,8 +3,8 @@ import psl from 'psl'
 import retry from 'async-retry'
 import wait from '../../../../util/output/wait'
 
-import { Now } from './types'
-import { DomainNotVerified, DomainPermissionDenied, DomainVerificationFailed, NeedUpgrade } from './errors'
+import { Now } from '../../util/types'
+import * as Errors from '../../util/errors'
 
 type VerifyOptions = { isExternal: boolean }
 type VerifyInfo = {
@@ -21,18 +21,18 @@ async function verifyDomain(now: Now, alias: string, contextName: string, opts: 
     cancelMessage()
 
     if (verified === false) {
-      return new DomainNotVerified(domain)
+      return new Errors.DomainNotVerified(domain)
     }
   } catch (error) {
     cancelMessage()
     if (error.status === 403) {
       return error.code === 'custom_domain_needs_upgrade'
-        ? new NeedUpgrade()
-        : new DomainPermissionDenied(domain, contextName)
+        ? new Errors.NeedUpgrade()
+        : new Errors.DomainPermissionDenied(domain, contextName)
     }
 
     if (error.status === 401 && error.code === 'verification_failed') {
-      return new DomainVerificationFailed(domain, subdomain, error.verifyToken)
+      return new Errors.DomainVerificationFailed(domain, subdomain, error.verifyToken)
     }
 
     if (error.status !== 409) {

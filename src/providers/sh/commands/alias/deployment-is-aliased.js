@@ -1,6 +1,6 @@
 // @flow
-import { Now } from './types'
-import type { Deployment } from './types'
+import { Now } from '../../util/types'
+import type { Deployment } from '../../util/types'
 
 async function deploymentIsAliased(now: Now, deployment: Deployment) {
   const aliases = await now.listAliases()

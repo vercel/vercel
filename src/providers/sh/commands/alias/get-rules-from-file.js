@@ -1,10 +1,10 @@
 // @flow
 import path from 'path'
 import humanizePath from '../../../../util/humanize-path'
-import { CantParseJSONFile, FileNotFound, RulesFileValidationError } from './errors'
+import type { PathRule } from '../../util/types'
+import { CantParseJSONFile, FileNotFound, RulesFileValidationError } from '../../util/errors'
 import validatePathAliasRules from './validate-path-alias-rules'
 import readJSONFile from './read-json-file'
-import type { PathRule } from './types'
 
 type JSONRules = {
   rules: PathRule[]

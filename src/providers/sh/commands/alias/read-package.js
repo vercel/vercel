@@ -1,8 +1,8 @@
 // @flow
 import path from 'path'
-import { CantParseJSONFile } from './errors'
+import { CantParseJSONFile } from '../../util/errors'
 import readJSONFile from './read-json-file'
-import type { Config } from './types'
+import type { Config } from '../../util/types'
 
 export type Package = {
   name: string,

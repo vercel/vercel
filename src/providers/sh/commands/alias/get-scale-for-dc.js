@@ -1,5 +1,5 @@
 // @flow
-import type { Scale, NpmDeployment, BinaryDeployment } from './types'
+import type { Scale, NpmDeployment, BinaryDeployment } from '../../util/types'
 
 function getScaleForDC(dc: string, deployment: NpmDeployment | BinaryDeployment) {
   const dcAttrs = deployment.scale && deployment.scale[dc] || {}

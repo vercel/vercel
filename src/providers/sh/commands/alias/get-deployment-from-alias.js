@@ -1,6 +1,6 @@
 // @flow
-import { Output, Now } from './types'
-import type { Alias, Deployment } from './types'
+import { Output, Now } from '../../util/types'
+import type { Alias, Deployment } from '../../util/types'
 import fetchDeploymentByIdOrHost from './get-deployment-by-id-or-host'
 
 async function fetchDeploymentFromAlias(

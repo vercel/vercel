@@ -1,6 +1,6 @@
 // @flow
-import { Now, Output } from './types'
-import type { User } from './types'
+import { Now, Output } from '../../util/types'
+import type { User } from '../../util/types'
 import getAppLastDeployment from './get-app-last-deployment'
 import getAppName from './get-app-name'
 import fetchDeploymentByIdOrHost from './get-deployment-by-id-or-host'
