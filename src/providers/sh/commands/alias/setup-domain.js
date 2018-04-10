@@ -19,7 +19,11 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
 
   // In case the domain is avilable, we have to purchase
   const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
-  if ((purchased instanceof Errors.UserAborted) || (purchased instanceof Errors.PaymentSourceNotFound)) {
+  if (
+    (purchased instanceof Errors.UserAborted) ||
+    (purchased instanceof Errors.PaymentSourceNotFound) ||
+    (purchased instanceof Errors.DomainNotFound)
+  ) {
     return purchased
   }
 

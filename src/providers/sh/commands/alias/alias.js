@@ -541,6 +541,7 @@ type CreateAliasError =
   Errors.DeploymentNotFound |
   Errors.DeploymentPermissionDenied |
   Errors.DomainConfigurationError |
+  Errors.DomainNotFound |
   Errors.DomainPermissionDenied |
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
@@ -596,6 +597,9 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     return 1
   } else if (error instanceof Errors.TooManyRequests) {
     output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    return 1
+  } else if (error instanceof Errors.DomainNotFound) {
+    output.error(`You should buy the domain before aliasing.`)
     return 1
   } else if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen

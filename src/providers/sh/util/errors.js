@@ -97,6 +97,16 @@ export class DomainNotVerified extends NowError<'DOMAIN_NOT_VERIFIED', {domain: 
   }
 }
 
+export class DomainNotFound extends NowError<'DOMAIN_NOT_FOUND', {domain: string}> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_FOUND',
+      meta: { domain },
+      message: `The domain is available and should be purchased before running alias.`
+    })
+  }
+}
+
 export class UserAborted extends NowError<'USER_ABORTED', {}> {
   constructor() {
     super({

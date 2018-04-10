@@ -17,6 +17,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     if (
       (result instanceof Errors.DNSPermissionDenied) ||
       (result instanceof Errors.DomainNameserversNotFound) ||
+      (result instanceof Errors.DomainNotFound) ||
       (result instanceof Errors.DomainNotVerified) ||
       (result instanceof Errors.DomainPermissionDenied) ||
       (result instanceof Errors.DomainVerificationFailed) ||

@@ -11,28 +11,33 @@ import wait from '../../../../util/output/wait'
 // Internal utils
 import { Now, Output } from '../../util/types'
 import { NowError } from '../../util/now-error'
-import { UserAborted } from '../../util/errors'
+import { DomainNotFound, UserAborted } from '../../util/errors'
 import getDomainPrice from './get-domain-price'
 import getDomainStatus from './get-domain-status'
 import purchaseDomain from './purchase-domain'
 
+// $FlowFixMe
+const isTTY = process.stdout.isTTY
+
 async function purchaseDomainIfAvailable(output: Output, now: Now, domain: string, contextName: string) {
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`)
   const buyDomainStamp = stamp()
-
   const { available } = await getDomainStatus(now, domain)
 
   if (available) {
+    // If we can't prompty and the domain is available, we should fail
+    if (!isTTY) { return new DomainNotFound(domain) }
     output.debug(`Domain is available to purchase`)
+    
     const { period, price } = await getDomainPrice(now, domain)
     cancelWait()
     output.log(
-      `The domain ${domain} is ${chalk.italic('available')} to buy under ${
+      `Domain not found, but you can buy it under ${
         chalk.bold(contextName)
       }! ${buyDomainStamp()}`
     )
 
-    if (!await promptBool(`Buy now for ${chalk.bold(`$${price}`)} (${plural('yr', period, true)})?`)) {
+    if (!await promptBool(`Buy ${chalk.underline(domain)} for ${chalk.bold(`$${price}`)} (${plural('yr', period, true)})?`)) {
       output.print(eraseLines(1))
       return new UserAborted()
     }
