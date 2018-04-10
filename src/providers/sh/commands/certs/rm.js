@@ -2,11 +2,15 @@
 import chalk from 'chalk'
 import ms from 'ms'
 import table from 'text-table'
+const plural = require('pluralize')
 
-import Now from '../../util'
-import getContextName from '../../util/get-context-name'
-import stamp from '../../../../util/output/stamp'
 import { CLIContext, Output } from '../../util/types'
+import deleteCertById from '../../util/certs/delete-cert-by-id'
+import getCertById from '../../util/certs/get-cert-by-id'
+import getCerts from '../../util/certs/get-certs'
+import getContextName from '../../util/get-context-name'
+import Now from '../../util'
+import stamp from '../../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
 
 async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
@@ -23,71 +27,60 @@ async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now certs rm <id>`'
+        '`now certs rm <id or cn>`'
       )}`
     );
     now.close();
     return 1;
   }
 
-  const id = args[0]
-  const cert = await getCertById(now, id)
-
-  if (!cert) {
-    output.error(`No certificate found by id or cn "${id}" under ${chalk.bold(contextName)}`)
+  const idOrCn = args[0]
+  const certs = await getCertsToDelete(output, now, idOrCn)
+  if (certs.length === 0) {
+    output.error(`No certificates found by id or cn "${idOrCn}" under ${chalk.bold(contextName)}`)
     now.close();
     return 1;
   }
 
-  const yes = await readConfirmation(output, 'The following certificate will be removed permanently', cert)
+  const yes = await readConfirmation(output, 'The following certificates will be removed permanently', certs)
   if (!yes) {
-    output.error('User abort');
     now.close();
     return 0;
   }
 
-  await deleteCertById(now, id)
-  output.success(
-    `Certificate ${chalk.bold(
-      cert.cns.join(', ')
-    )} ${chalk.gray(`(${id})`)} removed ${rmStamp()}`
-  )
+  await Promise.all(certs.map(cert => deleteCertById(output, now, cert.uid)))
+  output.success(`${chalk.bold(plural('Certificate', certs.length, true))} removed ${rmStamp()}`)
   return 0
 }
 
-function readConfirmation(output, msg, cert) {
+async function getCertsToDelete(output: Output, now: Now, idOrCn: string) {
+  const cert = await getCertById(output, now, idOrCn)
+  return !cert
+    ? await getCerts(output, now, [idOrCn])
+    : [cert]
+}
+
+function readConfirmation(output, msg, certs) {
   return new Promise(resolve => {
-    const time = chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
-    
     output.log(msg)
-    output.print(table([[cert.uid, chalk.bold(cert.cns.join(', ')), time]], {
+    output.print(table([...certs.map(formatCertRow)], {
       align: ['l', 'r', 'l'],
       hsep: ' '.repeat(6)
     }).replace(/^(.*)/gm, '  $1') + '\n')
     output.print(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`)
-
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause()
-        resolve(d.toString().trim().toLowerCase() === 'y')
-      })
-      .resume()
+    process.stdin.on('data', d => {
+      process.stdin.pause()
+      resolve(d.toString().trim().toLowerCase() === 'y')
+    }).resume()
   })
 }
 
-async function getCertById(now, id) {
-  return (await getCerts(now)).filter(c => c.uid === id)[0]
-}
-
-async function getCerts(now) {
-  const { certs } = await now.fetch('/v3/now/certs')
-  return certs
-}
-
-async function deleteCertById(now, id) {
-  return now.fetch(`/v3/now/certs/${id}`, {
-    method: 'DELETE',
-  })
+function formatCertRow(cert) {
+  return [
+    cert.uid, 
+    chalk.bold(cert.cns.join(', ')), 
+    chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
+  ]
 }
 
 export default rm

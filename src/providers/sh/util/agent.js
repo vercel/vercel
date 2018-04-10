@@ -6,11 +6,12 @@ const https = require('https')
 // Packages
 const Sema = require('async-sema')
 const fetch = require('node-fetch')
-const {version} = require('../../../util/pkg')
+// const {version} = require('../../../util/pkg')
 const createOutput = require('../../../util/output')
 
 // TODO: Don't limit to canary
-const USE_HTTP2 = version.indexOf('canary') > -1
+// const USE_HTTP2 = version.indexOf('canary') > -1
+const USE_HTTP2 = false
 const MAX_REQUESTS_PER_CONNECTION = 1000
 
 let JsonBody, StreamBody, context

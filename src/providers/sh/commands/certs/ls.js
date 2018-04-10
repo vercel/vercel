@@ -8,6 +8,7 @@ import table from 'text-table'
 import Now from '../../util'
 import getContextName from '../../util/get-context-name'
 import stamp from '../../../../util/output/stamp'
+import getCerts from '../../util/certs/get-certs'
 import strlen from '../../util/strlen'
 import { CLIContext, Output } from '../../util/types'
 import type { CLICertsOptions } from '../../util/types'
@@ -29,7 +30,7 @@ async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
   }
 
   // Get the list of certificates
-  const certs = sortByCn(await getCerts(now))
+  const certs = sortByCn(await getCerts(output, now))
   output.log(`${plural('certificate', certs.length, true)} found under ${chalk.bold(contextName)} ${lsStamp()}`)
 
   if (certs.length > 0) {
@@ -115,11 +116,6 @@ function sortByCn(certsList) {
     if (!domainA || !domainB) return 0;
     return domainA.localeCompare(domainB)
   })
-}
-
-async function getCerts(now) {
-  const { certs } = await now.fetch('/v3/now/certs')
-  return certs
 }
 
 export default ls
