@@ -3,19 +3,20 @@ import chalk from 'chalk'
 import psl from 'psl'
 
 // Internal utils
-import domainResolvesToNow from './domain-resolves-to-now'
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import purchaseDomainIfAvailable from './purchase-domain-if-available'
-import setupDNSRecords from './setup-dns-records'
+import maybeSetupDNSRecords from './maybe-setup-dns-records'
 import verifyDomain from './verify-domain'
 
 // Types and errors
+import wait from '../../../../util/output/wait'
 import { Output, Now } from '../../util/types'
 import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { domain } = psl.parse(alias)
+  const { domain, subdomain } = psl.parse(alias)
+  const cancelWait = wait(`Setting up the domain ${chalk.underline(domain)}`)
 
   // In case the domain is avilable, we have to purchase
   const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
@@ -24,12 +25,14 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     (purchased instanceof Errors.PaymentSourceNotFound) ||
     (purchased instanceof Errors.DomainNotFound)
   ) {
+    cancelWait()
     return purchased
   }
 
   // Now the domain shouldn't be available and it might or might not belong to the user
   const info = await getDomainInfo(now, domain, contextName)
   if (info instanceof Errors.DomainPermissionDenied) {
+    cancelWait()
     return info
   }
 
@@ -39,6 +42,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     // nameservers to register and verify it as an external or non-external domain
     const nameservers = await getDomainNameservers(now, domain)
     if (nameservers instanceof Errors.DomainNameserversNotFound) {
+      cancelWait()
       return nameservers
     }
 
@@ -58,6 +62,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         (verified instanceof Errors.DomainVerificationFailed) ||
         (verified instanceof Errors.NeedUpgrade)
       ) {
+        cancelWait()
         return verified
       } else {
         output.success(`Domain ${domain} added!`)
@@ -72,14 +77,16 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         (verified instanceof Errors.DomainVerificationFailed) ||
         (verified instanceof Errors.NeedUpgrade)
       ) {
+        cancelWait()
         return verified
       } else {
         output.success(`Domain ${domain} added!`)
       }
 
       // Since it's pointing to our nameservers we can configure the DNS records
-      const result = await setupDNSRecords(output, now, alias, domain)
+      const result = await maybeSetupDNSRecords(output, now, alias, domain, subdomain)
       if (result instanceof Errors.DNSPermissionDenied) {
+        cancelWait()
         return result
       }
     }
@@ -95,18 +102,17 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         (verified instanceof Errors.DomainVerificationFailed) ||
         (verified instanceof Errors.NeedUpgrade)
       ) {
+        cancelWait()
         return verified
       }
     }
 
     if (!info.isExternal) {
-      // If the domain is an internal domain it means that it's pointing to zeit.world and
-      // we can configure the DNS records in case it is not resolving properly.
-      if (!await domainResolvesToNow(output, alias)) {
-        const result = await setupDNSRecords(output, now, alias, domain)
-        if (result instanceof Errors.DNSPermissionDenied) {
-          return result
-        }
+      // Make sure that the DNS records are configured without messing with existent records
+      const result = await maybeSetupDNSRecords(output, now, alias, domain, subdomain)
+      if (result instanceof Errors.DNSPermissionDenied) {
+        cancelWait()
+        return result
       }
     }
   }

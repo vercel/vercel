@@ -148,6 +148,19 @@ export type PathRule = {
   method?: Array<string>,
 }
 
+export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT'
+
+export type DNSRecord = {
+  id: string,
+  slug: string,
+  name: string,
+  type: DNSRecordType,
+  value: string,
+  creator: string,
+  created: number,
+  updated: number
+}
+
 export type Certificate = {
   uid: string,
   autoRenew: boolean,
