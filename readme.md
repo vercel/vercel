@@ -35,3 +35,5 @@ If you have write access to this repository, this is how you can create a new re
 - **Canary release:** Run `release pre` on the `canary` branch.
 
 After you've run the command, monitor [this page](https://circleci.com/gh/zeit/now-cli) and wait for Circle CI to upload the binaries to the release. Once that's done and the tests are passing, hit "Publish" on the GitHub release.
+
+**That's all that has to be done.** The npm release will be handled by the CI automatically.
