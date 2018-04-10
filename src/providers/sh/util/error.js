@@ -74,6 +74,7 @@ async function responseError(res, fallbackMessage = null) {
   
   err.status = res.status
   err.userError = userError
+  err.serverMessage = message
   
   // Copy every field that was added manually to the error
   if (bodyError) {
