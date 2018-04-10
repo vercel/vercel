@@ -6,10 +6,10 @@ import setupDNSRecord from './setup-dns-record'
 
 async function maybeSetupDNSRecords(output: Output, now: Now, alias: string, domain: string, subdomain: string) {
   const records = await getDomainDNSRecords(output, now, domain)
-
+  
   // If there is no ALIAS DNS record we set one up
   if (!records.find(record => record.type === 'ALIAS')) {
-    const aliasResult = await setupDNSRecord(output, now, 'ALIAS', '', domain)
+    const aliasResult = await setupDNSRecord(output, now, 'ALIAS', '', domain, 'alias.zeit.co')
     if (aliasResult instanceof DNSPermissionDenied) {
       return aliasResult
     }
@@ -18,13 +18,13 @@ async function maybeSetupDNSRecords(output: Output, now: Now, alias: string, dom
   const cnameRecords = records.filter(record => record.type === 'CNAME')
   if (cnameRecords.length === 0) {
     // If there are no CNAME records, add one with the wildcard
-    const cnameResult = await setupDNSRecord(output, now, 'CNAME', '*', domain)
+    const cnameResult = await setupDNSRecord(output, now, 'CNAME', '*', domain, 'alias.zeit.co')
     if (cnameResult instanceof DNSPermissionDenied) {
       return cnameResult
     }
   } else if (subdomain && !cnameRecords.find(record => record.name === '*')) {
     // If there are CNAME records but not with * we should add one for subdomain
-    const cnameResult = await setupDNSRecord(output, now, 'CNAME', subdomain, domain)
+    const cnameResult = await setupDNSRecord(output, now, 'CNAME', subdomain, domain, 'alias.zeit.co')
     if (cnameResult instanceof DNSPermissionDenied) {
       return cnameResult
     }
