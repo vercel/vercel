@@ -142,6 +142,11 @@ export type AliasRecord = {
   oldDeploymentId?: string
 }
 
+export type HTTPChallengeInfo = {
+  canSolveForRootDomain: boolean,
+  canSolveForSubdomain: boolean,
+}
+
 export type PathRule = {
   dest: string,
   pathname?: string,

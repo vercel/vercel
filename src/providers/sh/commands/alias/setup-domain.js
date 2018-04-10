@@ -15,7 +15,7 @@ import { Output, Now } from '../../util/types'
 import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { domain, subdomain } = psl.parse(alias)
+  const { domain, subdomain }: { domain: string, subdomain: string | null } = psl.parse(alias)
   const cancelWait = wait(`Setting up the domain ${chalk.underline(domain)}`)
 
   // In case the domain is avilable, we have to purchase
@@ -84,8 +84,8 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       }
 
       // Since it's pointing to our nameservers we can configure the DNS records
-      const result = await maybeSetupDNSRecords(output, now, alias, domain, subdomain)
-      if (result instanceof Errors.DNSPermissionDenied) {
+      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
         cancelWait()
         return result
       }
@@ -109,8 +109,8 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
 
     if (!info.isExternal) {
       // Make sure that the DNS records are configured without messing with existent records
-      const result = await maybeSetupDNSRecords(output, now, alias, domain, subdomain)
-      if (result instanceof Errors.DNSPermissionDenied) {
+      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
         cancelWait()
         return result
       }

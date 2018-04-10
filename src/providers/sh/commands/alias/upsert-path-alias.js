@@ -2,15 +2,16 @@
 import chalk from 'chalk'
 import wait from '../../../../util/output/wait'
 import { Now, Output } from '../../util/types'
-import type { AliasRecord, PathRule } from '../../util/types'
-
+import type { HTTPChallengeInfo, AliasRecord, PathRule } from '../../util/types'
 import * as Errors from '../../util/errors'
 import createCertForAlias from './create-cert-for-alias'
 import setupDomain from './setup-domain'
 
 const NOW_SH_REGEX = /\.now\.sh$/
 
-async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias: string,contextName: string) {
+async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias: string, contextName: string) {
+  let httpChallengeInfo: HTTPChallengeInfo
+
   if (!NOW_SH_REGEX.test(alias)) {
     output.log(`${chalk.bold(chalk.underline(alias))} is a custom domain.`)
     const result = await setupDomain(output, now, alias, contextName)
@@ -26,6 +27,14 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
       (result instanceof Errors.UserAborted)
     ) {
       return result
+    }
+
+    // Maybe we get here an error of misconfigured shit
+    if (result instanceof Errors.MissingDomainDNSRecords) {
+      httpChallengeInfo = {
+        canSolveForRootDomain: !result.meta.forRootDomain,
+        canSolveForSubdomain: !result.meta.forSubdomain
+      }
     }
   }
 
@@ -43,7 +52,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     // If the certificate is missing we create it without expecting failures
     // then we call back upsertPathAliasRules
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertForAlias(output, now, alias, contextName)
+      const cert = await createCertForAlias(output, now, alias, contextName, httpChallengeInfo)
       if (
         (cert instanceof Errors.DomainConfigurationError) ||
         (cert instanceof Errors.DomainPermissionDenied) ||

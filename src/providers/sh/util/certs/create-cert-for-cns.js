@@ -5,13 +5,18 @@ import * as Errors from '../errors'
 import { Now } from '../types'
 import type { Certificate } from '../types'
 
-async function createCertForCns(now: Now, cns: string[], context: string) {
+type Options = {
+  preferDNS: boolean,
+}
+
+async function createCertForCns(now: Now, cns: string[], context: string, options?: Options) {
+  const preferDNS = (options || {}).preferDNS
   try {
     const certificate: Certificate = await retry(async (bail) => {
       try {
         return await now.fetch('/v3/now/certs', {
           method: 'POST',
-          body: { domains: cns },
+          body: { domains: cns, preferDNS },
         })
       } catch (error) {
         // When it's a configuration error we should retry because of the DNS propagation
