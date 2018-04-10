@@ -24,7 +24,7 @@ const help = () => {
 
     ls                    Show all available certificates
     add    <cn>[, <cn>]   Create a certificate for a domain
-    rm     <id>           Remove an available certificate
+    rm     <id or cn>     Remove an available certificate
 
   ${chalk.dim('Options:')}
 
@@ -59,7 +59,7 @@ const help = () => {
   )} Remove a certificate
 
       ${chalk.cyan(
-        '$ now certs rm 5n7g8eBEwslBF930FUAx'
+        '$ now certs rm acme.com'
       )}
   `)
 }

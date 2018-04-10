@@ -1,6 +1,6 @@
 // @flow
 type FetchOptions = {
-  body: any,
+  body?: any,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 }
 
