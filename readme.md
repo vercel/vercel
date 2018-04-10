@@ -28,12 +28,4 @@ As always, you can use `yarn test` to run the tests and see if your changes have
 
 ## How to Create a Release
 
-If you have write access to this repository, this is how you can create a new release: 
-
-- **Stable release:** Run `release <major|minor|patch>` (depending on the version bump you're planning to do) on the `master` branch.
-
-- **Canary release:** Run `release pre` on the `canary` branch.
-
-After you've run the command, monitor [this page](https://circleci.com/gh/zeit/now-cli) and wait for Circle CI to upload the binaries to the release. Once that's done and the tests are passing, hit "Publish" on the GitHub release.
-
-**That's all that has to be done.** The npm release will be handled by the CI automatically.
+If you have write access to this repository, you can read more about how publish a release [here](https://github.com/zeit/zeit/blob/master/guides/now-cli-release.md).
