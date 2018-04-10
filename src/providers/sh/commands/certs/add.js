@@ -65,7 +65,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     }
 
     // Create the certificate from the given array of CNs
-    const cancelWait = wait(`Issuing a certificate for ${chalk.bold(args.join(', '))}`);
+    const cancelWait = wait(`Generating a certificate for ${chalk.bold(args.join(', '))}`);
     cert = await createCertForCns(now, args, contextName)
     cancelWait();
     if (cert instanceof Errors.TooManyRequests) {
