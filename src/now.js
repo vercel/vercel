@@ -45,12 +45,15 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath()
 const GLOBAL_COMMANDS = new Set(['help'])
 
 const main = async (argv_) => {
+  // $FlowFixMe
+  const { isTTY } = process.stdout
+
   const update = await checkForUpdate(pkg, {
     interval: ms('1d'),
     distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
   })
 
-  if (update) {
+  if (update && isTTY) {
     console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`))
     console.log(info(`Read more about how to update here: https://zeit.co/update-cli`))
   }
@@ -392,9 +395,6 @@ const main = async (argv_) => {
 
     Object.assign(ctx.config, localConfig)
   }
-
-  // $FlowFixMe
-  const { isTTY } = process.stdout
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider

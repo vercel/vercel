@@ -21,6 +21,8 @@ const getContextName = require('../util/get-context-name')
 const toHost = require('../util/to-host')
 const argCommon = require('../util/arg-common')()
 
+import getDeploymentInstances from './alias/get-deployment-instances'
+
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now list`)} [app]
@@ -163,7 +165,8 @@ module.exports = async function main(ctx) {
     if (item) {
       debug('Found alias that matches app name');
       const match = await now.findDeployment(item.deploymentId)
-
+      const instances = await getDeploymentInstances(now, item.deploymentId)
+      match.instanceCount = Object.keys(instances).reduce((count, dc) => count + instances[dc].instances.length, 0)
       if (match !== null && typeof match !== 'undefined') {
         deployments = Array.of(match)
       }
