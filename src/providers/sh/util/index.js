@@ -79,7 +79,7 @@ module.exports = class Now extends EventEmitter {
 
     let files = []
     let relatives = {}
-    let engines
+    let engines = {}
 
     await time('Getting files', async () => {
       const opts = { output: this._output, hasNowJson }
@@ -98,7 +98,7 @@ module.exports = class Now extends EventEmitter {
           throw err
         }
 
-        engines = nowConfig.engines || pkg.engines
+        engines = nowConfig.engines || pkg.engines || {}
         forwardNpm = forwardNpm || nowConfig.forwardNpm
       } else if (type === 'static') {
         if (isFile) {
@@ -138,6 +138,15 @@ module.exports = class Now extends EventEmitter {
     })
 
     this._files = hashes
+
+    let nodeVersion = await readNodeVersion(paths[0]);
+
+    if (nodeVersion) {
+      engines.node = nodeVersion
+    } else {
+      // If the node version isn't present in nvmrc read it from package or now.json
+      nodeVersion = engines && engines.node ? engines.node : nodeVersion
+    }
 
     const deployment = await this.retry(async bail => {
       // Flatten the array to contain files to sync where each nested input
@@ -292,9 +301,9 @@ module.exports = class Now extends EventEmitter {
     }
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
-      if (engines && engines.node && !missingVersion) {
+      if (nodeVersion && !missingVersion) {
         log(chalk`Using Node.js {bold ${
-          deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`)
+          deployment.nodeVersion}} (requested: {dim \`${nodeVersion}\`})`)
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`)
       }
@@ -912,6 +921,16 @@ async function readAuthToken(path, name = '.npmrc') {
     const contents = await readFile(resolvePath(path, name), 'utf8')
     const npmrc = parseIni(contents)
     return npmrc['//registry.npmjs.org/:_authToken']
+  } catch (err) {
+    // Do nothing
+  }
+}
+
+async function readNodeVersion(path) {
+  try {
+    const nvmrcFile = '.nvmrc'
+    let nodeVersion = await readFile(resolvePath(path, nvmrcFile), 'utf8')
+    return nodeVersion.trim()
   } catch (err) {
     // Do nothing
   }
