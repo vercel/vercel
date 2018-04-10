@@ -209,16 +209,16 @@ workflows:
           filters:
             tags:
               only: /.*/
-      # - test-integration-mac:
-      #     requires:
-      #       - build
-      #     filters:
-      #       tags:
-      #         only: /.*/
+      - test-integration-mac:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
       - compress:
           requires:
             - test-lint
-            # - test-integration-mac
+            - test-integration-mac
             - test-unit
           filters:
             tags:
