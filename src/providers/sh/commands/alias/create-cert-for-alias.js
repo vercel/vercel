@@ -1,5 +1,6 @@
 // @flow
 import psl from 'psl'
+import joinWords from '../../../../util/output/join-words'
 import wait from '../../../../util/output/wait'
 import * as Errors from '../../util/errors'
 import { Now, Output } from '../../util/types'
@@ -8,7 +9,8 @@ import createCertForCns from '../../util/certs/create-cert-for-cns'
 async function createCertificateForAlias(output: Output, now: Now, alias: string, context: string) {
   const cancelMessage = wait(`Generating a certificate...`)
   const { domain } = psl.parse(alias)
-  let cert = await createCertForCns(now, [domain, `*.${domain}`], context)
+  const wildcardCns = [domain, `*.${domain}`]
+  let cert = await createCertForCns(now, wildcardCns, context)
   if (
     (cert instanceof Errors.DomainConfigurationError) ||
     (cert instanceof Errors.DomainPermissionDenied) ||
@@ -45,10 +47,10 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
     }
     
     cancelMessage()
-    output.success(`Certificate for ${alias} successfuly created`)
+    output.log(`Certificate for ${alias} successfuly created`)
   } else {
     cancelMessage()
-    output.success(`Certificate for ${domain} and *.${domain} successfuly created`)
+    output.log(`Certificate for ${joinWords(wildcardCns)} successfuly created`)
   }
 
   return cert
