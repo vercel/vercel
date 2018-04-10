@@ -43,10 +43,14 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
       cancelMessage()
       throw cert
     }
+    
+    cancelMessage()
+    output.success(`Certificate for ${alias} successfuly created`)
+  } else {
+    cancelMessage()
+    output.success(`Certificate for ${domain} and *.${domain} successfuly created`)
   }
 
-  cancelMessage()
-  output.success(`Certificate for ${alias} successfuly created`)
   return cert
 }
 
