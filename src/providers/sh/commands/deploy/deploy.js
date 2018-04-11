@@ -16,27 +16,27 @@ const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 const executable = require('executable')
-const { tick } = require('../../../util/output/chars')
-const elapsed = require('../../../util/output/elapsed')
+const { tick } = require('../../../../util/output/chars')
+const elapsed = require('../../../../util/output/elapsed')
 const sleep = require('then-sleep');
 
 // Utilities
-const Now = require('../util')
-const isELF = require('../util/is-elf')
-const createOutput = require('../../../util/output')
-const toHumanPath = require('../../../util/humanize-path')
-const { handleError } = require('../util/error')
-const readMetaData = require('../util/read-metadata')
-const checkPath = require('../util/check-path')
-const logo = require('../../../util/output/logo')
-const cmd = require('../../../util/output/cmd')
-const wait = require('../../../util/output/wait')
-const stamp = require('../../../util/output/stamp')
-const promptBool = require('../../../util/input/prompt-bool')
-const promptOptions = require('../util/prompt-options')
-const exit = require('../../../util/exit')
-const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
-const printEvents = require('../util/events')
+const Now = require('../../util')
+const isELF = require('../../util/is-elf')
+const createOutput = require('../../../../util/output')
+const toHumanPath = require('../../../../util/humanize-path')
+const { handleError } = require('../../util/error')
+const readMetaData = require('../../util/read-metadata')
+const checkPath = require('../../util/check-path')
+const logo = require('../../../../util/output/logo')
+const cmd = require('../../../../util/output/cmd')
+const wait = require('../../../../util/output/wait')
+const stamp = require('../../../../util/output/stamp')
+const promptBool = require('../../../../util/input/prompt-bool')
+const promptOptions = require('../../util/prompt-options')
+const exit = require('../../../../util/exit')
+const { normalizeRegionsList, isValidRegionOrDcId } = require('../../util/dcs')
+const printEvents = require('../../util/events')
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -241,7 +241,7 @@ const promptForEnvFields = async list => {
   }
 
   // eslint-disable-next-line import/no-unassigned-import
-  require('../../../util/input/patch-inquirer')
+  require('../../../../util/input/patch-inquirer')
 
   log('Please enter values for the following environment variables:')
   const answers = await inquirer.prompt(questions)
@@ -339,7 +339,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
         let repo
         let isValidRepo = false
 
-        const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
+        const { fromGit, isRepoPath, gitPathParts } = require('../../util/git')
 
         try {
           isValidRepo = isRepoPath(rawPath)
