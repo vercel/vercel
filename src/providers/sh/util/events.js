@@ -105,6 +105,12 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
               stream.end()
               finish()
             }
+          } else if (event === 'state' && data.payload.value === 'ERROR') {
+            if (mode === 'deploy') {
+              stream.end()
+              finish(new Error('Build failed'))
+              return
+            }
           } else {
             const linesPrinted = onEvent(data, callOnOpenOnce)
             o += linesPrinted || 0
