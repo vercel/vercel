@@ -79,7 +79,7 @@ export type NpmDeployment = {
   url: string,
   name: string,
   type: 'NPM',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -91,7 +91,7 @@ export type StaticDeployment = {
   url: string,
   name: string,
   type: 'STATIC',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -102,7 +102,7 @@ export type BinaryDeployment = {
   url: string,
   name: string,
   type: 'BINARY',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -271,6 +271,14 @@ export type DeploymentEvent =
   CommandEvent |
   StdoutEvent |
   StderrEvent
+
+export type NewDeployment = {
+  deploymentId: string,
+  url: string,
+  scale: DeploymentScale,
+  nodeVersion: string,
+  readyState: 'INITIALIZING' | 'READY'
+}
 
 export type CLIOptions<T> = {
   '--help'?: string,
