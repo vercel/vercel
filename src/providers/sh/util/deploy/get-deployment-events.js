@@ -26,7 +26,7 @@ type Options = {
 export default async function getDeploymentEvents(now: Now, contextName: string, idOrHost: string, options: Options) {
   const eventsStream = await getEventsStream(now, idOrHost, options)
   const eventsStreamGenerator: AsyncGenerator<DeploymentEvent, void, void> = eventListenerToGenerator('data', eventsStream)
-  const eventsFromPollingGenerator = getEventsFromPolling(now, contextName, idOrHost)
+  const eventsFromPollingGenerator = getStatusChangeFromPolling(now, contextName, idOrHost)
   return combineAsyncGenerators(eventsStreamGenerator, eventsFromPollingGenerator)
 }
 
@@ -46,21 +46,28 @@ async function getEventsStream(now: Now, idOrHost: string, options: Options): Pr
   return stream.pipe(jsonlines.parse())
 }
 
-async function* getEventsFromPolling(now: Now, contextName: string, idOrHost: string): AsyncGenerator<StateChangeEvent, void, void> {
-  const pollDeployment = createPollingFn(getDeploymentByIdOrHost, 3000)
+async function* getStatusChangeFromPolling(now: Now, contextName: string, idOrHost: string): AsyncGenerator<StateChangeEvent, void, void> {
+  const pollDeployment = createPollingFn(getDeploymentOrFail, 1000)
   let lastResult: Deployment | null = null
-
   for await (const deployment of pollDeployment(now, contextName, idOrHost)) {
-    if (!(deployment instanceof DeploymentPermissionDenied) && !(deployment instanceof DeploymentNotFound)) {
-      if (lastResult && lastResult.state !== deployment.state) {
-        const event: StateChangeEvent = {
-          type: 'state-change',
-          created: Date.now(),
-          payload: { value: deployment.state }
-        }
-        yield event
+    if (lastResult && lastResult.state !== deployment.state) {
+      yield {
+        type: 'state-change',
+        created: Date.now(),
+        payload: { value: deployment.state }
       }
+      break
+    } else {
       lastResult = deployment
     }
+  }
+}
+
+async function getDeploymentOrFail(now: Now, contextName: string, idOrHost: string) {
+  const deployment = await getDeploymentByIdOrHost(now, contextName, idOrHost)
+  if ((deployment instanceof DeploymentPermissionDenied) || (deployment instanceof DeploymentNotFound)) {
+    throw deployment
+  } else {
+    return deployment
   }
 }
