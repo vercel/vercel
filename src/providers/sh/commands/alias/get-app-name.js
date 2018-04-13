@@ -5,7 +5,7 @@ import { Output } from '../../util/types'
 import getConfig from './get-config'
 import readPackage from './read-package'
 
-async function getAppName(output: Output, localConfig: string) {
+async function getAppName(output: Output, localConfig?: string) {
   const config = await getConfig(output, localConfig)
 
   // If the name is in the configuration, return it
