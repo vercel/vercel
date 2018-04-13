@@ -294,17 +294,17 @@ module.exports = async function main (ctx) {
     }
   }
 
-  const successMsg = `Scale rules for ${
+  const successMsg = `${chalk.gray('>')} Scale rules for ${
     dcIds.map(d => chalk.bold(d)).join(', ')
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`
 
   if (deployment.type === 'BINARY' || argv['--no-verify']) {
-    output.log(successMsg)
+    console.log(successMsg)
     now.close();
     return 0;
   }
 
-  output.log(successMsg)
+  console.log(successMsg)
   const startVerification = Date.now()
   const cancelVerifyWait = waitDcs(scaleArgs, output)
   const cancelExit = onExit(() => {
