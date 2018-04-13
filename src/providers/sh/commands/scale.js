@@ -299,12 +299,12 @@ module.exports = async function main (ctx) {
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`
 
   if (deployment.type === 'BINARY' || argv['--no-verify']) {
-    console.log(successMsg)
+    output.log(successMsg)
     now.close();
     return 0;
   }
 
-  console.log(successMsg)
+  output.log(successMsg)
   const startVerification = Date.now()
   const cancelVerifyWait = waitDcs(scaleArgs, output)
   const cancelExit = onExit(() => {
