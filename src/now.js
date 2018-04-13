@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 //@flow
 
+// This should be automatically included by @babel/preset-env but it's
+// not being load right now. We have to remove it once it's fixed
+require('core-js/modules/es7.symbol.async-iterator');
+
 // we only enable source maps while developing, since
 // they have a small performance hit. for this, we
 // look for `pkg`, which is only present in the final bin
