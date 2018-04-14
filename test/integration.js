@@ -399,6 +399,7 @@ test('deploy a dockerfile project', async t => {
   const response = await fetch(href)
   const contentType = response.headers.get('content-type')
   let content
+
   try {
     content = await response.json()  
   } catch (error) {
