@@ -1,7 +1,7 @@
 // @flow
 import { Output, Now } from '../../util/types'
 import type { Alias, Deployment } from '../../util/types'
-import fetchDeploymentByIdOrHost from './get-deployment-by-id-or-host'
+import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host'
 
 async function fetchDeploymentFromAlias(
   output: Output, 
@@ -11,7 +11,7 @@ async function fetchDeploymentFromAlias(
   currentDeployment: Deployment
 ) {
   return (prevAlias && prevAlias.deploymentId && prevAlias.deploymentId !== currentDeployment.uid)
-    ? fetchDeploymentByIdOrHost(output, now, contextName, prevAlias.deploymentId)
+    ? fetchDeploymentByIdOrHost(now, contextName, prevAlias.deploymentId)
     : null
 }
 

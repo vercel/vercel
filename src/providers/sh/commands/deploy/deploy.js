@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 //@flow
 
 // Native
@@ -16,27 +15,29 @@ const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
 const inquirer = require('inquirer')
 const executable = require('executable')
-const { tick } = require('../../../util/output/chars')
-const elapsed = require('../../../util/output/elapsed')
+const { tick } = require('../../../../util/output/chars')
+const elapsed = require('../../../../util/output/elapsed')
 const sleep = require('then-sleep');
 
 // Utilities
-const Now = require('../util')
-const isELF = require('../util/is-elf')
-const createOutput = require('../../../util/output')
-const toHumanPath = require('../../../util/humanize-path')
-const { handleError } = require('../util/error')
-const readMetaData = require('../util/read-metadata')
-const checkPath = require('../util/check-path')
-const logo = require('../../../util/output/logo')
-const cmd = require('../../../util/output/cmd')
-const wait = require('../../../util/output/wait')
-const stamp = require('../../../util/output/stamp')
-const promptBool = require('../../../util/input/prompt-bool')
-const promptOptions = require('../util/prompt-options')
-const exit = require('../../../util/exit')
-const { normalizeRegionsList, isValidRegionOrDcId } = require('../util/dcs')
-const printEvents = require('../util/events')
+const Now = require('../../util')
+const isELF = require('../../util/is-elf')
+const createOutput = require('../../../../util/output')
+const toHumanPath = require('../../../../util/humanize-path')
+const { handleError } = require('../../util/error')
+const readMetaData = require('../../util/read-metadata')
+const checkPath = require('../../util/check-path')
+const logo = require('../../../../util/output/logo')
+const cmd = require('../../../../util/output/cmd')
+const wait = require('../../../../util/output/wait')
+const stamp = require('../../../../util/output/stamp')
+const promptBool = require('../../../../util/input/prompt-bool')
+const promptOptions = require('../../util/prompt-options')
+const exit = require('../../../../util/exit')
+const { normalizeRegionsList, isValidRegionOrDcId } = require('../../util/dcs')
+import getContextName from '../../util/get-context-name'
+import getDeploymentEvents from '../../util/deploy/get-deployment-events'
+import type { NewDeployment } from '../../util/types'
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -241,7 +242,7 @@ const promptForEnvFields = async list => {
   }
 
   // eslint-disable-next-line import/no-unassigned-import
-  require('../../../util/input/patch-inquirer')
+  require('../../../../util/input/patch-inquirer')
 
   log('Please enter values for the following environment variables:')
   const answers = await inquirer.prompt(questions)
@@ -290,11 +291,11 @@ async function main(ctx: any) {
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
+  const output = createOutput({ debug: debugEnabled })
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  const output = createOutput({ debug: debugEnabled })
   ;({ log, error, note, debug } = output)
 
   if (argv.h || argv.help) {
@@ -304,24 +305,25 @@ async function main(ctx: any) {
 
   const { authConfig: { credentials }, config: { sh } } = ctx
   const { token } = credentials.find(item => item.provider === 'sh')
+  const contextName = getContextName(sh);
   const config = sh
-
+  
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ output, token, config, showMessage: true })
+    return sync({ contextName, output, token, config, showMessage: true })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ output, token, config: { currentTeam, user }, showMessage }) {
+async function sync({ contextName, output, token, config: { currentTeam, user }, showMessage }) {
   return new Promise(async (_resolve, reject) => {
     const deployStamp = stamp()
     const rawPath = argv._[0]
 
     let meta
-    let deployment
+    let deployment: NewDeployment | null = null
     let deploymentType
     let isFile
     let atlas = false
@@ -339,7 +341,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
         let repo
         let isValidRepo = false
 
-        const { fromGit, isRepoPath, gitPathParts } = require('../util/git')
+        const { fromGit, isRepoPath, gitPathParts } = require('../../util/git')
 
         try {
           isValidRepo = isRepoPath(rawPath)
@@ -786,6 +788,7 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
         wantsPublic = true
 
         sync({
+          contextName,
           output,
           token,
           config: {
@@ -835,58 +838,80 @@ async function sync({ output, token, config: { currentTeam, user }, showMessage 
       process.stdout.write(url)
     }
 
-    if (!quiet) {
-      if (syncCount) {
-        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
-      }
+    if (!quiet && syncCount) {
+      log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
     }
 
     // Show build logs
     if (deploymentType === 'static') {
       if (!quiet) {
-        log(chalk`{cyan Deployment complete!}`)
+        output.log(chalk`{cyan Deployment complete!}`)
       }
       await exit(0)
-    } else {
-      let cancelWait = () => {}
-      if (!quiet) {
-        cancelWait = wait('Initializing…')
-      }
 
-      try {
+      // We have to add this check for flow but it will never happen
+    } else if (deployment !== null) {
+
+      // If the created deployment is ready it was a deduping and we should exit
+      if (deployment.readyState === 'READY') {
+        output.success(`Deployment ready`)
+        await exit(0)
+      } else {
         require('assert')(deployment) // mute linter
-        await printEvents(now, now.id, currentTeam, {
-          mode: 'deploy', onEvent: printEvent, onOpen: cancelWait, quiet, debugEnabled,
-          findOpts: { direction: 'forward', follow: true }
-        })
-      } catch (err) {
-        cancelWait()
-        throw err
-      }
+        const events = await getDeploymentEvents(now, contextName, now.id, { direction: 'forward', follow: true })
+        for await (const event of events) {
+          // Stop when the deployment is ready
+          if (event.type === 'state-change' && event.payload.value === 'READY') {
+            output.log(`Build completed`);
+            break
+          }
 
-      if (deployment) {
-        if (!noVerify) {
-          output.log(`Build completed`)
-          await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+          // Stop then there is an error state
+          if (event.type === 'state-change' && event.payload.value === 'ERROR') {
+            output.error(`Build failed`);
+            await exit(1)
+          }
+
+          // For any relevant event we receive, print the result
+          if (event.type === 'build-start') {
+            output.log('Building…')
+          } else if (event.type === 'command') {
+            output.log(`▲ ${formatText(event.payload.text)}`)
+          } else if (event.type === 'stdout' || event.type === 'stderr') {
+            formatText(event.payload.text).split('\n').forEach(v => {
+              output.log(`${v.replace(/^> /, '')}`)
+            })
+          }
         }
-        output.success(`Deployment ready!`)
-      }
 
-      await exit(0)
+        // Wait for scale if we need to and exit
+        if (!noVerify) {
+          try {
+            await waitForScale(output, now, deployment.deploymentId, deployment.scale)
+          } catch (error) {
+            output.error(`Instance verification timed out (2m)`)
+            output.log('Read more: https://err.sh/now-cli/verification-timeout')
+            await exit(1)
+          }
+        }
+        output.success(`Deployment ready`)
+        await exit(0)
+      }
     }
   })
 }
 
 // TODO: refactor this funtion to use something similar in alias and scale
 async function waitForScale(output, now, deploymentId, scale) {
-  const checkInterval = 500
-  const timeout = ms('5m')
+  const checkInterval = 1000
+  const timeout = ms('2m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
   let cancelWait = renderRemainingDCsWait(Object.keys(scale))
   
   while (true) { // eslint-disable-line
     if (start + timeout <= Date.now()) {
+      cancelWait()
       throw new Error('Timeout while verifying instance count (10m)');
     }
 
@@ -996,31 +1021,8 @@ async function readMeta(
   }
 }
 
-function printEvent({ type, event, text }, callOnOpenOnce) {
-  if (event === 'build-start') {
-    callOnOpenOnce()
-    log('Building…')
-    return 1
-  } else
-  if ([ 'command', 'stdout', 'stderr' ].includes(type)) {
-    text = text.replace(/\n$/, '').replace(/^\n/, '')
-    callOnOpenOnce()
-    const lines = text.split('\n')
-
-    if (type === 'command') {
-      log(`▲ ${text}`)
-    } else if (type === 'stdout' || type === 'stderr') {
-      lines.forEach(v => {
-        // strip out the beginning `>` if there is one because
-        // `log()` prepends its own and we don't want `> >`
-        log(v.replace(/^> /, ''))
-      })
-    }
-
-    return lines.length
-  }
-
-  return 0
+function formatText(text: string): string {
+  return text.replace(/\n$/, '').replace(/^\n/, '')
 }
 
 module.exports = main

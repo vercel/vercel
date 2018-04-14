@@ -13,7 +13,7 @@ import matchDeploymentScale from './match-deployment-scale'
 
 async function waitForScale(output: Output, now: Now, deploymentId: string, scale: DeploymentScale) {
   const checkInterval = 500
-  const timeout = ms('5m')
+  const timeout = ms('2m')
   const start = Date.now()
   let remainingMatches = new Set(Object.keys(scale))
   let cancelWait = renderRemainingDCsWait(remainingMatches)
