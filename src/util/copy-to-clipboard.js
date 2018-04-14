@@ -3,12 +3,10 @@
 // Packages
 const { write } = require('clipboardy')
 
-const copyToClipboard = async (
-  str: string,
-  shouldCopy: boolean | string = 'auto',
-  // $FlowFixMe
-  isTTY: boolean = process.stdout.isTTY
-): Promise<boolean> => {
+// $FlowFixMe
+const _isTTY = process.stdout.isTTY
+
+async function copyToClipboard(str: string, shouldCopy: boolean | string = 'auto', isTTY: boolean = _isTTY) {
   if (shouldCopy === false) {
     return false
   }

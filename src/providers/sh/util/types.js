@@ -79,7 +79,7 @@ export type NpmDeployment = {
   url: string,
   name: string,
   type: 'NPM',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -91,7 +91,7 @@ export type StaticDeployment = {
   url: string,
   name: string,
   type: 'STATIC',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -102,7 +102,7 @@ export type BinaryDeployment = {
   url: string,
   name: string,
   type: 'BINARY',
-  state: 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -172,6 +172,112 @@ export type Certificate = {
   cns: string[],
   created: string,
   expiration: string
+}
+
+type GenericEvent<T, P> = {
+  type: T,
+  created: number,
+  payload: P
+}
+
+export type StateChangeEvent = GenericEvent<'state-change', {
+  dc?: 'sfo1' | 'bru1',
+  value: 'INITIALIZING' | 'READY' | 'ERROR' | 'FROZEN'
+}>
+
+export type BuildStartEvent = GenericEvent<'build-start', {
+}>
+
+export type BuildCompleteEvent = GenericEvent<'build-complete', {
+  dc: 'sfo1' | 'bru1'
+}>
+
+export type InstanceStartEvent = GenericEvent<'instance-start', {
+  dc: 'sfo1' | 'bru1',
+  billingId: string
+}>
+
+export type InstanceStopEvent = GenericEvent<'instance-stop', {
+  dc: 'sfo1' | 'bru1',
+  billingId: string
+}>
+
+export type AliasSetEvent = GenericEvent<'alias-set', {
+  dc: 'sfo1' | 'bru1',
+  billingId: string,
+  aliasId: string,
+  alias: string,
+  teamId: string,
+  userId: string,
+  routes: null,
+  url: string,
+  oldDeploymentId: string,
+}>
+
+export type ScaleSetEvent = GenericEvent<'scale-set', {
+  scalingRules: DeploymentScale,
+  id: string,
+  url: string,
+  userId: string,
+  teamId: string,
+  min: number,
+  max: number,
+}>
+
+export type CommandEvent = GenericEvent<'command', {
+  deploymentId: string,
+  instanceId: string,
+  text: string,
+  appName: string,
+  id: string,
+  seq: string,
+  date: number,
+  pid: string,
+  serial: string
+}>
+
+export type StdoutEvent = GenericEvent<'stdout', {
+  deploymentId: string,
+  instanceId: string,
+  text: string,
+  appName: string,
+  id: string,
+  seq: string,
+  date: number,
+  pid: string,
+  serial: string
+}>
+
+export type StderrEvent = GenericEvent<'stderr', {
+  deploymentId: string,
+  instanceId: string,
+  text: string,
+  appName: string,
+  id: string,
+  seq: string,
+  date: number,
+  pid: string,
+  serial: string
+}>
+
+export type DeploymentEvent = 
+  StateChangeEvent |
+  BuildStartEvent |
+  BuildCompleteEvent |
+  InstanceStartEvent |
+  InstanceStopEvent |
+  AliasSetEvent |
+  ScaleSetEvent |
+  CommandEvent |
+  StdoutEvent |
+  StderrEvent
+
+export type NewDeployment = {
+  deploymentId: string,
+  url: string,
+  scale: DeploymentScale,
+  nodeVersion: string,
+  readyState: 'INITIALIZING' | 'READY'
 }
 
 export type CLIOptions<T> = {

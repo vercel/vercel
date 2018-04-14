@@ -88,7 +88,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
     if (await deploymentShouldDowscale(output, now, prevDeployment)) {
       await setDeploymentScale(output, now, prevDeployment.uid, getDeploymentDownscalePresets(prevDeployment))
-      output.success(`Previous deployment ${prevDeployment.url} downscaled`);
+      output.log(`Previous deployment ${prevDeployment.url} downscaled`);
     }
   }
 

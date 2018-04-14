@@ -294,7 +294,7 @@ module.exports = async function main (ctx) {
     }
   }
 
-  const successMsg = `Scale rules for ${
+  const successMsg = `${chalk.gray('>')} Scale rules for ${
     dcIds.map(d => chalk.bold(d)).join(', ')
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`
 
@@ -320,7 +320,7 @@ module.exports = async function main (ctx) {
       scaleArgs,
       output,
       {
-        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '5m'),
+        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '2m'),
         checkInterval: 500,
         onDCScaled(id, instanceCount) {
           cancelVerifyWait(id, instanceCount);
@@ -398,7 +398,7 @@ function setScale(now, deploymentId, scale) {
 
 // waits until the deployment's instances count reflects the intended
 // scale that the user is configuring with the command
-async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('5m'), checkInterval = 500, onDCScaled = null } = {}) {
+async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('2m'), checkInterval = 500, onDCScaled = null } = {}) {
   const start = Date.now()
   const intendedScaleDcs = new Set(Object.keys(intendedScale));
 

@@ -78,7 +78,7 @@
   "babel": {
     "presets": [
       [
-        "env",
+        "@babel/preset-env",
         {
           "targets": {
             "node": "current"
@@ -87,16 +87,17 @@
       ]
     ],
     "plugins": [
-      "transform-flow-comments",
-      [
-        "transform-object-rest-spread",
-        {
-          "useBuiltIns": true
-        }
-      ]
+      "@babel/plugin-transform-flow-comments",
+      "@babel/plugin-proposal-object-rest-spread",
+      "@babel/plugin-proposal-async-generator-functions"
     ]
   },
   "devDependencies": {
+    "@babel/core": "7.0.0-beta.44",
+    "@babel/plugin-proposal-async-generator-functions": "7.0.0-beta.44",
+    "@babel/plugin-proposal-object-rest-spread": "7.0.0-beta.44",
+    "@babel/plugin-transform-flow-comments": "7.0.0-beta.44",
+    "@babel/preset-env": "7.0.0-beta.44",
     "@google/maps": "0.4.3",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.4.0",
@@ -110,14 +111,8 @@
     "async-sema": "1.2.0",
     "ava": "0.25.0",
     "aws-sdk": "2.124.0",
-    "babel-core": "6.26.0",
     "babel-eslint": "8.2.2",
-    "babel-loader": "7.1.4",
-    "babel-plugin-transform-async-to-generator": "6.24.1",
-    "babel-plugin-transform-flow-comments": "6.22.0",
-    "babel-plugin-transform-object-rest-spread": "6.26.0",
-    "babel-plugin-transform-runtime": "6.23.0",
-    "babel-preset-env": "1.6.1",
+    "babel-loader": "8.0.0-beta.2",
     "bytes": "3.0.0",
     "chalk": "2.3.1",
     "child-process-promise": "2.2.1",
