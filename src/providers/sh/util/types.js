@@ -202,7 +202,7 @@ export type InstanceStopEvent = GenericEvent<'instance-stop', {
   billingId: string
 }>
 
-export type AliasSetEvent = GenericEvent<'alias-set', {
+export type AliasSetEvent = GenericEvent<'alias-add', {
   dc: 'sfo1' | 'bru1',
   billingId: string,
   aliasId: string,

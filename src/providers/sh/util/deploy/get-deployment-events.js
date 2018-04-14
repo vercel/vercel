@@ -1,4 +1,5 @@
 // @flow
+import through2 from 'through2'
 import jsonlines from 'jsonlines'
 import { stringify } from 'querystring'
 import type { Readable } from 'stream'
@@ -23,12 +24,25 @@ type Options = {
   until?: number,
 }
 
-export default async function getDeploymentEvents(now: Now, contextName: string, idOrHost: string, options: Options) {
+export default async function getDeploymentEvents(
+  now: Now, 
+  contextName: string,
+  idOrHost: string,
+  options: Options
+): Promise<AsyncGenerator<DeploymentEvent, void, void>> {
   const eventsStream = await getEventsStream(now, idOrHost, options)
-  const eventsStreamGenerator: AsyncGenerator<DeploymentEvent, void, void> = eventListenerToGenerator('data', eventsStream)
+  const eventsStreamGenerator = eventListenerToGenerator('data', eventsStream)
   const eventsFromPollingGenerator = getStatusChangeFromPolling(now, contextName, idOrHost)
   return combineAsyncGenerators(eventsStreamGenerator, eventsFromPollingGenerator)
 }
+
+// Since we will be receiving empty object from the stream, this transform will ignore them
+const ignoreEmptyObjects = through2.obj(function (chunk, enc, cb) {
+  if (Object.keys(chunk).length !== 0) {
+    this.push(chunk)
+  }
+  cb();
+})
 
 async function getEventsStream(now: Now, idOrHost: string, options: Options): Promise<Readable> {
   const response = await now.fetch(`/v2/now/deployments/${idOrHost}/events?${stringify({
@@ -43,7 +57,7 @@ async function getEventsStream(now: Now, idOrHost: string, options: Options): Pr
     until: options.until
   })}`)
   const stream = response.readable ? await response.readable() : response.body
-  return stream.pipe(jsonlines.parse())
+  return stream.pipe(jsonlines.parse()).pipe(ignoreEmptyObjects)
 }
 
 async function* getStatusChangeFromPolling(now: Now, contextName: string, idOrHost: string): AsyncGenerator<StateChangeEvent, void, void> {
@@ -56,7 +70,6 @@ async function* getStatusChangeFromPolling(now: Now, contextName: string, idOrHo
         created: Date.now(),
         payload: { value: deployment.state }
       }
-      break
     } else {
       lastResult = deployment
     }
