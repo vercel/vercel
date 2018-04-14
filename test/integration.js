@@ -398,7 +398,13 @@ test('deploy a dockerfile project', async t => {
   // Send a test request to the deployment
   const response = await fetch(href)
   const contentType = response.headers.get('content-type')
-  const content = await response.json()
+  let content
+  try {
+    content = await response.json()  
+  } catch (error) {
+    console.error('Error parsing JSON file')
+    console.log(await response.text())
+  }
 
   t.is(contentType, 'application/json; charset=utf-8')
   t.is(content.id, session)
