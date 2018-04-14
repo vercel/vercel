@@ -23,9 +23,14 @@ type Options = {
   until?: number,
 }
 
-export default async function getDeploymentEvents(now: Now, contextName: string, idOrHost: string, options: Options) {
+export default async function getDeploymentEvents(
+  now: Now, 
+  contextName: string,
+  idOrHost: string,
+  options: Options
+): Promise<AsyncGenerator<DeploymentEvent, void, void>> {
   const eventsStream = await getEventsStream(now, idOrHost, options)
-  const eventsStreamGenerator: AsyncGenerator<DeploymentEvent, void, void> = eventListenerToGenerator('data', eventsStream)
+  const eventsStreamGenerator = eventListenerToGenerator('data', eventsStream)
   const eventsFromPollingGenerator = getStatusChangeFromPolling(now, contextName, idOrHost)
   return combineAsyncGenerators(eventsStreamGenerator, eventsFromPollingGenerator)
 }
@@ -56,7 +61,6 @@ async function* getStatusChangeFromPolling(now: Now, contextName: string, idOrHo
         created: Date.now(),
         payload: { value: deployment.state }
       }
-      break
     } else {
       lastResult = deployment
     }
