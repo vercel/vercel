@@ -20,8 +20,7 @@ const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
 const toHost = require('../util/to-host')
 const argCommon = require('../util/arg-common')()
-
-import getDeploymentInstances from './alias/get-deployment-instances'
+import getDeploymentInstances from '../util/deploy/get-deployment-instances'
 
 const help = () => {
   console.log(`

@@ -309,3 +309,13 @@ export class InvalidWildcardDomain extends NowError<'INVALID_WILDCARD_DOMAIN', {
     })
   }
 }
+
+export class VerifyScaleTimeout extends NowError<'VERIFY_SCALE_TIMEOUT', { timeout: number }> {
+  constructor(timeout: number) {
+    super({
+      code: 'VERIFY_SCALE_TIMEOUT',
+      meta: { timeout },
+      message: `Instance verification timed out (${timeout}ms)`
+    })
+  }
+}
