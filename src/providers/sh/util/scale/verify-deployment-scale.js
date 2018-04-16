@@ -16,7 +16,7 @@ async function* verifyDeploymentScale(
   deploymentId: string,
   scale: DeploymentScale,
   options: Options = {}
-): AsyncGenerator<[string, number], VerifyScaleTimeout | void, void> {
+): AsyncGenerator<[string, number] | VerifyScaleTimeout, void, void> {
   const { timeout = ms('3m') } = options
   const { pollingInterval = 1000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
@@ -27,7 +27,8 @@ async function* verifyDeploymentScale(
 
   for await (const instances of pollDeploymentInstances) {
     if (Date.now() - startTime > timeout) {
-      return new VerifyScaleTimeout(timeout)
+      yield new VerifyScaleTimeout(timeout)
+      break
     }
 
     // For each instance we update the current count and yield a match if ready
