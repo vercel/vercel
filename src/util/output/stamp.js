@@ -1,4 +1,5 @@
-const elapsed = require('./elapsed')
+// @flow
+import elapsed from './elapsed'
 
 // Returns a time delta with the right color
 // example: `[103ms]`

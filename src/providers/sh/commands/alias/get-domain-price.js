@@ -1,6 +1,6 @@
 // @flow
 import qs from 'querystring'
-import { Now } from './types'
+import { Now } from '../../util/types'
 
 type DomainPrice = {
   period: boolean,

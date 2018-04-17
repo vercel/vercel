@@ -20,7 +20,6 @@ const stamp = require('../../../util/output/stamp')
 const error = require('../../../util/output/error')
 const treatBuyError = require('../util/domains/treat-buy-error')
 const scaleInfo = require('./scale-info')
-const { DOMAIN_VERIFICATION_ERROR } = require('./errors')
 const isZeitWorld = require('./is-zeit-world')
 const isValidDomain = require('./domains/is-valid-domain')
 const toHost = require('./to-host')
@@ -36,6 +35,26 @@ const argv = mri(process.argv.slice(2), {
 const isTTY = process.stdout.isTTY
 const clipboard = !argv['no-clipboard']
 const domainRegex = /^((?=[a-z0-9-]{1,63}\.)(xn--)?[a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,63}$/
+
+const DNS_VERIFICATION_ERROR = `Please make sure that your nameservers point to ${chalk.underline(
+  'zeit.world'
+)}.
+> Examples: (full list at ${chalk.underline('https://zeit.world')})
+> ${chalk.gray('-')} ${chalk.underline('a.zeit.world')}    ${chalk.dim(
+  '96.45.80.1'
+)}
+> ${chalk.gray('-')} ${chalk.underline('b.zeit.world')}    ${chalk.dim(
+  '46.31.236.1'
+)}
+> ${chalk.gray('-')} ${chalk.underline('c.zeit.world')}    ${chalk.dim(
+  '43.247.170.1'
+)}`;
+
+const DOMAIN_VERIFICATION_ERROR =
+  DNS_VERIFICATION_ERROR +
+  `\n> Alternatively, ensure it resolves to ${chalk.underline(
+    'alias.zeit.co'
+  )} via ${chalk.dim('CNAME')} / ${chalk.dim('ALIAS')}.`
 
 module.exports = class Alias extends Now {
   constructor(args) {

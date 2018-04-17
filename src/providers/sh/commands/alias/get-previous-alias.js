@@ -1,6 +1,6 @@
 // @flow
-import { Now } from './types'
-import type { Alias } from './types'
+import { Now } from '../../util/types'
+import type { Alias } from '../../util/types'
 
 async function getPreviousAlias(now: Now, alias: string): Promise<Alias | void> {
   const aliases = await now.listAliases()

@@ -3,23 +3,26 @@ import chalk from 'chalk'
 import psl from 'psl'
 
 // Internal utils
-import domainResolvesToNow from './domain-resolves-to-now'
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import purchaseDomainIfAvailable from './purchase-domain-if-available'
-import setupDNSRecords from './setup-dns-records'
+import maybeSetupDNSRecords from './maybe-setup-dns-records'
 import verifyDomain from './verify-domain'
 
 // Types and errors
-import { Output, Now } from './types'
-import * as Errors from './errors'
+import { Output, Now } from '../../util/types'
+import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { domain } = psl.parse(alias)
+  const { domain, subdomain }: { domain: string, subdomain: string | null } = psl.parse(alias)
 
   // In case the domain is avilable, we have to purchase
   const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
-  if ((purchased instanceof Errors.UserAborted) || (purchased instanceof Errors.PaymentSourceNotFound)) {
+  if (
+    (purchased instanceof Errors.UserAborted) ||
+    (purchased instanceof Errors.PaymentSourceNotFound) ||
+    (purchased instanceof Errors.DomainNotFound)
+  ) {
     return purchased
   }
 
@@ -74,8 +77,8 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       }
 
       // Since it's pointing to our nameservers we can configure the DNS records
-      const result = await setupDNSRecords(output, now, alias, domain)
-      if (result instanceof Errors.DNSPermissionDenied) {
+      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
         return result
       }
     }
@@ -96,13 +99,10 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     }
 
     if (!info.isExternal) {
-      // If the domain is an internal domain it means that it's pointing to zeit.world and
-      // we can configure the DNS records in case it is not resolving properly.
-      if (!await domainResolvesToNow(output, alias)) {
-        const result = await setupDNSRecords(output, now, alias, domain)
-        if (result instanceof Errors.DNSPermissionDenied) {
-          return result
-        }
+      // Make sure that the DNS records are configured without messing with existent records
+      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
+        return result
       }
     }
   }

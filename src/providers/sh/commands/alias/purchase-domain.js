@@ -2,9 +2,8 @@
 import chalk from 'chalk'
 import stamp from '../../../../util/output/stamp'
 import wait from '../../../../util/output/wait'
-
-import { Now, Output } from './types'
-import { PaymentSourceNotFound } from './errors'
+import { Now, Output } from '../../util/types'
+import { PaymentSourceNotFound } from '../../util/errors'
 
 type PurchaseDomainPayload = {
   uid: string,

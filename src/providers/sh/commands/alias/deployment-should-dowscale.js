@@ -1,6 +1,6 @@
 // @flow
-import { Output, Now } from './types'
-import type { NpmDeployment, BinaryDeployment } from './types'
+import { Output, Now } from '../../util/types'
+import type { NpmDeployment, BinaryDeployment } from '../../util/types'
 import deploymentIsAliased from './deployment-is-aliased'
 import getScaleForDC from './get-scale-for-dc'
 

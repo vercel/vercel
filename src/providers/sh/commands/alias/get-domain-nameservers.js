@@ -1,8 +1,7 @@
 // @flow
 import wait from '../../../../util/output/wait'
-
-import { Now } from './types'
-import { DomainNameserversNotFound } from './errors'
+import { Now } from '../../util/types'
+import { DomainNameserversNotFound } from '../../util/errors'
 
 type NameserversResponse = {
   nameservers: string[]

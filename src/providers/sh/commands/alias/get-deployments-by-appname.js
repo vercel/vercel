@@ -1,5 +1,5 @@
 // @flow
-import { Now } from './types'
+import { Now } from '../../util/types'
 
 async function fetchDeploymentsByAppName(now: Now, appName: string) {
   return now.list(appName, { version: 3 });

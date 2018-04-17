@@ -1,18 +1,18 @@
 // @flow
 import toHost from '../../util/to-host'
 
-import { Output } from './types'
-import { InvalidAliasTarget, CantParseJSONFile, CantFindConfig, NoAliasInConfig, InvalidAliasInConfig } from './errors'
+import { Output } from '../../util/types'
+import * as Errors from '../../util/errors'
 import getInferredTargets from './get-inferred-targets'
 import isValidDomain from '../../util/domains/is-valid-domain'
 
 async function getTargetsForAlias(output: Output, args: string[], localConfigPath: string | void) {
   const targets = await getTargets(output, args, localConfigPath)
   if (
-    (targets instanceof CantParseJSONFile) ||
-    (targets instanceof CantFindConfig) ||
-    (targets instanceof NoAliasInConfig) ||
-    (targets instanceof InvalidAliasInConfig)
+    (targets instanceof Errors.CantParseJSONFile) ||
+    (targets instanceof Errors.CantFindConfig) ||
+    (targets instanceof Errors.NoAliasInConfig) ||
+    (targets instanceof Errors.InvalidAliasInConfig)
   ) {
     return targets
   }
@@ -27,7 +27,7 @@ async function getTargetsForAlias(output: Output, args: string[], localConfigPat
   // Validate the targets
   for (const target of hostTargets) {
     if (!isValidDomain(target)) {
-      return new InvalidAliasTarget(target)
+      return new Errors.InvalidAliasTarget(target)
     }
   }
 

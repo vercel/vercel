@@ -1,13 +1,13 @@
 // @flow
 import path from 'path'
+import { Output } from '../../util/types'
 import humanizePath from '../../../../util/humanize-path'
+import type { Config } from '../../util/types'
 
 // Local modules
-import { Output } from './types'
-import { CantParseJSONFile, CantFindConfig } from './errors'
+import { CantParseJSONFile, CantFindConfig } from '../../util/errors'
 import readJSONFile from './read-json-file'
 import readPackage from './read-package'
-import type { Config } from './types'
 
 let config: Config | void
 

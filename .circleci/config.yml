@@ -66,7 +66,7 @@ jobs:
           name: Running Unit Tests
           command: yarn test-unit
 
-  test-integration-mac:
+  test-integration:
     macos:
       xcode: '9.2.0'
     working_directory: ~/repo
@@ -77,18 +77,6 @@ jobs:
       - run:
           name: Output version
           command: node --version
-      - run:
-          name: Running Integration Tests
-          command: yarn test-integration
-
-  test-integration-linux:
-    docker:
-      - image: circleci/node:9.10.0
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
       - run:
           name: Running Integration Tests
           command: yarn test-integration
@@ -168,23 +156,6 @@ jobs:
 
 workflows:
   version: 2
-  scheduled:
-    triggers:
-      - schedule:
-          cron: "30 * * * *"
-          filters:
-            branches:
-              only:
-                - master
-                - canary
-    jobs:
-      - install
-      - build:
-          requires:
-            - install
-      - test-integration-linux:
-          requires:
-            - build
   unscheduled:
     jobs:
       - install:
@@ -209,7 +180,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-integration-mac:
+      - test-integration:
           requires:
             - build
           filters:
@@ -218,7 +189,7 @@ workflows:
       - compress:
           requires:
             - test-lint
-            - test-integration-mac
+            - test-integration
             - test-unit
           filters:
             tags:

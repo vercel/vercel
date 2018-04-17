@@ -1,5 +1,5 @@
 // @flow
-import { RulesFileValidationError } from './errors'
+import { RulesFileValidationError } from '../../util/errors'
 
 function validatePathAliasRules(location: string, rules: any) {
   if (!Array.isArray(rules)) {
