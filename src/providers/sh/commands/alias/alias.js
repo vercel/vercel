@@ -1,7 +1,6 @@
 // @flow
 
 // Packages
-const arg = require('arg')
 const chalk = require('chalk')
 const ms = require('ms')
 const plural = require('pluralize')
@@ -9,7 +8,6 @@ const table = require('text-table')
 
 // Utilities
 const { handleError } = require('../../util/error')
-const argCommon = require('../../util/arg-common')()
 const cmd = require('../../../../util/output/cmd')
 const createOutput = require('../../../../util/output')
 const getContextName = require('../../util/get-context-name')
@@ -25,6 +23,7 @@ const wait = require('../../../../util/output/wait')
 import { Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import assignAlias from './assign-alias'
+import getArgs from '../../util/get-args'
 import getDeploymentForAlias from './get-deployment-for-alias'
 import getRulesFromFile from './get-rules-from-file'
 import getSubcommand from './get-subcommand'
@@ -114,8 +113,7 @@ const COMMAND_CONFIG = {
 module.exports = async function main(ctx: any): Promise<number> {
   let argv
   try {
-    argv = arg(ctx.argv.slice(2), {
-      ...argCommon,
+    argv = getArgs(ctx.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
 
