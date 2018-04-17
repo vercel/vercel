@@ -309,7 +309,7 @@ module.exports = async function main (ctx) {
   if (updatedDeployment.type === 'NPM') {
     const result = await waitVerifyDeploymentScale(output, now, deployment.uid, updatedDeployment.scale)
     if (result instanceof VerifyScaleTimeout) {
-      output.error(`Instance verification timed out (${ms(error.meta.timeout)})`)
+      output.error(`Instance verification timed out (${ms(result.meta.timeout)})`)
       output.log('Read more: https://err.sh/now-cli/verification-timeout')
       now.close()
       return 1
