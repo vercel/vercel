@@ -550,7 +550,8 @@ type CreateAliasError =
   Errors.NeedUpgrade |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
-  Errors.TooManyRequests
+  Errors.TooManyRequests |
+  Errors.VerifyScaleTimeout
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
   if (error instanceof Errors.AliasInUse) {
@@ -600,6 +601,10 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     return 1
   } else if (error instanceof Errors.DomainNotFound) {
     output.error(`You should buy the domain before aliasing.`)
+    return 1
+  } else if (error instanceof Errors.VerifyScaleTimeout) {
+    output.error(`Instance verification timed out (${ms(error.meta.timeout)})`)
+    output.log('Read more: https://err.sh/now-cli/verification-timeout')
     return 1
   } else if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
