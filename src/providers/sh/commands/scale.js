@@ -1,11 +1,9 @@
-#!/usr/bin/env node
 // @flow
 
 // Packages
 const ms = require('ms');
 const chalk = require('chalk')
 const arg = require('arg')
-const sleep = require('then-sleep');
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -15,11 +13,14 @@ const logo = require('../../../util/output/logo')
 const elapsed = require('../../../util/output/elapsed')
 const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
-const { tick } = require('../../../util/output/chars')
 const { normalizeRegionsList } = require('../util/dcs')
 const { handleError } = require('../util/error')
 const getContextName = require('../util/get-context-name')
-const exit = require('../../../util/exit')
+
+import stamp from '../../../util/output/stamp'
+import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale'
+import getDeploymentByIdOrThrow from '../util/deploy/get-deployment-by-id-or-throw'
+import { VerifyScaleTimeout } from '../util/errors'
 
 // the "auto" value for scaling
 const AUTO = 'auto'
@@ -97,7 +98,7 @@ module.exports = async function main (ctx) {
   const apiUrl = ctx.apiUrl
   const debugEnabled = argv['--debug']
   const output = createOutput({ debug: debugEnabled })
-  const { log, success, error, debug } = output;
+  const { log, error, debug } = output;
 
   // extract the first parameter
   id = argv._[0]
@@ -294,96 +295,30 @@ module.exports = async function main (ctx) {
     }
   }
 
-  const successMsg = `${chalk.gray('>')} Scale rules for ${
+  console.log(`${chalk.gray('>')} Scale rules for ${
     dcIds.map(d => chalk.bold(d)).join(', ')
-  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`
+  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${elapsed(Date.now() - startScale)}`)
 
   if (deployment.type === 'BINARY' || argv['--no-verify']) {
-    console.log(successMsg)
     now.close();
     return 0;
   }
 
-  console.log(successMsg)
-  const startVerification = Date.now()
-  const cancelVerifyWait = waitDcs(scaleArgs, output)
-  const cancelExit = onExit(() => {
-    cancelVerifyWait();
-    log('Verification aborted. Scale settings were saved')
-    exit(0);
-  });
-
-  try {
-    await waitForScale(
-      now,
-      deployment.uid,
-      scaleArgs,
-      output,
-      {
-        timeout: ms(argv['--verify-timeout'] != null ? argv['--verify-timeout'] : '2m'),
-        checkInterval: 500,
-        onDCScaled(id, instanceCount) {
-          cancelVerifyWait(id, instanceCount);
-        }
-      }
-    );
-    cancelVerifyWait()
-  } catch (err) {
-    cancelVerifyWait()
-    throw err
-  } finally {
-    cancelExit();
-  }
-
-  success(`Scale state verified ${elapsed(Date.now() - startVerification)}`);
-
-  now.close();
-  return 0;
-}
-
-// version of wait() that also displays progress
-// for all dcs
-function waitDcs(scaleArgs, { log }) {
-  let cancelMainWait;
-  const waitStart = Date.now();
-  const remaining = new Set(Object.keys(scaleArgs));
-  const renderWait = () => {
-    cancelMainWait = wait(`Waiting for instances in ${
-      Array.from(remaining).map(id => chalk.bold(id)).join(', ')
-    } to match constraints`)
-  }
-  renderWait();
-  return (dcId = null, instanceCount = null) => {
-    if (dcId !== null && instanceCount !== null) {
-      remaining.delete(dcId);
-      cancelMainWait();
-      log(`${chalk.cyan(tick)} Verified ${chalk.bold(dcId)} (${instanceCount}) ${elapsed(Date.now() - waitStart)}`);
-      renderWait();
-    } else {
-      cancelMainWait();
+  const verifyStamp = stamp()
+  const updatedDeployment = await getDeploymentByIdOrThrow(now, contextName, deployment.uid)
+  if (updatedDeployment.type === 'NPM') {
+    const result = await waitVerifyDeploymentScale(output, now, deployment.uid, updatedDeployment.scale)
+    if (result instanceof VerifyScaleTimeout) {
+      output.error(`Instance verification timed out (${ms(error.meta.timeout)})`)
+      output.log('Read more: https://err.sh/now-cli/verification-timeout')
+      now.close()
+      return 1
     }
-  }
-}
-
-// invokes the passed function upon process exit
-function onExit(fn: Function) {
-  let exit = false;
-
-  const onExit_ = () => {
-    if (exit) return;
-    fn();
-    exit = true;
+    output.success(`Scale state verified ${verifyStamp()}`);
   }
 
-  process.on('SIGTERM', onExit_);
-  process.on('SIGINT', onExit_);
-  process.on('exit', onExit_);
-
-  return () => {
-    process.removeListener('SIGTERM', onExit_);
-    process.removeListener('SIGINT', onExit_);
-    process.removeListener('exit', onExit_);
-  }
+  now.close()
+  return 0
 }
 
 function setScale(now, deploymentId, scale) {
@@ -396,64 +331,9 @@ function setScale(now, deploymentId, scale) {
   )
 }
 
-// waits until the deployment's instances count reflects the intended
-// scale that the user is configuring with the command
-async function waitForScale(now, deploymentId, intendedScale, { debug }, { timeout = ms('2m'), checkInterval = 500, onDCScaled = null } = {}) {
-  const start = Date.now()
-  const intendedScaleDcs = new Set(Object.keys(intendedScale));
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    if (start + timeout <= Date.now()) {
-      throw new Error('Timeout while verifying instance count (10m)');
-    }
-
-    const data = await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances?init=1`)
-
-    for (const dc of intendedScaleDcs) {
-      const currentScale = data[dc];
-
-      if (!currentScale) {
-        debug(`missing data for dc ${dc}`)
-        break;
-      }
-
-      const instanceCount = data[dc].instances.length;
-      const { min, max } = intendedScale[dc];
-      if (isInstanceCountBetween(instanceCount, min, max)) {
-        if (onDCScaled !== null) {
-          onDCScaled(dc, instanceCount);
-        }
-        intendedScaleDcs.delete(dc);
-        debug(`dc "${dc}" match`);
-      } else {
-        debug(`dc "${dc}" miss. intended: ${min}-${max}. current: ${instanceCount}`);
-      }
-    }
-
-    if (intendedScaleDcs.size === 0) {
-      return;
-    }
-
-    await sleep(checkInterval);
-  }
-}
-
 // whether it's a numeric or "auto"
 function isMinOrMaxArgument (v: string) {
   return v === AUTO || isNumeric(v);
-}
-
-function isInstanceCountBetween(v: number, min: number, max: number) {
-  if (v < min) {
-    return false;
-  }
-
-  if (v > (max === AUTO ? Infinity : max)) {
-    return false;
-  }
-
-  return true;
 }
 
 // converts "3" to 3, and "auto" to 0
