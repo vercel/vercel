@@ -1,6 +1,8 @@
 // @flow
 import stamp from '../../../../util/output/stamp'
 import { Now, Output } from '../../util/types'
+import setDeploymentScale from '../../util/scale/set-deployment-scale'
+import waitForScale from '../../util/scale/wait-verify-deployment-scale'
 import type { Deployment, HTTPChallengeInfo } from '../../util/types'
 import * as Errors from '../../util/errors'
 
@@ -10,9 +12,7 @@ import deploymentShouldDowscale from './deployment-should-dowscale'
 import fetchDeploymentFromAlias from './get-deployment-from-alias'
 import getDeploymentDownscalePresets from './get-deployment-downscale-presets'
 import getPreviousAlias from './get-previous-alias'
-import setDeploymentScale from './set-deployment-scale'
 import setupDomain from './setup-domain'
-import waitForScale from './wait-for-scale'
 
 // $FlowFixMe
 const NOW_SH_REGEX = /\.now\.sh$/
@@ -32,8 +32,11 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
       const scaleStamp = stamp()
       await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale)
-      if (!noVerify) { await waitForScale(output, now, deployment.uid, prevDeployment.scale) }
-      output.success(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
+      if (!noVerify) {
+        const result = await waitForScale(output, now, deployment.uid, prevDeployment.scale)
+        if (result instanceof Errors.VerifyScaleTimeout) { return result }
+        output.log(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
+      }
     } else {
       output.debug(`Both deployments have the same scaling rules.`)
     }

@@ -74,6 +74,10 @@ export type DeploymentScale = {
   [dc: string]: Scale
 }
 
+export type InstancesCount = {
+  [dc: string]: number,
+}
+
 export type NpmDeployment = {
   uid: string,
   url: string,
@@ -174,6 +178,12 @@ export type Certificate = {
   expiration: string
 }
 
+export type InstancesInfo = {
+  [dc: string]: {
+    instances: Array<{}>
+  }
+}
+
 type GenericEvent<T, P> = {
   type: T,
   created: number,
@@ -260,6 +270,17 @@ export type StderrEvent = GenericEvent<'stderr', {
   serial: string
 }>
 
+export type ExitEvent = GenericEvent<'exit', {
+  date: number,
+  pid: string,
+  seq: string,
+  text: string,
+  id: string,
+  deploymentId: string,
+  appName: string,
+  serial: string,
+}>
+
 export type DeploymentEvent = 
   StateChangeEvent |
   BuildStartEvent |
@@ -270,7 +291,8 @@ export type DeploymentEvent =
   ScaleSetEvent |
   CommandEvent |
   StdoutEvent |
-  StderrEvent
+  StderrEvent |
+  ExitEvent
 
 export type NewDeployment = {
   deploymentId: string,

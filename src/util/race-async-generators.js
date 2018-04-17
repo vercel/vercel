@@ -1,8 +1,8 @@
-// Combines two async generators into one that stops when all the generators
-// passed are done.
-export default async function* combineAsyncIterators(...args) {
+// Combines two o more async generators into one that stops when the first
+// generator finishes.
+export default async function* raceAsyncGenerators(...args) {
   let nextPromises = args.map(i => i.next())
-  while (nextPromises.length > 0) {
+  while (nextPromises.length === args.length) {
     yield new Promise(resolve => {
       let resolved = false
       nextPromises.forEach((nextPromise, idx) => {

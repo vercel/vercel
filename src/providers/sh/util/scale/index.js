@@ -1,5 +1,5 @@
 // Ours
-const Now = require('.')
+const Now = require('..')
 
 module.exports = class Scale extends Now {
   getInstances(id) {
