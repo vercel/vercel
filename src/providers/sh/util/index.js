@@ -308,7 +308,7 @@ module.exports = class Now extends EventEmitter {
     return deployment
   }
 
-  upload() {
+  upload({ atlas = false, scale = {} } = {}) {
     const { debug, time } = this._output
     debug(`Will upload ${this._missing.length} files`)
 
@@ -328,13 +328,18 @@ module.exports = class Now extends EventEmitter {
             stream.write(data)
             stream.end()
 
-            const res = await this._fetch('/v2/now/files', {
+            const url = atlas ? '/v1/now/images' : '/v2/now/files'
+            const additionalHeaders = atlas ? {
+              'x-now-dcs': Object.keys(scale).join(',')
+            } : {}
+            const res = await this._fetch(url, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
                 'Content-Length': data.length,
                 'x-now-digest': sha,
-                'x-now-size': data.length
+                'x-now-size': data.length,
+                ...additionalHeaders
               },
               body: stream
             })
