@@ -56,7 +56,7 @@ function allDcsMatched(target: InstancesCount, current: InstancesCount): boolean
 
 function getTargetInstancesCountForScale(scale: DeploymentScale): InstancesCount {
   return Object.keys(scale).reduce((result, dc) =>({ 
-    ...result, [dc]: scale[dc].max 
+    ...result, [dc]: scale[dc].min 
   }), {})
 }
 
