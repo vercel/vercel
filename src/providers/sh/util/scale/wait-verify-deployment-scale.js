@@ -15,7 +15,7 @@ async function waitForScale(output: Output, now: Now, deploymentId: string, scal
   const scaleStamp = stamp()
   let cancelWait = renderWaitDcs(Array.from(remainingDCs.keys()))
 
-  for await (const dcReady of verifyDeploymentScale(now, deploymentId, scale)) {
+  for await (const dcReady of verifyDeploymentScale(output, now, deploymentId, scale)) {
     cancelWait()
     if (Array.isArray(dcReady)) {
       const [dc, instances] = dcReady

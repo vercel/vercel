@@ -900,7 +900,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           const verifyStamp = stamp()
           const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], VerifyScaleTimeout, void> = raceAsyncGenerators(
             eventListenerToGenerator('data', eventsStream),
-            verifyDeploymentScale(now, deployment.deploymentId, deployment.scale)
+            verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
           )
 
           for await (const dcOrEvent of verifyDCsGenerator) {
