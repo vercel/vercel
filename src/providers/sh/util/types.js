@@ -321,6 +321,13 @@ export type CLIOptions<T> = {
   '--api'?: string,
 } & T
 
+export type CLIAliasOptions = CLIOptions<{
+  '--json': boolean,
+  '--no-verify': boolean,
+  '--rules': string,
+  '--yes': boolean,
+}>
+
 export type CLICertsOptions = CLIOptions<{
   '--overwrite': string,
   '--crt': string,
