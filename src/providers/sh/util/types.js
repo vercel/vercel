@@ -12,7 +12,7 @@ export interface Now {
 
 export interface Output {
   debug(msg: string): void,
-  error(msg: string): void,
+  error(msg: string, slug?: string): void,
   log(msg: string): void,
   note(msg: string): void,
   print(msg: string): void,
@@ -70,8 +70,17 @@ export type Scale = {
   max: number
 }
 
+export type ScaleArgs = {
+  min: number,
+  max: number | 'auto'
+}
+
 export type DeploymentScale = { 
   [dc: string]: Scale
+}
+
+export type DeploymentScaleArgs = {
+  [dc: string]: ScaleArgs
 }
 
 export type InstancesCount = {
@@ -83,7 +92,7 @@ export type NpmDeployment = {
   url: string,
   name: string,
   type: 'NPM',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -95,7 +104,7 @@ export type StaticDeployment = {
   url: string,
   name: string,
   type: 'STATIC',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -106,7 +115,7 @@ export type BinaryDeployment = {
   url: string,
   name: string,
   type: 'BINARY',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -317,4 +326,8 @@ export type CLICertsOptions = CLIOptions<{
   '--crt': string,
   '--key': string,
   '--ca': string,
+}>
+
+export type CLIScaleOptions = CLIOptions<{
+  '--no-verify': string,
 }>
