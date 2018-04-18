@@ -1,7 +1,7 @@
 // @flow
 import ms from 'ms'
 import createPollingFn from '../../../../util/create-polling-fn'
-import { Now } from '../types'
+import { Output, Now } from '../types'
 import { VerifyScaleTimeout } from '../errors'
 import getDeploymentInstances from '../deploy/get-deployment-instances'
 import type { InstancesCount, DeploymentScale } from '../types'
@@ -12,6 +12,7 @@ type Options = {
 }
 
 async function* verifyDeploymentScale(
+  output: Output,
   now: Now,
   deploymentId: string,
   scale: DeploymentScale,
@@ -24,6 +25,7 @@ async function* verifyDeploymentScale(
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
   const targetInstancesCount = getTargetInstancesCountForScale(scale)
   const startTime = Date.now()
+  output.debug(`Verifying scale minimum presets to ${JSON.stringify(targetInstancesCount)}`)
 
   for await (const instances of pollDeploymentInstances) {
     if (Date.now() - startTime > timeout) {
@@ -56,7 +58,7 @@ function allDcsMatched(target: InstancesCount, current: InstancesCount): boolean
 
 function getTargetInstancesCountForScale(scale: DeploymentScale): InstancesCount {
   return Object.keys(scale).reduce((result, dc) =>({ 
-    ...result, [dc]: scale[dc].min 
+    ...result, [dc]: Math.min(Math.max(scale[dc].min, 1), scale[dc].max)
   }), {})
 }
 
