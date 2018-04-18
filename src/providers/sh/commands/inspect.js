@@ -2,7 +2,6 @@
 
 // Packages
 const chalk = require('chalk')
-const arg = require('arg')
 const table = require('text-table')
 
 // Utilities
@@ -11,11 +10,12 @@ const createOutput = require('../../../util/output')
 const Now = require('../util/')
 const logo = require('../../../util/output/logo')
 const elapsed = require('../../../util/output/elapsed')
-const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
 const { handleError } = require('../util/error')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
+
+import getArgs from '../util/get-args'
 
 const STATIC = 'STATIC'
 
@@ -50,9 +50,7 @@ module.exports = async function main (ctx: any): Promise<number> {
   let argv;
 
   try {
-    argv = arg(ctx.argv.slice(3), {
-      ...argCommon
-    })
+    argv = getArgs(ctx.argv.slice(2))
   } catch (err) {
     handleError(err)
     return 1;
@@ -69,9 +67,9 @@ module.exports = async function main (ctx: any): Promise<number> {
   const { print, log, error } = output;
 
   // extract the first parameter
-  id = argv._[0]
+  id = argv._[1]
 
-  if (argv._.length !== 1) {
+  if (argv._.length !== 2) {
     error(`${cmd('now inspect <url>')} expects exactly one argument`)
     help();
     return 1;

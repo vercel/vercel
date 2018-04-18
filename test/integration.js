@@ -173,6 +173,31 @@ test('find deployment in list', async t => {
   }
 })
 
+test('find deployment in list with mixed args', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    '--debug',
+    'ls',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  const deployments = parseList(stdout)
+
+  t.true(deployments.length > 0)
+  t.is(code, 0)
+
+  const target = deployments.find(deployment => {
+    return deployment.includes(`${session}-`)
+  })
+
+  t.truthy(target)
+
+  if (target) {
+    context.deployment = target
+  }
+})
+
 test('create alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,

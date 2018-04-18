@@ -2,7 +2,6 @@
 //@flow
 
 // Packages
-const arg = require('arg')
 const chalk = require('chalk')
 const ms = require('ms')
 const plural = require('pluralize')
@@ -19,7 +18,8 @@ const wait = require('../../../util/output/wait')
 const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
 const toHost = require('../util/to-host')
-const argCommon = require('../util/arg-common')()
+
+import getArgs from '../util/get-args'
 import getDeploymentInstances from '../util/deploy/get-deployment-instances'
 
 const help = () => {
@@ -64,8 +64,7 @@ module.exports = async function main(ctx) {
   let argv
 
   try {
-    argv = arg(ctx.argv.slice(3), {
-      ...argCommon,
+    argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
       '-a': '--all',
     })
@@ -77,12 +76,12 @@ module.exports = async function main(ctx) {
   const debugEnabled = argv['--debug']
   const { print, log, error, note, debug } = createOutput({ debug: debugEnabled })
 
-  if (argv._.length > 1) {
+  if (argv._.length > 2) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
     return 1;
   }
 
-  let app = argv._[0]
+  let app = argv._[1]
   let host = null
 
   const apiUrl = ctx.apiUrl

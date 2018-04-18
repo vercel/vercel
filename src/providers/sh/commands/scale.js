@@ -3,7 +3,6 @@
 // Packages
 const ms = require('ms');
 const chalk = require('chalk')
-const arg = require('arg')
 
 // Utilities
 const cmd = require('../../../util/output/cmd')
@@ -11,12 +10,12 @@ const createOutput = require('../../../util/output')
 const Now = require('../util/')
 const logo = require('../../../util/output/logo')
 const elapsed = require('../../../util/output/elapsed')
-const argCommon = require('../util/arg-common')()
 const wait = require('../../../util/output/wait')
 const { normalizeRegionsList } = require('../util/dcs')
 const { handleError } = require('../util/error')
 const getContextName = require('../util/get-context-name')
 
+import getArgs from '../util/get-args'
 import stamp from '../../../util/output/stamp'
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale'
 import getDeploymentByIdOrThrow from '../util/deploy/get-deployment-by-id-or-throw'
@@ -78,12 +77,10 @@ module.exports = async function main (ctx) {
   let argv;
 
   try {
-    argv = arg(ctx.argv.slice(3), {
-      ...argCommon,
+    argv = getArgs(ctx.argv.slice(2), {
+      '--verify-timeout': Number,
       '--no-verify': Boolean,
       '-n': '--no-verify',
-      '--verify-timeout': String,
-      '-t': '--verify-timeout'
     })
   } catch (err) {
     handleError(err)
@@ -101,7 +98,7 @@ module.exports = async function main (ctx) {
   const { log, error, debug } = output;
 
   // extract the first parameter
-  id = argv._[0]
+  id = argv._[1]
 
   // `now scale ls` has been deprecated
   if (id === 'ls') {
@@ -109,13 +106,13 @@ module.exports = async function main (ctx) {
     return 1
   }
 
-  if (argv._.length < 2) {
+  if (argv._.length < 3) {
     error(`${cmd('now scale <url> <dc> [min] [max]')} expects at least two arguments`)
     help();
     return 1;
   }
 
-  if (argv._.length > 4) {
+  if (argv._.length > 5) {
     error(`${cmd('now scale <url> <dc> [min] [max]')} expects at most four arguments`)
     help();
     return 1;
@@ -133,12 +130,12 @@ module.exports = async function main (ctx) {
 
   // for legacy reasons, we still allow `now scale <url> <min> [max]`.
   // if this is the case, we apply the desired rules to all dcs
-  let dcIdOrMin = argv._[1];
+  let dcIdOrMin = argv._[2];
 
   if (isMinOrMaxArgument(dcIdOrMin)) {
     min = toMin(dcIdOrMin)
 
-    const maybeMax = argv._[2];
+    const maybeMax = argv._[3];
     if (maybeMax !== undefined) {
       if (isMinOrMaxArgument(maybeMax)) {
         max = toMax(maybeMax);
@@ -148,7 +145,7 @@ module.exports = async function main (ctx) {
       }
 
       // if we got min and max, but something else, err
-      if (argv._.length > 3) {
+      if (argv._.length > 4) {
         error(`Invalid number of arguments: expected <min> ("${min}") and [max]`)
         return 1
       }
@@ -188,19 +185,19 @@ module.exports = async function main (ctx) {
   // convert numeric parameters into actual numbers
   // only if min and max haven't been set above
   if (min === null) {
-    if (argv._[2] != null) {
-      if (isMinOrMaxArgument(argv._[2])) {
-        min = toMin(argv._[2]);
+    if (argv._[3] != null) {
+      if (isMinOrMaxArgument(argv._[3])) {
+        min = toMin(argv._[3]);
       } else {
-        error(`Invalid <min> parameter "${argv._[2]}". A number or "auto" were expected`);
+        error(`Invalid <min> parameter "${argv._[3]}". A number or "auto" were expected`);
         return 1;
       }
 
-      if (argv._[3] != null) {
-        if (isMinOrMaxArgument(argv._[3])) {
-          max = toMax(argv._[3]);
+      if (argv._[4] != null) {
+        if (isMinOrMaxArgument(argv._[4])) {
+          max = toMax(argv._[4]);
         } else {
-          error(`Invalid <max> parameter "${argv._[3]}". A number or "auto" were expected`);
+          error(`Invalid <max> parameter "${argv._[4]}". A number or "auto" were expected`);
           return 1;
         }
       } else {

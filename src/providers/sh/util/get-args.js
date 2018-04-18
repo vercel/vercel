@@ -2,11 +2,15 @@
 import arg from 'arg'
 const getCommonArgs = require('./arg-common')
 
-function getArgs(cliArgs: string[], options: Object) {
-  return arg(cliArgs, {
-    ...options,
-    ...getCommonArgs()
-  })
+type ArgOptions = {
+  permissive?: boolean
+}
+
+function getArgs(argv: string[], argsOptions?: Object = {}, argOptions?: ArgOptions = {}) {
+  return arg({
+    ...getCommonArgs(),
+    ...argsOptions
+  }, { ...argOptions, argv })
 }
 
 export default getArgs
