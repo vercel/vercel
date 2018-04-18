@@ -405,13 +405,20 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       checkers.push(checkPath(paths[0]))
     } else {
       for (const path of paths) {
-        const fsData = await fs.lstat(path)
-
-        if (fsData.isFile()) {
-          continue
+        try {
+          const fsData = await fs.lstat(path)
+          if (fsData.isFile()) {
+            continue
+          }
+          checkers.push(checkPath(path))
+        } catch (error) {
+          if (error.code === 'ENOENT') {
+            output.error(error.message, 'path-not-deployable')
+            await exit(1)
+          } else {
+            throw error
+          }
         }
-
-        checkers.push(checkPath(path))
       }
     }
 
