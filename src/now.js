@@ -23,7 +23,6 @@ const { join } = require('path')
 const debug = require('debug')('now:main')
 const { existsSync } = require('fs-extra')
 const mkdirp = require('mkdirp-promise')
-const mri = require('mri')
 const fetch = require('node-fetch')
 const chalk = require('chalk')
 const checkForUpdate = require('update-check')
@@ -41,6 +40,8 @@ const providers = require('./providers')
 const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
 const pkg = require('./util/pkg')
+
+import getArgs from './providers/sh/util/get-args'
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -62,23 +63,10 @@ const main = async (argv_) => {
     console.log(info(`Read more about how to update here: https://zeit.co/update-cli`))
   }
 
-  const argv = mri(argv_, {
-    boolean: [
-      'help',
-      'version'
-    ],
-    string: [
-      'token',
-      'team',
-      'api'
-    ],
-    alias: {
-      help: 'h',
-      version: 'v',
-      token: 't',
-      team: 'T'
-    }
-  })
+  const argv = getArgs(argv_, {
+    '--version': Boolean,
+    '-v': '--version'
+  }, { permissive: true })
 
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
@@ -87,7 +75,7 @@ const main = async (argv_) => {
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
-    if (argv.version) {
+    if (argv['--version']) {
       console.log(require('../package').version + `${
         // $FlowFixMe
         process.pkg ? '' : chalk.magenta(' (dev)')
@@ -383,8 +371,8 @@ const main = async (argv_) => {
   const { sh } = ctx.config
   ctx.apiUrl = 'https://api.zeit.co'
 
-  if (argv.api && typeof argv.api === 'string') {
-    ctx.apiUrl = argv.api
+  if (argv['--api'] && typeof argv['--api'] === 'string') {
+    ctx.apiUrl = argv['--api']
   } else if (sh && sh.api) {
     ctx.apiUrl = sh.api
   }
@@ -405,7 +393,7 @@ const main = async (argv_) => {
   if (
     !authConfig.credentials.length &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
-    !argv.token &&
+    !argv['--token'] &&
     subcommand !== 'login'
   ) {
     if (isTTY) {
@@ -428,7 +416,7 @@ const main = async (argv_) => {
     }
   }
 
-  if (typeof argv.token === 'string' && subcommand === 'switch') {
+  if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
     console.error(error({
       message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
       slug: 'no-token-allowed'
@@ -437,8 +425,8 @@ const main = async (argv_) => {
     return 1;
   }
 
-  if (typeof argv.token === 'string') {
-    const {token} = argv
+  if (typeof argv['--token'] === 'string') {
+    const token = argv['--token']
 
     if (token.length === 0) {
       console.error(error({
@@ -484,9 +472,9 @@ const main = async (argv_) => {
     ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
   }
 
-  if (typeof argv.team === 'string' && subcommand !== 'login') {
-    const { team } = argv
+  if (typeof argv['--team'] === 'string' && subcommand !== 'login') {
     const { sh } = ctx.config
+    const team = argv['--team']
 
     if (team.length === 0) {
       console.error(error({
