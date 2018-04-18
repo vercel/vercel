@@ -320,20 +320,19 @@ async function main(ctx: any) {
   alwaysForwardNpm = config.forwardNpm
 
   try {
-    return sync({ contextName, output, token, config, showMessage: true })
+    return sync({ contextName, output, token, config, firstRun: true, deploymentType: undefined })
   } catch (err) {
     await stopDeployment(err)
   }
 }
 
-async function sync({ contextName, output, token, config: { currentTeam, user }, showMessage }) {
+async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
   return new Promise(async (_resolve, reject) => {
     const deployStamp = stamp()
     const rawPath = argv._[0]
 
     let meta
     let deployment: NewDeployment | null = null
-    let deploymentType
     let isFile
     let atlas = false
 
@@ -423,7 +422,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       await exit(1)
     }
 
-    if (!quiet && showMessage) {
+    if (!quiet && firstRun) {
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
 
@@ -805,7 +804,8 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             currentTeam,
             user
           },
-          showMessage: false
+          firstRun: false,
+          deploymentType
         })
 
         return
