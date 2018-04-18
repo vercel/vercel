@@ -127,6 +127,12 @@ export type Deployment =
   StaticDeployment |
   BinaryDeployment
 
+export type PathAliasRule = {
+  pathname: string,
+  method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
+  dest: string,
+}
+
 export type Alias = {
   uid: string,
   alias: string,
@@ -141,11 +147,19 @@ export type Alias = {
     email: string
   },
   deploymentId: string,
-  rules: Array<{
-    pathname: string,
-    method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
-    dest: string,
-  }>
+  rules?: PathAliasRule[]
+}
+
+export type AliasListItem = {
+  uid: string,
+  alias: string,
+  created: string,
+  deployment: {
+    id: string,
+    url: string,
+  },
+  deploymentId: string,
+  rules?: PathAliasRule[]
 }
 
 export type AliasRecord = {

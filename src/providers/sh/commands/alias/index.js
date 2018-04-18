@@ -3,7 +3,6 @@
 // Packages
 const chalk = require('chalk')
 const ms = require('ms')
-const plural = require('pluralize')
 const table = require('text-table')
 
 // Utilities
@@ -13,16 +12,14 @@ const createOutput = require('../../../../util/output')
 const getContextName = require('../../util/get-context-name')
 const logo = require('../../../../util/output/logo')
 const Now = require('../../util/')
-const NowAlias = require('../../util/alias')
 const stamp = require('../../../../util/output/stamp')
 const strlen = require('../../util/strlen')
 const toHost = require('../../util/to-host')
-const wait = require('../../../../util/output/wait')
 
 import set from './set'
+import ls from './ls'
 
 import { Output } from '../../util/types'
-import * as Errors from '../../util/errors'
 import getArgs from '../../util/get-args'
 import getSubcommand from './get-subcommand'
 import promptBool from './prompt-bool'
@@ -189,122 +186,6 @@ function findAlias(alias, list, output) {
   return _alias
 }
 
-async function ls (ctx, opts, args, output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
-  const { currentTeam } = sh;
-  const contextName = getContextName(sh);
-
-  const {log, error, print} = output;
-  const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
-
-  const alias = new NowAlias({ apiUrl, token, debug: debugEnabled, currentTeam })
-
-  if (args.length === 1) {
-    let cancelWait;
-
-    if (!opts['--json']) {
-      cancelWait = wait(`Fetching alias details for "${args[0]}" under ${chalk.bold(contextName)}`);
-    }
-
-    const list = await alias.listAliases()
-    const item = list.find(listItem => {
-      return (listItem.uid === args[0] || listItem.alias === args[0])
-    })
-
-    if (!item || !item.rules) {
-      if (cancelWait) {
-        cancelWait()
-      }
-      error(`Could not match path alias for: ${args[0]}`)
-      return 1
-    }
-
-    if (opts['--json']) {
-      print(JSON.stringify({ rules: item.rules }, null, 2))
-    } else {
-      if (cancelWait) cancelWait();
-
-      const header = [
-        ['', 'pathname', 'method', 'dest'].map(s => chalk.dim(s))
-      ]
-      const text =
-        list.length === 0
-          ? null
-          : table(
-              header.concat(
-                item.rules.map(rule => {
-                  return [
-                    '',
-                    rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
-                    rule.method ? rule.method : '*',
-                    rule.dest
-                  ]
-                })
-              ),
-              {
-                align: ['l', 'l', 'l', 'l'],
-                hsep: ' '.repeat(2),
-                stringLength: strlen
-              }
-            )
-
-      if (text === null) {
-        // don't print anything, not even \n
-      } else {
-        print(text + '\n')
-      }
-    }
-    return 0;
-  } else if (args.length !== 0) {
-    error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias ls`')}`)
-    return 1
-  }
-
-  
-  const fetchStamp = stamp()
-  const aliases = await alias.ls()
-  aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
-  log(
-    `${
-      plural('alias', aliases.length, true)
-    } found under ${chalk.bold(contextName)} ${fetchStamp()}`
-  )
-
-  print('\n')
-
-  console.log(
-    table(
-      [
-        ['source', 'url', 'age'].map(h => chalk.gray(h)),
-        ...aliases.map(
-          a => ([
-            a.rules && a.rules.length
-              ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
-              // for legacy reasons, we might have situations
-              // where the deployment was deleted and the alias
-              // not collected appropriately, and we need to handle it
-              : a.deployment && a.deployment.url ?
-                  a.deployment.url :
-                  chalk.gray('–'),
-            a.alias,
-            ms(Date.now() - new Date(a.created))
-          ])
-        )
-      ],
-      {
-        align: ['l', 'l', 'r'],
-        hsep: ' '.repeat(4),
-        stringLength: strlen
-      }
-    ).replace(/^/gm, '  ') + '\n\n'
-  )
-
-  alias.close()
-  return 0
-}
-
 async function rm (ctx, opts, args, output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
@@ -357,13 +238,3 @@ async function rm (ctx, opts, args, output): Promise<number> {
   console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`)
   return 0
 }
-
-export type SetupDomainError = 
-  Errors.DNSPermissionDenied |
-  Errors.DomainNameserversNotFound |
-  Errors.DomainNotVerified |
-  Errors.DomainPermissionDenied |
-  Errors.DomainVerificationFailed |
-  Errors.NeedUpgrade |
-  Errors.PaymentSourceNotFound |
-  Errors.UserAborted
