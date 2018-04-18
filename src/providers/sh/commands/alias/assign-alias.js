@@ -32,10 +32,12 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
       const scaleStamp = stamp()
       await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale)
+      output.log(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
       if (!noVerify) {
         const result = await waitForScale(output, now, deployment.uid, prevDeployment.scale)
-        if (result instanceof Errors.VerifyScaleTimeout) { return result }
-        output.log(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
+        if (result instanceof Errors.VerifyScaleTimeout) {
+          return result
+        }
       }
     } else {
       output.debug(`Both deployments have the same scaling rules.`)
