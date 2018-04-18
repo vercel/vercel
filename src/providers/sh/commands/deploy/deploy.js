@@ -917,10 +917,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             }
           }
         }
-
-        output.success(`Deployment ready`)
-        await exit(0)
       }
+
+      output.success(`Deployment ready`)
+      await exit(0)
     }
   })
 }
