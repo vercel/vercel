@@ -121,8 +121,12 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     return 1
   }
 
-  const max = getMaxFromArgs(argv._, min)
-  if (max instanceof Errors.InvalidArgsForMinMaxScale) {
+  const max = getMaxFromArgs(argv._)
+  if (max instanceof Errors.InvalidMinForScale) {
+    output.error(`Invalid <min> parameter "${max.meta.value}". A number or "auto" were expected`)
+    now.close();
+    return 1
+  } else if (max instanceof Errors.InvalidArgsForMinMaxScale) {
     output.error(`Invalid number of arguments: expected <min> ("${max.meta.min}") and [max]`)
     now.close();
     return 1

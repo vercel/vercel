@@ -1,18 +1,11 @@
 // @flow
-import { InvalidMinForScale } from '../errors'
-import toNumberOrAuto from './to-number-or-auto'
-import isValidMinMaxValue from './is-valid-min-max-value'
+import getRawMinFromArgs from './get-raw-min-from-args'
 
 export default function getMinFromArgs(args: string[]) {
-  if (isValidMinMaxValue(args[2])) {
-    return toMinValue(toNumberOrAuto(args[2]))
-  } else if (isValidMinMaxValue(args[3])) {
-    return toMinValue(toNumberOrAuto(args[3]))
-  } else if (args[3]) {
-    return new InvalidMinForScale(args[3])
-  } else {
-    return 0
-  }
+  const result = getRawMinFromArgs(args)
+  return typeof result === 'string'
+    ? toMinValue(result)
+    : result
 }
 
 function toMinValue(value: 'auto' | number) {
