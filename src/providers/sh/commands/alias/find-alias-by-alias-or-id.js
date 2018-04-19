@@ -1,11 +1,11 @@
 // @flow
 import toHost from '../../util/to-host'
-import getAliases from './get-aliases'
+import getAliases from '../../util/alias/get-aliases'
 import { Now, Output } from '../../util/types'
-import type { AliasListItem } from '../../util/types'
+import type { Alias } from '../../util/types'
 
 export default async function findAliasByAliasOrId(output: Output, now: Now, aliasOrId: string) {
-  const aliases: AliasListItem[] = await getAliases(now)
+  const aliases: Alias[] = await getAliases(now)
   const [key, val] = /\./.test(aliasOrId)
     ? ['alias', toHost(aliasOrId)]
     : ['uid', aliasOrId]

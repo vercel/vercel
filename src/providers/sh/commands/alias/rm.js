@@ -9,7 +9,7 @@ import getContextName from '../../util/get-context-name'
 import stamp from '../../../../util/output/stamp'
 import strlen from '../../util/strlen'
 import { CLIContext, Output } from '../../util/types'
-import type { CLIAliasOptions, AliasListItem } from '../../util/types'
+import type { CLIAliasOptions, Alias } from '../../util/types'
 
 import deleteAliasById from './delete-alias-by-id'
 import findAliasByAliasOrId from './find-alias-by-alias-or-id'
@@ -37,7 +37,7 @@ export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: s
     return 1
   }
 
-  const alias: AliasListItem | void = await findAliasByAliasOrId(output, now, aliasOrId)
+  const alias: Alias | void = await findAliasByAliasOrId(output, now, aliasOrId)
   if (!alias) {
     output.error(`Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`)
     output.log(`Run ${cmd('now alias ls')} to see your aliases.`)
@@ -55,7 +55,7 @@ export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: s
   return 0
 }
 
-async function confirmAliasRemove(output: Output, alias: AliasListItem) {
+async function confirmAliasRemove(output: Output, alias: Alias) {
   const srcUrl = alias.deployment ? chalk.underline(alias.deployment.url) : null
   const tbl = table([
     [ ...(srcUrl ? [srcUrl] : []),

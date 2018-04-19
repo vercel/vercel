@@ -7,7 +7,6 @@ type FetchOptions = {
 export interface Now {
   fetch(url: string, options?: FetchOptions): Promise<any>,
   list(appName: string, {version: number}): Deployment[],
-  listAliases(): Alias[]
 }
 
 export interface Output {
@@ -145,18 +144,6 @@ export type Alias = {
     uid: string,
     username: string,
     email: string
-  },
-  deploymentId: string,
-  rules?: PathAliasRule[]
-}
-
-export type AliasListItem = {
-  uid: string,
-  alias: string,
-  created: string,
-  deployment: {
-    id: string,
-    url: string,
   },
   deploymentId: string,
   rules?: PathAliasRule[]

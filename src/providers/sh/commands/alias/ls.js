@@ -6,12 +6,12 @@ import table from 'text-table'
 
 import Now from '../../util'
 import { CLIContext, Output } from '../../util/types'
+import getAliases from '../../util/alias/get-aliases'
 import getContextName from '../../util/get-context-name'
 import stamp from '../../../../util/output/stamp'
 import strlen from '../../util/strlen'
 import wait from '../../../../util/output/wait'
-import type { CLIAliasOptions, AliasListItem, PathAliasRule } from '../../util/types'
-import getAliases from './get-aliases'
+import type { CLIAliasOptions, Alias, PathAliasRule } from '../../util/types'
 
 export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx
@@ -38,7 +38,7 @@ export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: s
     );
   }
 
-  const aliases: AliasListItem[] = await getAliases(now)
+  const aliases: Alias[] = await getAliases(now)
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -66,7 +66,7 @@ export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: s
   return 0
 }
 
-function printAliasTable(aliases: AliasListItem[]): string {
+function printAliasTable(aliases: Alias[]): string {
   return table([
     ['source', 'url', 'age'].map(h => chalk.gray(h)),
     ...aliases.map(
