@@ -213,7 +213,7 @@ test('create alias for deployment', async t => {
     reject: false
   })
 
-  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}!`
+  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}`
 
   t.is(code, 0)
   t.true(stdout.startsWith(goal))
