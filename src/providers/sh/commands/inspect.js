@@ -159,6 +159,7 @@ module.exports = async function main (ctx: any): Promise<number> {
     exitCode = 1;
   } else if (events) {
     events.forEach((data) => {
+      if (!data.event) return; // keepalive
       print(`    ${chalk.gray(new Date(data.created).toISOString())} ${data.event} ${
         getEventMetadata(data)
       }\n`);
