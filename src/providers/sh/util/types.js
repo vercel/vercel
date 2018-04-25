@@ -7,12 +7,11 @@ type FetchOptions = {
 export interface Now {
   fetch(url: string, options?: FetchOptions): Promise<any>,
   list(appName: string, {version: number}): Deployment[],
-  listAliases(): Alias[]
 }
 
 export interface Output {
   debug(msg: string): void,
-  error(msg: string): void,
+  error(msg: string, slug?: string): void,
   log(msg: string): void,
   note(msg: string): void,
   print(msg: string): void,
@@ -70,8 +69,17 @@ export type Scale = {
   max: number
 }
 
+export type ScaleArgs = {
+  min: number,
+  max: number | 'auto'
+}
+
 export type DeploymentScale = { 
   [dc: string]: Scale
+}
+
+export type DeploymentScaleArgs = {
+  [dc: string]: ScaleArgs
 }
 
 export type InstancesCount = {
@@ -83,7 +91,7 @@ export type NpmDeployment = {
   url: string,
   name: string,
   type: 'NPM',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -95,7 +103,7 @@ export type StaticDeployment = {
   url: string,
   name: string,
   type: 'STATIC',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -106,7 +114,7 @@ export type BinaryDeployment = {
   url: string,
   name: string,
   type: 'BINARY',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
   sessionAffinity: string,
@@ -117,6 +125,12 @@ export type Deployment =
   NpmDeployment |
   StaticDeployment |
   BinaryDeployment
+
+export type PathAliasRule = {
+  pathname: string,
+  method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
+  dest: string,
+}
 
 export type Alias = {
   uid: string,
@@ -132,11 +146,7 @@ export type Alias = {
     email: string
   },
   deploymentId: string,
-  rules: Array<{
-    pathname: string,
-    method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
-    dest: string,
-  }>
+  rules?: PathAliasRule[]
 }
 
 export type AliasRecord = {
@@ -312,9 +322,20 @@ export type CLIOptions<T> = {
   '--api'?: string,
 } & T
 
+export type CLIAliasOptions = CLIOptions<{
+  '--json': boolean,
+  '--no-verify': boolean,
+  '--rules': string,
+  '--yes': boolean,
+}>
+
 export type CLICertsOptions = CLIOptions<{
   '--overwrite': string,
   '--crt': string,
   '--key': string,
   '--ca': string,
+}>
+
+export type CLIScaleOptions = CLIOptions<{
+  '--no-verify': string,
 }>

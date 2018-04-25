@@ -1,11 +1,10 @@
 // @flow
-import { Now } from '../../util/types'
+import { Output, Now } from '../../util/types'
+import findAliasByAliasOrId from './find-alias-by-alias-or-id'
 import type { Alias } from '../../util/types'
 
-async function getPreviousAlias(now: Now, alias: string): Promise<Alias | void> {
-  const aliases = await now.listAliases()
-  const safeAlias = getSafeAlias(alias)
-  return aliases.find(a => a.alias === safeAlias)
+async function getPreviousAlias(output: Output, now: Now, alias: string): Promise<Alias | void> {
+  return findAliasByAliasOrId(output, now, getSafeAlias(alias))
 }
 
 function getSafeAlias(alias: string) {

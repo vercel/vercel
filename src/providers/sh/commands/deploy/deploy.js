@@ -19,7 +19,6 @@ const Progress = require('progress')
 
 // Utilities
 const { handleError } = require('../../util/error')
-const { normalizeRegionsList, isValidRegionOrDcId } = require('../../util/dcs')
 const { tick } = require('../../../../util/output/chars')
 const checkPath = require('../../util/check-path')
 const cmd = require('../../../../util/output/cmd')
@@ -33,7 +32,7 @@ const promptOptions = require('../../util/prompt-options')
 const readMetaData = require('../../util/read-metadata')
 const toHumanPath = require('../../../../util/humanize-path')
 
-import { VerifyScaleTimeout } from '../../util/errors'
+import { InvalidRegionOrDCForScale, InvalidAllForScale, VerifyScaleTimeout } from '../../util/errors'
 import combineAsyncGenerators from '../../../../util/combine-async-generators'
 import eventListenerToGenerator from '../../../../util/event-listener-to-generator'
 import formatLogCmd from '../../../../util/output/format-log-cmd'
@@ -43,7 +42,9 @@ import getEventsStream from '../../util/deploy/get-events-stream'
 import getInstanceIndex from '../../util/deploy/get-instance-index'
 import getStateChangeFromPolling from '../../util/deploy/get-state-change-from-polling'
 import joinWords from '../../../../util/output/join-words';
+import normalizeRegionsList from '../../util/scale/normalize-regions-list'
 import raceAsyncGenerators from '../../../../util/race-async-generators'
+import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
@@ -183,6 +184,7 @@ let deploymentName
 let sessionAffinity
 let log
 let error
+let warn
 let debug
 let note
 let debugEnabled
@@ -305,7 +307,7 @@ async function main(ctx: any) {
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, error, note, debug } = output)
+  ;({ log, error, note, debug, warn } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -490,63 +492,57 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     const nowConfig = meta.nowConfig
     atlas = atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
+    const scaleFromConfig = getScaleFromConfig(nowConfig)
+    let scale = {}
+    let dcIds
 
-    let scale
-    if (regions.length) {
-      // ignore now.json if regions cli option exists
-      scale = {}
-    } else {
-      const _nowConfig = nowConfig || {}
-      regions = _nowConfig.regions || []
-      scale = _nowConfig.scale || {}
+    // If there are regions coming from the args and now.json warn about it
+    if (regions.length > 0 && getRegionsFromConfig(nowConfig).length > 0) {
+      warn(`You have regions defined from both args and now.json, using ${chalk.bold(regions.join(','))}`)
+    }
+    
+    // If there are no regions from args, use config
+    if (regions.length === 0) {
+      regions = getRegionsFromConfig(nowConfig)
     }
 
-    // get all the region or dc identifiers from the scale settings
-    const scaleKeys = Object.keys(scale)
-
-    for (const scaleKey of scaleKeys) {
-      if (!isValidRegionOrDcId(scaleKey)) {
-        error(
-          `The value "${scaleKey}" in \`scale\` settings is not a valid region or DC identifier`,
-          'deploy-invalid-dc'
-        )
-        await exit(1)
-      }
+    // Read scale and fail if we have both regions and scale
+    if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
+      error("Can't set both `regions` and `scale` options simultaneously", 'regions-and-scale-at-once')
+      await exit(1)
     }
 
-    let dcIds = []
-
-    if (regions.length) {
-      if (Object.keys(scale).length) {
-        error(
-          "Can't set both `regions` and `scale` options simultaneously",
-          'regions-and-scale-at-once'
-        )
+    // If we have a regions list we use it to build scale presets
+    if (regions.length > 0) {
+      dcIds = normalizeRegionsList(regions)
+      if (dcIds instanceof InvalidRegionOrDCForScale) {
+        error(`The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`)
         await exit(1)
+        return 1
+      } else if (dcIds instanceof InvalidAllForScale) {
+        error(`You can't use all in the regions list mixed with other regions`)
+        await exit(1)
+        return 1
       }
 
-      try {
-        dcIds = normalizeRegionsList(regions)
-      } catch (err) {
-        if (err.code === 'INVALID_ID') {
-          error(
-            `The value "${err.id}" in \`--regions\` is not a valid region or DC identifier`,
-            'deploy-invalid-dc'
-          )
+      // Build the scale presets based on the given regions
+      scale = dcIds.reduce((result, dcId) => ({ ...result, [dcId]: {min: 0, max: 1}}), {})    
+    }  else if (Object.keys(scaleFromConfig).length > 0) {
+      // If we have no regions list we get it from the scale keys but we have to validate
+      // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
+      for (const regionOrDc of Object.keys(scaleFromConfig)) {
+        const dc = regionOrDCToDc(regionOrDc)
+        if (dc === undefined) {
+          error(`The value "${regionOrDc}" in \`scale\` settings is not a valid region or DC identifier`, 'deploy-invalid-dc')
           await exit(1)
-        } else if (err.code === 'INVALID_ALL') {
-          error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers')
-          await exit(1)
+          return 1
         } else {
-          throw err
+          scale[dc] = scaleFromConfig[regionOrDc]
         }
       }
-
-      for (const dcId of dcIds) {
-        scale[dcId] = { min: 0, max: 1 }
-      }
     }
 
+    debug(`Scale presets for deploy: ${JSON.stringify(scale)}`)
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
     let dotenvConfig
@@ -974,6 +970,14 @@ async function readMeta(
     }
     throw err
   }
+}
+
+function getRegionsFromConfig(config = {}): Array<string> {
+  return config.regions || []
+}
+
+function getScaleFromConfig(config = {}): Object {
+  return config.scale || {}
 }
 
 module.exports = main

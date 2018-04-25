@@ -19,6 +19,7 @@ const strlen = require('../util/strlen')
 const getContextName = require('../util/get-context-name')
 const toHost = require('../util/to-host')
 
+import getAliases from '../util/alias/get-aliases'
 import getArgs from '../util/get-args'
 import getDeploymentInstances from '../util/deploy/get-deployment-instances'
 
@@ -157,7 +158,7 @@ module.exports = async function main(ctx) {
 
   if (app && !deployments.length) {
     debug('No deployments: attempting to find aliases that matches supplied app name')
-    const aliases = await now.listAliases()
+    const aliases = await getAliases(now)
     const item = aliases.find(e => e.uid === app || e.alias === app)
 
     if (item) {

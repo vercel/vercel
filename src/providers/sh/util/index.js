@@ -539,29 +539,6 @@ module.exports = class Now extends EventEmitter {
     return logs
   }
 
-  async listAliases(deploymentId) {
-    const { aliases } = await this.retry(async bail => {
-      const res = await this._fetch(
-        deploymentId
-          ? `/now/deployments/${deploymentId}/aliases`
-          : '/now/aliases'
-      )
-
-      if (res.status === 200) {
-        // What we want
-        return res.json()
-      } else if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list aliases'))
-      } else {
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list aliases')
-      }
-    })
-
-    return aliases
-  }
-
   async last(app) {
     const deployments = await this.list(app)
 

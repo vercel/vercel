@@ -18,7 +18,7 @@ import setupDomain from './setup-domain'
 const NOW_SH_REGEX = /\.now\.sh$/
 
 async function assignAlias(output: Output, now: Now, deployment: Deployment, alias: string, contextName: string, noVerify: boolean) {
-  const prevAlias = await getPreviousAlias(now, alias)
+  const prevAlias = await getPreviousAlias(output, now, alias)
   let httpChallengeInfo: HTTPChallengeInfo
 
   // If there was a previous deployment, we should fetch it to scale and downscale later

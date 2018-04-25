@@ -6,7 +6,7 @@ import * as Errors from '../../util/errors'
 import getInferredTargets from './get-inferred-targets'
 import isValidDomain from '../../util/domains/is-valid-domain'
 
-async function getTargetsForAlias(output: Output, args: string[], localConfigPath: string | void) {
+async function getTargetsForAlias(output: Output, args: string[], localConfigPath?: string | void) {
   const targets = await getTargets(output, args, localConfigPath)
   if (
     (targets instanceof Errors.CantParseJSONFile) ||
