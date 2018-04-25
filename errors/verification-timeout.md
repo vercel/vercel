@@ -1,4 +1,4 @@
-# Not authorized to access domain
+# Verification Timeout
 
 #### Why This Error Occurred
 
