@@ -319,3 +319,83 @@ export class VerifyScaleTimeout extends NowError<'VERIFY_SCALE_TIMEOUT', { timeo
     })
   }
 }
+
+export class InvalidAllForScale extends NowError<'INVALID_ALL_FOR_SCALE', {}> {
+  constructor() {
+    super({
+      code: 'INVALID_ALL_FOR_SCALE',
+      meta: {},
+      message: `You can't use all in the regions list mixed with other regions`
+    })
+  }
+}
+
+export class InvalidRegionOrDCForScale extends NowError<'INVALID_REGION_OR_DC_FOR_SCALE', { regionOrDC: string }> {
+  constructor(regionOrDC: string) {
+    super({
+      code: 'INVALID_REGION_OR_DC_FOR_SCALE',
+      meta: { regionOrDC },
+      message: `Invalid region or DC "${regionOrDC}" provided`
+    })
+  }
+}
+
+export class InvalidMinForScale extends NowError<'INVALID_MIN_FOR_SCALE', { value: string }> {
+  constructor(value: string) {
+    super({
+      code: 'INVALID_MIN_FOR_SCALE',
+      meta: { value },
+      message: `Invalid <min> parameter "${value}". A number or "auto" were expected`
+    })
+  }
+}
+
+export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { value: string }> {
+  constructor(value: string) {
+    super({
+      code: 'INVALID_MAX_FOR_SCALE',
+      meta: { value },
+      message: `Invalid <max> parameter "${value}". A number or "auto" were expected`
+    })
+  }
+}
+
+export class InvalidArgsForMinMaxScale extends NowError<'INVALID_ARGS_FOR_MIN_MAX_SCALE', { min: number | 'auto' }> {
+  constructor(min: number | 'auto') {
+    super({
+      code: 'INVALID_ARGS_FOR_MIN_MAX_SCALE',
+      meta: { min },
+      message: `Invalid number of arguments: expected <min> ("${min}") and [max]`
+    })
+  }
+}
+
+export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_INSTANCES', { max: number }> {
+  constructor(max: number) {
+    super({
+      code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
+      meta: { max },
+      message: `You can't scale to more than ${max} min instances with your current plan.`
+    })
+  }
+}
+
+export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_INSTANCES', { max: number }> {
+  constructor(max: number) {
+    super({
+      code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
+      meta: { max },
+      message: `You can't scale to more than ${max} max instances with your current plan.`
+    })
+  }
+}
+
+export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_RELATION', {}> {
+  constructor() {
+    super({
+      code: 'INVALID_SCALE_MIN_MAX_RELATION',
+      meta: {},
+      message: `Min number of instances can't be higher than max.`
+    })
+  }
+}

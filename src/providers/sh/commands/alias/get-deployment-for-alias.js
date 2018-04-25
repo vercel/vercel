@@ -7,7 +7,7 @@ import getAppName from './get-app-name'
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host'
 import wait from '../../../../util/output/wait'
 
-async function getDeploymentForAlias(now: Now, output: Output, args: Array<string>, localConfig: string, user: User, contextName: string) {
+async function getDeploymentForAlias(now: Now, output: Output, args: Array<string>, localConfig: string | void, user: User, contextName: string) {
   const cancelWait = wait(`Fetching deployment to alias in ${chalk.bold(contextName)}`)
   let deployment
   

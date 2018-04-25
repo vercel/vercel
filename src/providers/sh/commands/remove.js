@@ -17,6 +17,7 @@ const cmd = require('../../../util/output/cmd')
 const elapsed = require('../../../util/output/elapsed')
 const { normalizeURL } = require('../../../util/url')
 const getContextName = require('../util/get-context-name')
+import getAliases from '../util/alias/get-aliases'
 
 const help = () => {
   console.log(`
@@ -125,7 +126,7 @@ module.exports = async function main (ctx: any): Promise<number>{
   let aliases;
 
   try {
-    aliases = await Promise.all(matches.map(depl => now.listAliases(depl.uid)))
+    aliases = await Promise.all(matches.map(depl => getAliases(now, depl.uid)))
     cancelWait();
   } catch (err) {
     cancelWait();
