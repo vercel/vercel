@@ -1,4 +1,5 @@
 // @flow
+import sleep from 'then-sleep'
 import { Now } from '../../util/types'
 import createPollingFn from '../../../../util/create-polling-fn'
 import type { StateChangeEvent } from '../types'
@@ -16,7 +17,7 @@ async function* getStatusChangeFromPolling(
   let prevState = initialState
   for await (const deployment of pollDeployment(now, contextName, idOrHost)) {
     if (prevState !== deployment.state) {
-      console.log('difference', prevState, deployment.state)
+      await sleep(5000)
       yield {
         type: 'state-change',
         created: Date.now(),
