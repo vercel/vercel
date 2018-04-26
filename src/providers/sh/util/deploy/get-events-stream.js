@@ -4,6 +4,7 @@ import jsonlines from 'jsonlines'
 import { stringify } from 'querystring'
 import type { Readable } from 'stream'
 import { Now } from '../../util/types'
+import noop from '../../../../util/noop'
 
 type Options = {
   direction: 'forward' | 'backwards',
@@ -30,7 +31,10 @@ async function getEventsStream(now: Now, idOrHost: string, options: Options): Pr
     until: options.until
   })}`)
   const stream = response.readable ? await response.readable() : response.body
-  return stream.pipe(jsonlines.parse()).pipe(ignoreEmptyObjects)
+  const pipeStream = stream.pipe(jsonlines.parse()).pipe(ignoreEmptyObjects)
+  stream.on('error', noop)
+  pipeStream.on('error', noop)
+  return pipeStream
 }
 
 // Since we will be receiving empty object from the stream, this transform will ignore them
