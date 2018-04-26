@@ -865,7 +865,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         const eventsStream = await getEventsStream(now, deployment.deploymentId, { direction: 'forward', follow: true })
         const eventsGenerator: AsyncGenerator<DeploymentEvent, void, void> = combineAsyncGenerators(
           eventListenerToGenerator('data', eventsStream), 
-          getStateChangeFromPolling(now, contextName, deployment.deploymentId)
+          getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState)
         )
 
         for await (const event of eventsGenerator) {
