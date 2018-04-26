@@ -15,11 +15,6 @@ function validatePathAliasRules(location: string, rules: any) {
       return new RulesFileValidationError(location, 'all rules must have a dest field')
     }
   }
-
-  const fallbackItem = rules.find((rule) => Object.keys(rule).length === 1 && rule.dest)
-  if (!fallbackItem) {
-    return new RulesFileValidationError(location, 'there must be at least one fallback destination url')
-  }
 }
 
 export default validatePathAliasRules
