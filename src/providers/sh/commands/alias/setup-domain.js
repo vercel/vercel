@@ -5,7 +5,6 @@ import psl from 'psl'
 // Internal utils
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
-import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import maybeSetupDNSRecords from './maybe-setup-dns-records'
 import verifyDomain from './verify-domain'
 
@@ -15,18 +14,6 @@ import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
   const { domain, subdomain }: { domain: string, subdomain: string | null } = psl.parse(alias)
-
-  // In case the domain is avilable, we have to purchase
-  const purchased = await purchaseDomainIfAvailable(output, now, domain, contextName)
-  if (
-    (purchased instanceof Errors.UserAborted) ||
-    (purchased instanceof Errors.PaymentSourceNotFound) ||
-    (purchased instanceof Errors.DomainNotFound)
-  ) {
-    return purchased
-  }
-
-  // Now the domain shouldn't be available and it might or might not belong to the user
   const info = await getDomainInfo(now, domain, contextName)
   if (info instanceof Errors.DomainPermissionDenied) {
     return info
