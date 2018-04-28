@@ -205,6 +205,8 @@ function compareEvents(d1, d2) {
 }
 
 function printLogShort(log) {
+  if (!log.created) return; // keepalive
+
   let data
   const obj = log.object
   if (log.type === 'request') {
@@ -241,6 +243,8 @@ function printLogShort(log) {
 }
 
 function printLogRaw(log) {
+  if (!log.created) return; // keepalive
+
   if (log.object) {
     console.log(log.object)
   } else {
