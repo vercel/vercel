@@ -32,8 +32,11 @@ const promptOptions = require('../../util/prompt-options')
 const readMetaData = require('../../util/read-metadata')
 const toHumanPath = require('../../../../util/humanize-path')
 
-import { InvalidRegionOrDCForScale, InvalidAllForScale, VerifyScaleTimeout } from '../../util/errors'
+import { Output } from '../../util/types'
+import * as Errors from '../../util/errors'
 import combineAsyncGenerators from '../../../../util/combine-async-generators'
+import createDeploy from '../../util/deploy/create-deploy'
+import dnsTable from '../../util/dns-table'
 import eventListenerToGenerator from '../../../../util/event-listener-to-generator'
 import formatLogCmd from '../../../../util/output/format-log-cmd'
 import formatLogOutput from '../../../../util/output/format-log-output'
@@ -47,7 +50,9 @@ import raceAsyncGenerators from '../../../../util/race-async-generators'
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
+import zeitWorldTable from '../../util/zeit-world-table'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
+import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -519,11 +524,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     // If we have a regions list we use it to build scale presets
     if (regions.length > 0) {
       dcIds = normalizeRegionsList(regions)
-      if (dcIds instanceof InvalidRegionOrDCForScale) {
+      if (dcIds instanceof Errors.InvalidRegionOrDCForScale) {
         error(`The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`)
         await exit(1)
         return 1
-      } else if (dcIds instanceof InvalidAllForScale) {
+      } else if (dcIds instanceof Errors.InvalidAllForScale) {
         error(`You can't use all in the regions list mixed with other regions`)
         await exit(1)
         return 1
@@ -715,7 +720,30 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         meta
       )
 
-      deployment = await now.create(paths, createArgs)
+      const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
+      if (
+        (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
+        (firstDeployCall instanceof Errors.DNSPermissionDenied) ||
+        (firstDeployCall instanceof Errors.DomainConfigurationError) ||
+        (firstDeployCall instanceof Errors.DomainNameserversNotFound) ||
+        (firstDeployCall instanceof Errors.DomainNotFound) ||
+        (firstDeployCall instanceof Errors.DomainNotVerified) ||
+        (firstDeployCall instanceof Errors.DomainPermissionDenied) ||
+        (firstDeployCall instanceof Errors.DomainsShouldShareRoot) ||
+        (firstDeployCall instanceof Errors.DomainValidationRunning) ||
+        (firstDeployCall instanceof Errors.DomainVerificationFailed) ||
+        (firstDeployCall instanceof Errors.InvalidWildcardDomain) ||
+        (firstDeployCall instanceof Errors.MissingDomainDNSRecords) ||
+        (firstDeployCall instanceof Errors.NeedUpgrade) ||
+        (firstDeployCall instanceof Errors.TooManyCertificates) ||
+        (firstDeployCall instanceof Errors.TooManyRequests)
+      ) {
+        handleCreateDeployError(output, firstDeployCall)
+        await exit(1)
+        return
+      }
+
+      deployment = firstDeployCall
 
       if (now.syncFileCount > 0) {
         await new Promise((resolve) => {
@@ -755,7 +783,30 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           })
         })
 
-        deployment = await now.create(paths, createArgs)
+        const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
+        if (
+          (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
+          (secondDeployCall instanceof Errors.DNSPermissionDenied) ||
+          (secondDeployCall instanceof Errors.DomainConfigurationError) ||
+          (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
+          (secondDeployCall instanceof Errors.DomainNotFound) ||
+          (secondDeployCall instanceof Errors.DomainNotVerified) ||
+          (secondDeployCall instanceof Errors.DomainPermissionDenied) ||
+          (secondDeployCall instanceof Errors.DomainsShouldShareRoot) ||
+          (secondDeployCall instanceof Errors.DomainValidationRunning) ||
+          (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
+          (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
+          (secondDeployCall instanceof Errors.MissingDomainDNSRecords) ||
+          (secondDeployCall instanceof Errors.NeedUpgrade) ||
+          (secondDeployCall instanceof Errors.TooManyCertificates) ||
+          (secondDeployCall instanceof Errors.TooManyRequests)
+        ) {
+          handleCreateDeployError(output, secondDeployCall)
+          await exit(1)
+          return
+        }
+
+        deployment = secondDeployCall
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
@@ -898,13 +949,13 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         if (!noVerify) {
           output.log(`Verifying instantiation in ${joinWords(Object.keys(deployment.scale).map(dc => chalk.bold(dc)))}`)
           const verifyStamp = stamp()
-          const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], VerifyScaleTimeout, void> = raceAsyncGenerators(
+          const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], Errors.VerifyScaleTimeout, void> = raceAsyncGenerators(
             eventListenerToGenerator('data', eventsStream),
             verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
           )
 
           for await (const dcOrEvent of verifyDCsGenerator) {
-            if (dcOrEvent instanceof VerifyScaleTimeout) {
+            if (dcOrEvent instanceof Errors.VerifyScaleTimeout) {
               output.error(`Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`)
               output.log('Read more: https://err.sh/now-cli/verification-timeout')
               await exit(1)
@@ -985,3 +1036,76 @@ function getScaleFromConfig(config = {}): Object {
 }
 
 module.exports = main
+
+function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
+  if (error instanceof Errors.CantGenerateWildcardCert) {
+    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`)
+    return 1
+  } else if (error instanceof Errors.DNSPermissionDenied) {
+    output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
+    return 1
+  } else if (error instanceof Errors.DomainConfigurationError) {
+    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`)
+    if (error.meta.external) {
+      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`)
+      output.print(dnsTable([
+        error.meta.subdomain === null
+          ? ['', 'ALIAS', 'alias.zeit.co']
+          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+      ]) + '\n');
+    } else {
+      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
+      output.print(`  Please try again later.\n`)
+    }
+    return 1
+  } else if (error instanceof Errors.DomainNameserversNotFound) {
+    output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`)
+    return 1
+  } else if (error instanceof Errors.DomainNotVerified) {
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`)
+    return 1
+  } else if (error instanceof Errors.DomainPermissionDenied) {
+    output.error(`You don't have permissions to access the domain used as a suffix ${chalk.underline(error.meta.domain)}.`)
+    return 1
+  } else if (error instanceof Errors.DomainsShouldShareRoot) {
+    // this is not going to happen
+    return 1
+  } else if (error instanceof Errors.DomainValidationRunning) {
+    output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`)
+    return 1
+  } else if (error instanceof Errors.DomainVerificationFailed) {
+    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`)
+    output.print(`  Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.\n`)
+    output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`)
+    output.print(zeitWorldTable() + '\n');
+    output.print(`\n  As an alternative, you can add following records to your DNS settings:\n`)
+    output.print(dnsTable([
+      ['_now', 'TXT', error.meta.token],
+      error.meta.subdomain === null
+        ? ['', 'ALIAS', 'alias.zeit.co']
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+    ], '  ') + '\n');
+    return 1
+  } else if (error instanceof Errors.InvalidWildcardDomain) {
+    // this should never happen
+    output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
+    return 1
+  } else if (error instanceof Errors.MissingDomainDNSRecords) {
+    output.error(`There are missing DNS records that we can't configure. You must update your DNS configuration and add the suffix again.`)
+    return 1
+  } else if (error instanceof Errors.NeedUpgrade) {
+    output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+    return 1
+  } else if (error instanceof Errors.TooManyCertificates) {
+    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
+    return 1
+  } else if (error instanceof Errors.TooManyRequests) {
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    return 1
+  } else if (error instanceof Errors.DomainNotFound) {
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`)
+    return 1
+  }
+
+  return error
+}
