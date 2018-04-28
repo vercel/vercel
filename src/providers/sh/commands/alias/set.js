@@ -1,16 +1,16 @@
 // @flow
 import chalk from 'chalk'
 import ms from 'ms'
-import table from 'text-table'
 
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import cmd from '../../../../util/output/cmd'
+import dnsTable from '../../util/dns-table'
 import getContextName from '../../util/get-context-name'
 import humanizePath from '../../../../util/humanize-path'
 import Now from '../../util'
 import stamp from '../../../../util/output/stamp'
-import strlen from '../../util/strlen'
+import zeitWorldTable from '../../util/zeit-world-table'
 import type { CLIAliasOptions } from '../../util/types'
 
 import assignAlias from './assign-alias'
@@ -166,29 +166,6 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
   } else {
     return error
   }
-}
-
-function zeitWorldTable() {
-  return table([
-    [chalk.underline('a.zeit.world'), chalk.dim('96.45.80.1')],
-    [chalk.underline('b.zeit.world'), chalk.dim('46.31.236.1')],
-    [chalk.underline('c.zeit.world'), chalk.dim('43.247.170.1')],
-  ], {
-    align: ['l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen
-  }).replace(/^(.*)/gm, '    $1')
-}
-
-function dnsTable(rows, extraSpace = '') {
-  return table([
-    ['name', 'type', 'value'].map(v => chalk.gray(v)),
-    ...rows
-  ], {
-    align: ['l', 'l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen
-  }).replace(/^(.*)/gm, `${extraSpace}  $1`)
 }
 
 type CreateAliasError =
