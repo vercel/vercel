@@ -729,18 +729,22 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               width: 20,
               complete: '=',
               incomplete: '',
-              total: now.syncAmount,
+              total: now.syncFileCount,
               clear: true
             }
           )
 
+          let finishedFiles = 0;
           now.upload({ atlas, scale })
 
           now.on('upload', ({ names, data }) => {
-            const amount = data.length
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
 
-            bar.tick(amount)
+            finishedFiles += 1;
+          })
+
+          now.on('uploadProgress', ({percent}) => {
+            bar.update(((finishedFiles + percent) / now.syncFileCount));
           })
 
           now.on('complete', () => resolve())

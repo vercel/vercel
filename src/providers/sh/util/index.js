@@ -341,19 +341,29 @@ module.exports = class Now extends EventEmitter {
                 'x-now-size': data.length,
                 ...additionalHeaders
               },
-              body: stream
+              body: stream,
+              _useGot: true
             })
 
-            if (res.status === 200) {
-              // What we want
-              this.emit('upload', file)
-            } else if (res.status > 200 && res.status < 500) {
-              // If something is wrong with our request, we don't retry
-              return bail(await responseError(res, 'Failed to upload file'))
-            } else {
-              // If something is wrong with the server, we retry
-              throw await responseError(res, 'Failed to upload file')
-            }
+            
+            // res.on('uploadProgress', console.log)            
+            res.on('uploadProgress', progress => this.emit('uploadProgress', progress));
+
+            return new Promise((resolve, reject) => 
+              res.on('response', resp => {
+                if (resp.statusCode === 200) {
+                  // What we want
+                  this.emit('upload', file)
+                  resolve();
+                } else if (resp.statusCode > 200 && resp.statusCode < 500) {
+                  // If something is wrong with our request, we don't retry
+                  resolve(bail(new Error(`Failed to upload file ${resp.statusCode}`)))
+                } else {
+                  // If something is wrong with the server, we retry
+                  reject(new Error(`Failed to upload file ${resp.statusCode}`))
+                }
+              })
+            );
           },
           {
             retries: 3,
