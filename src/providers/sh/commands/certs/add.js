@@ -20,7 +20,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   const contextName = getContextName(sh);
   const addStamp = stamp()
   let cert
-  
+
   const {
     ['--overwrite']: overwite,
     ['--debug']: debugEnabled,
@@ -28,11 +28,11 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     ['--key']: keyPath,
     ['--ca']: caPath,
   } = opts;
-  
+
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
-  
+
   if (overwite) {
     output.error('Overwrite option is deprecated')
     now.close();
@@ -46,7 +46,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
       now.close();
       return 1
     }
-    
+
     // Create a custom certificate from the given file paths
     cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName)
     if (cert instanceof Errors.InvalidCert) {
@@ -65,8 +65,9 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     }
 
     // Create the certificate from the given array of CNs
-    const cancelWait = wait(`Generating a certificate for ${chalk.bold(args.join(', '))}`);
-    cert = await createCertForCns(now, args, contextName)
+    const cns = args.reduce((res, item) => ([...res, ...item.split(',')]), [])
+    const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
+    cert = await createCertForCns(now, cns, contextName)
     cancelWait();
     if (cert instanceof Errors.TooManyRequests) {
       output.error(`Too many requests detected for ${cert.meta.api} API. Try again later.`)
@@ -96,8 +97,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   }
 
   // Print success message
-  const cns = chalk.bold(cert.cns.join(', '))
-  output.success(`Certificate entry for ${cns} created ${addStamp()}`)
+  output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
   return 0
 }
 
