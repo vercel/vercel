@@ -6,7 +6,6 @@ const https = require('https')
 // Packages
 const Sema = require('async-sema')
 const fetch = require('node-fetch')
-const got = require('got');
 // const {version} = require('../../../util/pkg')
 const createOutput = require('../../../util/output')
 
@@ -89,12 +88,6 @@ module.exports = class Agent {
 
   async fetch(path, opts = {}) {
     const { debug } = this._output
-    
-    // HACK that supports _onProgress option
-    if(opts._useGot) {
-      debug(`Using \`got\` to make an HTTP request with an upload progress handler`);
-      return this._useGot(path, opts)
-    }
 
     await this._sema.v()
 
@@ -182,32 +175,6 @@ module.exports = class Agent {
           throw err
         })
     }
-  }
-
-  async _useGot(path, opts={}) {
-    const { body } = opts
-    if (!opts.body || typeof body.pipe !== 'function') {
-      throw new Error('`opts._useGot` must be used with a `opts.body` that is a ReadableStream')
-    }
-
-    await this._sema.v()
-
-    const { debug } = this._output
-
-    if (!this._agent) {
-      debug('Re-initializing agent')
-      this._initAgent()
-    }
-    if (this._agent) {
-      opts.agent = this._agent
-    }
-
-    const retStream = got.stream(this._url + path, opts)
-
-    retStream.on('end', () => this._sema.p())
-    retStream.on('error', () => this._sema.p())
-
-    return retStream;
   }
 
   close() {

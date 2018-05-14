@@ -354,10 +354,10 @@ module.exports = class Now extends EventEmitter {
               this.emit('upload', file)
             } else if (res.status > 200 && res.status < 500) {
               // If something is wrong with our request, we don't retry
-              return bail(new Error(`Failed to upload file ${res.status}`))
+              return bail(await responseError(res, 'Failed to upload file'))
             } else {
               // If something is wrong with the server, we retry
-              throw new Error(`Failed to upload file ${res.status}`)
+              throw await responseError(res, 'Failed to upload file')
             }
           },
           {
