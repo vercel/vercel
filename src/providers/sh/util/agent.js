@@ -88,7 +88,6 @@ module.exports = class Agent {
 
   async fetch(path, opts = {}) {
     const { debug } = this._output
-
     await this._sema.v()
 
     let currentContext;
