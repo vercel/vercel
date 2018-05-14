@@ -729,25 +729,21 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               width: 20,
               complete: '=',
               incomplete: '',
-              total: now.syncFileCount,
+              total: now.syncAmount,
               clear: true
             }
           )
 
-          let finishedFiles = 0;
           now.upload({ atlas, scale })
 
           now.on('upload', ({ names, data }) => {
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
-
-            finishedFiles += 1;
           })
 
-          now.on('uploadProgress', ({percent}) => {
-            bar.update(((finishedFiles + percent) / now.syncFileCount));
-          })
 
-          now.on('complete', () => resolve())
+          now.on('uploadProgress', bar.tick.bind(bar))
+
+          now.on('complete', resolve)
 
           now.on('error', err => {
             error('Upload failed')

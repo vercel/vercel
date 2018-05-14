@@ -8,10 +8,9 @@ const { parse: parseUrl } = require('url')
 // Packages
 const bytes = require('bytes')
 const chalk = require('chalk')
-const through2 = require('through2')
 const retry = require('async-retry')
 const { parse: parseIni } = require('ini')
-const { readFile, stat, lstat } = require('fs-extra')
+const { createReadStream, readFile, stat, lstat } = require('fs-extra')
 
 // Utilities
 const {
@@ -322,11 +321,17 @@ module.exports = class Now extends EventEmitter {
         retry(
           async (bail) => {
             const file = this._files.get(sha)
+            const fPath = file.names[0];
+            const stream = createReadStream(fPath);
             const { data } = file
-            const stream = through2()
 
-            stream.write(data)
-            stream.end()
+            const fstreamRead = stream.read;
+
+            stream.read = (...args) => {
+              const chunk = fstreamRead.apply(stream, args)
+              chunk && this.emit('uploadProgress', chunk.length)
+              return chunk;
+            };
 
             const url = atlas ? '/v1/now/images' : '/v2/now/files'
             const additionalHeaders = atlas ? {
@@ -341,29 +346,19 @@ module.exports = class Now extends EventEmitter {
                 'x-now-size': data.length,
                 ...additionalHeaders
               },
-              body: stream,
-              _useGot: true
+              body: stream
             })
 
-            
-            // res.on('uploadProgress', console.log)            
-            res.on('uploadProgress', progress => this.emit('uploadProgress', progress));
-
-            return new Promise((resolve, reject) => 
-              res.on('response', resp => {
-                if (resp.statusCode === 200) {
-                  // What we want
-                  this.emit('upload', file)
-                  resolve();
-                } else if (resp.statusCode > 200 && resp.statusCode < 500) {
-                  // If something is wrong with our request, we don't retry
-                  resolve(bail(new Error(`Failed to upload file ${resp.statusCode}`)))
-                } else {
-                  // If something is wrong with the server, we retry
-                  reject(new Error(`Failed to upload file ${resp.statusCode}`))
-                }
-              })
-            );
+            if (res.status === 200) {
+              // What we want
+              this.emit('upload', file)
+            } else if (res.status > 200 && res.status < 500) {
+              // If something is wrong with our request, we don't retry
+              return bail(new Error(`Failed to upload file ${res.status}`))
+            } else {
+              // If something is wrong with the server, we retry
+              throw new Error(`Failed to upload file ${res.status}`)
+            }
           },
           {
             retries: 3,
