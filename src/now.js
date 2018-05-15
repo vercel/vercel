@@ -53,10 +53,16 @@ const main = async (argv_) => {
   // $FlowFixMe
   const { isTTY } = process.stdout
 
-  const update = await checkForUpdate(pkg, {
-    interval: ms('1d'),
-    distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
-  })
+  let update = null
+
+  try {
+    update = await checkForUpdate(pkg, {
+      interval: ms('1d'),
+      distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+    })
+  } catch (err) {
+    console.log(error('Checking for updates failed'))
+  }
 
   if (update && isTTY) {
     console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`))
