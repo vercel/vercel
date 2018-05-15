@@ -824,7 +824,7 @@ module.exports = class Now extends EventEmitter {
     opts.headers['user-agent'] = ua
 
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(opts.body) || ''}`,
       this._agent.fetch(_url, opts)
     )
   }
