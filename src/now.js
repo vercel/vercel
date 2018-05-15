@@ -53,20 +53,33 @@ const main = async (argv_) => {
   // $FlowFixMe
   const { isTTY } = process.stdout
 
-  const update = await checkForUpdate(pkg, {
-    interval: ms('1d'),
-    distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
-  })
+  const argv = getArgs(argv_, {
+    '--version': Boolean,
+    '-v': '--version',
+    '--debug': Boolean,
+    '-d': '--debug'
+  }, { permissive: true })
+
+  const isDebugging = argv['--debug']
+  let update = null
+
+  try {
+    update = await checkForUpdate(pkg, {
+      interval: ms('1d'),
+      distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+    })
+  } catch (err) {
+    console.error(error(`Checking for updates failed${isDebugging ? ':' : ''}`))
+
+    if (isDebugging) {
+      console.error(err)
+    }
+  }
 
   if (update && isTTY) {
     console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`))
     console.log(info(`Read more about how to update here: https://zeit.co/update-cli`))
   }
-
-  const argv = getArgs(argv_, {
-    '--version': Boolean,
-    '-v': '--version'
-  }, { permissive: true })
 
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
