@@ -61,7 +61,8 @@ const main = async (argv_) => {
       distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
     })
   } catch (err) {
-    console.log(error('Checking for updates failed'))
+    console.error(error('Checking for updates failed:'))
+    console.error(err)
   }
 
   if (update && isTTY) {
