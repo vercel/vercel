@@ -9,10 +9,10 @@ const loadPackageJSON = require('read-pkg')
 const { readFile } = require('fs-extra')
 const { parse: parseDockerfile } = require('docker-file-parser')
 const determineType = require('deployment-type')
+const nowSchema = require('@zeit/schemas/deployment/config')
 
 // Utilities
 const getLocalConfigPath = require('../../../config/local-path')
-const nowSchema = require('../../../schema/now-schema.json')
 
 module.exports = readMetaData
 
