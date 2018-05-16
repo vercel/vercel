@@ -318,7 +318,7 @@ async function main(ctx: any) {
   const { token } = credentials.find(item => item.provider === 'sh')
   const contextName = getContextName(sh);
   const config = sh
-  
+
   alwaysForwardNpm = config.forwardNpm
 
   try {
@@ -500,7 +500,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     if (regions.length > 0 && getRegionsFromConfig(nowConfig).length > 0) {
       warn(`You have regions defined from both args and now.json, using ${chalk.bold(regions.join(','))}`)
     }
-    
+
     // If there are no regions from args, use config
     if (regions.length === 0) {
       regions = getRegionsFromConfig(nowConfig)
@@ -526,7 +526,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
 
       // Build the scale presets based on the given regions
-      scale = dcIds.reduce((result, dcId) => ({ ...result, [dcId]: {min: 0, max: 1}}), {})    
+      scale = dcIds.reduce((result, dcId) => ({ ...result, [dcId]: {min: 0, max: 1}}), {})
     }  else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
@@ -864,7 +864,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         const instanceIndex = getInstanceIndex()
         const eventsStream = await getEventsStream(now, deployment.deploymentId, { direction: 'forward', follow: true })
         const eventsGenerator: AsyncGenerator<DeploymentEvent, void, void> = combineAsyncGenerators(
-          eventListenerToGenerator('data', eventsStream), 
+          eventListenerToGenerator('data', eventsStream),
           getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState)
         )
 

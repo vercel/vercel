@@ -183,23 +183,29 @@ module.exports = class Now extends EventEmitter {
         )
       )
 
+      const requestBody = {
+        env,
+        public: wantsPublic || nowConfig.public,
+        forceNew,
+        name,
+        description,
+        deploymentType: type,
+        registryAuthToken: authToken,
+        files,
+        engines,
+        scale,
+        sessionAffinity,
+        limits: nowConfig.limits,
+        atlas
+      }
+
+      if (Object.keys(nowConfig).length > 0) {
+        requestBody.config = nowConfig
+      }
+
       const res = await this._fetch('/v4/now/deployments', {
         method: 'POST',
-        body: {
-          env,
-          public: wantsPublic || nowConfig.public,
-          forceNew,
-          name,
-          description,
-          deploymentType: type,
-          registryAuthToken: authToken,
-          files,
-          engines,
-          scale,
-          sessionAffinity,
-          limits: nowConfig.limits,
-          atlas
-        }
+        body: requestBody
       })
 
       // No retry on 4xx
