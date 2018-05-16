@@ -662,9 +662,9 @@
   dependencies:
     samsam "1.3.0"
 
-"@zeit/schemas@1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.0.1.tgz#c9c27dadab87bff476caae8deb28e609ad21402a"
+"@zeit/schemas@1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.0.2.tgz#bd68682e4d83c2e789b28af07d870d7949571fe1"
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
