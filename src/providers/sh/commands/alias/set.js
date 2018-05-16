@@ -1,7 +1,7 @@
 // @flow
 import chalk from 'chalk'
 import ms from 'ms'
-import table from 'table'
+import table from 'text-table'
 
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
@@ -119,7 +119,7 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
   return 0
 }
 
-export type SetupDomainError = 
+export type SetupDomainError =
   Errors.DNSPermissionDenied |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotVerified |
@@ -140,7 +140,7 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
       ['_now', 'TXT', error.meta.token],
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
-        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
     ], '  ') + '\n');
     return 1
   } else if (error instanceof Errors.DomainPermissionDenied) {
@@ -200,7 +200,7 @@ type CreateAliasError =
   Errors.DomainPermissionDenied |
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
-  Errors.InvalidAlias | 
+  Errors.InvalidAlias |
   Errors.InvalidWildcardDomain |
   Errors.NeedUpgrade |
   Errors.RuleValidationFailed |
@@ -234,7 +234,7 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
       output.print(dnsTable([
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
-          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
       ]) + '\n');
     } else {
       output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
