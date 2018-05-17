@@ -139,7 +139,6 @@ async function readMetaData(
     if (!name) {
       name = labels.name
     }
-    console.log(name)
 
     description = labels.description
   } else if (type === 'static') {
