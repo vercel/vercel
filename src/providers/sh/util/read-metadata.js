@@ -124,7 +124,7 @@ async function readMetaData(
 
         // Unescape and convert into string
         try {
-          labels[key] = args[key]
+          labels[key] = args[key].replace(/^"(.+?)"$/g, '$1')
         } catch (err) {
           const e = new Error(
             `Error parsing value for LABEL ${key} in \`Dockerfile\``
@@ -139,6 +139,7 @@ async function readMetaData(
     if (!name) {
       name = labels.name
     }
+    console.log(name)
 
     description = labels.description
   } else if (type === 'static') {
