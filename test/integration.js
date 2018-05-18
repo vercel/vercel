@@ -468,7 +468,7 @@ test('try to deploy with non-existing team', async t => {
   })
 
   t.is(code, 1)
-  t.true(stderr.startsWith(goal))
+  t.true(stderr.includes(goal))
 })
 
 test.after.always(async t => {
