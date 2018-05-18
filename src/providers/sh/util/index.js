@@ -762,7 +762,7 @@ module.exports = class Now extends EventEmitter {
         return bail(await responseError(res, 'Failed to remove deployment'))
       } else {
         // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to fetch domain')
+        throw await responseError(res, 'Failed to remove deployment')
       }
     })
 
