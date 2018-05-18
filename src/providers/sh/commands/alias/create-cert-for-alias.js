@@ -76,7 +76,12 @@ function getCertRequestSettings(alias: string, domain: string, subdomain: string
       }
     }
   } else {
-    return { cns: [domain, `*.${domain}`], preferDNS: false }
+    if(subdomain.includes('.')) {
+      // Nested subdomains can't use wildcards
+      return { cns: [alias], preferDNS: true }
+    } else {
+      return { cns: [domain, `*.${domain}`], preferDNS: false }
+    }
   }
 }
 
