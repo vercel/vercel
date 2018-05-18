@@ -57,13 +57,18 @@ const mriOpts = {
     'debug',
     'force',
     'links',
-    'no-clipboard',
+    'C',
+    'clipboard',
     'forward-npm',
     'docker',
     'npm',
     'static',
     'public'
   ],
+  default: {
+    C: false,
+    clipboard: true,
+  },
   alias: {
     env: 'e',
     dotenv: 'E',
@@ -73,7 +78,6 @@ const mriOpts = {
     force: 'f',
     links: 'l',
     public: 'p',
-    'no-clipboard': 'C',
     'forward-npm': 'N',
     'session-affinity': 'S',
     name: 'n',
@@ -295,7 +299,7 @@ async function main(ctx: any) {
   deploymentName = argv.name
   sessionAffinity = argv['session-affinity']
   debugEnabled = argv.debug
-  clipboard = !argv['no-clipboard']
+  clipboard = argv.clipboard && !argv.C
   forwardNpm = argv['forward-npm']
   followSymlinks = !argv.links
   wantsPublic = argv.public
