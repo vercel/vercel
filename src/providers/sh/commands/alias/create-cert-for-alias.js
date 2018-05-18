@@ -50,7 +50,7 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
     // This is completely unexpected and should never happens
     if (cert instanceof Errors.CantGenerateWildcardCert) {
       throw cert
-    } 
+    }
   }
 
   cancelMessage()
@@ -78,7 +78,7 @@ function getCertRequestSettings(alias: string, domain: string, subdomain: string
   } else {
     if(subdomain.includes('.')) {
       // Nested subdomains can't use wildcards
-      return { cns: [alias], preferDNS: true }
+      return { cns: [alias], preferDNS: false }
     } else {
       return { cns: [domain, `*.${domain}`], preferDNS: false }
     }
