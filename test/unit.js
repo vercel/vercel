@@ -280,6 +280,16 @@ test('support docker', async t => {
   t.is(base(files[1]), 'dockerfile/a.js')
 })
 
+test('gets correct name of docker deployment', async t => {
+  const { name, deploymentType } = await readMetadata(fixture('dockerfile'), {
+    quiet: true,
+    strict: false
+  })
+
+  t.is(deploymentType, 'docker')
+  t.is(name, 'test')
+})
+
 test('prefix regression', async t => {
   let files = await getNpmFiles(fixture('prefix-regression'))
   files = files.sort(alpha)
