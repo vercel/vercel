@@ -741,13 +741,13 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           now.upload({ atlas, scale })
 
           now.on('upload', ({ names, data }) => {
-            const amount = data.length
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
-
-            bar.tick(amount)
           })
 
-          now.on('complete', () => resolve())
+
+          now.on('uploadProgress', bar.tick.bind(bar))
+
+          now.on('complete', resolve)
 
           now.on('error', err => {
             error('Upload failed')

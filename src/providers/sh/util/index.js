@@ -8,10 +8,9 @@ const { parse: parseUrl } = require('url')
 // Packages
 const bytes = require('bytes')
 const chalk = require('chalk')
-const through2 = require('through2')
 const retry = require('async-retry')
 const { parse: parseIni } = require('ini')
-const { readFile, stat, lstat } = require('fs-extra')
+const { createReadStream, readFile, stat, lstat } = require('fs-extra')
 
 // Utilities
 const {
@@ -328,11 +327,17 @@ module.exports = class Now extends EventEmitter {
         retry(
           async (bail) => {
             const file = this._files.get(sha)
+            const fPath = file.names[0];
+            const stream = createReadStream(fPath);
             const { data } = file
-            const stream = through2()
 
-            stream.write(data)
-            stream.end()
+            const fstreamRead = stream.read;
+
+            stream.read = (...args) => {
+              const chunk = fstreamRead.apply(stream, args)
+              chunk && this.emit('uploadProgress', chunk.length)
+              return chunk;
+            };
 
             const url = atlas ? '/v1/now/images' : '/v2/now/files'
             const additionalHeaders = atlas ? {
