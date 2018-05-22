@@ -58,7 +58,7 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
   return cert
 }
 
-function getCertRequestSettings(alias: string, domain: string, subdomain: string, httpChallengeInfo?: HTTPChallengeInfo) {
+function getCertRequestSettings(alias: string, domain: string, subdomain: string | null, httpChallengeInfo?: HTTPChallengeInfo) {
   if (httpChallengeInfo) {
     if (subdomain === null) {
       if (httpChallengeInfo.canSolveForRootDomain) {
@@ -76,7 +76,7 @@ function getCertRequestSettings(alias: string, domain: string, subdomain: string
       }
     }
   } else {
-    if(subdomain.includes('.')) {
+    if(subdomain && subdomain.includes('.')) {
       // Nested subdomains can't use wildcards
       return { cns: [alias], preferDNS: false }
     } else {
