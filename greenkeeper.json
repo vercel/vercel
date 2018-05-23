@@ -1,0 +1,31 @@
+{
+  "groups": {
+    "default": {
+      "packages": [
+        "link/package.json",
+        "package.json",
+        "test/fixtures/unit/big-file/package.json",
+        "test/fixtures/unit/directory-main/package.json",
+        "test/fixtures/unit/extensionless-main/package.json",
+        "test/fixtures/unit/files-in-package-ignore/package.json",
+        "test/fixtures/unit/files-in-package/package.json",
+        "test/fixtures/unit/files-overrides-gitignore/package.json",
+        "test/fixtures/unit/hashes/package.json",
+        "test/fixtures/unit/json-syntax-error/package.json",
+        "test/fixtures/unit/multiple-manifests-throws/package.json",
+        "test/fixtures/unit/negation/package.json",
+        "test/fixtures/unit/now-files-overrides-npmignore/package.json",
+        "test/fixtures/unit/now-files/package.json",
+        "test/fixtures/unit/now-json-npm-gitignore-override/package.json",
+        "test/fixtures/unit/now-json-npm-npmignore-override/package.json",
+        "test/fixtures/unit/now-json-static-gitignore-override/package.json",
+        "test/fixtures/unit/now-json-throws/package.json",
+        "test/fixtures/unit/now-json/package.json",
+        "test/fixtures/unit/prefix-regression/package.json",
+        "test/fixtures/unit/simple-main/package.json",
+        "test/fixtures/unit/simple/package.json",
+        "test/fixtures/unit/type-in-package-now-with-dockerfile/package.json"
+      ]
+    }
+  }
+}
