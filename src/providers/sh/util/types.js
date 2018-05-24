@@ -74,7 +74,7 @@ export type ScaleArgs = {
   max: number | 'auto'
 }
 
-export type DeploymentScale = { 
+export type DeploymentScale = {
   [dc: string]: Scale
 }
 
@@ -291,7 +291,7 @@ export type ExitEvent = GenericEvent<'exit', {
   serial: string,
 }>
 
-export type DeploymentEvent = 
+export type DeploymentEvent =
   StateChangeEvent |
   BuildStartEvent |
   BuildCompleteEvent |
@@ -309,7 +309,8 @@ export type NewDeployment = {
   url: string,
   scale: DeploymentScale,
   nodeVersion: string,
-  readyState: 'INITIALIZING' | 'READY'
+  readyState: 'INITIALIZING' | 'READY',
+  blob?: null
 }
 
 export type CLIOptions<T> = {
