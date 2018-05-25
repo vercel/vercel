@@ -1,7 +1,7 @@
 // @flow
 type RetryFunction<T> = () => Promise<T>
 type RetryOptions = {
-  retry?: number,
+  retries?: number,
   maxTimeout?: number
 }
 
@@ -9,7 +9,6 @@ type FetchOptions = {
   body?: any,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 }
-
 
 export interface Now {
   retry<T>(fn: RetryFunction<T>, options?: RetryOptions): Promise<T>,
