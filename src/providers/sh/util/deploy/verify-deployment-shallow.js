@@ -16,9 +16,7 @@ async function* verifyDeploymentShallow(
   const dcs = Object.keys(deploymentScale).filter(dc => {
     return deploymentScale[dc].max > 0
   })
-  await Promise.all(dcs.map(async (dc) => {
-    return verifyDeployment(now, deploymentUrl, dc);
-  }));
+  await Promise.all(dcs.map((dc) => verifyDeployment(now, deploymentUrl, dc)))
 }
 
 // Throws an error if the deployment failed to boot.
