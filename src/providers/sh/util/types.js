@@ -1,10 +1,17 @@
 // @flow
+type RetryFunction = () => Promise<any>;
+type RetryOptions = {
+  retry?: number,
+  maxTimeout?: number
+};
+
 type FetchOptions = {
   body?: any,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 }
 
 export interface Now {
+  retry(fn: RetryFunction, options?: RetryOptions): Promise<any>,
   fetch(url: string, options?: FetchOptions): Promise<any>,
   list(appName: string, {version: number}): Deployment[],
 }
