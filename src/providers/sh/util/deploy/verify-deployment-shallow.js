@@ -17,29 +17,35 @@ async function* verifyDeploymentShallow(
     return deploymentScale[dc].max > 0
   })
   await Promise.all(dcs.map(async (dc) => {
-    return verifyDeployment(deploymentUrl, dc);
+    return verifyDeployment(now, deploymentUrl, dc);
   }));
 }
 
 // Throws an error if the deployment failed to boot.
 async function verifyDeployment(
+  now: Now,
   deploymentUrl: string,
   dc: string
 ): Promise<void> {
+  await now.retry(() => shallowFetch(deploymentUrl, dc), { retries: 3 })
+
+  // TODO: add `x-now-shallow` response header verification
+}
+
+async function shallowFetch(deploymentUrl: string, dc: string) {
   const res = await fetch(`https://alias-${dc}.zeit.co`, {
     headers: {
       Accept: 'application/json',
       Connection: 'close',
       Host: deploymentUrl,
-      'X-Now-Shallow': '1',
+      'X-Now-Shallow': '1'
     }
   })
   if (!res.ok) {
     const error = await res.json()
     throw Object.assign(new Error(error.message), error)
   }
-
-  // TODO: add `x-now-shallow` response header verification
+  return res
 }
 
 export default verifyDeploymentShallow
