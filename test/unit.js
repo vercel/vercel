@@ -78,6 +78,18 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
   t.is(base(files[3]), 'files-in-package-ignore/package.json')
 })
 
+test('`.dockerignore` files are parsed correctly', async t => {
+  const path = 'dockerfile-negation'
+  let files = await getDockerFiles(fixture(path))
+  files = files.sort(alpha)
+
+  t.is(files.length, 4)
+  t.is(base(files[0]), `${path}/Dockerfile`)
+  t.is(base(files[1]), `${path}/a.js`)
+  t.is(base(files[2]), `${path}/build/a/c.js`)
+  t.is(base(files[3]), `${path}/c.js`)
+})
+
 test('`files` overrides `.gitignore`', async t => {
   let files = await getNpmFiles(fixture('files-overrides-gitignore'))
   files = files.sort(alpha)

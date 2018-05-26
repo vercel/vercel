@@ -4,6 +4,7 @@ const { resolve } = require('path')
 // Packages
 const flatten = require('arr-flatten')
 const ignore = require('ignore')
+const dockerignore = require('@zeit/dockerignore')
 const _glob = require('glob')
 const { stat, readdir, readFile } = require('fs-extra')
 
@@ -87,7 +88,7 @@ const getFilesInWhitelist = async function(
 
 /**
  * Remove leading `./` from the beginning of ignores
- * because our parser doesn't like them :|
+ * because ignore doesn't like them :|
  */
 
 const clearRelative = function(str) {
@@ -347,7 +348,7 @@ async function docker(
         : dockerIgnore
     )
 
-    const filter = ignore()
+    const filter = (dockerIgnore === null ? ignore : dockerignore)()
       .add(IGNORED + '\n' + ignoredFiles)
       .createFilter()
 
