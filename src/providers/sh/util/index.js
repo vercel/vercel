@@ -202,7 +202,7 @@ module.exports = class Now extends EventEmitter {
         requestBody.config = nowConfig
       }
 
-      const res = await this._fetch('/v5/now/deployments', {
+      const res = await this._fetch('/v4/now/deployments', {
         method: 'POST',
         body: requestBody
       })
