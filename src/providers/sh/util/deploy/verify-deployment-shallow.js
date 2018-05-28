@@ -25,9 +25,14 @@ async function verifyDeployment(
   deploymentUrl: string,
   dc: string
 ): Promise<void> {
-  await now.retry(() => shallowFetch(deploymentUrl, dc), { retries: 3 })
+  const res = await now.retry(() => shallowFetch(deploymentUrl, dc), {
+    retries: 3
+  })
 
-  // TODO: add `x-now-shallow` response header verification
+  const shallow = res.headers.get('x-now-shallow')
+  if (shallow !== '2') {
+    throw new Error(`X-Now-Shallow response header was ${shallow}`)
+  }
 }
 
 async function shallowFetch(deploymentUrl: string, dc: string) {
