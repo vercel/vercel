@@ -12,11 +12,6 @@ exports.normalizeURL = u => {
   // `url` should match the hostname of the deployment
   u = u.replace(/^https:\/\//i, '')
 
-  if (!u.includes('.')) {
-    // `.now.sh` domain is implied if just the subdomain is given
-    u += '.now.sh'
-  }
-
   return u
 }
 

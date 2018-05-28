@@ -47,7 +47,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
 
   // Check if the alias is a custom domain and if case we have a positive
   // we have to configure the DNS records and certificate
-  if (!NOW_SH_REGEX.test(alias)) {
+  if (alias.indexOf('.') !== -1 && !NOW_SH_REGEX.test(alias)) {
     // In case the domain is avilable, we have to purchase
     const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
     if (

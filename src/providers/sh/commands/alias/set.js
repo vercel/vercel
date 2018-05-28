@@ -78,9 +78,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
   } else if (targets instanceof Errors.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${targets.meta.file}.`);
     return 1
-  } else if (targets instanceof Errors.InvalidAliasTarget) {
-    output.error(`Invalid target to alias ${targets.meta.target}`);
-    return 1
   }
 
   if (rules) {
@@ -110,8 +107,9 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`)
       const record = await assignAlias(output, now, deployment, target, contextName, noVerify)
-      if (handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, record)) !== 1) {
-        console.log(`${chalk.cyan('> Success!')} ${target} now points to ${chalk.bold(deployment.url)} ${setStamp()}`)
+      const handleResult = handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, record));
+      if (handleResult !== 1) {
+        console.log(`${chalk.cyan('> Success!')} ${handleResult.alias} now points to ${chalk.bold(deployment.url)} ${setStamp()}`)
       }
     }
   }
