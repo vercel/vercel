@@ -865,10 +865,17 @@ module.exports = class Now extends EventEmitter {
       }
       const res = await this._fetch(url, opts)
       if (res.ok) {
-        return false === opts.json ? res :
-          res.headers.get('content-type').includes('application/json')
-            ? res.json()
-            : res
+        if (opts.json === false) {
+          return res;
+        }
+
+        if (!res.headers.get('content-type')) {
+          return null;
+        }
+
+        return res.headers.get('content-type').includes('application/json')
+          ? res.json()
+          : res
       } else {
         const err = await responseError(res);
         if (res.status >= 400 && res.status < 500) {
