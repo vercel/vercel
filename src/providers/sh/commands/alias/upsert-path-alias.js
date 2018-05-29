@@ -5,6 +5,7 @@ import { Now, Output } from '../../util/types'
 import type { HTTPChallengeInfo, AliasRecord, PathRule } from '../../util/types'
 import * as Errors from '../../util/errors'
 import createCertForAlias from './create-cert-for-alias'
+import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import setupDomain from './setup-domain'
 
 const NOW_SH_REGEX = /\.now\.sh$/
@@ -14,17 +15,26 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
 
   if (!NOW_SH_REGEX.test(alias)) {
     output.log(`${chalk.bold(chalk.underline(alias))} is a custom domain.`)
+
+    // In case the domain is avilable, we have to purchase
+    const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
+    if (
+      (purchased instanceof Errors.UserAborted) ||
+      (purchased instanceof Errors.PaymentSourceNotFound) ||
+      (purchased instanceof Errors.DomainNotFound)
+    ) {
+      return purchased
+    }
+
+    // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, now, alias, contextName)
     if (
       (result instanceof Errors.DNSPermissionDenied) ||
       (result instanceof Errors.DomainNameserversNotFound) ||
-      (result instanceof Errors.DomainNotFound) ||
       (result instanceof Errors.DomainNotVerified) ||
       (result instanceof Errors.DomainPermissionDenied) ||
       (result instanceof Errors.DomainVerificationFailed) ||
-      (result instanceof Errors.NeedUpgrade) ||
-      (result instanceof Errors.PaymentSourceNotFound) ||
-      (result instanceof Errors.UserAborted)
+      (result instanceof Errors.NeedUpgrade)
     ) {
       return result
     }

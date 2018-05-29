@@ -5,6 +5,7 @@ type FetchOptions = {
 }
 
 export interface Now {
+  create(paths: string[], createArgs: Object): Promise<NewDeployment>,
   fetch(url: string, options?: FetchOptions): Promise<any>,
   list(appName: string, {version: number}): Deployment[],
 }

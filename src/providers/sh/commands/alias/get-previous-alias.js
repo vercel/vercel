@@ -8,15 +8,11 @@ async function getPreviousAlias(output: Output, now: Now, alias: string): Promis
 }
 
 function getSafeAlias(alias: string) {
-  const _alias = alias
+  return alias
     .replace(/^https:\/\//i, '')
     .replace(/^\.+/, '')
     .replace(/\.+$/, '')
     .toLowerCase()
-
-  return _alias.indexOf('.') === -1
-    ? `${_alias}.now.sh`
-    : _alias
 }
 
 export default getPreviousAlias
