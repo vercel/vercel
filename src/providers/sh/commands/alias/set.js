@@ -1,16 +1,16 @@
 // @flow
 import chalk from 'chalk'
 import ms from 'ms'
-import table from 'text-table'
 
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import cmd from '../../../../util/output/cmd'
+import dnsTable from '../../util/dns-table'
 import getContextName from '../../util/get-context-name'
 import humanizePath from '../../../../util/humanize-path'
 import Now from '../../util'
 import stamp from '../../../../util/output/stamp'
-import strlen from '../../util/strlen'
+import zeitWorldTable from '../../util/zeit-world-table'
 import type { CLIAliasOptions } from '../../util/types'
 
 import assignAlias from './assign-alias'
@@ -78,9 +78,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
   } else if (targets instanceof Errors.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${targets.meta.file}.`);
     return 1
-  } else if (targets instanceof Errors.InvalidAliasTarget) {
-    output.error(`Invalid target to alias ${targets.meta.target}`);
-    return 1
   }
 
   if (rules) {
@@ -110,8 +107,9 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`)
       const record = await assignAlias(output, now, deployment, target, contextName, noVerify)
-      if (handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, record)) !== 1) {
-        console.log(`${chalk.cyan('> Success!')} ${target} now points to ${chalk.bold(deployment.url)} ${setStamp()}`)
+      const handleResult = handleSetupDomainErrorImpl(output, handleCreateAliasErrorImpl(output, record));
+      if (handleResult !== 1) {
+        console.log(`${chalk.cyan('> Success!')} ${handleResult.alias} now points to ${chalk.bold(deployment.url)} ${setStamp()}`)
       }
     }
   }
@@ -166,29 +164,6 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
   } else {
     return error
   }
-}
-
-function zeitWorldTable() {
-  return table([
-    [chalk.underline('a.zeit.world'), chalk.dim('96.45.80.1')],
-    [chalk.underline('b.zeit.world'), chalk.dim('46.31.236.1')],
-    [chalk.underline('c.zeit.world'), chalk.dim('43.247.170.1')],
-  ], {
-    align: ['l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen
-  }).replace(/^(.*)/gm, '    $1')
-}
-
-function dnsTable(rows, extraSpace = '') {
-  return table([
-    ['name', 'type', 'value'].map(v => chalk.gray(v)),
-    ...rows
-  ], {
-    align: ['l', 'l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen
-  }).replace(/^(.*)/gm, `${extraSpace}  $1`)
 }
 
 type CreateAliasError =
