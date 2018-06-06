@@ -50,6 +50,7 @@ import raceAsyncGenerators from '../../../../util/race-async-generators'
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
+import verifyDeploymentShallow from '../../util/deploy/verify-deployment-shallow'
 import zeitWorldTable from '../../util/zeit-world-table'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
@@ -949,9 +950,14 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         if (!noVerify) {
           output.log(`Verifying instantiation in ${joinWords(Object.keys(deployment.scale).map(dc => chalk.bold(dc)))}`)
           const verifyStamp = stamp()
+
+          const verifyDeployment = deployment.blob === null
+            ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
+            : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
+
           const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], Errors.VerifyScaleTimeout, void> = raceAsyncGenerators(
             eventListenerToGenerator('data', eventsStream),
-            verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
+            verifyDeployment
           )
 
           for await (const dcOrEvent of verifyDCsGenerator) {

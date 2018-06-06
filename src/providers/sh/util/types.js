@@ -1,10 +1,17 @@
 // @flow
+type RetryFunction<T> = () => Promise<T>
+type RetryOptions = {
+  retries?: number,
+  maxTimeout?: number
+}
+
 type FetchOptions = {
   body?: any,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 }
 
 export interface Now {
+  retry<T>(fn: RetryFunction<T>, options?: RetryOptions): Promise<T>,
   create(paths: string[], createArgs: Object): Promise<NewDeployment>,
   fetch(url: string, options?: FetchOptions): Promise<any>,
   list(appName: string, {version: number}): Deployment[],
@@ -75,7 +82,7 @@ export type ScaleArgs = {
   max: number | 'auto'
 }
 
-export type DeploymentScale = { 
+export type DeploymentScale = {
   [dc: string]: Scale
 }
 
@@ -292,7 +299,7 @@ export type ExitEvent = GenericEvent<'exit', {
   serial: string,
 }>
 
-export type DeploymentEvent = 
+export type DeploymentEvent =
   StateChangeEvent |
   BuildStartEvent |
   BuildCompleteEvent |
@@ -310,7 +317,8 @@ export type NewDeployment = {
   url: string,
   scale: DeploymentScale,
   nodeVersion: string,
-  readyState: 'INITIALIZING' | 'READY'
+  readyState: 'INITIALIZING' | 'READY',
+  blob?: null
 }
 
 export type CLIOptions<T> = {
