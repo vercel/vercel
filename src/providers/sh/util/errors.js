@@ -120,16 +120,6 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
 /**
  * Alias configuration errors
  */
-export class InvalidAliasTarget extends NowError<'INVALID_ALIAS_TARGET', {target: string}> {
-  constructor(target: string) {
-    super({
-      code: 'INVALID_ALIAS_TARGET',
-      meta: { target },
-      message: `The target ${target} is not valid to be used as alias.`
-    })
-  }
-}
-
 export class InvalidAliasInConfig extends NowError<'INVALID_ALIAS_IN_CONFIG', {value: number | Object}> {
   constructor(value: any) {
     super({

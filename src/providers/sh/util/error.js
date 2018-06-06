@@ -44,7 +44,7 @@ function handleError(err, { debug = false } = {}) {
   }
 }
 
-async function responseError(res, fallbackMessage = null) {
+async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   let message
   let userError
   let bodyError
@@ -55,7 +55,7 @@ async function responseError(res, fallbackMessage = null) {
     try {
       body = await res.json()
     } catch (err) {
-      body = {}
+      body = parsedBody
     }
 
     // Some APIs wrongly return `err` instead of `error`
@@ -75,7 +75,7 @@ async function responseError(res, fallbackMessage = null) {
   err.status = res.status
   err.userError = userError
   err.serverMessage = message
-  
+
   // Copy every field that was added manually to the error
   if (bodyError) {
     for (const field of Object.keys(bodyError)) {

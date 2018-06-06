@@ -1,10 +1,8 @@
 // @flow
 import toHost from '../../util/to-host'
-
 import { Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import getInferredTargets from './get-inferred-targets'
-import isValidDomain from '../../util/domains/is-valid-domain'
 
 async function getTargetsForAlias(output: Output, args: string[], localConfigPath?: string | void) {
   const targets = await getTargets(output, args, localConfigPath)
@@ -16,20 +14,12 @@ async function getTargetsForAlias(output: Output, args: string[], localConfigPat
   ) {
     return targets
   }
-  
-  // Append zeit if needed or convert to host in case is a full URL
-  const hostTargets: string[] = targets.map(target => {
-    return target.indexOf('.') === -1
-      ? `${target}.now.sh`
-      : toHost(target)
-  })
 
-  // Validate the targets
-  for (const target of hostTargets) {
-    if (!isValidDomain(target)) {
-      return new Errors.InvalidAliasTarget(target)
-    }
-  }
+  const hostTargets: string[] = targets.map(target => {
+    return target.indexOf('.') !== -1
+      ? toHost(target)
+      : target
+  })
 
   return hostTargets
 }
