@@ -30,7 +30,7 @@ async function verifyDeployment(
   })
 
   const shallow = res.headers.get('x-now-shallow')
-  if (shallow !== '2') {
+  if (shallow !== '1') {
     throw new Error(`X-Now-Shallow response header was ${shallow}`)
   }
 }
