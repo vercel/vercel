@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import table from 'table'
+import table from 'text-table'
 import strlen from './strlen'
 
 export default function dnsTable(rows, extraSpace = '') {
