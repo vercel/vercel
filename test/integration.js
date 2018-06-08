@@ -198,6 +198,26 @@ test('find deployment in list with mixed args', async t => {
   }
 })
 
+test('output logs of deployment', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'logs',
+    context.deployment,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.true(stdout.includes('npm install'))
+  t.true(stdout.includes('Installing'))
+  t.true(stdout.includes('Installed'))
+  t.true(stdout.includes('Snapshotting deployment'))
+  t.true(stdout.includes('Saving deployment image'))
+  t.true(stdout.includes('npm start'))
+  t.true(stdout.includes('> micro'))
+  t.true(stdout.includes('micro: Accepting connections on port 3000'))
+  t.is(code, 0)
+})
+
 test('create alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
