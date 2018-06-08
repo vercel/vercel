@@ -1,5 +1,5 @@
 /**
- * A fast impementation of an algorithm that takes an array and returns a copy of the array without duplicates.
+ * A fast implementation of an algorithm that takes an array and returns a copy of the array without duplicates.
  * We used to use `array-unique` ( https://github.com/jonschlinkert/array-unique/blob/5d1fbe560da8125e28e4ad6fbfa9daaf9f2ec120/index.js )
  * but from running benchmarks, found the implementation to be too slow. This implementation has show to be upto ~10x faster for large
  * projects
