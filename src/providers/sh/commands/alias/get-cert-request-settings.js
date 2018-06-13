@@ -23,6 +23,8 @@ export default function getCertRequestSettings(
         return { cns: [alias], preferDNS: true }
       }
     }
+  } else if (subdomain) {
+    return { cns: [alias], preferDNS: false }
   } else {
     return { cns: [domain, `*.${domain}`], preferDNS: false }
   }
