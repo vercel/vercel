@@ -336,12 +336,11 @@ module.exports = class Now extends EventEmitter {
             const stream = createReadStream(fPath);
             const { data } = file
 
-            const fstreamRead = stream.read;
+            const fstreamPush = stream.push;
 
-            stream.read = (...args) => {
-              const chunk = fstreamRead.apply(stream, args)
-              chunk && this.emit('uploadProgress', chunk.length)
-              return chunk;
+            stream.push = chunk => {
+              chunk && this.emit('uploadProgress', chunk.length);
+              return fstreamPush.call(stream, chunk);
             };
 
             const url = atlas ? '/v1/now/images' : '/v2/now/files'

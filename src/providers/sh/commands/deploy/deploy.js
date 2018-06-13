@@ -23,6 +23,7 @@ const { tick } = require('../../../../util/output/chars')
 const checkPath = require('../../util/check-path')
 const cmd = require('../../../../util/output/cmd')
 const createOutput = require('../../../../util/output')
+const wait = require('../../../../util/output/wait')
 const exit = require('../../../../util/exit')
 const isELF = require('../../util/is-elf')
 const logo = require('../../../../util/output/logo')
@@ -773,10 +774,18 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
           })
 
+          let completeUpload;
+          now.on('uploadProgress', progress => {
+            bar.tick(progress);
+            if (bar.complete && !completeUpload) {
+              completeUpload = wait('Completing upload…')
+            }
+          })
 
-          now.on('uploadProgress', bar.tick.bind(bar))
-
-          now.on('complete', resolve)
+          now.on('complete', () => {
+            completeUpload()
+            resolve()
+          })
 
           now.on('error', err => {
             error('Upload failed')
