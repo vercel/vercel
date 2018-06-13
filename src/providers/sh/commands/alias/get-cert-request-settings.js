@@ -7,9 +7,11 @@ export default function getCertRequestSettings(
   subdomain: string,
   httpChallengeInfo?: HTTPChallengeInfo,
 ) {
+  const hasSubdomain = Boolean(subdomain);
+  const isDeeplyNested = hasSubdomain && subdomain.indexOf('.') !== -1;
   if (httpChallengeInfo) {
-    if (subdomain === null) {
-      if (httpChallengeInfo.canSolveForRootDomain) {
+    if (hasSubdomain) {
+      if (httpChallengeInfo.canSolveForRootDomain && !isDeeplyNested) {
         return { cns: [domain, `*.${domain}`], preferDNS: false }
       } else {
         return { cns: [alias], preferDNS: true }
@@ -23,6 +25,8 @@ export default function getCertRequestSettings(
         return { cns: [alias], preferDNS: true }
       }
     }
+  } else if (isDeeplyNested) {
+    return { cns: [alias], preferDNS: false }
   } else {
     return { cns: [domain, `*.${domain}`], preferDNS: false }
   }
