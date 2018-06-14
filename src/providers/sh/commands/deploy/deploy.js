@@ -721,6 +721,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         meta
       )
 
+      deployStamp = stamp()
       const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
       if (
         (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
@@ -791,7 +792,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         }
 
         deployStamp = stamp()
-
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
           (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
