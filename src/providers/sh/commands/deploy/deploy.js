@@ -340,9 +340,9 @@ async function main(ctx: any) {
 
 async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
   return new Promise(async (_resolve, reject) => {
-    const deployStamp = stamp()
+    let deployStamp = stamp()
     const rawPath = argv._[0]
-
+    
     let meta
     let deployment: NewDeployment | null = null
     let isFile
@@ -721,6 +721,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         meta
       )
 
+      deployStamp = stamp()
       const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
       if (
         (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
@@ -747,6 +748,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       deployment = firstDeployCall
 
       if (now.syncFileCount > 0) {
+        const uploadStamp = stamp();
         await new Promise((resolve) => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
@@ -757,7 +759,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             ? 's'
             : ''}`
           const bar = new Progress(
-            `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+            `${chalk.gray('>')} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
             {
               width: 20,
               complete: '=',
@@ -773,8 +775,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
           })
 
-
-          now.on('uploadProgress', bar.tick.bind(bar))
+          now.on('uploadProgress', progress => {
+            bar.tick(progress);
+          })
 
           now.on('complete', resolve)
 
@@ -784,6 +787,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           })
         })
 
+        if (!quiet && syncCount) {
+          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`)
+        }
+
+        deployStamp = stamp()
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
           (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
@@ -898,10 +906,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
     } else {
       process.stdout.write(url)
-    }
-
-    if (!quiet && syncCount) {
-      log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
     }
 
     // Show build logs

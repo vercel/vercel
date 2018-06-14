@@ -336,12 +336,17 @@ module.exports = class Now extends EventEmitter {
             const stream = createReadStream(fPath);
             const { data } = file
 
-            const fstreamRead = stream.read;
+            const fstreamPush = stream.push;
 
-            stream.read = (...args) => {
-              const chunk = fstreamRead.apply(stream, args)
-              chunk && this.emit('uploadProgress', chunk.length)
-              return chunk;
+            let uploadedSoFar = 0;
+            stream.push = chunk => {
+              // If we're about to push the last chunk, then don't do it here
+              // But instead, we'll "hang" the progress bar and do it on 200
+              if (chunk && (uploadedSoFar + chunk.length) < data.length) {
+                this.emit('uploadProgress', chunk.length);
+                uploadedSoFar += chunk.length;
+              }
+              return fstreamPush.call(stream, chunk);
             };
 
             const url = atlas ? '/v1/now/images' : '/v2/now/files'
@@ -362,6 +367,7 @@ module.exports = class Now extends EventEmitter {
 
             if (res.status === 200) {
               // What we want
+              this.emit('uploadProgress', file.data.length - uploadedSoFar)
               this.emit('upload', file)
             } else if (res.status > 200 && res.status < 500) {
               // If something is wrong with our request, we don't retry
