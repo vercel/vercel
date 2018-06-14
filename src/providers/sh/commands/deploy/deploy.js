@@ -340,13 +340,13 @@ async function main(ctx: any) {
 
 async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
   return new Promise(async (_resolve, reject) => {
+    let deployStamp = stamp()
     const rawPath = argv._[0]
     
     let meta
     let deployment: NewDeployment | null = null
     let isFile
     let atlas = false
-    let deployStamp
 
     if (paths.length === 1) {
       try {
