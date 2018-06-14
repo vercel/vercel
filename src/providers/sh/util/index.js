@@ -338,8 +338,14 @@ module.exports = class Now extends EventEmitter {
 
             const fstreamPush = stream.push;
 
+            let uploadedSoFar = 0;
             stream.push = chunk => {
-              chunk && this.emit('uploadProgress', chunk.length);
+              // If we're about to push the last chunk, then don't do it here
+              // But instead, we'll "hang" the progress bar and do it on 200
+              if (chunk && (uploadedSoFar + chunk.length) < data.length) {
+                this.emit('uploadProgress', chunk.length);
+                uploadedSoFar += chunk.length;
+              }
               return fstreamPush.call(stream, chunk);
             };
 
@@ -361,6 +367,7 @@ module.exports = class Now extends EventEmitter {
 
             if (res.status === 200) {
               // What we want
+              this.emit('uploadProgress', file.data.length - uploadedSoFar)
               this.emit('upload', file)
             } else if (res.status > 200 && res.status < 500) {
               // If something is wrong with our request, we don't retry

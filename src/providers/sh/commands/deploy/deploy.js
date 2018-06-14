@@ -23,7 +23,6 @@ const { tick } = require('../../../../util/output/chars')
 const checkPath = require('../../util/check-path')
 const cmd = require('../../../../util/output/cmd')
 const createOutput = require('../../../../util/output')
-const wait = require('../../../../util/output/wait')
 const exit = require('../../../../util/exit')
 const isELF = require('../../util/is-elf')
 const logo = require('../../../../util/output/logo')
@@ -758,7 +757,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             ? 's'
             : ''}`
           const bar = new Progress(
-            `> Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+            `${chalk.gray('>')} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
             {
               width: 20,
               complete: '=',
@@ -774,16 +773,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
           })
 
-          let completeUpload;
           now.on('uploadProgress', progress => {
             bar.tick(progress);
-            if (bar.complete && !completeUpload) {
-              completeUpload = wait('Completing upload…')
-            }
           })
 
           now.on('complete', () => {
-            completeUpload()
             resolve()
           })
 
