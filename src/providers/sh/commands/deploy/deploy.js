@@ -763,7 +763,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               complete: '=',
               incomplete: '',
               total: now.syncAmount,
-              clear: false
+              clear: true
             }
           )
 
@@ -880,6 +880,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       await stopDeployment(err)
     }
 
+    if (!quiet && syncCount) {
+      log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
+    }
+
     const { url } = now
     // $FlowFixMe
     const dcs = (deploymentType !== 'static' && deployment.scale)
@@ -901,10 +905,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
     } else {
       process.stdout.write(url)
-    }
-
-    if (!quiet && syncCount) {
-      log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
     }
 
     // Show build logs
