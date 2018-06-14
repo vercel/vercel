@@ -3,7 +3,7 @@ import { Now, Output } from '../types'
 import generateCertForDeploy from './generate-cert-for-deploy'
 import * as Errors from '../errors'
 
-export type CreateDeployError = 
+export type CreateDeployError =
   Errors.CantGenerateWildcardCert |
   Errors.DNSPermissionDenied |
   Errors.DomainConfigurationError |
@@ -15,7 +15,6 @@ export type CreateDeployError =
   Errors.DomainValidationRunning |
   Errors.DomainVerificationFailed |
   Errors.InvalidWildcardDomain |
-  Errors.MissingDomainDNSRecords |
   Errors.NeedUpgrade |
   Errors.TooManyCertificates |
   Errors.TooManyRequests
@@ -53,8 +52,6 @@ export default async function createDeploy(output: Output, now: Now, contextName
         (result instanceof Errors.DomainValidationRunning) ||
         (result instanceof Errors.DomainVerificationFailed) ||
         (result instanceof Errors.InvalidWildcardDomain) ||
-        (result instanceof Errors.MissingDomainDNSRecords) ||
-        (result instanceof Errors.MissingDomainDNSRecords) ||
         (result instanceof Errors.NeedUpgrade) ||
         (result instanceof Errors.TooManyCertificates) ||
         (result instanceof Errors.TooManyRequests)
@@ -67,5 +64,5 @@ export default async function createDeploy(output: Output, now: Now, contextName
 
     // If the error is unknown, we just throw
     throw error
-  }  
+  }
 }

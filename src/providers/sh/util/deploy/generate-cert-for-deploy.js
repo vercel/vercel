@@ -16,7 +16,6 @@ export default async function generateCertForDeploy(output: Output, now: Now, co
     (result instanceof Errors.DomainNotVerified) ||
     (result instanceof Errors.DomainPermissionDenied) ||
     (result instanceof Errors.DomainVerificationFailed) ||
-    (result instanceof Errors.MissingDomainDNSRecords) ||
     (result instanceof Errors.NeedUpgrade)
   ) {
     cancelSetupWait()
@@ -27,7 +26,7 @@ export default async function generateCertForDeploy(output: Output, now: Now, co
 
   // Generate the certificate with the given parameters
   const cancelCertWait = wait(`Generating a wildcard certificate for ${domain}`)
-  let cert = await createCertForCns(now, [domain, `*.${domain}`], contextName, { preferDNS: false })
+  let cert = await createCertForCns(now, [domain, `*.${domain}`], contextName)
   if (
     (cert instanceof Errors.CantGenerateWildcardCert) ||
     (cert instanceof Errors.DomainConfigurationError) ||

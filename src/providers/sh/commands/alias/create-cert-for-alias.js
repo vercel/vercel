@@ -1,22 +1,19 @@
 // @flow
-import psl from 'psl'
 import joinWords from '../../../../util/output/join-words'
 import stamp from '../../../../util/output/stamp'
 import wait from '../../../../util/output/wait'
 import * as Errors from '../../util/errors'
 import { Now, Output } from '../../util/types'
-import type { HTTPChallengeInfo } from '../../util/types'
 import createCertForCns from '../../util/certs/create-cert-for-cns'
-import getCertRequestSettings from './get-cert-request-settings'
+import getWildcardCnsForAlias from './get-wildcard-cns-for-alias'
 
-async function createCertificateForAlias(output: Output, now: Now, alias: string, context: string, httpChallengeInfo?: HTTPChallengeInfo) {
-  const { domain, subdomain } = psl.parse(alias)
-  const { cns, preferDNS } = getCertRequestSettings(alias, domain, subdomain, httpChallengeInfo)
+async function createCertificateForAlias(output: Output, now: Now, alias: string, context: string) {
+  const cns = getWildcardCnsForAlias(alias)
   const cancelMessage = wait(`Generating a certificate...`)
   const certStamp = stamp()
 
   // Generate the certificate with the given parameters
-  let cert = await createCertForCns(now, cns, context, { preferDNS })
+  let cert = await createCertForCns(now, cns, context)
   if (
     (cert instanceof Errors.DomainConfigurationError) ||
     (cert instanceof Errors.DomainPermissionDenied) ||
@@ -34,7 +31,7 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
   // valid we can fallback to try to generate a normal certificate
   if ((cert instanceof Errors.CantGenerateWildcardCert)) {
     output.debug(`Falling back to a normal certificate`)
-    cert = await createCertForCns(now, [alias], context, { preferDNS })
+    cert = await createCertForCns(now, [alias], context)
     if (
       (cert instanceof Errors.DomainConfigurationError) ||
       (cert instanceof Errors.DomainPermissionDenied) ||

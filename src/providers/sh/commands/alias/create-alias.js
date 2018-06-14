@@ -1,17 +1,16 @@
 // @flow
 import wait from '../../../../util/output/wait'
-import type { AliasRecord, Deployment, HTTPChallengeInfo } from '../../util/types'
+import type { AliasRecord, Deployment } from '../../util/types'
 import { Now, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import createCertForAlias from './create-cert-for-alias'
 
 async function createAlias(
-  output: Output, 
-  now: Now, 
-  deployment: Deployment, 
-  alias: string, 
-  contextName: string, 
-  httpChallengeInfo?: HTTPChallengeInfo,
+  output: Output,
+  now: Now,
+  deployment: Deployment,
+  alias: string,
+  contextName: string,
 ) {
   const cancelMessage = wait(`Creating alias`)
   try {
@@ -27,7 +26,7 @@ async function createAlias(
     // If the certificate is missing we create it without expecting failures
     // then we call back the createAlias function
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertForAlias(output, now, alias, contextName, httpChallengeInfo)
+      const cert = await createCertForAlias(output, now, alias, contextName)
       if (
         (cert instanceof Errors.DomainConfigurationError) ||
         (cert instanceof Errors.DomainPermissionDenied) ||
@@ -39,7 +38,7 @@ async function createAlias(
       ) {
         return cert
       } else {
-        return createAlias(output, now, deployment, alias, contextName, httpChallengeInfo)
+        return createAlias(output, now, deployment, alias, contextName)
       }
     }
 
