@@ -151,7 +151,7 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
     return 1
   } else if (error instanceof Errors.DomainNotVerified) {
-    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}. Please try again later`)
+    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}. If it's an external domain, add it with --external.`)
     return 1
   } else if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`)
