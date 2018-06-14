@@ -340,13 +340,13 @@ async function main(ctx: any) {
 
 async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
   return new Promise(async (_resolve, reject) => {
-    const deployStamp = stamp()
     const rawPath = argv._[0]
-
+    
     let meta
     let deployment: NewDeployment | null = null
     let isFile
     let atlas = false
+    let deployStamp
 
     if (paths.length === 1) {
       try {
@@ -747,6 +747,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       deployment = firstDeployCall
 
       if (now.syncFileCount > 0) {
+        const uploadStamp = stamp();
         await new Promise((resolve) => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
@@ -786,8 +787,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         })
 
         if (!quiet && syncCount) {
-          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
+          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`)
         }
+
+        deployStamp = stamp()
 
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
