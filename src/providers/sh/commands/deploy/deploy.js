@@ -764,7 +764,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               complete: '=',
               incomplete: '',
               total: now.syncAmount,
-              clear: true
+              clear: false
             }
           )
 
