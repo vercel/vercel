@@ -777,15 +777,17 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             bar.tick(progress);
           })
 
-          now.on('complete', () => {
-            resolve()
-          })
+          now.on('complete', resolve)
 
           now.on('error', err => {
             error('Upload failed')
             reject(err)
           })
         })
+
+        if (!quiet && syncCount) {
+          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
+        }
 
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
@@ -878,10 +880,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
 
       await stopDeployment(err)
-    }
-
-    if (!quiet && syncCount) {
-      log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${deployStamp()}`)
     }
 
     const { url } = now
