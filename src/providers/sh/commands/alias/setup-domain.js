@@ -65,7 +65,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
 
       // Since it's pointing to our nameservers we can configure the DNS records
       const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
+      if ((result instanceof Errors.DNSPermissionDenied)) {
         return result
       }
     }
@@ -88,7 +88,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     if (!info.isExternal) {
       // Make sure that the DNS records are configured without messing with existent records
       const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-      if ((result instanceof Errors.DNSPermissionDenied) || (result instanceof Errors.MissingDomainDNSRecords)) {
+      if ((result instanceof Errors.DNSPermissionDenied)) {
         return result
       }
     }

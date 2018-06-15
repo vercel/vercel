@@ -200,16 +200,6 @@ export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERR
   }
 }
 
-export class MissingDomainDNSRecords extends NowError<'MISSING_DOMAIN_DNS_RECORDS', {forRootDomain: boolean, forSubdomain: boolean}> {
-  constructor({ forRootDomain, forSubdomain }: { forRootDomain: boolean, forSubdomain: boolean }) {
-    super({
-      code: 'MISSING_DOMAIN_DNS_RECORDS',
-      meta: { forRootDomain, forSubdomain },
-      message: `There are missing records to solve the ACME HTTP challenge`
-    })
-  }
-}
-
 export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_CERT', {}> {
   constructor() {
     super({
