@@ -1,6 +1,6 @@
 // @flow
 import { Now, Output } from '../../util/types'
-import { DNSPermissionDenied, MissingDomainDNSRecords } from '../../util/errors'
+import { DNSPermissionDenied } from '../../util/errors'
 import getDomainDNSRecords from './get-domain-dns-records'
 import setupDNSRecord from './setup-dns-record'
 
@@ -9,8 +9,6 @@ const ALIAS_ZEIT_RECORD = 'alias.zeit.co.'
 
 async function maybeSetupDNSRecords(output: Output, now: Now, domain: string, subdomain: string | null) {
   const records = await getDomainDNSRecords(output, now, domain)
-  let misconfiguredForRootDomain = false
-  let misconfiguredForSubdomain = false
 
    // Find all the ALIAS records and if there is a collision flat that root is misconfigured
   const aliasRecords = records.filter(record => record.type === 'ALIAS')
@@ -19,8 +17,6 @@ async function maybeSetupDNSRecords(output: Output, now: Now, domain: string, su
     if (aliasResult instanceof DNSPermissionDenied) {
       return aliasResult
     }
-  } else {
-    misconfiguredForRootDomain = true
   }
 
   // Find all CNAME records and if there are no collisions configure, otherwise flag as misconfigured
@@ -39,17 +35,7 @@ async function maybeSetupDNSRecords(output: Output, now: Now, domain: string, su
       if (cnameResult instanceof DNSPermissionDenied) {
         return cnameResult
       }
-    } else {
-      misconfiguredForSubdomain = true
     }
-  }
-
-  // If we've found anything misconfigured, return an error
-  if (misconfiguredForRootDomain || misconfiguredForSubdomain) {
-    return new MissingDomainDNSRecords({
-      forRootDomain: misconfiguredForRootDomain,
-      forSubdomain: misconfiguredForSubdomain
-    })
   }
 }
 

@@ -735,7 +735,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         (firstDeployCall instanceof Errors.DomainValidationRunning) ||
         (firstDeployCall instanceof Errors.DomainVerificationFailed) ||
         (firstDeployCall instanceof Errors.InvalidWildcardDomain) ||
-        (firstDeployCall instanceof Errors.MissingDomainDNSRecords) ||
         (firstDeployCall instanceof Errors.NeedUpgrade) ||
         (firstDeployCall instanceof Errors.TooManyCertificates) ||
         (firstDeployCall instanceof Errors.TooManyRequests)
@@ -805,7 +804,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           (secondDeployCall instanceof Errors.DomainValidationRunning) ||
           (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
           (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
-          (secondDeployCall instanceof Errors.MissingDomainDNSRecords) ||
           (secondDeployCall instanceof Errors.NeedUpgrade) ||
           (secondDeployCall instanceof Errors.TooManyCertificates) ||
           (secondDeployCall instanceof Errors.TooManyRequests)
@@ -1061,7 +1059,7 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
       output.print(dnsTable([
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
-          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
       ]) + '\n');
     } else {
       output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
@@ -1093,15 +1091,12 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
       ['_now', 'TXT', error.meta.token],
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
-        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
     ], '  ') + '\n');
     return 1
   } else if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
     output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
-    return 1
-  } else if (error instanceof Errors.MissingDomainDNSRecords) {
-    output.error(`There are missing DNS records that we can't configure. You must update your DNS configuration and add the suffix again.`)
     return 1
   } else if (error instanceof Errors.NeedUpgrade) {
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)

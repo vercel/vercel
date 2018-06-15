@@ -3,7 +3,7 @@ import stamp from '../../../../util/output/stamp'
 import { Now, Output } from '../../util/types'
 import setDeploymentScale from '../../util/scale/set-deployment-scale'
 import waitForScale from '../../util/scale/wait-verify-deployment-scale'
-import type { Deployment, HTTPChallengeInfo } from '../../util/types'
+import type { Deployment } from '../../util/types'
 import * as Errors from '../../util/errors'
 
 import createAlias from './create-alias'
@@ -20,7 +20,6 @@ const NOW_SH_REGEX = /\.now\.sh$/
 
 async function assignAlias(output: Output, now: Now, deployment: Deployment, alias: string, contextName: string, noVerify: boolean) {
   const prevAlias = await getPreviousAlias(output, now, alias)
-  let httpChallengeInfo: HTTPChallengeInfo
 
   // If there was a previous deployment, we should fetch it to scale and downscale later
   const prevDeployment = await fetchDeploymentFromAlias(output, now, contextName, prevAlias, deployment)
@@ -70,18 +69,10 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     ) {
       return result
     }
-
-    // Maybe we get here an error of misconfigured shit
-    if (result instanceof Errors.MissingDomainDNSRecords) {
-      httpChallengeInfo = {
-        canSolveForRootDomain: !result.meta.forRootDomain,
-        canSolveForSubdomain: !result.meta.forSubdomain
-      }
-    }
   }
 
   // Create the alias and the certificate if it's missing
-  const record = await createAlias(output, now, deployment, alias, contextName, httpChallengeInfo)
+  const record = await createAlias(output, now, deployment, alias, contextName)
   if (
     (record instanceof Errors.AliasInUse) ||
     (record instanceof Errors.DeploymentNotFound) ||
