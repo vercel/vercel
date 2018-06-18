@@ -1,22 +1,21 @@
-#!/usr/bin/env node
-
 // Packages
-const chalk = require('chalk')
-const mri = require('mri')
-const ms = require('ms')
-const psl = require('psl')
-const table = require('text-table')
-const plural = require('pluralize')
+import chalk from 'chalk'
+import mri from 'mri'
+import ms from 'ms'
+import plural from 'pluralize'
+import psl from 'psl'
+import table from 'text-table'
 
 // Utilities
-const NowDomains = require('../util/domains')
-const exit = require('../../../util/exit')
-const logo = require('../../../util/output/logo')
-const promptBool = require('../../../util/input/prompt-bool')
-const strlen = require('../util/strlen')
-const toHost = require('../util/to-host')
-const { handleError, error } = require('../util/error')
-const buy = require('./domains/buy')
+import { handleError, error } from '../../util/error'
+import exit from '../../../../util/exit'
+import logo from '../../../../util/output/logo'
+import NowDomains from '../../util/domains'
+import promptBool from '../../../../util/input/prompt-bool'
+import strlen from '../../util/strlen'
+import toHost from '../../util/to-host'
+
+import buy from './buy'
 
 const help = () => {
   console.log(`
