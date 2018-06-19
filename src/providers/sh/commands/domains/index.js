@@ -76,6 +76,8 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
+      '--cdn': Boolean,
+      '--no-cdn': Boolean,
       '--coupon': String,
       '--external': Boolean,
       '-c': '--coupon',

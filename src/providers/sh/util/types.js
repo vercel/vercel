@@ -391,6 +391,8 @@ export type CLIScaleOptions = CLIOptions<{
 }>
 
 export type CLIDomainsOptions = CLIOptions<{
+  '--cdn': boolean,
+  '--no-cdn': boolean,
   '--coupon': string,
   '--external': boolean,
   '--yes': boolean,

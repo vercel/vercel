@@ -5,6 +5,7 @@ import psl from 'psl'
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import addDomain from '../../util/domains/add-domain'
+import updateDomain from '../../util/domains/update-domain.js'
 import cmd from '../../../../util/output/cmd'
 import dnsTable from '../../util/dns-table'
 import getContextName from '../../util/get-context-name'
@@ -26,6 +27,16 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
 
   if (args.length !== 1) {
     output.error(`${cmd('now domains rm <domain>')} expects one argument`)
+    return 1
+  }
+
+  if (opts['--cdn'] && opts['--external']) {
+    output.error(`It's not possible to enable CDN for an external domain`)
+    return 1
+  }
+
+  if (typeof opts['--cdn'] !== 'undefined' && typeof opts['--no-cdn'] !== 'undefined') {
+    output.error(`You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} at the same time`)
     return 1
   }
 
@@ -80,6 +91,11 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     return 1
   }
 
+  if (typeof opts['--cdn'] !== 'undefined' || typeof opts['--no-cdn'] !== 'undefined') {
+    const enableCdn = typeof opts['--no-cdn'] === 'undefined'
+    await updateDomain(now, domainName, enableCdn)
+  }
+
   if (addedDomain instanceof Errors.DomainAlreadyExists) {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
@@ -91,8 +107,8 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
 
   if (!addedDomain.verified) {
     output.warn(
-      `The domain was added but it's not verified. If the domain is ${chalk.bold(`external`)}.\n` +
-      `  Please, remove it and add it back using ${cmd(`now domains add ${domainName} --external`)}.`
+      `The domain was added but it's not verified. If the domain is ${chalk.bold(`external`)}\n` +
+      `  please, remove it and add it back using ${cmd(`now domains add ${domainName} --external`)}.`
     )
   }
 

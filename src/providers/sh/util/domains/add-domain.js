@@ -5,10 +5,10 @@ import { Now } from '../types'
 import * as Errors from '../errors'
 import type { AddedDomain } from '../types'
 
-export default async function addDomain(now: Now, domain: string, contextName: string, isExternal: boolean) {
+export default async function addDomain(now: Now, domain: string, contextName: string, isExternal: boolean, cdnEnabled?: boolean) {
   const { domain: rootDomain, subdomain } = psl.parse(domain)
   try {
-    return await performAddRequest(now, domain, isExternal);
+    return await performAddRequest(now, domain, isExternal, cdnEnabled);
   } catch (error) {
     if (error.status === 403) {
       return error.code === 'custom_domain_needs_upgrade'
@@ -28,11 +28,11 @@ export default async function addDomain(now: Now, domain: string, contextName: s
   }
 }
 
-async function performAddRequest(now: Now, domain: string, isExternal: boolean): Promise<AddedDomain> {
+async function performAddRequest(now: Now, domain: string, isExternal: boolean, cdnEnabled?: boolean): Promise<AddedDomain> {
   return retry(async (bail) => {
     try {
       const result: AddedDomain = await now.fetch('/domains', {
-        body: { name: domain, isExternal },
+        body: { name: domain, isExternal, cdnEnabled },
         method: 'POST',
       })
       return result;
