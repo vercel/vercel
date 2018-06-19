@@ -41,14 +41,15 @@ function formatDomainsTable(domains: Domain[]) {
   const current = new Date();
   return table(
     [
-      ['', 'domain', 'dns', 'verified', 'age'].map(s => chalk.dim(s)),
+      ['', 'domain', 'dns', 'verified', 'cdn', 'age'].map(s => chalk.dim(s)),
       ...domains.map(domain => {
+        const cdnEnabled = domain.cdnEnabled || false
         const ns = domain.isExternal ? 'external' : 'zeit.world'
         const url = chalk.bold(domain.name)
         const time = chalk.gray(
           ms(current - new Date(domain.created))
         )
-        return ['', url, ns, domain.verified, time]
+        return ['', url, ns, domain.verified, cdnEnabled, time]
       })
     ],
     {

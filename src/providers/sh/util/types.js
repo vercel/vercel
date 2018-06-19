@@ -195,6 +195,7 @@ export type Domain = {
   uid: string,
   aliases: string[],
   boughtAt: string,
+  cdnEnabled: boolean,
   certs: string[],
   created: string,
   expiresAt: string,
