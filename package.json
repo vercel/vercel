@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "12.0.0-canary.45",
+  "version": "12.0.0-canary.46",
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
   "repository": "zeit/now-cli",
