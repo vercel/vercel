@@ -1,123 +1,97 @@
-// Packages
-const { italic, bold } = require('chalk')
+// @flow
+import chalk from 'chalk'
+import psl from 'psl'
 
-// Utilities
-const error = require('../../../../util/output/error')
-const wait = require('../../../../util/output/wait')
-const cmd = require('../../../../util/output/cmd')
-const param = require('../../../../util/output/param')
-const info = require('../../../../util/output/info')
-const success = require('../../../../util/output/success')
-const stamp = require('../../../../util/output/stamp')
-const promptBool = require('../../../../util/input/prompt-bool')
-const eraseLines = require('../../../../util/output/erase-lines')
-const treatBuyError = require('../../util/domains/treat-buy-error')
-const NowCreditCards = require('../../util/credit-cards')
-const addBilling = require('../billing/add')
+import { CLIContext, Output } from '../../util/types'
+import * as Errors from '../../util/errors'
+import cmd from '../../../../util/output/cmd'
+import getContextName from '../../util/get-context-name'
+import getDomainPrice from '../../util/domains/get-domain-price'
+import getDomainStatus from '../../util/domains/get-domain-status'
+import Now from '../../util'
+import param from '../../../../util/output/param'
+import promptBool from '../../../../util/input/prompt-bool'
+import purchaseDomain from '../../util/domains/purchase-domain'
+import stamp from '../../../../util/output/stamp'
+import type { CLIDomainsOptions } from '../../util/types'
+import wait from '../../../../util/output/wait'
 
-module.exports = async function({ domains, args, currentTeam, user, coupon }) {
-  const name = args[0]
-  let elapsed
+export default async function buy(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
+  const {authConfig: { credentials }, config: { sh }} = ctx
+  const contextName = getContextName(sh)
+  const { currentTeam } = sh
+  const { apiUrl } = ctx
 
-  if (!name) {
-    return console.error(error(`Missing domain name. Run ${cmd('now domains help')}`))
+  // $FlowFixMe
+  const {token} = credentials.find(item => item.provider === 'sh')
+  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
+  const coupon = opts['--coupon']
+  const domainName = args[0]
+
+  if (!domainName) {
+    output.error(`Missing domain name. Run ${cmd('now domains help')}`)
+    return 1
   }
 
-  const nameParam = param(name)
-  let stopSpinner
-
-  let price
-  let period
-  let validCoupon
-  try {
-    if (coupon) {
-      stopSpinner = wait(`Validating coupon ${param(coupon)}`)
-      const creditCards = new NowCreditCards({
-        apiUrl: domains._agent._url,
-        token: domains._token,
-        debug: domains._debug,
-        currentTeam
-      })
-      const [couponInfo, { cards }] = await Promise.all([
-        domains.coupon(coupon),
-        creditCards.ls()
-      ])
-      stopSpinner()
-
-      if (!couponInfo.isValid) {
-        return console.error(error(`The coupon ${param(coupon)} is invalid`))
-      }
-
-      if (!couponInfo.canBeUsed) {
-        return console.error(error(`The coupon ${param(coupon)} has already been used`))
-      }
-
-      validCoupon = true
-
-      if (cards.length === 0) {
-        console.log(info(
-          'You have no credit cards on file. Please add one in order to claim your free domain'
-        ))
-        console.log(info(`Your card will ${bold('not')} be charged`))
-
-        await addBilling({
-          creditCards,
-          currentTeam,
-          user,
-          clear: true
-        })
-      }
-    }
-    elapsed = stamp()
-    stopSpinner = wait(`Checking availability for ${nameParam}`)
-    const json = await domains.price(name)
-    price = validCoupon ? 0 : json.price
-    period = json.period
-  } catch (err) {
-    stopSpinner()
-    return console.error(error(err.message))
+  const {domain: rootDomain, subdomain} = psl.parse(domainName)
+  if (subdomain || !rootDomain) {
+    output.error(`Invalid domain name "${domainName}". Run ${cmd('now domains help')}`)
+    return 1
   }
 
-  const available = await domains.status(name)
-  stopSpinner()
-
-  if (!available) {
-    console.error(error(
-      `The domain ${nameParam} is ${italic('unavailable')}! ${elapsed()}`
-    ))
-    return
+  const availableStamp = stamp()
+  const domainPrice = await getDomainPrice(now, domainName, coupon)
+  if (domainPrice instanceof Errors.InvalidCoupon) {
+    output.error(`The coupon ${param(coupon)} is not valid.`)
+    return 1
+  } else if (domainPrice instanceof Errors.UsedCoupon) {
+    output.error(`The coupon ${param(coupon)} has already been used.`)
+    return 1
+  } if (domainPrice instanceof Errors.UnsupportedTLD) {
+    output.error(`The TLD for ${param(domainName)} is not supported.`)
+    return 1
   }
 
-  const periodMsg = `${period}yr${period > 1 ? 's' : ''}`
-  console.log(info(
-    `The domain ${nameParam} is ${italic('available')} to buy under ${bold(
-      (currentTeam && currentTeam.slug) || user.username || user.email
-    )}! ${elapsed()}`
-  ))
-  const confirmation = await promptBool(
-    `Buy now for ${bold(`$${price}`)} (${periodMsg})?`
-  )
-
-  eraseLines(1)
-  if (!confirmation) {
-    return console.log(info('Aborted'))
+  if (domainPrice instanceof Errors.MissingCreditCard) {
+    output.print('You have no credit cards on file. Please add one in order to claim your free domain')
+    output.print(`Your card will ${chalk.bold('not')} be charged`)
+    return 1
   }
 
-  stopSpinner = wait('Purchasing')
-  elapsed = stamp()
-  try {
-    await domains.buy({ name, coupon, expectedPrice: price })
-  } catch (err) {
-    stopSpinner()
-    return treatBuyError(err)
+  if (!(await getDomainStatus(now, domainName)).available) {
+    output.error(`The domain ${param(domainName)} is ${chalk.underline('unavailable')}! ${availableStamp()}`)
+    return 1
   }
 
-  stopSpinner()
+  const {period, price} = domainPrice
+  output.log(`The domain ${param(domainName)} is ${chalk.underline('available')} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`)
+  if (!await promptBool(`Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${period > 1 ? 's' : ''}`})?`)) {
+    return 0
+  }
 
-  console.log(success(`Domain ${nameParam} purchased ${elapsed()}`))
-  console.log(info(
-    `You may now use your domain as an alias to your deployments. Run ${cmd(
-      'now alias --help'
-    )}`
-  ))
+  const purchaseStamp = stamp()
+  const stopPurchaseSpinner = wait('Purchasing')
+  const buyResult = await purchaseDomain(output, now, domainName, coupon, price)
+  stopPurchaseSpinner()
+
+  if (buyResult instanceof Errors.InvalidDomain) {
+    output.error(`The domain ${buyResult.meta.domain} is not valid.`)
+    return 1
+  } else if (buyResult instanceof Errors.DomainNotAvailable) {
+    output.error(`The domain ${buyResult.meta.domain} is not available.`)
+    return 1
+  } else if (buyResult instanceof Errors.DomainServiceNotAvailable) {
+    output.error(`The domain purchase service is not available. Please try again later.`)
+    return 1
+  } else if (buyResult instanceof Errors.UnexpectedDomainPurchaseError) {
+    output.error(`An unexpected error happened while performing the purchase.`)
+    return 1
+  } else if (buyResult instanceof Errors.PremiumDomainForbidden) {
+    output.error(`A coupon cannot be used to register a premium domain.`)
+    return 1
+  }
+
+  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} purchased ${purchaseStamp()}`)
+  output.note(`You may now use your domain as an alias to your deployments. Run ${cmd('now alias --help')}`)
+  return 0
 }

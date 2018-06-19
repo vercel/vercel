@@ -31,6 +31,7 @@ module.exports = (
 
       if (data[0].toLowerCase() === yesChar) {
         restore()
+        stdout.write(`\n`)
         resolve(true)
       } else if (data[0].toLowerCase() === noChar) {
         restore()

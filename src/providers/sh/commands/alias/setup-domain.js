@@ -6,7 +6,7 @@ import psl from 'psl'
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import maybeSetupDNSRecords from './maybe-setup-dns-records'
-import verifyDomain from './verify-domain'
+import verifyDomain from '../../util/domains/verify-domain'
 
 // Types and errors
 import { Output, Now } from '../../util/types'

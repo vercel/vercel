@@ -67,6 +67,16 @@ export class DeploymentPermissionDenied extends NowError<'DEPLOYMENT_PERMISSION_
   }
 }
 
+export class DomainAlreadyExists extends NowError<'DOMAIN_ALREADY_EXISTS', {uid: string, domain: string, context: string}> {
+  constructor(uid: string, domain: string, context: string) {
+    super({
+      code: 'DOMAIN_ALREADY_EXISTS',
+      meta: { uid, domain, context },
+      message: `The domain ${domain} already exists with id ${uid} under ${context}.`
+    })
+  }
+}
+
 export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', {domain: string}> {
   constructor(domain: string) {
     super({
@@ -376,6 +386,96 @@ export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_
       code: 'INVALID_SCALE_MIN_MAX_RELATION',
       meta: {},
       message: `Min number of instances can't be higher than max.`
+    })
+  }
+}
+
+export class InvalidCoupon extends NowError<'INVALID_COUPON', { coupon: string }> {
+  constructor(coupon: string) {
+    super({
+      code: 'INVALID_COUPON',
+      meta: { coupon },
+      message: `The coupon ${coupon} is invalid.`
+    })
+  }
+}
+
+export class UsedCoupon extends NowError<'USED_COUPON', { coupon: string }> {
+  constructor(coupon: string) {
+    super({
+      code: 'USED_COUPON',
+      meta: { coupon },
+      message: `The coupon ${coupon} is already used.`
+    })
+  }
+}
+
+export class UnsupportedTLD extends NowError<'UNSUPPORTED_TLD', { name: string }> {
+  constructor(name: string) {
+    super({
+      code: 'UNSUPPORTED_TLD',
+      meta: { name },
+      message: `The TLD for domain name ${name} is not supported.`
+    })
+  }
+}
+
+export class MissingCreditCard extends NowError<'MISSING_CREDIT_CARD', {}> {
+  constructor() {
+    super({
+      code: 'MISSING_CREDIT_CARD',
+      meta: {},
+      message: `There are no credit cards added for the user.`
+    })
+  }
+}
+
+export class DomainNotAvailable extends NowError<'DOMAIN_NOT_AVAILABLE', { domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_AVAILABLE',
+      meta: { domain },
+      message: `The domain ${domain} is not available.`
+    })
+  }
+}
+
+export class InvalidDomain extends NowError<'INVALID_DOMAIN', { domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'INVALID_DOMAIN',
+      meta: { domain },
+      message: `The domain ${domain} is not valid.`
+    })
+  }
+}
+
+export class DomainServiceNotAvailable extends NowError<'DOMAIN_SERVICE_NOT_AVAILABLE', {}> {
+  constructor() {
+    super({
+      code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
+      meta: {},
+      message: `The domain purchase is unavailable, try again later.`
+    })
+  }
+}
+
+export class UnexpectedDomainPurchaseError extends NowError<'UNEXPECTED_DOMAIN_PURCHASE_ERROR', {}> {
+  constructor() {
+    super({
+      code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
+      meta: {},
+      message: `An unexpected error happened while purchasing.`
+    })
+  }
+}
+
+export class PremiumDomainForbidden extends NowError<'PREMIUM_DOMAIN_FORBIDDEN', {}> {
+  constructor() {
+    super({
+      code: 'PREMIUM_DOMAIN_FORBIDDEN',
+      meta: {},
+      message: `A coupon cannot be used to register a premium domain.`
     })
   }
 }
