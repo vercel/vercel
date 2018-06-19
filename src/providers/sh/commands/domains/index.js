@@ -29,6 +29,8 @@ const help = () => {
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
     -e, --external                 Use external DNS server
+    --cdn                          Enable CDN support for the specified domain
+    --no-cdn                       Disable CDN support for the specified domain, if it was previously enabled
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
