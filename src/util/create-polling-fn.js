@@ -1,16 +1,6 @@
-// @flow
-import sleep from 'then-sleep'
+import { infinite, delay, map } from 'shiksha';
 
-function createPollingFn<T>(
-  future: (...args: any[]) => Promise<T>,
-  sleepTime: number,
-): (...args: any[]) => AsyncGenerator<T, void, void> {
-  return async function* (...args: any[]) {
-    while (true) {
-      yield await future(...args)
-      await sleep(sleepTime)
-    }
-  }
-}
+const createPollingFn = (future, sleepTime) => (...args) =>
+  map(() => future(...args), delay(sleepTime, infinite()));
 
-export default createPollingFn
+export default createPollingFn;

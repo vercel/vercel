@@ -14,9 +14,11 @@
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
     "gzip": "ls packed/now* | xargs gzip",
-    "bundle": "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
+    "bundle":
+      "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
     "pack": "rm -rf packed && webpack && yarn bundle",
-    "build-download": "webpack --context download --config download/webpack.config.js",
+    "build-download":
+      "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link",
     "build": "webpack"
   },
@@ -30,14 +32,9 @@
   "bin": {
     "now": "download/dist/now"
   },
-  "files": [
-    "download/dist",
-    "download/install.js"
-  ],
+  "files": ["download/dist", "download/install.js"],
   "pkg": {
-    "scripts": [
-      "dist/*.js"
-    ],
+    "scripts": ["dist/*.js"],
     "targets": [
       "node9-alpine-x64",
       "node9-linux-x64",
@@ -45,24 +42,15 @@
       "node9-win-x64"
     ]
   },
-  "eslintIgnore": [
-    "download",
-    "dist",
-    "test/fixtures"
-  ],
+  "eslintIgnore": ["download", "dist", "test/fixtures"],
   "eslintConfig": {
     "parserOptions": {
       "ecmaVersion": 2018,
       "sourceType": "module"
     },
     "parser": "babel-eslint",
-    "extends": [
-      "eslint:recommended",
-      "plugin:flowtype/recommended"
-    ],
-    "plugins": [
-      "flowtype"
-    ],
+    "extends": ["eslint:recommended", "plugin:flowtype/recommended"],
+    "plugins": ["flowtype"],
     "env": {
       "es6": true,
       "node": true
@@ -168,6 +156,7 @@
     "read-pkg": "2.0.0",
     "semver": "5.5.0",
     "shebang-loader": "0.0.1",
+    "shiksha": "zeit/shiksha",
     "single-line-log": "1.1.2",
     "sinon": "4.4.2",
     "strip-ansi": "4.0.0",
