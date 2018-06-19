@@ -50,9 +50,13 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     // In case the domain is avilable, we have to purchase
     const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
     if (
-      (purchased instanceof Errors.UserAborted) ||
+      (purchased instanceof Errors.DomainNotFound) ||
+      (purchased instanceof Errors.InvalidCoupon) ||
+      (purchased instanceof Errors.MissingCreditCard) ||
       (purchased instanceof Errors.PaymentSourceNotFound) ||
-      (purchased instanceof Errors.DomainNotFound)
+      (purchased instanceof Errors.UnsupportedTLD) ||
+      (purchased instanceof Errors.UsedCoupon) ||
+      (purchased instanceof Errors.UserAborted)
     ) {
       return purchased
     }

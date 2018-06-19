@@ -6,12 +6,12 @@ import table from 'text-table'
 import Now from '../../util'
 import cmd from '../../../../util/output/cmd'
 import getContextName from '../../util/get-context-name'
+import removeAliasById from '../../util/alias/remove-alias-by-id'
 import stamp from '../../../../util/output/stamp'
 import strlen from '../../util/strlen'
 import { CLIContext, Output } from '../../util/types'
 import type { CLIAliasOptions, Alias } from '../../util/types'
 
-import deleteAliasById from './delete-alias-by-id'
 import findAliasByAliasOrId from './find-alias-by-alias-or-id'
 import promptBool from './prompt-bool'
 
@@ -21,7 +21,7 @@ export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: s
   const { apiUrl } = ctx;
   const contextName = getContextName(sh);
   const {['--debug']: debugEnabled} = opts;
-  
+
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
@@ -50,7 +50,7 @@ export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: s
     return 0
   }
 
-  await deleteAliasById(now, alias.uid)
+  await removeAliasById(now, alias.uid)
   console.log(`${chalk.cyan('> Success!')} Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`)
   return 0
 }
