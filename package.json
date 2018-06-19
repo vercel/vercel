@@ -36,10 +36,10 @@
   "pkg": {
     "scripts": ["dist/*.js"],
     "targets": [
-      "node9-alpine-x64",
-      "node9-linux-x64",
-      "node9-macos-x64",
-      "node9-win-x64"
+      "node10-alpine-x64",
+      "node10-linux-x64",
+      "node10-macos-x64",
+      "node10-win-x64"
     ]
   },
   "eslintIgnore": ["download", "dist", "test/fixtures"],
