@@ -191,6 +191,52 @@ export type Certificate = {
   expiration: string
 }
 
+export type Domain = {
+  uid: string,
+  aliases: string[],
+  boughtAt: string,
+  cdnEnabled: boolean,
+  certs: string[],
+  created: string,
+  expiresAt: string,
+  isExternal: boolean,
+  name: string,
+  verified: boolean,
+}
+
+export type AddedDomain = {
+  uid: string,
+  created: string,
+  verified: boolean,
+}
+
+export type DomainPrice = {
+  period: number,
+  price: number,
+}
+
+export type CreditCard = {
+  id: string,
+  address_city: string,
+  address_country: string,
+  address_line1_check: string,
+  address_line1: string,
+  address_line2: string,
+  address_state: string,
+  address_zip_check: string,
+  address_zip: string,
+  brand: string,
+  country: string,
+  customer: string,
+  cvc_check: string,
+  exp_month: number,
+  exp_year: number,
+  fingerprint: string,
+  last4: string,
+  name: string,
+  object: string,
+}
+
 export type InstancesInfo = {
   [dc: string]: {
     instances: Array<{}>
@@ -342,4 +388,12 @@ export type CLICertsOptions = CLIOptions<{
 
 export type CLIScaleOptions = CLIOptions<{
   '--no-verify': string,
+}>
+
+export type CLIDomainsOptions = CLIOptions<{
+  '--cdn': boolean,
+  '--no-cdn': boolean,
+  '--coupon': string,
+  '--external': boolean,
+  '--yes': boolean,
 }>

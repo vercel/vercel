@@ -176,11 +176,15 @@ type CreateAliasError =
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
   Errors.InvalidAlias |
+  Errors.InvalidCoupon |
   Errors.InvalidWildcardDomain |
+  Errors.MissingCreditCard |
   Errors.NeedUpgrade |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
   Errors.TooManyRequests |
+  Errors.UnsupportedTLD |
+  Errors.UsedCoupon |
   Errors.VerifyScaleTimeout
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
@@ -243,6 +247,21 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.DomainsShouldShareRoot) {
     // this should never happen either
     output.error(`All given common names should share the same root domain.`)
+    return 1
+  } else if (error instanceof Errors.InvalidCoupon) {
+    // this should never happen
+    output.error(`The provided coupon ${error.meta.coupon} is invalid.`)
+    return 1
+  } else if (error instanceof Errors.UsedCoupon) {
+    // this should never happen
+    output.error(`The provided coupon ${error.meta.coupon} can't be used.`)
+    return 1
+  } else if (error instanceof Errors.UnsupportedTLD) {
+    // this should never happen
+    output.error(`The TLD for domain name ${error.meta.name} is not supported.`)
+    return 1
+  } else if (error instanceof Errors.MissingCreditCard) {
+    output.print('You have no credit cards on file. Please add one to purchase the domain.')
     return 1
   } else {
     return error
