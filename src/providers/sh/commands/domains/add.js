@@ -100,7 +100,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
         chalk.underline(addedDomain.meta.domain)
-      )} ${chalk.dim(`(${addedDomain.meta.uid})`)} already exists ${addStamp()}`
+      )} ${chalk.dim(`(${addedDomain.meta.uid})`)} updated successfully ${addStamp()}`
     )
     return 0
   }
@@ -115,7 +115,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       chalk.underline(domainName)
-    )} ${chalk.dim(`(${addedDomain.uid})`)} added [${addStamp()}]`
+    )} ${chalk.dim(`(${addedDomain.uid})`)} added ${addStamp()}`
   )
   return 0;
 }
