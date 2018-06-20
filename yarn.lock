@@ -670,9 +670,9 @@
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.1.tgz#729b9c70b873f5d6a41308925d1e5091bf16e92e"
 
-"@zeit/schemas@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.2.0.tgz#89e47b2f2bd41cdb52f54ff23038ccd9b1eb30da"
+"@zeit/schemas@1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.4.0.tgz#d9be2319b0305b2e73a303b3c5e73f5d24805fba"
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
