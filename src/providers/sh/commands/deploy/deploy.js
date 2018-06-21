@@ -342,7 +342,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
   return new Promise(async (_resolve, reject) => {
     let deployStamp = stamp()
     const rawPath = argv._[0]
-    
+
     let meta
     let deployment: NewDeployment | null = null
     let isFile
@@ -881,10 +881,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
 
       await stopDeployment(err)
+      return 1;
     }
 
     const { url } = now
-    // $FlowFixMe
     const dcs = (deploymentType !== 'static' && deployment.scale)
       ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
       : ''
