@@ -13,6 +13,8 @@ const nowSchema = require('@zeit/schemas/deployment/config')
 
 // Utilities
 const getLocalConfigPath = require('../../../config/local-path')
+const error = require('../../../util/output/error')
+const exit = require('../../../util/exit');
 
 module.exports = readMetaData
 
@@ -55,7 +57,7 @@ async function readMetaData(
   }
 
   if (nowConfig) {
-    validateNowJson(nowConfig)
+    await validateNowJson(nowConfig)
   }
 
   // We can remove this once the prompt for choosing `--npm` or `--docker` is gone
@@ -201,15 +203,19 @@ const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
     return parseDockerfile(contents, { includeComments: true })
 })
 
-function validateNowJson(nowConfig) {
+async function validateNowJson(nowConfig) {
   const ajv = new Ajv({ allErrors: true })
   const validJson = ajv.validate(nowSchema, nowConfig)
+
   if (!validJson) {
-    const err = new Error(
-      'You have the following errors inside `now.json` ' +
-        JSON.stringify(ajv.errors)
-    )
-    err.userError = true
-    throw err
+    const base = `The following error occured inside \`now.json\`:`
+    const {message, params, dataPath} = ajv.errors[0]
+    const {allowedValues, additionalProperty} = params || {}
+    const property = dataPath.slice(1).trim()
+    const prefix = property ? `\`${property}\`` : 'It'
+    const suffix = additionalProperty ? ` (\`${additionalProperty}\`)` : ''
+
+    console.error(error(`${base} ${prefix} ${message}${allowedValues ? ` (${allowedValues.join(', ')})` : ''}${suffix}`))
+    await exit(1);
   }
 }
