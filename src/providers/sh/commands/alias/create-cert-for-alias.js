@@ -52,7 +52,7 @@ async function createCertificateForAlias(output: Output, now: Now, alias: string
   }
 
   cancelMessage()
-  output.log(`Certificate for ${joinWords(cns)} (${cert.uid}) created ${certStamp()}`)
+  output.log(`Certificate for ${joinWords(cert.cns)} (${cert.uid}) created ${certStamp()}`)
   return cert
 }
 
