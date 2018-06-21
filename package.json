@@ -102,7 +102,7 @@
     "@babel/runtime": "7.0.0-beta.44",
     "@google/maps": "0.4.3",
     "@zeit/dockerignore": "0.0.1",
-    "@zeit/schemas": "1.2.0",
+    "@zeit/schemas": "1.4.0",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.4.0",
     "alpha-sort": "2.0.1",
