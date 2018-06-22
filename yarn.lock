@@ -666,9 +666,38 @@
   dependencies:
     samsam "1.3.0"
 
+"@zeit/dns-cached-resolve@^1.2.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@zeit/dns-cached-resolve/-/dns-cached-resolve-1.3.0.tgz#1960fac6396b68cc3f2935f67267d13b20c4d02c"
+  dependencies:
+    async-retry "1.1.3"
+    lru-cache "4.1.1"
+
 "@zeit/dockerignore@0.0.1":
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.1.tgz#729b9c70b873f5d6a41308925d1e5091bf16e92e"
+
+"@zeit/fetch-cached-dns@1.1.3":
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/@zeit/fetch-cached-dns/-/fetch-cached-dns-1.1.3.tgz#4094b4fc94f83f1bb1db39f82fe9b9ba35f2f4f2"
+  dependencies:
+    "@zeit/dns-cached-resolve" "^1.2.0"
+
+"@zeit/fetch-retry@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fetch-retry/-/fetch-retry-3.0.0.tgz#c3efab8f97d928b2f1a2cff36be9739713083adb"
+  dependencies:
+    async-retry "^1.1.3"
+    debug "^3.1.0"
+
+"@zeit/fetch@3.0.3":
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/@zeit/fetch/-/fetch-3.0.3.tgz#7dd9ccd7a056f0367c31a1e251f83d42ebacd262"
+  dependencies:
+    "@zeit/fetch-cached-dns" "1.1.3"
+    "@zeit/fetch-retry" "3.0.0"
+    agentkeepalive "3.4.1"
+    debug "3.1.0"
 
 "@zeit/schemas@1.1.2":
   version "1.1.2"
@@ -711,6 +740,12 @@ acorn@^4.0.3:
 acorn@^5.0.0, acorn@^5.5.0:
   version "5.5.3"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-5.5.3.tgz#f473dd47e0277a08e28e9bec5aeeb04751f0b8c9"
+
+agentkeepalive@3.4.1:
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/agentkeepalive/-/agentkeepalive-3.4.1.tgz#aa95aebc3a749bca5ed53e3880a09f5235b48f0c"
+  dependencies:
+    humanize-ms "^1.2.1"
 
 ajv-keywords@^2.0.0:
   version "2.1.1"
@@ -977,6 +1012,12 @@ async-each@^1.0.0:
 async-retry@1.1.3:
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.1.3.tgz#1be664783337a0614999d543009a3b6e0de3609d"
+  dependencies:
+    retry "0.10.1"
+
+async-retry@^1.1.3:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.2.1.tgz#308c6c4e1d91e63397a4676290334ae9bda7bcb1"
   dependencies:
     retry "0.10.1"
 
@@ -3568,6 +3609,12 @@ hullabaloo-config-manager@^1.1.0:
     resolve-from "^3.0.0"
     safe-buffer "^5.0.1"
 
+humanize-ms@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/humanize-ms/-/humanize-ms-1.2.1.tgz#c46e3159a293f6b896da29316d8b6fe8bb79bbed"
+  dependencies:
+    ms "^2.0.0"
+
 iconv-lite@0.4.19:
   version "0.4.19"
   resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.19.tgz#f7468f60135f5e5dad3399c0a81be9a1603a082b"
@@ -4405,6 +4452,13 @@ loud-rejection@^1.0.0, loud-rejection@^1.2.0:
 lowercase-keys@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/lowercase-keys/-/lowercase-keys-1.0.1.tgz#6f9e30b47084d971a7c820ff15a6c5167b74c26f"
+
+lru-cache@4.1.1:
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-4.1.1.tgz#622e32e82488b49279114a4f9ecf45e7cd6bba55"
+  dependencies:
+    pseudomap "^1.0.2"
+    yallist "^2.1.2"
 
 lru-cache@^4.0.1:
   version "4.1.3"
