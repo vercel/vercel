@@ -1,5 +1,5 @@
 // Packages
-const fetch = require('node-fetch')
+const fetch = require('@zeit/fetch')()
 const debug = require('debug')('now:sh:get-user')
 
 const getUser = async ({ apiUrl, token }) => {
