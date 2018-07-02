@@ -345,13 +345,13 @@ test('deploy multiple static files', async t => {
   })
 
   const contentType = response.headers.get('content-type')
-  t.is(contentType, 'application/json; charset=utf8')
+  t.is(contentType, 'application/json; charset=utf-8')
 
   const content = await response.json()
-  t.is(content.length, 2)
+  t.is(content.files.length, 2)
 
   const bareGoal = files.map(file => path.basename(file))
-  const bareCurrent = content.map(item => item.file)
+  const bareCurrent = content.files.map(item => item.base)
 
   t.deepEqual(bareGoal, bareCurrent)
   await removeDeployment(t, binaryPath, defaultArgs, stdout)
