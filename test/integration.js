@@ -345,7 +345,7 @@ test('deploy multiple static files', async t => {
   })
 
   const contentType = response.headers.get('content-type')
-  t.is(contentType, 'application/json; charset=utf8')
+  t.is(contentType, 'application/json; charset=utf-8')
 
   const content = await response.json()
   t.is(content.length, 2)
