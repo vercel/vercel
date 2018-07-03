@@ -6,6 +6,7 @@ import psl from 'psl'
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import maybeSetupDNSRecords from './maybe-setup-dns-records'
+import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import verifyDomain from '../../util/domains/verify-domain'
 
 // Types and errors
@@ -21,49 +22,76 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
 
   if (!info) {
     output.debug(`Domain is unknown for ZEIT World`)
-    // If we have no info it means that it's an unknown domain. We have to check the
-    // nameservers to register and verify it as an external or non-external domain
     const nameservers = await getDomainNameservers(now, domain)
-    if (nameservers instanceof Errors.DomainNameserversNotFound) {
-      return nameservers
-    }
 
-    output.log(
-      `Nameservers: ${nameservers && nameservers.length
-        ? nameservers.map(ns => chalk.underline(ns)).join(', ')
-        : chalk.dim('none')}`
-    )
+    // If we find nameservers we have to try to add the domain
+    if (!(nameservers instanceof Errors.DomainNameserversNotFound)) {
+      output.log(
+        `Nameservers: ${nameservers && nameservers.length
+          ? nameservers.map(ns => chalk.underline(ns)).join(', ')
+          : chalk.dim('none')}`
+      )
 
-    if (!nameservers.every(ns => ns.endsWith('.zeit.world'))) {
-      // If it doesn't have the nameserver pointing to now we have to create the
-      // domain knowing that it should be verified via a DNS TXT record.
-      const verified = await verifyDomain(now, alias, contextName, { isExternal: true })
+      const domainPointsToZeitWorld = !nameservers.every(ns => ns.endsWith('.zeit.world'));
+      const verified = await verifyDomain(now, alias, contextName, { isExternal: !domainPointsToZeitWorld })
       if (
         (verified instanceof Errors.DomainNotVerified) ||
         (verified instanceof Errors.DomainPermissionDenied) ||
-        (verified instanceof Errors.DomainVerificationFailed) ||
         (verified instanceof Errors.NeedUpgrade)
       ) {
         return verified
+      } if (verified instanceof Errors.DomainVerificationFailed) {
+        // Verification fails when the domain is external so either its missing the TXT record
+        // or it's available to purchase, so we try to purchase it
+        const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
+        if (
+          (purchased instanceof Errors.DomainNotFound) ||
+          (purchased instanceof Errors.InvalidCoupon) ||
+          (purchased instanceof Errors.MissingCreditCard) ||
+          (purchased instanceof Errors.PaymentSourceNotFound) ||
+          (purchased instanceof Errors.UnsupportedTLD) ||
+          (purchased instanceof Errors.UsedCoupon) ||
+          (purchased instanceof Errors.UserAborted)
+        ) {
+          return purchased
+        }
+
+        if (purchased) {
+          const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+          if ((result instanceof Errors.DNSPermissionDenied)) {
+            return result
+          }
+        } else {
+          // If the domain was not available, return the verification error
+          return verified;
+        }
       } else {
         output.success(`Domain ${domain} added!`)
+      }
+
+      // If the domain was pointing to zeit world we always try to configure the DNS
+      if (domainPointsToZeitWorld) {
+        const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
+        if ((result instanceof Errors.DNSPermissionDenied)) {
+          return result
+        }
       }
     } else {
-      // We have to create the domain knowing that the nameservers are zeit.world
-      output.debug(`Detected ${chalk.bold(chalk.underline('zeit.world'))} nameservers! Setting up domain...`)
-      const verified = await verifyDomain(now, alias, contextName, { isExternal: false })
+      // If we couldn't find nameservers we try to purchase the domain
+      const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
       if (
-        (verified instanceof Errors.DomainNotVerified) ||
-        (verified instanceof Errors.DomainPermissionDenied) ||
-        (verified instanceof Errors.DomainVerificationFailed) ||
-        (verified instanceof Errors.NeedUpgrade)
+        (purchased instanceof Errors.DomainNotFound) ||
+        (purchased instanceof Errors.InvalidCoupon) ||
+        (purchased instanceof Errors.MissingCreditCard) ||
+        (purchased instanceof Errors.PaymentSourceNotFound) ||
+        (purchased instanceof Errors.UnsupportedTLD) ||
+        (purchased instanceof Errors.UsedCoupon) ||
+        (purchased instanceof Errors.UserAborted)
       ) {
-        return verified
-      } else {
-        output.success(`Domain ${domain} added!`)
+        return purchased
       }
 
-      // Since it's pointing to our nameservers we can configure the DNS records
+      // Since the domain was purchased we now try to configure the dns records.
       const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
       if ((result instanceof Errors.DNSPermissionDenied)) {
         return result

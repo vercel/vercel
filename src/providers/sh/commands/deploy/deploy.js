@@ -52,6 +52,7 @@ import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import verifyDeploymentShallow from '../../util/deploy/verify-deployment-shallow'
 import zeitWorldTable from '../../util/zeit-world-table'
+import type { Readable } from 'stream'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
@@ -920,11 +921,8 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       if (deployment.readyState !== 'READY') {
         require('assert')(deployment) // mute linter
         const instanceIndex = getInstanceIndex()
-        const eventsStream = await getEventsStream(now, deployment.deploymentId, { direction: 'forward', follow: true })
-        const eventsGenerator: AsyncGenerator<DeploymentEvent, void, void> = combineAsyncGenerators(
-          eventListenerToGenerator('data', eventsStream),
-          getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState)
-        )
+        const eventsStream = await maybeGetEventsStream(now, deployment)
+        const eventsGenerator = getEventsGenerator(now, contextName, deployment, eventsStream)
 
         for await (const event of eventsGenerator) {
           // Stop when the deployment is ready
@@ -952,15 +950,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         if (!noVerify) {
           output.log(`Verifying instantiation in ${joinWords(Object.keys(deployment.scale).map(dc => chalk.bold(dc)))}`)
           const verifyStamp = stamp()
-
-          const verifyDeployment = deployment.blob === null
-            ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
-            : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
-
-          const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], Errors.VerifyScaleTimeout, void> = raceAsyncGenerators(
-            eventListenerToGenerator('data', eventsStream),
-            verifyDeployment
-          )
+          const verifyDCsGenerator = getVerifyDCsGenerator(output, now, deployment, eventsStream)
 
           for await (const dcOrEvent of verifyDCsGenerator) {
             if (dcOrEvent instanceof Errors.VerifyScaleTimeout) {
@@ -1043,7 +1033,35 @@ function getScaleFromConfig(config = {}): Object {
   return config.scale || {}
 }
 
-module.exports = main
+async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
+  try {
+    return await getEventsStream(now, deployment.deploymentId, { direction: 'forward', follow: true })
+  } catch (error) {
+    return null
+  }
+}
+
+function getEventsGenerator(now: Now, contextName: string, deployment: NewDeployment, eventsStream: null | Readable): AsyncGenerator<DeploymentEvent, void, void> {
+  const stateChangeFromPollingGenerator = getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState)
+  if (eventsStream !== null) {
+    return combineAsyncGenerators(
+      eventListenerToGenerator('data', eventsStream),
+      stateChangeFromPollingGenerator
+    );
+  }
+
+  return stateChangeFromPollingGenerator
+}
+
+function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployment, eventsStream: Readable | null) {
+  const verifyDeployment = deployment.blob === null
+    ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
+    : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
+
+  return eventsStream
+    ? raceAsyncGenerators(eventListenerToGenerator('data', eventsStream), verifyDeployment)
+    : verifyDeployment
+}
 
 function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
   if (error instanceof Errors.CantGenerateWildcardCert) {
@@ -1114,3 +1132,6 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 
   return error
 }
+
+module.exports = main
+
