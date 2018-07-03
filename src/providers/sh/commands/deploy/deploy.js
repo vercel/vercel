@@ -947,18 +947,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           }
         }
 
-        if (!noVerify && eventsStream !== null) {
+        if (!noVerify) {
           output.log(`Verifying instantiation in ${joinWords(Object.keys(deployment.scale).map(dc => chalk.bold(dc)))}`)
           const verifyStamp = stamp()
-
-          const verifyDeployment = deployment.blob === null
-            ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
-            : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
-
-          const verifyDCsGenerator: AsyncGenerator<DeploymentEvent | [string, number], Errors.VerifyScaleTimeout, void> = raceAsyncGenerators(
-            eventListenerToGenerator('data', eventsStream),
-            verifyDeployment
-          )
+          const verifyDCsGenerator = getVerifyDCsGenerator(output, now, deployment, eventsStream)
 
           for await (const dcOrEvent of verifyDCsGenerator) {
             if (dcOrEvent instanceof Errors.VerifyScaleTimeout) {
@@ -1061,9 +1053,15 @@ function getEventsGenerator(now: Now, contextName: string, deployment: NewDeploy
   return stateChangeFromPollingGenerator
 }
 
+function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployment, eventsStream: Readable | null) {
+  const verifyDeployment = deployment.blob === null
+    ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
+    : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
 
-
-module.exports = main
+  return eventsStream
+    ? raceAsyncGenerators(eventListenerToGenerator('data', eventsStream), verifyDeployment)
+    : verifyDeployment
+}
 
 function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
   if (error instanceof Errors.CantGenerateWildcardCert) {
@@ -1134,3 +1132,6 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 
   return error
 }
+
+module.exports = main
+
