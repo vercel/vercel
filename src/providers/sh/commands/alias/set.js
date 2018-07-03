@@ -120,11 +120,16 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
 export type SetupDomainError =
   Errors.DNSPermissionDenied |
   Errors.DomainNameserversNotFound |
+  Errors.DomainNotFound |
   Errors.DomainNotVerified |
   Errors.DomainPermissionDenied |
   Errors.DomainVerificationFailed |
+  Errors.InvalidCoupon |
+  Errors.MissingCreditCard |
   Errors.NeedUpgrade |
   Errors.PaymentSourceNotFound |
+  Errors.UnsupportedTLD |
+  Errors.UsedCoupon |
   Errors.UserAborted
 
 function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainError | Other): 1 | Other {
@@ -160,6 +165,22 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
     output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
     return 1
   } else if (error instanceof Errors.UserAborted) {
+    output.error(`User aborted`);
+    return 1
+  } else if (error instanceof Errors.DomainNotFound) {
+    output.error(`You should buy the domain before aliasing.`)
+    return 1
+  } else if (error instanceof Errors.InvalidCoupon) {
+    output.error(`The provided coupon ${error.meta.coupon} is invalid.`)
+    return 1
+  } else if (error instanceof Errors.MissingCreditCard) {
+    output.print('You have no credit cards on file. Please add one to purchase the domain.')
+    return 1
+  } else if (error instanceof Errors.UnsupportedTLD) {
+    output.error(`The TLD for domain name ${error.meta.name} is not supported.`)
+    return 1
+  } else if (error instanceof Errors.UsedCoupon) {
+    output.error(`The provided coupon ${error.meta.coupon} can't be used.`)
     return 1
   } else {
     return error
@@ -171,20 +192,15 @@ type CreateAliasError =
   Errors.DeploymentNotFound |
   Errors.DeploymentPermissionDenied |
   Errors.DomainConfigurationError |
-  Errors.DomainNotFound |
   Errors.DomainPermissionDenied |
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
   Errors.InvalidAlias |
-  Errors.InvalidCoupon |
   Errors.InvalidWildcardDomain |
-  Errors.MissingCreditCard |
   Errors.NeedUpgrade |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
   Errors.TooManyRequests |
-  Errors.UnsupportedTLD |
-  Errors.UsedCoupon |
   Errors.VerifyScaleTimeout
 
 function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAliasError | OtherError): 1 | OtherError {
@@ -233,35 +249,15 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.TooManyRequests) {
     output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
     return 1
-  } else if (error instanceof Errors.DomainNotFound) {
-    output.error(`You should buy the domain before aliasing.`)
-    return 1
   } else if (error instanceof Errors.VerifyScaleTimeout) {
     output.error(`Instance verification timed out (${ms(error.meta.timeout)})`)
     output.log('Read more: https://err.sh/now-cli/verification-timeout')
     return 1
   } else if (error instanceof Errors.InvalidWildcardDomain) {
-    // this should never happen
     output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
     return 1
   } else if (error instanceof Errors.DomainsShouldShareRoot) {
-    // this should never happen either
     output.error(`All given common names should share the same root domain.`)
-    return 1
-  } else if (error instanceof Errors.InvalidCoupon) {
-    // this should never happen
-    output.error(`The provided coupon ${error.meta.coupon} is invalid.`)
-    return 1
-  } else if (error instanceof Errors.UsedCoupon) {
-    // this should never happen
-    output.error(`The provided coupon ${error.meta.coupon} can't be used.`)
-    return 1
-  } else if (error instanceof Errors.UnsupportedTLD) {
-    // this should never happen
-    output.error(`The TLD for domain name ${error.meta.name} is not supported.`)
-    return 1
-  } else if (error instanceof Errors.MissingCreditCard) {
-    output.print('You have no credit cards on file. Please add one to purchase the domain.')
     return 1
   } else {
     return error
