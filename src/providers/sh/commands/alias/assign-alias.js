@@ -12,7 +12,6 @@ import deploymentShouldDowscale from './deployment-should-dowscale'
 import fetchDeploymentFromAlias from './get-deployment-from-alias'
 import getDeploymentDownscalePresets from './get-deployment-downscale-presets'
 import getPreviousAlias from './get-previous-alias'
-import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import setupDomain from './setup-domain'
 
 // $FlowFixMe
@@ -47,29 +46,22 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   // Check if the alias is a custom domain and if case we have a positive
   // we have to configure the DNS records and certificate
   if (alias.indexOf('.') !== -1 && !NOW_SH_REGEX.test(alias)) {
-    // In case the domain is avilable, we have to purchase
-    const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
-    if (
-      (purchased instanceof Errors.DomainNotFound) ||
-      (purchased instanceof Errors.InvalidCoupon) ||
-      (purchased instanceof Errors.MissingCreditCard) ||
-      (purchased instanceof Errors.PaymentSourceNotFound) ||
-      (purchased instanceof Errors.UnsupportedTLD) ||
-      (purchased instanceof Errors.UsedCoupon) ||
-      (purchased instanceof Errors.UserAborted)
-    ) {
-      return purchased
-    }
-
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, now, alias, contextName)
     if (
       (result instanceof Errors.DNSPermissionDenied) ||
       (result instanceof Errors.DomainNameserversNotFound) ||
+      (result instanceof Errors.DomainNotFound) ||
       (result instanceof Errors.DomainNotVerified) ||
       (result instanceof Errors.DomainPermissionDenied) ||
       (result instanceof Errors.DomainVerificationFailed) ||
-      (result instanceof Errors.NeedUpgrade)
+      (result instanceof Errors.InvalidCoupon) ||
+      (result instanceof Errors.MissingCreditCard) ||
+      (result instanceof Errors.NeedUpgrade) ||
+      (result instanceof Errors.PaymentSourceNotFound) ||
+      (result instanceof Errors.UnsupportedTLD) ||
+      (result instanceof Errors.UsedCoupon) ||
+      (result instanceof Errors.UserAborted)
     ) {
       return result
     }
