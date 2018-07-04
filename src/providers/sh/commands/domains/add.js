@@ -40,31 +40,27 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     return 1
   }
 
-  const domainName = String(args[0])
-  if (!await promptBool(`Are you sure you want to add "${domainName}"?`)) {
-    return 0
-  }
-
   // If the user is adding with subdomain, warn about what he's doing
+  const domainName = String(args[0])
   const { domain, subdomain } = psl.parse(domainName)
   if (!domain) {
     output.error(`The given domain '${domainName}' is not valid.`)
     return 1;
   }
 
+  // Do not allow to add domains with a subdomain
   if (subdomain) {
-    output.warn(
-      `You are adding "${domainName}" as a domain name which seems to contain a subdomain part "${subdomain}".\n` +
-      '  This is probably wrong unless you really know what you are doing.\n' +
-      `  To add the root domain instead please run: ${chalk.cyan(
-        'now domain add ' +
-          (opts['--external'] ? '-e ' : '') +
-          domain
+    output.error(
+      `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
+      `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
+        'now domain add ' + (opts['--external'] ? '-e' : '') + domain
       )}`
     )
-    if (!await promptBool(`Continue adding "${domainName}" as a domain name?`)) {
-      return 1;
-    }
+    return 1;
+  }
+
+  if (!await promptBool(`Are you sure you want to add "${domainName}"?`)) {
+    return 0
   }
 
   const addStamp = stamp()
