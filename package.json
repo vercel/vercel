@@ -17,7 +17,7 @@
     "bundle": "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
     "pack": "rm -rf packed && webpack --mode production && yarn bundle",
     "build-download": "webpack --context --mode production download --config download/webpack.config.js",
-    "link": "yarn build && cd link && npm link",
+    "link": "webpack --mode production && cd link && npm link",
     "build": "webpack --mode production"
   },
   "lint-staged": {
