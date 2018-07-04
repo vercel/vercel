@@ -18,13 +18,14 @@ module.exports = {
     devtoolModuleFilenameTemplate: '[absolute-resource-path]',
   },
   module: {
-    loaders: [
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        loaders: ['shebang-loader', 'babel-loader']
-      }
-    ]
+    rules: [{
+      test: /\.js$/,
+      exclude: /node_modules/,
+      use: [
+        { loader: 'shebang-loader' },
+        { loader: 'babel-loader' }
+      ]
+    }]
   },
   plugins: [
     new FlowBabelWebpackPlugin(),
