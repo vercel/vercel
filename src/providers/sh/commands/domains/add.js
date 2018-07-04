@@ -71,12 +71,14 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   if (addedDomain instanceof Errors.NeedUpgrade) {
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
     return 1
-  } else if (addedDomain instanceof Errors.DomainPermissionDenied && domainInfo) {
-    output.error(`You don't have permissions over domain ${chalk.underline(addedDomain.meta.domain)} under ${chalk.bold(addedDomain.meta.context)}.`)
-    return 1
-  } else if (addedDomain instanceof Errors.DomainPermissionDenied && !domainInfo) {
-    output.error(`The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.`)
-    return 1
+  } else if (addedDomain instanceof Errors.DomainPermissionDenied) {
+    if (domainInfo) {
+      output.error(`You don't have permissions over domain ${chalk.underline(addedDomain.meta.domain)} under ${chalk.bold(addedDomain.meta.context)}.`)
+      return 1
+    } else {
+      output.error(`The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.`)
+      return 1
+    }
   } else if (addedDomain instanceof Errors.DomainVerificationFailed) {
     output.error(`We couldn't verify the domain ${chalk.underline(addedDomain.meta.domain)}.\n`)
     output.print(`  Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.\n`)
