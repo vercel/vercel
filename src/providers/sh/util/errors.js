@@ -2,6 +2,19 @@
 import { NowError } from './now-error'
 
 /**
+ * General CLI errors
+ */
+export class ConflictingOption extends NowError<'CONFICTING_OPTION', {name: string}> {
+  constructor(name: string) {
+    super({
+      code: 'CONFICTING_OPTION',
+      meta: { name },
+      message: `You can't use at the same time a positive and negative value for option ${name}`
+    })
+  }
+}
+
+/**
  * Create Alias Errors
  */
 export class AliasInUse extends NowError<'ALIAS_IN_USE', {alias: string}> {
