@@ -49,7 +49,6 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, now, alias, contextName)
     if (
-      (result instanceof Errors.DNSPermissionDenied) ||
       (result instanceof Errors.DomainNameserversNotFound) ||
       (result instanceof Errors.DomainNotFound) ||
       (result instanceof Errors.DomainNotVerified) ||

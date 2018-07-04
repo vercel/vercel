@@ -27,7 +27,6 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, now, alias, contextName)
     if (
-      (result instanceof Errors.DNSPermissionDenied) ||
       (result instanceof Errors.DomainNameserversNotFound) ||
       (result instanceof Errors.DomainNotVerified) ||
       (result instanceof Errors.DomainPermissionDenied) ||

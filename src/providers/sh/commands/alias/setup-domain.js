@@ -5,7 +5,6 @@ import psl from 'psl'
 // Internal utils
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
-import maybeSetupDNSRecords from './maybe-setup-dns-records'
 import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import verifyDomain from '../../util/domains/verify-domain'
 
@@ -14,7 +13,7 @@ import { Output, Now } from '../../util/types'
 import * as Errors from '../../util/errors'
 
 async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { domain, subdomain }: { domain: string, subdomain: string | null } = psl.parse(alias)
+  const { domain }: { domain: string, subdomain: string | null } = psl.parse(alias)
   const info = await getDomainInfo(now, domain, contextName)
   if (info instanceof Errors.DomainPermissionDenied) {
     return info
@@ -54,27 +53,11 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
           (purchased instanceof Errors.UserAborted)
         ) {
           return purchased
-        }
-
-        if (purchased) {
-          const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-          if ((result instanceof Errors.DNSPermissionDenied)) {
-            return result
-          }
-        } else {
-          // If the domain was not available, return the verification error
-          return verified;
+        } else if (!purchased) {
+          return verified
         }
       } else {
         output.success(`Domain ${domain} added!`)
-      }
-
-      // If the domain was pointing to zeit world we always try to configure the DNS
-      if (domainPointsToZeitWorld) {
-        const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-        if ((result instanceof Errors.DNSPermissionDenied)) {
-          return result
-        }
       }
     } else {
       // If we couldn't find nameservers we try to purchase the domain
@@ -90,12 +73,6 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       ) {
         return purchased
       }
-
-      // Since the domain was purchased we now try to configure the dns records.
-      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-      if ((result instanceof Errors.DNSPermissionDenied)) {
-        return result
-      }
     }
   } else {
     // If we have records from the domain we have to try to verify in case it is not
@@ -110,14 +87,6 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         (verified instanceof Errors.NeedUpgrade)
       ) {
         return verified
-      }
-    }
-
-    if (!info.isExternal) {
-      // Make sure that the DNS records are configured without messing with existent records
-      const result = await maybeSetupDNSRecords(output, now, domain, subdomain)
-      if ((result instanceof Errors.DNSPermissionDenied)) {
-        return result
       }
     }
   }

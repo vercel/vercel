@@ -726,7 +726,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
       if (
         (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
-        (firstDeployCall instanceof Errors.DNSPermissionDenied) ||
         (firstDeployCall instanceof Errors.DomainConfigurationError) ||
         (firstDeployCall instanceof Errors.DomainNameserversNotFound) ||
         (firstDeployCall instanceof Errors.DomainNotFound) ||
@@ -795,7 +794,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
           (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
-          (secondDeployCall instanceof Errors.DNSPermissionDenied) ||
           (secondDeployCall instanceof Errors.DomainConfigurationError) ||
           (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
           (secondDeployCall instanceof Errors.DomainNotFound) ||
@@ -1066,9 +1064,6 @@ function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployme
 function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`)
-    return 1
-  } else if (error instanceof Errors.DNSPermissionDenied) {
-    output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
     return 1
   } else if (error instanceof Errors.DomainConfigurationError) {
     output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`)

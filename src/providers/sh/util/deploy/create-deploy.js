@@ -5,7 +5,6 @@ import * as Errors from '../errors'
 
 export type CreateDeployError =
   Errors.CantGenerateWildcardCert |
-  Errors.DNSPermissionDenied |
   Errors.DomainConfigurationError |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotFound |
@@ -43,7 +42,6 @@ export default async function createDeploy(output: Output, now: Now, contextName
       const result = await generateCertForDeploy(output, now, contextName, error.value)
       if (
         (result instanceof Errors.CantGenerateWildcardCert) ||
-        (result instanceof Errors.DNSPermissionDenied) ||
         (result instanceof Errors.DomainConfigurationError) ||
         (result instanceof Errors.DomainNameserversNotFound) ||
         (result instanceof Errors.DomainNotVerified) ||

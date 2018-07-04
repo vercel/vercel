@@ -118,7 +118,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
 }
 
 export type SetupDomainError =
-  Errors.DNSPermissionDenied |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotFound |
   Errors.DomainNotVerified |
@@ -160,9 +159,6 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
     return 1
   } else if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`)
-    return 1
-  } else if (error instanceof Errors.DNSPermissionDenied) {
-    output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
     return 1
   } else if (error instanceof Errors.UserAborted) {
     output.error(`User aborted`);

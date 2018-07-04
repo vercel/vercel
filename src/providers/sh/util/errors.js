@@ -125,7 +125,7 @@ export class DomainNotFound extends NowError<'DOMAIN_NOT_FOUND', {domain: string
     super({
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
-      message: `The domain is available and should be purchased before running alias.`
+      message: `The domain ${domain} can't be found.`
     })
   }
 }
