@@ -68,12 +68,14 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
 
   const addStamp = stamp()
   const addedDomain = await addDomain(now, domainName, contextName, opts['--external'])
-
   if (addedDomain instanceof Errors.NeedUpgrade) {
     output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
     return 1
-  } else if (addedDomain instanceof Errors.DomainPermissionDenied) {
+  } else if (addedDomain instanceof Errors.DomainPermissionDenied && domainInfo) {
     output.error(`You don't have permissions over domain ${chalk.underline(addedDomain.meta.domain)} under ${chalk.bold(addedDomain.meta.context)}.`)
+    return 1
+  } else if (addedDomain instanceof Errors.DomainPermissionDenied && !domainInfo) {
+    output.error(`The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.`)
     return 1
   } else if (addedDomain instanceof Errors.DomainVerificationFailed) {
     output.error(`We couldn't verify the domain ${chalk.underline(addedDomain.meta.domain)}.\n`)
