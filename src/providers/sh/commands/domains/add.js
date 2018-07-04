@@ -5,6 +5,7 @@ import psl from 'psl'
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import addDomain from '../../util/domains/add-domain'
+import getDomainByIdOrName from '../../util/domains/get-domain-by-id-or-name'
 import updateDomain from '../../util/domains/update-domain.js'
 import cmd from '../../../../util/output/cmd'
 import dnsTable from '../../util/dns-table'
@@ -59,7 +60,9 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     return 1;
   }
 
-  if (!await promptBool(`Are you sure you want to add "${domainName}"?`)) {
+  // Check if the domain exists and ask for confirmation if it doesn't
+  const domainInfo = await getDomainByIdOrName(output, now, contextName, domain);
+  if (!domainInfo && !await promptBool(`Are you sure you want to add "${domainName}"?`)) {
     return 0
   }
 
