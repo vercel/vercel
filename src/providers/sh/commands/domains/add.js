@@ -109,7 +109,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
       console.log(
         `${chalk.cyan('> Success!')} Domain ${chalk.bold(
           chalk.underline(domainName)
-        )} ${chalk.dim(`(${addedDomain.uid})`)} added. ${addStamp()}`
+        )} added. ${addStamp()}`
       )
       return 0;
     }
@@ -119,7 +119,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
         chalk.underline(domainName)
-      )} ${chalk.dim(`(${domainInfo.uid})`)} updated. ${addStamp()}`
+      )} updated. ${addStamp()}`
     )
     return 0
   } else {
@@ -127,7 +127,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
         chalk.underline(domainName)
-      )} ${chalk.dim(`(${domainInfo.uid})`)} was already added.`
+      )} was already added.`
     )
     return 0
   }
