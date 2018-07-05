@@ -2,15 +2,13 @@
 import chalk from 'chalk'
 import ms from 'ms'
 import plural from 'pluralize'
-import table from 'text-table'
 
 import Now from '../../util'
 import getContextName from '../../util/get-context-name'
 import getDNSRecords from '../../util/dns/get-dns-records'
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records'
-import indent from '../../util/indent'
 import stamp from '../../../../util/output/stamp'
-import strlen from '../../util/strlen'
+import formatTable from '../../util/format-table'
 import { CLIContext, Output } from '../../util/types'
 import { DomainNotFound } from '../../util/errors'
 import type { CLIDNSOptions, DNSRecord } from '../../util/types'
@@ -50,8 +48,7 @@ async function ls(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: 
         chalk.bold(contextName)
       } ${chalk.gray(lsStamp())}`
     )
-    console.log(`\n${chalk.bold(domainName)}`)
-    console.log(`${indent(getDNSTable(domainName, records), 2)}`);
+    console.log(getDNSRecordsTable([{domainName, records}]))
     return 0
   }
 
@@ -62,38 +59,32 @@ async function ls(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: 
       chalk.bold(contextName)
     } ${chalk.gray(lsStamp())}`
   )
-
-  dnsRecords.forEach(({domainName, records}) => {
-    console.log(`\n${chalk.bold(domainName)}`)
-    console.log(`${indent(getDNSTable(domainName, records), 2)}`);
-  })
+  console.log(getDNSRecordsTable(dnsRecords))
   return 0
 }
 
-function getDNSTable(domainName: string, records: DNSRecord[]): string {
-  return table([
-    ['', 'id', 'name', 'type', 'value', 'aux', 'created', ''].map(h => chalk.gray(h)),
-    ...records.map(getDNSRow)
-  ], {
-    align: ['l', 'r', 'l', 'l', 'l', 'l', 'r'],
-    hsep: ' '.repeat(2),
-    stringLength: strlen
-  }).replace(/^/gm, '  ')
+function getDNSRecordsTable(dnsRecords: Array<{domainName: string, records: DNSRecord[]}>): string {
+  return formatTable(
+    ['', 'id', 'name', 'type', 'value', 'created'],
+    ['l', 'r', 'l', 'l', 'l', 'l'],
+    dnsRecords.map(({domainName, records}) => ({
+      name: chalk.bold(domainName),
+      rows: records.map(record => getDNSRecordRow(domainName, record))
+    }))
+  )
 }
 
-function getDNSRow(record: DNSRecord) {
+function getDNSRecordRow(domainName: string, record: DNSRecord) {
   const isSystemRecord = record.creator === 'system'
   const createdAt = ms(Date.now() - new Date(Number(record.created))) + ' ago'
-  const priority = (record.mxPriority && record.mxPriority) || (record.priority && record.priority) || ''
+  const priority = record.mxPriority || record.priority || null
   return [
     '',
     !isSystemRecord ? record.id : '',
     record.name,
     record.type,
-    record.value,
-    priority,
-    !isSystemRecord ? chalk.gray(createdAt) : '',
-    isSystemRecord ? 'default' : 'user'
+    priority ? `${priority} ${record.value}` : record.value,
+    chalk.gray(isSystemRecord  ? 'default' : createdAt),
   ]
 }
 
