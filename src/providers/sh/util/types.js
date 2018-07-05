@@ -170,8 +170,6 @@ export type PathRule = {
   method?: Array<string>,
 }
 
-export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT' | 'MX' | 'SRV'
-
 export type DNSRecord = {
   id: string,
   creator: string,
@@ -179,7 +177,7 @@ export type DNSRecord = {
   name: string,
   priority?: number,
   slug: string,
-  type: DNSRecordType,
+  type: string,
   value: string,
   created: number,
   updated: number

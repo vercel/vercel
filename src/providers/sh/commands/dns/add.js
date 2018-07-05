@@ -28,23 +28,6 @@ async function add(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output:
     return 1
   }
 
-  if (
-    parsedParams.data.type !== 'A' &&
-    parsedParams.data.type !== 'AAAA' &&
-    parsedParams.data.type !== 'ALIAS' &&
-    parsedParams.data.type !== 'CNAME' &&
-    parsedParams.data.type !== 'TXT' &&
-    parsedParams.data.type !== 'MX' &&
-    parsedParams.data.type !== 'SRV'
-  ) {
-    output.error(
-      `Invalid record type. See: ${chalk.cyan(
-        '`now dns --help`'
-      )} for usage.`
-    )
-    return 1
-  }
-
   const addStamp = stamp()
   const {domain, data} = parsedParams
   const record = await addDNSRecord(output, now, domain, data)

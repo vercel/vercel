@@ -9,7 +9,7 @@ export type RecordParams = {
   value: string,
 } | {
   name: string,
-  type: 'SRV',
+  type: string,
   srv: {
     port: number,
     priority: number,
