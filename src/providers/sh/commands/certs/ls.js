@@ -18,7 +18,7 @@ async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
   const { currentTeam } = sh;
   const contextName = getContextName(sh);
   const { apiUrl } = ctx;
-  
+
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })

@@ -170,15 +170,17 @@ export type PathRule = {
   method?: Array<string>,
 }
 
-export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT'
+export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT' | 'MX' | 'SRV'
 
 export type DNSRecord = {
   id: string,
-  slug: string,
+  creator: string,
+  mxPriority?: number,
   name: string,
+  priority?: number,
+  slug: string,
   type: DNSRecordType,
   value: string,
-  creator: string,
   created: number,
   updated: number
 }
@@ -396,4 +398,7 @@ export type CLIDomainsOptions = CLIOptions<{
   '--coupon': string,
   '--external': boolean,
   '--yes': boolean,
+}>
+
+export type CLIDNSOptions = CLIOptions<{
 }>
