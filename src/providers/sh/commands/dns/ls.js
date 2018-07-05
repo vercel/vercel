@@ -52,42 +52,49 @@ async function ls(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: 
     )
     console.log(`\n${chalk.bold(domainName)}`)
     console.log(`${indent(getDNSTable(domainName, records), 2)}`);
-  } else {
-    const dnsRecords = await getDNSRecords(output, now, contextName);
-    const nRecords = dnsRecords.reduce((p, r) => r.records.length + p);
-    output.log(
-      `${plural('Record', nRecords, true)} found under ${
-        chalk.bold(contextName)
-      } ${chalk.gray(lsStamp())}`
-    )
-
-    dnsRecords.forEach(({domainName, records}) => {
-      console.log(`\n${chalk.bold(domainName)}`)
-      console.log(`${indent(getDNSTable(domainName, records), 2)}`);
-    })
+    return 0
   }
+
+  const dnsRecords = await getDNSRecords(output, now, contextName);
+  const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
+  output.log(
+    `${plural('Record', nRecords, true)} found under ${
+      chalk.bold(contextName)
+    } ${chalk.gray(lsStamp())}`
+  )
+
+  dnsRecords.forEach(({domainName, records}) => {
+    console.log(`\n${chalk.bold(domainName)}`)
+    console.log(`${indent(getDNSTable(domainName, records), 2)}`);
+  })
   return 0
 }
 
 function getDNSTable(domainName: string, records: DNSRecord[]): string {
   return table([
-    ['', 'id', 'name', 'type', 'value', 'aux', 'created'].map(h => chalk.gray(h)),
-    ...records.map(record => ([
-      '',
-      record.id,
-      record.name,
-      record.type,
-      record.value,
-      (record.mxPriority && record.mxPriority) ||
-        (record.priority && record.priority) ||
-        '',
-      chalk.gray(ms(Date.now() - new Date(Number(record.created))) + ' ago')
-    ]))
+    ['', 'id', 'name', 'type', 'value', 'aux', 'created', ''].map(h => chalk.gray(h)),
+    ...records.map(getDNSRow)
   ], {
-    align: ['l', 'r', 'l', 'l', 'l', 'l'],
+    align: ['l', 'r', 'l', 'l', 'l', 'l', 'r'],
     hsep: ' '.repeat(2),
     stringLength: strlen
   }).replace(/^/gm, '  ')
+}
+
+function getDNSRow(record: DNSRecord) {
+  const isSystemRecord = record.creator === 'system'
+  const createdAt = ms(Date.now() - new Date(Number(record.created))) + ' ago'
+  const priority = (record.mxPriority && record.mxPriority) || (record.priority && record.priority) || ''
+  return [
+    '',
+    !isSystemRecord ? record.id : '',
+    record.name,
+    record.type,
+    record.value,
+    priority,
+    !isSystemRecord ? chalk.gray(createdAt) : '',
+    isSystemRecord ? 'default' : 'user'
+  ]
 }
 
 export default ls
