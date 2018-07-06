@@ -68,7 +68,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   }
 
   // Create the alias and the certificate if it's missing
-  const record = await createAlias(output, now, deployment, alias, contextName)
+  const record = await createAlias(output, now, contextName, deployment, alias)
   if (
     (record instanceof Errors.AliasInUse) ||
     (record instanceof Errors.DeploymentNotFound) ||

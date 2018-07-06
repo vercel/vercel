@@ -8,9 +8,9 @@ import createCertForAlias from './create-cert-for-alias'
 async function createAlias(
   output: Output,
   now: Now,
+  contextName: string,
   deployment: Deployment,
   alias: string,
-  contextName: string,
 ) {
   const cancelMessage = wait(`Creating alias`)
   try {
@@ -38,7 +38,7 @@ async function createAlias(
       ) {
         return cert
       } else {
-        return createAlias(output, now, deployment, alias, contextName)
+        return createAlias(output, now, contextName, deployment, alias)
       }
     }
 
