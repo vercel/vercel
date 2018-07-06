@@ -2,7 +2,8 @@
 import chalk from 'chalk'
 import psl from 'psl'
 
-// Internal utils
+// Internal utis
+
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import maybeSetupDNSRecords from './maybe-setup-dns-records'
@@ -76,6 +77,12 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
           return result
         }
       }
+
+      const domainInfo = await getDomainInfo(now, domain, contextName)
+      return domainInfo === null
+        ? new Errors.DomainNotFound(domain)
+        : domainInfo
+
     } else {
       // If we couldn't find nameservers we try to purchase the domain
       const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
@@ -96,6 +103,11 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       if ((result instanceof Errors.DNSPermissionDenied)) {
         return result
       }
+
+      const domainInfo = await getDomainInfo(now, domain, contextName)
+      return domainInfo === null
+        ? new Errors.DomainNotFound(domain)
+        : domainInfo
     }
   } else {
     // If we have records from the domain we have to try to verify in case it is not
@@ -120,6 +132,8 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         return result
       }
     }
+
+    return info
   }
 }
 
