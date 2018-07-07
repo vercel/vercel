@@ -31,7 +31,7 @@ export default async function addDomain(now: Now, domain: string, contextName: s
 async function performAddRequest(now: Now, domain: string, isExternal: boolean, cdnEnabled?: boolean): Promise<AddedDomain> {
   return retry(async (bail) => {
     try {
-      const result: AddedDomain = await now.fetch('/domains', {
+      const result: AddedDomain = await now.fetch('/v3/domains', {
         body: { name: domain, isExternal, cdnEnabled },
         method: 'POST',
       })

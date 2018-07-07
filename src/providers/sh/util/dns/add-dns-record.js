@@ -20,7 +20,7 @@ export type RecordParams = {
 
 async function addDNSRecord(output: Output, now: Now, domain: string, recordParams: RecordParams) {
   try {
-    const record: {uid: string, updated: number} = await now.fetch(`/domains/${domain}/records`, {
+    const record: {uid: string, updated: number} = await now.fetch(`/v3/domains/${domain}/records`, {
       body: recordParams,
       method: 'POST'
     })

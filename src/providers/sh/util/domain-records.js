@@ -36,7 +36,7 @@ module.exports = class DomainRecords extends Now {
     for (const domain of domains) {
       bodies.push(
         this.retry(async (bail, attempt) => {
-          const url = `/domains/${domain}/records`
+          const url = `/v3/domains/${domain}/records`
           if (this._debug) {
             console.time(`> [debug] #${attempt} GET ${url}`)
           }
@@ -72,7 +72,7 @@ module.exports = class DomainRecords extends Now {
   }
 
   create(domain, data) {
-    const url = `/domains/${domain}/records`
+    const url = `/v3/domains/${domain}/records`
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
@@ -116,7 +116,7 @@ module.exports = class DomainRecords extends Now {
   }
 
   delete(domain, recordId) {
-    const url = `/domains/${domain}/records/${recordId}`
+    const url = `/v3/domains/${domain}/records/${recordId}`
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
