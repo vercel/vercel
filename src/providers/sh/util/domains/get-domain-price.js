@@ -23,7 +23,7 @@ export default async function getDomainPrice(now: Now, name: string, coupon?: st
   }
 
   try {
-    const payload: DomainPrice = await now.fetch(`/domains/price?${stringify({name})}`)
+    const payload: DomainPrice = await now.fetch(`/v3/domains/price?${stringify({name})}`)
     const result: DomainPrice = coupon ? {price: 0, period: payload.price} : payload
     return result
   } catch (error) {

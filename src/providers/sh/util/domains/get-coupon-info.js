@@ -8,6 +8,6 @@ type CouponInfo = {
 }
 
 export default async function getCouponInfo(now: Now, coupon: string) {
-  const result: CouponInfo = await now.fetch(`/domains/buy?${stringify({ coupon })}`)
+  const result: CouponInfo = await now.fetch(`/v3/domains/buy?${stringify({ coupon })}`)
   return result
 }
