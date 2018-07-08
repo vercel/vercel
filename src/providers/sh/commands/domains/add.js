@@ -5,7 +5,8 @@ import psl from 'psl'
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import addDomain from '../../util/domains/add-domain'
-import getDomainByIdOrName from '../../util/domains/get-domain-by-id-or-name'
+import getDomainByName from '../../util/domains/get-domain-by-name'
+import isDomainExternal from '../../util/domains/is-domain-external'
 import updateDomain from '../../util/domains/update-domain.js'
 import cmd from '../../../../util/output/cmd'
 import dnsTable from '../../util/dns-table'
@@ -31,6 +32,11 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   if (cdnEnabled instanceof Errors.ConflictingOption) {
     output.error(`You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} at the same time`)
     return 1
+  }
+
+  if (opts['--external'] && opts['--cdn']) {
+    output.error(`You can't enable CDN for a domain that is external`);
+    return 1;
   }
 
   if (args.length !== 1) {
@@ -63,15 +69,15 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   }
 
   // Check if the domain exists and ask for confirmation if it doesn't
-  const domainInfo = await getDomainByIdOrName(output, now, contextName, domain);
+  const domainInfo = await getDomainByName(output, now, contextName, domain);
   if (!domainInfo && opts['--external'] && !await promptBool(`Are you sure you want to add "${domainName}"?`)) {
     return 0
   }
 
   // Do not allow to switch from internal to external or viceversa if the domain is added
-  if (domainInfo && domainInfo.isExternal !== Boolean(opts['--external'])) {
+  if (domainInfo && isDomainExternal(domainInfo) !== Boolean(opts['--external'])) {
     output.error(
-      `You already have the domain ${domainInfo.name} added as ${domainInfo.isExternal ? 'external' : 'non external'}.\n` +
+      `You already have the domain ${domainInfo.name} added as ${isDomainExternal(domainInfo) ? 'external' : 'non external'}.\n` +
       `  If you want to change it, please remove the domain and add it back.`
     )
     return 1;

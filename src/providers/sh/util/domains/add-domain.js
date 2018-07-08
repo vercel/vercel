@@ -29,10 +29,11 @@ export default async function addDomain(now: Now, domain: string, contextName: s
 }
 
 async function performAddRequest(now: Now, domain: string, isExternal: boolean, cdnEnabled?: boolean): Promise<AddedDomain> {
+  const serviceType = isExternal ? 'external' : 'zeit.world'
   return retry(async (bail) => {
     try {
-      const result: AddedDomain = await now.fetch('/domains', {
-        body: { name: domain, isExternal, cdnEnabled },
+      const result: AddedDomain = await now.fetch('/v3/domains', {
+        body: { name: domain, serviceType, cdnEnabled },
         method: 'POST',
       })
       return result;

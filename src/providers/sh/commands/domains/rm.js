@@ -13,7 +13,7 @@ import type { CLIDomainsOptions, Certificate, Domain } from '../../util/types'
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertsForDomain from '../../util/certs/get-certs-for-domain';
-import getDomainByIdOrName from '../../util/domains/get-domain-by-id-or-name'
+import getDomainByName from '../../util/domains/get-domain-by-name'
 import removeAliasById from '../../util/alias/remove-alias-by-id'
 import removeDomainByName from '../../util/domains/remove-domain-by-name'
 
@@ -38,7 +38,7 @@ async function rm(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], outp
     return 1
   }
 
-  const domain = await getDomainByIdOrName(output, now, contextName, domainIdOrName)
+  const domain = await getDomainByName(output, now, contextName, domainIdOrName)
   if (!domain) {
     output.error(`Domain not found by "${domainIdOrName}" under ${chalk.bold(contextName)}`)
     output.log(`Run ${cmd('now domains ls')} to see your domains.`)

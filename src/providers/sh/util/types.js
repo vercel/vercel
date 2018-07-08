@@ -192,14 +192,13 @@ export type Certificate = {
 }
 
 export type Domain = {
-  uid: string,
   aliases: string[],
-  boughtAt: string,
+  boughtAt?: string,
   cdnEnabled: boolean,
   certs: string[],
   created: string,
   expiresAt: string,
-  isExternal: boolean,
+  serviceType: 'zeit.world' | 'external',
   name: string,
   verified: boolean,
 }
