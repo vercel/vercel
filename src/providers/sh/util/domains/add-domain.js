@@ -11,8 +11,8 @@ export default async function addDomain(now: Now, domain: string, contextName: s
     return await performAddRequest(now, domain, isExternal, cdnEnabled);
   } catch (error) {
     if (error.status === 403) {
-      return error.code === 'custom_domain_needs_upgrade'
-        ? new Errors.NeedUpgrade()
+      return error.code === 'domain_with_cdn_needs_upgrade'
+        ? new Errors.CDNNeedsUpgrade()
         : new Errors.DomainPermissionDenied(rootDomain, contextName)
     }
 

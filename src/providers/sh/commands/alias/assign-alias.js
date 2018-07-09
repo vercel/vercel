@@ -56,7 +56,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
       (result instanceof Errors.DomainVerificationFailed) ||
       (result instanceof Errors.InvalidCoupon) ||
       (result instanceof Errors.MissingCreditCard) ||
-      (result instanceof Errors.NeedUpgrade) ||
+      (result instanceof Errors.CDNNeedsUpgrade) ||
       (result instanceof Errors.PaymentSourceNotFound) ||
       (result instanceof Errors.UnsupportedTLD) ||
       (result instanceof Errors.UsedCoupon) ||
@@ -77,7 +77,6 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     (record instanceof Errors.DomainValidationRunning) ||
     (record instanceof Errors.InvalidAlias) ||
     (record instanceof Errors.InvalidWildcardDomain) ||
-    (record instanceof Errors.NeedUpgrade) ||
     (record instanceof Errors.TooManyCertificates) ||
     (record instanceof Errors.TooManyRequests)
   ) {

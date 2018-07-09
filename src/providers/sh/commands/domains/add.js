@@ -86,8 +86,8 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   const addStamp = stamp()
   if (!domainInfo || !domainInfo.verified) {
     const addedDomain = await addDomain(now, domainName, contextName, opts['--external'], cdnEnabled)
-    if (addedDomain instanceof Errors.NeedUpgrade) {
-      output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+    if (addedDomain instanceof Errors.CDNNeedsUpgrade) {
+      output.error(`You can't add domains with CDN enabled from an OSS plan.`)
       return 1
     } else if (addedDomain instanceof Errors.DomainPermissionDenied) {
       output.error(domainInfo

@@ -37,12 +37,12 @@ export class InvalidAlias extends NowError<'INVALID_ALIAS', {alias: string}> {
   }
 }
 
-export class NeedUpgrade extends NowError<'NEED_UPGRADE', {}> {
+export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   constructor() {
     super({
-      code: 'NEED_UPGRADE',
+      code: 'CDN_NEEDS_UPGRADE',
       meta: {},
-      message: `You're trying to use a feature that is restricted for premium users. Please upgrade`
+      message: `You can't add domains with CDN enabled from an OSS plan.`
     })
   }
 }

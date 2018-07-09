@@ -204,7 +204,7 @@ export type Domain = {
 }
 
 export type AddedDomain = {
-  uid: string,
+  ns: string[],
   created: string,
   verified: boolean,
 }

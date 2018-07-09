@@ -15,7 +15,7 @@ export default async function generateCertForDeploy(output: Output, now: Now, co
     (result instanceof Errors.DomainNotVerified) ||
     (result instanceof Errors.DomainPermissionDenied) ||
     (result instanceof Errors.DomainVerificationFailed) ||
-    (result instanceof Errors.NeedUpgrade)
+    (result instanceof Errors.CDNNeedsUpgrade)
   ) {
     cancelSetupWait()
     return result

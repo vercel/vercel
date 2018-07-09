@@ -36,7 +36,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       if (
         (verified instanceof Errors.DomainNotVerified) ||
         (verified instanceof Errors.DomainPermissionDenied) ||
-        (verified instanceof Errors.NeedUpgrade)
+        (verified instanceof Errors.CDNNeedsUpgrade)
       ) {
         return verified
       } if (verified instanceof Errors.DomainVerificationFailed) {
@@ -84,7 +84,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         (verified instanceof Errors.DomainNotVerified) ||
         (verified instanceof Errors.DomainPermissionDenied) ||
         (verified instanceof Errors.DomainVerificationFailed) ||
-        (verified instanceof Errors.NeedUpgrade)
+        (verified instanceof Errors.CDNNeedsUpgrade)
       ) {
         return verified
       }

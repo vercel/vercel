@@ -14,7 +14,7 @@ export type CreateDeployError =
   Errors.DomainValidationRunning |
   Errors.DomainVerificationFailed |
   Errors.InvalidWildcardDomain |
-  Errors.NeedUpgrade |
+  Errors.CDNNeedsUpgrade |
   Errors.TooManyCertificates |
   Errors.TooManyRequests
 
@@ -50,7 +50,7 @@ export default async function createDeploy(output: Output, now: Now, contextName
         (result instanceof Errors.DomainValidationRunning) ||
         (result instanceof Errors.DomainVerificationFailed) ||
         (result instanceof Errors.InvalidWildcardDomain) ||
-        (result instanceof Errors.NeedUpgrade) ||
+        (result instanceof Errors.CDNNeedsUpgrade) ||
         (result instanceof Errors.TooManyCertificates) ||
         (result instanceof Errors.TooManyRequests)
       ) {

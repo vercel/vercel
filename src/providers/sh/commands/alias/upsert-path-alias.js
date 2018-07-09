@@ -31,7 +31,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
       (result instanceof Errors.DomainNotVerified) ||
       (result instanceof Errors.DomainPermissionDenied) ||
       (result instanceof Errors.DomainVerificationFailed) ||
-      (result instanceof Errors.NeedUpgrade)
+      (result instanceof Errors.CDNNeedsUpgrade)
     ) {
       return result
     }
@@ -84,10 +84,6 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     }
 
     if (error.status === 403) {
-      if (error.code === 'custom_domain_needs_upgrade') {
-        return new Errors.NeedUpgrade()
-      }
-
       if (error.code === 'alias_in_use') {
         console.log(error)
         return new Errors.AliasInUse(alias)

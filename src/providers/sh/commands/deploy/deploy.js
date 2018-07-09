@@ -735,7 +735,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         (firstDeployCall instanceof Errors.DomainValidationRunning) ||
         (firstDeployCall instanceof Errors.DomainVerificationFailed) ||
         (firstDeployCall instanceof Errors.InvalidWildcardDomain) ||
-        (firstDeployCall instanceof Errors.NeedUpgrade) ||
+        (firstDeployCall instanceof Errors.CDNNeedsUpgrade) ||
         (firstDeployCall instanceof Errors.TooManyCertificates) ||
         (firstDeployCall instanceof Errors.TooManyRequests)
       ) {
@@ -803,7 +803,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           (secondDeployCall instanceof Errors.DomainValidationRunning) ||
           (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
           (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
-          (secondDeployCall instanceof Errors.NeedUpgrade) ||
+          (secondDeployCall instanceof Errors.CDNNeedsUpgrade) ||
           (secondDeployCall instanceof Errors.TooManyCertificates) ||
           (secondDeployCall instanceof Errors.TooManyRequests)
         ) {
@@ -1111,8 +1111,8 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
     // this should never happen
     output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
     return 1
-  } else if (error instanceof Errors.NeedUpgrade) {
-    output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+    output.error(`You can't add domains with CDN enabled from an OSS plan`)
     return 1
   } else if (error instanceof Errors.TooManyCertificates) {
     output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
