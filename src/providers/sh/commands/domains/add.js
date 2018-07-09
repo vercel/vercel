@@ -30,12 +30,12 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
   const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
 
   if (cdnEnabled instanceof Errors.ConflictingOption) {
-    output.error(`You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} at the same time`)
+    output.error(`You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`)
     return 1
   }
 
   if (opts['--external'] && opts['--cdn']) {
-    output.error(`You can't enable CDN for a domain that is external`);
+    output.error(`You can’t enable the Now CDN for domains that are not pointing to zeit.world`);
     return 1;
   }
 
@@ -44,16 +44,11 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     return 1
   }
 
-  if (opts['--cdn'] && opts['--external']) {
-    output.error(`It's not possible to enable CDN for an external domain`)
-    return 1
-  }
-
   // If the user is adding with subdomain, warn about what he's doing
   const domainName = String(args[0])
   const { domain, subdomain } = psl.parse(domainName)
   if (!domain) {
-    output.error(`The given domain '${domainName}' is not valid.`)
+    output.error(`The domain '${domainName}' is not valid.`)
     return 1;
   }
 
@@ -76,9 +71,11 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
 
   // Do not allow to switch from internal to external or viceversa if the domain is added
   if (domainInfo && isDomainExternal(domainInfo) !== Boolean(opts['--external'])) {
+    const youWant = isDomainExternal(domainInfo) ? 'non-external' : 'external'
+    const youHave = isDomainExternal(domainInfo) ? 'external' : 'non-external'
     output.error(
-      `You already have the domain ${domainInfo.name} added as ${isDomainExternal(domainInfo) ? 'external' : 'non external'}.\n` +
-      `  If you want to change it, please remove the domain and add it back.`
+      `You already have the domain ${domainInfo.name} as as ${youHave} domain.\n` +
+      `  If you want to change the domain to be ${youWant}, please remove it and then add it back as an ${youWant} domain.`
     )
     return 1;
   }
@@ -90,10 +87,14 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
       output.error(`You can't add domains with CDN enabled from an OSS plan.`)
       return 1
     } else if (addedDomain instanceof Errors.DomainPermissionDenied) {
-      output.error(domainInfo
-        ? `You don't have permissions over domain ${chalk.underline(addedDomain.meta.domain)} under ${chalk.bold(addedDomain.meta.context)}.`
-        : `The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.`)
-      return 1
+      if (domainInfo) {
+        output.error(`You don't have permissions over domain ${chalk.underline(addedDomain.meta.domain)} under ${chalk.bold(addedDomain.meta.context)}.`)
+        return 1
+      } else {
+        output.error(`The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.\n` +
+          `  If this seems like a mistake, please contact us at support@zeit.co`)
+        return 1
+      }
     } else if (addedDomain instanceof Errors.DomainVerificationFailed) {
       output.error(`We couldn't verify the domain ${chalk.underline(addedDomain.meta.domain)}.\n`)
       output.print(`  Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.\n`)
@@ -112,29 +113,27 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
       return 1
     } else {
       maybeWarnAboutUnverified(output, domainName, addedDomain.verified)
-      console.log(
-        `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-          chalk.underline(domainName)
-        )} added. ${addStamp()}`
-      )
-      return 0;
+      if (cdnEnabled) {
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added and configured with CDN enabled. ${addStamp()}`)
+        return 0
+      } else {
+        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added. ${addStamp()}`)
+        return 0
+      }
     }
   } else if (cdnEnabled !== undefined && domainInfo.cdnEnabled !== cdnEnabled) {
     maybeWarnAboutUnverified(output, domainName, domainInfo.verified)
     await updateDomain(now, domainName, cdnEnabled)
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-        chalk.underline(domainName)
-      )} updated. ${addStamp()}`
-    )
-    return 0
+    if (cdnEnabled) {
+      console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was updated and configured with CDN enabled. ${addStamp()}`)
+      return 0
+    } else {
+      console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was updated and configured with CDN disabled. ${addStamp()}`)
+      return 0
+    }
   } else {
     maybeWarnAboutUnverified(output, domainName, domainInfo.verified)
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-        chalk.underline(domainName)
-      )} was already added.`
-    )
+    console.log(`You requested to modify information for ${chalk.bold(chalk.underline(domainName))} that is already as requested; nothing was changed.`)
     return 0
   }
 }
@@ -142,8 +141,8 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
 function maybeWarnAboutUnverified(output: Output, domainName: string, isVerified: boolean) {
   if (!isVerified) {
     output.warn(
-      `The domain was added but it's not verified. If the domain is ${chalk.bold(`external`)}\n` +
-      `  please, remove it and add it back using ${cmd(`now domains add ${domainName} --external`)}.`
+      `The domain was added but it could not be verified. If the domain doesn't point to ${chalk.bold('zeit.world')} nameservers\n` +
+      `  please, remove the domain and add it back using ${cmd(`now domains add ${domainName} --external`)}.`
     )
   }
 }
