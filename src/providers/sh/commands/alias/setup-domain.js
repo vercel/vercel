@@ -32,7 +32,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
           : chalk.dim('none')}`
       )
 
-      const domainPointsToZeitWorld = !nameservers.every(ns => ns.endsWith('.zeit.world'));
+      const domainPointsToZeitWorld = nameservers.every(ns => ns.endsWith('.zeit.world'));
       const verified = await verifyDomain(now, alias, contextName, { isExternal: !domainPointsToZeitWorld })
       if (
         (verified instanceof Errors.DomainNotVerified) ||
