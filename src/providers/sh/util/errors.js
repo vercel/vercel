@@ -313,6 +313,16 @@ export class InvalidWildcardDomain extends NowError<'INVALID_WILDCARD_DOMAIN', {
   }
 }
 
+export class CantSolveChallenge extends NowError<'CANT_SOLVE_CHALLENGE', { domain: string, type: 'dns-01' | 'http-01' }> {
+  constructor(domain: string, type: 'dns-01' | 'http-01') {
+    super({
+      code: 'CANT_SOLVE_CHALLENGE',
+      meta: { domain, type },
+      message: `Can't solve ${type} challenge for domain ${domain}`
+    })
+  }
+}
+
 export class VerifyScaleTimeout extends NowError<'VERIFY_SCALE_TIMEOUT', { timeout: number }> {
   constructor(timeout: number) {
     super({

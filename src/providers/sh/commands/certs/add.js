@@ -6,6 +6,7 @@ import Now from '../../util'
 import getContextName from '../../util/get-context-name'
 import stamp from '../../../../util/output/stamp'
 import wait from '../../../../util/output/wait'
+import dnsTable from '../../util/dns-table'
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
 import { handleDomainConfigurationError } from '../../util/error-handlers'
@@ -70,7 +71,18 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
     cert = await createCertForCns(now, cns, contextName)
     cancelWait();
-    if (cert instanceof Errors.TooManyRequests) {
+    if (cert instanceof Errors.CantSolveChallenge) {
+      output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
+      if (cert.meta.type === 'dns-01') {
+        output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)
+        output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
+      } else {
+        output.error(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
+        output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
+        output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+      }
+      return 1
+    } else if (cert instanceof Errors.TooManyRequests) {
       output.error(`Too many requests detected for ${cert.meta.api} API. Try again in ${ms(cert.meta.retryAfter * 1000, { long: true })}.`)
       return 1
     } else if (cert instanceof Errors.TooManyCertificates) {

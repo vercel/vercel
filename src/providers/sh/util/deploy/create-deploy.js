@@ -5,6 +5,8 @@ import * as Errors from '../errors'
 
 export type CreateDeployError =
   Errors.CantGenerateWildcardCert |
+  Errors.CantSolveChallenge |
+  Errors.CDNNeedsUpgrade |
   Errors.DomainConfigurationError |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotFound |
@@ -14,7 +16,6 @@ export type CreateDeployError =
   Errors.DomainValidationRunning |
   Errors.DomainVerificationFailed |
   Errors.InvalidWildcardDomain |
-  Errors.CDNNeedsUpgrade |
   Errors.TooManyCertificates |
   Errors.TooManyRequests
 
@@ -41,6 +42,7 @@ export default async function createDeploy(output: Output, now: Now, contextName
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(output, now, contextName, error.value)
       if (
+        (result instanceof Errors.CantSolveChallenge) ||
         (result instanceof Errors.CantGenerateWildcardCert) ||
         (result instanceof Errors.DomainConfigurationError) ||
         (result instanceof Errors.DomainNameserversNotFound) ||

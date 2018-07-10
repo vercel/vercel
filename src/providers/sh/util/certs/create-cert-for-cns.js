@@ -40,6 +40,8 @@ async function createCertForCns(now: Now, cns: string[], context: string) {
       return new Errors.DomainValidationRunning(error.domain)
     } else if (error.code === 'should_share_root_domain') {
       return new Errors.DomainsShouldShareRoot(error.domains)
+    } else if (error.code === 'cant_solve_challenge') {
+      return new Errors.CantSolveChallenge(error.domain, error.type)
     } else if (error.code === 'invalid_wildcard_domain') {
       return new Errors.InvalidWildcardDomain(error.domain)
     } else {
