@@ -907,15 +907,22 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       process.stdout.write(url)
     }
 
-    // Show build logs
     if (deploymentType === 'static' || atlas) {
-      if (!quiet) {
-        output.log(chalk`{cyan Deployment complete!}`)
+      if (deployment.readyState === 'INITIALIZING') {
+        // This static deployment requires a build, so show the logs
+        noVerify = true
+      } else {
+        if (!quiet) {
+          output.log(chalk`{cyan Deployment complete!}`)
+        }
+        await exit(0)
+        return
       }
-      await exit(0)
+    }
 
-      // We have to add this check for flow but it will never happen
-    } else if (deployment !== null) {
+    // Show build logs
+    // (We have to add this check for flow but it will never happen)
+    if (deployment !== null) {
 
       // If the created deployment is ready it was a deduping and we should exit
       if (deployment.readyState !== 'READY') {
