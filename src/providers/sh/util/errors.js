@@ -270,11 +270,11 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
   }
 }
 
-export class TooManyRequests extends NowError<'TOO_MANY_REQUESTS', { api: string }> {
-  constructor(api: string) {
+export class TooManyRequests extends NowError<'TOO_MANY_REQUESTS', { api: string, retryAfter: number }> {
+  constructor({api, retryAfter}: {api: string, retryAfter: number}) {
     super({
       code: 'TOO_MANY_REQUESTS',
-      meta: { api },
+      meta: { api, retryAfter },
       message: `To made too many requests`
     })
   }

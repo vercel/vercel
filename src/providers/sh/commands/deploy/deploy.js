@@ -1130,7 +1130,7 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
     output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
     return 1
   } else if (error instanceof Errors.TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`)
     return 1
   } else if (error instanceof Errors.DomainNotFound) {
     output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`)
