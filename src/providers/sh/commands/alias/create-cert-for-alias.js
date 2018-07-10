@@ -7,8 +7,8 @@ import { Now, Output } from '../../util/types'
 import createCertForCns from '../../util/certs/create-cert-for-cns'
 import getWildcardCnsForAlias from './get-wildcard-cns-for-alias'
 
-async function createCertificateForAlias(output: Output, now: Now, alias: string, context: string) {
-  const cns = getWildcardCnsForAlias(alias)
+async function createCertificateForAlias(output: Output, now: Now, context: string, alias: string, shouldBeWildcard: boolean) {
+  const cns = shouldBeWildcard ? getWildcardCnsForAlias(alias) : [alias]
   const cancelMessage = wait(`Generating a certificate...`)
   const certStamp = stamp()
 

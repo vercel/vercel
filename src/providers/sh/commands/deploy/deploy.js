@@ -9,7 +9,6 @@ const { write: copy } = require('clipboardy')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const dotenv = require('dotenv')
-const executable = require('executable')
 const fs = require('fs-extra')
 const inquirer = require('inquirer')
 const mri = require('mri')
@@ -24,7 +23,6 @@ const checkPath = require('../../util/check-path')
 const cmd = require('../../../../util/output/cmd')
 const createOutput = require('../../../../util/output')
 const exit = require('../../../../util/exit')
-const isELF = require('../../util/is-elf')
 const logo = require('../../../../util/output/logo')
 const Now = require('../../util')
 const promptBool = require('../../../../util/input/prompt-bool')
@@ -347,7 +345,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     let meta
     let deployment: NewDeployment | null = null
     let isFile
-    let atlas = false
 
     if (paths.length === 1) {
       try {
@@ -356,7 +353,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         if (fsData.isFile()) {
           isFile = true
           deploymentType = 'static'
-          atlas = await isELF(paths[0]) && executable.checkMode(fsData.mode, fsData.gid, fsData.uid)
         }
       } catch (err) {
         let repo
@@ -502,7 +498,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     }
 
     const nowConfig = meta.nowConfig
-    atlas = atlas || (meta.hasNowJson && nowConfig && Boolean(nowConfig.atlas))
     const scaleFromConfig = getScaleFromConfig(nowConfig)
     let scale = {}
     let dcIds
@@ -538,7 +533,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
       // Build the scale presets based on the given regions
       scale = dcIds.reduce((result, dcId) => ({ ...result, [dcId]: {min: 0, max: 1}}), {})
-    }  else if (Object.keys(scaleFromConfig).length > 0) {
+    } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
       for (const regionOrDc of Object.keys(scaleFromConfig)) {
@@ -716,8 +711,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile,
-          atlas
+          isFile
         },
         meta
       )
@@ -768,7 +762,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             }
           )
 
-          now.upload({ atlas, scale })
+          now.upload({ scale })
 
           now.on('upload', ({ names, data }) => {
             debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
@@ -888,7 +882,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
       : ''
 
-
     if (isTTY) {
       if (clipboard) {
         try {
@@ -905,7 +898,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       process.stdout.write(url)
     }
 
-    if (deploymentType === 'static' || atlas) {
+    if (deploymentType === 'static') {
       if (deployment.readyState === 'INITIALIZING') {
         // This static deployment requires a build, so show the logs
         noVerify = true
@@ -1125,7 +1118,7 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
     output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
     return 1
   } else if (error instanceof Errors.TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`)
     return 1
   } else if (error instanceof Errors.DomainNotFound) {
     output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`)
@@ -1136,4 +1129,3 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 }
 
 module.exports = main
-
