@@ -59,6 +59,12 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       } else {
         output.success(`Domain ${domain} added!`)
       }
+
+      const domainInfo = await getDomainInfo(now, domain, contextName)
+      return domainInfo === null
+        ? new Errors.DomainNotFound(domain)
+        : domainInfo
+
     } else {
       // If we couldn't find nameservers we try to purchase the domain
       const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
@@ -73,6 +79,11 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       ) {
         return purchased
       }
+
+      const domainInfo = await getDomainInfo(now, domain, contextName)
+      return domainInfo === null
+        ? new Errors.DomainNotFound(domain)
+        : domainInfo
     }
   } else {
     // If we have records from the domain we have to try to verify in case it is not
@@ -89,6 +100,8 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
         return verified
       }
     }
+
+    return info
   }
 }
 

@@ -22,7 +22,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
       (domainInfo instanceof Errors.DomainVerificationFailed) ||
       (domainInfo instanceof Errors.InvalidCoupon) ||
       (domainInfo instanceof Errors.MissingCreditCard) ||
-      (domainInfo instanceof Errors.NeedUpgrade) ||
+      (domainInfo instanceof Errors.CDNNeedsUpgrade) ||
       (domainInfo instanceof Errors.PaymentSourceNotFound) ||
       (domainInfo instanceof Errors.UnsupportedTLD) ||
       (domainInfo instanceof Errors.UsedCoupon) ||
