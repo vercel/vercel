@@ -22,7 +22,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
       (domainInfo instanceof Errors.DomainVerificationFailed) ||
       (domainInfo instanceof Errors.InvalidCoupon) ||
       (domainInfo instanceof Errors.MissingCreditCard) ||
-      (domainInfo instanceof Errors.NeedUpgrade) ||
+      (domainInfo instanceof Errors.CDNNeedsUpgrade) ||
       (domainInfo instanceof Errors.PaymentSourceNotFound) ||
       (domainInfo instanceof Errors.UnsupportedTLD) ||
       (domainInfo instanceof Errors.UsedCoupon) ||
@@ -81,10 +81,6 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     }
 
     if (error.status === 403) {
-      if (error.code === 'custom_domain_needs_upgrade') {
-        return new Errors.NeedUpgrade()
-      }
-
       if (error.code === 'alias_in_use') {
         console.log(error)
         return new Errors.AliasInUse(alias)

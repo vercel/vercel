@@ -59,10 +59,6 @@ async function createAlias(
     }
 
     if (error.status === 403) {
-      if (error.code === 'custom_domain_needs_upgrade') {
-        return new Errors.NeedUpgrade()
-      }
-
       if (error.code === 'alias_in_use') {
         return new Errors.AliasInUse(alias)
       }

@@ -6,7 +6,7 @@ const chalk = require('chalk')
 
 // Ours
 const Now = require('.')
-const isValidDomain = require('./domains/is-valid-domain')
+const isValidDomain = require('./v3/domains/is-valid-domain')
 const cmd = require('../../../util/output/param')
 
 module.exports = class Domains extends Now {
@@ -70,12 +70,12 @@ module.exports = class Domains extends Now {
     // Remove the domain
     const name = domain.name
     return this.retry(async (bail, attempt) => {
-      const label = `> [debug] #${attempt} DELETE /domains/${name}`
+      const label = `> [debug] #${attempt} DELETE /v3/domains/${name}`
       if (this._debug) {
         console.time(label)
       }
 
-      const res = await this._fetch(`/domains/${name}`, { method: 'DELETE' })
+      const res = await this._fetch(`/v3/domains/${name}`, { method: 'DELETE' })
 
       if (this._debug) {
         console.timeEnd(label)
@@ -118,14 +118,14 @@ module.exports = class Domains extends Now {
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains/status?${query}`)
+        console.time(`> [debug] #${attempt} GET /v3/domains/status?${query}`)
       }
 
-      const res = await this._fetch(`/domains/status?${query}`)
+      const res = await this._fetch(`/v3/domains/status?${query}`)
       const json = await res.json()
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains/status?${query}`)
+        console.timeEnd(`> [debug] #${attempt} GET /v3/domains/status?${query}`)
       }
 
       return json.available
@@ -141,10 +141,10 @@ module.exports = class Domains extends Now {
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains/price?${query}`)
+        console.time(`> [debug] #${attempt} GET /v3/domains/price?${query}`)
       }
 
-      const res = await this._fetch(`/domains/price?${query}`)
+      const res = await this._fetch(`/v3/domains/price?${query}`)
       const json = await res.json()
 
       if (res.status === 400) {
@@ -154,7 +154,7 @@ module.exports = class Domains extends Now {
       }
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains/price?${query}`)
+        console.timeEnd(`> [debug] #${attempt} GET /v3/domains/price?${query}`)
       }
 
       return json
@@ -170,16 +170,16 @@ module.exports = class Domains extends Now {
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /domains/buy`)
+        console.time(`> [debug] #${attempt} POST /v3/domains/buy`)
       }
-      const res = await this._fetch(`/domains/buy`, {
+      const res = await this._fetch(`/v3/domains/buy`, {
         method: 'POST',
         body
       })
       const json = await res.json()
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} POST /domains/buy`)
+        console.timeEnd(`> [debug] #${attempt} POST /v3/domains/buy`)
       }
 
       if ([400, 403, 500, 503].includes(res.status)) {
@@ -206,10 +206,10 @@ module.exports = class Domains extends Now {
 
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /domains/buy?${query}`)
+        console.time(`> [debug] #${attempt} GET /v3/domains/buy?${query}`)
       }
 
-      const res = await this._fetch(`/domains/buy?${query}`)
+      const res = await this._fetch(`/v3/domains/buy?${query}`)
       const json = await res.json()
 
       if (res.status !== 200) {
@@ -219,7 +219,7 @@ module.exports = class Domains extends Now {
       }
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /domains/buy?${query}`)
+        console.timeEnd(`> [debug] #${attempt} GET /v3/domains/buy?${query}`)
       }
 
       return json

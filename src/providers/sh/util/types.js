@@ -170,15 +170,15 @@ export type PathRule = {
   method?: Array<string>,
 }
 
-export type DNSRecordType = 'A' | 'AAAA' | 'ALIAS' | 'CNAME' | 'TXT'
-
 export type DNSRecord = {
   id: string,
-  slug: string,
-  name: string,
-  type: DNSRecordType,
-  value: string,
   creator: string,
+  mxPriority?: number,
+  name: string,
+  priority?: number,
+  slug: string,
+  type: string,
+  value: string,
   created: number,
   updated: number
 }
@@ -192,20 +192,19 @@ export type Certificate = {
 }
 
 export type Domain = {
-  uid: string,
   aliases: string[],
-  boughtAt: string,
+  boughtAt?: string,
   cdnEnabled: boolean,
   certs: string[],
   created: string,
   expiresAt: string,
-  isExternal: boolean,
+  serviceType: 'zeit.world' | 'external',
   name: string,
   verified: boolean,
 }
 
 export type AddedDomain = {
-  uid: string,
+  ns: string[],
   created: string,
   verified: boolean,
 }
@@ -396,4 +395,7 @@ export type CLIDomainsOptions = CLIOptions<{
   '--coupon': string,
   '--external': boolean,
   '--yes': boolean,
+}>
+
+export type CLIDNSOptions = CLIOptions<{
 }>

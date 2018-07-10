@@ -11,12 +11,11 @@ export default async function generateCertForDeploy(output: Output, now: Now, co
   const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`)
   const result = await setupDomain(output, now, domain, contextName)
   if (
-    (result instanceof Errors.DNSPermissionDenied) ||
     (result instanceof Errors.DomainNameserversNotFound) ||
     (result instanceof Errors.DomainNotVerified) ||
     (result instanceof Errors.DomainPermissionDenied) ||
     (result instanceof Errors.DomainVerificationFailed) ||
-    (result instanceof Errors.NeedUpgrade)
+    (result instanceof Errors.CDNNeedsUpgrade)
   ) {
     cancelSetupWait()
     return result

@@ -12,7 +12,7 @@ async function verifyDomain(now: Now, domain: string, contextName: string, opts:
   const result = await addDomain(now, domain, contextName, opts.isExternal)
   cancelMessage()
   if (
-    (result instanceof Errors.NeedUpgrade) ||
+    (result instanceof Errors.CDNNeedsUpgrade) ||
     (result instanceof Errors.DomainPermissionDenied) ||
     (result instanceof Errors.DomainVerificationFailed)
   ) {

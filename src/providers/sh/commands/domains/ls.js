@@ -7,6 +7,7 @@ import table from 'text-table'
 import { CLIContext, Output } from '../../util/types'
 import getContextName from '../../util/get-context-name'
 import getDomains from '../../util/domains/get-domains'
+import isDomainExternal from '../../util/domains/is-domain-external'
 import Now from '../../util'
 import stamp from '../../../../util/output/stamp'
 import strlen from '../../util/strlen'
@@ -44,7 +45,7 @@ function formatDomainsTable(domains: Domain[]) {
       ['', 'domain', 'dns', 'verified', 'cdn', 'age'].map(s => chalk.dim(s)),
       ...domains.map(domain => {
         const cdnEnabled = domain.cdnEnabled || false
-        const ns = domain.isExternal ? 'external' : 'zeit.world'
+        const ns = isDomainExternal(domain) ? 'external' : 'zeit.world'
         const url = chalk.bold(domain.name)
         const time = chalk.gray(
           ms(current - new Date(domain.created))

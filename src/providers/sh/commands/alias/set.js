@@ -118,7 +118,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
 }
 
 export type SetupDomainError =
-  Errors.DNSPermissionDenied |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotFound |
   Errors.DomainNotVerified |
@@ -126,7 +125,7 @@ export type SetupDomainError =
   Errors.DomainVerificationFailed |
   Errors.InvalidCoupon |
   Errors.MissingCreditCard |
-  Errors.NeedUpgrade |
+  Errors.CDNNeedsUpgrade |
   Errors.PaymentSourceNotFound |
   Errors.UnsupportedTLD |
   Errors.UsedCoupon |
@@ -152,17 +151,14 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
   } else if (error instanceof Errors.PaymentSourceNotFound) {
     output.error(`No credit cards found to buy the domain. Please run ${cmd('now cc add')}.`)
     return 1
-  } else if (error instanceof Errors.NeedUpgrade) {
-    output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+    output.error(`You can't add domains with CDN enabled from an OSS plan`)
     return 1
   } else if (error instanceof Errors.DomainNotVerified) {
     output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}. If it's an external domain, add it with --external.`)
     return 1
   } else if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`)
-    return 1
-  } else if (error instanceof Errors.DNSPermissionDenied) {
-    output.error(`You don't have permissions to access the DNS records for ${chalk.underline(error.meta.domain)}`)
     return 1
   } else if (error instanceof Errors.UserAborted) {
     output.error(`User aborted`);
@@ -197,7 +193,7 @@ type CreateAliasError =
   Errors.DomainValidationRunning |
   Errors.InvalidAlias |
   Errors.InvalidWildcardDomain |
-  Errors.NeedUpgrade |
+  Errors.CDNNeedsUpgrade |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
   Errors.TooManyRequests |
@@ -219,8 +215,8 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.DeploymentPermissionDenied) {
     output.error(`No permission to access deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(error.meta.context)}`)
     return 1
-  } else if (error instanceof Errors.NeedUpgrade) {
-    output.error(`Custom domains are only supported for premium accounts. Please upgrade.`)
+  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+    output.error(`You can't add domains with CDN enabled from an OSS plan.`)
     return 1
   } else if (error instanceof Errors.DomainConfigurationError) {
     output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`)
