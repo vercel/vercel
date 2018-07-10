@@ -1,15 +1,21 @@
 // @flow
 import psl from 'psl'
+import chalk from 'chalk'
 import retry from 'async-retry'
 import { Now } from '../types'
 import * as Errors from '../errors'
 import type { AddedDomain } from '../types'
+import wait from '../../../../util/output/wait'
 
 export default async function addDomain(now: Now, domain: string, contextName: string, isExternal: boolean, cdnEnabled?: boolean) {
+  const cancelWait = wait(`Adding domain ${domain} under ${chalk.bold(contextName)}`)
   const { domain: rootDomain, subdomain } = psl.parse(domain)
   try {
-    return await performAddRequest(now, domain, isExternal, cdnEnabled);
+    const addedDomain = await performAddRequest(now, domain, isExternal, cdnEnabled);
+    cancelWait()
+    return addedDomain
   } catch (error) {
+    cancelWait()
     if (error.status === 403) {
       return error.code === 'domain_with_cdn_needs_upgrade'
         ? new Errors.CDNNeedsUpgrade()
