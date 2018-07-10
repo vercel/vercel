@@ -670,9 +670,9 @@
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.1.tgz#729b9c70b873f5d6a41308925d1e5091bf16e92e"
 
-"@zeit/schemas@1.4.0":
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.4.0.tgz#d9be2319b0305b2e73a303b3c5e73f5d24805fba"
+"@zeit/schemas@1.6.0":
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/@zeit/schemas/-/schemas-1.6.0.tgz#2f49cb7b3fff308bd35d6a934c5e0a143d598e17"
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
@@ -2887,12 +2887,6 @@ execa@^0.8.0:
     p-finally "^1.0.0"
     signal-exit "^3.0.0"
     strip-eof "^1.0.0"
-
-executable@4.1.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/executable/-/executable-4.1.1.tgz#41532bff361d3e57af4d763b70582db18f5d133c"
-  dependencies:
-    pify "^2.2.0"
 
 exit-hook@^1.0.0:
   version "1.1.1"
