@@ -1,4 +1,5 @@
 // @flow
+import ms from 'ms'
 import chalk from 'chalk'
 
 import Now from '../../util'
@@ -70,7 +71,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     cert = await createCertForCns(now, cns, contextName)
     cancelWait();
     if (cert instanceof Errors.TooManyRequests) {
-      output.error(`Too many requests detected for ${cert.meta.api} API. Try again later.`)
+      output.error(`Too many requests detected for ${cert.meta.api} API. Try again in ${ms(cert.meta.retryAfter * 1000, { long: true })}.`)
       return 1
     } else if (cert instanceof Errors.TooManyCertificates) {
       output.error(`Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(', ')}`)

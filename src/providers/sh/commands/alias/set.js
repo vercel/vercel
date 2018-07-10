@@ -1,6 +1,6 @@
 // @flow
-import chalk from 'chalk'
 import ms from 'ms'
+import chalk from 'chalk'
 
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
@@ -247,7 +247,7 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     output.print(`  Make sure your rules file is written correctly.\n`)
     return 1
   } else if (error instanceof Errors.TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again later.`)
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`)
     return 1
   } else if (error instanceof Errors.VerifyScaleTimeout) {
     output.error(`Instance verification timed out (${ms(error.meta.timeout)})`)

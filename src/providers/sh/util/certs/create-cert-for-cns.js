@@ -35,7 +35,7 @@ async function createCertForCns(now: Now, cns: string[], context: string) {
     } else if (error.code === 'rate_limited') {
       return new Errors.TooManyCertificates(error.domains)
     } else if (error.code === 'too_many_requests') {
-      return new Errors.TooManyRequests('certificates')
+      return new Errors.TooManyRequests({api: 'certificates', retryAfter: error.retryAfter})
     } else if (error.code === 'validation_running') {
       return new Errors.DomainValidationRunning(error.domain)
     } else if (error.code === 'should_share_root_domain') {
