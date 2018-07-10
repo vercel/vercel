@@ -1,41 +1,37 @@
 // @flow
-import chalk from 'chalk'
 import wait from '../../../../util/output/wait'
 import { Now, Output } from '../../util/types'
 import type { AliasRecord, PathRule } from '../../util/types'
 import * as Errors from '../../util/errors'
 import createCertForAlias from './create-cert-for-alias'
-import purchaseDomainIfAvailable from './purchase-domain-if-available'
 import setupDomain from './setup-domain'
 
 const NOW_SH_REGEX = /\.now\.sh$/
 
 async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias: string, contextName: string) {
+  let externalDomain = false
+
   if (!NOW_SH_REGEX.test(alias)) {
-    output.log(`${chalk.bold(chalk.underline(alias))} is a custom domain.`)
-
-    // In case the domain is avilable, we have to purchase
-    const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName)
+    const domainInfo = await setupDomain(output, now, alias, contextName)
     if (
-      (purchased instanceof Errors.UserAborted) ||
-      (purchased instanceof Errors.PaymentSourceNotFound) ||
-      (purchased instanceof Errors.DomainNotFound)
+      (domainInfo instanceof Errors.DNSPermissionDenied) ||
+      (domainInfo instanceof Errors.DomainNameserversNotFound) ||
+      (domainInfo instanceof Errors.DomainNotFound) ||
+      (domainInfo instanceof Errors.DomainNotVerified) ||
+      (domainInfo instanceof Errors.DomainPermissionDenied) ||
+      (domainInfo instanceof Errors.DomainVerificationFailed) ||
+      (domainInfo instanceof Errors.InvalidCoupon) ||
+      (domainInfo instanceof Errors.MissingCreditCard) ||
+      (domainInfo instanceof Errors.NeedUpgrade) ||
+      (domainInfo instanceof Errors.PaymentSourceNotFound) ||
+      (domainInfo instanceof Errors.UnsupportedTLD) ||
+      (domainInfo instanceof Errors.UsedCoupon) ||
+      (domainInfo instanceof Errors.UserAborted)
     ) {
-      return purchased
+      return domainInfo
     }
 
-    // Now the domain shouldn't be available and it might or might not belong to the user
-    const result = await setupDomain(output, now, alias, contextName)
-    if (
-      (result instanceof Errors.DNSPermissionDenied) ||
-      (result instanceof Errors.DomainNameserversNotFound) ||
-      (result instanceof Errors.DomainNotVerified) ||
-      (result instanceof Errors.DomainPermissionDenied) ||
-      (result instanceof Errors.DomainVerificationFailed) ||
-      (result instanceof Errors.NeedUpgrade)
-    ) {
-      return result
-    }
+    externalDomain = domainInfo.isExternal
   }
 
   const cancelMessage = wait(`Updating path alias rules for ${alias}`)
@@ -52,7 +48,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     // If the certificate is missing we create it without expecting failures
     // then we call back upsertPathAliasRules
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertForAlias(output, now, alias, contextName)
+      const cert = await createCertForAlias(output, now, contextName, alias, !externalDomain)
       if (
         (cert instanceof Errors.DomainConfigurationError) ||
         (cert instanceof Errors.DomainPermissionDenied) ||
