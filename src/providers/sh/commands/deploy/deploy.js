@@ -901,7 +901,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     }
 
     // Show build logs
-    if (deploymentType === 'static' || atlas) {
+    if (deploymentType === 'static') {
       if (!quiet) {
         output.log(chalk`{cyan Deployment complete!}`)
       }
