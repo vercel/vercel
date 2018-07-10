@@ -136,7 +136,6 @@
     "eslint": "4.7.2",
     "eslint-plugin-flowtype": "2.46.1",
     "execa": "0.9.0",
-    "executable": "4.1.1",
     "fetch-h2": "0.2.5",
     "flow-babel-webpack-plugin": "1.1.1",
     "fs-extra": "4.0.2",
