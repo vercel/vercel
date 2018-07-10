@@ -146,4 +146,3 @@ function maybeWarnAboutUnverified(output: Output, domainName: string, isVerified
     )
   }
 }
-
