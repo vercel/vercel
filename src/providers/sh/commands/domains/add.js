@@ -112,14 +112,16 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
       output.error(`The domain exists already`);
       return 1
     } else {
-      maybeWarnAboutUnverified(output, domainName, addedDomain.verified)
-      if (cdnEnabled) {
-        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added and configured with CDN enabled. ${addStamp()}`)
-        return 0
-      } else {
-        console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added. ${addStamp()}`)
-        return 0
+      const addedDomainInfo = await getDomainByName(output, now, contextName, domain);
+      if (addedDomainInfo) {
+        maybeWarnAboutUnverified(output, domainName, addedDomain.verified)
+        if (addedDomainInfo.cdnEnabled) {
+          console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added and configured with CDN enabled. ${addStamp()}`)
+          return 0
+        }
       }
+      console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(chalk.underline(domainName))} was added. ${addStamp()}`)
+      return 0;
     }
   } else if (cdnEnabled !== undefined && domainInfo.cdnEnabled !== cdnEnabled) {
     maybeWarnAboutUnverified(output, domainName, domainInfo.verified)
