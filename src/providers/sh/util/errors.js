@@ -2,6 +2,19 @@
 import { NowError } from './now-error'
 
 /**
+ * General CLI errors
+ */
+export class ConflictingOption extends NowError<'CONFICTING_OPTION', {name: string}> {
+  constructor(name: string) {
+    super({
+      code: 'CONFICTING_OPTION',
+      meta: { name },
+      message: `You can't use at the same time a positive and negative value for option ${name}`
+    })
+  }
+}
+
+/**
  * Create Alias Errors
  */
 export class AliasInUse extends NowError<'ALIAS_IN_USE', {alias: string}> {
@@ -24,12 +37,12 @@ export class InvalidAlias extends NowError<'INVALID_ALIAS', {alias: string}> {
   }
 }
 
-export class NeedUpgrade extends NowError<'NEED_UPGRADE', {}> {
+export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   constructor() {
     super({
-      code: 'NEED_UPGRADE',
+      code: 'CDN_NEEDS_UPGRADE',
       meta: {},
-      message: `You're trying to use a feature that is restricted for premium users. Please upgrade`
+      message: `You can't add domains with CDN enabled from an OSS plan.`
     })
   }
 }
@@ -112,7 +125,7 @@ export class DomainNotFound extends NowError<'DOMAIN_NOT_FOUND', {domain: string
     super({
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
-      message: `The domain is available and should be purchased before running alias.`
+      message: `The domain ${domain} can't be found.`
     })
   }
 }

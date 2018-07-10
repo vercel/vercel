@@ -5,7 +5,6 @@ import * as Errors from '../errors'
 
 export type CreateDeployError =
   Errors.CantGenerateWildcardCert |
-  Errors.DNSPermissionDenied |
   Errors.DomainConfigurationError |
   Errors.DomainNameserversNotFound |
   Errors.DomainNotFound |
@@ -15,7 +14,7 @@ export type CreateDeployError =
   Errors.DomainValidationRunning |
   Errors.DomainVerificationFailed |
   Errors.InvalidWildcardDomain |
-  Errors.NeedUpgrade |
+  Errors.CDNNeedsUpgrade |
   Errors.TooManyCertificates |
   Errors.TooManyRequests
 
@@ -43,7 +42,6 @@ export default async function createDeploy(output: Output, now: Now, contextName
       const result = await generateCertForDeploy(output, now, contextName, error.value)
       if (
         (result instanceof Errors.CantGenerateWildcardCert) ||
-        (result instanceof Errors.DNSPermissionDenied) ||
         (result instanceof Errors.DomainConfigurationError) ||
         (result instanceof Errors.DomainNameserversNotFound) ||
         (result instanceof Errors.DomainNotVerified) ||
@@ -52,7 +50,7 @@ export default async function createDeploy(output: Output, now: Now, contextName
         (result instanceof Errors.DomainValidationRunning) ||
         (result instanceof Errors.DomainVerificationFailed) ||
         (result instanceof Errors.InvalidWildcardDomain) ||
-        (result instanceof Errors.NeedUpgrade) ||
+        (result instanceof Errors.CDNNeedsUpgrade) ||
         (result instanceof Errors.TooManyCertificates) ||
         (result instanceof Errors.TooManyRequests)
       ) {

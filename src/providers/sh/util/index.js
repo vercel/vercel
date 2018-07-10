@@ -581,7 +581,7 @@ module.exports = class Now extends EventEmitter {
 
   async listDomains() {
     const { domains } = await this.retry(async (bail) => {
-      const res = await this._fetch('/domains')
+      const res = await this._fetch('/v3/domains')
 
       if (res.status === 200) {
         // What we want
@@ -600,7 +600,7 @@ module.exports = class Now extends EventEmitter {
 
   async getDomain(domain) {
     return this.retry(async (bail) => {
-      const res = await this._fetch(`/domains/${domain}`)
+      const res = await this._fetch(`/v3/domains/${domain}`)
 
       if (res.status === 200) {
         // What we want
@@ -644,7 +644,7 @@ module.exports = class Now extends EventEmitter {
     const { debug } = this._output
 
     return this.retry(async (bail) => {
-      const res = await this._fetch('/domains', {
+      const res = await this._fetch('/v3/domains', {
         method: 'POST',
         body: { name, isExternal: Boolean(isExternal) }
       })
