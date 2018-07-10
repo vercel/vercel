@@ -2,8 +2,7 @@
 import chalk from 'chalk'
 import psl from 'psl'
 
-// Internal utis
-
+// Internal utils
 import getDomainInfo from './get-domain-info'
 import getDomainNameservers from './get-domain-nameservers'
 import maybeSetupDNSRecords from './maybe-setup-dns-records'
