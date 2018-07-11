@@ -50,6 +50,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
       const cert = await createCertForAlias(output, now, contextName, alias, !externalDomain)
       if (
+        (cert instanceof Errors.CantSolveChallenge) ||
         (cert instanceof Errors.DomainConfigurationError) ||
         (cert instanceof Errors.DomainPermissionDenied) ||
         (cert instanceof Errors.DomainsShouldShareRoot) ||

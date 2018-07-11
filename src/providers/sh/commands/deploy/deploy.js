@@ -719,6 +719,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       deployStamp = stamp()
       const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
       if (
+        (firstDeployCall instanceof Errors.CantSolveChallenge) ||
         (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
         (firstDeployCall instanceof Errors.DomainConfigurationError) ||
         (firstDeployCall instanceof Errors.DomainNameserversNotFound) ||
@@ -787,6 +788,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         deployStamp = stamp()
         const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
         if (
+          (secondDeployCall instanceof Errors.CantSolveChallenge) ||
           (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
           (secondDeployCall instanceof Errors.DomainConfigurationError) ||
           (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
@@ -1064,6 +1066,16 @@ function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployme
 function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`)
+    return 1
+  } else if (error instanceof Errors.CantSolveChallenge) {
+    if (error.meta.type === 'dns-01') {
+      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`)
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
+    } else {
+      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`)
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
+      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+    }
     return 1
   } else if (error instanceof Errors.DomainConfigurationError) {
     output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`)

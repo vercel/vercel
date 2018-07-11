@@ -15,6 +15,7 @@ async function createCertificateForAlias(output: Output, now: Now, context: stri
   // Generate the certificate with the given parameters
   let cert = await createCertForCns(now, cns, context)
   if (
+    (cert instanceof Errors.CantSolveChallenge) ||
     (cert instanceof Errors.DomainConfigurationError) ||
     (cert instanceof Errors.DomainPermissionDenied) ||
     (cert instanceof Errors.DomainsShouldShareRoot) ||
@@ -33,6 +34,7 @@ async function createCertificateForAlias(output: Output, now: Now, context: stri
     output.debug(`Falling back to a normal certificate`)
     cert = await createCertForCns(now, [alias], context)
     if (
+      (cert instanceof Errors.CantSolveChallenge) ||
       (cert instanceof Errors.DomainConfigurationError) ||
       (cert instanceof Errors.DomainPermissionDenied) ||
       (cert instanceof Errors.DomainsShouldShareRoot) ||

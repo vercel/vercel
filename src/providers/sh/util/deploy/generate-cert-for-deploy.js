@@ -28,6 +28,7 @@ export default async function generateCertForDeploy(output: Output, now: Now, co
   let cert = await createCertForCns(now, [domain, `*.${domain}`], contextName)
   if (
     (cert instanceof Errors.CantGenerateWildcardCert) ||
+    (cert instanceof Errors.CantSolveChallenge) ||
     (cert instanceof Errors.DomainConfigurationError) ||
     (cert instanceof Errors.DomainPermissionDenied) ||
     (cert instanceof Errors.DomainsShouldShareRoot) ||

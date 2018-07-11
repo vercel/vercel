@@ -74,6 +74,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   const record = await createAlias(output, now, contextName, deployment, alias, externalDomain)
   if (
     (record instanceof Errors.AliasInUse) ||
+    (record instanceof Errors.CantSolveChallenge) ||
     (record instanceof Errors.DeploymentNotFound) ||
     (record instanceof Errors.DomainConfigurationError) ||
     (record instanceof Errors.DomainPermissionDenied) ||
