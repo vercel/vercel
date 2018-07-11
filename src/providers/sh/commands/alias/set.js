@@ -185,6 +185,8 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
 
 type CreateAliasError =
   Errors.AliasInUse |
+  Errors.CantSolveChallenge |
+  Errors.CDNNeedsUpgrade |
   Errors.DeploymentNotFound |
   Errors.DeploymentPermissionDenied |
   Errors.DomainConfigurationError |
@@ -193,7 +195,6 @@ type CreateAliasError =
   Errors.DomainValidationRunning |
   Errors.InvalidAlias |
   Errors.InvalidWildcardDomain |
-  Errors.CDNNeedsUpgrade |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
   Errors.TooManyRequests |
@@ -234,6 +235,16 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     return 1
   } else if (error instanceof Errors.TooManyCertificates) {
     output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`)
+    return 1
+  } else if (error instanceof Errors.CantSolveChallenge) {
+    if (error.meta.type === 'dns-01') {
+      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`)
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
+    } else {
+      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`)
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
+      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+    }
     return 1
   } else if (error instanceof Errors.DomainValidationRunning) {
     output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`)
