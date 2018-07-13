@@ -2685,6 +2685,10 @@ es6-weak-map@^2.0.1:
     es6-iterator "^2.0.1"
     es6-symbol "^3.1.1"
 
+es7-sleep@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/es7-sleep/-/es7-sleep-1.0.0.tgz#d58a37c2504e81d50ad9885ba76baf3e8a8b5a87"
+
 escape-string-regexp@^1.0.2, escape-string-regexp@^1.0.4, escape-string-regexp@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
