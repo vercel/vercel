@@ -453,7 +453,6 @@ test('deploy a static build deployment', async t => {
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout)
   const { href, host } = new URL(deploymentUrl)
-  // console.log('XXX', href)
   t.is(host.split('-')[0], session)
 
   await waitForDeployment(href)
@@ -462,6 +461,37 @@ test('deploy a static build deployment', async t => {
   const response = await fetch(href)
   const content = await response.text()
   t.is(content.trim(), 'hello')
+
+  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl)
+})
+
+test('use build-env', async t => {
+  const directory = fixture('build-env')
+
+  const { stdout, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout)
+  const { href, host } = new URL(deploymentUrl)
+  t.is(host.split('-')[0], session)
+
+  await waitForDeployment(href)
+
+  // get the content
+  const response = await fetch(href)
+  const content = await response.text()
+  t.is(content.trim(), 'bar')
 
   await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl)
 })

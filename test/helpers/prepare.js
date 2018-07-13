@@ -77,6 +77,21 @@ FROM alpine
 RUN mkdir /public
 RUN echo hello > /public/index.html
       `
+    },
+    'build-env': {
+      'now.json': JSON.stringify({
+        type: 'static',
+        build: {
+          env: {FOO: 'bar'}
+        }
+      }),
+      'Dockerfile': `
+FROM alpine
+ARG FOO
+
+RUN mkdir /public
+RUN echo $FOO > /public/index.html
+      `
     }
   }
 
