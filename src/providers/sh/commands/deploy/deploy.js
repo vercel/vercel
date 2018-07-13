@@ -785,30 +785,41 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`)
         }
 
-        deployStamp = stamp()
-        const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
-        if (
-          (secondDeployCall instanceof Errors.CantSolveChallenge) ||
-          (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
-          (secondDeployCall instanceof Errors.DomainConfigurationError) ||
-          (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
-          (secondDeployCall instanceof Errors.DomainNotFound) ||
-          (secondDeployCall instanceof Errors.DomainNotVerified) ||
-          (secondDeployCall instanceof Errors.DomainPermissionDenied) ||
-          (secondDeployCall instanceof Errors.DomainsShouldShareRoot) ||
-          (secondDeployCall instanceof Errors.DomainValidationRunning) ||
-          (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
-          (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
-          (secondDeployCall instanceof Errors.CDNNeedsUpgrade) ||
-          (secondDeployCall instanceof Errors.TooManyCertificates) ||
-          (secondDeployCall instanceof Errors.TooManyRequests)
-        ) {
-          handleCreateDeployError(output, secondDeployCall)
+        for (let i = 0; i < 4; i += 1) {
+          deployStamp = stamp()
+          const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs)
+          if (
+            (secondDeployCall instanceof Errors.CantSolveChallenge) ||
+            (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
+            (secondDeployCall instanceof Errors.DomainConfigurationError) ||
+            (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
+            (secondDeployCall instanceof Errors.DomainNotFound) ||
+            (secondDeployCall instanceof Errors.DomainNotVerified) ||
+            (secondDeployCall instanceof Errors.DomainPermissionDenied) ||
+            (secondDeployCall instanceof Errors.DomainsShouldShareRoot) ||
+            (secondDeployCall instanceof Errors.DomainValidationRunning) ||
+            (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
+            (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
+            (secondDeployCall instanceof Errors.CDNNeedsUpgrade) ||
+            (secondDeployCall instanceof Errors.TooManyCertificates) ||
+            (secondDeployCall instanceof Errors.TooManyRequests)
+          ) {
+            handleCreateDeployError(output, secondDeployCall)
+            await exit(1)
+            return
+          }
+
+          if (now.syncFileCount === 0) {
+            deployment = secondDeployCall
+            break;
+          }
+        }
+
+        if (deployment === null) {
+          error('Uploading failed. Please try again.')
           await exit(1)
           return
         }
-
-        deployment = secondDeployCall
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
