@@ -6,7 +6,7 @@ module.exports = async (t, binaryPath, defaultArgs, deployment) => {
 
   const { stdout, code } = await execa(binaryPath, [
     'rm',
-    deployment,
+    host,
     '--yes',
     ...defaultArgs
   ], {
