@@ -48,7 +48,6 @@ import raceAsyncGenerators from '../../../../util/race-async-generators'
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
-import verifyDeploymentShallow from '../../util/deploy/verify-deployment-shallow'
 import zeitWorldTable from '../../util/zeit-world-table'
 import type { Readable } from 'stream'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
@@ -1065,9 +1064,7 @@ function getEventsGenerator(now: Now, contextName: string, deployment: NewDeploy
 }
 
 function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployment, eventsStream: Readable | null) {
-  const verifyDeployment = deployment.blob === null
-    ? verifyDeploymentShallow(output, now, deployment.url, deployment.scale)
-    : verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
+  const verifyDeployment = verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale)
 
   return eventsStream
     ? raceAsyncGenerators(eventListenerToGenerator('data', eventsStream), verifyDeployment)
