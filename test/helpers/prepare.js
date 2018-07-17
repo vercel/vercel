@@ -69,19 +69,52 @@ module.exports = async session => {
     'static-multiple-files': [
       'first.png',
       'second.png'
-    ]
+    ],
+    'now-static-builds': {
+      'now.json': '{"type": "static"}',
+      'Dockerfile': `
+FROM alpine
+RUN mkdir /public
+RUN echo hello > /public/index.html
+      `
+    },
+    'build-env': {
+      'now.json': JSON.stringify({
+        type: 'static',
+        build: {
+          env: {FOO: 'bar'}
+        }
+      }),
+      'Dockerfile': `
+FROM alpine
+ARG FOO
+
+RUN mkdir /public
+RUN echo $FOO > /public/index.html
+      `
+    }
   }
 
   for (const type of Object.keys(spec)) {
     const needed = spec[type]
+    const directory = join(__dirname, '..', 'fixtures', 'integration', type)
+    await ensureDir(directory)
 
-    for (const name of needed) {
-      const directory = join(__dirname, '..', 'fixtures', 'integration', type)
-      const file = join(directory, name)
-      const content = files[name]
-
-      await ensureDir(directory)
-      await writeFile(file, content)
+    if(Array.isArray(needed)) {
+      // Get content from the defined files
+      for (const name of needed) {
+        const file = join(directory, name)
+        const content = files[name]
+        await writeFile(file, content)
+      }
+    } else {
+      // Get content from the object property
+      const names = Object.keys(needed)
+      for (const name of names) {
+        const file = join(directory, name)
+        const content = needed[name]
+        await writeFile(file, content)
+      }
     }
   }
 }

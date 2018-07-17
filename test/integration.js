@@ -10,6 +10,7 @@ const { readFile } = require('fs-extra')
 const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
+const sleep = require('es7-sleep')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -28,6 +29,21 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
+const pickUrl = stdout => {
+  const lines = stdout.split('\n')
+  return lines[lines.length - 1]
+}
+const waitForDeployment = async href => {
+  // eslint-disable-next-line
+  while (true) {
+    const
+    response = await fetch(href, {redirect: 'manual'})
+    if (response.status === 200) {
+      break;
+    }
+    sleep(2000)
+  }
+}
 
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
@@ -416,6 +432,68 @@ test('deploy a static directory', async t => {
   t.deepEqual(await readFile(file), await response.buffer())
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout)
+})
+
+test('deploy a static build deployment', async t => {
+  const directory = fixture('now-static-builds')
+
+  const { stdout, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout)
+  const { href, host } = new URL(deploymentUrl)
+  t.is(host.split('-')[0], session)
+
+  await waitForDeployment(href)
+
+  // get the content
+  const response = await fetch(href)
+  const content = await response.text()
+  t.is(content.trim(), 'hello')
+
+  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl)
+})
+
+test('use build-env', async t => {
+  const directory = fixture('build-env')
+
+  const { stdout, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout)
+  const { href, host } = new URL(deploymentUrl)
+  t.is(host.split('-')[0], session)
+
+  await waitForDeployment(href)
+
+  // get the content
+  const response = await fetch(href)
+  const content = await response.text()
+  t.is(content.trim(), 'bar')
+
+  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl)
 })
 
 test('deploy a dockerfile project', async t => {
