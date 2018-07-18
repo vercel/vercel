@@ -1,6 +1,6 @@
 // @flow
 import ms from 'ms'
-import cuid from 'cuid'
+import uuid from '../../util/uuid'
 import createPollingFn from '../../../../util/create-polling-fn'
 import { Output, Now } from '../types'
 import { VerifyScaleTimeout } from '../errors'
@@ -22,7 +22,7 @@ async function* verifyDeploymentScale(
   const { timeout = ms('3m') } = options
   const { pollingInterval = 1000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
-  const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId, cuid())
+  const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId, uuid())
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
   const targetInstancesCount = getTargetInstancesCountForScale(scale)
   const startTime = Date.now()
