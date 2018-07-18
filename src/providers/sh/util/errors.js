@@ -413,6 +413,17 @@ export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_
   }
 }
 
+export class NotSupportedMinScaleSlots extends NowError<'NOT_SUPPORTED_MIN_SCALE_SLOTS', {}> {
+  constructor() {
+    super({
+      code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
+      meta: {},
+      message: `Cloud v2 does not yet support setting a non-zero min scale setting.`
+    })
+  }
+}
+
+
 export class InvalidCoupon extends NowError<'INVALID_COUPON', { coupon: string }> {
   constructor(coupon: string) {
     super({
