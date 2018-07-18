@@ -6,7 +6,6 @@ const { resolve, basename } = require('path')
 // Packages
 const { eraseLines } = require('ansi-escapes')
 const { write: copy } = require('clipboardy')
-const only = require('only')
 const bytes = require('bytes')
 const chalk = require('chalk')
 const dotenv = require('dotenv')
@@ -634,8 +633,12 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       ...envNullFields,
       ...buildEnvNullFields
     ]).sort())
-    Object.assign(deploymentEnv, only(userEnv, envNullFields))
-    Object.assign(deploymentBuildEnv, only(userEnv, buildEnvNullFields))
+    for (const key of envNullFields) {
+      deploymentEnv[key] = userEnv[key]
+    }
+    for (const key of buildEnvNullFields) {
+      deploymentBuildEnv[key] = userEnv[key]
+    }
 
     // If there's any undefined values, then inherit them from this process
     await addProcessEnv(deploymentEnv)
