@@ -117,6 +117,19 @@ export type StaticDeployment = {
   sessionAffinity: string,
 }
 
+export type DockerDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'DOCKER',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale,
+  blob?: string
+}
+
 export type BinaryDeployment = {
   uid: string,
   url: string,
@@ -132,6 +145,7 @@ export type BinaryDeployment = {
 export type Deployment =
   NpmDeployment |
   StaticDeployment |
+  DockerDeployment |
   BinaryDeployment
 
 export type PathAliasRule = {

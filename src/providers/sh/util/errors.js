@@ -37,6 +37,16 @@ export class InvalidAlias extends NowError<'INVALID_ALIAS', {alias: string}> {
   }
 }
 
+export class IncompatibleScaleSettings extends NowError<'INCOMPATIBLE_SCALE_SETTINGS', {alias: string}> {
+  constructor(alias: string) {
+    super({
+      code: 'INCOMPATIBLE_SCALE_SETTINGS',
+      meta: { alias },
+      message: `Scale rules from previous alias ${alias} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${alias} with \`now scale\` and try again.`
+    })
+  }
+}
+
 export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   constructor() {
     super({
