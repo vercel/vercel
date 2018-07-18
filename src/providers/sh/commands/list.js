@@ -164,7 +164,7 @@ module.exports = async function main(ctx) {
     if (item) {
       debug('Found alias that matches app name');
       const match = await now.findDeployment(item.deploymentId)
-      const instances = await getDeploymentInstances(now, item.deploymentId)
+      const instances = await getDeploymentInstances(now, item.deploymentId, 'now_cli_alias_instances')
       match.instanceCount = Object.keys(instances).reduce((count, dc) => count + instances[dc].instances.length, 0)
       if (match !== null && typeof match !== 'undefined') {
         deployments = Array.of(match)
@@ -220,7 +220,7 @@ module.exports = async function main(ctx) {
         [
           dep.name,
           chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-          dep.type === 'BINARY' || dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+          dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
           dep.type,
           stateString(dep.state),
           chalk.gray(ms(Date.now() - new Date(dep.created)))

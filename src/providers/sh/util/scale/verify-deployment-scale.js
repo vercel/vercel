@@ -1,5 +1,6 @@
 // @flow
 import ms from 'ms'
+import uuid from '../../util/uuid'
 import createPollingFn from '../../../../util/create-polling-fn'
 import { Output, Now } from '../types'
 import { VerifyScaleTimeout } from '../errors'
@@ -21,7 +22,7 @@ async function* verifyDeploymentScale(
   const { timeout = ms('3m') } = options
   const { pollingInterval = 1000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
-  const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId)
+  const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId, uuid())
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
   const targetInstancesCount = getTargetInstancesCountForScale(scale)
   const startTime = Date.now()
@@ -57,7 +58,7 @@ function allDcsMatched(target: InstancesCount, current: InstancesCount): boolean
 }
 
 function getTargetInstancesCountForScale(scale: DeploymentScale): InstancesCount {
-  return Object.keys(scale).reduce((result, dc) =>({ 
+  return Object.keys(scale).reduce((result, dc) =>({
     ...result, [dc]: Math.min(Math.max(scale[dc].min, 1), scale[dc].max)
   }), {})
 }
