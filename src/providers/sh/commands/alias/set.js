@@ -193,6 +193,7 @@ type CreateAliasError =
   Errors.DomainPermissionDenied |
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
+  Errors.IncompatibleScaleSettings |
   Errors.InvalidAlias |
   Errors.InvalidWildcardDomain |
   Errors.RuleValidationFailed |
@@ -253,7 +254,7 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     output.error(`Rule validation error: ${error.meta.message}.`)
     output.print(`  Make sure your rules file is written correctly.\n`)
     return 1
-  } else if (error instanceof Errors.TooManyRequests) {
+  }else if (error instanceof Errors.TooManyRequests) {
     output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`)
     return 1
   } else if (error instanceof Errors.VerifyScaleTimeout) {
@@ -266,6 +267,10 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`)
     return 1
+  }  else if (error instanceof Errors.IncompatibleScaleSettings) {
+    output.error(`Scale rules from previous alias ${chalk.dim(error.meta.alias)} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${chalk.dim(error.meta.alias)} with \`now scale\` and try again`)
+    output.log('Read more: https://err.sh/now-cli/v2-no-min')
+    return 1;
   } else {
     return error
   }

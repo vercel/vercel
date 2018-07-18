@@ -23,6 +23,8 @@ async function setScale(output: Output, now: Now, deploymentId: string, scaleArg
       return new Errors.ForbiddenScaleMaxInstances(error.max)
     } else if (error.code === 'wrong_min_max_relation') {
       return new Errors.InvalidScaleMinMaxRelation()
+    } else if (error.code === 'not_supported_min_scale_slots') {
+      return new Errors.NotSupportedMinScaleSlots()
     } else {
       throw error
     }

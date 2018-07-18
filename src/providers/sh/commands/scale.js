@@ -81,7 +81,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   const { authConfig: { credentials }, config: { sh } } = ctx
   const { currentTeam } = sh;
   const { apiUrl } = ctx;
-  
+
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: argv['--debug'], currentTeam })
@@ -148,7 +148,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     now.close();
     return 1
   }
- 
+
   output.log(`Fetched deployment "${deployment.url}" ${deploymentStamp()}`);
 
   // Make sure the deployment can be scaled
@@ -180,14 +180,18 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     output.error(`Min number of instances can't be higher than max.`)
     now.close();
     return 1
+  } else if (result instanceof Errors.NotSupportedMinScaleSlots) {
+    output.error(`Cloud v2 does not yet support setting a non-zero min number of instances.`)
+    output.log('Read more: https://err.sh/now-cli/v2-no-min')
+    now.close();
+    return 1
   }
 
   console.log(`${chalk.gray('>')} Scale rules for ${
     dcs.map(d => chalk.bold(d)).join(', ')
   } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${scaleStamp()}`)
 
-  // Skip verification for binary and those cases where we skip it by args
-  if (deployment.type === 'BINARY' || argv['--no-verify']) {
+  if (argv['--no-verify']) {
     now.close();
     return 0;
   }
@@ -195,7 +199,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   // Verify that the scale presets are there
   const verifyStamp = stamp()
   const updatedDeployment = await getDeploymentByIdOrThrow(now, contextName, deployment.uid)
-  if (updatedDeployment.type === 'NPM') {
+  if (updatedDeployment.type === 'NPM' || updatedDeployment.type === 'DOCKER') {
     const result = await waitVerifyDeploymentScale(output, now, deployment.uid, updatedDeployment.scale)
     if (result instanceof VerifyScaleTimeout) {
       output.error(`Instance verification timed out (${ms(result.meta.timeout)})`, 'verification-timeout')
