@@ -1,8 +1,8 @@
 // @flow
-import type { NpmDeployment, BinaryDeployment, DockerDeployment } from '../../util/types'
+import type { NpmDeployment, DockerDeployment } from '../../util/types'
 import getScaleForDC from './get-scale-for-dc'
 
-function shouldCopyScalingAttributes(origin: NpmDeployment | BinaryDeployment | DockerDeployment, dest: NpmDeployment | BinaryDeployment | DockerDeployment) {
+function shouldCopyScalingAttributes(origin: NpmDeployment | DockerDeployment, dest: NpmDeployment | DockerDeployment) {
   return Boolean(origin.scale) &&
     getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min ||
     getScaleForDC('bru1', origin).max !== getScaleForDC('bru1', dest).max ||

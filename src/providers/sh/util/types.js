@@ -130,23 +130,10 @@ export type DockerDeployment = {
   blob?: string
 }
 
-export type BinaryDeployment = {
-  uid: string,
-  url: string,
-  name: string,
-  type: 'BINARY',
-  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
-  created: number,
-  creator: { uid: string },
-  sessionAffinity: string,
-  scale: DeploymentScale
-}
-
 export type Deployment =
   NpmDeployment |
   StaticDeployment |
-  DockerDeployment |
-  BinaryDeployment
+  DockerDeployment
 
 export type PathAliasRule = {
   pathname: string,
