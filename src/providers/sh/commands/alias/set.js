@@ -268,7 +268,8 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     output.error(`All given common names should share the same root domain.`)
     return 1
   }  else if (error instanceof Errors.IncompatibleScaleSettings) {
-    output.error(`Scale rules from previous alias ${chalk.dim(error.meta.alias)} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${chalk.dim(error.meta.alias)} with \`now scale\` and try again.`)
+    output.error(`Scale rules from previous alias ${chalk.dim(error.meta.alias)} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${chalk.dim(error.meta.alias)} with \`now scale\` and try again`)
+    output.log('Read more: https://err.sh/now-cli/v2-no-min')
     return 1;
   } else {
     return error

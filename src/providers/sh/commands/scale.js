@@ -182,6 +182,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     return 1
   } else if (result instanceof Errors.NotSupportedMinScaleSlots) {
     output.error(`Cloud v2 does not yet support setting a non-zero min number of instances.`)
+    output.log('Read more: https://err.sh/now-cli/v2-no-min')
     now.close();
     return 1
   }
