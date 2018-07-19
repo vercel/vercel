@@ -88,9 +88,19 @@ RUN echo hello > /public/index.html
       'Dockerfile': `
 FROM alpine
 ARG FOO
-
 RUN mkdir /public
 RUN echo $FOO > /public/index.html
+      `
+    },
+    'build-env-arg': {
+      'now.json': JSON.stringify({
+        type: 'static'
+      }),
+      'Dockerfile': `
+FROM alpine
+ARG NONCE
+RUN mkdir /public
+RUN echo $NONCE > /public/index.html
       `
     }
   }
