@@ -25,6 +25,7 @@ const createOutput = require('../../../../util/output')
 const exit = require('../../../../util/exit')
 const logo = require('../../../../util/output/logo')
 const Now = require('../../util')
+const uniq = require('../../util/unique-strings')
 const promptBool = require('../../../../util/input/prompt-bool')
 const promptOptions = require('../../util/prompt-options')
 const readMetaData = require('../../util/read-metadata')
@@ -75,6 +76,7 @@ const mriOpts = {
   },
   alias: {
     env: 'e',
+    'build-env': 'b',
     dotenv: 'E',
     help: 'h',
     debug: 'd',
@@ -138,9 +140,10 @@ const help = () => {
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
     )} is exposed) [on for oss, off for premium]
-    -e, --env                      Include an env var (e.g.: ${chalk.dim(
+    -e, --env                      Include an env var during run time (e.g.: ${chalk.dim(
       '`-e KEY=value`'
     )}). Can appear many times.
+    -b, --build-env                Similar to ${chalk.dim('`--env`')} but for build time only.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
@@ -209,6 +212,34 @@ let alwaysForwardNpm
 
 // If the current deployment is a repo
 const gitRepo = {}
+
+// For `env` and `buildEnv`
+const getNullFields = o => Object.keys(o).filter(k => o[k] === null)
+
+const addProcessEnv = async (env) => {
+  let val
+  for (const key of Object.keys(env)) {
+    if (typeof env[key] !== 'undefined') continue
+    val = process.env[key]
+    if (typeof val === 'string') {
+      log(
+        `Reading ${chalk.bold(
+          `"${chalk.bold(key)}"`
+        )} from your env (as no value was specified)`
+      )
+      // Escape value if it begins with @
+      env[key] = val.replace(/^@/, '\\@')
+    } else {
+      error(
+        `No value specified for env ${chalk.bold(
+          `"${chalk.bold(key)}"`
+        )} and it was not found in your env.`
+      )
+      await exit(1)
+      return
+    }
+  }
+}
 
 const stopDeployment = async msg => {
   handleError(msg)
@@ -496,7 +527,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       } = await readMeta(paths[0], deploymentName, deploymentType, sessionAffinity))
     }
 
-    const nowConfig = meta.nowConfig
+    const nowConfig = meta.nowConfig || {}
     const scaleFromConfig = getScaleFromConfig(nowConfig)
     let scale = {}
     let dcIds
@@ -555,7 +586,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     if (argv.dotenv) {
       dotenvOption = argv.dotenv
-    } else if (nowConfig && nowConfig.dotenv) {
+    } else if (nowConfig.dotenv) {
       dotenvOption = nowConfig.dotenv
     }
 
@@ -584,15 +615,40 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     const deploymentEnv = Object.assign(
       {},
       dotenvConfig,
-      parseEnv(nowConfig && nowConfig.env, null),
+      parseEnv(nowConfig.env, null),
       parseEnv(argv.env, undefined)
     )
 
-    // If there's any envs with `null` then prompt the user for the values
-    const askFor = Object.keys(deploymentEnv).filter(
-      key => deploymentEnv[key] === null
+    // Merge build env out of  `build.env` from now.json, and `--build-env` args
+    const deploymentBuildEnv = Object.assign(
+      {},
+      parseEnv(nowConfig.build && nowConfig.build.env, null),
+      parseEnv(argv['build-env'], undefined)
     )
-    Object.assign(deploymentEnv, await promptForEnvFields(askFor))
+
+    // If there's any envs with `null` then prompt the user for the values
+    const envNullFields = getNullFields(deploymentEnv)
+    const buildEnvNullFields = getNullFields(deploymentBuildEnv)
+    const userEnv = await promptForEnvFields(uniq([
+      ...envNullFields,
+      ...buildEnvNullFields
+    ]).sort())
+    for (const key of envNullFields) {
+      deploymentEnv[key] = userEnv[key]
+    }
+    for (const key of buildEnvNullFields) {
+      deploymentBuildEnv[key] = userEnv[key]
+    }
+
+    // If there's any undefined values, then inherit them from this process
+    await addProcessEnv(deploymentEnv)
+    await addProcessEnv(deploymentBuildEnv)
+
+    // Put the `build.env` back onto the `nowConfig`
+    if (Object.keys(deploymentBuildEnv).length > 0) {
+      if (!nowConfig.build) nowConfig.build = {};
+      nowConfig.build.env = deploymentBuildEnv;
+    }
 
     let secrets
     const findSecret = async uidOrName => {
@@ -627,28 +683,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         }
 
         let val = deploymentEnv[key]
-
-        if (val === undefined) {
-          if (key in process.env) {
-            log(
-              `Reading ${chalk.bold(
-                `"${chalk.bold(key)}"`
-              )} from your env (as no value was specified)`
-            )
-            // Escape value if it begins with @
-            if (process.env[key] != null) {
-              val = process.env[key].replace(/^@/, '\\@')
-            }
-          } else {
-            error(
-              `No value specified for env ${chalk.bold(
-                `"${chalk.bold(key)}"`
-              )} and it was not found in your env.`
-            )
-
-            await exit(1)
-          }
-        }
 
         if (val[0] === '@') {
           const uidOrName = val.substr(1)

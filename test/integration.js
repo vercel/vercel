@@ -538,6 +538,40 @@ test('deploy a dockerfile project', async t => {
   await removeDeployment(t, binaryPath, defaultArgs, stdout)
 })
 
+test('use `--build-env` CLI flag', async t => {
+  const directory = fixture('build-env-arg')
+  const nonce = Math.random().toString(36).substring(2);
+
+  const { stdout, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    '--build-env',
+    `NONCE=${nonce}`,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  // Ensure the exit code is right
+  t.is(code, 0)
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout)
+  const { href, host } = new URL(deploymentUrl)
+  t.is(host.split('-')[0], session)
+
+  await waitForDeployment(href)
+
+  // get the content
+  const response = await fetch(href)
+  const content = await response.text()
+  t.is(content.trim(), nonce)
+
+  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl)
+})
+
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified directory "${session}" doesn't exist.`
 
