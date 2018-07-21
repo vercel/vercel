@@ -223,9 +223,7 @@ test('output logs of deployment', async t => {
     reject: false
   })
 
-  t.true(stdout.includes('npm install'))
-  t.true(stdout.includes('Installing'))
-  t.true(stdout.includes('Installed'))
+  t.true(stdout.includes('yarn install'))
   t.true(stdout.includes('Snapshotting deployment'))
   t.true(stdout.includes('Saving deployment image'))
   t.true(stdout.includes('npm start'))
