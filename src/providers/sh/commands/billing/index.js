@@ -7,16 +7,15 @@ const ms = require('ms')
 const plural = require('pluralize')
 
 // Utilities
-const { handleError, error } = require('../util/error')
-const NowCreditCards = require('../util/credit-cards')
-const indent = require('../util/indent')
-const listInput = require('../../../util/input/list')
-const success = require('../../../util/output/success')
-const promptBool = require('../../../util/input/prompt-bool')
-const info = require('../../../util/output/info')
-const logo = require('../../../util/output/logo')
-const addBilling = require('./billing/add')
-const exit = require('../../../util/exit')
+const { error } = require('../../util/error')
+const NowCreditCards = require('../../util/credit-cards')
+const indent = require('../../util/indent')
+const listInput = require('../../../../util/input/list')
+const success = require('../../../../util/output/success')
+const promptBool = require('../../../../util/input/prompt-bool')
+const info = require('../../../../util/output/info')
+const logo = require('../../../../util/output/logo')
+const addBilling = require('./add')
 
 const help = () => {
   console.log(`
@@ -57,7 +56,7 @@ let debug
 let apiUrl
 let subcommand
 
-const main = async ctx => {
+module.exports = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
@@ -74,14 +73,14 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help()
-    await exit(0)
+    return 2;
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, sh })
+    return run({ token, sh })
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message))
@@ -89,16 +88,7 @@ const main = async ctx => {
       console.error(error(`Unknown error: ${err.stack}`))
     }
 
-    exit(1)
-  }
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
+    return 1;
   }
 }
 
@@ -132,12 +122,14 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'ls':
     case 'list': {
       let cards
+
       try {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
+
       const text = cards.sources
         .map(source => {
           const _default =
@@ -173,7 +165,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'set-default': {
       if (args.length > 1) {
         console.error(error('Invalid number of arguments'))
-        return exit(1)
+        return 1;
       }
 
       const start = new Date()
@@ -183,12 +175,12 @@ async function run({ token, sh: { currentTeam, user } }) {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
 
       if (cards.sources.length === 0) {
         console.error(error('You have no credit cards to choose from'))
-        return exit(0)
+        return 0;
       }
 
       let cardId = args[0]
@@ -215,10 +207,12 @@ async function run({ token, sh: { currentTeam, user } }) {
         const confirmation = await promptBool(label, {
           trailing: '\n'
         })
+
         if (!confirmation) {
           console.log(info('Aborted'))
           break
         }
+
         const start = new Date()
         await creditCards.setDefault(cardId)
 
@@ -240,7 +234,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'remove': {
       if (args.length > 1) {
         console.error(error('Invalid number of arguments'))
-        return exit(1)
+        return 1;
       }
 
       const start = new Date()
@@ -249,7 +243,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
 
       if (cards.sources.length === 0) {
@@ -258,7 +252,7 @@ async function run({ token, sh: { currentTeam, user } }) {
             (currentTeam && currentTeam.slug) || user.username || user.email
           )}`
         ))
-        return exit(0)
+        return 0;
       }
 
       let cardId = args[0]
@@ -338,8 +332,10 @@ async function run({ token, sh: { currentTeam, user } }) {
     default:
       console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'))
       help()
-      exit(1)
+      return 1;
   }
 
-  creditCards.close()
+  //creditCards.close()
+  //d
+  return 0;
 }
