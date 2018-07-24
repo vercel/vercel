@@ -155,7 +155,7 @@ module.exports = async function({
 
       console.log(success(
         `${state.cardNumber
-          .brand} ending in ${res.last4} was added to ${chalk.bold(
+          .brand || state.cardNumber.card.brand} ending in ${res.last4 || res.card.last4} was added to ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )}`
       ))

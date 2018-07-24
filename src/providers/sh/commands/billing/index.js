@@ -220,7 +220,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         const card = cards.sources.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
         console.log(success(
-          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(
+          `${card.brand || card.card.brand} ending in ${card.last4 || card.card.last4} is now the default ${chalk.gray(
             `[${elapsed}]`
           )}`
         ))
@@ -290,7 +290,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         const deletedCard = cards.sources.find(card => card.id === cardId)
         const remainingCards = cards.sources.filter(card => card.id !== cardId)
 
-        let text = `${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
+        let text = `${deletedCard.brand || deletedCard.card.brand} ending in ${deletedCard.last4 || deletedCard.card.last4} was deleted`
         //  ${chalk.gray(`[${elapsed}]`)}
 
         if (cardId === cards.defaultSource) {
@@ -304,7 +304,7 @@ async function run({ token, sh: { currentTeam, user } }) {
               card => card.id === cards.defaultCardId
             )
 
-            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default for ${chalk.bold(
+            text += `\n${newDefaultCard.brand || newDefaultCard.card.brand} ending in ${newDefaultCard.last4 || newDefaultCard.card.last4} in now default for ${chalk.bold(
               (currentTeam && currentTeam.slug) || user.username || user.email
             )}`
           }
