@@ -104,21 +104,21 @@ module.exports = async ctx => {
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()
 function buildInquirerChoices(cards) {
-  return cards.sources.map(card => {
+  return cards.sources.map(source => {
     const _default =
-      card.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
-    const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
-    const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
+      source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
+    const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`
+    const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`
     const str = [
       id,
-      indent(card.name, 2),
-      indent(`${card.brand} ${number}`, 2)
+      indent(source.name || source.owner.name, 2),
+      indent(`${source.brand || source.card.brand} ${number}`, 2)
     ].join('\n')
 
     return {
       name: str, // Will be displayed by Inquirer
-      value: card.id, // Will be used to identify the answer
-      short: card.id // Will be displayed after the users answers
+      value: source.id, // Will be used to identify the answer
+      short: source.id // Will be displayed after the users answers
     }
   })
 }
