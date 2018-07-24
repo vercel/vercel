@@ -104,9 +104,9 @@ module.exports = async ctx => {
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()
 function buildInquirerChoices(cards) {
-  return cards.cards.map(card => {
+  return cards.sources.map(card => {
     const _default =
-      card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+      card.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
     const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
     const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
     const str = [
@@ -139,36 +139,18 @@ async function run({ token, sh: { currentTeam, user } }) {
         return
       }
       const text = cards.sources
-        .map(card => {
+        .map(source => {
           const _default =
-            card.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
+            source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
           const id = `${chalk.gray('-')} ${chalk.cyan(
-            `ID: ${card.id}`
+            `ID: ${source.id}`
           )}${_default}`
-          const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
-          let address = card.address_line1
-
-          if (card.address_line2) {
-            address += `, ${card.address_line2}.`
-          } else {
-            address += '.'
-          }
-
-          address += `\n${card.address_city}, `
-
-          if (card.address_state) {
-            address += `${card.address_state}, `
-          }
-
-          // Stripe is returning a two digit code for the country,
-          // but we want the full country name
-          address += `${card.address_zip}. ${card.address_country}`
+          const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`
 
           return [
             id,
-            indent(card.name, 2),
-            indent(`${card.brand} ${number}`, 2),
-            indent(address, 2)
+            indent(source.name || source.owner.name, 2),
+            indent(`${source.brand || source.card.brand} ${number}`, 2)
           ].join('\n')
         })
         .join('\n\n')
