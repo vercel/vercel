@@ -29,10 +29,12 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
+
 const pickUrl = stdout => {
   const lines = stdout.split('\n')
   return lines[lines.length - 1]
 }
+
 const waitForDeployment = async href => {
   // eslint-disable-next-line
   while (true) {
@@ -41,6 +43,7 @@ const waitForDeployment = async href => {
     if (response.status === 200) {
       break;
     }
+
     sleep(2000)
   }
 }
@@ -50,6 +53,8 @@ const waitForDeployment = async href => {
 const context = {}
 
 const defaultArgs = []
+const email = `now-cli-${session}@zeit.pub`
+
 let tmpDir
 
 if (!process.env.CI) {
@@ -94,7 +99,7 @@ test('output the version', async t => {
 test('log in', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'login',
-    `now-cli-${session}@zeit.pub`,
+    email,
     ...defaultArgs
   ], {
     reject: false
@@ -134,6 +139,59 @@ test('try to deploy user directory', async t => {
 
   t.is(code, 1)
   t.true(stderr.includes(goal))
+})
+
+test('list the payment methods', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'billing',
+    'ls',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 0)
+  t.true(stdout.startsWith(`> 0 cards found under ${email}`))
+})
+
+test('try to set default without existing payment method', async t => {
+  const { stderr, code } = await execa(binaryPath, [
+    'billing',
+    'set-default',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 0)
+  t.is(stderr, '> Error! You have no credit cards to choose from')
+})
+
+test('try to remove a non-existing payment method', async t => {
+  const { stderr, code } = await execa(binaryPath, [
+    'billing',
+    'rm',
+    'card_d2j32d9382jr928rd',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 0)
+  t.is(stderr, `> Error! You have no credit cards to choose from to delete under ${email}`)
+})
+
+test('try to add a payment method', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'billing',
+    'add',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 1)
+  t.true(stdout.startsWith(`> Enter your card details for ${email}`))
 })
 
 test('deploy a node microservice', async t => {

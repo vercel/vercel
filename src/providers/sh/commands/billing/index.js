@@ -336,5 +336,6 @@ async function run({ token, sh: { currentTeam, user } }) {
       return 1;
   }
 
+  // This is required, otherwise we get those weird zlib errors
   return exit(0);
 }
