@@ -16,6 +16,7 @@ const promptBool = require('../../../../util/input/prompt-bool')
 const info = require('../../../../util/output/info')
 const logo = require('../../../../util/output/logo')
 const addBilling = require('./add')
+const exit = require('../../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -335,7 +336,5 @@ async function run({ token, sh: { currentTeam, user } }) {
       return 1;
   }
 
-  //creditCards.close()
-  //d
-  return 0;
+  return exit(0);
 }
