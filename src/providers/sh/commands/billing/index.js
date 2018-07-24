@@ -7,16 +7,16 @@ const ms = require('ms')
 const plural = require('pluralize')
 
 // Utilities
-const { handleError, error } = require('../util/error')
-const NowCreditCards = require('../util/credit-cards')
-const indent = require('../util/indent')
-const listInput = require('../../../util/input/list')
-const success = require('../../../util/output/success')
-const promptBool = require('../../../util/input/prompt-bool')
-const info = require('../../../util/output/info')
-const logo = require('../../../util/output/logo')
-const addBilling = require('./billing/add')
-const exit = require('../../../util/exit')
+const { error } = require('../../util/error')
+const NowCreditCards = require('../../util/credit-cards')
+const indent = require('../../util/indent')
+const listInput = require('../../../../util/input/list')
+const success = require('../../../../util/output/success')
+const promptBool = require('../../../../util/input/prompt-bool')
+const info = require('../../../../util/output/info')
+const logo = require('../../../../util/output/logo')
+const addBilling = require('./add')
+const exit = require('../../../../util/exit')
 
 const help = () => {
   console.log(`
@@ -57,7 +57,7 @@ let debug
 let apiUrl
 let subcommand
 
-const main = async ctx => {
+module.exports = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
@@ -74,14 +74,14 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help()
-    await exit(0)
+    return 2;
   }
 
   const {authConfig: { credentials }, config: { sh }} = ctx
   const {token} = credentials.find(item => item.provider === 'sh')
 
   try {
-    await run({ token, sh })
+    return run({ token, sh })
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message))
@@ -89,36 +89,27 @@ const main = async ctx => {
       console.error(error(`Unknown error: ${err.stack}`))
     }
 
-    exit(1)
-  }
-}
-
-module.exports = async ctx => {
-  try {
-    await main(ctx)
-  } catch (err) {
-    handleError(err)
-    process.exit(1)
+    return 1;
   }
 }
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()
 function buildInquirerChoices(cards) {
-  return cards.cards.map(card => {
+  return cards.sources.map(source => {
     const _default =
-      card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
-    const id = `${chalk.cyan(`ID: ${card.id}`)}${_default}`
-    const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
+      source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
+    const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`
+    const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`
     const str = [
       id,
-      indent(card.name, 2),
-      indent(`${card.brand} ${number}`, 2)
+      indent(source.name || source.owner.name, 2),
+      indent(`${source.brand || source.card.brand} ${number}`, 2)
     ].join('\n')
 
     return {
       name: str, // Will be displayed by Inquirer
-      value: card.id, // Will be used to identify the answer
-      short: card.id // Will be displayed after the users answers
+      value: source.id, // Will be used to identify the answer
+      short: source.id // Will be displayed after the users answers
     }
   })
 }
@@ -132,43 +123,27 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'ls':
     case 'list': {
       let cards
+
       try {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
-      const text = cards.cards
-        .map(card => {
+
+      const text = cards.sources
+        .map(source => {
           const _default =
-            card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+            source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
           const id = `${chalk.gray('-')} ${chalk.cyan(
-            `ID: ${card.id}`
+            `ID: ${source.id}`
           )}${_default}`
-          const number = `${chalk.gray('#### ').repeat(3)}${card.last4}`
-          let address = card.address_line1
-
-          if (card.address_line2) {
-            address += `, ${card.address_line2}.`
-          } else {
-            address += '.'
-          }
-
-          address += `\n${card.address_city}, `
-
-          if (card.address_state) {
-            address += `${card.address_state}, `
-          }
-
-          // Stripe is returning a two digit code for the country,
-          // but we want the full country name
-          address += `${card.address_zip}. ${card.address_country}`
+          const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`
 
           return [
             id,
-            indent(card.name, 2),
-            indent(`${card.brand} ${number}`, 2),
-            indent(address, 2)
+            indent(source.name || source.owner.name, 2),
+            indent(`${source.brand || source.card.brand} ${number}`, 2)
           ].join('\n')
         })
         .join('\n\n')
@@ -176,7 +151,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       const elapsed = ms(new Date() - start)
       console.log(
         `> ${
-          plural('card', cards.cards.length, true)
+          plural('card', cards.sources.length, true)
         } found under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed}]`)}`
@@ -191,7 +166,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'set-default': {
       if (args.length > 1) {
         console.error(error('Invalid number of arguments'))
-        return exit(1)
+        return 1;
       }
 
       const start = new Date()
@@ -201,12 +176,12 @@ async function run({ token, sh: { currentTeam, user } }) {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
 
-      if (cards.cards.length === 0) {
+      if (cards.sources.length === 0) {
         console.error(error('You have no credit cards to choose from'))
-        return exit(0)
+        return 0;
       }
 
       let cardId = args[0]
@@ -233,17 +208,19 @@ async function run({ token, sh: { currentTeam, user } }) {
         const confirmation = await promptBool(label, {
           trailing: '\n'
         })
+
         if (!confirmation) {
           console.log(info('Aborted'))
           break
         }
+
         const start = new Date()
         await creditCards.setDefault(cardId)
 
-        const card = cards.cards.find(card => card.id === cardId)
+        const card = cards.sources.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
         console.log(success(
-          `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(
+          `${card.brand || card.card.brand} ending in ${card.last4 || card.card.last4} is now the default ${chalk.gray(
             `[${elapsed}]`
           )}`
         ))
@@ -258,7 +235,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     case 'remove': {
       if (args.length > 1) {
         console.error(error('Invalid number of arguments'))
-        return exit(1)
+        return 1;
       }
 
       const start = new Date()
@@ -267,16 +244,16 @@ async function run({ token, sh: { currentTeam, user } }) {
         cards = await creditCards.ls()
       } catch (err) {
         console.error(error(err.message))
-        return
+        return 1;
       }
 
-      if (cards.cards.length === 0) {
+      if (cards.sources.length === 0) {
         console.error(error(
           `You have no credit cards to choose from to delete under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
           )}`
         ))
-        return exit(0)
+        return 0;
       }
 
       let cardId = args[0]
@@ -310,24 +287,24 @@ async function run({ token, sh: { currentTeam, user } }) {
         const start = new Date()
         await creditCards.rm(cardId)
 
-        const deletedCard = cards.cards.find(card => card.id === cardId)
-        const remainingCards = cards.cards.filter(card => card.id !== cardId)
+        const deletedCard = cards.sources.find(card => card.id === cardId)
+        const remainingCards = cards.sources.filter(card => card.id !== cardId)
 
-        let text = `${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
+        let text = `${deletedCard.brand || deletedCard.card.brand} ending in ${deletedCard.last4 || deletedCard.card.last4} was deleted`
         //  ${chalk.gray(`[${elapsed}]`)}
 
-        if (cardId === cards.defaultCardId) {
+        if (cardId === cards.defaultSource) {
           if (remainingCards.length === 0) {
             // The user deleted the last card in their account
             text += `\n${chalk.yellow('Warning!')} You have no default card`
           } else {
             // We can't guess the current default card – let's ask the API
             const cards = await creditCards.ls()
-            const newDefaultCard = cards.cards.find(
+            const newDefaultCard = cards.sources.find(
               card => card.id === cards.defaultCardId
             )
 
-            text += `\n${newDefaultCard.brand} ending in ${newDefaultCard.last4} in now default for ${chalk.bold(
+            text += `\n${newDefaultCard.brand || newDefaultCard.card.brand} ending in ${newDefaultCard.last4 || newDefaultCard.card.last4} in now default for ${chalk.bold(
               (currentTeam && currentTeam.slug) || user.username || user.email
             )}`
           }
@@ -356,8 +333,9 @@ async function run({ token, sh: { currentTeam, user } }) {
     default:
       console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'))
       help()
-      exit(1)
+      return 1;
   }
 
-  creditCards.close()
+  // This is required, otherwise we get those weird zlib errors
+  return exit(0);
 }
