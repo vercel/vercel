@@ -37,19 +37,14 @@ module.exports = class CreditCards extends Now {
     return true
   }
 
-  /* eslint-disable camelcase */
   add(card) {
     return new Promise(async (resolve, reject) => {
       const expDateParts = card.expDate.split(' / ')
+
       card = {
         name: card.name,
         number: card.cardNumber,
-        cvc: card.ccv,
-        address_country: card.country,
-        address_zip: card.zipCode,
-        address_state: card.state,
-        address_city: card.city,
-        address_line1: card.address1
+        cvc: card.ccv
       }
 
       card.exp_month = expDateParts[0]
