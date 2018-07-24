@@ -16,18 +16,24 @@ module.exports = class CreditCards extends Now {
     return body
   }
 
-  async setDefault(cardId) {
-    await this._fetch('/cards/default', {
-      method: 'PUT',
-      body: { cardId }
+  async setDefault(source) {
+    await this._fetch('/stripe/sources/', {
+      method: 'POST',
+      body: {
+        source,
+        makeDefault: true
+      }
     })
+
     return true
   }
 
-  async rm(cardId) {
-    await this._fetch(`/cards/${encodeURIComponent(cardId)}`, {
-      method: 'DELETE'
+  async rm(source) {
+    await this._fetch(`/stripe/sources/`, {
+      method: 'DELETE',
+      body: { source }
     })
+
     return true
   }
 
@@ -50,10 +56,11 @@ module.exports = class CreditCards extends Now {
       card.exp_year = expDateParts[1]
 
       try {
-        const stripeToken = (await stripe.tokens.create({ card })).id
-        const res = await this._fetch('/cards', {
+        const source = (await stripe.tokens.create({ card })).id
+
+        const res = await this._fetch('/stripe/sources/', {
           method: 'POST',
-          body: { stripeToken }
+          body: { source }
         })
 
         const body = await res.json()
