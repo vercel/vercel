@@ -4,13 +4,15 @@ const Now = require('.')
 
 module.exports = class CreditCards extends Now {
   async ls() {
-    const res = await this._fetch('/cards')
+    const res = await this._fetch('/stripe/sources/')
     const body = await res.json()
+
     if (res.status !== 200) {
       const e = new Error(body.error.message)
       e.code = body.error.code
       throw e
     }
+
     return body
   }
 

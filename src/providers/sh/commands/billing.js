@@ -138,10 +138,10 @@ async function run({ token, sh: { currentTeam, user } }) {
         console.error(error(err.message))
         return
       }
-      const text = cards.cards
+      const text = cards.sources
         .map(card => {
           const _default =
-            card.id === cards.defaultCardId ? ' ' + chalk.bold('(default)') : ''
+            card.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : ''
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${card.id}`
           )}${_default}`
@@ -176,7 +176,7 @@ async function run({ token, sh: { currentTeam, user } }) {
       const elapsed = ms(new Date() - start)
       console.log(
         `> ${
-          plural('card', cards.cards.length, true)
+          plural('card', cards.sources.length, true)
         } found under ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )} ${chalk.gray(`[${elapsed}]`)}`
@@ -204,7 +204,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         return
       }
 
-      if (cards.cards.length === 0) {
+      if (cards.sources.length === 0) {
         console.error(error('You have no credit cards to choose from'))
         return exit(0)
       }
@@ -240,7 +240,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         const start = new Date()
         await creditCards.setDefault(cardId)
 
-        const card = cards.cards.find(card => card.id === cardId)
+        const card = cards.sources.find(card => card.id === cardId)
         const elapsed = ms(new Date() - start)
         console.log(success(
           `${card.brand} ending in ${card.last4} is now the default ${chalk.gray(
@@ -270,7 +270,7 @@ async function run({ token, sh: { currentTeam, user } }) {
         return
       }
 
-      if (cards.cards.length === 0) {
+      if (cards.sources.length === 0) {
         console.error(error(
           `You have no credit cards to choose from to delete under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
@@ -310,20 +310,20 @@ async function run({ token, sh: { currentTeam, user } }) {
         const start = new Date()
         await creditCards.rm(cardId)
 
-        const deletedCard = cards.cards.find(card => card.id === cardId)
-        const remainingCards = cards.cards.filter(card => card.id !== cardId)
+        const deletedCard = cards.sources.find(card => card.id === cardId)
+        const remainingCards = cards.sources.filter(card => card.id !== cardId)
 
         let text = `${deletedCard.brand} ending in ${deletedCard.last4} was deleted`
         //  ${chalk.gray(`[${elapsed}]`)}
 
-        if (cardId === cards.defaultCardId) {
+        if (cardId === cards.defaultSource) {
           if (remainingCards.length === 0) {
             // The user deleted the last card in their account
             text += `\n${chalk.yellow('Warning!')} You have no default card`
           } else {
             // We can't guess the current default card – let's ask the API
             const cards = await creditCards.ls()
-            const newDefaultCard = cards.cards.find(
+            const newDefaultCard = cards.sources.find(
               card => card.id === cards.defaultCardId
             )
 
