@@ -7,9 +7,7 @@ const ccValidator = require('credit-card')
 
 // Utilities
 const textInput = require('../../../../util/input/text')
-const countries = require('../../util/billing/country-list')
 const cardBrands = require('../../util/billing/card-brands')
-const geocode = require('../../util/billing/geocode')
 const success = require('../../../../util/output/success')
 const wait = require('../../../../util/output/wait')
 const { tick } = require('../../../../util/output/chars')
@@ -69,66 +67,6 @@ module.exports = async function({
       placeholder: 'mm / yyyy',
       middleware: expDateMiddleware,
       validateValue: data => !ccValidator.isExpired(...data.split(' / '))
-    },
-
-    addressGroupLabel: `\n> ${chalk.bold('Enter your billing address')}`,
-
-    country: {
-      label: rightPad('Country', 12),
-      async autoComplete(value) {
-        for (const country in countries) {
-          if (!Object.hasOwnProperty.call(countries, country)) {
-            continue
-          }
-
-          if (country.startsWith(value)) {
-            return country.substr(value.length)
-          }
-
-          const lowercaseCountry = country.toLowerCase()
-          const lowercaseValue = value.toLowerCase()
-
-          if (lowercaseCountry.startsWith(lowercaseValue)) {
-            return lowercaseCountry.substr(value.length)
-          }
-        }
-
-        return false
-      },
-      validateValue: value => {
-        for (const country in countries) {
-          if (!Object.hasOwnProperty.call(countries, country)) {
-            continue
-          }
-
-          if (country.toLowerCase() === value.toLowerCase()) {
-            return true
-          }
-        }
-
-        return false
-      }
-    },
-
-    zipCode: {
-      label: rightPad('ZIP', 12),
-      validadeKeypress: data => data.trim().length > 0,
-      validateValue: data => data.trim().length > 0
-    },
-
-    state: {
-      label: rightPad('State', 12),
-      validateValue: data => data.trim().length > 0
-    },
-
-    city: {
-      label: rightPad('City', 12),
-      validateValue: data => data.trim().length > 0
-    },
-
-    address1: {
-      label: rightPad('Address', 12),
-      validateValue: data => data.trim().length > 0
     }
   }
 
@@ -137,11 +75,14 @@ module.exports = async function({
       if (!Object.hasOwnProperty.call(state, key)) {
         continue
       }
+
       const piece = state[key]
+
       if (typeof piece === 'string') {
         console.log(piece)
       } else if (typeof piece === 'object') {
         let result
+
         try {
           /* eslint-disable no-await-in-loop */
           result = await textInput({
@@ -179,22 +120,6 @@ module.exports = async function({
             let text = result.split(' / ')
             text = text[0] + chalk.gray(' / ') + text[1]
             process.stdout.write(`${chalk.cyan(tick)} ${piece.label}${text}\n`)
-          } else if (key === 'zipCode') {
-            const stopSpinner = wait(piece.label + result)
-            const addressInfo = await geocode({
-              country: state.country.value,
-              zipCode: result
-            })
-            if (addressInfo.state) {
-              state.state.initialValue = addressInfo.state
-            }
-            if (addressInfo.city) {
-              state.city.initialValue = addressInfo.city
-            }
-            stopSpinner()
-            process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${result}\n`
-            )
           } else {
             process.stdout.write(
               `${chalk.cyan(tick)} ${piece.label}${result}\n`
@@ -209,6 +134,7 @@ module.exports = async function({
         }
       }
     }
+
     console.log('') // New line
     const stopSpinner = wait('Saving card')
 
@@ -217,21 +143,19 @@ module.exports = async function({
         name: state.name.value,
         cardNumber: state.cardNumber.value,
         ccv: state.ccv.value,
-        expDate: state.expDate.value,
-        country: state.country.value,
-        zipCode: state.zipCode.value,
-        state: state.state.value,
-        city: state.city.value,
-        address1: state.address1.value
+        expDate: state.expDate.value
       })
+
       stopSpinner()
+
       if (clear) {
         const linesToClear = state.error ? 15 : 14
         process.stdout.write(ansiEscapes.eraseLines(linesToClear))
       }
+
       console.log(success(
         `${state.cardNumber
-          .brand} ending in ${res.last4} was added to ${chalk.bold(
+          .brand || state.cardNumber.card.brand} ending in ${res.last4 || res.card.last4} was added to ${chalk.bold(
           (currentTeam && currentTeam.slug) || user.username || user.email
         )}`
       ))
