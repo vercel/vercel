@@ -56,21 +56,23 @@ module.exports = class CreditCards extends Now {
       card.exp_year = expDateParts[1]
 
       try {
-        const source = (await stripe.tokens.create({ card })).id
+        const token = (await stripe.tokens.create({ card })).id
 
         const res = await this._fetch('/stripe/sources/', {
           method: 'POST',
-          body: { source }
+          body: {
+            source: token
+          }
         })
 
-        const body = await res.json()
+        const { source, error } = await res.json()
 
-        if (body && body.id) {
+        if (source && source.id) {
           resolve({
-            last4: body.last4
+            last4: source.last4
           })
-        } else if (body.error && body.error.message) {
-          reject(new Error(body.error.message))
+        } else if (error && error.message) {
+          reject(new Error(error.message))
         } else {
           reject(new Error('Unknown error'))
         }
