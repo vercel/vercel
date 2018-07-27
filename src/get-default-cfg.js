@@ -9,7 +9,7 @@ module.exports = async () => {
   let migrated = false
 
   const config = {
-    _: 'This is your Now config file. See `now config help`. More: https://git.io/v5ECz'
+    _: 'This is your Now config file. See `now config help`. More: https://zeit.co/docs/features/configuration#now.json'
   }
 
   try {
