@@ -94,6 +94,12 @@ export type InstancesCount = {
   [dc: string]: number,
 }
 
+export type DeploymentLimits = {
+  maxConcurrentReqs: number,
+  timeout: number,
+  duration: number
+}
+
 export type NpmDeployment = {
   uid: string,
   url: string,
@@ -127,7 +133,8 @@ export type DockerDeployment = {
   creator: { uid: string },
   sessionAffinity: string,
   scale: DeploymentScale,
-  blob?: string
+  limits?: DeploymentLimits,
+  slot?: string
 }
 
 export type Deployment =
