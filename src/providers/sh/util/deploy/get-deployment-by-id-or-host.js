@@ -22,7 +22,7 @@ async function getDeploymentByIdOrHost(now: Now, contextName: string, idOrHost: 
 }
 
 async function getDeploymentById(now: Now, id: string): Promise<{ deployment: Deployment }> {
-  const deployment = await now.fetch(`/v3/now/deployments/${encodeURIComponent(id)}`)
+  const deployment = await now.fetch(`/v4/now/deployments/${encodeURIComponent(id)}`)
   return { deployment }
 }
 
@@ -33,7 +33,7 @@ type DeploymentHostResponse = {
 }
 
 async function getDeploymentByHost(now: Now, host: string): Promise<{ deployment: Deployment }> {
-  const response: DeploymentHostResponse = await now.fetch(`/v3/now/hosts/${encodeURIComponent(host)}?resolve=1`)
+  const response: DeploymentHostResponse = await now.fetch(`/v4/now/hosts/${encodeURIComponent(host)}?resolve=1`)
   return getDeploymentById(now, response.deployment.id)
 }
 
