@@ -9,7 +9,7 @@ module.exports = async () => {
   let migrated = false
 
   const config = {
-    _: 'This is your Now credentials file. DON\'T SHARE! More: https://git.io/v5ECz',
+    _: 'This is your Now credentials file. DON\'T SHARE! More: https://goo.gl/mbf4CZ',
     credentials: []
   }
 
