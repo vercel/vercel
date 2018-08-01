@@ -38,6 +38,7 @@ export type Config = {
   alias?: string[] | string,
   aliases?: string[] | string,
   name?: string,
+  type?: string,
 }
 
 export interface CLIContext {
