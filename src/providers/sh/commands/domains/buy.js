@@ -29,13 +29,13 @@ export default async function buy(ctx: CLIContext, opts: CLIDomainsOptions, args
   const domainName = args[0]
 
   if (!domainName) {
-    output.error(`Missing domain name. Run ${cmd('now domains help')}`)
+    output.error(`Missing domain name. Run ${cmd('now domains --help')}`)
     return 1
   }
 
   const {domain: rootDomain, subdomain} = psl.parse(domainName)
   if (subdomain || !rootDomain) {
-    output.error(`Invalid domain name "${domainName}". Run ${cmd('now domains help')}`)
+    output.error(`Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`)
     return 1
   }
 
