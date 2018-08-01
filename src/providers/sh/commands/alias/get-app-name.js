@@ -14,7 +14,7 @@ async function getAppName(output: Output, localConfig?: string) {
   }
 
   // Otherwise try to get it from the package
-  if (!(config instanceof NowError) && config.type === "npm") {
+  if (!(config instanceof NowError) && config.type && config.type === "npm") {
     const pkg = await readPackage()
     if (!(pkg instanceof NowError) && pkg) {
       return pkg.name
