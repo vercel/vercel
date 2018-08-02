@@ -218,7 +218,6 @@ module.exports = class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
-        console.log(body)
         let msg = 'You have been creating deployments at a very fast pace. '
 
         if (body.error && body.error.limit && body.error.limit.reset) {
