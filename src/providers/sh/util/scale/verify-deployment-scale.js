@@ -20,7 +20,7 @@ async function* verifyDeploymentScale(
   options: Options = {}
 ): AsyncGenerator<[string, number] | VerifyScaleTimeout, void, void> {
   const { timeout = ms('3m') } = options
-  const { pollingInterval = 1000 } = options
+  const { pollingInterval = 5000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
   const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId, uuid())
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
