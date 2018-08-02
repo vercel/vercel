@@ -11,6 +11,7 @@ const chalk = require('chalk')
 const retry = require('async-retry')
 const { parse: parseIni } = require('ini')
 const { createReadStream, readFile, stat, lstat } = require('fs-extra')
+const ms = require('ms')
 
 // Utilities
 const {
@@ -217,8 +218,17 @@ module.exports = class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
-        let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-        msg += `Please run ${cmd('now upgrade')} to proceed`
+        let msg = 'You have been creating deployments at a very fast pace. '
+
+        if (body.error && body.error.limit && body.error.limit.reset) {
+          const {reset} = body.error.limit
+          const difference = (reset * 1000) - Date.now()
+
+          msg += `Please retry in ${ms(difference, { long: true })}.`
+        } else {
+          msg += 'Please slow down.'
+        }
+
         const err = new Error(msg)
 
         err.status = res.status
