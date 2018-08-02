@@ -217,9 +217,7 @@ module.exports = class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
-        let msg = `You reached your 20 deployments limit in the OSS plan.\n`
-        msg += `Please run ${cmd('now upgrade')} to proceed`
-        const err = new Error(msg)
+        const err = new Error('You have been creating deployments in a very fast pace. Please slow down.')
 
         err.status = res.status
         err.retryAfter = 'never'
