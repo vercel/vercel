@@ -401,10 +401,12 @@ const main = async (argv_) => {
     Object.assign(ctx.config, localConfig)
   }
 
-  // If no credentials are set at all, prompt for
-  // login to the .sh provider
+  const credentialsIndex = authConfig.credentials.findIndex(
+    cred => cred.provider === providerName
+  )
+  // If no credentials are set for the current provider, prompt for login
   if (
-    !authConfig.credentials.length &&
+    credentialsIndex === -1 &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !argv['--token'] &&
     subcommand !== 'login'
@@ -455,14 +457,14 @@ const main = async (argv_) => {
       token
     }
 
-    const credentialsIndex = ctx.authConfig.credentials.findIndex(
+    const shCredentialsIndex = ctx.authConfig.credentials.findIndex(
       cred => cred.provider === 'sh'
     )
 
-    if (credentialsIndex === -1) {
+    if (shCredentialsIndex === -1) {
       ctx.authConfig.credentials.push(obj)
     } else {
-      ctx.authConfig.credentials[credentialsIndex] = obj
+      ctx.authConfig.credentials[shCredentialsIndex] = obj
     }
 
     let user
