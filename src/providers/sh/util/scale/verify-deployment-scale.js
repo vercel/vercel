@@ -2,6 +2,7 @@
 import ms from 'ms'
 import uuid from '../../util/uuid'
 import createPollingFn from '../../../../util/create-polling-fn'
+import returnify from '../../../../util/returnify-async-generator.js'
 import { Output, Now } from '../types'
 import { VerifyScaleTimeout } from '../errors'
 import getDeploymentInstances from '../deploy/get-deployment-instances'
@@ -22,31 +23,41 @@ async function* verifyDeploymentScale(
   const { timeout = ms('3m') } = options
   const { pollingInterval = 5000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
-  const pollDeploymentInstances = getPollDeploymentInstances(now, deploymentId, uuid())
+  const pollDeploymentInstances = returnify(getPollDeploymentInstances(now, deploymentId, uuid()))
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
   const targetInstancesCount = getTargetInstancesCountForScale(scale)
   const startTime = Date.now()
   output.debug(`Verifying scale minimum presets to ${JSON.stringify(targetInstancesCount)}`)
 
-  for await (const instances of pollDeploymentInstances) {
+  for await (const [err, instances] of pollDeploymentInstances) {
     if (Date.now() - startTime > timeout) {
       yield new VerifyScaleTimeout(timeout)
       break
     }
 
-    // For each instance we update the current count and yield a match if ready
-    for (const dc of Object.keys(instances)) {
-      if (instances[dc].instances.length > currentInstancesCount[dc]) {
-        currentInstancesCount[dc] = instances[dc].instances.length
-        if (currentInstancesCount[dc] >= targetInstancesCount[dc]) {
-          yield [dc, currentInstancesCount[dc]]
+    if (err) {
+      // These ResponseErrors aren't typed yet :(
+      // $FlowFixMe
+      if (err.status === 412) {
+        continue;
+      } else {
+        throw err
+      }
+    } else if (instances) { // HACK because of https://github.com/facebook/flow/issues/6676
+      // For each instance we update the current count and yield a match if ready
+      for (const dc of Object.keys(instances)) {
+        if (instances[dc].instances.length > currentInstancesCount[dc]) {
+          currentInstancesCount[dc] = instances[dc].instances.length
+          if (currentInstancesCount[dc] >= targetInstancesCount[dc]) {
+            yield [dc, currentInstancesCount[dc]]
+          }
         }
       }
-    }
 
-    // If all dcs are matched, finish the generator
-    if (allDcsMatched(targetInstancesCount, currentInstancesCount)) {
-      break
+      // If all dcs are matched, finish the generator
+      if (allDcsMatched(targetInstancesCount, currentInstancesCount)) {
+        break
+      }
     }
   }
 }
