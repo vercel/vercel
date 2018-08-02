@@ -217,7 +217,7 @@ module.exports = class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
-        const err = new Error('You have been creating deployments in a very fast pace. Please slow down.')
+        const err = new Error('You have been creating deployments at a very fast pace. Please slow down.')
 
         err.status = res.status
         err.retryAfter = 'never'
