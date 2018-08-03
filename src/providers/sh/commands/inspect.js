@@ -116,6 +116,7 @@ module.exports = async function main (ctx: any): Promise<number> {
   print(`    ${chalk.dim('name')}\t${deployment.name}\n`)
   print(`    ${chalk.dim('state')}\t${stateString(deployment.state)}\n`)
   print(`    ${chalk.dim('type')}\t${deployment.type}\n`)
+  print(`    ${chalk.dim('affinity')}\t${deployment.sessionAffinity}\n`)
   print(`    ${chalk.dim('url')}\t\t${deployment.url}\n`)
   print(`    ${chalk.dim('created')}\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
 
