@@ -2779,6 +2779,10 @@ eslint@4.7.2:
     table "^4.0.1"
     text-table "~0.2.0"
 
+esm@3.0.51:
+  version "3.0.51"
+  resolved "https://registry.yarnpkg.com/esm/-/esm-3.0.51.tgz#35c3bcd0237867ab09020728135bfdb91ec79c90"
+
 espower-location-detector@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/espower-location-detector/-/espower-location-detector-1.0.0.tgz#a17b7ecc59d30e179e2bef73fb4137704cb331b5"
@@ -5862,6 +5866,12 @@ shebang-loader@0.0.1:
 shebang-regex@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-1.0.0.tgz#da42f49740c0b42db2ca9728571cb190c98efea3"
+
+shiksha@zeit/shiksha:
+  version "1.0.0"
+  resolved "git+ssh://git@github.com/zeit/shiksha.git#4aa3b3b85d5df5b390ecb356d4c64406686dab11"
+  dependencies:
+    esm "3.0.51"
 
 signal-exit@^3.0.0, signal-exit@^3.0.2:
   version "3.0.2"
