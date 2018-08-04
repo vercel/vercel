@@ -5,7 +5,7 @@ import createPollingFn from '../../../../util/create-polling-fn'
 import type { StateChangeEvent } from '../types'
 import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw'
 
-const POLLING_INTERVAL = 1000
+const POLLING_INTERVAL = 5000
 
 async function* getStatusChangeFromPolling(
   now: Now,
