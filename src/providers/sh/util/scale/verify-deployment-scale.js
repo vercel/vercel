@@ -21,9 +21,9 @@ async function* verifyDeploymentScale(
   options: Options = {}
 ): AsyncGenerator<[string, number] | VerifyScaleTimeout, void, void> {
   const { timeout = ms('3m') } = options
-  const { pollingInterval = 5000 } = options
+  const { pollingInterval = 2000 } = options
   const getPollDeploymentInstances = createPollingFn(getDeploymentInstances, pollingInterval)
-  const pollDeploymentInstances = returnify(getPollDeploymentInstances(now, deploymentId, uuid()))
+  const pollDeploymentInstances = returnify(getPollDeploymentInstances.bind({}, now, deploymentId, uuid()))
   const currentInstancesCount = getInitialInstancesCountForScale(scale)
   const targetInstancesCount = getTargetInstancesCountForScale(scale)
   const startTime = Date.now()
@@ -38,9 +38,7 @@ async function* verifyDeploymentScale(
     if (err) {
       // These ResponseErrors aren't typed yet :(
       // $FlowFixMe
-      if (err.status === 412) {
-        continue;
-      } else {
+      if (err.status !== 'not_ready') {
         throw err
       }
     } else if (instances) { // HACK because of https://github.com/facebook/flow/issues/6676
