@@ -38,7 +38,7 @@ async function* verifyDeploymentScale(
     if (err) {
       // These ResponseErrors aren't typed yet :(
       // $FlowFixMe
-      if (err.status !== 412) {
+      if (err.status !== 'not_ready') {
         throw err
       }
     } else if (instances) { // HACK because of https://github.com/facebook/flow/issues/6676
