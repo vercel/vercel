@@ -102,6 +102,9 @@ const deploy = async ({
 
   // initialize aws client
   const aws = getAWS(authConfig)
+  if (aws.config.error) {
+    return 1
+  }
   const region = aws.config.region || 'us-west-1'
 
   console.log(
