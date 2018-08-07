@@ -105,17 +105,17 @@ function sort(sortOption: ?string) {
   }
 }
 
-// sorts by most recent alias url
+// sort by alias url, ascending
 function sortByAlias() {
   return (a, b) => a.alias.localeCompare(b.alias)
 }
 
-// sorts by most recent source url
+// sorts by source url, ascending
 function sortBySource() {
   return (a, b) => a.deployment.url.localeCompare(b.deployment.url)
 }
 
-// sorts by most recent alias
+// sorts by most recent alias, new first
 function sortByAge() {
   return (a, b) => new Date(b.created) - new Date(a.created)
 }
