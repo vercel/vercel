@@ -57,7 +57,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
     output.error(
       `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
       `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-        'now domain add ' + (opts['--external'] ? '-e' : '') + domain
+        'now domain add ' + (opts['--external'] ? '-e ' : '') + domain
       )}`
     )
     return 1;
