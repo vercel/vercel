@@ -89,7 +89,7 @@ const COMMAND_CONFIG = {
   default: 'set',
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
-  set: ['set'],
+  set: ['set']
 }
 
 module.exports = async function main(ctx: any): Promise<number> {
@@ -100,29 +100,31 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--json': Boolean,
       '--no-verify': Boolean,
       '--rules': String,
+      '--sort': String,
       '--yes': Boolean,
       '-n': '--no-verify',
       '-r': '--rules',
       '-y': '--yes',
+      '-s': '--sort'
     })
   } catch (err) {
     handleError(err)
-    return 1;
+    return 1
   }
 
   if (argv['--help']) {
     help()
-    return 2;
+    return 2
   }
 
   const output: Output = createOutput({ debug: argv['--debug'] })
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
   switch (subcommand) {
     case 'ls':
-      return ls(ctx, argv, args, output);
+      return ls(ctx, argv, args, output)
     case 'rm':
-      return rm(ctx, argv, args, output);
+      return rm(ctx, argv, args, output)
     default:
-      return set(ctx, argv, args, output);
+      return set(ctx, argv, args, output)
   }
 }

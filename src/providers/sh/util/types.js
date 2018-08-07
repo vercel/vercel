@@ -378,6 +378,7 @@ export type CLIOptions<T> = {
   '--local-config'?: string,
   '--global-config'?: string,
   '--api'?: string,
+  '--sort'?: string
 } & T
 
 export type CLIAliasOptions = CLIOptions<{
@@ -385,6 +386,7 @@ export type CLIAliasOptions = CLIOptions<{
   '--no-verify': boolean,
   '--rules': string,
   '--yes': boolean,
+  '--sort': string
 }>
 
 export type CLICertsOptions = CLIOptions<{
