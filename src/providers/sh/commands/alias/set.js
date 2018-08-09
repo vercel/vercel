@@ -209,7 +209,7 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
     output.error(`Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(error.meta.context)}`)
     return 1
   } else if (error instanceof Errors.InvalidAlias ) {
-    output.error(`Invalid alias. Nested domains are not supported.`)
+    output.error(`Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: Nested domains are not supported.`)
     return 1
   } else if (error instanceof Errors.DomainPermissionDenied) {
     output.error(`No permission to access domain ${chalk.underline(error.meta.domain)} under ${chalk.bold(error.meta.context)}`)
