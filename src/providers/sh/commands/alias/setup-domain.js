@@ -32,7 +32,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       )
 
       const domainPointsToZeitWorld = nameservers.every(ns => ns.endsWith('.zeit.world'));
-      const verified = await verifyDomain(now, alias, contextName, { isExternal: !domainPointsToZeitWorld })
+      const verified = await verifyDomain(now, domain, contextName, { isExternal: !domainPointsToZeitWorld })
       if (
         (verified instanceof Errors.DomainNotVerified) ||
         (verified instanceof Errors.DomainPermissionDenied) ||
