@@ -16,7 +16,7 @@ import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host
 import getDeploymentByIdOrThrow from '../util/deploy/get-deployment-by-id-or-throw'
 import getMaxFromArgs from '../util/scale/get-max-from-args'
 import getMinFromArgs from '../util/scale/get-min-from-args'
-import setDeploymentScale from '../util/scale/set-deployment-scale'
+import patchDeploymentScale from '../util/scale/patch-deployment-scale'
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale'
 import type { CLIScaleOptions, DeploymentScaleArgs } from '../util/types'
 import { CLIContext, Output } from '../util/types'
@@ -167,7 +167,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
 
   // Set the deployment scale
   const scaleStamp = stamp()
-  const result = await setDeploymentScale(output, now, deployment.uid, scaleArgs)
+  const result = await patchDeploymentScale(output, now, deployment.uid, scaleArgs)
   if (result instanceof Errors.ForbiddenScaleMinInstances) {
     output.error(`You can't scale to more than ${result.meta.max} min instances with your current plan.`)
     now.close();
