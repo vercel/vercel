@@ -31,10 +31,16 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC' && deployment.type !== 'STATIC') {
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
       const scaleStamp = stamp()
-      const result = await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale)
-      if (result instanceof Errors.NotSupportedMinScaleSlots) {
-        return new Errors.IncompatibleScaleSettings(prevDeployment.url);
+      const result = await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale, deployment.url)
+      if (
+        result instanceof Errors.NotSupportedMinScaleSlots ||
+        result instanceof Errors.ForbiddenScaleMinInstances ||
+        result instanceof Errors.ForbiddenScaleMaxInstances ||
+        result instanceof Errors.InvalidScaleMinMaxRelation
+      ) {
+        return result;
       }
+
       output.log(`Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`);
       if (!noVerify) {
         const result = await waitForScale(output, now, deployment.uid, prevDeployment.scale)
@@ -94,7 +100,7 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
   // Downscale if the previous deployment is not static and doesn't have the minimal presets
   if (prevDeployment !== null && prevDeployment.type !== 'STATIC') {
     if (await deploymentShouldDownscale(output, now, prevDeployment)) {
-      await setDeploymentScale(output, now, prevDeployment.uid, getDeploymentDownscalePresets(prevDeployment))
+      await setDeploymentScale(output, now, prevDeployment.uid, getDeploymentDownscalePresets(prevDeployment), prevDeployment.url)
       output.log(`Previous deployment ${prevDeployment.url} downscaled`);
     }
   }

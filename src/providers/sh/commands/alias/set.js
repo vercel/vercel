@@ -193,9 +193,12 @@ type CreateAliasError =
   Errors.DomainPermissionDenied |
   Errors.DomainsShouldShareRoot |
   Errors.DomainValidationRunning |
-  Errors.IncompatibleScaleSettings |
+  Errors.ForbiddenScaleMaxInstances |
+  Errors.ForbiddenScaleMinInstances |
   Errors.InvalidAlias |
+  Errors.InvalidScaleMinMaxRelation |
   Errors.InvalidWildcardDomain |
+  Errors.NotSupportedMinScaleSlots |
   Errors.RuleValidationFailed |
   Errors.TooManyCertificates |
   Errors.TooManyRequests |
@@ -267,11 +270,24 @@ function handleCreateAliasErrorImpl<OtherError>(output: Output, error: CreateAli
   } else if (error instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`)
     return 1
-  }  else if (error instanceof Errors.IncompatibleScaleSettings) {
-    output.error(`Scale rules from previous alias ${chalk.dim(error.meta.alias)} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${chalk.dim(error.meta.alias)} with \`now scale\` and try again`)
+  }  else if (error instanceof Errors.NotSupportedMinScaleSlots) {
+    output.error(`Scale rules from previous aliased deployment ${chalk.dim(error.meta.url)} could not be copied since Cloud v2 deployments cannot have a non-zero min`);
+    output.log(`Update the scale settings on ${chalk.dim(error.meta.url)} with \`now scale\` and try again`)
     output.log('Read more: https://err.sh/now-cli/v2-no-min')
     return 1;
+  }  else if (error instanceof Errors.ForbiddenScaleMaxInstances) {
+    output.error(`Scale rules from previous aliased deployment ${chalk.dim(error.meta.url)} could not be copied since the given number of max instances (${error.meta.max}) is not allowed.`);
+    output.log(`Update the scale settings on ${chalk.dim(error.meta.url)} with \`now scale\` and try again`)
+    return 1;
+  }  else if (error instanceof Errors.ForbiddenScaleMinInstances) {
+    output.error(`Scale rules from previous aliased deployment ${chalk.dim(error.meta.url)} could not be copied since the given number of min instances (${error.meta.min}) is not allowed.`);
+    output.log(`Update the scale settings on ${chalk.dim(error.meta.url)} with \`now scale\` and try again`)
+    return 1;
+  }  else if (error instanceof Errors.InvalidScaleMinMaxRelation) {
+    output.error(`Scale rules from previous aliased deployment ${chalk.dim(error.meta.url)} could not be copied becuase the relation between min and max instances is wrong.`);
+    output.log(`Update the scale settings on ${chalk.dim(error.meta.url)} with \`now scale\` and try again`)
+    return 1;
   } else {
-    return error
+    return error;
   }
 }

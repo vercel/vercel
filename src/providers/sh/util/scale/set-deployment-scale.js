@@ -6,7 +6,7 @@ import { Output, Now } from '../../util/types'
 import type { DeploymentScaleArgs, DeploymentScale } from '../../util/types'
 import * as Errors from '../errors';
 
-async function setScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScaleArgs | DeploymentScale) {
+async function setScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScaleArgs | DeploymentScale, url: string) {
   const cancelWait = wait(`Setting scale rules for ${joinWords(
     Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
   )}`)
@@ -20,13 +20,13 @@ async function setScale(output: Output, now: Now, deploymentId: string, scaleArg
   } catch (error) {
     cancelWait()
     if (error.code === 'forbidden_min_instances') {
-      return new Errors.ForbiddenScaleMinInstances(error.max)
+      return new Errors.ForbiddenScaleMinInstances(url, error.min)
     } else if (error.code === 'forbidden_max_instances') {
-      return new Errors.ForbiddenScaleMaxInstances(error.max)
+      return new Errors.ForbiddenScaleMaxInstances(url, error.max)
     } else if (error.code === 'wrong_min_max_relation') {
-      return new Errors.InvalidScaleMinMaxRelation()
+      return new Errors.InvalidScaleMinMaxRelation(url)
     } else if (error.code === 'not_supported_min_scale_slots') {
-      return new Errors.NotSupportedMinScaleSlots()
+      return new Errors.NotSupportedMinScaleSlots(url)
     } else {
       throw error
     }
