@@ -32,13 +32,12 @@ async function assignAlias(output: Output, now: Now, deployment: Deployment, ali
     if (deploymentShouldCopyScale(prevDeployment, deployment)) {
       const scaleStamp = stamp()
       const result = await setDeploymentScale(output, now, deployment.uid, prevDeployment.scale, deployment.url)
-      if (result instanceof Errors.NotSupportedMinScaleSlots) {
-        return result;
-      } else if (result instanceof Errors.ForbiddenScaleMinInstances) {
-        return result;
-      } else if (result instanceof Errors.ForbiddenScaleMaxInstances) {
-        return result;
-      } else if (result instanceof Errors.InvalidScaleMinMaxRelation) {
+      if (
+        result instanceof Errors.NotSupportedMinScaleSlots ||
+        result instanceof Errors.ForbiddenScaleMinInstances ||
+        result instanceof Errors.ForbiddenScaleMaxInstances ||
+        result instanceof Errors.InvalidScaleMinMaxRelation
+      ) {
         return result;
       }
 
