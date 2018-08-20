@@ -6,14 +6,14 @@ import { Output, Now } from '../../util/types'
 import type { DeploymentScaleArgs, DeploymentScale } from '../../util/types'
 import * as Errors from '../errors';
 
-async function setScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScaleArgs | DeploymentScale) {
+async function patchDeploymentScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScaleArgs | DeploymentScale) {
   const cancelWait = wait(`Setting scale rules for ${joinWords(
     Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
   )}`)
 
   try {
     await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: scaleArgs
     })
     cancelWait()
@@ -33,4 +33,4 @@ async function setScale(output: Output, now: Now, deploymentId: string, scaleArg
   }
 }
 
-export default setScale
+export default patchDeploymentScale
