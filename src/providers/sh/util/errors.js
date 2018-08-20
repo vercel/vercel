@@ -37,16 +37,6 @@ export class InvalidAlias extends NowError<'INVALID_ALIAS', {alias: string}> {
   }
 }
 
-export class IncompatibleScaleSettings extends NowError<'INCOMPATIBLE_SCALE_SETTINGS', {alias: string}> {
-  constructor(alias: string) {
-    super({
-      code: 'INCOMPATIBLE_SCALE_SETTINGS',
-      meta: { alias },
-      message: `Scale rules from previous alias ${alias} could not be copied since Cloud v2 deployments cannot have a non-zero min. Update the scale settings on ${alias} with \`now scale\` and try again.`
-    })
-  }
-}
-
 export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   constructor() {
     super({
@@ -393,41 +383,41 @@ export class InvalidArgsForMinMaxScale extends NowError<'INVALID_ARGS_FOR_MIN_MA
   }
 }
 
-export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_INSTANCES', { max: number }> {
-  constructor(max: number) {
+export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_INSTANCES', { url: string, min: number }> {
+  constructor(url: string, min: number) {
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
-      meta: { max },
-      message: `You can't scale to more than ${max} min instances with your current plan.`
+      meta: { url, min },
+      message: `You can't scale to more than ${min} min instances with your current plan.`
     })
   }
 }
 
-export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_INSTANCES', { max: number }> {
-  constructor(max: number) {
+export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_INSTANCES', { url: string, max: number }> {
+  constructor(url: string, max: number) {
     super({
       code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
-      meta: { max },
+      meta: { url, max },
       message: `You can't scale to more than ${max} max instances with your current plan.`
     })
   }
 }
 
-export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_RELATION', {}> {
-  constructor() {
+export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_RELATION', {url: string}> {
+  constructor(url: string) {
     super({
       code: 'INVALID_SCALE_MIN_MAX_RELATION',
-      meta: {},
+      meta: {url},
       message: `Min number of instances can't be higher than max.`
     })
   }
 }
 
-export class NotSupportedMinScaleSlots extends NowError<'NOT_SUPPORTED_MIN_SCALE_SLOTS', {}> {
-  constructor() {
+export class NotSupportedMinScaleSlots extends NowError<'NOT_SUPPORTED_MIN_SCALE_SLOTS', {url: string}> {
+  constructor(url: string) {
     super({
       code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
-      meta: {},
+      meta: {url},
       message: `Cloud v2 does not yet support setting a non-zero min scale setting.`
     })
   }

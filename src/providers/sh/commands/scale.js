@@ -167,7 +167,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
 
   // Set the deployment scale
   const scaleStamp = stamp()
-  const result = await patchDeploymentScale(output, now, deployment.uid, scaleArgs)
+  const result = await patchDeploymentScale(output, now, deployment.uid, scaleArgs, deployment.url)
   if (result instanceof Errors.ForbiddenScaleMinInstances) {
     output.error(`You can't scale to more than ${result.meta.max} min instances with your current plan.`)
     now.close();
