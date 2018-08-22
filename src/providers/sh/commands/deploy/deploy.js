@@ -100,8 +100,8 @@ const help = () => {
     ${chalk.dim('Cloud')}
 
       deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
-      ls | list            [app]       List deployments
-      rm | remove          [id]        Remove a deployment
+      ls | list            [app]       Lists deployments
+      rm | remove          [id]        Removes a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
       domains              [name]      Manages your domain names
       certs                [cmd]       Manages your SSL certificates
@@ -117,8 +117,8 @@ const help = () => {
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
       teams                [team]      Manages your teams
       switch                           Switches between teams and your account
-      login                            Login into your account or creates a new one
-      logout                           Logout from your account
+      login                            Logs into your account or creates a new one
+      logout                           Logs out of your account
 
   ${chalk.dim('Options:')}
 
