@@ -16,6 +16,7 @@ and DCs have to be in *lowercase*.
 - `all` (special, used to scale to all DCs, can only appear once)
 - `sfo`
 - `bru`
+- `gru`
 
 In `now-cli`, they currently are transformed to `sfo1`
 and `bru1` dc identifiers before being sent to our APIs.
@@ -24,9 +25,10 @@ and `bru1` dc identifiers before being sent to our APIs.
 
 - `sfo1`
 - `bru1`
+- `gru1`
 
 To pass multiple ones, use a comma:
 
 ```
-now scale my-url-123.now.sh sfo,bru 1 5
+now scale my-url-123.now.sh sfo,bru,gru 1 5
 ```

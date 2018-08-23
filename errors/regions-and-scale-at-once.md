@@ -13,7 +13,7 @@ with default scale settings.
 
 ```json
 {
-  "regions": ["sfo", "bru"]
+  "regions": ["sfo", "bru", "gru"]
 }
 ```
 
