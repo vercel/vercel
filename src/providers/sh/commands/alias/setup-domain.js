@@ -90,7 +90,7 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     // verified and from this point we can be sure about its verification
     output.debug(`Domain is known for ZEIT World`)
     if (!info.verified) {
-      const verified = await verifyDomain(now, alias, contextName, { isExternal: info.isExternal })
+      const verified = await verifyDomain(now, domain, contextName, { isExternal: info.isExternal })
       if (
         (verified instanceof Errors.DomainNotVerified) ||
         (verified instanceof Errors.DomainPermissionDenied) ||
