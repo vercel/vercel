@@ -67,7 +67,9 @@ module.exports = async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
+      '--sort': String,
       '-a': '--all',
+      '-s': '--sort'
     })
   } catch (err) {
     handleError(err)
@@ -214,7 +216,7 @@ module.exports = async function main(ctx) {
   console.log(table([
     ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
     ...deployments
-    .sort(sortRecent())
+    .sort(sort(argv['--sort']))
     .map(dep => (
       [
         [
@@ -273,11 +275,87 @@ function stateString(s: string) {
   }
 }
 
-// sorts by most recent deployment
-function sortRecent() {
-  return function recencySort(a, b) {
-    return b.created - a.created;
+// sorting alias based on options
+function sort(sortOption: ?string) {
+  console.info(sortOption)
+  switch (sortOption) {
+    case 'app':
+      return sortByAppName()
+    case 'url':
+      return sortBySource()
+    case 'inst':
+      return sortByInstanceCount()
+    case 'inst #':
+      return sortByInstanceCount()
+    case 'type':
+      return sortByType()
+    case 'state':
+      return sortByState()
+    case 'age':
+      return sortByAge()
+    default:
+      return sortByAge()
   }
+}
+
+// sort by app name ascending
+function sortByAppName() {
+  return (a, b) => a.name.localeCompare(b.name)
+}
+
+// sort by source url ascending
+function sortBySource() {
+  return (a, b) => a.url.localeCompare(b.url)
+}
+
+// sort by count of instances
+// descending, with static deployments last
+function sortByInstanceCount() {
+  return (a, b) => {
+    if (a.instanceCount === b.instanceCount)
+      return 0;
+    else if (a.instanceCount === null)
+      return 1;
+    else if (b.instanceCount === null)
+      return -1;
+    else
+      return b.instanceCount - a.instanceCount
+  }
+}
+
+// sort by type of deployment
+// docker first, then npm followed by static
+function sortByType() {
+  return (a, b) => a.type.localeCompare(b.type)
+}
+
+// sort by state
+// priority:
+// 1. ERROR
+// 2. READY
+// 3. FREEZE
+function sortByState() {
+  return (a, b) => {
+    const weightHandler = state => {
+      switch (state) {
+        case 'ERROR':
+          return 3
+        case 'READY':
+          return 2
+        case 'FREEZE':
+          return 1
+        default:
+          return 0
+      }
+    }
+
+    return (weightHandler(a.state) - weightHandler(b.state))
+  }
+}
+
+// sort by age
+function sortByAge() {
+  return (a, b) => b.created - a.created
 }
 
 // filters only one deployment per app, so that

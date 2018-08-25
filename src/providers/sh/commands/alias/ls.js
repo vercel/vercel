@@ -19,6 +19,7 @@ export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: s
   const { apiUrl } = ctx;
   const contextName = getContextName(sh);
   const {['--debug']: debugEnabled} = opts;
+  const {['--sort']: sortOption} = opts;
 
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
@@ -57,13 +58,43 @@ export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: s
       output.print(`${printPathAliasTable(rules)}\n`)
     }
   } else {
-    aliases.sort((a, b) => new Date(b.created) - new Date(a.created))
+    aliases.sort(sort(sortOption))
     output.log(`${plural('alias', aliases.length, true)} found under ${chalk.bold(contextName)} ${lsStamp()}`)
     console.log(printAliasTable(aliases))
   }
 
   now.close()
   return 0
+}
+
+// sorting alias based on options
+function sort(sortOption: ?string) {
+  console.info(sortOption)
+  switch (sortOption) {
+    case 'source':
+      return sortBySource()
+    case 'url':
+      return sortByAlias()
+    case 'age':
+      return sortByAge()
+    default:
+      return sortByAge()
+  }
+}
+
+// sort by alias url, ascending
+function sortByAlias() {
+  return (a, b) => a.alias.localeCompare(b.alias)
+}
+
+// sorts by source url, ascending
+function sortBySource() {
+  return (a, b) => a.deployment.url.localeCompare(b.deployment.url)
+}
+
+// sorts by most recent alias, new first
+function sortByAge() {
+  return (a, b) => new Date(b.created) - new Date(a.created)
 }
 
 function printAliasTable(aliases: Alias[]): string {

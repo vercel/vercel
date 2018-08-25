@@ -100,10 +100,12 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--json': Boolean,
       '--no-verify': Boolean,
       '--rules': String,
+      '--sort': String,
       '--yes': Boolean,
       '-n': '--no-verify',
       '-r': '--rules',
       '-y': '--yes',
+      '-s': '--sort',
     })
   } catch (err) {
     handleError(err)
