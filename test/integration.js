@@ -340,8 +340,8 @@ test('scale the alias', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.alias,
+    'bru',
     '1',
-    'bru,sfo',
     ...defaultArgs
   ], {
     reject: false
