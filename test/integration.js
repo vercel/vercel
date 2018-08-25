@@ -340,11 +340,14 @@ test('scale the alias', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.alias,
+    'bru',
     '1',
     ...defaultArgs
   ], {
     reject: false
   })
+
+  console.log(stdout, code)
 
   t.is(code, 0)
   t.true(stdout.includes(`(min: 1, max: 1)`))
@@ -371,6 +374,7 @@ test('scale down the deployment directly', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.deployment,
+    'bru',
     '0',
     ...defaultArgs
   ], {

@@ -16,6 +16,7 @@ and DCs have to be in *lowercase*.
 - `all` (special, used to scale to all DCs, can only appear once)
 - `sfo`
 - `bru`
+- `gru`
 
 In `now-cli`, they currently are transformed to `sfo1`
 and `bru1` dc identifiers before being sent to our APIs.
@@ -24,10 +25,11 @@ and `bru1` dc identifiers before being sent to our APIs.
 
 - `sfo1`
 - `bru1`
+- `gru1`
 
 When passing multiple `--regions` as a CLI parameter,
 make sure they're separated by a comma (`,`). For example:
 
 ```console
-now --regions sfo,bru
+now --regions sfo,bru,gru
 ```

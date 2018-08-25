@@ -258,7 +258,7 @@ type GenericEvent<T, P> = {
 }
 
 export type StateChangeEvent = GenericEvent<'state-change', {
-  dc?: 'sfo1' | 'bru1',
+  dc?: 'sfo1' | 'bru1' | 'gru1',
   value: 'INITIALIZING' | 'READY' | 'ERROR' | 'FROZEN'
 }>
 
@@ -266,21 +266,21 @@ export type BuildStartEvent = GenericEvent<'build-start', {
 }>
 
 export type BuildCompleteEvent = GenericEvent<'build-complete', {
-  dc: 'sfo1' | 'bru1'
+  dc: 'sfo1' | 'bru1' | 'gru1'
 }>
 
 export type InstanceStartEvent = GenericEvent<'instance-start', {
-  dc: 'sfo1' | 'bru1',
+  dc: 'sfo1' | 'bru1' | 'gru1',
   billingId: string
 }>
 
 export type InstanceStopEvent = GenericEvent<'instance-stop', {
-  dc: 'sfo1' | 'bru1',
+  dc: 'sfo1' | 'bru1' | 'gru1',
   billingId: string
 }>
 
 export type AliasSetEvent = GenericEvent<'alias-add', {
-  dc: 'sfo1' | 'bru1',
+  dc: 'sfo1' | 'bru1' | 'gru1',
   billingId: string,
   aliasId: string,
   alias: string,
