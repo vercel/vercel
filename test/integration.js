@@ -341,6 +341,7 @@ test('scale the alias', async t => {
     'scale',
     context.alias,
     '1',
+    'bru,sfo',
     ...defaultArgs
   ], {
     reject: false
