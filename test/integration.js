@@ -341,12 +341,13 @@ test('scale the alias', async t => {
     'scale',
     context.alias,
     '1',
-    '--regions',
     'bru,sfo',
     ...defaultArgs
   ], {
     reject: false
   })
+
+  console.log(stdout, code)
 
   t.is(code, 0)
   t.true(stdout.includes(`(min: 1, max: 1)`))
