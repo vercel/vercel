@@ -374,6 +374,7 @@ test('scale down the deployment directly', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'scale',
     context.deployment,
+    'bru',
     '0',
     ...defaultArgs
   ], {
