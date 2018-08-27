@@ -1,8 +1,8 @@
 // @flow
 import { REGION_TO_DC } from './constants'
-import type { RegionToDC } from './constants'
+import type { DC } from './constants'
 
-function regionOrDCToDC(regionOrDC: string): $Values<RegionToDC> | void {
+function regionOrDCToDC(regionOrDC: string): $Values<DC> | void {
   const allDcs = Object.keys(REGION_TO_DC).map(key => REGION_TO_DC[key])
   if (Object.keys(REGION_TO_DC).includes(regionOrDC)) {
     return REGION_TO_DC[regionOrDC]
