@@ -1,25 +1,24 @@
 // @flow
-import { REGION_TO_DC } from './constants'
 import { InvalidRegionOrDCForScale, InvalidAllForScale } from '../errors'
 import regionOrDCToDC from './region-or-dc-to-dc'
-import type { RegionToDC } from './constants'
+import type { DC } from './constants'
 
-export default function normalizeRegionsList(regionsOrDCs: string[]): InvalidRegionOrDCForScale | InvalidAllForScale | Array<$Values<RegionToDC>> {
-  const allDcs = Object.keys(REGION_TO_DC).map(key => REGION_TO_DC[key])
+export default function normalizeRegionsList(regionsOrDCs: string[]): InvalidRegionOrDCForScale | InvalidAllForScale | Array<$Values<DC>> {
   if (regionsOrDCs.includes('all')) {
-    return regionsOrDCs.length > 1
-      ? new InvalidAllForScale()
-      : allDcs
+    if (regionsOrDCs.length > 1) {
+      return new InvalidAllForScale();
+    }
+
+    return ['all'];
   }
 
-  const dcs: Set<$Values<RegionToDC>> = new Set()
+  const dcs: Set<$Values<DC>> = new Set()
   for (const regionOrDC of regionsOrDCs) {
     const dc = regionOrDCToDC(regionOrDC)
-    if (dc !== undefined) {
-      dcs.add(dc)
-    } else {
+    if (dc === undefined) {
       return new InvalidRegionOrDCForScale(regionOrDC)
     }
+    dcs.add(dc)
   }
 
   return Array.from(dcs)
