@@ -500,7 +500,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         debug(`Forcing \`deploymentType\` = \`static\``)
         deploymentType = 'static'
       }
-    } else if (deploymentType === 'static') {
+    } else if (deploymentType === 'static' && firstRun) {
       debug(`Forcing \`deploymentType\` = \`static\` automatically`)
 
       meta = {
