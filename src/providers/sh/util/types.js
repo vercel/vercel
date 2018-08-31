@@ -200,6 +200,23 @@ export type Certificate = {
   expiration: string
 }
 
+export type CertificateChallenge = {
+  type: 'dns-01',
+  status: 'valid' | 'pending',
+  authorization: string,
+  domain: string,
+  token: string,
+  value: string,
+  url: string
+}
+
+export type CertificateOrder = {
+  challengesToResolve: CertificateChallenge[],
+  domains: string[],
+  finalize: string,
+  createdAt: number
+}
+
 export type Domain = {
   aliases: string[],
   boughtAt?: string,
