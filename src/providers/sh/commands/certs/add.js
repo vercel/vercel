@@ -143,15 +143,18 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     const order = await startCertOrder(now, cns)
     const pendingChallenges = order.challengesToResolve.filter(challenge => challenge.status === 'pending')
 
-    output.log(`An certificate order for ${chalk.bold(cns.join(', '))} has been created ${addStamp()}`)
-    output.print(`  Please, add the following records to solve the DNS challenge:\n\n`)
-    output.print(dnsTable(pendingChallenges.map((challenge) => ([
-      parse(challenge.domain).subdomain ? `_acme-challenge.${parse(challenge.domain).subdomain}` : `_acme-challenge`,
-      'TXT',
-      challenge.value
-    ]))) + `\n\n`)
+    if (pendingChallenges.length > 0) {
+      output.log(`An certificate order for ${chalk.bold(cns.join(', '))} has been created ${addStamp()}`)
+      output.print(`  Please, add the following records to solve the DNS challenge:\n\n`)
+      output.print(dnsTable(pendingChallenges.map((challenge) => ([
+        parse(challenge.domain).subdomain ? `_acme-challenge.${parse(challenge.domain).subdomain}` : `_acme-challenge`,
+        'TXT',
+        challenge.value
+      ]))) + `\n\n`)
 
-    await readConfirmation(output)
+      await readConfirmation(output)
+    }
+
     cert = await finishCertOrder(now, cns, contextName)
     if (cert instanceof Errors.CantSolveChallenge) {
       output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
