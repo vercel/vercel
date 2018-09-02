@@ -1,11 +1,10 @@
 // @flow
-
-import getCerts from './get-certs'
 import { Output, Now } from '../types'
+import type { CertificateDetails } from '../types'
 
 async function getCertById(output: Output, now: Now, id: string) {
-  const certs = await getCerts(output, now)
-  return certs.find(c => c.uid === id)
+  const cert: CertificateDetails = await now.fetch(`/v3/now/certs/${id}`)
+  return cert;
 }
 
 export default getCertById

@@ -200,6 +200,29 @@ export type Certificate = {
   expiration: string
 }
 
+export type CertificateDetails = Certificate & {
+  key: string,
+  ca: string,
+  crt: string
+}
+
+export type CertificateChallenge = {
+  type: 'dns-01',
+  status: 'valid' | 'pending',
+  authorization: string,
+  domain: string,
+  token: string,
+  value: string,
+  url: string
+}
+
+export type CertificateOrder = {
+  challengesToResolve: CertificateChallenge[],
+  domains: string[],
+  finalize: string,
+  createdAt: number
+}
+
 export type Domain = {
   aliases: string[],
   boughtAt?: string,
@@ -388,6 +411,7 @@ export type CLIAliasOptions = CLIOptions<{
 }>
 
 export type CLICertsOptions = CLIOptions<{
+  '--output': string,
   '--overwrite': string,
   '--crt': string,
   '--key': string,

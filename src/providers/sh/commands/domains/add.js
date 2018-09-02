@@ -106,7 +106,7 @@ export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args
         addedDomain.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
           : [addedDomain.meta.subdomain, 'CNAME', 'alias.zeit.co']
-      ], '  ') + '\n');
+      ], {extraSpace: '  '}) + '\n');
       return 1
     } else if (addedDomain instanceof Errors.DomainAlreadyExists) {
       output.error(`The domain exists already`);
