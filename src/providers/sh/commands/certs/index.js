@@ -12,6 +12,8 @@ import type { CLICertsOptions } from '../../util/types'
 import add from './add'
 import ls from './ls'
 import rm from './rm'
+import start from './start'
+import finish from './finish'
 
 const help = () => {
   console.log(`
@@ -24,7 +26,9 @@ const help = () => {
 
     ls                        Show all available certificates
     add        <cn>[, <cn>]   Create a certificate for a domain
-    rm         <id or cn>     Remove an available certificate
+    rm         <id>           Remove a certificate by id
+    start      <cn>[, <cn>]   Start an order to add a certificate
+    finish     <cn>[, <cn>]   Finish an order to add a certificate
 
   ${chalk.dim('Options:')}
 
@@ -69,6 +73,8 @@ const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
   renew: ['renew'],
   rm: ['rm', 'remove'],
+  start: ['start', 'start-order'],
+  finish: ['finish', 'finish-order'],
 }
 
 module.exports = async function main(ctx: any): Promise<number> {
@@ -104,6 +110,10 @@ module.exports = async function main(ctx: any): Promise<number> {
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.')
       return 1
+    case 'start':
+      return start(ctx, argv, args, output)
+    case 'finish':
+      return finish(ctx, argv, args, output)
     default:
       output.error('Please specify a valid subcommand: ls | add | rm')
       help()
