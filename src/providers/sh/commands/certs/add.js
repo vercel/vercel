@@ -2,15 +2,16 @@
 import chalk from 'chalk'
 import ms from 'ms'
 
-import Now from '../../util'
-import getContextName from '../../util/get-context-name'
-import stamp from '../../../../util/output/stamp'
-import wait from '../../../../util/output/wait'
-import dnsTable from '../../util/dns-table'
 import { CLIContext, Output } from '../../util/types'
-import * as Errors from '../../util/errors'
 import { handleDomainConfigurationError } from '../../util/error-handlers'
+import * as Errors from '../../util/errors'
+import dnsTable from '../../util/dns-table'
+import getCnsFromArgs from '../../util/certs/get-cns-from-args'
+import getContextName from '../../util/get-context-name'
+import Now from '../../util'
+import stamp from '../../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
+import wait from '../../../../util/output/wait'
 
 import createCertForCns from '../../util/certs/create-cert-for-cns'
 import createCertFromFile from '../../util/certs/create-cert-from-file'
@@ -71,10 +72,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     return 1
   }
 
-  // Create the certificate from the given array of CNs
-  const cns = args.reduce((res, item) => ([...res, ...item.split(',')]), []).filter(i => i)
-
-
+  const cns = getCnsFromArgs(args)
   const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
   cert = await createCertForCns(now, cns, contextName)
   cancelWait();
