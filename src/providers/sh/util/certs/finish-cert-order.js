@@ -19,6 +19,7 @@ export default async function startCertOrder(now: Now, cns: string[], context: s
     cancelWait()
     return cert
   } catch (error) {
+    cancelWait()
     if (error.code === 'configuration_error') {
       const {domain, subdomain} = psl.parse(error.domain)
       return new Errors.DomainConfigurationError(domain, subdomain, error.external)
