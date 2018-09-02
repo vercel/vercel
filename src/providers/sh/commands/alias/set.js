@@ -143,7 +143,7 @@ function handleSetupDomainErrorImpl<Other>(output: Output, error: SetupDomainErr
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
         : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-    ], '  ') + '\n');
+    ], {extraSpace: '  '}) + '\n');
     return 1
   } else if (error instanceof Errors.DomainPermissionDenied) {
     output.error(`You don't have permissions over domain ${chalk.underline(error.meta.domain)} under ${chalk.bold(error.meta.context)}.`)
