@@ -1,6 +1,4 @@
 // @flow
-import {eraseLines} from 'ansi-escapes'
-import {parse} from 'psl'
 import chalk from 'chalk'
 import ms from 'ms'
 
@@ -16,9 +14,6 @@ import type { CLICertsOptions } from '../../util/types'
 
 import createCertForCns from '../../util/certs/create-cert-for-cns'
 import createCertFromFile from '../../util/certs/create-cert-from-file'
-import getDomainNameservers from '../../util/domains/get-domain-nameservers'
-import finishCertOrder from '../../util/certs/finish-cert-order'
-import startCertOrder from '../../util/certs/start-cert-order'
 
 async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx
@@ -78,136 +73,51 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
 
   // Create the certificate from the given array of CNs
   const cns = args.reduce((res, item) => ([...res, ...item.split(',')]), []).filter(i => i)
-  const {domain} = parse(cns[0]);
-  const nameservers = await getDomainNameservers(now, domain)
-  if ((nameservers instanceof Errors.DomainNameserversNotFound)) {
-    output.error(`Can't find nameservers for the domain ${domain}.`)
+
+
+  const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
+  cert = await createCertForCns(now, cns, contextName)
+  cancelWait();
+  if (cert instanceof Errors.CantSolveChallenge) {
+    output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
+    if (cert.meta.type === 'dns-01') {
+      output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
+    } else {
+      output.error(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
+      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+    }
+    return 1
+  } else if (cert instanceof Errors.TooManyRequests) {
+    output.error(`Too many requests detected for ${cert.meta.api} API. Try again in ${ms(cert.meta.retryAfter * 1000, { long: true })}.`)
+    return 1
+  } else if (cert instanceof Errors.TooManyCertificates) {
+    output.error(`Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(', ')}`)
+    return 1
+  } else if (cert instanceof Errors.DomainValidationRunning) {
+    output.error(`There is a validation in course for ${chalk.underline(cert.meta.domain)}. Wait until it finishes.`)
+    return 1
+  } else if (cert instanceof Errors.DomainConfigurationError) {
+    handleDomainConfigurationError(output, cert)
+    return 1
+  } else if (cert instanceof Errors.CantGenerateWildcardCert) {
+    output.error(`Wildcard certificates are allowed only for domains in ${chalk.underline('zeit.world')}`)
+    return 1
+  } else if (cert instanceof Errors.DomainsShouldShareRoot) {
+    output.error(`All given common names should share the same root domain.`)
+    return 1
+  } else if (cert instanceof Errors.InvalidWildcardDomain) {
+    output.error(`Invalid domain ${chalk.underline(cert.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
+    return 1
+  } else if (cert instanceof Errors.DomainPermissionDenied) {
+    output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
     return 1
   }
 
-  output.debug(
-    `Nameservers: ${nameservers && nameservers.length
-      ? nameservers.map(ns => chalk.underline(ns)).join(', ')
-      : chalk.dim('none')}`
-  )
-
-  // If the domain points to zeit.world or does not include wildcard we use the normal procedure
-  const domainPointsToZeitWorld = nameservers.every(ns => ns.endsWith('.zeit.world'));
-  const includesWildcard = cns.some(cn => cn.includes('*'));
-
-  if (domainPointsToZeitWorld || !includesWildcard) {
-    const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
-    cert = await createCertForCns(now, cns, contextName)
-    cancelWait();
-    if (cert instanceof Errors.CantSolveChallenge) {
-      output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
-      if (cert.meta.type === 'dns-01') {
-        output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)
-        output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
-      } else {
-        output.error(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
-        output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
-        output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
-      }
-      return 1
-    } else if (cert instanceof Errors.TooManyRequests) {
-      output.error(`Too many requests detected for ${cert.meta.api} API. Try again in ${ms(cert.meta.retryAfter * 1000, { long: true })}.`)
-      return 1
-    } else if (cert instanceof Errors.TooManyCertificates) {
-      output.error(`Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(', ')}`)
-      return 1
-    } else if (cert instanceof Errors.DomainValidationRunning) {
-      output.error(`There is a validation in course for ${chalk.underline(cert.meta.domain)}. Wait until it finishes.`)
-      return 1
-    } else if (cert instanceof Errors.DomainConfigurationError) {
-      handleDomainConfigurationError(output, cert)
-      return 1
-    } else if (cert instanceof Errors.CantGenerateWildcardCert) {
-      output.error(`Wildcard certificates are allowed only for domains in ${chalk.underline('zeit.world')}`)
-      return 1
-    } else if (cert instanceof Errors.DomainsShouldShareRoot) {
-      output.error(`All given common names should share the same root domain.`)
-      return 1
-    } else if (cert instanceof Errors.InvalidWildcardDomain) {
-      output.error(`Invalid domain ${chalk.underline(cert.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
-      return 1
-    } else if (cert instanceof Errors.DomainPermissionDenied) {
-      output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
-      return 1
-    }
-
-    // Print success message
-    output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
-    return 0;
-  } else {
-    const order = await startCertOrder(now, cns)
-    const pendingChallenges = order.challengesToResolve.filter(challenge => challenge.status === 'pending')
-
-    if (pendingChallenges.length > 0) {
-      output.log(`An certificate order for ${chalk.bold(cns.join(', '))} has been created ${addStamp()}`)
-      output.print(`  Please, add the following records to solve the DNS challenge:\n\n`)
-      output.print(dnsTable(pendingChallenges.map((challenge) => ([
-        parse(challenge.domain).subdomain ? `_acme-challenge.${parse(challenge.domain).subdomain}` : `_acme-challenge`,
-        'TXT',
-        challenge.value
-      ]))) + `\n\n`)
-
-      await readConfirmation(output)
-    }
-
-    cert = await finishCertOrder(now, cns, contextName)
-    if (cert instanceof Errors.CantSolveChallenge) {
-      output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
-      if (cert.meta.type === 'dns-01') {
-        output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)
-        output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
-      } else {
-        output.error(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
-        output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
-        output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
-      }
-      return 1
-    } else if (cert instanceof Errors.TooManyRequests) {
-      output.error(`Too many requests detected for ${cert.meta.api} API. Try again in ${ms(cert.meta.retryAfter * 1000, { long: true })}.`)
-      return 1
-    } else if (cert instanceof Errors.TooManyCertificates) {
-      output.error(`Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(', ')}`)
-      return 1
-    } else if (cert instanceof Errors.DomainValidationRunning) {
-      output.error(`There is a validation in course for ${chalk.underline(cert.meta.domain)}. Wait until it finishes.`)
-      return 1
-    } else if (cert instanceof Errors.DomainConfigurationError) {
-      handleDomainConfigurationError(output, cert)
-      return 1
-    } else if (cert instanceof Errors.CantGenerateWildcardCert) {
-      output.error(`Wildcard certificates are allowed only for domains in ${chalk.underline('zeit.world')}`)
-      return 1
-    } else if (cert instanceof Errors.DomainsShouldShareRoot) {
-      output.error(`All given common names should share the same root domain.`)
-      return 1
-    } else if (cert instanceof Errors.InvalidWildcardDomain) {
-      output.error(`Invalid domain ${chalk.underline(cert.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
-      return 1
-    } else if (cert instanceof Errors.DomainPermissionDenied) {
-      output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
-      return 1
-    }
-
-    // Print success message
-    output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
-    return 0;
-  }
-}
-
-function readConfirmation(output) {
-  return new Promise(resolve => {
-    output.print(`> Press ${chalk.yellow('ENTER')} to continue `)
-    process.stdin.on('data', () => {
-      process.stdin.pause()
-      process.stdout.write(eraseLines(2))
-      resolve()
-    }).resume()
-  })
+  // Print success message
+  output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
+  return 0;
 }
 
 export default add
