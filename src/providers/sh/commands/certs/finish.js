@@ -6,76 +6,37 @@ import { CLIContext, Output } from '../../util/types'
 import { handleDomainConfigurationError } from '../../util/error-handlers'
 import * as Errors from '../../util/errors'
 import dnsTable from '../../util/dns-table'
+import finishCertOrder from '../../util/certs/finish-cert-order'
 import getCnsFromArgs from '../../util/certs/get-cns-from-args'
 import getContextName from '../../util/get-context-name'
 import Now from '../../util'
 import stamp from '../../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
-import wait from '../../../../util/output/wait'
 
-import createCertForCns from '../../util/certs/create-cert-for-cns'
-import createCertFromFile from '../../util/certs/create-cert-from-file'
-
-async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
+async function finish(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const { currentTeam } = sh;
   const { apiUrl } = ctx;
   const contextName = getContextName(sh);
   const addStamp = stamp()
-  let cert
 
   const {
-    ['--overwrite']: overwite,
     ['--debug']: debugEnabled,
-    ['--crt']: crtPath,
-    ['--key']: keyPath,
-    ['--ca']: caPath,
   } = opts;
 
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
-  if (overwite) {
-    output.error('Overwrite option is deprecated')
-    now.close();
-    return 1;
-  }
-
-  if (crtPath || keyPath || caPath) {
-    if ((args.length !== 0) || (!crtPath || !keyPath || !caPath)) {
-      output.error(`Invalid number of arguments to create a custom certificate entry. Usage:`)
-      output.print(`  ${chalk.cyan(`now certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>`)}\n`)
-      now.close();
-      return 1
-    }
-
-    // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName)
-    if (cert instanceof Errors.InvalidCert) {
-      output.error(`The provided certificate is not valid and can't be added.`)
-      return 1
-    } else if (cert instanceof Errors.DomainPermissionDenied) {
-      output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
-      return 1
-    }
-
-    // Print success message
-    output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
-    return 0;
-  }
-
   if (args.length < 1) {
-    output.error(`Invalid number of arguments to create a custom certificate entry. Usage:`)
-    output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`)
+    output.error(`Invalid number of arguments to finish a certificate order. Usage:`)
+    output.print(`  ${chalk.cyan(`now certs finish <cn>[, <cn>]`)}\n`)
     now.close();
     return 1
   }
 
   const cns = getCnsFromArgs(args)
-  const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
-  cert = await createCertForCns(now, cns, contextName)
-  cancelWait();
+  const cert = await finishCertOrder(now, cns, contextName)
   if (cert instanceof Errors.CantSolveChallenge) {
     output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
     if (cert.meta.type === 'dns-01') {
@@ -118,4 +79,4 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   return 0;
 }
 
-export default add
+export default finish

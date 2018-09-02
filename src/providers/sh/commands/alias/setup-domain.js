@@ -4,8 +4,8 @@ import psl from 'psl'
 
 // Internal utils
 import getDomainInfo from './get-domain-info'
-import getDomainNameservers from './get-domain-nameservers'
 import purchaseDomainIfAvailable from './purchase-domain-if-available'
+import getDomainNameservers from '../../util/domains/get-domain-nameservers'
 import verifyDomain from '../../util/domains/verify-domain'
 
 // Types and errors

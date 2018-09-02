@@ -41,6 +41,8 @@ const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
 const pkg = require('./util/pkg')
 
+import { Output } from './providers/sh/util/types'
+import createOutput from './util/output'
 import getArgs from './providers/sh/util/get-args'
 
 const NOW_DIR = getNowDir()
@@ -61,6 +63,7 @@ const main = async (argv_) => {
   }, { permissive: true })
 
   const isDebugging = argv['--debug']
+  const output: Output = createOutput({ debug: isDebugging })
   let update = null
 
   try {
@@ -560,11 +563,19 @@ const main = async (argv_) => {
   try {
     exitCode = await provider[subcommand](ctx);
   } catch (err) {
-    console.error(
-      error(
-        `An unexpected error occurred in ${subcommand}: ${err.stack}`
-      )
-    )
+
+    // If there is a code we should not consider the error unexpected
+    // but instead show the message
+    if (err.code) {
+      output.debug(err.stack)
+      output.error(err.message)
+      return 1;
+    }
+
+    // Otherwise it is an unexpected error and we should show the trace
+    // and an unexpected error message
+    console.error(error(`An unexpected error occurred in ${subcommand}: ${err.stack}`))
+
     return 1;
   }
 

@@ -1159,7 +1159,7 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
         : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-    ], '  ') + '\n');
+    ], {extraSpace: '  '}) + '\n');
     return 1
   } else if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
