@@ -10,7 +10,6 @@ import logo from '../../../../util/output/logo'
 import type { CLICertsOptions } from '../../util/types'
 
 import add from './add'
-import download from './download'
 import ls from './ls'
 import rm from './rm'
 
@@ -25,7 +24,6 @@ const help = () => {
 
     ls                        Show all available certificates
     add        <cn>[, <cn>]   Create a certificate for a domain
-    download   <id or cn>     Download an available certificate
     rm         <id or cn>     Remove an available certificate
 
   ${chalk.dim('Options:')}
@@ -41,7 +39,6 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -o, --output                   Path to download a certificate
     -T, --team                     Set a custom team scope
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline('FILE')}                     Certificate key file
@@ -59,14 +56,6 @@ const help = () => {
 
   ${chalk.gray(
     '–'
-  )} Download a certificate
-
-      ${chalk.cyan(
-        '$ now certs download cert_5zvtpRrSK87PLnQ -o ~/Downloads'
-      )}
-
-  ${chalk.gray(
-    '–'
   )} Remove a certificate
 
       ${chalk.cyan(
@@ -77,7 +66,6 @@ const help = () => {
 
 const COMMAND_CONFIG = {
   add: ['add'],
-  download: ['download'],
   ls: ['ls', 'list'],
   renew: ['renew'],
   rm: ['rm', 'remove'],
@@ -109,8 +97,6 @@ module.exports = async function main(ctx: any): Promise<number> {
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output)
-    case 'download':
-      return download(ctx, argv, args, output)
     case 'ls':
       return ls(ctx, argv, args, output)
     case 'rm':
