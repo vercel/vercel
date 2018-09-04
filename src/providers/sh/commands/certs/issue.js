@@ -56,10 +56,10 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
     // Create a custom certificate from the given file paths
     cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName)
     if (cert instanceof Errors.InvalidCert) {
-      output.error(`The provided certificate is not valid and can't be added.`)
+      output.error(`The provided certificate is not valid and cannot be added.`)
       return 1
     } else if (cert instanceof Errors.DomainPermissionDenied) {
-      output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
+      output.error(`You do not have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
       return 1
     }
 
@@ -91,7 +91,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
   }
 
   if (cert instanceof Errors.CantSolveChallenge) {
-    output.error(`We couldn't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
+    output.error(`We could not solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
     if (cert.meta.type === 'dns-01') {
       output.log(`The certificate provider could not resolve the required DNS record queries.`)
       output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n')
@@ -111,7 +111,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
     output.error(`Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(', ')}`)
     return 1
   } else if (cert instanceof Errors.DomainValidationRunning) {
-    output.error(`There is a validation in course for ${chalk.underline(cert.meta.domain)}. Wait until it finishes.`)
+    output.error(`There is a validation in course for ${chalk.underline(cert.meta.domain)}. Please wait for it to complete.`)
     return 1
   } else if (cert instanceof Errors.DomainConfigurationError) {
     handleDomainConfigurationError(output, cert)
@@ -125,7 +125,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
     output.error(`Invalid domain ${chalk.underline(cert.meta.domain)}. Wildcard domains can only be followed by a root domain.`)
     return 1
   } else if (cert instanceof Errors.DomainPermissionDenied) {
-    output.error(`You don't have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
+    output.error(`You do not have permissions over domain ${chalk.underline(cert.meta.domain)} under ${chalk.bold(cert.meta.context)}.`)
     return 1
   }
 
@@ -143,7 +143,7 @@ async function runStartOrder(output: Output, now: Now, cns: string[], contextNam
 
   if (pendingChallenges.length === 0) {
     output.log(`A certificate issuance for ${chalk.bold(cns.join(', '))} has been started ${stamp()}`)
-    output.print(`  There are no pending challenges so you can now finish the order by running: \n`)
+    output.print(`  There are no pending challenges. Finish the issuance by running: \n`)
     output.print(`  ${chalk.cyan(`now certs finish ${cns.join(' ')}`)}\n`)
     return 0;
   }
