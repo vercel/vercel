@@ -82,6 +82,7 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
+      '--challenge-only': Boolean,
       '--overwrite': Boolean,
       '--output': String,
       '--crt': String,

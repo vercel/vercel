@@ -233,6 +233,16 @@ export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_C
   }
 }
 
+export class CertOrderNotFound extends NowError<'CERT_ORDER_NOT_FOUND', {cns: string[]}> {
+  constructor(cns: string[]) {
+    super({
+      code: 'CERT_ORDER_NOT_FOUND',
+      meta: { cns },
+      message: `No cert order could be found for cns ${cns.join(' ,')}`
+    });
+  }
+}
+
 export class TooManyCertificates extends NowError<'TOO_MANY_CERTIFICATES', {domains: string[]}> {
   constructor(domains: string[]) {
     super({

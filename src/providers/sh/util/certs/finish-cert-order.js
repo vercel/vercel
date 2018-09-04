@@ -20,7 +20,9 @@ export default async function startCertOrder(now: Now, cns: string[], context: s
     return cert
   } catch (error) {
     cancelWait()
-    if (error.code === 'configuration_error') {
+    if (error.code === 'cert_order_not_found') {
+      return new Errors.CertOrderNotFound(cns);
+    } else if (error.code === 'configuration_error') {
       const {domain, subdomain} = psl.parse(error.domain)
       return new Errors.DomainConfigurationError(domain, subdomain, error.external)
     } else if (error.code === 'forbidden') {

@@ -37,7 +37,10 @@ async function finish(ctx: CLIContext, opts: CLICertsOptions, args: string[], ou
 
   const cns = getCnsFromArgs(args)
   const cert = await finishCertOrder(now, cns, contextName)
-  if (cert instanceof Errors.CantSolveChallenge) {
+  if (cert instanceof Errors.CertOrderNotFound) {
+    output.error(`Can't found a cert order for the given cns`);
+    return 1;
+  } else if (cert instanceof Errors.CantSolveChallenge) {
     output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
     if (cert.meta.type === 'dns-01') {
       output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)

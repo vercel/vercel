@@ -13,8 +13,10 @@ export function handleDomainConfigurationError(output: Output, error: DomainConf
     output.print(dnsTable([
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
-        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
     ]) + '\n');
+    output.log(`Alternatively, you can generate a certificate solving DNS challenges manually after running:\n`);
+    output.print(`    ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`);
   } else {
     output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
     output.print(`  Please try again later.\n`)

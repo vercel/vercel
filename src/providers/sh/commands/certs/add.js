@@ -1,4 +1,5 @@
 // @flow
+import {parse} from 'psl'
 import chalk from 'chalk'
 import ms from 'ms'
 
@@ -11,12 +12,13 @@ import getContextName from '../../util/get-context-name'
 import Now from '../../util'
 import stamp from '../../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
-import wait from '../../../../util/output/wait'
 
 import createCertForCns from '../../util/certs/create-cert-for-cns'
 import createCertFromFile from '../../util/certs/create-cert-from-file'
+import finishCertOrder from '../../util/certs/finish-cert-order'
+import startCertOrder from '../../util/certs/start-cert-order'
 
-async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
+export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx
   const { currentTeam } = sh;
   const { apiUrl } = ctx;
@@ -25,6 +27,7 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   let cert
 
   const {
+    ['--challenge-only']: challengeOnly,
     ['--overwrite']: overwite,
     ['--debug']: debugEnabled,
     ['--crt']: crtPath,
@@ -73,18 +76,31 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   }
 
   const cns = getCnsFromArgs(args)
-  const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
-  cert = await createCertForCns(now, cns, contextName)
-  cancelWait();
+
+  // If the user specifies that he wants the challenge to be solved manually, we request the
+  // order, show the result challenges and finish immediately.
+  if (challengeOnly) {
+    return await runStartOrder(output, now, cns, contextName, addStamp);
+  }
+
+  // If the user does not specify anything, we try to fullfill a pending order that may exist
+  // and if it doesn't exist we try to issue the cert solving from the server
+  cert = await finishCertOrder(now, cns, contextName)
+  if (cert instanceof Errors.CertOrderNotFound) {
+    cert = await createCertForCns(now, cns, contextName)
+  }
+
   if (cert instanceof Errors.CantSolveChallenge) {
-    output.error(`We can't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
+    output.error(`We couldn't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
     if (cert.meta.type === 'dns-01') {
-      output.error(`The certificate provider could not resolve the DNS queries for ${cert.meta.domain}.`)
-      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
+      output.log(`The certificate provider could not resolve the required DNS queries for ${cert.meta.domain}.`)
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Try again later.\n`)
     } else {
-      output.error(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
+      output.log(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
       output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
-      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n\n');
+      output.log(`Alternatively, you can solve DNS challenges manually after running:\n`);
+      output.print(`    ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`);
     }
     return 1
   } else if (cert instanceof Errors.TooManyRequests) {
@@ -100,8 +116,8 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     handleDomainConfigurationError(output, cert)
     return 1
   } else if (cert instanceof Errors.CantGenerateWildcardCert) {
-    output.error(`Wildcard certificates are allowed only for domains in ${chalk.underline('zeit.world')}`)
-    return 1
+    output.warn(`To generate a wildcard certificate for domain for an external domain you must solve challenges manually.`);
+    return await runStartOrder(output, now, cns, contextName, addStamp);
   } else if (cert instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`)
     return 1
@@ -113,9 +129,30 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     return 1
   }
 
-  // Print success message
   output.success(`Certificate entry for ${chalk.bold(cert.cns.join(', '))} created ${addStamp()}`)
   return 0;
 }
 
-export default add
+async function runStartOrder(output: Output, now: Now, cns: string[], contextName: string, stamp: () => string) {
+  const {challengesToResolve} = await startCertOrder(now, cns, contextName)
+  const pendingChallenges = challengesToResolve.filter(challenge => challenge.status === 'pending')
+
+  if (pendingChallenges.length === 0) {
+    output.log(`A certificate order ${chalk.bold(cns.join(', '))} has been created ${stamp()}`)
+    output.print(`  There are no pending challenges so you can now finish the order by running: \n`)
+    output.print(`  ${chalk.cyan(`now certs finish ${cns.join(' ')}`)}\n`)
+    return 0;
+  }
+
+  output.log(`A certificate order ${chalk.bold(cns.join(', '))} has been created ${stamp()}`)
+  output.print(`  You may add now the following TXT records to solve the DNS challenge:\n\n`)
+  const [header, ...rows] = dnsTable(pendingChallenges.map((challenge) => ([
+    parse(challenge.domain).subdomain ? `_acme-challenge.${parse(challenge.domain).subdomain}` : `_acme-challenge`,
+    'TXT',
+    challenge.value
+  ]))).split('\n');
+
+  output.print(header + '\n');
+  process.stdout.write(rows.join('\n') + '\n')
+  return 0
+}
