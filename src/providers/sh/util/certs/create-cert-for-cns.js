@@ -8,7 +8,7 @@ import type { Certificate } from '../types'
 import wait from '../../../../util/output/wait'
 
 async function createCertForCns(now: Now, cns: string[], context: string) {
-  const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
+  const cancelWait = wait(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {
     const certificate: Certificate = await retry(async (bail) => {
       try {

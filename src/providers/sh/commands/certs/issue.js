@@ -93,14 +93,15 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
   if (cert instanceof Errors.CantSolveChallenge) {
     output.error(`We couldn't solve the ${cert.meta.type} challenge for domain ${cert.meta.domain}.`)
     if (cert.meta.type === 'dns-01') {
-      output.log(`The certificate provider could not resolve the required DNS queries for ${cert.meta.domain}.`)
-      output.print(`  This might happen to new domains or domains with recent DNS changes. Try again later.\n`)
+      output.log(`The certificate provider could not resolve the required DNS record queries.`)
+      output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n')
     } else {
       output.log(`The certificate provider could not resolve the HTTP queries for ${cert.meta.domain}.`)
       output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
       output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n\n');
       output.log(`Alternatively, you can solve DNS challenges manually after running:\n`);
-      output.print(`    ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`);
+      output.print(`  ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`);
+      output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n')
     }
     return 1
   } else if (cert instanceof Errors.TooManyRequests) {
@@ -116,8 +117,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
     handleDomainConfigurationError(output, cert)
     return 1
   } else if (cert instanceof Errors.CantGenerateWildcardCert) {
-    output.warn(`To generate a wildcard certificate for domain for an external domain you must solve challenges manually.`);
-    return await runStartOrder(output, now, cns, contextName, addStamp);
+    return await runStartOrder(output, now, cns, contextName, addStamp, {fallingBack: true});
   } else if (cert instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`)
     return 1
@@ -133,19 +133,23 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
   return 0;
 }
 
-async function runStartOrder(output: Output, now: Now, cns: string[], contextName: string, stamp: () => string) {
+async function runStartOrder(output: Output, now: Now, cns: string[], contextName: string, stamp: () => string, {fallingBack = false}: {fallingBack: boolean} = {}) {
   const {challengesToResolve} = await startCertOrder(now, cns, contextName)
   const pendingChallenges = challengesToResolve.filter(challenge => challenge.status === 'pending')
 
+  if (fallingBack) {
+    output.warn(`To generate a wildcard certificate for domain for an external domain you must solve challenges manually.`);
+  }
+
   if (pendingChallenges.length === 0) {
-    output.log(`A certificate order ${chalk.bold(cns.join(', '))} has been created ${stamp()}`)
+    output.log(`A certificate issuance for ${chalk.bold(cns.join(', '))} has been started ${stamp()}`)
     output.print(`  There are no pending challenges so you can now finish the order by running: \n`)
     output.print(`  ${chalk.cyan(`now certs finish ${cns.join(' ')}`)}\n`)
     return 0;
   }
 
-  output.log(`A certificate order ${chalk.bold(cns.join(', '))} has been created ${stamp()}`)
-  output.print(`  You may add now the following TXT records to solve the DNS challenge:\n\n`)
+  output.log(`A certificate issuance for ${chalk.bold(cns.join(', '))} has been started ${stamp()}`)
+  output.print(`  Add the following TXT records with your registrar to be able to the solve the DNS challenge:\n\n`)
   const [header, ...rows] = dnsTable(pendingChallenges.map((challenge) => ([
     parse(challenge.domain).subdomain ? `_acme-challenge.${parse(challenge.domain).subdomain}` : `_acme-challenge`,
     'TXT',
@@ -153,6 +157,8 @@ async function runStartOrder(output: Output, now: Now, cns: string[], contextNam
   ]))).split('\n');
 
   output.print(header + '\n');
-  process.stdout.write(rows.join('\n') + '\n')
+  process.stdout.write(rows.join('\n') + '\n\n')
+  output.log(`To issue the certificate once the records are added, run:`);
+  output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
   return 0
 }
