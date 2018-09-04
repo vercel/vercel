@@ -23,7 +23,7 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                        Show all available certificates
-    issue      <cn>[, <cn>]   Create a certificate for a domain
+    issue      <cn> [<cn>]    Issue a new certificate for a domain
     rm         <id>           Remove a certificate by id
 
   ${chalk.dim('Options:')}
@@ -66,6 +66,7 @@ const help = () => {
 }
 
 const COMMAND_CONFIG = {
+  add: ['add'],
   issue: ['issue'],
   ls: ['ls', 'list'],
   renew: ['renew'],
@@ -103,6 +104,9 @@ module.exports = async function main(ctx: any): Promise<number> {
       return ls(ctx, argv, args, output)
     case 'rm':
       return rm(ctx, argv, args, output)
+    case 'add':
+      output.error(`${chalk.cyan('now certs add')} is deprecated. Please use ${chalk.cyan('now certs issue <cn> <cns>')} instead`)
+      return 1
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.')
       return 1
