@@ -48,7 +48,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
   if (crtPath || keyPath || caPath) {
     if ((args.length !== 0) || (!crtPath || !keyPath || !caPath)) {
       output.error(`Invalid number of arguments to create a custom certificate entry. Usage:`)
-      output.print(`  ${chalk.cyan(`now certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>`)}\n`)
+      output.print(`  ${chalk.cyan(`now certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>`)}\n`)
       now.close();
       return 1
     }

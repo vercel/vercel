@@ -9,7 +9,7 @@ import getSubcommand from '../../util/get-subcommand'
 import logo from '../../../../util/output/logo'
 import type { CLICertsOptions } from '../../util/types'
 
-import add from './add'
+import issue from './issue'
 import ls from './ls'
 import rm from './rm'
 
@@ -23,7 +23,7 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                        Show all available certificates
-    add        <cn>[, <cn>]   Create a certificate for a domain
+    issue      <cn>[, <cn>]   Create a certificate for a domain
     rm         <id>           Remove a certificate by id
 
   ${chalk.dim('Options:')}
@@ -40,6 +40,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
+    --challenge-only               Only show challenges needed to issue a cert
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline('FILE')}                     Certificate key file
     --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
@@ -51,7 +52,7 @@ const help = () => {
   )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
 
       ${chalk.cyan(
-        '$ now certs add acme.com www.acme.com'
+        '$ now certs issue acme.com www.acme.com'
       )}
 
   ${chalk.gray(
@@ -65,7 +66,7 @@ const help = () => {
 }
 
 const COMMAND_CONFIG = {
-  add: ['add'],
+  issue: ['issue'],
   ls: ['ls', 'list'],
   renew: ['renew'],
   rm: ['rm', 'remove']
@@ -96,8 +97,8 @@ module.exports = async function main(ctx: any): Promise<number> {
   const output: Output = createOutput({ debug: argv['--debug'] })
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
   switch (subcommand) {
-    case 'add':
-      return add(ctx, argv, args, output)
+    case 'issue':
+      return issue(ctx, argv, args, output)
     case 'ls':
       return ls(ctx, argv, args, output)
     case 'rm':
@@ -106,7 +107,7 @@ module.exports = async function main(ctx: any): Promise<number> {
       output.error('Renewing certificates is deprecated, issue a new one.')
       return 1
     default:
-      output.error('Please specify a valid subcommand: ls | add | rm')
+      output.error('Please specify a valid subcommand: ls | issue | rm')
       help()
       return 2
   }
