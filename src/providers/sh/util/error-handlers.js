@@ -13,11 +13,14 @@ export function handleDomainConfigurationError(output: Output, error: DomainConf
     output.print(dnsTable([
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
-        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']  
-    ]) + '\n');
+        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
+    ]) + '\n\n');
+    output.log(`Alternatively, you can issue a certificate solving DNS challenges manually after running:`);
+    output.print(`  ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`);
+    output.print('  Read more: https://err.sh/now-cli/dns-configuration-error\n')
   } else {
-    output.print(`  We configured them for you, but the propagation may take a few minutes.\n`)
-    output.print(`  Please try again later.\n`)
+    output.print(`  We configured them for you, but the propagation may take a few minutes. Please try again later.\n`)
+    output.print('  Read more: https://err.sh/now-cli/dns-configuration-error\n')
   }
 }
 

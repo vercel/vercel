@@ -7,7 +7,7 @@ import wait from '../../../../util/output/wait'
 import type { Certificate } from '../types'
 
 export default async function startCertOrder(now: Now, cns: string[], context: string) {
-  const cancelWait = wait(`Generating a certificate for ${chalk.bold(cns.join(', '))}`);
+  const cancelWait = wait(`Finishing certificate issuance for ${chalk.bold(cns.join(', '))}`);
   try {
     const cert: Certificate = await now.fetch('/v3/now/certs', {
       method: 'PATCH',
@@ -20,7 +20,9 @@ export default async function startCertOrder(now: Now, cns: string[], context: s
     return cert
   } catch (error) {
     cancelWait()
-    if (error.code === 'configuration_error') {
+    if (error.code === 'cert_order_not_found') {
+      return new Errors.CertOrderNotFound(cns);
+    } else if (error.code === 'configuration_error') {
       const {domain, subdomain} = psl.parse(error.domain)
       return new Errors.DomainConfigurationError(domain, subdomain, error.external)
     } else if (error.code === 'forbidden') {

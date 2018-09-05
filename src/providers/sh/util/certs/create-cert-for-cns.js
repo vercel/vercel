@@ -1,11 +1,14 @@
 // @flow
 import psl from 'psl'
+import chalk from 'chalk'
 import retry from 'async-retry'
 import * as Errors from '../errors'
 import { Now } from '../types'
 import type { Certificate } from '../types'
+import wait from '../../../../util/output/wait'
 
 async function createCertForCns(now: Now, cns: string[], context: string) {
+  const cancelWait = wait(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {
     const certificate: Certificate = await retry(async (bail) => {
       try {
@@ -23,8 +26,10 @@ async function createCertForCns(now: Now, cns: string[], context: string) {
         }
       }
     }, { retries: 3, minTimeout: 5000, maxTimeout: 15000 })
+    cancelWait();
     return certificate
   } catch (error) {
+    cancelWait();
     if (error.code === 'configuration_error') {
       const {domain, subdomain} = psl.parse(error.domain)
       return new Errors.DomainConfigurationError(domain, subdomain, error.external)

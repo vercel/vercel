@@ -411,6 +411,7 @@ export type CLIAliasOptions = CLIOptions<{
 }>
 
 export type CLICertsOptions = CLIOptions<{
+  '--challenge-only': boolean,
   '--output': string,
   '--overwrite': string,
   '--crt': string,
