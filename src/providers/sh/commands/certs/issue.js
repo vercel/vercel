@@ -144,7 +144,7 @@ async function runStartOrder(output: Output, now: Now, cns: string[], contextNam
   if (pendingChallenges.length === 0) {
     output.log(`A certificate issuance for ${chalk.bold(cns.join(', '))} has been started ${stamp()}`)
     output.print(`  There are no pending challenges. Finish the issuance by running: \n`)
-    output.print(`  ${chalk.cyan(`now certs finish ${cns.join(' ')}`)}\n`)
+    output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`)
     return 0;
   }
 

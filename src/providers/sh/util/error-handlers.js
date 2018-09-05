@@ -14,8 +14,8 @@ export function handleDomainConfigurationError(output: Output, error: DomainConf
       error.meta.subdomain === null
         ? ['', 'ALIAS', 'alias.zeit.co']
         : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-    ]) + '\n');
-    output.log(`Alternatively, you can issue a certificate solving DNS challenges manually after running:\n`);
+    ]) + '\n\n');
+    output.log(`Alternatively, you can issue a certificate solving DNS challenges manually after running:`);
     output.print(`  ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`);
     output.print('  Read more: https://err.sh/now-cli/dns-configuration-error\n')
   } else {
