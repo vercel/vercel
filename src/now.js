@@ -82,6 +82,7 @@ const main = async (argv_) => {
   if (update && isTTY) {
     console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`))
     console.log(info(`Read more about how to update here: https://zeit.co/update-cli`))
+    console.log(info(`Changelog: https://github.com/zeit/now-cli/releases/tag/${update.latest}`))
   }
 
   // the second argument to the command can be a path
