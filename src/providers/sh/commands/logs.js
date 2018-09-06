@@ -17,7 +17,7 @@ const getContextName = require('../util/get-context-name')
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now logs`)} <deploymentId|url>
+  ${chalk.bold(`${logo} now logs`)} <url|deploymentId>
 
   ${chalk.dim('Options:')}
 
