@@ -119,6 +119,7 @@ const help = () => {
       switch                           Switches between teams and your account
       login                            Logs into your account or creates a new one
       logout                           Logs out of your account
+      whoami                           Displays the currently logged in username
 
   ${chalk.dim('Options:')}
 
