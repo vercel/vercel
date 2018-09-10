@@ -28,7 +28,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Show the current team context
+  ${chalk.gray('–')} Shows the currently logged in username
 
     ${chalk.cyan('$ now whoami')}
 `)
