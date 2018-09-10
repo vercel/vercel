@@ -99,6 +99,7 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
+      init                 [path]      Generates a Dockerfile for your project
       deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       ls | list            [app]       Lists deployments
       rm | remove          [id]        Removes a deployment
