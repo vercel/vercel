@@ -143,7 +143,7 @@ module.exports = async function main (ctx: any): Promise<number>{
   })
 
   if (matches.length === 0) {
-    error(
+    log(
       `Could not find ${argv.safe
         ? 'unaliased'
         : 'any'} deployments matching ${ids
