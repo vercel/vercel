@@ -9,7 +9,10 @@ function shouldCopyScalingAttributes(origin: NpmDeployment | DockerDeployment, d
     getScaleForDC('gru1', origin).min !== getScaleForDC('gru1', dest).min ||
     getScaleForDC('gru1', origin).max !== getScaleForDC('gru1', dest).max ||
     getScaleForDC('sfo1', origin).min !== getScaleForDC('sfo1', dest).min ||
-    getScaleForDC('sfo1', origin).max !== getScaleForDC('sfo1', dest).max
+    getScaleForDC('sfo1', origin).max !== getScaleForDC('sfo1', dest).max ||
+    getScaleForDC('iad1', origin).min !== getScaleForDC('iad1', dest).min ||
+    getScaleForDC('iad1', origin).max !== getScaleForDC('iad1', dest).max
+
 }
 
 export default shouldCopyScalingAttributes
