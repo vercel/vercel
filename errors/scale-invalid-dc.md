@@ -17,15 +17,17 @@ and DCs have to be in *lowercase*.
 - `sfo`
 - `bru`
 - `gru`
+- `iad`
 
-In `now-cli`, they currently are transformed to `sfo1`
-and `bru1` dc identifiers before being sent to our APIs.
+In `now-cli`, they currently are transformed to
+DC identifiers before being sent to our APIs.
 
 **Valid DC identifiers**:
 
 - `sfo1`
 - `bru1`
 - `gru1`
+- `iad1`
 
 To pass multiple ones, use a comma:
 
