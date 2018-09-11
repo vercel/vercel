@@ -6,6 +6,7 @@ const fs = require('fs-extra')
 const chalk = require('chalk')
 const init = require('@zeit/init')
 const { resolve } = require('path')
+const { highlight } = require('cli-highlight')
 
 // Utilities
 const logo = require('../../../../util/output/logo')
@@ -30,6 +31,22 @@ const help = () => {
 
     ${chalk.cyan('$ now init')}
 `)
+}
+
+function indent (str, prefix = '  ') {
+  return str.split('\n').map(l => `${prefix}${l}`).join('\n')
+}
+
+async function loadJson (path) {
+  let json = {}
+  try {
+    json = await fs.readJSON(path)
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err
+    }
+  }
+  return json
 }
 
 // Options
@@ -84,16 +101,14 @@ Deployment Type: ${chalk.cyan(deploymentType)}
 
 Dockerfile:
 
-${dockerfile.trim().split('\n').map(l => `  ${l}`).join('\n')}
+${indent(highlight(dockerfile.trim(), { language: 'dockerfile' }))}
 
 now.json:
 
-${nowJsonString.trim().split('\n').map(l => `  ${l}`).join('\n')}
+${indent(highlight(nowJsonString.trim(), { language: 'json' }))}
 `)
 
-  const confirmation = argv.yes || await promptBool('Create the files?', {
-    //trailing: '\n'
-  })
+  const confirmation = argv.yes || await promptBool('Create the files?')
 
   if (confirmation) {
     await Promise.all([
@@ -106,16 +121,4 @@ ${nowJsonString.trim().split('\n').map(l => `  ${l}`).join('\n')}
   }
 
   return 0
-}
-
-async function loadJson (path) {
-  let json = {}
-  try {
-    json = await fs.readJSON(path)
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err
-    }
-  }
-  return json
 }

@@ -119,6 +119,7 @@
     "bytes": "3.0.0",
     "chalk": "2.3.1",
     "child-process-promise": "2.2.1",
+    "cli-highlight": "2.0.0",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
     "copy-webpack-plugin": "4.0.1",
