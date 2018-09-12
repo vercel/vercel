@@ -437,7 +437,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               gitRepo.main
             )}" ${gitRef}on ${gitRepo.type}`)
         } else {
-          error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
+          output.error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           await exit(1)
         }
       }
@@ -552,7 +552,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
-      error("Can't set both `regions` and `scale` options simultaneously", 'regions-and-scale-at-once')
+      output.error("Can't set both `regions` and `scale` options simultaneously", 'regions-and-scale-at-once')
       await exit(1)
     }
 
@@ -560,11 +560,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     if (regions.length > 0) {
       dcIds = normalizeRegionsList(regions)
       if (dcIds instanceof Errors.InvalidRegionOrDCForScale) {
-        error(`The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`)
+        output.error(`The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`)
         await exit(1)
         return 1
       } else if (dcIds instanceof Errors.InvalidAllForScale) {
-        error(`You can't use all in the regions list mixed with other regions`)
+        output.error(`You can't use all in the regions list mixed with other regions`)
         await exit(1)
         return 1
       }
@@ -577,7 +577,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       for (const regionOrDc of Object.keys(scaleFromConfig)) {
         const dc = regionOrDCToDc(regionOrDc)
         if (dc === undefined) {
-          error(`The value "${regionOrDc}" in \`scale\` settings is not a valid region or DC identifier`, 'deploy-invalid-dc')
+          output.error(`The value "${regionOrDc}" in \`scale\` settings is not a valid region or DC identifier`, 'deploy-invalid-dc')
           await exit(1)
           return 1
         } else {
@@ -607,7 +607,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         dotenvConfig = dotenv.parse(dotenvFile)
       } catch (err) {
         if (err.code === 'ENOENT') {
-          error(
+          output.error(
             `--dotenv flag is set but ${dotenvFileName} file is missing`,
             'missing-dotenv-target'
           )
@@ -672,7 +672,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async key => {
         if (!key) {
-          error(
+          output.error(
             'Environment variable name is missing',
             'missing-env-key-value'
           )
@@ -681,7 +681,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         }
 
         if (/[^A-z0-9_]/i.test(key)) {
-          error(
+          output.error(
             `Invalid ${chalk.dim('-e')} key ${chalk.bold(
               `"${chalk.bold(key)}"`
             )}. Only letters, digits and underscores are allowed.`
@@ -698,13 +698,13 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
           if (_secrets.length === 0) {
             if (uidOrName === '') {
-              error(
+              output.error(
                 `Empty reference provided for env key ${chalk.bold(
                   `"${chalk.bold(key)}"`
                 )}`
               )
             } else {
-              error(
+              output.error(
                 `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
                 'env-no-secret'
               )
@@ -712,7 +712,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
             await exit(1)
           } else if (_secrets.length > 1) {
-            error(
+            output.error(
               `Ambiguous secret ${chalk.bold(
                 `"${uidOrName}"`
               )} (matches ${chalk.bold(_secrets.length)} secrets)`
@@ -817,7 +817,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           now.on('complete', resolve)
 
           now.on('error', err => {
-            error('Upload failed')
+            output.error('Upload failed')
             reject(err)
           })
         })
@@ -857,7 +857,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         }
 
         if (deployment === null) {
-          error('Uploading failed. Please try again.')
+          output.error('Uploading failed. Please try again.')
           await exit(1)
           return
         }
@@ -887,7 +887,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           if (!proceed) {
             if (typeof proceed === 'undefined') {
               const message = `If you agree with that, please run again with ${cmd('--public')}.`
-              error(message)
+              output.error(message)
 
               await exit(1)
             } else {
@@ -923,7 +923,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         const message = regions.length
           ? `Invalid regions: ${additionalProperty.slice(0, -1)}`
           : `Invalid DC name for the scale option: ${additionalProperty}`
-        error(message)
+        output.error(message)
         await exit(1)
       }
 
