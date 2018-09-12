@@ -63,6 +63,7 @@ const mriOpts = {
     'force',
     'links',
     'json',
+    'raw',
     'C',
     'clipboard',
     'forward-npm',
