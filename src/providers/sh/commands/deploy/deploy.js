@@ -412,7 +412,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           Object.assign(gitRepo, gitParts)
 
           const searchMessage = setTimeout(() => {
-            log(`Didn't find directory. Searching on ${gitRepo.type}...`)
+            output.print(`Didn't find directory. Searching on ${gitRepo.type}...\n`)
           }, 500)
 
           try {
@@ -472,11 +472,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
 
-        log(`Deploying ${gitRepo.type} repository "${chalk.bold(
+        output.print(`Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
           )}"${gitRef} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          )}\n`)
       } else {
         const list = paths
           .map((path, index) => {
@@ -490,9 +490,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           })
           .join('')
 
-        log(`Deploying ${list} under ${chalk.bold(
+        output.print(`Deploying ${list} under ${chalk.bold(
             (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`)
+          )}\n`)
       }
     }
 
@@ -822,7 +822,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         })
 
         if (!quiet && syncCount) {
-          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`)
+          output.print(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}\n`)
         }
 
         for (let i = 0; i < 4; i += 1) {
@@ -867,7 +867,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           const who = currentTeam ? 'your team is' : 'you are'
 
           let proceed
-          log(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`)
+          output.print(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.\n`)
 
           if (isTTY) {
             proceed = await promptBool('Are you sure you want to proceed?', {
@@ -890,7 +890,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
               await exit(1)
             } else {
-              log('Aborted')
+              output.print('Aborted\n')
               await exit(0)
             }
 
@@ -939,13 +939,13 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       if (clipboard) {
         try {
           await copy(url)
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
+          output.print(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}\n`)
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`)
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`)
+          output.print(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}\n`)
         }
       } else {
-        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`)
+        output.print(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}\n`)
       }
     }
 
@@ -955,7 +955,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         noVerify = true
       } else {
         if (!quiet) {
-          output.log(chalk`{cyan Deployment complete!}`)
+          output.print(chalk`{cyan Deployment complete!}\n`)
         }
         logDeployment(deployment)
         await exit(0)
