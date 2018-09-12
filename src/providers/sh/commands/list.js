@@ -68,6 +68,7 @@ module.exports = async function main(ctx) {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
       '-a': '--all',
+      '--json': Boolean,
     })
   } catch (err) {
     handleError(err)
@@ -207,6 +208,11 @@ module.exports = async function main(ctx) {
     log(`To list more deployments for an app run ${cmd('now ls [app]')}`)
   } else if (!argv['--all']) {
     log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
+  }
+
+  if (argv['--json']) {
+    print(JSON.stringify(deployments, null, '  '))
+    return 0;
   }
 
   print('\n')
