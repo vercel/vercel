@@ -62,6 +62,7 @@ const mriOpts = {
     'debug',
     'force',
     'links',
+    'json',
     'C',
     'clipboard',
     'forward-npm',
@@ -149,6 +150,8 @@ const help = () => {
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
+    --json                         Output deployment info as JSON to stdout
+    --raw                          Output the deployment URL only to stdout
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
@@ -210,6 +213,7 @@ let apiUrl
 let isTTY
 let quiet
 let alwaysForwardNpm
+let raw
 
 // If the current deployment is a repo
 const gitRepo = {}
@@ -342,12 +346,14 @@ async function main(ctx: any) {
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
+  raw = !isTTY || argv.raw
   const output = createOutput({ debug: debugEnabled })
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-  ;({ log, error, note, debug, warn } = output)
+
+  ;({ log, note, debug, warn } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -941,8 +947,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       } else {
         log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`)
       }
-    } else {
-      process.stdout.write(url)
     }
 
     if (deploymentType === 'static') {
@@ -953,6 +957,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         if (!quiet) {
           output.log(chalk`{cyan Deployment complete!}`)
         }
+        logDeployment(deployment)
         await exit(0)
         return
       }
@@ -1014,6 +1019,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
 
       output.success(`Deployment ready`)
+      logDeployment(deployment)
       await exit(0)
     }
   })
@@ -1181,6 +1187,20 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
   }
 
   return error
+}
+
+function logDeployment(deployment) {
+  // write a newline to stderr
+  process.stderr.write('\n')
+  if (argv.json) {
+    const data = {
+      uid: deployment.deploymentId,
+      url: deployment.url
+    }
+    process.stdout.write(JSON.stringify(data, null, 2))
+  } else if (raw) {
+    process.stdout.write(deployment.url)
+  }
 }
 
 module.exports = main
