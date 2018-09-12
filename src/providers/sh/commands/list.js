@@ -42,6 +42,7 @@ const help = () => {
   )}        Login token
     -T, --team                     Set a custom team scope
     -a, --all                      See all instances for each deployment (requires [app])
+    --json                         Write JSON data for deployments to stdout
 
   ${chalk.dim('Examples:')}
 
