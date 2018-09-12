@@ -50,7 +50,7 @@ export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: s
     }
 
     if (opts['--json']) {
-      output.print(JSON.stringify({ rules: alias.rules }, null, 2))
+      process.stdout.write(JSON.stringify({ rules: alias.rules }, null, 2))
     } else {
       const rules: PathAliasRule[] = alias.rules || []
       output.log(`${rules.length} path alias ${plural('rule', rules.length)} found under ${chalk.bold(contextName)} ${lsStamp()}`)
