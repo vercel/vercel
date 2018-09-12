@@ -347,7 +347,7 @@ async function main(ctx: any) {
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
-  raw = !isTTY || argv.raw
+  raw = argv.raw || !isTTY
   const output = createOutput({ debug: debugEnabled })
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
@@ -1191,8 +1191,6 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 }
 
 function logDeployment(deployment) {
-  // write a newline to stderr
-  process.stderr.write('\n')
   if (argv.json) {
     const data = {
       uid: deployment.deploymentId,
