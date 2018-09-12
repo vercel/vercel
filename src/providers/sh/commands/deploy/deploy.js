@@ -1185,14 +1185,12 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 }
 
 function logDeployment(deployment) {
+  const url = `https://${deployment.url}`
   if (argv.json) {
-    const data = {
-      uid: deployment.deploymentId,
-      url: deployment.url
-    }
+    const data = {uid: deployment.deploymentId, url}
     process.stdout.write(JSON.stringify(data, null, 2))
   } else if (raw) {
-    process.stdout.write(deployment.url)
+    process.stdout.write(url)
   }
 }
 
