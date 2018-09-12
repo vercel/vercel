@@ -102,27 +102,51 @@ module.exports = async function main (ctx: any): Promise<number> {
     }
   }
 
+  const {
+    uid,
+    name,
+    state,
+    type,
+    slot,
+    sessionAffinity,
+    url,
+    created,
+    limits
+  } = deployment
+
   const [scale, events] = await Promise.all([
-    caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(deployment.uid)}/instances`)),
-    deployment.type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(deployment.uid)}/events?types=event`)),
+    caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(uid)}/instances`)),
+    type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(uid)}/events?types=event`)),
   ])
 
   cancelWait();
-  log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+  log(`Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
   print('\n');
   print(chalk.bold('  Meta\n'))
-  print(`    ${chalk.dim('uid')}\t\t${deployment.uid}\n`)
-  print(`    ${chalk.dim('name')}\t${deployment.name}\n`)
-  print(`    ${chalk.dim('state')}\t${stateString(deployment.state)}\n`)
-  print(`    ${chalk.dim('type')}\t${deployment.type}\n`)
-  print(`    ${chalk.dim('affinity')}\t${deployment.sessionAffinity}\n`)
-  print(`    ${chalk.dim('url')}\t\t${deployment.url}\n`)
-  print(`    ${chalk.dim('created')}\t${new Date(deployment.created)} ${elapsed(Date.now() - deployment.created)}\n`)
-
+  print(`    ${chalk.dim('uid')}\t\t${uid}\n`)
+  print(`    ${chalk.dim('name')}\t${name}\n`)
+  print(`    ${chalk.dim('state')}\t${stateString(state)}\n`)
+  print(`    ${chalk.dim('type')}\t${type}\n`)
+  if (slot) {
+    print(`    ${chalk.dim('slot')}\t${slot}\n`)
+  }
+  if (sessionAffinity) {
+    print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`)
+  }
+  print(`    ${chalk.dim('url')}\t\t${url}\n`)
+  print(`    ${chalk.dim('created')}\t${new Date(created)} ${elapsed(Date.now() - created)}\n`)
   print('\n');
 
-  if (deployment.type === STATIC) {
+  if (limits) {
+    print(chalk.bold('  Limits\n'))
+    print(`    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(limits.duration)}\n`)
+    print(`    ${chalk.dim('maxConcurrentReqs')}\t${limits.maxConcurrentReqs}\n`)
+    print(`    ${chalk.dim('timeout')}\t\t${limits.timeout} ${elapsed(limits.timeout)}\n`)
+    print('\n');
+  }
+
+  if (type === STATIC) {
     return 0
   }
 
