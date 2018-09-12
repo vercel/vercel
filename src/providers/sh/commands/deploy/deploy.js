@@ -103,6 +103,7 @@ const help = () => {
       ls | list            [app]       Lists deployments
       rm | remove          [id]        Removes a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
+      inspect              [id]        Displays information related to a deployment
       domains              [name]      Manages your domain names
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your secret environment variables
