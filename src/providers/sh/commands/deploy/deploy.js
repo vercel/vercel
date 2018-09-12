@@ -198,11 +198,7 @@ let paths
 let forceNew
 let deploymentName
 let sessionAffinity
-let log
-let error
-let warn
-let debug
-let note
+let output
 let debugEnabled
 let clipboard
 let forwardNpm
@@ -228,7 +224,7 @@ const addProcessEnv = async (env) => {
     if (typeof env[key] !== 'undefined') continue
     val = process.env[key]
     if (typeof val === 'string') {
-      log(
+      output.log(
         `Reading ${chalk.bold(
           `"${chalk.bold(key)}"`
         )} from your env (as no value was specified)`
@@ -236,7 +232,7 @@ const addProcessEnv = async (env) => {
       // Escape value if it begins with @
       env[key] = val.replace(/^@/, '\\@')
     } else {
-      error(
+      output.error(
         `No value specified for env ${chalk.bold(
           `"${chalk.bold(key)}"`
         )} and it was not found in your env.`
@@ -300,7 +296,7 @@ const promptForEnvFields = async list => {
   // eslint-disable-next-line import/no-unassigned-import
   require('../../../../util/input/patch-inquirer')
 
-  log('Please enter values for the following environment variables:')
+  output.log('Please enter values for the following environment variables:')
   const answers = await inquirer.prompt(questions)
 
   for (const answer of Object.keys(answers)) {
@@ -348,13 +344,11 @@ async function main(ctx: any) {
   noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
   raw = argv.raw || !isTTY
-  const output = createOutput({ debug: debugEnabled })
+  output = createOutput({ debug: debugEnabled })
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY
   quiet = !isTTY
-
-  ;({ log, note, debug, warn } = output)
 
   if (argv.h || argv.help) {
     help()
@@ -465,7 +459,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     try {
       await Promise.all(checkers)
     } catch (err) {
-      error(err.message, 'path-not-deployable')
+      output.error(err.message, 'path-not-deployable')
       await exit(1)
     }
 
@@ -499,17 +493,17 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     if (!isFile && deploymentType !== 'static') {
       if (argv.docker) {
-        debug(`Forcing \`deploymentType\` = \`docker\``)
+        output.debug(`Forcing \`deploymentType\` = \`docker\``)
         deploymentType = 'docker'
       } else if (argv.npm) {
-        debug(`Forcing \`deploymentType\` = \`npm\``)
+        output.debug(`Forcing \`deploymentType\` = \`npm\``)
         deploymentType = 'npm'
       } else if (argv.static) {
-        debug(`Forcing \`deploymentType\` = \`static\``)
+        output.debug(`Forcing \`deploymentType\` = \`static\``)
         deploymentType = 'static'
       }
     } else if (deploymentType === 'static') {
-      debug(`Forcing \`deploymentType\` = \`static\` automatically`)
+      output.debug(`Forcing \`deploymentType\` = \`static\` automatically`)
 
       meta = {
         name: deploymentName || (isFile
@@ -542,7 +536,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     // If there are regions coming from the args and now.json warn about it
     if (regions.length > 0 && getRegionsFromConfig(nowConfig).length > 0) {
-      warn(`You have regions defined from both args and now.json, using ${chalk.bold(regions.join(','))}`)
+      output.warn(`You have regions defined from both args and now.json, using ${chalk.bold(regions.join(','))}`)
     }
 
     // If there are no regions from args, use config
@@ -586,7 +580,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
     }
 
-    debug(`Scale presets for deploy: ${JSON.stringify(scale)}`)
+    output.debug(`Scale presets for deploy: ${JSON.stringify(scale)}`)
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
     let dotenvConfig
@@ -732,7 +726,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
-          note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`)
+          output.note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`)
       }
 
       env[key] = val
@@ -786,7 +780,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         const uploadStamp = stamp();
         await new Promise((resolve) => {
           if (now.syncFileCount !== now.fileCount) {
-            debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
+            output.debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`)
           }
 
           const size = bytes(now.syncAmount)
@@ -807,7 +801,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           now.upload({ scale })
 
           now.on('upload', ({ names, data }) => {
-            debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
+            output.debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`)
           })
 
           now.on('uploadProgress', progress => {
@@ -882,7 +876,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
           }
 
-          note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`)
+          output.note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`)
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
@@ -916,7 +910,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         return
       }
 
-      debug(`Error: ${err}\n${err.stack}`)
+      output.debug(`Error: ${err}\n${err.stack}`)
 
       if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
         const { additionalProperty = '' } = err.params || {}
@@ -942,7 +936,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           await copy(url)
           output.print(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}\n`)
         } catch (err) {
-          debug(`Error copying to clipboard: ${err}`)
+          output.debug(`Error copying to clipboard: ${err}`)
           output.print(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}\n`)
         }
       } else {
@@ -1042,12 +1036,12 @@ async function readMeta(
 
     if (!deploymentType) {
       deploymentType = meta.type
-      debug(`Detected \`deploymentType\` = \`${deploymentType}\``)
+      output.debug(`Detected \`deploymentType\` = \`${deploymentType}\``)
     }
 
     if (!_deploymentName) {
       _deploymentName = meta.name
-      debug(`Detected \`deploymentName\` = "${_deploymentName}"`)
+      output.debug(`Detected \`deploymentName\` = "${_deploymentName}"`)
     }
 
     return {
@@ -1058,8 +1052,8 @@ async function readMeta(
     }
   } catch (err) {
     if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
-      debug('Multiple manifests found, disambiguating')
-      log(
+      output.debug('Multiple manifests found, disambiguating')
+      output.log(
         `Two manifests found. Press [${chalk.bold(
           'n'
         )}] to deploy or re-run with --flag`
@@ -1070,7 +1064,7 @@ async function readMeta(
         ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
       ])
 
-      debug(`Selected \`deploymentType\` = "${deploymentType}"`)
+      output.debug(`Selected \`deploymentType\` = "${deploymentType}"`)
       return readMeta(_path, _deploymentName, deploymentType)
     }
     throw err
