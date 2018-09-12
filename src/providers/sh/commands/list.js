@@ -212,7 +212,7 @@ module.exports = async function main(ctx) {
   }
 
   if (argv['--json']) {
-    print(JSON.stringify(deployments, null, '  '))
+    process.stdout.write(JSON.stringify(deployments, null, '  '))
     return 0;
   }
 
