@@ -1122,7 +1122,7 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
       output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`)
     } else {
       output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`)
-      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`)
+      output.print(`  The DNS propagation may take a few minutes. Please verify your settings:\n\n`)
       output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
     }
     return 1
