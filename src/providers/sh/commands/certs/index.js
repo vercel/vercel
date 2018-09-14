@@ -9,6 +9,7 @@ import getSubcommand from '../../util/get-subcommand'
 import logo from '../../../../util/output/logo'
 import type { CLICertsOptions } from '../../util/types'
 
+import add from './add'
 import issue from './issue'
 import ls from './ls'
 import rm from './rm'
@@ -105,8 +106,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     case 'rm':
       return rm(ctx, argv, args, output)
     case 'add':
-      output.error(`${chalk.cyan('now certs add')} is deprecated. Please use ${chalk.cyan('now certs issue <cn> <cns>')} instead`)
-      return 1
+      return add(ctx, argv, args, output)
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.')
       return 1
