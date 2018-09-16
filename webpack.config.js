@@ -1,6 +1,5 @@
 // Packages
 const nodeExternals = require('webpack-node-externals')
-const FlowBabelWebpackPlugin = require('flow-babel-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
@@ -18,7 +17,7 @@ module.exports = {
     devtoolModuleFilenameTemplate: '[absolute-resource-path]',
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.js$/,
         exclude: /node_modules/,
@@ -27,7 +26,6 @@ module.exports = {
     ]
   },
   plugins: [
-    new FlowBabelWebpackPlugin(),
     new CopyWebpackPlugin([
       { from: 'src/serverless/handler.js', to: 'dist/handler.js' }
     ])

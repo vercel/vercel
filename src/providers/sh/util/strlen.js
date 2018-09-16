@@ -1,5 +1,5 @@
 function strlen(str) {
-  return str.replace(/\u001b[^m]*m/g, '').length
+  return str.replace(new RegExp("u001b[^m]*m/g"), '').length
 }
 
 module.exports = strlen
