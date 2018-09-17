@@ -10,7 +10,7 @@
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint .",
     "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
-    "dev": "webpack -w",
+    "dev": "webpack -w -d",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
     "gzip": "ls packed/now* | xargs gzip",
@@ -18,7 +18,7 @@
     "pack": "rm -rf packed && webpack && yarn bundle",
     "build-download": "webpack --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link",
-    "build": "webpack"
+    "build": "webpack -p"
   },
   "lint-staged": {
     "*.js": [
@@ -120,7 +120,7 @@
     "child-process-promise": "2.2.1",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
-    "copy-webpack-plugin": "4.0.1",
+    "copy-webpack-plugin": "4.5.2",
     "credit-card": "3.0.1",
     "death": "1.1.0",
     "debug": "3.1.0",
@@ -179,8 +179,9 @@
     "tmp-promise": "1.0.3",
     "uid-promise": "1.0.0",
     "update-check": "1.5.0",
-    "webpack": "3.6.0",
-    "webpack-node-externals": "1.6.0",
+    "webpack": "4.19.0",
+    "webpack-cli": "3.1.0",
+    "webpack-node-externals": "1.7.2",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0"
   }
