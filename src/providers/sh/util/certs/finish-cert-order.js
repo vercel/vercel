@@ -7,7 +7,7 @@ import wait from '../../../../util/output/wait'
 import type { Certificate } from '../types'
 
 export default async function startCertOrder(now: Now, cns: string[], context: string) {
-  const cancelWait = wait(`Finishing certificate issuance for ${chalk.bold(cns.join(', '))}`);
+  const cancelWait = wait(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {
     const cert: Certificate = await now.fetch('/v3/now/certs', {
       method: 'PATCH',
