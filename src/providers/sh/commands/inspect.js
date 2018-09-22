@@ -40,7 +40,7 @@ const help = () => {
 
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
-    ${chalk.cyan('$ now scale my-deployment.now.sh')}
+    ${chalk.cyan('$ now inspect my-deployment.now.sh')}
   `)
 }
 
