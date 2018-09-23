@@ -1,22 +1,23 @@
 const mainCommands = new Set([
-  'deploy',
-  'help',
-  'list',
-  'remove',
   'alias',
-  'domains',
-  'dns',
-  'certs',
-  'secrets',
   'billing',
-  'upgrade',
-  'teams',
-  'logs',
-  'scale',
+  'certs',
+  'deploy',
+  'dns',
+  'domains',
+  'help',
+  'init',
+  'inspect',
+  'list',
   'login',
   'logout',
-  'whoami',
-  'inspect'
+  'logs',
+  'remove',
+  'scale',
+  'secrets',
+  'teams',
+  'upgrade',
+  'whoami'
 ])
 
 const aliases = {
