@@ -76,7 +76,7 @@ const resolveGitHubByURL = async (url: string) => {
             return join(tmpDir, `${repo}-${tree}`)
           } else {
             throw new Error(
-              'An HTTP error ${res.status} was returned ' +
+              `An HTTP error ${res.status} was returned ` +
                 `by "${downloadURL}"`
             )
           }
