@@ -111,14 +111,7 @@ module.exports = async ctx => {
   }
 }
 
-function buildInquirerChoices(current, until) {
-  if (until) {
-    until = until.split(' ')
-    until = ' for ' + chalk.bold(until[0]) + ' more ' + until[1]
-  } else {
-    until = ''
-  }
-
+function buildInquirerChoices(current) {
   const currentText = bold('(current)')
   let ossName = `OSS ${bold('FREE')}`
   let premiumName = `Premium ${bold('$15')}`
@@ -200,7 +193,7 @@ async function run({ token, sh: { currentTeam, user } }) {
     message += `\n> Select a plan for ${bold(
       (currentTeam && currentTeam.slug) || user.username || user.email
     )} ${chalk.gray(`[${elapsed}]`)}`
-    const choices = buildInquirerChoices(currentPlan.id, currentPlan.until)
+    const choices = buildInquirerChoices(currentPlan.id)
 
     planId = await listInput({
       message,
