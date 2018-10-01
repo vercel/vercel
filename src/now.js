@@ -225,7 +225,12 @@ const main = async (argv_) => {
       return 1;
     }
 
-    if (!authConfig.token) {
+    // This is from when Now CLI supported
+    // multiple providers. In that case, we really
+    // need to migrate.
+    if (authConfig.credentials) {
+      authConfigExists = false;
+    } else if (!authConfig.token) {
       console.error(
         error(
           `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
@@ -233,13 +238,6 @@ const main = async (argv_) => {
         )
       )
       return 1;
-    }
-
-    // This is from when Now CLI supported
-    // multiple providers. In that case, we really
-    // need to migrate.
-    if (authConfig.credentials) {
-      authConfigExists = false;
     }
   }
 
