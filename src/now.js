@@ -36,14 +36,14 @@ const getNowDir = require('./config/global-path')
 const getDefaultCfg = require('./get-default-cfg')
 const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
-const platform = require('./sh');
+const commands = require('./commands');
 const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
 const pkg = require('./util/pkg')
 
-import { Output } from './sh/util/types'
+import { Output } from './util/types'
 import createOutput from './util/output'
-import getArgs from './sh/util/get-args'
+import getArgs from './util/get-args'
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()
@@ -300,7 +300,7 @@ const main = async (argv_) => {
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand)
     const targetPathExists = existsSync(targetPath)
-    const subcommandExists = GLOBAL_COMMANDS.has(targetOrSubcommand) || platform.subcommands.has(targetOrSubcommand)
+    const subcommandExists = GLOBAL_COMMANDS.has(targetOrSubcommand) || commands.subcommands.has(targetOrSubcommand)
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -494,7 +494,7 @@ const main = async (argv_) => {
   let exitCode;
 
   try {
-    exitCode = await platform[subcommand](ctx);
+    exitCode = await commands[subcommand](ctx);
   } catch (err) {
     // If there is a code we should not consider the error unexpected
     // but instead show the message
