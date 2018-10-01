@@ -1,28 +1,21 @@
-// Native
-const { join } = require('path')
-const { homedir } = require('os')
-
-// Packages
-const readJSON = require('load-json-file')
-
-module.exports = async () => {
+module.exports = async (existing) => {
   let migrated = false
 
   const config = {
-    _: 'This is your Now credentials file. DON\'T SHARE! More: https://goo.gl/mbf4CZ',
-    credentials: []
+    _: 'This is your Now credentials file. DON\'T SHARE! More: https://goo.gl/mbf4CZ'
   }
 
-  try {
-    const {token} = await readJSON(join(homedir(), '.now.json'))
+  if (existing) {
+    try {
+      const sh = existing.credentials.find(item => item.provider === 'sh');
 
-    config.credentials.push({
-      provider: 'sh',
-      token
-    })
+      if (sh) {
+        config.token = sh.token;
+      }
 
-    migrated = true
-  } catch (err) {}
+      migrated = true
+    } catch (err) {}
+  }
 
   return {config, migrated}
 }

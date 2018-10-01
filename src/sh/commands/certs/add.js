@@ -16,10 +16,10 @@ import createCertFromFile from '../../util/certs/create-cert-from-file'
 import createCertForCns from '../../util/certs/create-cert-for-cns'
 
 async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const { currentTeam } = sh;
+  const {authConfig: { token }, config} = ctx
+  const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const contextName = getContextName(sh);
+  const contextName = getContextName(config);
   const addStamp = stamp()
   let cert
 
@@ -32,7 +32,6 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   } = opts;
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   if (overwite) {

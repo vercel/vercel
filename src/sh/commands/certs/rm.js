@@ -14,14 +14,13 @@ import stamp from '../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
 
 async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const contextName = getContextName(sh);
-  const { currentTeam } = sh;
+  const {authConfig: { token }, config} = ctx
+  const contextName = getContextName(config);
+  const { currentTeam } = config;
   const { apiUrl } = ctx;
   const rmStamp = stamp()
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
 
   if (args.length !== 1) {

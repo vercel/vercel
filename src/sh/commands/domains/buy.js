@@ -17,13 +17,12 @@ import type { CLIDomainsOptions } from '../../util/types'
 import wait from '../../../util/output/wait'
 
 export default async function buy(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const contextName = getContextName(sh)
-  const { currentTeam } = sh
+  const {authConfig: { token }, config} = ctx
+  const contextName = getContextName(config)
+  const { currentTeam } = config
   const { apiUrl } = ctx
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
   const coupon = opts['--coupon']
   const domainName = args[0]

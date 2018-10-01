@@ -92,10 +92,9 @@ module.exports = async function main(ctx) {
     return 0
   }
 
-  const {authConfig: { credentials }, config: { sh, includeScheme }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
-  const { currentTeam } = sh;
-  const contextName = getContextName(sh);
+  const {authConfig: { token }, config} = ctx
+  const {currentTeam, includeScheme} = config;
+  const contextName = getContextName(config);
 
   const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
 

@@ -36,9 +36,7 @@ const getNowDir = require('./config/global-path')
 const getDefaultCfg = require('./get-default-cfg')
 const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
-const providers = {
-  sh: require('./sh')
-}
+const platform = require('./sh');
 const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
 const pkg = require('./util/pkg')
@@ -164,8 +162,17 @@ const main = async (argv_) => {
 
       return 1;
     }
-  } else {
-    const results = await getDefaultCfg()
+
+    // This is from when Now CLI supported
+    // multiple providers. In that case, we really
+    // need to migrate.
+    if (config.sh) {
+      configExists = false;
+    }
+  }
+
+  if (!configExists) {
+    const results = await getDefaultCfg(config)
 
     config = results.config
     migrated = results.migrated
@@ -218,39 +225,26 @@ const main = async (argv_) => {
       return 1;
     }
 
-    if (!Array.isArray(authConfig.credentials)) {
+    if (!authConfig.token) {
       console.error(
         error(
           `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
-            'No `credentials` list found inside'
+            'No `token` property found inside'
         )
       )
       return 1;
     }
 
-    for (const [i, { provider }] of authConfig.credentials.entries()) {
-      if (null == provider) {
-        console.error(
-          error(
-            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-              `Missing \`provider\` key in entry with index ${i}`
-          )
-        )
-        return 1;
-      }
-
-      if (!(provider in providers)) {
-        console.error(
-          error(
-            `Invalid credential found in "${hp(NOW_AUTH_CONFIG_PATH)}". ` +
-              `Unknown provider "${provider}"`
-          )
-        )
-        return 1;
-      }
+    // This is from when Now CLI supported
+    // multiple providers. In that case, we really
+    // need to migrate.
+    if (authConfig.credentials) {
+      authConfigExists = false;
     }
-  } else {
-    const results = await getDefaultAuthCfg()
+  }
+
+  if (!authConfigExists) {
+    const results = await getDefaultAuthCfg(authConfig)
 
     authConfig = results.config
     migrated = results.migrated
@@ -261,7 +255,7 @@ const main = async (argv_) => {
       console.error(
         error(
           'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" ` +
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
             err.message
         )
       )
@@ -300,63 +294,13 @@ const main = async (argv_) => {
     }
   }
 
-  let suppliedProvider = null
-
-  // if the target is something like `aws`
-  if (targetOrSubcommand && targetOrSubcommand in providers) {
-    debug('user supplied a known provider')
-    const targetPath = join(process.cwd(), targetOrSubcommand)
-    const targetPathExists = existsSync(targetPath)
-
-    if (targetPathExists) {
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous. ` +
-            'Both a directory and a provider are known'
-        )
-      )
-      return 1;
-    }
-
-    suppliedProvider = targetOrSubcommand
-    targetOrSubcommand = argv._[3]
-  }
-
-  // $FlowFixMe
-  let { defaultProvider = null }: { defaultProvider: ?string } = config
-
-  if (null === suppliedProvider) {
-    if (null === defaultProvider) {
-      debug(`falling back to default now provider 'sh'`)
-      defaultProvider = 'sh'
-    } else {
-      debug('using provider supplied by user', defaultProvider)
-
-      if (!(defaultProvider in providers)) {
-        console.error(
-          error(
-            `The \`defaultProvider\` "${defaultProvider}" supplied in ` +
-              `"${NOW_CONFIG_PATH}" is not a valid provider`
-          )
-        )
-        return 1;
-      }
-    }
-  }
-
-  const providerName = suppliedProvider || defaultProvider
-  const provider: Object = providers[providerName]
-
   let subcommand
 
   // we check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand)
     const targetPathExists = existsSync(targetPath)
-
-    const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
-      provider.subcommands.has(targetOrSubcommand)
+    const subcommandExists = GLOBAL_COMMANDS.has(targetOrSubcommand) || platform.subcommands.has(targetOrSubcommand)
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -387,7 +331,7 @@ const main = async (argv_) => {
     ctx.argv.push('-h')
   }
 
-  const { sh } = ctx.config
+  const sh = ctx.config;
   ctx.apiUrl = 'https://api.zeit.co'
 
   if (argv['--api'] && typeof argv['--api'] === 'string') {
@@ -410,7 +354,7 @@ const main = async (argv_) => {
   // If no credentials are set at all, prompt for
   // login to the .sh provider
   if (
-    !authConfig.credentials.length &&
+    (!authConfig || !authConfig.token) &&
     !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
     !argv['--token'] &&
     subcommand !== 'login'
@@ -456,20 +400,7 @@ const main = async (argv_) => {
       return 1;
     }
 
-    const obj = {
-      provider: 'sh',
-      token
-    }
-
-    const credentialsIndex = ctx.authConfig.credentials.findIndex(
-      cred => cred.provider === 'sh'
-    )
-
-    if (credentialsIndex === -1) {
-      ctx.authConfig.credentials.push(obj)
-    } else {
-      ctx.authConfig.credentials[credentialsIndex] = obj
-    }
+    ctx.authConfig.token = token
 
     let user
 
@@ -484,11 +415,11 @@ const main = async (argv_) => {
     }
 
     // Don't use team from config if `--token` was set
-    if (ctx.config.sh && ctx.config.sh.currentTeam) {
-      delete ctx.config.sh.currentTeam
+    if (ctx.config && ctx.config.currentTeam) {
+      delete ctx.config.currentTeam
     }
 
-    ctx.config.sh = Object.assign(ctx.config.sh || {}, { user })
+    ctx.config.sh = Object.assign(ctx.config || {}, { user })
   }
 
   if (typeof argv['--team'] === 'string' && subcommand !== 'login') {
@@ -514,7 +445,7 @@ const main = async (argv_) => {
 
     // Only download team data if not cached
     if (!cachedTeam && !cachedUser) {
-      const { token } = ctx.authConfig.credentials.find(item => item.provider === 'sh')
+      const { token } = ctx.authConfig
 
       const headers = {
         Authorization: `Bearer ${token}`
@@ -563,9 +494,8 @@ const main = async (argv_) => {
   let exitCode;
 
   try {
-    exitCode = await provider[subcommand](ctx);
+    exitCode = await platform[subcommand](ctx);
   } catch (err) {
-
     // If there is a code we should not consider the error unexpected
     // but instead show the message
     if (err.code) {

@@ -135,12 +135,10 @@ module.exports = async function main (ctx: any) {
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit']
   outputMode = argv.output in logPrinters ? argv.output : 'short'
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
-
-  const { currentTeam } = sh;
+  const {authConfig: { token }, config} = ctx
+  const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const contextName = getContextName(sh);
+  const contextName = getContextName(config);
 
   let deployment;
   const id = deploymentIdOrURL;

@@ -53,7 +53,7 @@ const main = async ctx => {
     process.exit(0)
   }
 
-  await whoami(ctx.config.sh)
+  await whoami(ctx.config)
 }
 
 module.exports = async ctx => {

@@ -355,10 +355,8 @@ async function main(ctx: any) {
     await exit(0)
   }
 
-  const { authConfig: { credentials }, config: { sh } } = ctx
-  const { token } = credentials.find(item => item.provider === 'sh')
-  const contextName = getContextName(sh);
-  const config = sh
+  const { authConfig: {token}, config } = ctx
+  const contextName = getContextName(config);
 
   alwaysForwardNpm = config.forwardNpm
 

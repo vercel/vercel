@@ -19,13 +19,12 @@ import type { CLIDomainsOptions } from '../../util/types'
 import zeitWorldTable from '../../util/zeit-world-table'
 
 export default async function add(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const { currentTeam } = sh;
-  const contextName = getContextName(sh);
+  const {authConfig: { token }, config} = ctx
+  const { currentTeam } = config;
+  const contextName = getContextName(config);
   const { apiUrl } = ctx;
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
   const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
 

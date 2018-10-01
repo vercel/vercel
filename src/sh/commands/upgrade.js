@@ -86,11 +86,10 @@ const main = async ctx => {
     exit(0)
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
+  const {authConfig: { token }, config} = ctx
 
   try {
-    await run({ token, sh })
+    await run({ token, config })
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message))
@@ -171,7 +170,7 @@ function buildInquirerChoices(current, until) {
   ]
 }
 
-async function run({ token, sh: { currentTeam, user } }) {
+async function run({ token, config: { currentTeam, user } }) {
   const args = argv._
   if (args.length > 1) {
     console.error(error('Invalid number of arguments'))

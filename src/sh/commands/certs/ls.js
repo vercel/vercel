@@ -14,13 +14,12 @@ import { CLIContext, Output } from '../../util/types'
 import type { CLICertsOptions } from '../../util/types'
 
 async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const { currentTeam } = sh;
-  const contextName = getContextName(sh);
+  const {authConfig: {token}, config} = ctx
+  const { currentTeam } = config;
+  const contextName = getContextName(config);
   const { apiUrl } = ctx;
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
   const lsStamp = stamp()
 

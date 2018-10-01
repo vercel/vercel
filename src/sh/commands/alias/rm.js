@@ -16,14 +16,13 @@ import findAliasByAliasOrId from './find-alias-by-alias-or-id'
 import promptBool from './prompt-bool'
 
 export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const { currentTeam } = sh;
+  const {authConfig: { token}, config} = ctx
+  const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const contextName = getContextName(sh);
+  const contextName = getContextName(config);
   const {['--debug']: debugEnabled} = opts;
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
   const [aliasOrId] = args
 

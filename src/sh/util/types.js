@@ -43,10 +43,7 @@ export type Config = {
 
 export interface CLIContext {
   authConfig: {
-    credentials: Array<{
-      provider: 'sh',
-      token: string,
-    }>,
+    token: string
   },
   argv: string[],
   apiUrl: string,
@@ -55,20 +52,18 @@ export interface CLIContext {
     type: string,
     files: string[],
     forwardNpm: boolean,
-    sh: {
-      user: {
-        uid: string,
-        email: string,
-        username: string,
-        avatar: string
-      },
-      currentTeam: {
-        id: string,
-        slug: string,
-        name: string,
-        creatorId: string,
-        avatar: string,
-      }
+    user: {
+      uid: string,
+      email: string,
+      username: string,
+      avatar: string
+    },
+    currentTeam: {
+      id: string,
+      slug: string,
+      name: string,
+      creatorId: string,
+      avatar: string,
     }
   },
 }

@@ -75,10 +75,9 @@ module.exports = async function main (ctx: any): Promise<number> {
     return 1;
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
-  const { currentTeam } = sh;
-  const contextName = getContextName(sh);
+  const {authConfig: { token }, config} = ctx
+  const { currentTeam } = config;
+  const contextName = getContextName(config);
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 

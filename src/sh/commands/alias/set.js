@@ -20,10 +20,10 @@ import getTargetsForAlias from './get-targets-for-alias'
 import upsertPathAlias from './upsert-path-alias'
 
 export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const { currentTeam, user } = sh;
+  const {authConfig: { token }, config} = ctx
+  const { currentTeam, user } = config;
   const { apiUrl } = ctx;
-  const contextName = getContextName(sh);
+  const contextName = getContextName(config);
   const setStamp = stamp()
 
   const {
@@ -33,7 +33,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
   } = opts;
 
   // $FlowFixMe
-  const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // If there are more than two args we have to error

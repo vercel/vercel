@@ -88,11 +88,10 @@ const main = async ctx => {
     await exit(0)
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
+  const {authConfig: { token }, config} = ctx
 
   try {
-    await run({ token, sh })
+    await run({ token, config })
   } catch (err) {
     handleError(err)
     exit(1)
@@ -108,7 +107,7 @@ module.exports = async ctx => {
   }
 }
 
-async function run({ token, sh: { currentTeam, user } }) {
+async function run({ token, config: { currentTeam, user } }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
   const start = Date.now()
