@@ -2,10 +2,10 @@
 import ms from 'ms'
 import chalk from 'chalk'
 
-import cmd from '../../../util/output/cmd'
-import createOutput from '../../../util/output'
-import logo from '../../../util/output/logo'
-import stamp from '../../../util/output/stamp'
+import cmd from '../../util/output/cmd'
+import createOutput from '../../util/output'
+import logo from '../../util/output/logo'
+import stamp from '../../util/output/stamp'
 
 import * as Errors from '../util/errors'
 import Now from '../util/'

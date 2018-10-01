@@ -9,7 +9,7 @@ import getContextName from '../../util/get-context-name'
 import getDomains from '../../util/domains/get-domains'
 import isDomainExternal from '../../util/domains/is-domain-external'
 import Now from '../../util'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import strlen from '../../util/strlen'
 import type { CLIDomainsOptions, Domain } from '../../util/types'
 

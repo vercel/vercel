@@ -1,5 +1,5 @@
 // @flow
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import { Now } from '../../util/types'
 import { DomainNameserversNotFound } from '../../util/errors'
 

@@ -3,8 +3,8 @@ const ms = require('ms')
 const chalk = require('chalk')
 
 // Utilities
-const error = require('../../../util/output/error')
-const info = require('../../../util/output/info')
+const error = require('../../util/output/error')
+const info = require('../../util/output/info')
 
 function handleError(err, { debug = false } = {}) {
   // Coerce Strings to Error instances
@@ -71,7 +71,7 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   }
 
   const err = new Error(`${message} (${res.status})`)
-  
+
   err.status = res.status
   err.userError = userError
   err.serverMessage = message

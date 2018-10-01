@@ -7,7 +7,7 @@ import table from 'text-table'
 
 import Now from '../../util'
 import getContextName from '../../util/get-context-name'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import getCerts from '../../util/certs/get-certs'
 import strlen from '../../util/strlen'
 import { CLIContext, Output } from '../../util/types'

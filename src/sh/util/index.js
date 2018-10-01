@@ -22,8 +22,8 @@ const {
 const Agent = require('./agent')
 const ua = require('./ua')
 const hash = require('./hash')
-const cmd = require('../../../util/output/cmd')
-const createOutput = require('../../../util/output')
+const cmd = require('../../util/output/cmd')
+const createOutput = require('../../util/output')
 const { responseError } = require('./error')
 
 // How many concurrent HTTP/2 stream uploads

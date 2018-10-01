@@ -13,26 +13,26 @@ const mri = require('mri')
 
 // Utilities
 const ua = require('../util/ua')
-const error = require('../../../util/output/error')
-const aborted = require('../../../util/output/aborted')
-const wait = require('../../../util/output/wait')
-const highlight = require('../../../util/output/highlight')
-const info = require('../../../util/output/info')
-const ok = require('../../../util/output/ok')
-const cmd = require('../../../util/output/cmd')
-const ready = require('../../../util/output/ready')
-const param = require('../../../util/output/param')
-const eraseLines = require('../../../util/output/erase-lines')
-const sleep = require('../../../util/sleep')
-const getUser = require('../../../util/get-user')
+const error = require('../../util/output/error')
+const aborted = require('../../util/output/aborted')
+const wait = require('../../util/output/wait')
+const highlight = require('../../util/output/highlight')
+const info = require('../../util/output/info')
+const ok = require('../../util/output/ok')
+const cmd = require('../../util/output/cmd')
+const ready = require('../../util/output/ready')
+const param = require('../../util/output/param')
+const eraseLines = require('../../util/output/erase-lines')
+const sleep = require('../../util/sleep')
+const getUser = require('../../util/get-user')
 const {
   writeToAuthConfigFile,
   writeToConfigFile
-} = require('../../../util/config-files')
-const getNowDir = require('../../../config/global-path')
-const hp = require('../../../util/humanize-path')
-const logo = require('../../../util/output/logo')
-const exit = require('../../../util/exit')
+} = require('../../util/config-files')
+const getNowDir = require('../../config/global-path')
+const hp = require('../../util/humanize-path')
+const logo = require('../../util/output/logo')
+const exit = require('../../util/exit')
 
 const help = () => {
   console.log(`

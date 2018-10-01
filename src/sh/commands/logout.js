@@ -7,16 +7,16 @@ const fetch = require('node-fetch')
 const ora = require('ora')
 
 // Utilities
-const logo = require('../../../util/output/logo')
+const logo = require('../../util/output/logo')
 const { handleError } = require('../util/error')
 const {
   readConfigFile,
   writeToConfigFile,
   readAuthConfigFile,
   writeToAuthConfigFile
-} = require('../../../util/config-files')
-const error = require('../../../util/output/error')
-const exit = require('../../../util/exit')
+} = require('../../util/config-files')
+const error = require('../../util/output/error')
+const exit = require('../../util/exit')
 
 const help = () => {
   console.log(`

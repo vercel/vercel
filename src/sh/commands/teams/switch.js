@@ -2,13 +2,13 @@
 const chalk = require('chalk')
 
 // Utilities
-const wait = require('../../../../util/output/wait')
-const listInput = require('../../../../util/input/list')
-const success = require('../../../../util/output/success')
-const info = require('../../../../util/output/info')
-const error = require('../../../../util/output/error')
-const param = require('../../../../util/output/param')
-const {writeToConfigFile} = require('../../../../util/config-files')
+const wait = require('../../../util/output/wait')
+const listInput = require('../../../util/input/list')
+const success = require('../../../util/output/success')
+const info = require('../../../util/output/info')
+const error = require('../../../util/output/error')
+const param = require('../../../util/output/param')
+const {writeToConfigFile} = require('../../../util/config-files')
 
 const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {

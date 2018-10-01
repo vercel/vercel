@@ -5,7 +5,7 @@ import retry from 'async-retry'
 import * as Errors from '../errors'
 import { Now } from '../types'
 import type { Certificate } from '../types'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 async function createCertForCns(now: Now, cns: string[], context: string) {
   const cancelWait = wait(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);

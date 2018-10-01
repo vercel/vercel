@@ -1,5 +1,5 @@
 // @flow
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 import { Now } from '../types'
 import * as Errors from '../errors'

@@ -1,7 +1,7 @@
 // @flow
 import { readFileSync } from 'fs-extra'
 import { resolve } from 'path'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 import { Now } from '../types'
 import { InvalidCert, DomainPermissionDenied } from '../errors'

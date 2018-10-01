@@ -10,7 +10,7 @@ import getCertById from '../../util/certs/get-cert-by-id'
 import getCerts from '../../util/certs/get-certs'
 import getContextName from '../../util/get-context-name'
 import Now from '../../util'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
 
 async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
@@ -19,7 +19,7 @@ async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
   const { currentTeam } = sh;
   const { apiUrl } = ctx;
   const rmStamp = stamp()
-  
+
   // $FlowFixMe
   const {token} = credentials.find(item => item.provider === 'sh')
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
@@ -77,8 +77,8 @@ function readConfirmation(output, msg, certs) {
 
 function formatCertRow(cert) {
   return [
-    cert.uid, 
-    chalk.bold(cert.cns.join(', ')), 
+    cert.uid,
+    chalk.bold(cert.cns.join(', ')),
     chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
   ]
 }

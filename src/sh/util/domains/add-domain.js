@@ -5,7 +5,7 @@ import retry from 'async-retry'
 import { Now } from '../types'
 import * as Errors from '../errors'
 import type { AddedDomain } from '../types'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 export default async function addDomain(now: Now, domain: string, contextName: string, isExternal: boolean, cdnEnabled?: boolean) {
   const cancelWait = wait(`Adding domain ${domain} under ${chalk.bold(contextName)}`)

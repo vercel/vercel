@@ -6,13 +6,13 @@ const chalk = require('chalk')
 const ccValidator = require('credit-card')
 
 // Utilities
-const textInput = require('../../../../util/input/text')
+const textInput = require('../../../util/input/text')
 const cardBrands = require('../../util/billing/card-brands')
-const success = require('../../../../util/output/success')
-const wait = require('../../../../util/output/wait')
-const { tick } = require('../../../../util/output/chars')
-const rightPad = require('../../../../util/output/right-pad')
-const error = require('../../../../util/output/error')
+const success = require('../../../util/output/success')
+const wait = require('../../../util/output/wait')
+const { tick } = require('../../../util/output/chars')
+const rightPad = require('../../../util/output/right-pad')
+const error = require('../../../util/output/error')
 
 const expDateMiddleware = data => data
 

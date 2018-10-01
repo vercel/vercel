@@ -2,19 +2,19 @@
 const chalk = require('chalk')
 
 // Utilities
-const stamp = require('../../../../util/output/stamp')
-const info = require('../../../../util/output/info')
-const error = require('../../../../util/output/error')
-const wait = require('../../../../util/output/wait')
-const rightPad = require('../../../../util/output/right-pad')
-const eraseLines = require('../../../../util/output/erase-lines')
-const { tick } = require('../../../../util/output/chars')
-const success = require('../../../../util/output/success')
-const cmd = require('../../../../util/output/cmd')
-const note = require('../../../../util/output/note')
-const textInput = require('../../../../util/input/text')
+const stamp = require('../../../util/output/stamp')
+const info = require('../../../util/output/info')
+const error = require('../../../util/output/error')
+const wait = require('../../../util/output/wait')
+const rightPad = require('../../../util/output/right-pad')
+const eraseLines = require('../../../util/output/erase-lines')
+const { tick } = require('../../../util/output/chars')
+const success = require('../../../util/output/success')
+const cmd = require('../../../util/output/cmd')
+const note = require('../../../util/output/note')
+const textInput = require('../../../util/input/text')
 const invite = require('./invite')
-const {writeToConfigFile} = require('../../../../util/config-files')
+const {writeToConfigFile} = require('../../../util/config-files')
 
 const validateSlugKeypress = (data, value) => {
   // TODO: the `value` here should contain the current value + the keypress

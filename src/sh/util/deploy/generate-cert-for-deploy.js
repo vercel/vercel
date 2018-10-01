@@ -4,7 +4,7 @@ import * as Errors from '../errors'
 import { Now, Output } from '../types'
 import createCertForCns from '../certs/create-cert-for-cns'
 import setupDomain from '../../commands/alias/setup-domain'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 export default async function generateCertForDeploy(output: Output, now: Now, contextName: string, deployURL: string) {
   const {domain} = psl.parse(deployURL)

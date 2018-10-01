@@ -18,36 +18,36 @@ const Progress = require('progress')
 
 // Utilities
 const { handleError } = require('../../util/error')
-const { tick } = require('../../../../util/output/chars')
+const { tick } = require('../../../util/output/chars')
 const checkPath = require('../../util/check-path')
-const cmd = require('../../../../util/output/cmd')
-const createOutput = require('../../../../util/output')
-const exit = require('../../../../util/exit')
-const logo = require('../../../../util/output/logo')
+const cmd = require('../../../util/output/cmd')
+const createOutput = require('../../../util/output')
+const exit = require('../../../util/exit')
+const logo = require('../../../util/output/logo')
 const Now = require('../../util')
 const uniq = require('../../util/unique-strings')
-const promptBool = require('../../../../util/input/prompt-bool')
+const promptBool = require('../../../util/input/prompt-bool')
 const promptOptions = require('../../util/prompt-options')
 const readMetaData = require('../../util/read-metadata')
-const toHumanPath = require('../../../../util/humanize-path')
+const toHumanPath = require('../../../util/humanize-path')
 
 import { Output } from '../../util/types'
 import * as Errors from '../../util/errors'
-import combineAsyncGenerators from '../../../../util/combine-async-generators'
+import combineAsyncGenerators from '../../../util/combine-async-generators'
 import createDeploy from '../../util/deploy/create-deploy'
 import dnsTable from '../../util/dns-table'
-import eventListenerToGenerator from '../../../../util/event-listener-to-generator'
-import formatLogCmd from '../../../../util/output/format-log-cmd'
-import formatLogOutput from '../../../../util/output/format-log-output'
+import eventListenerToGenerator from '../../../util/event-listener-to-generator'
+import formatLogCmd from '../../../util/output/format-log-cmd'
+import formatLogOutput from '../../../util/output/format-log-output'
 import getContextName from '../../util/get-context-name'
 import getEventsStream from '../../util/deploy/get-events-stream'
 import getInstanceIndex from '../../util/deploy/get-instance-index'
 import getStateChangeFromPolling from '../../util/deploy/get-state-change-from-polling'
-import joinWords from '../../../../util/output/join-words';
+import joinWords from '../../../util/output/join-words';
 import normalizeRegionsList from '../../util/scale/normalize-regions-list'
-import raceAsyncGenerators from '../../../../util/race-async-generators'
+import raceAsyncGenerators from '../../../util/race-async-generators'
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import zeitWorldTable from '../../util/zeit-world-table'
 import type { Readable } from 'stream'
@@ -294,7 +294,7 @@ const promptForEnvFields = async list => {
   }
 
   // eslint-disable-next-line import/no-unassigned-import
-  require('../../../../util/input/patch-inquirer')
+  require('../../../util/input/patch-inquirer')
 
   log('Please enter values for the following environment variables:')
   const answers = await inquirer.prompt(questions)

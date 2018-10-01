@@ -3,10 +3,10 @@ import chalk from 'chalk'
 
 import { handleError } from '../../util/error'
 import { Output } from '../../util/types'
-import createOutput from '../../../../util/output'
+import createOutput from '../../../util/output'
 import getArgs from '../../util/get-args'
 import getSubcommand from '../../util/get-subcommand'
-import logo from '../../../../util/output/logo'
+import logo from '../../../util/output/logo'
 import type { CLICertsOptions } from '../../util/types'
 
 import add from './add'

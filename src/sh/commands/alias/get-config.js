@@ -1,7 +1,7 @@
 // @flow
 import path from 'path'
 import { Output } from '../../util/types'
-import humanizePath from '../../../../util/humanize-path'
+import humanizePath from '../../../util/humanize-path'
 import type { Config } from '../../util/types'
 
 // Local modules

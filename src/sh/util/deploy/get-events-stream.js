@@ -4,7 +4,7 @@ import jsonlines from 'jsonlines'
 import { stringify } from 'querystring'
 import type { Readable } from 'stream'
 import { Now } from '../../util/types'
-import noop from '../../../../util/noop'
+import noop from '../../../util/noop'
 
 type Options = {
   direction: 'forward' | 'backwards',

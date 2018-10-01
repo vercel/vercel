@@ -7,7 +7,7 @@ const jsonlines = require('jsonlines')
 const retry = require('async-retry')
 
 // Utilities
-const createOutput = require('../../../util/output')
+const createOutput = require('../../util/output')
 
 async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
   mode, onOpen = ()=>{}, onEvent, quiet, debugEnabled, findOpts

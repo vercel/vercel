@@ -1,7 +1,7 @@
 // @flow
 import chalk from 'chalk'
 import { Now } from '../types'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import type { CertificateOrder } from '../types'
 
 export default async function startCertOrder(now: Now, cns: string[], contextName: string) {

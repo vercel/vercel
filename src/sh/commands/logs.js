@@ -7,12 +7,12 @@ const chalk = require('chalk')
 
 // Utilities
 const Now = require('../util')
-const createOutput = require('../../../util/output')
-const logo = require('../../../util/output/logo')
-const elapsed = require('../../../util/output/elapsed')
-const { maybeURL, normalizeURL, parseInstanceURL } = require('../../../util/url')
+const createOutput = require('../../util/output')
+const logo = require('../../util/output/logo')
+const elapsed = require('../../util/output/elapsed')
+const { maybeURL, normalizeURL, parseInstanceURL } = require('../../util/url')
 const printEvents = require('../util/events')
-const wait = require('../../../util/output/wait')
+const wait = require('../../util/output/wait')
 const getContextName = require('../util/get-context-name')
 
 const help = () => {

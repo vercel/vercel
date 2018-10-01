@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import psl from 'psl'
 import { Now } from '../types'
 import * as Errors from '../errors'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import type { Certificate } from '../types'
 
 export default async function startCertOrder(now: Now, cns: string[], context: string) {

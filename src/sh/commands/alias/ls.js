@@ -8,9 +8,9 @@ import Now from '../../util'
 import { CLIContext, Output } from '../../util/types'
 import getAliases from '../../util/alias/get-aliases'
 import getContextName from '../../util/get-context-name'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import strlen from '../../util/strlen'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import type { CLIAliasOptions, Alias, PathAliasRule } from '../../util/types'
 
 export default async function ls(ctx: CLIContext, opts: CLIAliasOptions, args: string[], output: Output): Promise<number> {

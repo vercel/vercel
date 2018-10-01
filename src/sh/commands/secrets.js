@@ -11,8 +11,8 @@ const plural = require('pluralize')
 const strlen = require('../util/strlen')
 const { handleError, error } = require('../util/error')
 const NowSecrets = require('../util/secrets')
-const exit = require('../../../util/exit')
-const logo = require('../../../util/output/logo')
+const exit = require('../../util/exit')
+const logo = require('../../util/output/logo')
 
 const help = () => {
   console.log(`

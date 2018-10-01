@@ -1,7 +1,7 @@
 // @flow
 import sleep from 'then-sleep'
 import { Now } from '../../util/types'
-import createPollingFn from '../../../../util/create-polling-fn'
+import createPollingFn from '../../../util/create-polling-fn'
 import type { StateChangeEvent } from '../types'
 import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw'
 

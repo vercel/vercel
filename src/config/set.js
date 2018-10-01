@@ -9,8 +9,7 @@ const CONFIGS = new Map([
   [
     'defaultProvider',
     value => {
-      const providers = require('../providers')
-      return [providers.hasOwnProperty(value), value]
+      return [true, value]
     }
   ],
   [

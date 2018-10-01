@@ -10,12 +10,12 @@ const table = require('text-table')
 
 // Utilities
 const Now = require('../util')
-const createOutput = require('../../../util/output')
-const wait = require('../../../util/output/wait')
-const logo = require('../../../util/output/logo')
-const cmd = require('../../../util/output/cmd')
-const elapsed = require('../../../util/output/elapsed')
-const { normalizeURL } = require('../../../util/url')
+const createOutput = require('../../util/output')
+const wait = require('../../util/output/wait')
+const logo = require('../../util/output/logo')
+const cmd = require('../../util/output/cmd')
+const elapsed = require('../../util/output/elapsed')
+const { normalizeURL } = require('../../util/url')
 const getContextName = require('../util/get-context-name')
 import getAliases from '../util/alias/get-aliases'
 

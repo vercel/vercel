@@ -1,8 +1,8 @@
 // @flow
 import ms from 'ms'
 import uuid from '../../util/uuid'
-import createPollingFn from '../../../../util/create-polling-fn'
-import returnify from '../../../../util/returnify-async-generator.js'
+import createPollingFn from '../../../util/create-polling-fn'
+import returnify from '../../../util/returnify-async-generator.js'
 import { Output, Now } from '../types'
 import { VerifyScaleTimeout } from '../errors'
 import getDeploymentInstances from '../deploy/get-deployment-instances'

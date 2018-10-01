@@ -5,7 +5,7 @@ const mri = require('mri')
 const chalk = require('chalk')
 
 // Utilities
-const logo = require('../../../util/output/logo')
+const logo = require('../../util/output/logo')
 const { handleError } = require('../util/error')
 
 const help = () => {

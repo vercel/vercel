@@ -10,7 +10,7 @@ import dnsTable from '../../util/dns-table'
 import getCnsFromArgs from '../../util/certs/get-cns-from-args'
 import getContextName from '../../util/get-context-name'
 import Now from '../../util'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import type { CLICertsOptions } from '../../util/types'
 
 import createCertForCns from '../../util/certs/create-cert-for-cns'

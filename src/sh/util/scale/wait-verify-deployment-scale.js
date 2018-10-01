@@ -2,12 +2,12 @@
 import chalk from 'chalk'
 import plural from 'pluralize'
 import { Output, Now } from '../../util/types'
-import { tick } from '../../../../util/output/chars'
+import { tick } from '../../../util/output/chars'
 import { VerifyScaleTimeout } from '../../util/errors'
-import joinWords from '../../../../util/output/join-words';
-import stamp from '../../../../util/output/stamp'
+import joinWords from '../../../util/output/join-words';
+import stamp from '../../../util/output/stamp'
 import type { DeploymentScale } from '../../util/types'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import verifyDeploymentScale from './verify-deployment-scale'
 
 async function waitForScale(output: Output, now: Now, deploymentId: string, scale: DeploymentScale) {

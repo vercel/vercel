@@ -2,7 +2,7 @@
 import chalk from 'chalk'
 import Now from '../../util'
 import getContextName from '../../util/get-context-name'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import addDNSRecord from '../../util/dns/add-dns-record'
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors'
 import { CLIContext, Output } from '../../util/types'

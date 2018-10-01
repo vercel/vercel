@@ -1,7 +1,7 @@
 // @flow
 import chalk from 'chalk'
-import wait from '../../../../util/output/wait'
-import joinWords from '../../../../util/output/join-words'
+import wait from '../../../util/output/wait'
+import joinWords from '../../../util/output/join-words'
 import { Output, Now } from '../../util/types'
 import type { DeploymentScaleArgs, DeploymentScale } from '../../util/types'
 import * as Errors from '../errors';

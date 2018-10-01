@@ -8,12 +8,12 @@ const ms = require('ms')
 // Utilities
 const NowPlans = require('../util/plans')
 const indent = require('../util/indent')
-const listInput = require('../../../util/input/list')
-const code = require('../../../util/output/code')
-const error = require('../../../util/output/error')
-const success = require('../../../util/output/success')
-const cmd = require('../../../util/output/cmd')
-const logo = require('../../../util/output/logo')
+const listInput = require('../../util/input/list')
+const code = require('../../util/output/code')
+const error = require('../../util/output/error')
+const success = require('../../util/output/success')
+const cmd = require('../../util/output/cmd')
+const logo = require('../../util/output/logo')
 const { handleError } = require('../util/error')
 
 const { bold } = chalk

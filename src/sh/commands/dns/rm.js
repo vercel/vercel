@@ -7,7 +7,7 @@ import Now from '../../util'
 import getContextName from '../../util/get-context-name'
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id'
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import { CLIContext, Output } from '../../util/types'
 import type { CLIDNSOptions, DNSRecord } from '../../util/types'
 

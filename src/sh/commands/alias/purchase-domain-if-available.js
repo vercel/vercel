@@ -3,10 +3,10 @@ import chalk from 'chalk'
 import plural from 'pluralize'
 
 // External utils
-import eraseLines from '../../../../util/output/erase-lines'
-import promptBool from '../../../../util/input/prompt-bool'
-import stamp from '../../../../util/output/stamp'
-import wait from '../../../../util/output/wait'
+import eraseLines from '../../../util/output/erase-lines'
+import promptBool from '../../../util/input/prompt-bool'
+import stamp from '../../../util/output/stamp'
+import wait from '../../../util/output/wait'
 
 // Internal utils
 import { Now, Output } from '../../util/types'

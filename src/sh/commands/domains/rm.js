@@ -5,10 +5,10 @@ import plural from 'pluralize'
 import table from 'text-table'
 
 import { CLIContext, Output } from '../../util/types'
-import cmd from '../../../../util/output/cmd'
+import cmd from '../../../util/output/cmd'
 import getContextName from '../../util/get-context-name'
 import Now from '../../util'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import type { CLIDomainsOptions, Certificate, Domain } from '../../util/types'
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';

@@ -1,5 +1,5 @@
 // @flow
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 import { Now, Output } from '../../util/types'
 import type { AliasRecord, PathRule } from '../../util/types'
 import * as Errors from '../../util/errors'

@@ -4,17 +4,17 @@ import psl from 'psl'
 
 import { CLIContext, Output } from '../../util/types'
 import * as Errors from '../../util/errors'
-import cmd from '../../../../util/output/cmd'
+import cmd from '../../../util/output/cmd'
 import getContextName from '../../util/get-context-name'
 import getDomainPrice from '../../util/domains/get-domain-price'
 import getDomainStatus from '../../util/domains/get-domain-status'
 import Now from '../../util'
-import param from '../../../../util/output/param'
-import promptBool from '../../../../util/input/prompt-bool'
+import param from '../../../util/output/param'
+import promptBool from '../../../util/input/prompt-bool'
 import purchaseDomain from '../../util/domains/purchase-domain'
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import type { CLIDomainsOptions } from '../../util/types'
-import wait from '../../../../util/output/wait'
+import wait from '../../../util/output/wait'
 
 export default async function buy(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { credentials }, config: { sh }} = ctx

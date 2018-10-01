@@ -1,5 +1,5 @@
 // @flow
-import stamp from '../../../../util/output/stamp'
+import stamp from '../../../util/output/stamp'
 import { Now, Output } from '../../util/types'
 import setDeploymentScale from '../../util/scale/set-deployment-scale'
 import waitForScale from '../../util/scale/wait-verify-deployment-scale'

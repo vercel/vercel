@@ -36,14 +36,16 @@ const getNowDir = require('./config/global-path')
 const getDefaultCfg = require('./get-default-cfg')
 const getDefaultAuthCfg = require('./get-default-auth-cfg')
 const hp = require('./util/humanize-path')
-const providers = require('./providers')
+const providers = {
+  sh: require('./sh')
+}
 const configFiles = require('./util/config-files')
 const getUser = require('./util/get-user')
 const pkg = require('./util/pkg')
 
-import { Output } from './providers/sh/util/types'
+import { Output } from './sh/util/types'
 import createOutput from './util/output'
-import getArgs from './providers/sh/util/get-args'
+import getArgs from './sh/util/get-args'
 
 const NOW_DIR = getNowDir()
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath()

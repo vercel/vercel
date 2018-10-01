@@ -6,8 +6,7 @@ const https = require('https')
 // Packages
 const Sema = require('async-sema')
 const fetch = require('node-fetch')
-// const {version} = require('../../../util/pkg')
-const createOutput = require('../../../util/output')
+const createOutput = require('../../util/output')
 
 // TODO: Don't limit to canary
 // const USE_HTTP2 = version.indexOf('canary') > -1
