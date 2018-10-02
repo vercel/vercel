@@ -1,26 +1,35 @@
-// Native
-const { join } = require('path')
-const { homedir } = require('os')
-
-// Packages
-const readJSON = require('load-json-file')
-
-module.exports = async () => {
+module.exports = async (existingCopy) => {
   let migrated = false
 
   const config = {
     _: 'This is your Now config file. See `now config help`. More: https://goo.gl/5aRS2s'
   }
 
-  try {
-    const sh = await readJSON(join(homedir(), '.now.json'))
+  if (existingCopy) {
+    const keep = [
+      '_',
+      'user',
+      'currentTeam',
+      'desktop',
+      'updateChannel',
+      'api'
+    ]
 
-    delete sh.lastUpdate
-    delete sh.token
+    try {
+      const existing = Object.assign({}, existingCopy);
+      const sh = Object.assign({}, existing.sh || {});
 
-    Object.assign(config, { sh })
-    migrated = true
-  } catch (err) {}
+      Object.assign(config, existing, sh);
+
+      for (const key of Object.keys(config)) {
+        if (!keep.includes(key)) {
+          delete config[key]
+        }
+      }
+
+      migrated = true
+    } catch (err) {}
+  }
 
   return {config, migrated}
 }
