@@ -312,10 +312,23 @@ const login = async ctx => {
     return 1
   }
 
+  const keepUserConfig = [
+    'uid',
+    'email',
+    'username'
+  ]
+
+  for (const key of Object.keys(user)) {
+    if (!keepUserConfig.includes(key)) {
+      delete user[key]
+    }
+  }
+
   ctx.authConfig.token = token
 
   // Make sure we keep existing properties in the config
   ctx.config.user = user
+
   delete ctx.config.currentTeam
 
   writeToAuthConfigFile(ctx.authConfig)
