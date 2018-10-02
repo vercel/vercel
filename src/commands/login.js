@@ -312,19 +312,11 @@ const login = async ctx => {
     return 1
   }
 
-  const index = ctx.authConfig.credentials.findIndex(c => c.provider === 'sh')
-  const obj = { provider: 'sh', token }
+  ctx.authConfig.token = token
 
-  if (index === -1) {
-    // wasn't logged in before
-    ctx.authConfig.credentials.push(obj)
-  } else {
-    // let's just replace the existing object
-    ctx.authConfig.credentials[index] = obj
-  }
-
-  // NOTE: this will override any existing config for `sh`
-  ctx.config.sh = { user }
+  // Make sure we keep existing properties in the config
+  ctx.config.user = user
+  delete ctx.config.currentTeam
 
   writeToAuthConfigFile(ctx.authConfig)
   writeToConfigFile(ctx.config)
