@@ -116,18 +116,15 @@ const logout = async () => {
   }).start()
 
   const configContent = readConfigFile()
-
-  if (configContent.sh) {
-    delete configContent.sh
-  }
-
   const authContent = readAuthConfigFile()
-  const {credentials} = authContent
-  const related = credentials.find(item => item.provider === 'sh')
-  const index = credentials.indexOf(related)
 
-  credentials.splice(index, 1)
-  authContent.credentials = credentials
+  // Copy the content
+  const token = `${authContent.token}`
+
+  delete configContent.user
+  delete configContent.currentTeam
+
+  delete authContent.token
 
   try {
     await writeToConfigFile(configContent)
@@ -140,7 +137,7 @@ const logout = async () => {
   let tokenId
 
   try {
-    tokenId = await getTokenId(related.token)
+    tokenId = await getTokenId(token)
   } catch (err) {
     spinner.fail('Not able to get token id on logout')
     process.exit(1)
@@ -151,7 +148,7 @@ const logout = async () => {
   }
 
   try {
-    await revokeToken(related.token, tokenId)
+    await revokeToken(token, tokenId)
   } catch (err) {
     spinner.fail('Could not revoke token on logout')
     process.exit(1)

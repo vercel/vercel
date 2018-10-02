@@ -77,11 +77,10 @@ module.exports = async ctx => {
     return 2;
   }
 
-  const {authConfig: { credentials }, config: { sh }} = ctx
-  const {token} = credentials.find(item => item.provider === 'sh')
+  const {authConfig: { token }, config} = ctx
 
   try {
-    return run({ token, sh })
+    return run({ token, config })
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message))
@@ -114,7 +113,7 @@ function buildInquirerChoices(cards) {
   })
 }
 
-async function run({ token, sh: { currentTeam, user } }) {
+async function run({ token, config: { currentTeam, user } }) {
   const start = new Date()
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
