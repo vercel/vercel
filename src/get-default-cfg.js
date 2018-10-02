@@ -6,15 +6,27 @@ module.exports = async (existingCopy) => {
   }
 
   if (existingCopy) {
+    const keep = [
+      '_',
+      'user',
+      'currentTeam',
+      'desktop',
+      'updateChannel',
+      'api'
+    ]
+
     try {
       const existing = Object.assign({}, existingCopy);
       const sh = Object.assign({}, existing.sh || {});
 
-      delete existing.sh
-      delete existing.gcp
-      delete existing.aws
-
       Object.assign(config, existing, sh);
+
+      for (const key of Object.keys(config)) {
+        if (!keep.includes(key)) {
+          delete config[key]
+        }
+      }
+
       migrated = true
     } catch (err) {}
   }
