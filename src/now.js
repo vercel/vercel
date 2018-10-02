@@ -225,12 +225,18 @@ const main = async (argv_) => {
       return 1;
     }
 
+    const subcommandsWithoutToken = [
+      'help',
+      'config',
+      'login'
+    ]
+
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (authConfig.credentials) {
       authConfigExists = false;
-    } else if (!authConfig.token) {
+    } else if (!authConfig.token && !subcommandsWithoutToken.includes(targetOrSubcommand)) {
       console.error(
         error(
           `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
