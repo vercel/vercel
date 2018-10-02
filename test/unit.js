@@ -11,19 +11,19 @@ const fetch = require('node-fetch')
 
 // Utilities
 const createOutput = require('../src/util/output')
-const hash = require('../src/providers/sh/util/hash')
-const readMetadata = require('../src/providers/sh/util/read-metadata')
+const hash = require('../src/util/hash')
+const readMetadata = require('../src/util/read-metadata')
 const getLocalConfigPath = require('../src/config/local-path')
-const toHost = require('../src/providers/sh/util/to-host')
+const toHost = require('../src/util/to-host')
 const wait = require('../src/util/output/wait')
-const { responseError } = require('../src/providers/sh/util/error')
+const { responseError } = require('../src/util/error')
 const getURL = require('./helpers/get-url')
 
 const {
   npm: getNpmFiles_,
   docker: getDockerFiles_,
   staticFiles: getStaticFiles_
-} = require('../src/providers/sh/util/get-files')
+} = require('../src/util/get-files')
 
 const output = createOutput({ debug: false })
 const prefix = join(__dirname, 'fixtures', 'unit') + '/'
@@ -431,10 +431,10 @@ test('`wait` utility does not invoke spinner before n miliseconds', async t => {
     start: () => {},
     stop: () => {}
   })
-  
+
   const timeOut = 200
   const stop = wait('test', timeOut, oraStub)
-  
+
   stop()
 
   t.truthy(oraStub.notCalled)
@@ -446,13 +446,13 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
     start: () => {},
     stop: () => {}
   })
-  
+
   const timeOut = 200
 
   const delayedWait = () => {
     return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub)
-      
+
       setTimeout(() => {
         resolve()
         stop()
@@ -470,14 +470,14 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
     start: () => {},
     stop: () => {}
   })
-  
+
   const timeOut = 200
 
   const delayedWait = () => {
     return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub)
       stop()
-      
+
       setTimeout(() => {
         resolve()
       }, timeOut + 100)
