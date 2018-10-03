@@ -55,7 +55,7 @@ import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity', 'regions'],
+  string: ['name', 'alias', 'session-affinity', 'regions', 'metadata'],
   boolean: [
     'help',
     'version',
@@ -87,7 +87,8 @@ const mriOpts = {
     'forward-npm': 'N',
     'session-affinity': 'S',
     name: 'n',
-    alias: 'a'
+    alias: 'a',
+    metadata: 'm'
   }
 }
 
@@ -149,6 +150,9 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
+    -m, --metatdata                Add metadata for the deployment (e.g.: ${chalk.dim(
+      '`-m KEY=value`'
+    )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
@@ -277,6 +281,24 @@ const parseEnv = (env, empty) => {
   }
   // assume it's already an Object
   return env
+}
+
+const parseMetadata = (metadata) => {
+  if (!metadata) {
+    return {};
+  }
+
+  if (typeof metadata === 'string') {
+    metadata = [metadata];
+  }
+
+  const parsed = {}
+  metadata.forEach(item => {
+    const [key, value] = item.split('=');
+    parsed[key] = value || ''
+  })
+
+  return parsed;
 }
 
 const promptForEnvFields = async list => {
@@ -722,6 +744,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       })
     )
 
+    const metadata = parseMetadata(argv.metadata)
     const env = {}
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
@@ -739,6 +762,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       const createArgs = Object.assign(
         {
           env,
+          metadata,
           followSymlinks,
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,
