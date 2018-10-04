@@ -18,16 +18,13 @@ const expDateMiddleware = data => data
 
 module.exports = async function({
   creditCards,
-  currentTeam,
-  user,
-  clear = false
+  clear = false,
+  contextName
 }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
-      `Enter your card details for ${chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )}`
+      `Enter your card details for ${chalk.bold(contextName)}`
     )}`,
 
     name: {
@@ -155,9 +152,7 @@ module.exports = async function({
 
       console.log(success(
         `${state.cardNumber
-          .brand || state.cardNumber.card.brand} ending in ${res.last4 || res.card.last4} was added to ${chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )}`
+          .brand || state.cardNumber.card.brand} ending in ${res.last4 || res.card.last4} was added to ${chalk.bold(contextName)}`
       ))
     } catch (err) {
       stopSpinner()

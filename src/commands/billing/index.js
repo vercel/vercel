@@ -114,7 +114,7 @@ function buildInquirerChoices(cards) {
   })
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, config: { currentTeam } }) {
   const start = new Date()
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam })
   const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
@@ -314,8 +314,7 @@ async function run({ token, config: { currentTeam, user } }) {
     case 'add': {
       await addBilling({
         creditCards,
-        currentTeam,
-        user
+        contextName
       })
 
       break
