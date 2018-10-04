@@ -46,6 +46,9 @@ module.exports = async (existingCopy) => {
             shownTips: config.shownTips
           }
         }
+
+        // Clean up the old property
+        delete config.shownTips
       }
 
       migrated = true
