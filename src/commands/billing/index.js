@@ -17,6 +17,7 @@ const info = require('../../util/output/info')
 const logo = require('../../util/output/logo')
 const addBilling = require('./add')
 const exit = require('../../util/exit')
+const getContextName = require('../../util/get-context-name')
 
 const help = () => {
   console.log(`
@@ -116,6 +117,7 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam, user } }) {
   const start = new Date()
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam })
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
 
   switch (subcommand) {
@@ -151,9 +153,7 @@ async function run({ token, config: { currentTeam, user } }) {
       console.log(
         `> ${
           plural('card', cards.sources.length, true)
-        } found under ${chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )} ${chalk.gray(`[${elapsed}]`)}`
+        } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
       )
       if (text) {
         console.log(`\n${text}\n`)
