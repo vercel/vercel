@@ -124,6 +124,12 @@ const logout = async () => {
   delete configContent.user
   delete configContent.currentTeam
 
+  // The new user might have completely different teams, so
+  // we should wipe the order.
+  if (configContent.desktop) {
+    delete configContent.desktop.teamOrder
+  }
+
   delete authContent.token
 
   try {
