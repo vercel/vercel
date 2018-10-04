@@ -27,6 +27,14 @@ module.exports = async (existingCopy) => {
         }
       }
 
+      if (typeof config.currentTeam === 'object') {
+        config.currentTeam = config.currentTeam.id
+      }
+
+      if (typeof config.user === 'object') {
+        config.user = config.user.uid || config.user.id
+      }
+
       migrated = true
     } catch (err) {}
   }
