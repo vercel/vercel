@@ -315,7 +315,8 @@ const login = async ctx => {
   const keepUserConfig = [
     'uid',
     'email',
-    'username'
+    'username',
+    'platformVersion'
   ]
 
   for (const key of Object.keys(user)) {
