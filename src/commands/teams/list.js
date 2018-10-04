@@ -7,14 +7,20 @@ const info = require('../../util/output/info')
 const error = require('../../util/output/error')
 const { tick: tickChar } = require('../../util/output/chars')
 const table = require('../../util/output/table')
+const getUser = require('../../util/get-user')
 
-module.exports = async function({ teams, config }) {
+module.exports = async function({ teams, config, apiUrl, token }) {
   const stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
-  let { user, currentTeam } = config.sh
+  let { currentTeam } = config
   const accountIsCurrent = !currentTeam
 
   stopSpinner()
+
+  let stopUserSpinner = wait('Fetching user information')
+  const user = await getUser({ apiUrl, token })
+
+  stopUserSpinner()
 
   if (accountIsCurrent) {
     currentTeam = {

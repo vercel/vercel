@@ -9,26 +9,11 @@ const info = require('../../util/output/info')
 const error = require('../../util/output/error')
 const param = require('../../util/output/param')
 const {writeToConfigFile} = require('../../util/config-files')
-
-const keepTeamProps = [
-  'id',
-  'slug',
-  'name',
-  'platformVersion'
-];
+const getUser = require('../../util/get-user');
 
 const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
-    delete newTeam.created
-    delete newTeam.creator_id
-
-    config.currentTeam = newTeam
-
-    for (const key of Object.keys(config.currentTeam)) {
-      if (!keepTeamProps.includes(key)) {
-        delete config.currentTeam[key]
-      }
-    }
+    config.currentTeam = newTeam.id
   } else {
     delete config.currentTeam
   }
@@ -36,14 +21,19 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config)
 }
 
-module.exports = async function({ teams, args, config }) {
+module.exports = async function({ apiUrl, token, teams, args, config }) {
   let stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
 
-  let { user, currentTeam } = config
+  let { currentTeam } = config
   const accountIsCurrent = !currentTeam
 
   stopSpinner()
+
+  let stopUserSpinner = wait('Fetching user information')
+  const user = await getUser({ apiUrl, token })
+
+  stopUserSpinner()
 
   if (accountIsCurrent) {
     currentTeam = {
@@ -74,9 +64,10 @@ module.exports = async function({ teams, args, config }) {
     return 1
   }
 
-  const choices = list.map(({ slug, name }) => {
+  const choices = list.map(({ id, slug, name }) => {
     name = `${slug} (${name})`
-    if (slug === currentTeam.slug) {
+
+    if (id === currentTeam) {
       name += ` ${chalk.bold('(current)')}`
     }
 

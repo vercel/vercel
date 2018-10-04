@@ -101,6 +101,7 @@ const main = async ctx => {
     } else {
       console.error(error(`Unknown error: ${err.stack}`))
     }
+
     return 1
   }
 }
@@ -125,7 +126,9 @@ async function run({ token, config }) {
     case 'ls': {
       exitCode = await list({
         teams,
-        config
+        config,
+        apiUrl,
+        token
       })
       break
     }
@@ -134,7 +137,9 @@ async function run({ token, config }) {
      exitCode = await change({
         teams,
         args,
-        config
+        config,
+        apiUrl,
+        token
       })
       break
     }
@@ -148,7 +153,9 @@ async function run({ token, config }) {
       exitCode = await invite({
         teams,
         args,
-        config
+        config,
+        apiUrl,
+        token
       })
       break
     }

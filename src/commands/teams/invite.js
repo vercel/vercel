@@ -15,6 +15,7 @@ const textInput = require('../../util/input/text')
 const eraseLines = require('../../util/output/erase-lines')
 const success = require('../../util/output/success')
 const error = require('../../util/output/error')
+const getUser = require('../../util/get-user')
 
 const validateEmail = data => {
   return regexes.email.test(data.trim()) || data.length === 0
@@ -60,9 +61,21 @@ const emailAutoComplete = (value, teamSlug) => {
 }
 
 module.exports = async function(
-  { teams, args, config, introMsg, noopMsg = 'No changes made' } = {}
+  { teams, args, config, introMsg, noopMsg = 'No changes made', apiUrl, token } = {}
 ) {
-  const { user, currentTeam } = config.sh
+  const { currentTeam: currentTeamId } = config
+
+  let stopSpinner = wait('Fetching teams')
+
+  const list = (await teams.ls()).teams
+  const currentTeam = list.find(team => team.id === currentTeamId)
+
+  stopSpinner()
+
+  let stopUserSpinner = wait('Fetching user information')
+  const user = await getUser({ apiUrl, token })
+
+  stopUserSpinner()
 
   domains.push(user.email.split('@')[1])
 

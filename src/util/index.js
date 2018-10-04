@@ -846,7 +846,7 @@ module.exports = class Now extends EventEmitter {
       const parsedUrl = parseUrl(_url, true)
       const query = parsedUrl.query
 
-      query.teamId = this.currentTeam.id
+      query.teamId = this.currentTeam
       _url = `${parsedUrl.pathname}?${qs.encode(query)}`
       delete opts.useCurrentTeam
     }
