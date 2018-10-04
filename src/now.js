@@ -270,7 +270,7 @@ const main = async (argv_) => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR))
-    console.log(info(`Your credentials and configuration were migrated to ${directory}`))
+    console.log(info(`Your credentials and configuration within the ${directory} directory were migrated`))
   }
 
   // the context object to supply to the providers or the commands

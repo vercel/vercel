@@ -12,7 +12,8 @@ module.exports = async (existingCopy) => {
       'currentTeam',
       'desktop',
       'updateChannel',
-      'api'
+      'api',
+      'shownTips'
     ]
 
     try {
@@ -33,6 +34,18 @@ module.exports = async (existingCopy) => {
 
       if (typeof config.user === 'object') {
         config.user = config.user.uid || config.user.id
+      }
+
+      // Make sure Now Desktop users don't see any tips
+      // again that they already dismissed
+      if (config.shownTips) {
+        if (config.desktop) {
+          config.desktop.shownTips = config.shownTips
+        } else {
+          config.desktop = {
+            shownTips: config.shownTips
+          }
+        }
       }
 
       migrated = true
