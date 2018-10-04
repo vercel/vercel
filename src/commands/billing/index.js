@@ -246,9 +246,7 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (cards.sources.length === 0) {
         console.error(error(
-          `You have no credit cards to choose from to delete under ${chalk.bold(
-            (currentTeam && currentTeam.slug) || user.username || user.email
-          )}`
+          `You have no credit cards to choose from to delete under ${chalk.bold(contextName)}`
         ))
         return 0;
       }
@@ -259,9 +257,7 @@ async function run({ token, config: { currentTeam, user } }) {
         const elapsed = ms(new Date() - start)
         const message = `Selecting a card to ${chalk.underline(
           'remove'
-        )} under ${chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )} ${chalk.gray(`[${elapsed}]`)}`
+        )} under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
         const choices = buildInquirerChoices(cards)
 
         cardId = await listInput({
