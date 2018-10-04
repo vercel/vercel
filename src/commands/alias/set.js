@@ -23,7 +23,6 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
   const {authConfig: { token }, config} = ctx
   const { currentTeam, user } = config;
   const { apiUrl } = ctx;
-  const contextName = getContextName(config);
   const setStamp = stamp()
 
   const {
@@ -31,6 +30,8 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
     ['--no-verify']: noVerify,
     ['--rules']: rulesPath,
   } = opts;
+
+  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })

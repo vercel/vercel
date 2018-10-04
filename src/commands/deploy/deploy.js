@@ -356,7 +356,8 @@ async function main(ctx: any) {
   }
 
   const { authConfig: {token}, config } = ctx
-  const contextName = getContextName(config);
+  const { currentTeam } = config
+  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   alwaysForwardNpm = config.forwardNpm
 

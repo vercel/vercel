@@ -11,11 +11,12 @@ import type { CLIDNSOptions } from '../../util/types'
 async function add(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: Output): Promise<number> { // eslint-disable-line
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
-  const contextName = getContextName(config);
   const { apiUrl } = ctx;
+  const debug = opts['--debug']
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
+  const now = new Now({ apiUrl, token, debug, currentTeam })
 
   const parsedParams = parseAddArgs(args)
   if (!parsedParams) {

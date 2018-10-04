@@ -18,12 +18,13 @@ import wait from '../../util/output/wait'
 
 export default async function buy(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { token }, config} = ctx
-  const contextName = getContextName(config)
   const { currentTeam } = config
   const { apiUrl } = ctx
+  const debug = opts['--debug']
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
+  const now = new Now({ apiUrl, token, debug, currentTeam })
   const coupon = opts['--coupon']
   const domainName = args[0]
 

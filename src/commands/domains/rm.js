@@ -20,11 +20,13 @@ import removeDomainByName from '../../util/domains/remove-domain-by-name'
 async function rm(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
-  const contextName = getContextName(config);
   const { apiUrl } = ctx;
+  const debug = opts['--debug']
+
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
+  const now = new Now({ apiUrl, token, debug, currentTeam })
   const [domainIdOrName] = args
 
   if (!domainIdOrName) {

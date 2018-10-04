@@ -15,13 +15,14 @@ import type { CLICertsOptions } from '../../util/types'
 
 async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { token }, config} = ctx
-  const contextName = getContextName(config);
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const rmStamp = stamp()
+  const debug = opts['--debug']
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
+  const now = new Now({ apiUrl, token, debug, currentTeam })
 
   if (args.length !== 1) {
     output.error(

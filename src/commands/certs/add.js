@@ -19,8 +19,8 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const contextName = getContextName(config);
   const addStamp = stamp()
+
   let cert
 
   const {
@@ -30,6 +30,8 @@ async function add(ctx: CLIContext, opts: CLICertsOptions, args: string[], outpu
     ['--key']: keyPath,
     ['--ca']: caPath,
   } = opts;
+
+  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })

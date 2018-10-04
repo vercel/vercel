@@ -16,8 +16,10 @@ import type { CLIDomainsOptions, Domain } from '../../util/types'
 async function ls(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
-  const contextName = getContextName(config);
   const { apiUrl } = ctx;
+  const debug = opts['--debug'];
+
+  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam })
