@@ -10,14 +10,27 @@ const error = require('../../util/output/error')
 const param = require('../../util/output/param')
 const {writeToConfigFile} = require('../../util/config-files')
 
+const keepTeamProps = [
+  'id',
+  'slug',
+  'name',
+  'platformVersion'
+];
+
 const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
     delete newTeam.created
     delete newTeam.creator_id
 
-    config.sh.currentTeam = newTeam
+    config.currentTeam = newTeam
+
+    for (const key of Object.keys(config.currentTeam)) {
+      if (!keepTeamProps.includes(key)) {
+        delete config.currentTeam[key]
+      }
+    }
   } else {
-    delete config.sh.currentTeam
+    delete config.currentTeam
   }
 
   writeToConfigFile(config)
@@ -27,7 +40,7 @@ module.exports = async function({ teams, args, config }) {
   let stopSpinner = wait('Fetching teams')
   const list = (await teams.ls()).teams
 
-  let { user, currentTeam } = config.sh
+  let { user, currentTeam } = config
   const accountIsCurrent = !currentTeam
 
   stopSpinner()
