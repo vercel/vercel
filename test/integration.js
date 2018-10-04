@@ -29,6 +29,7 @@ const binaryPath = path.resolve(__dirname, '../packed/' + binary)
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name)
 const deployHelpMessage = `${logo} now [options] <command | path>`
 const session = Math.random().toString(36).split('.')[1]
+const cleanString = input => input.replace(/[^a-zA-Z ]/g, '')
 
 const pickUrl = stdout => {
   const lines = stdout.split('\n')
@@ -164,9 +165,7 @@ test('try to set default without existing payment method', async t => {
   })
 
   t.is(code, 0)
-  console.log(encodeURIComponent('> Error! You have no credit cards to choose from'))
-  console.log(encodeURIComponent(stderr))
-  t.is(stderr, '> Error! You have no credit cards to choose from')
+  t.is(cleanString(stderr), cleanString('> Error! You have no credit cards to choose from'))
 })
 
 test('try to remove a non-existing payment method', async t => {
