@@ -187,9 +187,7 @@ async function run({ token, config: { currentTeam, user } }) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start)
-        const message = `Selecting a new default payment card for ${chalk.bold(
-          (currentTeam && currentTeam.slug) || user.username || user.email
-        )} ${chalk.gray(`[${elapsed}]`)}`
+        const message = `Selecting a new default payment card for ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
         const choices = buildInquirerChoices(cards)
 
         cardId = await listInput({
@@ -303,9 +301,7 @@ async function run({ token, config: { currentTeam, user } }) {
               card => card.id === cards.defaultCardId
             )
 
-            text += `\n${newDefaultCard.brand || newDefaultCard.card.brand} ending in ${newDefaultCard.last4 || newDefaultCard.card.last4} in now default for ${chalk.bold(
-              (currentTeam && currentTeam.slug) || user.username || user.email
-            )}`
+            text += `\n${newDefaultCard.brand || newDefaultCard.card.brand} ending in ${newDefaultCard.last4 || newDefaultCard.card.last4} in now default for ${chalk.bold(contextName)}`
           }
         }
 
