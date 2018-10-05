@@ -371,7 +371,7 @@ const main = async (argv_) => {
       subcommand = 'login'
       ctx.argv[2] = 'login'
 
-      // Ensure that sub commands lead to login as well, if
+      // Ensure that subcommands lead to login as well, if
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3)
     } else {
@@ -501,7 +501,7 @@ const main = async (argv_) => {
 
   if (typeof runner !== 'function') {
     const cmd = param(subcommand)
-    console.error(error(`The ${cmd} sub command does not exist`))
+    console.error(error(`The ${cmd} subcommand does not exist`))
     return 1
   }
 
@@ -560,7 +560,7 @@ process.on('unhandledRejection', handleRejection)
 process.on('uncaughtException', handleUnexpected)
 
 // Don't use `.then` here. We need to shutdown gracefully, otherwise
-// sub commands waiting for further data won't work (like `logs` and `logout`)!
+// subcommands waiting for further data won't work (like `logs` and `logout`)!
 main(process.argv)
   .then(exitCode => {
     process.emit('nowExit');
