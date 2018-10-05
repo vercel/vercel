@@ -497,6 +497,14 @@ const main = async (argv_) => {
     }
   }
 
+  const runner = await commands[subcommand]
+
+  if (typeof runner !== 'function') {
+    const cmd = param(subcommand)
+    console.error(error(`The ${cmd} sub command does not exist`))
+    return 1
+  }
+
   let exitCode;
 
   try {
@@ -507,14 +515,14 @@ const main = async (argv_) => {
     if (err.code) {
       output.debug(err.stack)
       output.error(err.message)
-      return 1;
+      return 1
     }
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
     console.error(error(`An unexpected error occurred in ${subcommand}: ${err.stack}`))
 
-    return 1;
+    return 1
   }
 
   return exitCode;
