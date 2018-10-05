@@ -155,12 +155,6 @@ const help = () => {
     --regions                      Set default regions or DCs to enable the deployment on
     --no-verify                    Skip step of waiting until instance count meets given constraints
 
-  ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
-
-    --npm                          Node.js application
-    --docker                       Docker container
-    --static                       Static file hosting
-
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Deploy the current directory
