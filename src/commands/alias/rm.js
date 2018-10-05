@@ -20,7 +20,7 @@ export default async function rm(ctx: CLIContext, opts: CLIAliasOptions, args: s
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const {['--debug']: debugEnabled} = opts;
-  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })

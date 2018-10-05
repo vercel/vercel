@@ -18,7 +18,7 @@ async function ls(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: 
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug']
-  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam })

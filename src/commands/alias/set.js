@@ -31,7 +31,7 @@ export default async function set(ctx: CLIContext, opts: CLIAliasOptions, args: 
     ['--rules']: rulesPath,
   } = opts;
 
-  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })

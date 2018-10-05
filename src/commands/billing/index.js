@@ -117,7 +117,7 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam } }) {
   const start = new Date()
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam })
-  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
   const args = argv._.slice(1)
 
   switch (subcommand) {

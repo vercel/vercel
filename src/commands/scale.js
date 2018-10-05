@@ -86,7 +86,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam })
   const output: Output = createOutput({ debug })
-  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // Fail if the user is providing an old command
   if (argv._[1] === 'ls') {

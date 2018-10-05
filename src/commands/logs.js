@@ -138,7 +138,7 @@ module.exports = async function main (ctx: any) {
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam })
-  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
 
   let deployment;
   const id = deploymentIdOrURL;

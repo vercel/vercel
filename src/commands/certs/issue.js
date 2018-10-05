@@ -35,7 +35,7 @@ export default async function issue(ctx: CLIContext, opts: CLICertsOptions, args
     ['--ca']: caPath,
   } = opts;
 
-  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })

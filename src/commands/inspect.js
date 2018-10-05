@@ -77,7 +77,7 @@ module.exports = async function main (ctx: any): Promise<number> {
 
   const {authConfig: { token }, config} = ctx
   const { currentTeam } = config;
-  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
 

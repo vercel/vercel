@@ -94,7 +94,7 @@ module.exports = async function main(ctx) {
 
   const {authConfig: { token }, config} = ctx
   const {currentTeam, includeScheme} = config
-  const contextName = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
 
   const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
 

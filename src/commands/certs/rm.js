@@ -19,7 +19,7 @@ async function rm(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
   const { apiUrl } = ctx;
   const rmStamp = stamp()
   const debug = opts['--debug']
-  const contextName = await getContextName({ apiUrl, token, debug, currentTeam })
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam })
