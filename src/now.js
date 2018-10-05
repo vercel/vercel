@@ -65,6 +65,7 @@ const main = async (argv_) => {
 
   const isDebugging = argv['--debug']
   const output: Output = createOutput({ debug: isDebugging })
+
   let update = null
 
   try {
@@ -227,9 +228,9 @@ const main = async (argv_) => {
     }
 
     const subcommandsWithoutToken = [
-      'help',
       'config',
-      'login'
+      'login',
+      'help'
     ]
 
     // This is from when Now CLI supported
