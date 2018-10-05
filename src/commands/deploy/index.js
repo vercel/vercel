@@ -11,6 +11,7 @@ module.exports = async (ctx) => {
 
   const {authConfig, config: {currentTeam, version}, apiUrl} = ctx
   const output = createOutput({ debug: false })
+  const isHelp = ctx.argv[ctx.argv.length - 1] == '-h'
 
   if (authConfig && authConfig.token) {
     ;({ contextName, platformVersion } = await getContextName({
@@ -22,32 +23,34 @@ module.exports = async (ctx) => {
     }))
   }
 
-  if (version) {
-    if (typeof version === 'number') {
-      if (version !== 1 && version !== 2) {
+  if (!isHelp) {
+    if (version) {
+      if (typeof version === 'number') {
+        if (version !== 1 && version !== 2) {
+          const prop = code('version')
+          const file = highlight('now.json')
+          const first = code(1)
+          const second = code(2)
+
+          output.error(`The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`)
+          return 1
+        }
+
+        platformVersion = version
+      } else {
         const prop = code('version')
         const file = highlight('now.json')
-        const first = code(1)
-        const second = code(2)
 
-        output.error(`The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`)
+        output.error(`The ${prop} property inside your ${file} file must be a number.`)
         return 1
       }
-
-      platformVersion = version
     } else {
       const prop = code('version')
       const file = highlight('now.json')
+      const fallback = highlight(platformVersion === null ? 'latest version' : `version ${platformVersion}`)
 
-      output.error(`The ${prop} property inside your ${file} file must be a number.`)
-      return 1
+      output.warn(`Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`)
     }
-  } else {
-    const prop = code('version')
-    const file = highlight('now.json')
-    const fallback = highlight(platformVersion === null ? 'latest version' : `version ${platformVersion}`)
-
-    output.warn(`Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`)
   }
 
   if (platformVersion === null || platformVersion > 1) {
