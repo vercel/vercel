@@ -27,8 +27,10 @@ module.exports = async (ctx) => {
       if (version !== 1 && version !== 2) {
         const prop = code('version')
         const file = highlight('now.json')
+        const first = code(1)
+        const second = code(2)
 
-        output.error(`The value of the ${prop} property inside ${file} can only be ${code(1)} or ${code(2)}.`)
+        output.error(`The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`)
         return 1
       }
 
