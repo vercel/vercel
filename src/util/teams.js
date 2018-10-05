@@ -130,7 +130,9 @@ module.exports = class Teams extends Now {
       }
 
       if (res.status === 403) {
-        return bail(new Error('Unauthorized'))
+        const error = new Error('Unauthorized')
+        error.code = 'not_authorized'
+        return bail(error)
       }
 
       return res.json()

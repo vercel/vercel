@@ -34,7 +34,9 @@ const getUser = async ({ apiUrl, token }) => {
   }
 
   if (body.error && body.error.code === 'forbidden') {
-    throw new Error('The specified token is not valid')
+    const error = new Error('The specified token is not valid')
+    error.code = 'not_authorized'
+    throw error
   }
 
   const { user } = body

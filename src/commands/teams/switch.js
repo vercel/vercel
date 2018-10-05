@@ -9,7 +9,8 @@ const info = require('../../util/output/info')
 const error = require('../../util/output/error')
 const param = require('../../util/output/param')
 const {writeToConfigFile} = require('../../util/config-files')
-const getUser = require('../../util/get-user');
+const getUser = require('../../util/get-user')
+const NowTeams = require('../../util/teams')
 
 const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
@@ -21,8 +22,13 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config)
 }
 
-module.exports = async function({ apiUrl, token, teams, args, config }) {
+module.exports = async function({ apiUrl, token, debug, args, config }) {
   let stopSpinner = wait('Fetching teams')
+
+  // We're loading the teams here without `currentTeam`, so that
+  // people can use `now switch` in the case that their
+  // current team was deleted.
+  const teams = new NowTeams({ apiUrl, token, debug })
   const list = (await teams.ls()).teams
 
   let { currentTeam } = config

@@ -135,11 +135,11 @@ async function run({ token, config }) {
     case 'switch':
     case 'change': {
      exitCode = await change({
-        teams,
         args,
         config,
         apiUrl,
-        token
+        token,
+        debug
       })
       break
     }
