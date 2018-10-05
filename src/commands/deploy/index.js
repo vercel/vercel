@@ -1,5 +1,5 @@
-const deploy = require('./deploy')
-const deployLegacy = require('./deploy-legacy')
+const deploy = require('./latest')
+const deployLegacy = require('./legacy')
 const getContextName = require('../../util/get-context-name')
 
 module.exports = async (ctx) => {
