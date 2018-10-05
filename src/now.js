@@ -32,6 +32,7 @@ const ms = require('ms')
 const error = require('./util/output/error')
 const param = require('./util/output/param')
 const info = require('./util/output/info')
+const note = require('./util/output/note')
 const getNowDir = require('./config/global-path')
 const getDefaultCfg = require('./get-default-cfg')
 const getDefaultAuthCfg = require('./get-default-auth-cfg')
@@ -270,7 +271,7 @@ const main = async (argv_) => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR))
-    console.log(info(`Your credentials and configuration within the ${directory} directory were migrated`))
+    console.log(note(`Your credentials and configuration within the ${directory} directory were migrated`))
   }
 
   // the context object to supply to the providers or the commands
