@@ -159,6 +159,11 @@ async function readMetaData(
     }
   }
 
+  // We can remove this once we updated the schema
+  if (nowConfig && nowConfig.version) {
+    delete nowConfig.version
+  }
+
   return {
     name,
     description,
