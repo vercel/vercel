@@ -7,7 +7,21 @@ const TokenError = new Error(`Your access token has been revoked. You can log in
 
 TokenError.code = 'not_authorized'
 
-module.exports = async function getContextName({ apiUrl, token, debug, currentTeam }) {
+const output = (input, includePlatformVersion) => {
+  const {slug, username, email, platformVersion} = input
+  const contextName = slug || username || email
+
+  if (includePlatformVersion) {
+    return {
+      platformVersion,
+      contextName
+    }
+  }
+
+  return contextName
+}
+
+module.exports = async function getContextName({ apiUrl, token, debug, currentTeam, includePlatformVersion }) {
   if (currentTeam) {
     let list = []
 
@@ -32,7 +46,7 @@ module.exports = async function getContextName({ apiUrl, token, debug, currentTe
       throw error
     }
 
-    return related.slug
+    return output(related, includePlatformVersion)
   }
 
   let user = null
@@ -47,5 +61,5 @@ module.exports = async function getContextName({ apiUrl, token, debug, currentTe
     throw err
   }
 
-  return user.username || user.email
+  return output(user, includePlatformVersion)
 }
