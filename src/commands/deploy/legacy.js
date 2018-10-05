@@ -348,6 +348,10 @@ async function main(ctx: any, contextName: string) {
     await exit(0)
   }
 
+  warn('You are using a legacy version of the Now Platform. We highly recommend upgrading:')
+  // To be replaced
+  warn(`https://zeit.co/docs`)
+
   const { authConfig: {token}, config } = ctx
   alwaysForwardNpm = config.forwardNpm
 
