@@ -14,7 +14,7 @@ module.exports = async (ctx) => {
     includePlatformVersion: true
   })
 
-  if (platformVersion === null) {
+  if (platformVersion === null || platformVersion > 1) {
     return deploy(ctx, contextName)
   }
 
