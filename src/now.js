@@ -168,7 +168,7 @@ const main = async (argv_) => {
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
-    if (config.sh) {
+    if (config.sh || typeof config.user === 'object' || typeof config.currentTeam === 'object') {
       configExists = false;
     }
   }
