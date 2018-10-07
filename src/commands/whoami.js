@@ -7,6 +7,7 @@ const chalk = require('chalk')
 // Utilities
 const logo = require('../util/output/logo')
 const { handleError } = require('../util/error')
+const getContextName = require('../util/get-context-name')
 
 const help = () => {
   console.log(`
@@ -53,7 +54,11 @@ const main = async ctx => {
     process.exit(0)
   }
 
-  await whoami(ctx.config)
+  const debug = argv['--debug']
+  const {authConfig: { token }, config: { currentTeam }, apiUrl} = ctx
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
+
+  await whoami(contextName)
 }
 
 module.exports = async ctx => {
@@ -65,11 +70,10 @@ module.exports = async ctx => {
   }
 }
 
-async function whoami({user}) {
+async function whoami(contextName) {
   if (process.stdout.isTTY) {
     process.stdout.write('> ')
   }
 
-  const name = user.username || user.email
-  console.log(name)
+  console.log(contextName)
 }
