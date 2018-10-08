@@ -26,10 +26,10 @@ module.exports = async (ctx) => {
     }));
   }
 
-  if (!isHelp) {
-    if (localConfig && localConfig.version) {
-      const {version} = localConfig;
+  if (!isHelp && localConfig) {
+    const {version} = localConfig;
 
+    if (version) {
       if (typeof version === 'number') {
         if (version !== 1 && version !== 2) {
           const prop = code('version');
