@@ -77,7 +77,7 @@ test('print the deploy help message', async t => {
     reject: false
   })
 
-  t.is(code, 0)
+  t.is(code, 2)
   t.true(stdout.includes(deployHelpMessage))
 })
 
