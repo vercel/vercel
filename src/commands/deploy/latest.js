@@ -161,10 +161,6 @@ const help = () => {
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Deploy a GitHub repository
-
-    ${chalk.cyan('$ now user/repo#ref')}
-
   ${chalk.gray('–')} Deploy with environment variables
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
@@ -200,9 +196,6 @@ let apiUrl
 let isTTY
 let quiet
 let alwaysForwardNpm
-
-// If the current deployment is a repo
-const gitRepo = {}
 
 // For `env` and `buildEnv`
 const getNullFields = o => Object.keys(o).filter(k => o[k] === null)
@@ -351,7 +344,6 @@ async function main(ctx: any, contextName: string) {
 async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
   return new Promise(async (_resolve, reject) => {
     let deployStamp = stamp()
-    const rawPath = argv._[0]
 
     let meta
     let deployment: NewDeployment | null = null
@@ -366,53 +358,8 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           deploymentType = 'static'
         }
       } catch (err) {
-        let repo
-        let isValidRepo = false
-
-        const { fromGit, isRepoPath, gitPathParts } = require('../../util/git')
-
-        try {
-          isValidRepo = isRepoPath(rawPath)
-        } catch (_err) {
-          if (err.code === 'INVALID_URL') {
-            await stopDeployment(_err)
-          } else {
-            reject(_err)
-          }
-        }
-
-        if (isValidRepo) {
-          const gitParts = gitPathParts(rawPath)
-          Object.assign(gitRepo, gitParts)
-
-          const searchMessage = setTimeout(() => {
-            log(`Didn't find directory. Searching on ${gitRepo.type}...`)
-          }, 500)
-
-          try {
-            repo = await fromGit(rawPath, debugEnabled)
-          } catch (err) {}
-
-          clearTimeout(searchMessage)
-        }
-
-        if (repo) {
-          // Tell now which directory to deploy
-          paths = [ repo.path ]
-
-          // Set global variable for deleting tmp dir later
-          // once the deployment has finished
-          Object.assign(gitRepo, repo)
-        } else if (isValidRepo) {
-          const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : ''
-
-          await stopDeployment(`There's no repository named "${chalk.bold(
-              gitRepo.main
-            )}" ${gitRef}on ${gitRepo.type}`)
-        } else {
           error(`The specified directory "${basename(paths[0])}" doesn't exist.`)
           await exit(1)
-        }
       }
     } else {
       isFile = false
@@ -443,13 +390,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     }
 
     if (!quiet && firstRun) {
-      if (gitRepo.main) {
-        const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : ''
-
-        log(`Deploying ${gitRepo.type} repository "${chalk.bold(
-            gitRepo.main
-          )}"${gitRef} under ${chalk.bold(contextName)}`)
-      } else {
         const list = paths
           .map((path, index) => {
             let suffix = ''
@@ -463,7 +403,6 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           .join('')
 
         log(`Deploying ${list} under ${chalk.bold(contextName)}`)
-      }
     }
 
     if (!isFile && deploymentType !== 'static') {
