@@ -346,17 +346,6 @@ const main = async (argv_) => {
     ctx.apiUrl = sh.api
   }
 
-  const localConfig = configFiles.readLocalConfig()
-
-  if (localConfig) {
-    if (localConfig.api) {
-      ctx.apiUrl = localConfig.api
-      delete localConfig.api
-    }
-
-    Object.assign(ctx.config, localConfig)
-  }
-
   // If no credentials are set at all, prompt for
   // login to the .sh provider
   if (
