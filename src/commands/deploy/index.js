@@ -44,7 +44,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   const output = createOutput({ debug: argv['--debug'] });
-  const isHelp = argv['-h'];
+  const isHelp = argv['--help'];
 
   for (const path of paths) {
     try {
