@@ -70,14 +70,12 @@ if (!process.env.CI) {
 test.before(async () => prepareFixtures(session))
 
 test('print the deploy help message', async t => {
-  const { stdout, stderr, code } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'help',
     ...defaultArgs
   ], {
     reject: false
   })
-  console.log(stdout)
-  console.log(stderr)
 
   t.is(code, 2)
   t.true(stdout.includes(deployHelpMessage))
