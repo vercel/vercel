@@ -871,7 +871,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           let url = 'https://zeit.co/account/plan'
 
           if (currentTeam) {
-            url = `https://zeit.co/teams/${currentTeam.slug}/settings/plan`
+            url = `https://zeit.co/teams/${contextName}/settings/plan`
           }
 
           note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`)
