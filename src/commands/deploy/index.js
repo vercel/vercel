@@ -71,7 +71,7 @@ module.exports = async (ctx: CLIContext) => {
 
   if (!localConfig) {
     output.warn(`Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`);
-  } else if (!isHelp) {
+  } else {
     const {version} = localConfig;
 
     if (version) {
@@ -89,7 +89,7 @@ module.exports = async (ctx: CLIContext) => {
         output.error(`The ${prop} property inside your ${file} file must be a number.`);
         return 1;
       }
-    } else {
+    } else if (!isHelp) {
       output.warn(`Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`);
     }
   }
