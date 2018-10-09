@@ -50,8 +50,10 @@ module.exports = async (ctx: CLIContext) => {
     try {
       await lstat(path);
     } catch (err) {
-      output.error(`The specified file or directory "${basename(path)}" does not exist`);
-      return 1;
+      if (!isHelp) {
+        output.error(`The specified file or directory "${basename(path)}" does not exist`);
+        return 1;
+      }
     }
   }
 
