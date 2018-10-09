@@ -17,30 +17,47 @@ import purchaseDomain from './purchase-domain';
 // $FlowFixMe
 const isTTY = process.stdout.isTTY;
 
-async function purchaseDomainIfAvailable(output: Output, now: Now, domain: string, contextName: string) {
+async function purchaseDomainIfAvailable(
+  output: Output,
+  now: Now,
+  domain: string,
+  contextName: string
+) {
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
   const { available } = await getDomainStatus(now, domain);
 
   if (available) {
     // If we can't prompty and the domain is available, we should fail
-    if (!isTTY) { return new Errors.DomainNotFound(domain); }
+    if (!isTTY) {
+      return new Errors.DomainNotFound(domain);
+    }
     output.debug(`Domain is available to purchase`);
 
     const domainPrice = await getDomainPrice(now, domain);
     cancelWait();
     if (
-      (domainPrice instanceof Errors.InvalidCoupon) ||
-      (domainPrice instanceof Errors.UsedCoupon) ||
-      (domainPrice instanceof Errors.UnsupportedTLD) ||
-      (domainPrice instanceof Errors.MissingCreditCard)
+      domainPrice instanceof Errors.InvalidCoupon ||
+      domainPrice instanceof Errors.UsedCoupon ||
+      domainPrice instanceof Errors.UnsupportedTLD ||
+      domainPrice instanceof Errors.MissingCreditCard
     ) {
       return domainPrice;
     }
 
     const { price, period } = domainPrice;
-    output.log(`Domain not found, but you can buy it under ${chalk.bold(contextName)}! ${buyDomainStamp()}`);
-    if (!await promptBool(`Buy ${chalk.underline(domain)} for ${chalk.bold(`$${price}`)} (${plural('yr', period, true)})?`)) {
+    output.log(
+      `Domain not found, but you can buy it under ${chalk.bold(
+        contextName
+      )}! ${buyDomainStamp()}`
+    );
+    if (
+      !await promptBool(
+        `Buy ${chalk.underline(domain)} for ${chalk.bold(
+          `$${price}`
+        )} (${plural('yr', period, true)})?`
+      )
+    ) {
       output.print(eraseLines(1));
       return new Errors.UserAborted();
     }

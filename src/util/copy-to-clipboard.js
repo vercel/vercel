@@ -6,7 +6,11 @@ const { write } = require('clipboardy');
 // $FlowFixMe
 const _isTTY = process.stdout.isTTY;
 
-async function copyToClipboard(str: string, shouldCopy: boolean | string = 'auto', isTTY: boolean = _isTTY) {
+async function copyToClipboard(
+  str: string,
+  shouldCopy: boolean | string = 'auto',
+  isTTY: boolean = _isTTY
+) {
   if (shouldCopy === false) {
     return false;
   }

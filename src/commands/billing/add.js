@@ -16,11 +16,7 @@ const error = require('../../util/output/error');
 
 const expDateMiddleware = data => data;
 
-module.exports = async function({
-  creditCards,
-  clear = false,
-  contextName
-}) {
+module.exports = async function({ creditCards, clear = false, contextName }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
@@ -150,10 +146,13 @@ module.exports = async function({
         process.stdout.write(ansiEscapes.eraseLines(linesToClear));
       }
 
-      console.log(success(
-        `${state.cardNumber
-          .brand || state.cardNumber.card.brand} ending in ${res.last4 || res.card.last4} was added to ${chalk.bold(contextName)}`
-      ));
+      console.log(
+        success(
+          `${state.cardNumber.brand ||
+            state.cardNumber.card.brand} ending in ${res.last4 ||
+            res.card.last4} was added to ${chalk.bold(contextName)}`
+        )
+      );
     } catch (err) {
       stopSpinner();
       const linesToClear = state.error ? 15 : 14;

@@ -18,7 +18,7 @@ export type DomainInfo = {
   verified: boolean,
   aliases: string[],
   certs: string[]
-}
+};
 
 async function getDomainInfo(now: Now, domain: string, context: string) {
   const cancelMessage = wait(`Fetching domain info`);

@@ -61,7 +61,15 @@ const emailAutoComplete = (value, teamSlug) => {
 };
 
 module.exports = async function(
-  { teams, args, config, introMsg, noopMsg = 'No changes made', apiUrl, token } = {}
+  {
+    teams,
+    args,
+    config,
+    introMsg,
+    noopMsg = 'No changes made',
+    apiUrl,
+    token
+  } = {}
 ) {
   const { currentTeam: currentTeamId } = config;
 
@@ -87,7 +95,9 @@ module.exports = async function(
     return fatalError(err);
   }
 
-  console.log(info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`));
+  console.log(
+    info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`)
+  );
 
   if (args.length > 0) {
     for (const email of args) {
@@ -138,10 +148,12 @@ module.exports = async function(
         if (hasError) {
           hasError = false;
           process.stdout.write(eraseLines(emails.length + 2));
-          console.log(info(
-            introMsg ||
-              `Inviting team members to ${chalk.bold(currentTeam.name)}`
-          ));
+          console.log(
+            info(
+              introMsg ||
+                `Inviting team members to ${chalk.bold(currentTeam.name)}`
+            )
+          );
           for (const email of emails) {
             console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
           }

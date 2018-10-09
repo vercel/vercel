@@ -31,7 +31,9 @@ const help = () => {
   )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --follow                   Wait for additional data [off]
-    -n ${chalk.bold.underline('NUMBER')}                      Number of logs [100]
+    -n ${chalk.bold.underline(
+      'NUMBER'
+    )}                      Number of logs [100]
     -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
     'QUERY'
   )}        Search query
@@ -46,8 +48,10 @@ const help = () => {
     )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
     -T, --team                     Set a custom team scope
     -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
-      'MODE'
-    )}         Specify the output format (${Object.keys(logPrinters).join('|')}) [short]
+    'MODE'
+  )}         Specify the output format (${Object.keys(logPrinters).join(
+    '|'
+  )}) [short]
 
   ${chalk.dim('Examples:')}
 
@@ -59,7 +63,7 @@ const help = () => {
 `);
 };
 
-module.exports = async function main (ctx: any) {
+module.exports = async function main(ctx: any) {
   let argv;
   let deploymentIdOrURL;
 
@@ -117,11 +121,13 @@ module.exports = async function main (ctx: any) {
   if (maybeURL(deploymentIdOrURL)) {
     const normalizedURL = normalizeURL(deploymentIdOrURL);
     if (normalizedURL.includes('/')) {
-      output.error(`Invalid deployment url: can't include path (${deploymentIdOrURL})`);
+      output.error(
+        `Invalid deployment url: can't include path (${deploymentIdOrURL})`
+      );
       return 1;
     }
 
-    ;[deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL);
+    [deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL);
   }
 
   debug = argv.debug;
@@ -135,16 +141,23 @@ module.exports = async function main (ctx: any) {
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit'];
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   let deployment;
   const id = deploymentIdOrURL;
 
   const depFetchStart = Date.now();
-  const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
+  const cancelWait = wait(
+    `Fetching deployment "${id}" in ${chalk.bold(contextName)}`
+  );
 
   try {
     deployment = await now.findDeployment(id);
@@ -153,10 +166,16 @@ module.exports = async function main (ctx: any) {
     now.close();
 
     if (err.status === 404) {
-      output.error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
+      output.error(
+        `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
+      );
       return 1;
     } else if (err.status === 403) {
-      output.error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`);
+      output.error(
+        `No permission to access deployment "${id}" in ${chalk.bold(
+          contextName
+        )}`
+      );
       return 1;
     } else {
       // unexpected
@@ -165,26 +184,55 @@ module.exports = async function main (ctx: any) {
   }
 
   cancelWait();
-  output.log(`Fetched deployment "${deployment.url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+  output.log(
+    `Fetched deployment "${deployment.url}" in ${chalk.bold(
+      contextName
+    )} ${elapsed(Date.now() - depFetchStart)}`
+  );
 
   let direction = head ? 'forward' : 'backward';
   if (since && !until) direction = 'forward';
-  const findOpts1 = { direction, limit, query, types, instanceId, since, until }; // no follow
+  const findOpts1 = {
+    direction,
+    limit,
+    query,
+    types,
+    instanceId,
+    since,
+    until
+  }; // no follow
   const storage = [];
-  const storeEvent = (event) => storage.push(event);
+  const storeEvent = event => storage.push(event);
 
-  await printEvents(now, deployment.uid, currentTeam,
-    { mode: 'logs', onEvent: storeEvent, quiet: false, debug, findOpts: findOpts1 });
+  await printEvents(now, deployment.uid, currentTeam, {
+    mode: 'logs',
+    onEvent: storeEvent,
+    quiet: false,
+    debug,
+    findOpts: findOpts1
+  });
 
-  const printEvent = (event) => logPrinters[outputMode](event);
+  const printEvent = event => logPrinters[outputMode](event);
   storage.sort(compareEvents).forEach(printEvent);
 
   if (follow) {
     const lastEvent = storage[storage.length - 1];
     const since2 = lastEvent ? lastEvent.created + 1 : Date.now();
-    const findOpts2 = { direction: 'forward', query, types, instanceId, since: since2, follow: true };
-    await printEvents(now, deployment.uid, currentTeam,
-      { mode: 'logs', onEvent: printEvent, quiet: false, debug, findOpts: findOpts2 });
+    const findOpts2 = {
+      direction: 'forward',
+      query,
+      types,
+      instanceId,
+      since: since2,
+      follow: true
+    };
+    await printEvents(now, deployment.uid, currentTeam, {
+      mode: 'logs',
+      onEvent: printEvent,
+      quiet: false,
+      debug,
+      findOpts: findOpts2
+    });
   }
 
   now.close();
@@ -217,17 +265,20 @@ function printLogShort(log) {
       `RES "${obj.method} ${obj.uri} ${obj.protocol}"` +
       ` ${obj.status} ${obj.bodyBytesSent}`;
   } else if (log.type === 'event') {
-    data =
-      `EVENT ${log.event} ${JSON.stringify(log.payload)}`;
+    data = `EVENT ${log.event} ${JSON.stringify(log.payload)}`;
   } else {
     data = obj
       ? JSON.stringify(obj, null, 2)
-      : (log.text || '').replace(/\n$/, '').replace(/^\n/, '')
+      : (log.text || '')
+          .replace(/\n$/, '')
+          .replace(/^\n/, '')
           // eslint-disable-next-line no-control-regex
-          .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, '');
+          .replace(/\x1b\[1000D/g, '')
+          .replace(/\x1b\[0K/g, '')
+          .replace(/\x1b\[1A/g, '');
   }
 
-  const date = (new Date(log.created)).toISOString();
+  const date = new Date(log.created).toISOString();
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {
@@ -246,9 +297,15 @@ function printLogRaw(log) {
   if (log.object) {
     console.log(log.object);
   } else {
-    console.log(log.text.replace(/\n$/, '').replace(/^\n/, '')
-      // eslint-disable-next-line no-control-regex
-      .replace(/\x1b\[1000D/g, '').replace(/\x1b\[0K/g, '').replace(/\x1b\[1A/g, ''));
+    console.log(
+      log.text
+        .replace(/\n$/, '')
+        .replace(/^\n/, '')
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b\[1000D/g, '')
+        .replace(/\x1b\[0K/g, '')
+        .replace(/\x1b\[1A/g, '')
+    );
   }
 
   return 0;

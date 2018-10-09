@@ -11,9 +11,12 @@ async function* getStatusChangeFromPolling(
   now: Now,
   contextName: ?string,
   idOrHost: string,
-  initialState: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
+  initialState: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR'
 ): AsyncGenerator<StateChangeEvent, void, void> {
-  const pollDeployment = createPollingFn(getDeploymentByIdOrThrow, POLLING_INTERVAL);
+  const pollDeployment = createPollingFn(
+    getDeploymentByIdOrThrow,
+    POLLING_INTERVAL
+  );
   let prevState = initialState;
   for await (const deployment of pollDeployment(now, contextName, idOrHost)) {
     if (prevState !== deployment.state) {

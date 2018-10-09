@@ -66,7 +66,9 @@ const help = () => {
 // securityCode: will be sent to the user in the email body
 const getVerificationData = async ({ apiUrl, email }) => {
   const hyphens = new RegExp('-', 'g');
-  const host = hostname().replace(hyphens, ' ').replace('.local', '');
+  const host = hostname()
+    .replace(hyphens, ' ')
+    .replace('.local', '');
   const tokenName = `Now CLI on ${host}`;
 
   const data = JSON.stringify({ email, tokenName });
@@ -111,9 +113,14 @@ const getVerificationData = async ({ apiUrl, email }) => {
   }
 
   if (!res.ok) {
-    debug('error response from POST /now/registration: %d %j', res.status, body);
+    debug(
+      'error response from POST /now/registration: %d %j',
+      res.status,
+      body
+    );
     const { error = {} } = body;
-    const message = error.code === 'invalid_email'
+    const message =
+      error.code === 'invalid_email'
         ? 'Invalid email address'
         : `Unexpected error: ${error.message}`;
     throw new Error(message);
@@ -272,10 +279,16 @@ const login = async ctx => {
   // Clear up `Sending email` success message
   process.stdout.write(eraseLines(possibleAddress ? 1 : 2));
 
-  console.log(info(
-    `We sent an email to ${highlight(email)}. Please follow the steps provided`,
-    `  inside it and make sure the security code matches ${highlight(securityCode)}.`
-  ));
+  console.log(
+    info(
+      `We sent an email to ${highlight(
+        email
+      )}. Please follow the steps provided`,
+      `  inside it and make sure the security code matches ${highlight(
+        securityCode
+      )}.`
+    )
+  );
 
   stopSpinner = wait('Waiting for your confirmation');
 

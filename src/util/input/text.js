@@ -17,7 +17,10 @@ const ESCAPES = {
 };
 
 const formatCC = data => {
-  return data.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+  return data
+    .replace(/\s/g, '')
+    .replace(/(.{4})/g, '$1 ')
+    .trim();
 };
 
 module.exports = function(

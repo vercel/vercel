@@ -7,7 +7,7 @@ import type { Config } from '../../util/types';
 export type Package = {
   name: string,
   now?: Config
-}
+};
 
 async function readPackage(file?: string) {
   const pkgFilePath = file || path.resolve(process.cwd(), 'package.json');

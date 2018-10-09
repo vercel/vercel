@@ -8,12 +8,23 @@ import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
 import { CLIContext, Output } from '../../util/types';
 import type { CLIDNSOptions } from '../../util/types';
 
-async function add(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output: Output): Promise<number> { // eslint-disable-line
-  const {authConfig: { token }, config} = ctx;
+async function add(
+  ctx: CLIContext,
+  opts: CLIDNSOptions,
+  args: string[],
+  output: Output
+): Promise<number> {
+  // eslint-disable-line
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -29,25 +40,29 @@ async function add(ctx: CLIContext, opts: CLIDNSOptions, args: string[], output:
   }
 
   const addStamp = stamp();
-  const {domain, data} = parsedParams;
+  const { domain, data } = parsedParams;
   const record = await addDNSRecord(output, now, domain, data);
   if (record instanceof DomainNotFound) {
-    output.error(`The domain ${domain} can't be found under ${
-      chalk.bold(contextName)
-    } ${chalk.gray(addStamp())}`);
+    output.error(
+      `The domain ${domain} can't be found under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(addStamp())}`
+    );
     return 1;
   } else if (record instanceof DNSPermissionDenied) {
-    output.error(`You don't have permissions to add records to domain ${domain} under ${
-      chalk.bold(contextName)
-    } ${chalk.gray(addStamp())}`);
+    output.error(
+      `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(addStamp())}`
+    );
     return 1;
   } else {
     console.log(
       `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
         domain
-      )} ${chalk.gray(`(${record.uid})`)} created under ${
-        chalk.bold(contextName)
-      } ${chalk.gray(addStamp())}`
+      )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(addStamp())}`
     );
   }
 

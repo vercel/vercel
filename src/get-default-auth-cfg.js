@@ -1,8 +1,9 @@
-module.exports = async (existing) => {
+module.exports = async existing => {
   let migrated = false;
 
   const config = {
-    _: 'This is your Now credentials file. DON\'T SHARE! More: https://goo.gl/mbf4CZ'
+    _:
+      "This is your Now credentials file. DON'T SHARE! More: https://goo.gl/mbf4CZ"
   };
 
   if (existing) {
@@ -17,5 +18,5 @@ module.exports = async (existing) => {
     } catch (err) {}
   }
 
-  return {config, migrated};
+  return { config, migrated };
 };

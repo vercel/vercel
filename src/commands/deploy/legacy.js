@@ -16,7 +16,7 @@ import { handleError } from '../../util/error';
 import { tick } from '../../util/output/chars';
 import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd';
-import exit from'../../util/exit';
+import exit from '../../util/exit';
 import logo from '../../util/output/logo';
 import Now from '../../util';
 import uniq from '../../util/unique-strings';
@@ -42,7 +42,12 @@ import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
 import type { Readable } from 'stream';
-import type { Output, CLIContext, NewDeployment, DeploymentEvent } from '../../util/types';
+import type {
+  Output,
+  CLIContext,
+  NewDeployment,
+  DeploymentEvent
+} from '../../util/types';
 import type { CreateDeployError } from '../../util/deploy/create-deploy';
 
 const mriOpts = {
@@ -64,7 +69,7 @@ const mriOpts = {
   ],
   default: {
     C: false,
-    clipboard: true,
+    clipboard: true
   },
   alias: {
     env: 'e',
@@ -110,7 +115,9 @@ const help = () => {
 
     ${chalk.dim('Cloud')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       ls | list            [app]       Lists deployments
       rm | remove          [id]        Removes a deployment
       ln | alias           [id] [url]  Configures aliases for deployments
@@ -156,7 +163,9 @@ const help = () => {
     -e, --env                      Include an env var during run time (e.g.: ${chalk.dim(
       '`-e KEY=value`'
     )}). Can appear many times.
-    -b, --build-env                Similar to ${chalk.dim('`--env`')} but for build time only.
+    -b, --build-env                Similar to ${chalk.dim(
+      '`--env`'
+    )} but for build time only.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
@@ -229,7 +238,7 @@ const gitRepo = {};
 // For `env` and `buildEnv`
 const getNullFields = o => Object.keys(o).filter(k => o[k] === null);
 
-const addProcessEnv = async (env) => {
+const addProcessEnv = async env => {
   let val;
   for (const key of Object.keys(env)) {
     if (typeof env[key] !== 'undefined') continue;
@@ -321,7 +330,11 @@ const promptForEnvFields = async list => {
   return answers;
 };
 
-exports.pipe = async function main(ctx: CLIContext, contextName: string, output: Output) {
+exports.pipe = async function main(
+  ctx: CLIContext,
+  contextName: string,
+  output: Output
+) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
   if (argv._[0] === 'deploy') {
@@ -345,34 +358,53 @@ exports.pipe = async function main(ctx: CLIContext, contextName: string, output:
   forwardNpm = argv['forward-npm'];
   followSymlinks = !argv.links;
   wantsPublic = argv.public;
-  regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean);
+  regions = (argv.regions || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
   noVerify = argv['verify'] === false;
   apiUrl = ctx.apiUrl;
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY;
-  quiet = !isTTY
-  ;({ log, error, note, debug, warn } = output);
+  quiet = !isTTY;
+  ({ log, error, note, debug, warn } = output);
 
   if (argv.h || argv.help) {
     help();
     await exit(0);
   }
 
-  warn('You are using a legacy version of the Now Platform. We highly recommend upgrading:');
+  warn(
+    'You are using a legacy version of the Now Platform. We highly recommend upgrading:'
+  );
   // To be replaced
   warn(`https://zeit.co/docs`);
 
-  const { authConfig: {token}, config } = ctx;
+  const { authConfig: { token }, config } = ctx;
 
   try {
-    return sync({ contextName, output, token, config, firstRun: true, deploymentType: undefined });
+    return sync({
+      contextName,
+      output,
+      token,
+      config,
+      firstRun: true,
+      deploymentType: undefined
+    });
   } catch (err) {
     await stopDeployment(err);
   }
 };
 
-async function sync({ contextName, output, token, config: { currentTeam, user }, firstRun, deploymentType }) {
+async function sync({
+  contextName,
+  output,
+  token,
+  config: { currentTeam, user },
+  firstRun,
+  deploymentType
+}) {
   return new Promise(async (_resolve, reject) => {
     let deployStamp = stamp();
     const rawPath = argv._[0];
@@ -422,19 +454,25 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
         if (repo) {
           // Tell now which directory to deploy
-          paths = [ repo.path ];
+          paths = [repo.path];
 
           // Set global variable for deleting tmp dir later
           // once the deployment has finished
           Object.assign(gitRepo, repo);
         } else if (isValidRepo) {
-          const gitRef = gitRepo.ref ? `with "${chalk.bold(gitRepo.ref)}" ` : '';
+          const gitRef = gitRepo.ref
+            ? `with "${chalk.bold(gitRepo.ref)}" `
+            : '';
 
-          await stopDeployment(`There's no repository named "${chalk.bold(
+          await stopDeployment(
+            `There's no repository named "${chalk.bold(
               gitRepo.main
-            )}" ${gitRef}on ${gitRepo.type}`);
+            )}" ${gitRef}on ${gitRepo.type}`
+          );
         } else {
-          error(`The specified directory "${basename(paths[0])}" doesn't exist.`);
+          error(
+            `The specified directory "${basename(paths[0])}" doesn't exist.`
+          );
           await exit(1);
         }
       }
@@ -470,9 +508,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       if (gitRepo.main) {
         const gitRef = gitRepo.ref ? ` at "${chalk.bold(gitRepo.ref)}" ` : '';
 
-        log(`Deploying ${gitRepo.type} repository "${chalk.bold(
+        log(
+          `Deploying ${gitRepo.type} repository "${chalk.bold(
             gitRepo.main
-          )}"${gitRef} under ${chalk.bold(contextName)}`);
+          )}"${gitRef} under ${chalk.bold(contextName)}`
+        );
       } else {
         const list = paths
           .map((path, index) => {
@@ -505,9 +545,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       debug(`Forcing \`deploymentType\` = \`static\` automatically`);
 
       meta = {
-        name: deploymentName || (isFile
-          ? 'file'
-          : paths.length === 1 ? basename(paths[0]) : 'files'),
+        name:
+          deploymentName ||
+          (isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -520,12 +560,17 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     }
 
     if (!meta) {
-      ;({
+      ({
         meta,
         deploymentName,
         deploymentType,
         sessionAffinity
-      } = await readMeta(paths[0], deploymentName, deploymentType, sessionAffinity));
+      } = await readMeta(
+        paths[0],
+        deploymentName,
+        deploymentType,
+        sessionAffinity
+      ));
     }
 
     const nowConfig = meta.nowConfig || {};
@@ -535,7 +580,11 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     // If there are regions coming from the args and now.json warn about it
     if (regions.length > 0 && getRegionsFromConfig(nowConfig).length > 0) {
-      warn(`You have regions defined from both args and now.json, using ${chalk.bold(regions.join(','))}`);
+      warn(
+        `You have regions defined from both args and now.json, using ${chalk.bold(
+          regions.join(',')
+        )}`
+      );
     }
 
     // If there are no regions from args, use config
@@ -545,7 +594,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
-      error("Can't set both `regions` and `scale` options simultaneously", 'regions-and-scale-at-once');
+      error(
+        "Can't set both `regions` and `scale` options simultaneously",
+        'regions-and-scale-at-once'
+      );
       await exit(1);
     }
 
@@ -553,7 +605,10 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     if (regions.length > 0) {
       dcIds = normalizeRegionsList(regions);
       if (dcIds instanceof Errors.InvalidRegionOrDCForScale) {
-        error(`The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`);
+        error(
+          `The value "${dcIds.meta
+            .regionOrDC}" is not a valid region or DC identifier`
+        );
         await exit(1);
         return 1;
       } else if (dcIds instanceof Errors.InvalidAllForScale) {
@@ -563,14 +618,20 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       }
 
       // Build the scale presets based on the given regions
-      scale = dcIds.reduce((result, dcId) => ({ ...result, [dcId]: {min: 0, max: 1}}), {});
+      scale = dcIds.reduce(
+        (result, dcId) => ({ ...result, [dcId]: { min: 0, max: 1 } }),
+        {}
+      );
     } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
       for (const regionOrDc of Object.keys(scaleFromConfig)) {
         const dc = regionOrDCToDc(regionOrDc);
         if (dc === undefined) {
-          error(`The value "${regionOrDc}" in \`scale\` settings is not a valid region or DC identifier`, 'deploy-invalid-dc');
+          error(
+            `The value "${regionOrDc}" in \`scale\` settings is not a valid region or DC identifier`,
+            'deploy-invalid-dc'
+          );
           await exit(1);
           return 1;
         } else {
@@ -630,10 +691,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     // If there's any envs with `null` then prompt the user for the values
     const envNullFields = getNullFields(deploymentEnv);
     const buildEnvNullFields = getNullFields(deploymentBuildEnv);
-    const userEnv = await promptForEnvFields(uniq([
-      ...envNullFields,
-      ...buildEnvNullFields
-    ]).sort());
+    const userEnv = await promptForEnvFields(
+      uniq([...envNullFields, ...buildEnvNullFields]).sort()
+    );
     for (const key of envNullFields) {
       deploymentEnv[key] = userEnv[key];
     }
@@ -698,7 +758,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
               );
             } else {
               error(
-                `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+                `No secret found by uid or name ${chalk.bold(
+                  `"${uidOrName}"`
+                )}`,
                 'env-no-secret'
               );
             }
@@ -725,7 +787,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
       if (key in env) {
-          note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
+        note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
       }
 
       env[key] = val;
@@ -751,22 +813,28 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       );
 
       deployStamp = stamp();
-      const firstDeployCall = await createDeploy(output, now, contextName, paths, createArgs);
+      const firstDeployCall = await createDeploy(
+        output,
+        now,
+        contextName,
+        paths,
+        createArgs
+      );
       if (
-        (firstDeployCall instanceof Errors.CantSolveChallenge) ||
-        (firstDeployCall instanceof Errors.CantGenerateWildcardCert) ||
-        (firstDeployCall instanceof Errors.DomainConfigurationError) ||
-        (firstDeployCall instanceof Errors.DomainNameserversNotFound) ||
-        (firstDeployCall instanceof Errors.DomainNotFound) ||
-        (firstDeployCall instanceof Errors.DomainNotVerified) ||
-        (firstDeployCall instanceof Errors.DomainPermissionDenied) ||
-        (firstDeployCall instanceof Errors.DomainsShouldShareRoot) ||
-        (firstDeployCall instanceof Errors.DomainValidationRunning) ||
-        (firstDeployCall instanceof Errors.DomainVerificationFailed) ||
-        (firstDeployCall instanceof Errors.InvalidWildcardDomain) ||
-        (firstDeployCall instanceof Errors.CDNNeedsUpgrade) ||
-        (firstDeployCall instanceof Errors.TooManyCertificates) ||
-        (firstDeployCall instanceof Errors.TooManyRequests)
+        firstDeployCall instanceof Errors.CantSolveChallenge ||
+        firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
+        firstDeployCall instanceof Errors.DomainConfigurationError ||
+        firstDeployCall instanceof Errors.DomainNameserversNotFound ||
+        firstDeployCall instanceof Errors.DomainNotFound ||
+        firstDeployCall instanceof Errors.DomainNotVerified ||
+        firstDeployCall instanceof Errors.DomainPermissionDenied ||
+        firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
+        firstDeployCall instanceof Errors.DomainValidationRunning ||
+        firstDeployCall instanceof Errors.DomainVerificationFailed ||
+        firstDeployCall instanceof Errors.InvalidWildcardDomain ||
+        firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
+        firstDeployCall instanceof Errors.TooManyCertificates ||
+        firstDeployCall instanceof Errors.TooManyRequests
       ) {
         handleCreateDeployError(output, firstDeployCall);
         await exit(1);
@@ -777,7 +845,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
 
       if (now.syncFileCount > 0) {
         const uploadStamp = stamp();
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
           }
@@ -787,7 +855,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             ? 's'
             : ''}`;
           const bar = new Progress(
-            `${chalk.gray('>')} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+            `${chalk.gray(
+              '>'
+            )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
             {
               width: 20,
               complete: '=',
@@ -816,27 +886,35 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         });
 
         if (!quiet && syncCount) {
-          log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`);
+          log(
+            `Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`
+          );
         }
 
         for (let i = 0; i < 4; i += 1) {
           deployStamp = stamp();
-          const secondDeployCall = await createDeploy(output, now, contextName, paths, createArgs);
+          const secondDeployCall = await createDeploy(
+            output,
+            now,
+            contextName,
+            paths,
+            createArgs
+          );
           if (
-            (secondDeployCall instanceof Errors.CantSolveChallenge) ||
-            (secondDeployCall instanceof Errors.CantGenerateWildcardCert) ||
-            (secondDeployCall instanceof Errors.DomainConfigurationError) ||
-            (secondDeployCall instanceof Errors.DomainNameserversNotFound) ||
-            (secondDeployCall instanceof Errors.DomainNotFound) ||
-            (secondDeployCall instanceof Errors.DomainNotVerified) ||
-            (secondDeployCall instanceof Errors.DomainPermissionDenied) ||
-            (secondDeployCall instanceof Errors.DomainsShouldShareRoot) ||
-            (secondDeployCall instanceof Errors.DomainValidationRunning) ||
-            (secondDeployCall instanceof Errors.DomainVerificationFailed) ||
-            (secondDeployCall instanceof Errors.InvalidWildcardDomain) ||
-            (secondDeployCall instanceof Errors.CDNNeedsUpgrade) ||
-            (secondDeployCall instanceof Errors.TooManyCertificates) ||
-            (secondDeployCall instanceof Errors.TooManyRequests)
+            secondDeployCall instanceof Errors.CantSolveChallenge ||
+            secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
+            secondDeployCall instanceof Errors.DomainConfigurationError ||
+            secondDeployCall instanceof Errors.DomainNameserversNotFound ||
+            secondDeployCall instanceof Errors.DomainNotFound ||
+            secondDeployCall instanceof Errors.DomainNotVerified ||
+            secondDeployCall instanceof Errors.DomainPermissionDenied ||
+            secondDeployCall instanceof Errors.DomainsShouldShareRoot ||
+            secondDeployCall instanceof Errors.DomainValidationRunning ||
+            secondDeployCall instanceof Errors.DomainVerificationFailed ||
+            secondDeployCall instanceof Errors.InvalidWildcardDomain ||
+            secondDeployCall instanceof Errors.CDNNeedsUpgrade ||
+            secondDeployCall instanceof Errors.TooManyCertificates ||
+            secondDeployCall instanceof Errors.TooManyRequests
           ) {
             handleCreateDeployError(output, secondDeployCall);
             await exit(1);
@@ -861,7 +939,9 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
           const who = currentTeam ? 'your team is' : 'you are';
 
           let proceed;
-          log(`Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`);
+          log(
+            `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
+          );
 
           if (isTTY) {
             proceed = await promptBool('Are you sure you want to proceed?', {
@@ -875,11 +955,17 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
             url = `https://zeit.co/teams/${contextName}/settings/plan`;
           }
 
-          note(`You can use ${cmd('now --public')} or upgrade your plan (${url}) to skip this prompt`);
+          note(
+            `You can use ${cmd(
+              'now --public'
+            )} or upgrade your plan (${url}) to skip this prompt`
+          );
 
           if (!proceed) {
             if (typeof proceed === 'undefined') {
-              const message = `If you agree with that, please run again with ${cmd('--public')}.`;
+              const message = `If you agree with that, please run again with ${cmd(
+                '--public'
+              )}.`;
               error(message);
 
               await exit(1);
@@ -925,18 +1011,27 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     }
 
     const { url } = now;
-    const dcs = (deploymentType !== 'static' && deployment.scale)
-      ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
-      : '';
+    const dcs =
+      deploymentType !== 'static' && deployment.scale
+        ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
+        : '';
 
     if (isTTY) {
       if (clipboard) {
         try {
           await copy(url);
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`);
+          log(
+            `${chalk.bold(
+              chalk.cyan(url)
+            )} [in clipboard]${dcs} ${deployStamp()}`
+          );
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
-          log(`${chalk.bold(chalk.cyan(url))} [in clipboard]${dcs} ${deployStamp()}`);
+          log(
+            `${chalk.bold(
+              chalk.cyan(url)
+            )} [in clipboard]${dcs} ${deployStamp()}`
+          );
         }
       } else {
         log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
@@ -961,23 +1056,33 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
     // Show build logs
     // (We have to add this check for flow but it will never happen)
     if (deployment !== null) {
-
       // If the created deployment is ready it was a deduping and we should exit
       if (deployment.readyState !== 'READY') {
         require('assert')(deployment); // mute linter
         const instanceIndex = getInstanceIndex();
         const eventsStream = await maybeGetEventsStream(now, deployment);
-        const eventsGenerator = getEventsGenerator(now, contextName, deployment, eventsStream);
+        const eventsGenerator = getEventsGenerator(
+          now,
+          contextName,
+          deployment,
+          eventsStream
+        );
 
         for await (const event of eventsGenerator) {
           // Stop when the deployment is ready
-          if (event.type === 'state-change' && event.payload.value === 'READY') {
+          if (
+            event.type === 'state-change' &&
+            event.payload.value === 'READY'
+          ) {
             output.log(`Build completed`);
             break;
           }
 
           // Stop then there is an error state
-          if (event.type === 'state-change' && event.payload.value === 'ERROR') {
+          if (
+            event.type === 'state-change' &&
+            event.payload.value === 'ERROR'
+          ) {
             output.error(`Build failed`);
             await exit(1);
           }
@@ -993,21 +1098,49 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
         }
 
         if (!noVerify) {
-          output.log(`Verifying instantiation in ${joinWords(Object.keys(deployment.scale).map(dc => chalk.bold(dc)))}`);
+          output.log(
+            `Verifying instantiation in ${joinWords(
+              Object.keys(deployment.scale).map(dc => chalk.bold(dc))
+            )}`
+          );
           const verifyStamp = stamp();
-          const verifyDCsGenerator = getVerifyDCsGenerator(output, now, deployment, eventsStream);
+          const verifyDCsGenerator = getVerifyDCsGenerator(
+            output,
+            now,
+            deployment,
+            eventsStream
+          );
 
           for await (const dcOrEvent of verifyDCsGenerator) {
             if (dcOrEvent instanceof Errors.VerifyScaleTimeout) {
-              output.error(`Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`);
-              output.log('Read more: https://err.sh/now-cli/verification-timeout');
+              output.error(
+                `Instance verification timed out (${ms(
+                  dcOrEvent.meta.timeout
+                )})`
+              );
+              output.log(
+                'Read more: https://err.sh/now-cli/verification-timeout'
+              );
               await exit(1);
             } else if (Array.isArray(dcOrEvent)) {
               const [dc, instances] = dcOrEvent;
-              output.log(`${chalk.cyan(tick)} Scaled ${plural('instance', instances, true)} in ${chalk.bold(dc)} ${verifyStamp()}`);
-            } else if (dcOrEvent && (dcOrEvent.type === 'stdout' || dcOrEvent.type === 'stderr')) {
-              const prefix = chalk.gray(`[${instanceIndex(dcOrEvent.payload.instanceId)}] `);
-              formatLogOutput(dcOrEvent.payload.text, prefix).forEach(msg => output.log(msg));
+              output.log(
+                `${chalk.cyan(tick)} Scaled ${plural(
+                  'instance',
+                  instances,
+                  true
+                )} in ${chalk.bold(dc)} ${verifyStamp()}`
+              );
+            } else if (
+              dcOrEvent &&
+              (dcOrEvent.type === 'stdout' || dcOrEvent.type === 'stderr')
+            ) {
+              const prefix = chalk.gray(
+                `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
+              );
+              formatLogOutput(dcOrEvent.payload.text, prefix).forEach(msg =>
+                output.log(msg)
+              );
             }
           }
         }
@@ -1080,14 +1213,27 @@ function getScaleFromConfig(config = {}): Object {
 
 async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
   try {
-    return await getEventsStream(now, deployment.deploymentId, { direction: 'forward', follow: true });
+    return await getEventsStream(now, deployment.deploymentId, {
+      direction: 'forward',
+      follow: true
+    });
   } catch (error) {
     return null;
   }
 }
 
-function getEventsGenerator(now: Now, contextName: ?string, deployment: NewDeployment, eventsStream: null | Readable): AsyncGenerator<DeploymentEvent, void, void> {
-  const stateChangeFromPollingGenerator = getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState);
+function getEventsGenerator(
+  now: Now,
+  contextName: ?string,
+  deployment: NewDeployment,
+  eventsStream: null | Readable
+): AsyncGenerator<DeploymentEvent, void, void> {
+  const stateChangeFromPollingGenerator = getStateChangeFromPolling(
+    now,
+    contextName,
+    deployment.deploymentId,
+    deployment.readyState
+  );
   if (eventsStream !== null) {
     return combineAsyncGenerators(
       eventListenerToGenerator('data', eventsStream),
@@ -1098,85 +1244,173 @@ function getEventsGenerator(now: Now, contextName: ?string, deployment: NewDeplo
   return stateChangeFromPollingGenerator;
 }
 
-function getVerifyDCsGenerator(output: Output, now: Now, deployment: NewDeployment, eventsStream: Readable | null) {
-  const verifyDeployment = verifyDeploymentScale(output, now, deployment.deploymentId, deployment.scale);
+function getVerifyDCsGenerator(
+  output: Output,
+  now: Now,
+  deployment: NewDeployment,
+  eventsStream: Readable | null
+) {
+  const verifyDeployment = verifyDeploymentScale(
+    output,
+    now,
+    deployment.deploymentId,
+    deployment.scale
+  );
 
   return eventsStream
-    ? raceAsyncGenerators(eventListenerToGenerator('data', eventsStream), verifyDeployment)
+    ? raceAsyncGenerators(
+        eventListenerToGenerator('data', eventsStream),
+        verifyDeployment
+      )
     : verifyDeployment;
 }
 
-function handleCreateDeployError<OtherError>(output: Output, error: CreateDeployError | OtherError): 1 | OtherError {
+function handleCreateDeployError<OtherError>(
+  output: Output,
+  error: CreateDeployError | OtherError
+): 1 | OtherError {
   if (error instanceof Errors.CantGenerateWildcardCert) {
-    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
+    output.error(
+      `Custom suffixes are only allowed for domains in ${chalk.underline(
+        'zeit.world'
+      )}`
+    );
     return 1;
   } else if (error instanceof Errors.CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
-      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
+      output.error(
+        `The certificate provider could not resolve the DNS queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
+      );
     } else {
-      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
-      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
+      output.error(
+        `The certificate provider could not resolve the HTTP queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
+      );
       output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
     }
     return 1;
   } else if (error instanceof Errors.DomainConfigurationError) {
-    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
+    output.error(
+      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
+        error.meta.domain
+      )}`
+    );
     if (error.meta.external) {
-      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
-      output.print(dnsTable([
-        error.meta.subdomain === null
-          ? ['', 'ALIAS', 'alias.zeit.co']
-          : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-      ]) + '\n');
+      output.print(
+        `  The propagation may take a few minutes, but please verify your settings:\n\n`
+      );
+      output.print(
+        dnsTable([
+          error.meta.subdomain === null
+            ? ['', 'ALIAS', 'alias.zeit.co']
+            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
+        ]) + '\n'
+      );
     } else {
-      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
+      output.print(
+        `  We configured them for you, but the propagation may take a few minutes.\n`
+      );
       output.print(`  Please try again later.\n`);
     }
     return 1;
   } else if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(`Couldn't find nameservers for the domain ${chalk.underline(error.meta.domain)}`);
+    output.error(
+      `Couldn't find nameservers for the domain ${chalk.underline(
+        error.meta.domain
+      )}`
+    );
     return 1;
   } else if (error instanceof Errors.DomainNotVerified) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} is not verified and can't be used as custom suffix.`
+    );
     return 1;
   } else if (error instanceof Errors.DomainPermissionDenied) {
-    output.error(`You don't have permissions to access the domain used as a suffix ${chalk.underline(error.meta.domain)}.`);
+    output.error(
+      `You don't have permissions to access the domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )}.`
+    );
     return 1;
   } else if (error instanceof Errors.DomainsShouldShareRoot) {
     // this is not going to happen
     return 1;
   } else if (error instanceof Errors.DomainValidationRunning) {
-    output.error(`There is a validation in course for ${chalk.underline(error.meta.domain)}. Wait until it finishes.`);
+    output.error(
+      `There is a validation in course for ${chalk.underline(
+        error.meta.domain
+      )}. Wait until it finishes.`
+    );
     return 1;
   } else if (error instanceof Errors.DomainVerificationFailed) {
-    output.error(`We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`);
-    output.print(`  Please make sure that your nameservers point to ${chalk.underline('zeit.world')}.\n`);
-    output.print(`  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`);
+    output.error(
+      `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
+    );
+    output.print(
+      `  Please make sure that your nameservers point to ${chalk.underline(
+        'zeit.world'
+      )}.\n`
+    );
+    output.print(
+      `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
+    );
     output.print(zeitWorldTable() + '\n');
-    output.print(`\n  As an alternative, you can add following records to your DNS settings:\n`);
-    output.print(dnsTable([
-      ['_now', 'TXT', error.meta.token],
-      error.meta.subdomain === null
-        ? ['', 'ALIAS', 'alias.zeit.co']
-        : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-    ], {extraSpace: '  '}) + '\n');
+    output.print(
+      `\n  As an alternative, you can add following records to your DNS settings:\n`
+    );
+    output.print(
+      dnsTable(
+        [
+          ['_now', 'TXT', error.meta.token],
+          error.meta.subdomain === null
+            ? ['', 'ALIAS', 'alias.zeit.co']
+            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
+        ],
+        { extraSpace: '  ' }
+      ) + '\n'
+    );
     return 1;
   } else if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
-    output.error(`Invalid domain ${chalk.underline(error.meta.domain)}. Wildcard domains can only be followed by a root domain.`);
+    output.error(
+      `Invalid domain ${chalk.underline(
+        error.meta.domain
+      )}. Wildcard domains can only be followed by a root domain.`
+    );
     return 1;
   } else if (error instanceof Errors.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
   } else if (error instanceof Errors.TooManyCertificates) {
-    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
+    output.error(
+      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
+        ', '
+      )}`
+    );
     return 1;
   } else if (error instanceof Errors.TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
+    output.error(
+      `Too many requests detected for ${error.meta
+        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
+        long: true
+      })}.`
+    );
     return 1;
   } else if (error instanceof Errors.DomainNotFound) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} no longer exists. Please update or remove your custom suffix.`
+    );
     return 1;
   }
 

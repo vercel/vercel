@@ -9,11 +9,11 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
 
   setTimeout(() => {
     if (stopped) return;
-    
+
     spinner = ora(gray(msg));
     spinner.color = 'gray';
     spinner.start();
-    
+
     running = true;
   }, timeOut);
 

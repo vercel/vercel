@@ -53,7 +53,9 @@ const help = () => {
 
     ${chalk.cyan('$ now ls my-app')}
 
-  ${chalk.gray('–')} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
+  ${chalk.gray(
+    '–'
+  )} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app --all')}
 `);
@@ -67,7 +69,7 @@ module.exports = async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
-      '-a': '--all',
+      '-a': '--all'
     });
   } catch (err) {
     handleError(err);
@@ -75,7 +77,9 @@ module.exports = async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug'];
-  const { print, log, error, note, debug } = createOutput({ debug: debugEnabled });
+  const { print, log, error, note, debug } = createOutput({
+    debug: debugEnabled
+  });
 
   if (argv._.length > 2) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
@@ -92,11 +96,18 @@ module.exports = async function main(ctx) {
     return 0;
   }
 
-  const {authConfig: { token }, config} = ctx;
-  const {currentTeam, includeScheme} = config;
-  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const { authConfig: { token }, config } = ctx;
+  const { currentTeam, includeScheme } = config;
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam
+  });
 
-  const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`);
+  const stopSpinner = wait(
+    `Fetching deployments in ${chalk.bold(contextName)}`
+  );
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const start = new Date();
@@ -109,7 +120,9 @@ module.exports = async function main(ctx) {
   // Some people are using entire domains as app names, so
   // we need to account for this here
   if (app && toHost(app).endsWith('.now.sh')) {
-    note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment');
+    note(
+      'We suggest using `now inspect <deployment>` for retrieving details about a single deployment'
+    );
 
     const asHost = toHost(app);
     const hostParts = asHost.split('-');
@@ -135,7 +148,9 @@ module.exports = async function main(ctx) {
   }
 
   if (app && !deployments.length) {
-    debug('No deployments: attempting to find deployment that matches supplied app name');
+    debug(
+      'No deployments: attempting to find deployment that matches supplied app name'
+    );
     let match;
 
     try {
@@ -156,15 +171,24 @@ module.exports = async function main(ctx) {
   }
 
   if (app && !deployments.length) {
-    debug('No deployments: attempting to find aliases that matches supplied app name');
+    debug(
+      'No deployments: attempting to find aliases that matches supplied app name'
+    );
     const aliases = await getAliases(now);
     const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {
       debug('Found alias that matches app name');
       const match = await now.findDeployment(item.deploymentId);
-      const instances = await getDeploymentInstances(now, item.deploymentId, 'now_cli_alias_instances');
-      match.instanceCount = Object.keys(instances).reduce((count, dc) => count + instances[dc].instances.length, 0);
+      const instances = await getDeploymentInstances(
+        now,
+        item.deploymentId,
+        'now_cli_alias_instances'
+      );
+      match.instanceCount = Object.keys(instances).reduce(
+        (count, dc) => count + instances[dc].instances.length,
+        0
+      );
       if (match !== null && typeof match !== 'undefined') {
         deployments = Array.of(match);
       }
@@ -176,9 +200,8 @@ module.exports = async function main(ctx) {
   if (argv['--all']) {
     await Promise.all(
       deployments.map(async ({ uid, instanceCount }, i) => {
-        deployments[i].instances = instanceCount > 0
-          ? await now.listInstances(uid)
-          : [];
+        deployments[i].instances =
+          instanceCount > 0 ? await now.listInstances(uid) : [];
       })
     );
   }
@@ -191,9 +214,11 @@ module.exports = async function main(ctx) {
 
   stopSpinner();
   log(
-    `${
-      plural('total deployment', deployments.length, true)
-    } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `${plural(
+      'total deployment',
+      deployments.length,
+      true
+    )} found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -210,49 +235,49 @@ module.exports = async function main(ctx) {
 
   print('\n');
 
-  console.log(table([
-    ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
-    ...deployments
-    .sort(sortRecent())
-    .map(dep => (
+  console.log(
+    table(
       [
-        [
-          dep.name,
-          chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-          dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
-          dep.type,
-          stateString(dep.state),
-          chalk.gray(ms(Date.now() - new Date(dep.created)))
-        ],
-        ...(argv['--all']
-          ? dep.instances.map(
-              (i) => [
-                '',
-                ` ${chalk.gray('-')} ${i.url} `,
-                '',
-                '',
-                ''
-              ]
-            )
-          : []
-        )
-      ]
-    ))
-    // flatten since the previous step returns a nested
-    // array of the deployment and (optionally) its instances
-    .reduce((ac, c) => ac.concat(c), [])
-    .filter(
-      app == null
-        // if an app wasn't supplied to filter by,
-        // we only want to render one deployment per app
-        ? filterUniqueApps()
-        : () => true
-    )
-  ], {
-    align: ['l','l','r','l','b'],
-    hsep: ' '.repeat(4),
-    stringLength: strlen
-  }).replace(/^/gm, '  ') + '\n\n');
+        ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ...deployments
+          .sort(sortRecent())
+          .map(dep => [
+            [
+              dep.name,
+              chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+              dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+              dep.type,
+              stateString(dep.state),
+              chalk.gray(ms(Date.now() - new Date(dep.created)))
+            ],
+            ...(argv['--all']
+              ? dep.instances.map(i => [
+                  '',
+                  ` ${chalk.gray('-')} ${i.url} `,
+                  '',
+                  '',
+                  ''
+                ])
+              : [])
+          ])
+          // flatten since the previous step returns a nested
+          // array of the deployment and (optionally) its instances
+          .reduce((ac, c) => ac.concat(c), [])
+          .filter(
+            app == null
+              ? // if an app wasn't supplied to filter by,
+                // we only want to render one deployment per app
+                filterUniqueApps()
+              : () => true
+          )
+      ],
+      {
+        align: ['l', 'l', 'r', 'l', 'b'],
+        hsep: ' '.repeat(4),
+        stringLength: strlen
+      }
+    ).replace(/^/gm, '  ') + '\n\n'
+  );
 };
 
 // renders the state string

@@ -5,16 +5,21 @@ import { Now } from '../types';
 import * as Errors from '../errors';
 import addDomain from './add-domain';
 
-type VerifyOptions = { isExternal: boolean }
+type VerifyOptions = { isExternal: boolean };
 
-async function verifyDomain(now: Now, domain: string, contextName: string, opts: VerifyOptions) {
+async function verifyDomain(
+  now: Now,
+  domain: string,
+  contextName: string,
+  opts: VerifyOptions
+) {
   const cancelMessage = wait('Setting up and verifying the domain');
   const result = await addDomain(now, domain, contextName, opts.isExternal);
   cancelMessage();
   if (
-    (result instanceof Errors.CDNNeedsUpgrade) ||
-    (result instanceof Errors.DomainPermissionDenied) ||
-    (result instanceof Errors.DomainVerificationFailed)
+    result instanceof Errors.CDNNeedsUpgrade ||
+    result instanceof Errors.DomainPermissionDenied ||
+    result instanceof Errors.DomainVerificationFailed
   ) {
     return result;
   } else if (result instanceof Errors.DomainAlreadyExists) {

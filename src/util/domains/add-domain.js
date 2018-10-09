@@ -7,11 +7,24 @@ import * as Errors from '../errors';
 import type { AddedDomain } from '../types';
 import wait from '../output/wait';
 
-export default async function addDomain(now: Now, domain: string, contextName: string, isExternal: boolean, cdnEnabled?: boolean) {
-  const cancelWait = wait(`Adding domain ${domain} under ${chalk.bold(contextName)}`);
+export default async function addDomain(
+  now: Now,
+  domain: string,
+  contextName: string,
+  isExternal: boolean,
+  cdnEnabled?: boolean
+) {
+  const cancelWait = wait(
+    `Adding domain ${domain} under ${chalk.bold(contextName)}`
+  );
   const { domain: rootDomain, subdomain } = psl.parse(domain);
   try {
-    const addedDomain = await performAddRequest(now, domain, isExternal, cdnEnabled);
+    const addedDomain = await performAddRequest(
+      now,
+      domain,
+      isExternal,
+      cdnEnabled
+    );
     cancelWait();
     return addedDomain;
   } catch (error) {
@@ -23,7 +36,11 @@ export default async function addDomain(now: Now, domain: string, contextName: s
     }
 
     if (error.status === 401 && error.code === 'verification_failed') {
-      return new Errors.DomainVerificationFailed(rootDomain, subdomain, error.verifyToken);
+      return new Errors.DomainVerificationFailed(
+        rootDomain,
+        subdomain,
+        error.verifyToken
+      );
     }
 
     if (error.status === 409) {
@@ -34,22 +51,30 @@ export default async function addDomain(now: Now, domain: string, contextName: s
   }
 }
 
-async function performAddRequest(now: Now, domain: string, isExternal: boolean, cdnEnabled?: boolean): Promise<AddedDomain> {
+async function performAddRequest(
+  now: Now,
+  domain: string,
+  isExternal: boolean,
+  cdnEnabled?: boolean
+): Promise<AddedDomain> {
   const serviceType = isExternal ? 'external' : 'zeit.world';
-  return retry(async (bail) => {
-    try {
-      const result: AddedDomain = await now.fetch('/v3/domains', {
-        body: { name: domain, serviceType, cdnEnabled },
-        method: 'POST',
-      });
-      return result;
-    } catch (err) {
-      // retry in case the user has to setup a TXT record
-      if (err.code !== 'verification_failed') {
-        bail(err);
-      } else {
-        throw err;
+  return retry(
+    async bail => {
+      try {
+        const result: AddedDomain = await now.fetch('/v3/domains', {
+          body: { name: domain, serviceType, cdnEnabled },
+          method: 'POST'
+        });
+        return result;
+      } catch (err) {
+        // retry in case the user has to setup a TXT record
+        if (err.code !== 'verification_failed') {
+          bail(err);
+        } else {
+          throw err;
+        }
       }
-    }
-  }, { retries: 5, maxTimeout: 8000 });
+    },
+    { retries: 5, maxTimeout: 8000 }
+  );
 }

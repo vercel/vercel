@@ -28,7 +28,9 @@ const binary = {
 const binaryPath = path.resolve(__dirname, '../packed/' + binary);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
-const session = Math.random().toString(36).split('.')[1];
+const session = Math.random()
+  .toString(36)
+  .split('.')[1];
 
 const pickUrl = stdout => {
   const lines = stdout.split('\n');
@@ -38,8 +40,7 @@ const pickUrl = stdout => {
 const waitForDeployment = async href => {
   // eslint-disable-next-line
   while (true) {
-    const
-    response = await fetch(href, {redirect: 'manual'});
+    const response = await fetch(href, { redirect: 'manual' });
     if (response.status === 200) {
       break;
     }
@@ -70,10 +71,7 @@ if (!process.env.CI) {
 test.before(async () => prepareFixtures(session));
 
 test('print the deploy help message', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'help',
-    ...defaultArgs
-  ], {
+  const { stdout, code } = await execa(binaryPath, ['help', ...defaultArgs], {
     reject: false
   });
 
@@ -82,12 +80,13 @@ test('print the deploy help message', async t => {
 });
 
 test('output the version', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    '--version',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['--version', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const version = stdout.trim();
 
@@ -97,13 +96,13 @@ test('output the version', async t => {
 });
 
 test('log in', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'login',
-    email,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['login', email, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const location = path.join(tmpDir ? tmpDir.name : '~', '.now');
   const goal = `> Ready! Authentication token and personal details saved in "${location}"`;
@@ -118,10 +117,7 @@ test('trigger OSS confirmation message', async t => {
   const target = fixture('node');
   const goal = `Your deployment's code and logs will be publicly accessible`;
 
-  const { stderr, code } = await execa(binaryPath, [
-    target,
-    ...defaultArgs
-  ], {
+  const { stderr, code } = await execa(binaryPath, [target, ...defaultArgs], {
     reject: false
   });
 
@@ -142,53 +138,56 @@ test('try to deploy user directory', async t => {
 });
 
 test('list the payment methods', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'billing',
-    'ls',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['billing', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
   t.true(stdout.startsWith(`> 0 cards found under ${email}`));
 });
 
 test('try to set default without existing payment method', async t => {
-  const { stderr, code } = await execa(binaryPath, [
-    'billing',
-    'set-default',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['billing', 'set-default', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
   t.true(stderr.includes('You have no credit cards to choose from'));
 });
 
 test('try to remove a non-existing payment method', async t => {
-  const { stderr, code } = await execa(binaryPath, [
-    'billing',
-    'rm',
-    'card_d2j32d9382jr928rd',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
-  t.true(stderr.includes(`You have no credit cards to choose from to delete under ${email}`));
+  t.true(
+    stderr.includes(
+      `You have no credit cards to choose from to delete under ${email}`
+    )
+  );
 });
 
 test('try to add a payment method', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'billing',
-    'add',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['billing', 'add', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 1);
   t.true(stdout.startsWith(`> Enter your card details for ${email}`));
@@ -197,15 +196,13 @@ test('try to add a payment method', async t => {
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
-  const { stdout, code } = await execa(binaryPath, [
-    target,
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [target, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -224,10 +221,7 @@ test('deploy a node microservice', async t => {
 });
 
 test('find deployment in list', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'ls',
-    ...defaultArgs
-  ], {
+  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
     reject: false
   });
 
@@ -248,13 +242,13 @@ test('find deployment in list', async t => {
 });
 
 test('find deployment in list with mixed args', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    '--debug',
-    'ls',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['--debug', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const deployments = parseList(stdout);
 
@@ -273,13 +267,13 @@ test('find deployment in list with mixed args', async t => {
 });
 
 test('output logs of deployment', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'logs',
-    context.deployment,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.true(stdout.includes('yarn install'));
   t.true(stdout.includes('Snapshotting deployment'));
@@ -296,14 +290,13 @@ test('create alias for deployment', async t => {
     alias: `${session}.now.sh`
   };
 
-  const { stdout, code } = await execa(binaryPath, [
-    'alias',
-    hosts.deployment,
-    hosts.alias,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}`;
 
@@ -322,13 +315,13 @@ test('create alias for deployment', async t => {
 });
 
 test('list the aliases', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'alias',
-    'ls',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const results = parseList(stdout);
 
@@ -337,15 +330,13 @@ test('list the aliases', async t => {
 });
 
 test('scale the alias', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'scale',
-    context.alias,
-    'bru',
-    '1',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['scale', context.alias, 'bru', '1', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
   t.true(stdout.includes(`(min: 1, max: 1)`));
@@ -354,30 +345,26 @@ test('scale the alias', async t => {
 test('remove the alias', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
-  const { stdout, code } = await execa(binaryPath, [
-    'alias',
-    'rm',
-    context.alias,
-    '--yes',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
 });
 
 test('scale down the deployment directly', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'scale',
-    context.deployment,
-    'bru',
-    '0',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['scale', context.deployment, 'bru', '0', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
   t.true(stdout.includes(`(min: 0, max: 0)`));
@@ -393,16 +380,13 @@ test('deploy multiple static files', async t => {
     path.join(directory, 'second.png')
   ];
 
-  const { stdout, code } = await execa(binaryPath, [
-    files[0],
-    files[1],
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [files[0], files[1], '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -414,7 +398,7 @@ test('deploy multiple static files', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      'Accept': 'application/json'
+      Accept: 'application/json'
     }
   });
 
@@ -434,15 +418,13 @@ test('deploy multiple static files', async t => {
 test('deploy single static file', async t => {
   const file = fixture('static-single-file/first.png');
 
-  const { stdout, code } = await execa(binaryPath, [
-    file,
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [file, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -464,15 +446,13 @@ test('deploy single static file', async t => {
 test('deploy a static directory', async t => {
   const directory = fixture('static-single-file');
 
-  const { stdout, code } = await execa(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -495,15 +475,13 @@ test('deploy a static directory', async t => {
 test('deploy a static build deployment', async t => {
   const directory = fixture('now-static-builds');
 
-  const { stdout, code } = await execa(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -526,15 +504,13 @@ test('deploy a static build deployment', async t => {
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
-  const { stdout, code } = await execa(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -557,17 +533,21 @@ test('use build-env', async t => {
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile');
 
-  const { stdout, code } = await execa(binaryPath, [
-    target,
-    '--public',
-    '--name',
-    session,
-    '--docker',
-    '--no-verify',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [
+      target,
+      '--public',
+      '--name',
+      session,
+      '--docker',
+      '--no-verify',
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -598,19 +578,25 @@ test('deploy a dockerfile project', async t => {
 
 test('use `--build-env` CLI flag', async t => {
   const directory = fixture('build-env-arg');
-  const nonce = Math.random().toString(36).substring(2);
+  const nonce = Math.random()
+    .toString(36)
+    .substring(2);
 
-  const { stdout, code } = await execa(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    '--build-env',
-    `NONCE=${nonce}`,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '--build-env',
+      `NONCE=${nonce}`,
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -633,10 +619,7 @@ test('use `--build-env` CLI flag', async t => {
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
-  const { stderr, code } = await execa(binaryPath, [
-    session,
-    ...defaultArgs
-  ], {
+  const { stderr, code } = await execa(binaryPath, [session, ...defaultArgs], {
     reject: false
   });
 
@@ -648,27 +631,26 @@ test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
   const goal = `> Error! The specified team doesn't exist`;
 
-  const { stderr, code } = await execa(binaryPath, [
-    target,
-    '--team',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stderr, code } = await execa(
+    binaryPath,
+    [target, '--team', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 1);
   t.true(stderr.includes(goal));
 });
 
 test.after.always(async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'ls',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['ls', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 0);
 
@@ -684,10 +666,7 @@ test.after.always(async t => {
 
 test.after.always(async () => {
   // Make sure the token gets revoked
-  await execa(binaryPath, [
-    'logout',
-    ...defaultArgs
-  ]);
+  await execa(binaryPath, ['logout', ...defaultArgs]);
 
   if (!tmpDir) {
     return;

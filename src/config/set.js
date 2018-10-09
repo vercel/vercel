@@ -3,7 +3,10 @@ const error = require('../util/output/error');
 const success = require('../util/output/success');
 const param = require('../util/output/param');
 const hp = require('../util/humanize-path');
-const { writeToConfigFile, getConfigFilePath } = require('../util/config-files');
+const {
+  writeToConfigFile,
+  getConfigFilePath
+} = require('../util/config-files');
 
 const CONFIGS = new Map([
   [

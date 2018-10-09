@@ -1,8 +1,9 @@
-module.exports = async (existingCopy) => {
+module.exports = async existingCopy => {
   let migrated = false;
 
   const config = {
-    _: 'This is your Now config file. See `now config help`. More: https://goo.gl/5aRS2s'
+    _:
+      'This is your Now config file. See `now config help`. More: https://goo.gl/5aRS2s'
   };
 
   if (existingCopy) {
@@ -55,5 +56,5 @@ module.exports = async (existingCopy) => {
     } catch (err) {}
   }
 
-  return {config, migrated};
+  return { config, migrated };
 };

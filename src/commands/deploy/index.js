@@ -8,14 +8,14 @@ import getContextName from '../../util/get-context-name';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
-import {readLocalConfig} from '../../util/config-files';
+import { readLocalConfig } from '../../util/config-files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import type { CLIContext } from '../../util/types';
 
 module.exports = async (ctx: CLIContext) => {
   const localConfig = readLocalConfig();
-  const {authConfig, config: {currentTeam}, apiUrl} = ctx;
+  const { authConfig, config: { currentTeam }, apiUrl } = ctx;
   const combinedArgs = Object.assign({}, legacyArgs, latestArgs);
 
   let platformVersion = null;
@@ -52,7 +52,9 @@ module.exports = async (ctx: CLIContext) => {
       stats[path] = await lstat(path);
     } catch (err) {
       if (!isHelp) {
-        output.error(`The specified file or directory "${basename(path)}" does not exist.`);
+        output.error(
+          `The specified file or directory "${basename(path)}" does not exist.`
+        );
         return 1;
       }
     }
@@ -70,12 +72,16 @@ module.exports = async (ctx: CLIContext) => {
 
   const file = highlight('now.json');
   const prop = code('version');
-  const fallback = highlight(platformVersion === null ? 'latest version' : `version ${platformVersion}`);
+  const fallback = highlight(
+    platformVersion === null ? 'latest version' : `version ${platformVersion}`
+  );
 
   if (!localConfig) {
-    output.warn(`Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`);
+    output.warn(
+      `Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`
+    );
   } else {
-    const {version} = localConfig;
+    const { version } = localConfig;
 
     if (version) {
       if (typeof version === 'number') {
@@ -83,17 +89,23 @@ module.exports = async (ctx: CLIContext) => {
           const first = code(1);
           const second = code(2);
 
-          output.error(`The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`);
+          output.error(
+            `The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`
+          );
           return 1;
         }
 
         platformVersion = version;
       } else {
-        output.error(`The ${prop} property inside your ${file} file must be a number.`);
+        output.error(
+          `The ${prop} property inside your ${file} file must be a number.`
+        );
         return 1;
       }
     } else if (!isHelp) {
-      output.warn(`Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`);
+      output.warn(
+        `Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`
+      );
     }
   }
 

@@ -4,22 +4,28 @@ import generateCertForDeploy from './generate-cert-for-deploy';
 import * as Errors from '../errors';
 
 export type CreateDeployError =
-  Errors.CantGenerateWildcardCert |
-  Errors.CantSolveChallenge |
-  Errors.CDNNeedsUpgrade |
-  Errors.DomainConfigurationError |
-  Errors.DomainNameserversNotFound |
-  Errors.DomainNotFound |
-  Errors.DomainNotVerified |
-  Errors.DomainPermissionDenied |
-  Errors.DomainsShouldShareRoot |
-  Errors.DomainValidationRunning |
-  Errors.DomainVerificationFailed |
-  Errors.InvalidWildcardDomain |
-  Errors.TooManyCertificates |
-  Errors.TooManyRequests
+  | Errors.CantGenerateWildcardCert
+  | Errors.CantSolveChallenge
+  | Errors.CDNNeedsUpgrade
+  | Errors.DomainConfigurationError
+  | Errors.DomainNameserversNotFound
+  | Errors.DomainNotFound
+  | Errors.DomainNotVerified
+  | Errors.DomainPermissionDenied
+  | Errors.DomainsShouldShareRoot
+  | Errors.DomainValidationRunning
+  | Errors.DomainVerificationFailed
+  | Errors.InvalidWildcardDomain
+  | Errors.TooManyCertificates
+  | Errors.TooManyRequests;
 
-export default async function createDeploy(output: Output, now: Now, contextName: string, paths: string[], createArgs: Object) {
+export default async function createDeploy(
+  output: Output,
+  now: Now,
+  contextName: string,
+  paths: string[],
+  createArgs: Object
+) {
   try {
     return await now.create(paths, createArgs);
   } catch (error) {
@@ -40,21 +46,26 @@ export default async function createDeploy(output: Output, now: Now, contextName
 
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
-      const result = await generateCertForDeploy(output, now, contextName, error.value);
+      const result = await generateCertForDeploy(
+        output,
+        now,
+        contextName,
+        error.value
+      );
       if (
-        (result instanceof Errors.CantSolveChallenge) ||
-        (result instanceof Errors.CantGenerateWildcardCert) ||
-        (result instanceof Errors.DomainConfigurationError) ||
-        (result instanceof Errors.DomainNameserversNotFound) ||
-        (result instanceof Errors.DomainNotVerified) ||
-        (result instanceof Errors.DomainPermissionDenied) ||
-        (result instanceof Errors.DomainsShouldShareRoot) ||
-        (result instanceof Errors.DomainValidationRunning) ||
-        (result instanceof Errors.DomainVerificationFailed) ||
-        (result instanceof Errors.InvalidWildcardDomain) ||
-        (result instanceof Errors.CDNNeedsUpgrade) ||
-        (result instanceof Errors.TooManyCertificates) ||
-        (result instanceof Errors.TooManyRequests)
+        result instanceof Errors.CantSolveChallenge ||
+        result instanceof Errors.CantGenerateWildcardCert ||
+        result instanceof Errors.DomainConfigurationError ||
+        result instanceof Errors.DomainNameserversNotFound ||
+        result instanceof Errors.DomainNotVerified ||
+        result instanceof Errors.DomainPermissionDenied ||
+        result instanceof Errors.DomainsShouldShareRoot ||
+        result instanceof Errors.DomainValidationRunning ||
+        result instanceof Errors.DomainVerificationFailed ||
+        result instanceof Errors.InvalidWildcardDomain ||
+        result instanceof Errors.CDNNeedsUpgrade ||
+        result instanceof Errors.TooManyCertificates ||
+        result instanceof Errors.TooManyRequests
       ) {
         return result;
       } else {

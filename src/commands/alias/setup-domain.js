@@ -12,8 +12,15 @@ import verifyDomain from '../../util/domains/verify-domain';
 import { Output, Now } from '../../util/types';
 import * as Errors from '../../util/errors';
 
-async function setupDomain(output: Output, now: Now, alias: string, contextName: string) {
-  const { domain }: { domain: string, subdomain: string | null } = psl.parse(alias);
+async function setupDomain(
+  output: Output,
+  now: Now,
+  alias: string,
+  contextName: string
+) {
+  const { domain }: { domain: string, subdomain: string | null } = psl.parse(
+    alias
+  );
   const info = await getDomainInfo(now, domain, contextName);
   if (info instanceof Errors.DomainPermissionDenied) {
     return info;
@@ -31,26 +38,36 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
           : chalk.dim('none')}`
       );
 
-      const domainPointsToZeitWorld = nameservers.every(ns => ns.endsWith('.zeit.world'));
-      const verified = await verifyDomain(now, domain, contextName, { isExternal: !domainPointsToZeitWorld });
+      const domainPointsToZeitWorld = nameservers.every(ns =>
+        ns.endsWith('.zeit.world')
+      );
+      const verified = await verifyDomain(now, domain, contextName, {
+        isExternal: !domainPointsToZeitWorld
+      });
       if (
-        (verified instanceof Errors.DomainNotVerified) ||
-        (verified instanceof Errors.DomainPermissionDenied) ||
-        (verified instanceof Errors.CDNNeedsUpgrade)
+        verified instanceof Errors.DomainNotVerified ||
+        verified instanceof Errors.DomainPermissionDenied ||
+        verified instanceof Errors.CDNNeedsUpgrade
       ) {
         return verified;
-      } if (verified instanceof Errors.DomainVerificationFailed) {
+      }
+      if (verified instanceof Errors.DomainVerificationFailed) {
         // Verification fails when the domain is external so either its missing the TXT record
         // or it's available to purchase, so we try to purchase it
-        const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName);
+        const purchased = await purchaseDomainIfAvailable(
+          output,
+          now,
+          alias,
+          contextName
+        );
         if (
-          (purchased instanceof Errors.DomainNotFound) ||
-          (purchased instanceof Errors.InvalidCoupon) ||
-          (purchased instanceof Errors.MissingCreditCard) ||
-          (purchased instanceof Errors.PaymentSourceNotFound) ||
-          (purchased instanceof Errors.UnsupportedTLD) ||
-          (purchased instanceof Errors.UsedCoupon) ||
-          (purchased instanceof Errors.UserAborted)
+          purchased instanceof Errors.DomainNotFound ||
+          purchased instanceof Errors.InvalidCoupon ||
+          purchased instanceof Errors.MissingCreditCard ||
+          purchased instanceof Errors.PaymentSourceNotFound ||
+          purchased instanceof Errors.UnsupportedTLD ||
+          purchased instanceof Errors.UsedCoupon ||
+          purchased instanceof Errors.UserAborted
         ) {
           return purchased;
         } else if (!purchased) {
@@ -64,18 +81,22 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
       return domainInfo === null
         ? new Errors.DomainNotFound(domain)
         : domainInfo;
-
     } else {
       // If we couldn't find nameservers we try to purchase the domain
-      const purchased = await purchaseDomainIfAvailable(output, now, alias, contextName);
+      const purchased = await purchaseDomainIfAvailable(
+        output,
+        now,
+        alias,
+        contextName
+      );
       if (
-        (purchased instanceof Errors.DomainNotFound) ||
-        (purchased instanceof Errors.InvalidCoupon) ||
-        (purchased instanceof Errors.MissingCreditCard) ||
-        (purchased instanceof Errors.PaymentSourceNotFound) ||
-        (purchased instanceof Errors.UnsupportedTLD) ||
-        (purchased instanceof Errors.UsedCoupon) ||
-        (purchased instanceof Errors.UserAborted)
+        purchased instanceof Errors.DomainNotFound ||
+        purchased instanceof Errors.InvalidCoupon ||
+        purchased instanceof Errors.MissingCreditCard ||
+        purchased instanceof Errors.PaymentSourceNotFound ||
+        purchased instanceof Errors.UnsupportedTLD ||
+        purchased instanceof Errors.UsedCoupon ||
+        purchased instanceof Errors.UserAborted
       ) {
         return purchased;
       }
@@ -90,12 +111,14 @@ async function setupDomain(output: Output, now: Now, alias: string, contextName:
     // verified and from this point we can be sure about its verification
     output.debug(`Domain is known for ZEIT World`);
     if (!info.verified) {
-      const verified = await verifyDomain(now, domain, contextName, { isExternal: info.isExternal });
+      const verified = await verifyDomain(now, domain, contextName, {
+        isExternal: info.isExternal
+      });
       if (
-        (verified instanceof Errors.DomainNotVerified) ||
-        (verified instanceof Errors.DomainPermissionDenied) ||
-        (verified instanceof Errors.DomainVerificationFailed) ||
-        (verified instanceof Errors.CDNNeedsUpgrade)
+        verified instanceof Errors.DomainNotVerified ||
+        verified instanceof Errors.DomainPermissionDenied ||
+        verified instanceof Errors.DomainVerificationFailed ||
+        verified instanceof Errors.CDNNeedsUpgrade
       ) {
         return verified;
       }

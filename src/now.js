@@ -52,16 +52,20 @@ const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
 
-const main = async (argv_) => {
+const main = async argv_ => {
   // $FlowFixMe
   const { isTTY } = process.stdout;
 
-  const argv = getArgs(argv_, {
-    '--version': Boolean,
-    '-v': '--version',
-    '--debug': Boolean,
-    '-d': '--debug'
-  }, { permissive: true });
+  const argv = getArgs(
+    argv_,
+    {
+      '--version': Boolean,
+      '-v': '--version',
+      '--debug': Boolean,
+      '-d': '--debug'
+    },
+    { permissive: true }
+  );
 
   const isDebugging = argv['--debug'];
   const output: Output = createOutput({ debug: isDebugging });
@@ -74,7 +78,9 @@ const main = async (argv_) => {
       distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
     });
   } catch (err) {
-    console.error(error(`Checking for updates failed${isDebugging ? ':' : ''}`));
+    console.error(
+      error(`Checking for updates failed${isDebugging ? ':' : ''}`)
+    );
 
     if (isDebugging) {
       console.error(err);
@@ -82,9 +88,21 @@ const main = async (argv_) => {
   }
 
   if (update && isTTY) {
-    console.log(info(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${update.latest}`));
-    console.log(info(`Read more about how to update here: https://zeit.co/update-cli`));
-    console.log(info(`Changelog: https://github.com/zeit/now-cli/releases/tag/${update.latest}`));
+    console.log(
+      info(
+        `${chalk.bgRed(
+          'UPDATE AVAILABLE'
+        )} The latest version of Now CLI is ${update.latest}`
+      )
+    );
+    console.log(
+      info(`Read more about how to update here: https://zeit.co/update-cli`)
+    );
+    console.log(
+      info(
+        `Changelog: https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+      )
+    );
   }
 
   // the second argument to the command can be a path
@@ -95,10 +113,11 @@ const main = async (argv_) => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(require('../package').version + `${
-        // $FlowFixMe
-        process.pkg ? '' : chalk.magenta(' (dev)')
-      }`);
+      console.log(
+        require('../package').version +
+          `${// $FlowFixMe
+          process.pkg ? '' : chalk.magenta(' (dev)')}`
+      );
       return 0;
     }
   }
@@ -123,11 +142,13 @@ const main = async (argv_) => {
     try {
       await mkdirp(NOW_DIR);
     } catch (err) {
-      console.error(error(
-        'An unexpected error occurred while trying to create the ' +
-          `now global directory "${hp(NOW_DIR)}" ` +
-          err.message
-      ));
+      console.error(
+        error(
+          'An unexpected error occurred while trying to create the ' +
+            `now global directory "${hp(NOW_DIR)}" ` +
+            err.message
+        )
+      );
     }
   }
 
@@ -168,7 +189,11 @@ const main = async (argv_) => {
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
-    if (config.sh || typeof config.user === 'object' || typeof config.currentTeam === 'object') {
+    if (
+      config.sh ||
+      typeof config.user === 'object' ||
+      typeof config.currentTeam === 'object'
+    ) {
       configExists = false;
     }
   }
@@ -227,18 +252,17 @@ const main = async (argv_) => {
       return 1;
     }
 
-    const subcommandsWithoutToken = [
-      'config',
-      'login',
-      'help'
-    ];
+    const subcommandsWithoutToken = ['config', 'login', 'help'];
 
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (authConfig.credentials) {
       authConfigExists = false;
-    } else if (!authConfig.token && !subcommandsWithoutToken.includes(targetOrSubcommand)) {
+    } else if (
+      !authConfig.token &&
+      !subcommandsWithoutToken.includes(targetOrSubcommand)
+    ) {
       console.error(
         error(
           `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
@@ -272,7 +296,11 @@ const main = async (argv_) => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR));
-    console.log(note(`Your credentials and configuration within the ${directory} directory were migrated`));
+    console.log(
+      note(
+        `Your credentials and configuration within the ${directory} directory were migrated`
+      )
+    );
   }
 
   // the context object to supply to the providers or the commands
@@ -306,7 +334,9 @@ const main = async (argv_) => {
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
-    const subcommandExists = GLOBAL_COMMANDS.has(targetOrSubcommand) || commands.subcommands.has(targetOrSubcommand);
+    const subcommandExists =
+      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
+      commands.subcommands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -350,7 +380,8 @@ const main = async (argv_) => {
   // login to the .sh provider
   if (
     (!authConfig || !authConfig.token) &&
-    !ctx.argv.includes('-h') && !ctx.argv.includes('--help') &&
+    !ctx.argv.includes('-h') &&
+    !ctx.argv.includes('--help') &&
     !argv['--token'] &&
     subcommand !== 'login'
   ) {
@@ -364,21 +395,28 @@ const main = async (argv_) => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3);
     } else {
-      console.error(error({
-        message: 'No existing credentials found. Please run ' +
-        `${param('now login')} or pass ${param('--token')}`,
-        slug: 'no-credentials-found'
-      }));
+      console.error(
+        error({
+          message:
+            'No existing credentials found. Please run ' +
+            `${param('now login')} or pass ${param('--token')}`,
+          slug: 'no-credentials-found'
+        })
+      );
 
       return 1;
     }
   }
 
   if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
-    console.error(error({
-      message: `This command doesn't work with ${param('--token')}. Please use ${param('--team')}.`,
-      slug: 'no-token-allowed'
-    }));
+    console.error(
+      error({
+        message: `This command doesn't work with ${param(
+          '--token'
+        )}. Please use ${param('--team')}.`,
+        slug: 'no-token-allowed'
+      })
+    );
 
     return 1;
   }
@@ -387,10 +425,12 @@ const main = async (argv_) => {
     const token = argv['--token'];
 
     if (token.length === 0) {
-      console.error(error({
-        message: `You defined ${param('--token')}, but it's missing a value`,
-        slug: 'missing-token-value'
-      }));
+      console.error(
+        error({
+          message: `You defined ${param('--token')}, but it's missing a value`,
+          slug: 'missing-token-value'
+        })
+      );
 
       return 1;
     }
@@ -422,10 +462,12 @@ const main = async (argv_) => {
     const team = argv['--team'];
 
     if (team.length === 0) {
-      console.error(error({
-        message: `You defined ${param('--team')}, but it's missing a value`,
-        slug: 'missing-team-value'
-      }));
+      console.error(
+        error({
+          message: `You defined ${param('--team')}, but it's missing a value`,
+          slug: 'missing-team-value'
+        })
+      );
 
       return 1;
     }
@@ -453,10 +495,12 @@ const main = async (argv_) => {
         const res = await fetch(url, { headers });
 
         if (res.status === 403) {
-          console.error(error({
-            message: `You don't have access to the specified team`,
-            slug: 'team-not-accessible'
-          }));
+          console.error(
+            error({
+              message: `You don't have access to the specified team`,
+              slug: 'team-not-accessible'
+            })
+          );
 
           return 1;
         }
@@ -468,10 +512,12 @@ const main = async (argv_) => {
       }
 
       if (!body || body.error) {
-        console.error(error({
-          message: 'The specified team doesn\'t exist',
-          slug: 'team-not-existent'
-        }));
+        console.error(
+          error({
+            message: "The specified team doesn't exist",
+            slug: 'team-not-existent'
+          })
+        );
 
         return 1;
       }
@@ -509,7 +555,9 @@ const main = async (argv_) => {
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
-    console.error(error(`An unexpected error occurred in ${subcommand}: ${err.stack}`));
+    console.error(
+      error(`An unexpected error occurred in ${subcommand}: ${err.stack}`)
+    );
 
     return 1;
   }

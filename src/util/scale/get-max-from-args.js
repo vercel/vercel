@@ -1,5 +1,9 @@
 // @flow
-import { InvalidArgsForMinMaxScale, InvalidMaxForScale, InvalidMinForScale } from '../errors';
+import {
+  InvalidArgsForMinMaxScale,
+  InvalidMaxForScale,
+  InvalidMinForScale
+} from '../errors';
 import toNumberOrAuto from './to-number-or-auto';
 import isValidMinMaxValue from './is-valid-min-max-value';
 import getRawMinFromArgs from './get-raw-min-from-args';

@@ -1,6 +1,6 @@
 // @flow
 
-type Maybe<T> = [Error, null] | [null, T]
+type Maybe<T> = [Error, null] | [null, T];
 
 /*
  * Returnify iterates through an async generator and yields the values

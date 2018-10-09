@@ -54,7 +54,9 @@ const help = () => {
     )} If the secret's value is more than one word, wrap it in quotes
     ${chalk.gray('–')} When in doubt, always wrap your value in quotes
 
-  ${chalk.gray('–')} Expose a secret as an environment variable (notice the ${chalk.cyan.bold(
+  ${chalk.gray(
+    '–'
+  )} Expose a secret as an environment variable (notice the ${chalk.cyan.bold(
     '`@`'
   )} symbol)
 
@@ -88,7 +90,7 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
 
   try {
     await run({ token, config });
@@ -114,9 +116,11 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
-      console.error(error(
-        `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
-      ));
+      console.error(
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
+        )
+      );
       return exit(1);
     }
 
@@ -124,9 +128,7 @@ async function run({ token, config: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${
-        plural('secret', list.length, true)
-      } found under ${chalk.bold(
+      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
         (currentTeam && currentTeam.slug) || user.username || user.email
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -160,11 +162,13 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'rm' || subcommand === 'remove') {
     if (args.length !== 1) {
-      console.error(error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now secret rm <name>`'
-        )}`
-      ));
+      console.error(
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now secret rm <name>`'
+          )}`
+        )
+      );
       return exit(1);
     }
     const list = await secrets.ls();
@@ -193,11 +197,13 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'rename') {
     if (args.length !== 2) {
-      console.error(error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now secret rename <old-name> <new-name>`'
-        )}`
-      ));
+      console.error(
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now secret rename <old-name> <new-name>`'
+          )}`
+        )
+      );
       return exit(1);
     }
     const secret = await secrets.rename(args[0], args[1]);
@@ -212,11 +218,13 @@ async function run({ token, config: { currentTeam, user } }) {
 
   if (subcommand === 'add' || subcommand === 'set') {
     if (args.length !== 2) {
-      console.error(error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now secret add <name> <value>`'
-        )}`
-      ));
+      console.error(
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now secret add <name> <value>`'
+          )}`
+        )
+      );
 
       if (args.length > 2) {
         const example = chalk.cyan(`$ now secret add ${args[0]}`);
@@ -242,7 +250,9 @@ async function run({ token, config: { currentTeam, user } }) {
     return secrets.close();
   }
 
-  console.error(error('Please specify a valid subcommand: ls | add | rename | rm'));
+  console.error(
+    error('Please specify a valid subcommand: ls | add | rename | rm')
+  );
   help();
   exit(1);
 }
@@ -260,7 +270,9 @@ function readConfirmation(secret) {
       hsep: ' '.repeat(6)
     });
 
-    process.stdout.write('> The following secret will be removed permanently\n');
+    process.stdout.write(
+      '> The following secret will be removed permanently\n'
+    );
     process.stdout.write('  ' + tbl + '\n');
 
     process.stdout.write(
@@ -270,7 +282,12 @@ function readConfirmation(secret) {
     process.stdin
       .on('data', d => {
         process.stdin.pause();
-        resolve(d.toString().trim().toLowerCase() === 'y');
+        resolve(
+          d
+            .toString()
+            .trim()
+            .toLowerCase() === 'y'
+        );
       })
       .resume();
   });

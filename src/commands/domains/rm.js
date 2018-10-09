@@ -17,13 +17,23 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
-async function rm(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { token }, config} = ctx;
+async function rm(
+  ctx: CLIContext,
+  opts: CLIDomainsOptions,
+  args: string[],
+  output: Output
+): Promise<number> {
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -35,19 +45,30 @@ async function rm(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], outp
   }
 
   if (args.length !== 1) {
-    output.error(`Invalid number of arguments. Usage: ${chalk.cyan('`now alias rm <alias>`')}`);
+    output.error(
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        '`now alias rm <alias>`'
+      )}`
+    );
     return 1;
   }
 
-  const domain = await getDomainByName(output, now, contextName, domainIdOrName);
+  const domain = await getDomainByName(
+    output,
+    now,
+    contextName,
+    domainIdOrName
+  );
   if (!domain) {
-    output.error(`Domain not found by "${domainIdOrName}" under ${chalk.bold(contextName)}`);
+    output.error(
+      `Domain not found by "${domainIdOrName}" under ${chalk.bold(contextName)}`
+    );
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
 
   const certs = await getCertsForDomain(output, now, domain.name);
-  if (!opts['--yes'] && !(await confirmDomainRemove(output, domain, certs))) {
+  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, certs)) {
     output.log('Aborted');
     return 0;
   }
@@ -65,11 +86,19 @@ async function rm(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], outp
 
   output.debug(`Removing domain`);
   await removeDomainByName(output, now, domain.name);
-  console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(domain.name)} removed ${removeStamp()}`);
+  console.log(
+    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
+      domain.name
+    )} removed ${removeStamp()}`
+  );
   return 0;
 }
 
-async function confirmDomainRemove(output: Output, domain: Domain, certs: Certificate[]) {
+async function confirmDomainRemove(
+  output: Output,
+  domain: Domain,
+  certs: Certificate[]
+) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(domain.created)) + ' ago');
     const tbl = table([[chalk.bold(domain.name), time]], {
@@ -82,23 +111,34 @@ async function confirmDomainRemove(output: Output, domain: Domain, certs: Certif
 
     if (domain.aliases.length > 0) {
       output.warn(
-        `This domain's ${chalk.bold(plural('alias', domain.aliases.length, true))
-        } will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
+        `This domain's ${chalk.bold(
+          plural('alias', domain.aliases.length, true)
+        )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
       );
     }
 
     if (certs.length > 0) {
       output.warn(
-        `This domain's ${chalk.bold(plural('certificate', certs.length, true))
-        } will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
+        `This domain's ${chalk.bold(
+          plural('certificate', certs.length, true)
+        )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
 
-    output.print(`${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`);
-    process.stdin.on('data', d => {
-      process.stdin.pause();
-      resolve(d.toString().trim().toLowerCase() === 'y');
-    }).resume();
+    output.print(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    );
+    process.stdin
+      .on('data', d => {
+        process.stdin.pause();
+        resolve(
+          d
+            .toString()
+            .trim()
+            .toLowerCase() === 'y'
+        );
+      })
+      .resume();
   });
 }
 

@@ -15,10 +15,13 @@ async function createAlias(
 ) {
   const cancelMessage = wait(`Creating alias`);
   try {
-    const record: AliasRecord = await now.fetch(`/now/deployments/${deployment.uid}/aliases`, {
-      method: 'POST',
-      body: { alias }
-    });
+    const record: AliasRecord = await now.fetch(
+      `/now/deployments/${deployment.uid}/aliases`,
+      {
+        method: 'POST',
+        body: { alias }
+      }
+    );
     cancelMessage();
     return record;
   } catch (error) {
@@ -27,20 +30,33 @@ async function createAlias(
     // If the certificate is missing we create it without expecting failures
     // then we call back the createAlias function
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertForAlias(output, now, contextName, alias, !externalDomain);
+      const cert = await createCertForAlias(
+        output,
+        now,
+        contextName,
+        alias,
+        !externalDomain
+      );
       if (
-        (cert instanceof Errors.CantSolveChallenge) ||
-        (cert instanceof Errors.DomainConfigurationError) ||
-        (cert instanceof Errors.DomainPermissionDenied) ||
-        (cert instanceof Errors.DomainsShouldShareRoot) ||
-        (cert instanceof Errors.DomainValidationRunning) ||
-        (cert instanceof Errors.InvalidWildcardDomain) ||
-        (cert instanceof Errors.TooManyCertificates) ||
-        (cert instanceof Errors.TooManyRequests)
+        cert instanceof Errors.CantSolveChallenge ||
+        cert instanceof Errors.DomainConfigurationError ||
+        cert instanceof Errors.DomainPermissionDenied ||
+        cert instanceof Errors.DomainsShouldShareRoot ||
+        cert instanceof Errors.DomainValidationRunning ||
+        cert instanceof Errors.InvalidWildcardDomain ||
+        cert instanceof Errors.TooManyCertificates ||
+        cert instanceof Errors.TooManyRequests
       ) {
         return cert;
       } else {
-        return createAlias(output, now, contextName, deployment, alias, !externalDomain);
+        return createAlias(
+          output,
+          now,
+          contextName,
+          deployment,
+          alias,
+          !externalDomain
+        );
       }
     }
 

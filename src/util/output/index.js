@@ -35,7 +35,11 @@ function createOutput({ debug: debugEnabled = false } = {}) {
 
   function debug(v) {
     if (debugEnabled) {
-      log(`${chalk.bold('[debug]')} ${chalk.gray(`[${new Date().toISOString()}]`)} ${v}`);
+      log(
+        `${chalk.bold('[debug]')} ${chalk.gray(
+          `[${new Date().toISOString()}]`
+        )} ${v}`
+      );
     }
   }
 
@@ -43,7 +47,9 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   // being used because of `pkg` it's safe to do in this case.
   const c = {
     _times: new Map(),
-    log(...args) { debug(format(...args)); }
+    log(...args) {
+      debug(format(...args));
+    }
   };
 
   async function time(label, fn) {

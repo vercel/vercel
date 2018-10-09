@@ -26,9 +26,15 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline('FILE')}   Path to the local ${'`now.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline('DIR')}    Path to the global ${'`.now`'} directory
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')}        Login token
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )}        Login token
     -d, --debug                    Debug mode [off]
     -T, --team                     Set a custom team scope
 
@@ -44,7 +50,7 @@ const help = () => {
   `);
 };
 
-module.exports = async function main (ctx: any): Promise<number> {
+module.exports = async function main(ctx: any): Promise<number> {
   let id;
   let deployment;
   let argv;
@@ -75,15 +81,22 @@ module.exports = async function main (ctx: any): Promise<number> {
     return 1;
   }
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam
+  });
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  const cancelWait = wait(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
+  const cancelWait = wait(
+    `Fetching deployment "${id}" in ${chalk.bold(contextName)}`
+  );
 
   try {
     deployment = await now.findDeployment(id);
@@ -93,7 +106,11 @@ module.exports = async function main (ctx: any): Promise<number> {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
       return 1;
     } else if (err.status === 403) {
-      error(`No permission to access deployment "${id}" in ${chalk.bold(contextName)}`);
+      error(
+        `No permission to access deployment "${id}" in ${chalk.bold(
+          contextName
+        )}`
+      );
       return 1;
     } else {
       // unexpected
@@ -114,12 +131,24 @@ module.exports = async function main (ctx: any): Promise<number> {
   } = deployment;
 
   const [scale, events] = await Promise.all([
-    caught(now.fetch(`/v3/now/deployments/${encodeURIComponent(uid)}/instances`)),
-    type === STATIC ? null : caught(now.fetch(`/v1/now/deployments/${encodeURIComponent(uid)}/events?types=event`)),
+    caught(
+      now.fetch(`/v3/now/deployments/${encodeURIComponent(uid)}/instances`)
+    ),
+    type === STATIC
+      ? null
+      : caught(
+          now.fetch(
+            `/v1/now/deployments/${encodeURIComponent(uid)}/events?types=event`
+          )
+        )
   ]);
 
   cancelWait();
-  log(`Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
+  log(
+    `Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - depFetchStart
+    )}`
+  );
 
   print('\n');
   print(chalk.bold('  Meta\n'));
@@ -134,14 +163,28 @@ module.exports = async function main (ctx: any): Promise<number> {
     print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`);
   }
   print(`    ${chalk.dim('url')}\t\t${url}\n`);
-  print(`    ${chalk.dim('created')}\t${new Date(created)} ${elapsed(Date.now() - created)}\n`);
+  print(
+    `    ${chalk.dim('created')}\t${new Date(created)} ${elapsed(
+      Date.now() - created
+    )}\n`
+  );
   print('\n');
 
   if (limits) {
     print(chalk.bold('  Limits\n'));
-    print(`    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(limits.duration)}\n`);
-    print(`    ${chalk.dim('maxConcurrentReqs')}\t${limits.maxConcurrentReqs}\n`);
-    print(`    ${chalk.dim('timeout')}\t\t${limits.timeout} ${elapsed(limits.timeout)}\n`);
+    print(
+      `    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(
+        limits.duration
+      )}\n`
+    );
+    print(
+      `    ${chalk.dim('maxConcurrentReqs')}\t${limits.maxConcurrentReqs}\n`
+    );
+    print(
+      `    ${chalk.dim('timeout')}\t\t${limits.timeout} ${elapsed(
+        limits.timeout
+      )}\n`
+    );
     print('\n');
   }
 
@@ -162,18 +205,15 @@ module.exports = async function main (ctx: any): Promise<number> {
     for (const dc of dcs) {
       const { instances } = scale[dc];
       const cfg = deployment.scale[dc] || {};
-      t.push([
-        dc,
-        cfg.min || 0,
-        cfg.max || 0,
-        instances.length
-      ]);
+      t.push([dc, cfg.min || 0, cfg.max || 0, instances.length]);
     }
-    print(table(t, {
-      align: ['l', 'c', 'c', 'c'],
-      hsep: ' '.repeat(8),
-      stringLength: strlen
-    }).replace(/^(.*)/gm, '    $1') + '\n');
+    print(
+      table(t, {
+        align: ['l', 'c', 'c', 'c'],
+        hsep: ' '.repeat(8),
+        stringLength: strlen
+      }).replace(/^(.*)/gm, '    $1') + '\n'
+    );
     print('\n');
   }
 
@@ -182,11 +222,13 @@ module.exports = async function main (ctx: any): Promise<number> {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
   } else if (events) {
-    events.forEach((data) => {
+    events.forEach(data => {
       if (!data.event) return; // keepalive
-      print(`    ${chalk.gray(new Date(data.created).toISOString())} ${data.event} ${
-        getEventMetadata(data)
-      }\n`);
+      print(
+        `    ${chalk.gray(
+          new Date(data.created).toISOString()
+        )} ${data.event} ${getEventMetadata(data)}\n`
+      );
     });
     print('\n');
   }
@@ -201,7 +243,7 @@ type Event = {
   event: string,
   payload: any,
   created: number
-}
+};
 
 function getEventMetadata({ event, payload }: Event): string {
   if (event === 'state') {
@@ -219,7 +261,7 @@ function getEventMetadata({ event, payload }: Event): string {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught (p): Promise<any> {
+function caught(p): Promise<any> {
   return new Promise(r => {
     p.then(r).catch(r);
   });

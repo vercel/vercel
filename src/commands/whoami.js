@@ -55,8 +55,13 @@ const main = async ctx => {
   }
 
   const debug = argv['--debug'];
-  const {authConfig: { token }, config: { currentTeam }, apiUrl} = ctx;
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { authConfig: { token }, config: { currentTeam }, apiUrl } = ctx;
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   await whoami(contextName);
 };

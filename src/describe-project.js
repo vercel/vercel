@@ -97,7 +97,9 @@ const getName = (path, nowJSON = null, packageJSON = null) => {
     return packageJSON.name.toLowerCase();
   }
 
-  return basename(path).replace(/[^\w]+/g, '-').toLowerCase();
+  return basename(path)
+    .replace(/[^\w]+/g, '-')
+    .toLowerCase();
 };
 
 const getDescription = (nowJSON = null, packageJSON = null) => {

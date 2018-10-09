@@ -13,25 +13,41 @@ import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import type { CLIDomainsOptions, Domain } from '../../util/types';
 
-async function ls(ctx: CLIContext, opts: CLIDomainsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: { token }, config} = ctx;
+async function ls(
+  ctx: CLIContext,
+  opts: CLIDomainsOptions,
+  args: string[],
+  output: Output
+): Promise<number> {
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
-    output.error(`Invalid number of arguments. Usage: ${chalk.cyan('`now domains ls`')}`);
+    output.error(
+      `Invalid number of arguments. Usage: ${chalk.cyan('`now domains ls`')}`
+    );
     return 1;
   }
 
   const domains = await getDomains(output, now, contextName);
-  output.log(`${plural('domain', domains.length, true)} found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}\n`);
+  output.log(
+    `${plural('domain', domains.length, true)} found under ${chalk.bold(
+      contextName
+    )} ${chalk.gray(lsStamp())}\n`
+  );
   if (domains.length > 0) {
     console.log(formatDomainsTable(domains));
   }
@@ -48,9 +64,7 @@ function formatDomainsTable(domains: Domain[]) {
         const cdnEnabled = domain.cdnEnabled || false;
         const ns = isDomainExternal(domain) ? 'external' : 'zeit.world';
         const url = chalk.bold(domain.name);
-        const time = chalk.gray(
-          ms(current - new Date(domain.created))
-        );
+        const time = chalk.gray(ms(current - new Date(domain.created)));
         return ['', url, ns, domain.verified, cdnEnabled, time];
       })
     ],

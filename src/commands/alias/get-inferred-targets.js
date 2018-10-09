@@ -1,12 +1,20 @@
 // @flow
 import getConfig from './get-config';
 import { Output } from '../../util/types';
-import { NoAliasInConfig, InvalidAliasInConfig, CantParseJSONFile, CantFindConfig } from '../../util/errors';
+import {
+  NoAliasInConfig,
+  InvalidAliasInConfig,
+  CantParseJSONFile,
+  CantFindConfig
+} from '../../util/errors';
 
-async function getInferredTargets(output: Output, localConfigPath: string | void) {
+async function getInferredTargets(
+  output: Output,
+  localConfigPath: string | void
+) {
   // Read the configuration file from the best guessed location
   const config = await getConfig(output, localConfigPath);
-  if ((config instanceof CantParseJSONFile) || (config instanceof CantFindConfig)) {
+  if (config instanceof CantParseJSONFile || config instanceof CantFindConfig) {
     return config;
   }
 

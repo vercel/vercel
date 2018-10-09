@@ -38,7 +38,9 @@ async function hashes(files) {
  */
 
 function hash(buf) {
-  return createHash('sha1').update(buf).digest('hex');
+  return createHash('sha1')
+    .update(buf)
+    .digest('hex');
 }
 
 module.exports = hashes;

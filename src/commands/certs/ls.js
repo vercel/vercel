@@ -13,25 +13,41 @@ import strlen from '../../util/strlen';
 import { CLIContext, Output } from '../../util/types';
 import type { CLICertsOptions } from '../../util/types';
 
-async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: {token}, config} = ctx;
+async function ls(
+  ctx: CLIContext,
+  opts: CLICertsOptions,
+  args: string[],
+  output: Output
+): Promise<number> {
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
-    output.error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`);
+    output.error(
+      `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
+    );
     return 1;
   }
 
   // Get the list of certificates
   const certs = sortByCn(await getCerts(output, now));
-  output.log(`${plural('certificate', certs.length, true)} found under ${chalk.bold(contextName)} ${lsStamp()}`);
+  output.log(
+    `${plural('certificate', certs.length, true)} found under ${chalk.bold(
+      contextName
+    )} ${lsStamp()}`
+  );
 
   if (certs.length > 0) {
     console.log(formatCertsTable(certs));
@@ -40,15 +56,13 @@ async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output
 }
 
 function formatCertsTable(certsList) {
-  return table([
-      formatCertsTableHead(),
-      ...formatCertsTableBody(certsList),
-    ], {
+  return (
+    table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
       stringLength: strlen
-    }
-  ).replace(/^(.*)/gm, '  $1') + '\n';
+    }).replace(/^(.*)/gm, '  $1') + '\n'
+  );
 }
 
 function formatCertsTableHead() {
@@ -63,18 +77,19 @@ function formatCertsTableHead() {
 
 function formatCertsTableBody(certsList) {
   const now = new Date();
-  return certsList.reduce((result, cert) => ([
-    ...result,
-    ...formatCert(now, cert)
-  ]), []);
+  return certsList.reduce(
+    (result, cert) => [...result, ...formatCert(now, cert)],
+    []
+  );
 }
 
 function formatCert(time, cert) {
-  return cert.cns.map((cn, idx) => (
-    (idx === 0)
-      ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
-      : formatCertNonFirstCn(cn, cert.cns.length > 1)
-  ));
+  return cert.cns.map(
+    (cn, idx) =>
+      idx === 0
+        ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
+        : formatCertNonFirstCn(cn, cert.cns.length > 1)
+  );
 }
 
 function formatCertNonFirstCn(cn, multiple) {
@@ -82,9 +97,7 @@ function formatCertNonFirstCn(cn, multiple) {
 }
 
 function formatCertCn(cn, multiple) {
-  return multiple
-    ? `${chalk.gray('-')} ${chalk.bold(cn)}`
-    : chalk.bold(cn);
+  return multiple ? `${chalk.gray('-')} ${chalk.bold(cn)}` : chalk.bold(cn);
 }
 
 function formatCertFirstCn(time, cert, cn, multiple) {
@@ -93,7 +106,7 @@ function formatCertFirstCn(time, cert, cn, multiple) {
     formatCertCn(cn, multiple),
     formatExpirationDate(new Date(cert.expiration)),
     cert.autoRenew ? 'yes' : 'no',
-    chalk.gray(ms(time - new Date(cert.created))),
+    chalk.gray(ms(time - new Date(cert.created)))
   ];
 }
 

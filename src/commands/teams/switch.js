@@ -8,7 +8,7 @@ const success = require('../../util/output/success');
 const info = require('../../util/output/info');
 const error = require('../../util/output/error');
 const param = require('../../util/output/param');
-const {writeToConfigFile} = require('../../util/config-files');
+const { writeToConfigFile } = require('../../util/config-files');
 const getUser = require('../../util/get-user');
 const NowTeams = require('../../util/teams');
 
@@ -53,7 +53,13 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
 
     if (newTeam) {
       updateCurrentTeam(config, newTeam);
-      console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`));
+      console.log(
+        success(
+          `The team ${chalk.bold(
+            newTeam.name
+          )} (${newTeam.slug}) is now active!`
+        )
+      );
       return 0;
     }
 
@@ -62,11 +68,15 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
       updateCurrentTeam(config);
 
       stopSpinner();
-      console.log(success(`Your account (${chalk.bold(desiredSlug)}) is now active!`));
+      console.log(
+        success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
+      );
       return 0;
     }
 
-    console.error(error(`Could not find membership for team ${param(desiredSlug)}`));
+    console.error(
+      error(`Could not find membership for team ${param(desiredSlug)}`)
+    );
     return 1;
   }
 
@@ -98,7 +108,9 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
 
   // Let's bring the current team to the beginning of the list
   if (!accountIsCurrent) {
-    const index = choices.findIndex(choice => choice.value === currentTeam.slug);
+    const index = choices.findIndex(
+      choice => choice.value === currentTeam.slug
+    );
     const choice = choices.splice(index, 1)[0];
     choices.unshift(choice);
   }
@@ -148,6 +160,10 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
   updateCurrentTeam(config, newTeam);
 
   stopSpinner();
-  console.log(success(`The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`));
+  console.log(
+    success(
+      `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
+    )
+  );
   return 0;
 };

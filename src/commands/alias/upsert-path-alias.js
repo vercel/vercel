@@ -8,25 +8,31 @@ import setupDomain from './setup-domain';
 
 const NOW_SH_REGEX = /\.now\.sh$/;
 
-async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias: string, contextName: string) {
+async function upsertPathAlias(
+  output: Output,
+  now: Now,
+  rules: PathRule[],
+  alias: string,
+  contextName: string
+) {
   let externalDomain = false;
 
   if (!NOW_SH_REGEX.test(alias)) {
     const domainInfo = await setupDomain(output, now, alias, contextName);
     if (
-      (domainInfo instanceof Errors.DNSPermissionDenied) ||
-      (domainInfo instanceof Errors.DomainNameserversNotFound) ||
-      (domainInfo instanceof Errors.DomainNotFound) ||
-      (domainInfo instanceof Errors.DomainNotVerified) ||
-      (domainInfo instanceof Errors.DomainPermissionDenied) ||
-      (domainInfo instanceof Errors.DomainVerificationFailed) ||
-      (domainInfo instanceof Errors.InvalidCoupon) ||
-      (domainInfo instanceof Errors.MissingCreditCard) ||
-      (domainInfo instanceof Errors.CDNNeedsUpgrade) ||
-      (domainInfo instanceof Errors.PaymentSourceNotFound) ||
-      (domainInfo instanceof Errors.UnsupportedTLD) ||
-      (domainInfo instanceof Errors.UsedCoupon) ||
-      (domainInfo instanceof Errors.UserAborted)
+      domainInfo instanceof Errors.DNSPermissionDenied ||
+      domainInfo instanceof Errors.DomainNameserversNotFound ||
+      domainInfo instanceof Errors.DomainNotFound ||
+      domainInfo instanceof Errors.DomainNotVerified ||
+      domainInfo instanceof Errors.DomainPermissionDenied ||
+      domainInfo instanceof Errors.DomainVerificationFailed ||
+      domainInfo instanceof Errors.InvalidCoupon ||
+      domainInfo instanceof Errors.MissingCreditCard ||
+      domainInfo instanceof Errors.CDNNeedsUpgrade ||
+      domainInfo instanceof Errors.PaymentSourceNotFound ||
+      domainInfo instanceof Errors.UnsupportedTLD ||
+      domainInfo instanceof Errors.UsedCoupon ||
+      domainInfo instanceof Errors.UserAborted
     ) {
       return domainInfo;
     }
@@ -38,7 +44,7 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
   try {
     const record: AliasRecord = await now.fetch(`/now/aliases`, {
       body: { alias, rules },
-      method: 'POST',
+      method: 'POST'
     });
     cancelMessage();
     return record;
@@ -48,16 +54,22 @@ async function upsertPathAlias(output: Output,now: Now, rules: PathRule[], alias
     // If the certificate is missing we create it without expecting failures
     // then we call back upsertPathAliasRules
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      const cert = await createCertForAlias(output, now, contextName, alias, !externalDomain);
+      const cert = await createCertForAlias(
+        output,
+        now,
+        contextName,
+        alias,
+        !externalDomain
+      );
       if (
-        (cert instanceof Errors.CantSolveChallenge) ||
-        (cert instanceof Errors.DomainConfigurationError) ||
-        (cert instanceof Errors.DomainPermissionDenied) ||
-        (cert instanceof Errors.DomainsShouldShareRoot) ||
-        (cert instanceof Errors.DomainValidationRunning) ||
-        (cert instanceof Errors.InvalidWildcardDomain) ||
-        (cert instanceof Errors.TooManyCertificates) ||
-        (cert instanceof Errors.TooManyRequests)
+        cert instanceof Errors.CantSolveChallenge ||
+        cert instanceof Errors.DomainConfigurationError ||
+        cert instanceof Errors.DomainPermissionDenied ||
+        cert instanceof Errors.DomainsShouldShareRoot ||
+        cert instanceof Errors.DomainValidationRunning ||
+        cert instanceof Errors.InvalidWildcardDomain ||
+        cert instanceof Errors.TooManyCertificates ||
+        cert instanceof Errors.TooManyRequests
       ) {
         return cert;
       } else {

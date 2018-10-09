@@ -59,11 +59,7 @@ const walkSync = async (dir, path, filelist = [], { output } = {}) => {
  *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
-const getFilesInWhitelist = async function(
-  whitelist,
-  path,
-  { output } = {}
-) {
+const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
   const { debug } = output;
   let files = [];
 
@@ -166,7 +162,7 @@ async function staticFiles(
 
     const filter = ignore()
       .add(IGNORED + '\n' + clearRelative(gitIgnore))
-      .add([ 'now.json' ])
+      .add(['now.json'])
       .createFilter();
 
     const prefixLength = path.length + 1;
@@ -437,7 +433,6 @@ async function explode(paths, { accepts, output }) {
 
     return path;
   };
-
 
   const many = all => Promise.all(all.map(file => list(file)));
   return flatten(await many(paths)).filter(v => v !== null);

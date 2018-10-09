@@ -7,7 +7,13 @@ import { Now } from '../types';
 import { InvalidCert, DomainPermissionDenied } from '../errors';
 import type { Certificate } from '../types';
 
-async function createCertFromFile(now: Now, keyPath: string, certPath: string, caPath: string, context: string) {
+async function createCertFromFile(
+  now: Now,
+  keyPath: string,
+  certPath: string,
+  caPath: string,
+  context: string
+) {
   const cancelWait = wait('Adding your custom certificate');
   const cert = readFileSync(resolve(certPath), 'utf8');
   const key = readFileSync(resolve(keyPath), 'utf8');
@@ -17,12 +23,14 @@ async function createCertFromFile(now: Now, keyPath: string, certPath: string, c
     const certificate: Certificate = await now.fetch('/v3/now/certs', {
       method: 'PUT',
       body: {
-        ca, cert, key
+        ca,
+        cert,
+        key
       }
     });
     cancelWait();
     return certificate;
-  } catch(error) {
+  } catch (error) {
     cancelWait();
     if (error.code === 'invalid_cert') {
       return new InvalidCert();

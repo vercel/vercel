@@ -17,21 +17,23 @@ function handleError(err, { debug = false } = {}) {
   }
 
   if (err.status === 403) {
-    console.error(error(
-      'Authentication error. Run `now login` to log-in again.'
-    ));
+    console.error(
+      error('Authentication error. Run `now login` to log-in again.')
+    );
   } else if (err.status === 429) {
     if (err.retryAfter === 'never') {
       console.error(error(err.message));
     } else if (err.retryAfter === null) {
       console.error(error('Rate limit exceeded error. Please try later.'));
     } else {
-      console.error(error(
-        'Rate limit exceeded error. Try again in ' +
-          ms(err.retryAfter * 1000, { long: true }) +
-          ', or upgrade your account by running ' +
-          `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
-      ));
+      console.error(
+        error(
+          'Rate limit exceeded error. Try again in ' +
+            ms(err.retryAfter * 1000, { long: true }) +
+            ', or upgrade your account by running ' +
+            `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
+        )
+      );
     }
   } else if (err.userError || err.message) {
     console.error(error(err.message));
@@ -40,7 +42,9 @@ function handleError(err, { debug = false } = {}) {
   } else if (err.code === 'USER_ABORT') {
     info('Aborted');
   } else {
-    console.error(error(`Unexpected error. Please try again later. (${err.message})`));
+    console.error(
+      error(`Unexpected error. Please try again later. (${err.message})`)
+    );
   }
 }
 
@@ -59,7 +63,7 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
     }
 
     // Some APIs wrongly return `err` instead of `error`
-    bodyError = (body.error || body.err || {});
+    bodyError = body.error || body.err || {};
     message = bodyError.message;
     userError = true;
   } else {

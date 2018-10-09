@@ -43,8 +43,12 @@ const help = () => {
     -T, --team                     Set a custom team scope
     --challenge-only               Only show challenges needed to issue a cert
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
-    --key ${chalk.bold.underline('FILE')}                     Certificate key file
-    --ca ${chalk.bold.underline('FILE')}                      CA certificate chain file
+    --key ${chalk.bold.underline(
+      'FILE'
+    )}                     Certificate key file
+    --ca ${chalk.bold.underline(
+      'FILE'
+    )}                      CA certificate chain file
 
   ${chalk.dim('Examples:')}
 
@@ -52,17 +56,11 @@ const help = () => {
     '–'
   )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
 
-      ${chalk.cyan(
-        '$ now certs issue acme.com www.acme.com'
-      )}
+      ${chalk.cyan('$ now certs issue acme.com www.acme.com')}
 
-  ${chalk.gray(
-    '–'
-  )} Remove a certificate
+  ${chalk.gray('–')} Remove a certificate
 
-      ${chalk.cyan(
-        '$ now certs rm acme.com'
-      )}
+      ${chalk.cyan('$ now certs rm acme.com')}
   `);
 };
 

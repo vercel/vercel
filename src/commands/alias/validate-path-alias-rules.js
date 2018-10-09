@@ -10,9 +10,15 @@ function validatePathAliasRules(location: string, rules: any) {
 
   for (const rule of rules) {
     if (!(rule instanceof Object)) {
-      return new RulesFileValidationError(location, 'all rules must be objects');
+      return new RulesFileValidationError(
+        location,
+        'all rules must be objects'
+      );
     } else if (!rule.dest) {
-      return new RulesFileValidationError(location, 'all rules must have a dest field');
+      return new RulesFileValidationError(
+        location,
+        'all rules must have a dest field'
+      );
     }
   }
 }

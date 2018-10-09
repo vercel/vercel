@@ -24,7 +24,9 @@ const resolveGitHub = (param: string) => {
   const match = param.match(DEPLOY_PARAM_REGEX);
   if (match) {
     const [, user, repo, tree = 'master'] = match;
-    return resolveGitHubByURL(`https://github.com/${user}/${repo}/tree/${tree}`);
+    return resolveGitHubByURL(
+      `https://github.com/${user}/${repo}/tree/${tree}`
+    );
   } else if (GITHUB_TEST_REGEX.test(param)) {
     return resolveGitHubByURL(param);
   } else {

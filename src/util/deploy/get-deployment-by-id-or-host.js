@@ -4,11 +4,16 @@ import { DeploymentNotFound, DeploymentPermissionDenied } from '../errors';
 import type { Deployment } from '../types';
 import toHost from '../to-host';
 
-async function getDeploymentByIdOrHost(now: Now, contextName: string, idOrHost: string) {
+async function getDeploymentByIdOrHost(
+  now: Now,
+  contextName: string,
+  idOrHost: string
+) {
   try {
-    const { deployment } = idOrHost.indexOf('.') !== -1
-      ? await getDeploymentByHost(now, toHost(idOrHost))
-      : await getDeploymentById(now, idOrHost);
+    const { deployment } =
+      idOrHost.indexOf('.') !== -1
+        ? await getDeploymentByHost(now, toHost(idOrHost))
+        : await getDeploymentById(now, idOrHost);
     return deployment;
   } catch (error) {
     if (error.status === 404) {
@@ -21,8 +26,13 @@ async function getDeploymentByIdOrHost(now: Now, contextName: string, idOrHost: 
   }
 }
 
-async function getDeploymentById(now: Now, id: string): Promise<{ deployment: Deployment }> {
-  const deployment = await now.fetch(`/v4/now/deployments/${encodeURIComponent(id)}`);
+async function getDeploymentById(
+  now: Now,
+  id: string
+): Promise<{ deployment: Deployment }> {
+  const deployment = await now.fetch(
+    `/v4/now/deployments/${encodeURIComponent(id)}`
+  );
   return { deployment };
 }
 
@@ -30,10 +40,15 @@ type DeploymentHostResponse = {
   deployment: {
     id: string
   }
-}
+};
 
-async function getDeploymentByHost(now: Now, host: string): Promise<{ deployment: Deployment }> {
-  const response: DeploymentHostResponse = await now.fetch(`/v4/now/hosts/${encodeURIComponent(host)}?resolve=1`);
+async function getDeploymentByHost(
+  now: Now,
+  host: string
+): Promise<{ deployment: Deployment }> {
+  const response: DeploymentHostResponse = await now.fetch(
+    `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1`
+  );
   return getDeploymentById(now, response.deployment.id);
 }
 

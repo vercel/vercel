@@ -4,7 +4,13 @@ import type { User } from '../../util/types';
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import fetchDeploymentsByAppName from './get-deployments-by-appname';
 
-async function getAppLastDeployment(output: Output, now: Now, appName: string, user: User, contextName: string) {
+async function getAppLastDeployment(
+  output: Output,
+  now: Now,
+  appName: string,
+  user: User,
+  contextName: string
+) {
   output.debug(`Looking for deployments matching app ${appName}`);
   const deployments = await fetchDeploymentsByAppName(now, appName);
   const deploymentItem = deployments

@@ -3,11 +3,18 @@ const NowTeams = require('./teams');
 const param = require('./output/param');
 
 const loginCommand = param('now login');
-const TokenError = new Error(`Your access token has been revoked. You can log in again using ${loginCommand}.`);
+const TokenError = new Error(
+  `Your access token has been revoked. You can log in again using ${loginCommand}.`
+);
 
 TokenError.code = 'not_authorized';
 
-module.exports = async function getContextName({ apiUrl, token, debug, currentTeam }) {
+module.exports = async function getContextName({
+  apiUrl,
+  token,
+  debug,
+  currentTeam
+}) {
   if (currentTeam) {
     let list = [];
 
@@ -26,7 +33,9 @@ module.exports = async function getContextName({ apiUrl, token, debug, currentTe
 
     if (!related) {
       const cmd = param('now switch');
-      const error = new Error(`Your team was deleted. You can switch to a different one using ${cmd}.`);
+      const error = new Error(
+        `Your team was deleted. You can switch to a different one using ${cmd}.`
+      );
 
       error.code = 'team_deleted';
       throw error;

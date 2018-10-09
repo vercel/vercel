@@ -14,7 +14,7 @@ const cmd = require('../../util/output/cmd');
 const note = require('../../util/output/note');
 const textInput = require('../../util/input/text');
 const invite = require('./invite');
-const {writeToConfigFile} = require('../../util/config-files');
+const { writeToConfigFile } = require('../../util/config-files');
 
 const validateSlugKeypress = (data, value) => {
   // TODO: the `value` here should contain the current value + the keypress
@@ -22,11 +22,10 @@ const validateSlugKeypress = (data, value) => {
   return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
 };
 
-const validateNameKeypress = (data, value) => (
+const validateNameKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
-  /^[ a-zA-Z0-9_-]+$/.test(value + data)
-);
+  /^[ a-zA-Z0-9_-]+$/.test(value + data);
 
 const gracefulExit = () => {
   console.log(); // Blank line
@@ -47,9 +46,13 @@ module.exports = async function({ teams, config }) {
   let elapsed;
   let stopSpinner;
 
-  console.log(info(
-    `Pick a team identifier for its url (e.g.: ${chalk.cyan('`zeit.co/acme`')})`
-  ));
+  console.log(
+    info(
+      `Pick a team identifier for its url (e.g.: ${chalk.cyan(
+        '`zeit.co/acme`'
+      )})`
+    )
+  );
   do {
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -134,8 +137,7 @@ module.exports = async function({ teams, config }) {
     teams,
     args: [],
     config,
-    introMsg:
-      'Invite your teammates! When done, press enter on an empty field',
+    introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${cmd(
       'now teams invite'
     )}`

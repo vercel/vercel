@@ -30,9 +30,15 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline('FILE')}   Path to the local ${'`now.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline('DIR')}    Path to the global ${'`.now`'} directory
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline('TOKEN')}        Login token
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`now.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.now`'} directory
+    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
+    'TOKEN'
+  )}        Login token
     -d, --debug                    Debug mode [off]
     -T, --team                     Set a custom team scope
     -n, --no-verify                Skip step of waiting until instance count meets given constraints
@@ -44,15 +50,21 @@ const help = () => {
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh all')}
 
-  ${chalk.gray('-')} Enable your deployment in the SFO datacenter (min: 0, max: 1)
+  ${chalk.gray(
+    '-'
+  )} Enable your deployment in the SFO datacenter (min: 0, max: 1)
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh sfo')}
 
-  ${chalk.gray('–')} Scale a deployment in all datacenters to 3 instances at all times (no sleep)
+  ${chalk.gray(
+    '–'
+  )} Scale a deployment in all datacenters to 3 instances at all times (no sleep)
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh all 3')}
 
-  ${chalk.gray('–')} Enable your deployment in all datacenters, with auto-scaling
+  ${chalk.gray(
+    '–'
+  )} Enable your deployment in all datacenters, with auto-scaling
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh all auto')}
   `);
@@ -65,7 +77,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     argv = getArgs(ctx.argv.slice(2), {
       '--verify-timeout': Number,
       '--no-verify': Boolean,
-      '-n': '--no-verify',
+      '-n': '--no-verify'
     });
   } catch (err) {
     handleError(err);
@@ -86,18 +98,31 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const output: Output = createOutput({ debug });
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   // Fail if the user is providing an old command
   if (argv._[1] === 'ls') {
-    output.error(`${cmd('now scale ls')} has been deprecated. Use ${cmd('now ls')} and ${cmd('now inspect <url>')}`);
+    output.error(
+      `${cmd('now scale ls')} has been deprecated. Use ${cmd(
+        'now ls'
+      )} and ${cmd('now inspect <url>')}`
+    );
     now.close();
     return 1;
   }
 
   // Ensure the number of arguments is between the allower range
   if (argv._.length < 3 || argv._.length > 5) {
-    output.error(`${cmd('now scale <url> <dc> [min] [max]')} expects at least two arguments`);
+    output.error(
+      `${cmd(
+        'now scale <url> <dc> [min] [max]'
+      )} expects at least two arguments`
+    );
     help();
     now.close();
     return 1;
@@ -105,33 +130,50 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
 
   const dcs = getDCsFromArgs(argv._);
   if (dcs instanceof Errors.InvalidAllForScale) {
-    output.error('The region value "all" was used, but it cannot be used alongside other region or dc identifiers');
+    output.error(
+      'The region value "all" was used, but it cannot be used alongside other region or dc identifiers'
+    );
     now.close();
     return 1;
   } else if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
-    output.error(`The value "${dcs.meta.regionOrDC}" is not a valid region or DC identifier`);
+    output.error(
+      `The value "${dcs.meta
+        .regionOrDC}" is not a valid region or DC identifier`
+    );
     now.close();
     return 1;
   }
 
   const min = getMinFromArgs(argv._);
   if (min instanceof Errors.InvalidMinForScale) {
-    output.error(`Invalid <min> parameter "${min.meta.value}". A number or "auto" were expected`);
+    output.error(
+      `Invalid <min> parameter "${min.meta
+        .value}". A number or "auto" were expected`
+    );
     now.close();
     return 1;
   }
 
   const max = getMaxFromArgs(argv._);
   if (max instanceof Errors.InvalidMinForScale) {
-    output.error(`Invalid <min> parameter "${max.meta.value}". A number or "auto" were expected`);
+    output.error(
+      `Invalid <min> parameter "${max.meta
+        .value}". A number or "auto" were expected`
+    );
     now.close();
     return 1;
   } else if (max instanceof Errors.InvalidArgsForMinMaxScale) {
-    output.error(`Invalid number of arguments: expected <min> ("${max.meta.min}") and [max]`);
+    output.error(
+      `Invalid number of arguments: expected <min> ("${max.meta
+        .min}") and [max]`
+    );
     now.close();
     return 1;
   } else if (max instanceof Errors.InvalidMaxForScale) {
-    output.error(`Invalid <max> parameter "${max.meta.value}". A number or "auto" were expected`);
+    output.error(
+      `Invalid <max> parameter "${max.meta
+        .value}". A number or "auto" were expected`
+    );
     now.close();
     return 1;
   }
@@ -140,11 +182,17 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   const deploymentStamp = stamp();
   const deployment = await getDeploymentByIdOrHost(now, contextName, argv._[1]);
   if (deployment instanceof Errors.DeploymentPermissionDenied) {
-    output.error(`No permission to access deployment ${chalk.dim(deployment.meta.id)} under ${chalk.bold(deployment.meta.context)}`);
+    output.error(
+      `No permission to access deployment ${chalk.dim(
+        deployment.meta.id
+      )} under ${chalk.bold(deployment.meta.context)}`
+    );
     now.close();
     return 1;
   } else if (deployment instanceof Errors.DeploymentNotFound) {
-    output.error(`Failed to find deployment "${argv._[1]}" in ${chalk.bold(contextName)}`);
+    output.error(
+      `Failed to find deployment "${argv._[1]}" in ${chalk.bold(contextName)}`
+    );
     now.close();
     return 1;
   }
@@ -162,18 +210,35 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     return 1;
   }
 
-  const scaleArgs: DeploymentScaleArgs = dcs.reduce((result, dc) => ({...result, [dc]: { min, max }}), {});
-  output.debug(`Setting scale deployment presets to ${JSON.stringify(scaleArgs)}`);
+  const scaleArgs: DeploymentScaleArgs = dcs.reduce(
+    (result, dc) => ({ ...result, [dc]: { min, max } }),
+    {}
+  );
+  output.debug(
+    `Setting scale deployment presets to ${JSON.stringify(scaleArgs)}`
+  );
 
   // Set the deployment scale
   const scaleStamp = stamp();
-  const result = await patchDeploymentScale(output, now, deployment.uid, scaleArgs, deployment.url);
+  const result = await patchDeploymentScale(
+    output,
+    now,
+    deployment.uid,
+    scaleArgs,
+    deployment.url
+  );
   if (result instanceof Errors.ForbiddenScaleMinInstances) {
-    output.error(`You can't scale to more than ${result.meta.max} min instances with your current plan.`);
+    output.error(
+      `You can't scale to more than ${result.meta
+        .max} min instances with your current plan.`
+    );
     now.close();
     return 1;
   } else if (result instanceof Errors.ForbiddenScaleMaxInstances) {
-    output.error(`You can't scale to more than ${result.meta.max} max instances with your current plan.`);
+    output.error(
+      `You can't scale to more than ${result.meta
+        .max} max instances with your current plan.`
+    );
     now.close();
     return 1;
   } else if (result instanceof Errors.InvalidScaleMinMaxRelation) {
@@ -181,15 +246,21 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     now.close();
     return 1;
   } else if (result instanceof Errors.NotSupportedMinScaleSlots) {
-    output.error(`Cloud v2 does not yet support setting a non-zero min number of instances.`);
+    output.error(
+      `Cloud v2 does not yet support setting a non-zero min number of instances.`
+    );
     output.log('Read more: https://err.sh/now-cli/v2-no-min');
     now.close();
     return 1;
   }
 
-  console.log(`${chalk.gray('>')} Scale rules for ${
-    dcs.map(d => chalk.bold(d)).join(', ')
-  } (min: ${chalk.bold(min)}, max: ${chalk.bold(max)}) saved ${scaleStamp()}`);
+  console.log(
+    `${chalk.gray('>')} Scale rules for ${dcs
+      .map(d => chalk.bold(d))
+      .join(', ')} (min: ${chalk.bold(min)}, max: ${chalk.bold(
+      max
+    )}) saved ${scaleStamp()}`
+  );
 
   if (argv['--no-verify']) {
     now.close();
@@ -198,11 +269,23 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
 
   // Verify that the scale presets are there
   const verifyStamp = stamp();
-  const updatedDeployment = await getDeploymentByIdOrThrow(now, contextName, deployment.uid);
+  const updatedDeployment = await getDeploymentByIdOrThrow(
+    now,
+    contextName,
+    deployment.uid
+  );
   if (updatedDeployment.type === 'NPM' || updatedDeployment.type === 'DOCKER') {
-    const result = await waitVerifyDeploymentScale(output, now, deployment.uid, updatedDeployment.scale);
+    const result = await waitVerifyDeploymentScale(
+      output,
+      now,
+      deployment.uid,
+      updatedDeployment.scale
+    );
     if (result instanceof VerifyScaleTimeout) {
-      output.error(`Instance verification timed out (${ms(result.meta.timeout)})`, 'verification-timeout');
+      output.error(
+        `Instance verification timed out (${ms(result.meta.timeout)})`,
+        'verification-timeout'
+      );
       now.close();
       return 1;
     }

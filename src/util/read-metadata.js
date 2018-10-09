@@ -196,6 +196,6 @@ function decorateUserErrors(fn) {
 const readPkg = decorateUserErrors(loadPackageJSON);
 const readJSON = decorateUserErrors(loadJSON);
 const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
-    const contents = await readFile(resolvePath(path, name), 'utf8');
-    return parseDockerfile(contents, { includeComments: true });
+  const contents = await readFile(resolvePath(path, name), 'utf8');
+  return parseDockerfile(contents, { includeComments: true });
 });

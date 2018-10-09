@@ -78,7 +78,7 @@ module.exports = async ctx => {
     return 2;
   }
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
 
   try {
     return run({ token, config });
@@ -99,7 +99,8 @@ function buildInquirerChoices(cards) {
     const _default =
       source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
-    const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`;
+    const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
+      source.card.last4}`;
     const str = [
       id,
       indent(source.name || source.owner.name, 2),
@@ -117,7 +118,12 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
   const args = argv._.slice(1);
 
   switch (subcommand) {
@@ -135,11 +141,14 @@ async function run({ token, config: { currentTeam } }) {
       const text = cards.sources
         .map(source => {
           const _default =
-            source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : '';
+            source.id === cards.defaultSource
+              ? ' ' + chalk.bold('(default)')
+              : '';
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`
           )}${_default}`;
-          const number = `${chalk.gray('#### ').repeat(3)}${source.last4 || source.card.last4}`;
+          const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
+            source.card.last4}`;
 
           return [
             id,
@@ -151,9 +160,11 @@ async function run({ token, config: { currentTeam } }) {
 
       const elapsed = ms(new Date() - start);
       console.log(
-        `> ${
-          plural('card', cards.sources.length, true)
-        } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+        `> ${plural(
+          'card',
+          cards.sources.length,
+          true
+        )} found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
       );
       if (text) {
         console.log(`\n${text}\n`);
@@ -187,7 +198,9 @@ async function run({ token, config: { currentTeam } }) {
 
       if (cardId === undefined) {
         const elapsed = ms(new Date() - start);
-        const message = `Selecting a new default payment card for ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`;
+        const message = `Selecting a new default payment card for ${chalk.bold(
+          contextName
+        )} ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
         cardId = await listInput({
@@ -216,11 +229,12 @@ async function run({ token, config: { currentTeam } }) {
 
         const card = cards.sources.find(card => card.id === cardId);
         const elapsed = ms(new Date() - start);
-        console.log(success(
-          `${card.brand || card.card.brand} ending in ${card.last4 || card.card.last4} is now the default ${chalk.gray(
-            `[${elapsed}]`
-          )}`
-        ));
+        console.log(
+          success(
+            `${card.brand || card.card.brand} ending in ${card.last4 ||
+              card.card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+          )
+        );
       } else {
         console.log('No changes made');
       }
@@ -245,9 +259,13 @@ async function run({ token, config: { currentTeam } }) {
       }
 
       if (cards.sources.length === 0) {
-        console.error(error(
-          `You have no credit cards to choose from to delete under ${chalk.bold(contextName)}`
-        ));
+        console.error(
+          error(
+            `You have no credit cards to choose from to delete under ${chalk.bold(
+              contextName
+            )}`
+          )
+        );
         return 0;
       }
 
@@ -283,7 +301,9 @@ async function run({ token, config: { currentTeam } }) {
         const deletedCard = cards.sources.find(card => card.id === cardId);
         const remainingCards = cards.sources.filter(card => card.id !== cardId);
 
-        let text = `${deletedCard.brand || deletedCard.card.brand} ending in ${deletedCard.last4 || deletedCard.card.last4} was deleted`;
+        let text = `${deletedCard.brand ||
+          deletedCard.card.brand} ending in ${deletedCard.last4 ||
+          deletedCard.card.last4} was deleted`;
         //  ${chalk.gray(`[${elapsed}]`)}
 
         if (cardId === cards.defaultSource) {
@@ -297,7 +317,11 @@ async function run({ token, config: { currentTeam } }) {
               card => card.id === cards.defaultCardId
             );
 
-            text += `\n${newDefaultCard.brand || newDefaultCard.card.brand} ending in ${newDefaultCard.last4 || newDefaultCard.card.last4} in now default for ${chalk.bold(contextName)}`;
+            text += `\n${newDefaultCard.brand ||
+              newDefaultCard.card.brand} ending in ${newDefaultCard.last4 ||
+              newDefaultCard.card.last4} in now default for ${chalk.bold(
+              contextName
+            )}`;
           }
         }
 
@@ -321,7 +345,9 @@ async function run({ token, config: { currentTeam } }) {
     }
 
     default:
-      console.error(error('Please specify a valid subcommand: ls | add | rm | set-default'));
+      console.error(
+        error('Please specify a valid subcommand: ls | add | rm | set-default')
+      );
       help();
       return 1;
   }

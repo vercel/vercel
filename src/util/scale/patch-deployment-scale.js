@@ -6,16 +6,27 @@ import { Output, Now } from '../../util/types';
 import type { DeploymentScaleArgs, DeploymentScale } from '../../util/types';
 import * as Errors from '../errors';
 
-async function patchDeploymentScale(output: Output, now: Now, deploymentId: string, scaleArgs: DeploymentScaleArgs | DeploymentScale, url: string) {
-  const cancelWait = wait(`Setting scale rules for ${joinWords(
-    Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
-  )}`);
+async function patchDeploymentScale(
+  output: Output,
+  now: Now,
+  deploymentId: string,
+  scaleArgs: DeploymentScaleArgs | DeploymentScale,
+  url: string
+) {
+  const cancelWait = wait(
+    `Setting scale rules for ${joinWords(
+      Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
+    )}`
+  );
 
   try {
-    await now.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`, {
-      method: 'PATCH',
-      body: scaleArgs
-    });
+    await now.fetch(
+      `/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`,
+      {
+        method: 'PATCH',
+        body: scaleArgs
+      }
+    );
     cancelWait();
   } catch (error) {
     cancelWait();

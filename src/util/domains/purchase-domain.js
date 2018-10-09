@@ -2,7 +2,13 @@
 import * as Errors from '../errors';
 import { Now, Output } from '../types';
 
-export default async function purchaseDomain(output: Output, now: Now, name: string, coupon: string, expectedPrice: number) {
+export default async function purchaseDomain(
+  output: Output,
+  now: Now,
+  name: string,
+  coupon: string,
+  expectedPrice: number
+) {
   try {
     return await now.fetch(`/v3/domains/buy`, {
       body: JSON.stringify({ name, coupon, expectedPrice }),

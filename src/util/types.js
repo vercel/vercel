@@ -1,81 +1,81 @@
 // @flow
-type RetryFunction<T> = () => Promise<T>
+type RetryFunction<T> = () => Promise<T>;
 type RetryOptions = {
   retries?: number,
   maxTimeout?: number
-}
+};
 
 type FetchOptions = {
   body?: any,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-}
+};
 
 export interface Now {
-  retry<T>(fn: RetryFunction<T>, options?: RetryOptions): Promise<T>,
-  create(paths: string[], createArgs: Object): Promise<NewDeployment>,
-  fetch(url: string, options?: FetchOptions): Promise<any>,
-  list(appName: string, {version: number}): Deployment[],
+  retry<T>(fn: RetryFunction<T>, options?: RetryOptions): Promise<T>;
+  create(paths: string[], createArgs: Object): Promise<NewDeployment>;
+  fetch(url: string, options?: FetchOptions): Promise<any>;
+  list(appName: string, { version: number }): Deployment[];
 }
 
 export interface Output {
-  debug(msg: string): void,
-  error(msg: string, slug?: string): void,
-  log(msg: string): void,
-  note(msg: string): void,
-  print(msg: string): void,
-  success(msg: string): void,
-  warn(msg: string): void,
+  debug(msg: string): void;
+  error(msg: string, slug?: string): void;
+  log(msg: string): void;
+  note(msg: string): void;
+  print(msg: string): void;
+  success(msg: string): void;
+  warn(msg: string): void;
 }
 
-export type User = string
+export type User = string;
 
 export type Config = {
   alias?: string[] | string,
   aliases?: string[] | string,
   name?: string,
-  type?: string,
-}
+  type?: string
+};
 
 export interface CLIContext {
   authConfig: {
     token: string
-  },
-  argv: string[],
-  apiUrl: string,
+  };
+  argv: string[];
+  apiUrl: string;
   config: {
     updateChannel: string,
     user: string,
     currentTeam: string
-  },
+  };
 }
 
 export type Scale = {
   min: number,
   max: number
-}
+};
 
 export type ScaleArgs = {
   min: number,
   max: number | 'auto'
-}
+};
 
 export type DeploymentScale = {
   [dc: string]: Scale
-}
+};
 
 export type DeploymentScaleArgs = {
   [dc: string]: ScaleArgs
-}
+};
 
 export type InstancesCount = {
-  [dc: string]: number,
-}
+  [dc: string]: number
+};
 
 export type DeploymentLimits = {
   maxConcurrentReqs: number,
   timeout: number,
   duration: number
-}
+};
 
 export type NpmDeployment = {
   uid: string,
@@ -87,7 +87,7 @@ export type NpmDeployment = {
   creator: { uid: string },
   sessionAffinity: string,
   scale: DeploymentScale
-}
+};
 
 export type StaticDeployment = {
   uid: string,
@@ -97,8 +97,8 @@ export type StaticDeployment = {
   state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
   created: number,
   creator: { uid: string },
-  sessionAffinity: string,
-}
+  sessionAffinity: string
+};
 
 export type DockerDeployment = {
   uid: string,
@@ -112,18 +112,15 @@ export type DockerDeployment = {
   scale: DeploymentScale,
   limits?: DeploymentLimits,
   slot?: string
-}
+};
 
-export type Deployment =
-  NpmDeployment |
-  StaticDeployment |
-  DockerDeployment
+export type Deployment = NpmDeployment | StaticDeployment | DockerDeployment;
 
 export type PathAliasRule = {
   pathname: string,
   method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
-  dest: string,
-}
+  dest: string
+};
 
 export type Alias = {
   uid: string,
@@ -140,20 +137,20 @@ export type Alias = {
   },
   deploymentId: string,
   rules?: PathAliasRule[]
-}
+};
 
 export type AliasRecord = {
   uid: string,
   alias: string,
   created?: string,
   oldDeploymentId?: string
-}
+};
 
 export type PathRule = {
   dest: string,
   pathname?: string,
-  method?: Array<string>,
-}
+  method?: Array<string>
+};
 
 export type DNSRecord = {
   id: string,
@@ -166,7 +163,7 @@ export type DNSRecord = {
   value: string,
   created: number,
   updated: number
-}
+};
 
 export type Certificate = {
   uid: string,
@@ -174,13 +171,13 @@ export type Certificate = {
   cns: string[],
   created: string,
   expiration: string
-}
+};
 
 export type CertificateDetails = Certificate & {
   key: string,
   ca: string,
   crt: string
-}
+};
 
 export type CertificateChallenge = {
   type: 'dns-01',
@@ -190,14 +187,14 @@ export type CertificateChallenge = {
   token: string,
   value: string,
   url: string
-}
+};
 
 export type CertificateOrder = {
   challengesToResolve: CertificateChallenge[],
   domains: string[],
   finalize: string,
   createdAt: number
-}
+};
 
 export type Domain = {
   aliases: string[],
@@ -208,19 +205,19 @@ export type Domain = {
   expiresAt: string,
   serviceType: 'zeit.world' | 'external',
   name: string,
-  verified: boolean,
-}
+  verified: boolean
+};
 
 export type AddedDomain = {
   ns: string[],
   created: string,
-  verified: boolean,
-}
+  verified: boolean
+};
 
 export type DomainPrice = {
   period: number,
-  price: number,
-}
+  price: number
+};
 
 export type CreditCard = {
   id: string,
@@ -241,124 +238,153 @@ export type CreditCard = {
   fingerprint: string,
   last4: string,
   name: string,
-  object: string,
-}
+  object: string
+};
 
 export type InstancesInfo = {
   [dc: string]: {
     instances: Array<{}>
   }
-}
+};
 
 type GenericEvent<T, P> = {
   type: T,
   created: number,
   payload: P
-}
+};
 
-export type StateChangeEvent = GenericEvent<'state-change', {
-  dc?: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
-  value: 'INITIALIZING' | 'READY' | 'ERROR' | 'FROZEN'
-}>
+export type StateChangeEvent = GenericEvent<
+  'state-change',
+  {
+    dc?: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
+    value: 'INITIALIZING' | 'READY' | 'ERROR' | 'FROZEN'
+  }
+>;
 
-export type BuildStartEvent = GenericEvent<'build-start', {
-}>
+export type BuildStartEvent = GenericEvent<'build-start', {}>;
 
-export type BuildCompleteEvent = GenericEvent<'build-complete', {
-  dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1'
-}>
+export type BuildCompleteEvent = GenericEvent<
+  'build-complete',
+  {
+    dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1'
+  }
+>;
 
-export type InstanceStartEvent = GenericEvent<'instance-start', {
-  dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
-  billingId: string
-}>
+export type InstanceStartEvent = GenericEvent<
+  'instance-start',
+  {
+    dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
+    billingId: string
+  }
+>;
 
-export type InstanceStopEvent = GenericEvent<'instance-stop', {
-  dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
-  billingId: string
-}>
+export type InstanceStopEvent = GenericEvent<
+  'instance-stop',
+  {
+    dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
+    billingId: string
+  }
+>;
 
-export type AliasSetEvent = GenericEvent<'alias-add', {
-  dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
-  billingId: string,
-  aliasId: string,
-  alias: string,
-  teamId: string,
-  userId: string,
-  routes: null,
-  url: string,
-  oldDeploymentId: string,
-}>
+export type AliasSetEvent = GenericEvent<
+  'alias-add',
+  {
+    dc: 'sfo1' | 'bru1' | 'gru1' | 'iad1',
+    billingId: string,
+    aliasId: string,
+    alias: string,
+    teamId: string,
+    userId: string,
+    routes: null,
+    url: string,
+    oldDeploymentId: string
+  }
+>;
 
-export type ScaleSetEvent = GenericEvent<'scale-set', {
-  scalingRules: DeploymentScale,
-  id: string,
-  url: string,
-  userId: string,
-  teamId: string,
-  min: number,
-  max: number,
-}>
+export type ScaleSetEvent = GenericEvent<
+  'scale-set',
+  {
+    scalingRules: DeploymentScale,
+    id: string,
+    url: string,
+    userId: string,
+    teamId: string,
+    min: number,
+    max: number
+  }
+>;
 
-export type CommandEvent = GenericEvent<'command', {
-  deploymentId: string,
-  instanceId: string,
-  text: string,
-  appName: string,
-  id: string,
-  seq: string,
-  date: number,
-  pid: string,
-  serial: string
-}>
+export type CommandEvent = GenericEvent<
+  'command',
+  {
+    deploymentId: string,
+    instanceId: string,
+    text: string,
+    appName: string,
+    id: string,
+    seq: string,
+    date: number,
+    pid: string,
+    serial: string
+  }
+>;
 
-export type StdoutEvent = GenericEvent<'stdout', {
-  deploymentId: string,
-  instanceId: string,
-  text: string,
-  appName: string,
-  id: string,
-  seq: string,
-  date: number,
-  pid: string,
-  serial: string
-}>
+export type StdoutEvent = GenericEvent<
+  'stdout',
+  {
+    deploymentId: string,
+    instanceId: string,
+    text: string,
+    appName: string,
+    id: string,
+    seq: string,
+    date: number,
+    pid: string,
+    serial: string
+  }
+>;
 
-export type StderrEvent = GenericEvent<'stderr', {
-  deploymentId: string,
-  instanceId: string,
-  text: string,
-  appName: string,
-  id: string,
-  seq: string,
-  date: number,
-  pid: string,
-  serial: string
-}>
+export type StderrEvent = GenericEvent<
+  'stderr',
+  {
+    deploymentId: string,
+    instanceId: string,
+    text: string,
+    appName: string,
+    id: string,
+    seq: string,
+    date: number,
+    pid: string,
+    serial: string
+  }
+>;
 
-export type ExitEvent = GenericEvent<'exit', {
-  date: number,
-  pid: string,
-  seq: string,
-  text: string,
-  id: string,
-  deploymentId: string,
-  appName: string,
-  serial: string,
-}>
+export type ExitEvent = GenericEvent<
+  'exit',
+  {
+    date: number,
+    pid: string,
+    seq: string,
+    text: string,
+    id: string,
+    deploymentId: string,
+    appName: string,
+    serial: string
+  }
+>;
 
 export type DeploymentEvent =
-  StateChangeEvent |
-  BuildStartEvent |
-  BuildCompleteEvent |
-  InstanceStartEvent |
-  InstanceStopEvent |
-  AliasSetEvent |
-  ScaleSetEvent |
-  CommandEvent |
-  StdoutEvent |
-  StderrEvent |
-  ExitEvent
+  | StateChangeEvent
+  | BuildStartEvent
+  | BuildCompleteEvent
+  | InstanceStartEvent
+  | InstanceStopEvent
+  | AliasSetEvent
+  | ScaleSetEvent
+  | CommandEvent
+  | StdoutEvent
+  | StderrEvent
+  | ExitEvent;
 
 export type NewDeployment = {
   deploymentId: string,
@@ -367,7 +393,7 @@ export type NewDeployment = {
   nodeVersion: string,
   readyState: 'INITIALIZING' | 'READY',
   blob?: null
-}
+};
 
 export type CLIOptions<T> = {
   '--help'?: string,
@@ -376,15 +402,15 @@ export type CLIOptions<T> = {
   '--team'?: string,
   '--local-config'?: string,
   '--global-config'?: string,
-  '--api'?: string,
-} & T
+  '--api'?: string
+} & T;
 
 export type CLIAliasOptions = CLIOptions<{
   '--json': boolean,
   '--no-verify': boolean,
   '--rules': string,
-  '--yes': boolean,
-}>
+  '--yes': boolean
+}>;
 
 export type CLICertsOptions = CLIOptions<{
   '--challenge-only': boolean,
@@ -392,20 +418,19 @@ export type CLICertsOptions = CLIOptions<{
   '--overwrite': string,
   '--crt': string,
   '--key': string,
-  '--ca': string,
-}>
+  '--ca': string
+}>;
 
 export type CLIScaleOptions = CLIOptions<{
-  '--no-verify': string,
-}>
+  '--no-verify': string
+}>;
 
 export type CLIDomainsOptions = CLIOptions<{
   '--cdn': boolean,
   '--no-cdn': boolean,
   '--coupon': string,
   '--external': boolean,
-  '--yes': boolean,
-}>
+  '--yes': boolean
+}>;
 
-export type CLIDNSOptions = CLIOptions<{
-}>
+export type CLIDNSOptions = CLIOptions<{}>;

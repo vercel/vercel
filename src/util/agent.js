@@ -19,7 +19,7 @@ if (USE_HTTP2) {
   ({ JsonBody, StreamBody, context } = require('fetch-h2'));
 
   // this requires `--no-warnings` to be passed to node.js to work
-  process.on('warning', function (warn) {
+  process.on('warning', function(warn) {
     if (warn.message.includes('http2')) {
       // ignore warnings about http2, we know node!
     } else {
@@ -81,8 +81,8 @@ module.exports = class Agent {
     }
   }
 
-  setConcurrency({maxStreams, capacity}) {
-    this._sema = new Sema(maxStreams || 20, {capacity});
+  setConcurrency({ maxStreams, capacity }) {
+    this._sema = new Sema(maxStreams || 20, { capacity });
   }
 
   async fetch(path, opts = {}) {
@@ -93,7 +93,7 @@ module.exports = class Agent {
 
     if (USE_HTTP2) {
       this._currContext.fetchesMade++;
-      if(this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
+      if (this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
         const ctx = context();
         ctx.fetchesMade = 1;
         ctx.ongoingFetches = 0;
@@ -106,8 +106,14 @@ module.exports = class Agent {
       this._currContext.ongoingFetches++;
       currentContext = this._currContext;
 
-      debug(`Total requests made on socket #${this._contexts.length}: ${this._currContext.fetchesMade}`);
-      debug(`Concurrent requests on socket #${this._contexts.length}: ${this._currContext.ongoingFetches}`);
+      debug(
+        `Total requests made on socket #${this._contexts.length}: ${this
+          ._currContext.fetchesMade}`
+      );
+      debug(
+        `Concurrent requests on socket #${this._contexts.length}: ${this
+          ._currContext.ongoingFetches}`
+      );
     }
 
     if (!this._agent) {
@@ -129,7 +135,12 @@ module.exports = class Agent {
       }
     }
 
-    if (USE_HTTP2 && body && typeof body === 'object' && typeof body.pipe === 'function') {
+    if (
+      USE_HTTP2 &&
+      body &&
+      typeof body === 'object' &&
+      typeof body.pipe === 'function'
+    ) {
       opts.body = new StreamBody(body);
     }
 
@@ -137,10 +148,13 @@ module.exports = class Agent {
       opts.headers['Content-Length'] = Buffer.byteLength(opts.body);
     }
 
-    const handleCompleted = async (res) => {
+    const handleCompleted = async res => {
       if (USE_HTTP2) {
         currentContext.ongoingFetches--;
-        if(currentContext !== this._currContext && currentContext.ongoingFetches <= 0) {
+        if (
+          currentContext !== this._currContext &&
+          currentContext.ongoingFetches <= 0
+        ) {
           // We've completely moved on to a new socket
           // close the old one
 
@@ -159,7 +173,8 @@ module.exports = class Agent {
     if (USE_HTTP2) {
       // We have to set the `host` manually when using http2
       opts.headers.host = this._url.replace(/^https?:\/\//, '');
-      return currentContext.fetch(this._url + path, opts)
+      return currentContext
+        .fetch(this._url + path, opts)
         .then(res => handleCompleted(res) || res)
         .catch(err => {
           handleCompleted();

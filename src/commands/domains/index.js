@@ -58,9 +58,7 @@ const help = () => {
         '`domain add`'
       )}).
 
-  ${chalk.gray(
-    '–'
-  )} Add a domain using an external nameserver
+  ${chalk.gray('–')} Add a domain using an external nameserver
 
       ${chalk.cyan('$ now domain add -e my-app.com')}
 `);
@@ -70,7 +68,7 @@ const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove'],
+  rm: ['rm', 'remove']
 };
 
 module.exports = async function main(ctx: any): Promise<number> {

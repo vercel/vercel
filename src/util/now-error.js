@@ -4,7 +4,7 @@ type NowErrorArgs<T, M> = {
   code: T,
   meta: M,
   message: string
-}
+};
 
 // A generic error to rule them all
 export class NowError<T, M> extends Error {

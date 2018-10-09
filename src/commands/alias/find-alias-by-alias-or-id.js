@@ -10,6 +10,12 @@ function getSafeAlias(alias: string) {
     .toLowerCase();
 }
 
-export default async function findAliasByAliasOrId(output: Output, now: Now, aliasOrId: string): Promise<Alias> {
-  return now.fetch(`/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`);
+export default async function findAliasByAliasOrId(
+  output: Output,
+  now: Now,
+  aliasOrId: string
+): Promise<Alias> {
+  return now.fetch(
+    `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
+  );
 }

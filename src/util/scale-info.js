@@ -8,8 +8,12 @@ const retry = require('async-retry');
 function barify(cur, tot) {
   return (
     '[' +
-    range(0, cur).map(() => '=').join('') +
-    range(cur, tot).map(() => '-').join('') +
+    range(0, cur)
+      .map(() => '=')
+      .join('') +
+    range(cur, tot)
+      .map(() => '-')
+      .join('') +
     ']'
   );
 }
@@ -36,9 +40,9 @@ module.exports = async function(now, url) {
   let barcurr = current;
   const end = Math.max(current, max);
   linelog(
-    `${chalk.gray('>')} Scaling to ${
-      chalk.bold(plural('instance', targetReplicaCount, true))
-    }: ` + barify(barcurr, end)
+    `${chalk.gray('>')} Scaling to ${chalk.bold(
+      plural('instance', targetReplicaCount, true)
+    )}: ` + barify(barcurr, end)
   );
 
   const instances = await retry(
@@ -47,17 +51,17 @@ module.exports = async function(now, url) {
       if (barcurr !== res.length) {
         barcurr = res.length;
         linelog(
-          `${chalk.gray('>')} Scaling to ${
-            chalk.bold(plural('instance', targetReplicaCount, true))
-          }: ` + barify(barcurr, end)
+          `${chalk.gray('>')} Scaling to ${chalk.bold(
+            plural('instance', targetReplicaCount, true)
+          )}: ` + barify(barcurr, end)
         );
 
         if (barcurr === targetReplicaCount) {
           linelog.clear();
           linelog(
-            `> Scaled to ${
-              chalk.bold(plural('instance', targetReplicaCount, true))
-            }: ${chalk.gray('[' + ms(Date.now() - startTime) + ']')}\n`
+            `> Scaled to ${chalk.bold(
+              plural('instance', targetReplicaCount, true)
+            )}: ${chalk.gray('[' + ms(Date.now() - startTime) + ']')}\n`
           );
           return res;
         }

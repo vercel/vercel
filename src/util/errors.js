@@ -4,7 +4,10 @@ import { NowError } from './now-error';
 /**
  * General CLI errors
  */
-export class ConflictingOption extends NowError<'CONFICTING_OPTION', {name: string}> {
+export class ConflictingOption extends NowError<
+  'CONFICTING_OPTION',
+  { name: string }
+> {
   constructor(name: string) {
     super({
       code: 'CONFICTING_OPTION',
@@ -17,7 +20,7 @@ export class ConflictingOption extends NowError<'CONFICTING_OPTION', {name: stri
 /**
  * Create Alias Errors
  */
-export class AliasInUse extends NowError<'ALIAS_IN_USE', {alias: string}> {
+export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
   constructor(alias: string) {
     super({
       code: 'ALIAS_IN_USE',
@@ -27,7 +30,7 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', {alias: string}> {
   }
 }
 
-export class InvalidAlias extends NowError<'INVALID_ALIAS', {alias: string}> {
+export class InvalidAlias extends NowError<'INVALID_ALIAS', { alias: string }> {
   constructor(alias: string) {
     super({
       code: 'INVALID_ALIAS',
@@ -47,7 +50,10 @@ export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   }
 }
 
-export class DeploymentNotFound extends NowError<'DEPLOYMENT_NOT_FOUND', {id: string, context: string}> {
+export class DeploymentNotFound extends NowError<
+  'DEPLOYMENT_NOT_FOUND',
+  { id: string, context: string }
+> {
   constructor(id: string, context: string) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
@@ -60,7 +66,10 @@ export class DeploymentNotFound extends NowError<'DEPLOYMENT_NOT_FOUND', {id: st
 /**
  * SetupDomainErrors
  */
-export class DomainPermissionDenied extends NowError<'DOMAIN_PERMISSION_DENIED', {domain: string, context: string}> {
+export class DomainPermissionDenied extends NowError<
+  'DOMAIN_PERMISSION_DENIED',
+  { domain: string, context: string }
+> {
   constructor(domain: string, context: string) {
     super({
       code: 'DOMAIN_PERMISSION_DENIED',
@@ -70,7 +79,10 @@ export class DomainPermissionDenied extends NowError<'DOMAIN_PERMISSION_DENIED',
   }
 }
 
-export class DeploymentPermissionDenied extends NowError<'DEPLOYMENT_PERMISSION_DENIED', {id: string, context: string}> {
+export class DeploymentPermissionDenied extends NowError<
+  'DEPLOYMENT_PERMISSION_DENIED',
+  { id: string, context: string }
+> {
   constructor(id: string, context: string) {
     super({
       code: 'DEPLOYMENT_PERMISSION_DENIED',
@@ -80,7 +92,10 @@ export class DeploymentPermissionDenied extends NowError<'DEPLOYMENT_PERMISSION_
   }
 }
 
-export class DomainAlreadyExists extends NowError<'DOMAIN_ALREADY_EXISTS', {uid: string, domain: string, context: string}> {
+export class DomainAlreadyExists extends NowError<
+  'DOMAIN_ALREADY_EXISTS',
+  { uid: string, domain: string, context: string }
+> {
   constructor(uid: string, domain: string, context: string) {
     super({
       code: 'DOMAIN_ALREADY_EXISTS',
@@ -90,7 +105,10 @@ export class DomainAlreadyExists extends NowError<'DOMAIN_ALREADY_EXISTS', {uid:
   }
 }
 
-export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', {domain: string}> {
+export class DNSPermissionDenied extends NowError<
+  'DNS_PERMISSION_DENIED',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DNS_PERMISSION_DENIED',
@@ -100,7 +118,10 @@ export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', {doma
   }
 }
 
-export class DomainVerificationFailed extends NowError<'DOMAIN_VERIFICATION_FAILED', {domain: string, subdomain: string, token: string}> {
+export class DomainVerificationFailed extends NowError<
+  'DOMAIN_VERIFICATION_FAILED',
+  { domain: string, subdomain: string, token: string }
+> {
   constructor(domain: string, subdomain: string, token: string) {
     super({
       code: 'DOMAIN_VERIFICATION_FAILED',
@@ -110,7 +131,10 @@ export class DomainVerificationFailed extends NowError<'DOMAIN_VERIFICATION_FAIL
   }
 }
 
-export class DomainNotVerified extends NowError<'DOMAIN_NOT_VERIFIED', {domain: string}> {
+export class DomainNotVerified extends NowError<
+  'DOMAIN_NOT_VERIFIED',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_NOT_VERIFIED',
@@ -120,7 +144,10 @@ export class DomainNotVerified extends NowError<'DOMAIN_NOT_VERIFIED', {domain: 
   }
 }
 
-export class DomainNotFound extends NowError<'DOMAIN_NOT_FOUND', {domain: string}> {
+export class DomainNotFound extends NowError<
+  'DOMAIN_NOT_FOUND',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_NOT_FOUND',
@@ -143,7 +170,10 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
 /**
  * Alias configuration errors
  */
-export class InvalidAliasInConfig extends NowError<'INVALID_ALIAS_IN_CONFIG', {value: number | Object}> {
+export class InvalidAliasInConfig extends NowError<
+  'INVALID_ALIAS_IN_CONFIG',
+  { value: number | Object }
+> {
   constructor(value: any) {
     super({
       code: 'INVALID_ALIAS_IN_CONFIG',
@@ -163,7 +193,7 @@ export class NoAliasInConfig extends NowError<'NO_ALIAS_IN_CONFIG', {}> {
   }
 }
 
-export class FileNotFound extends NowError<'FILE_NOT_FOUND', {file: string}> {
+export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   constructor(file: string) {
     super({
       code: 'FILE_NOT_FOUND',
@@ -173,7 +203,10 @@ export class FileNotFound extends NowError<'FILE_NOT_FOUND', {file: string}> {
   }
 }
 
-export class CantFindConfig extends NowError<'CANT_FIND_CONFIG', {paths: string[]}> {
+export class CantFindConfig extends NowError<
+  'CANT_FIND_CONFIG',
+  { paths: string[] }
+> {
   constructor(paths: string[]) {
     super({
       code: 'CANT_FIND_CONFIG',
@@ -183,7 +216,10 @@ export class CantFindConfig extends NowError<'CANT_FIND_CONFIG', {paths: string[
   }
 }
 
-export class DomainNameserversNotFound extends NowError<'NAMESERVERS_NOT_FOUND', {domain: string}> {
+export class DomainNameserversNotFound extends NowError<
+  'NAMESERVERS_NOT_FOUND',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'NAMESERVERS_NOT_FOUND',
@@ -193,7 +229,10 @@ export class DomainNameserversNotFound extends NowError<'NAMESERVERS_NOT_FOUND',
   }
 }
 
-export class PaymentSourceNotFound extends NowError<'PAYMENT_SOURCE_NOT_FOUND', {}> {
+export class PaymentSourceNotFound extends NowError<
+  'PAYMENT_SOURCE_NOT_FOUND',
+  {}
+> {
   constructor() {
     super({
       code: 'PAYMENT_SOURCE_NOT_FOUND',
@@ -203,7 +242,10 @@ export class PaymentSourceNotFound extends NowError<'PAYMENT_SOURCE_NOT_FOUND', 
   }
 }
 
-export class CantParseJSONFile extends NowError<'CANT_PARSE_JSON_FILE', {file: string}> {
+export class CantParseJSONFile extends NowError<
+  'CANT_PARSE_JSON_FILE',
+  { file: string }
+> {
   constructor(file: string) {
     super({
       code: 'CANT_PARSE_JSON_FILE',
@@ -213,7 +255,10 @@ export class CantParseJSONFile extends NowError<'CANT_PARSE_JSON_FILE', {file: s
   }
 }
 
-export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERROR', {domain: string, subdomain: string, external: boolean}> {
+export class DomainConfigurationError extends NowError<
+  'DOMAIN_CONFIGURATION_ERROR',
+  { domain: string, subdomain: string, external: boolean }
+> {
   constructor(domain: string, subdomain: string, external: boolean) {
     super({
       code: 'DOMAIN_CONFIGURATION_ERROR',
@@ -223,7 +268,10 @@ export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERR
   }
 }
 
-export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_CERT', {}> {
+export class CantGenerateWildcardCert extends NowError<
+  'CANT_GENERATE_WILDCARD_CERT',
+  {}
+> {
   constructor() {
     super({
       code: 'CANT_GENERATE_WILDCARD_CERT',
@@ -233,7 +281,10 @@ export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_C
   }
 }
 
-export class CertOrderNotFound extends NowError<'CERT_ORDER_NOT_FOUND', {cns: string[]}> {
+export class CertOrderNotFound extends NowError<
+  'CERT_ORDER_NOT_FOUND',
+  { cns: string[] }
+> {
   constructor(cns: string[]) {
     super({
       code: 'CERT_ORDER_NOT_FOUND',
@@ -243,17 +294,25 @@ export class CertOrderNotFound extends NowError<'CERT_ORDER_NOT_FOUND', {cns: st
   }
 }
 
-export class TooManyCertificates extends NowError<'TOO_MANY_CERTIFICATES', {domains: string[]}> {
+export class TooManyCertificates extends NowError<
+  'TOO_MANY_CERTIFICATES',
+  { domains: string[] }
+> {
   constructor(domains: string[]) {
     super({
       code: 'TOO_MANY_CERTIFICATES',
       meta: { domains },
-      message: `Too many certificates already issued for exact set of domains: ${domains.join(', ')}`
+      message: `Too many certificates already issued for exact set of domains: ${domains.join(
+        ', '
+      )}`
     });
   }
 }
 
-export class DomainValidationRunning extends NowError<'DOMAIN_VALIDATION_RUNNING', {domain: string}> {
+export class DomainValidationRunning extends NowError<
+  'DOMAIN_VALIDATION_RUNNING',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_VALIDATION_RUNNING',
@@ -263,7 +322,10 @@ export class DomainValidationRunning extends NowError<'DOMAIN_VALIDATION_RUNNING
   }
 }
 
-export class RulesFileValidationError extends NowError<'PATH_ALIAS_VALIDATION_ERROR', {location: string, message: string}> {
+export class RulesFileValidationError extends NowError<
+  'PATH_ALIAS_VALIDATION_ERROR',
+  { location: string, message: string }
+> {
   constructor(location: string, message: string) {
     super({
       code: 'PATH_ALIAS_VALIDATION_ERROR',
@@ -273,7 +335,10 @@ export class RulesFileValidationError extends NowError<'PATH_ALIAS_VALIDATION_ER
   }
 }
 
-export class RuleValidationFailed extends NowError<'RULE_VALIDATION_FAILED', { message: string }> {
+export class RuleValidationFailed extends NowError<
+  'RULE_VALIDATION_FAILED',
+  { message: string }
+> {
   constructor(message: string) {
     super({
       code: 'RULE_VALIDATION_FAILED',
@@ -293,8 +358,11 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
   }
 }
 
-export class TooManyRequests extends NowError<'TOO_MANY_REQUESTS', { api: string, retryAfter: number }> {
-  constructor({api, retryAfter}: {api: string, retryAfter: number}) {
+export class TooManyRequests extends NowError<
+  'TOO_MANY_REQUESTS',
+  { api: string, retryAfter: number }
+> {
+  constructor({ api, retryAfter }: { api: string, retryAfter: number }) {
     super({
       code: 'TOO_MANY_REQUESTS',
       meta: { api, retryAfter },
@@ -303,7 +371,10 @@ export class TooManyRequests extends NowError<'TOO_MANY_REQUESTS', { api: string
   }
 }
 
-export class DomainsShouldShareRoot extends NowError<'CNS_SHOULD_SHARE_ROOT', { api: string }> {
+export class DomainsShouldShareRoot extends NowError<
+  'CNS_SHOULD_SHARE_ROOT',
+  { api: string }
+> {
   constructor(api: string) {
     super({
       code: 'CNS_SHOULD_SHARE_ROOT',
@@ -313,7 +384,10 @@ export class DomainsShouldShareRoot extends NowError<'CNS_SHOULD_SHARE_ROOT', { 
   }
 }
 
-export class InvalidWildcardDomain extends NowError<'INVALID_WILDCARD_DOMAIN', { domain: string }> {
+export class InvalidWildcardDomain extends NowError<
+  'INVALID_WILDCARD_DOMAIN',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'INVALID_WILDCARD_DOMAIN',
@@ -323,7 +397,10 @@ export class InvalidWildcardDomain extends NowError<'INVALID_WILDCARD_DOMAIN', {
   }
 }
 
-export class CantSolveChallenge extends NowError<'CANT_SOLVE_CHALLENGE', { domain: string, type: 'dns-01' | 'http-01' }> {
+export class CantSolveChallenge extends NowError<
+  'CANT_SOLVE_CHALLENGE',
+  { domain: string, type: 'dns-01' | 'http-01' }
+> {
   constructor(domain: string, type: 'dns-01' | 'http-01') {
     super({
       code: 'CANT_SOLVE_CHALLENGE',
@@ -333,7 +410,10 @@ export class CantSolveChallenge extends NowError<'CANT_SOLVE_CHALLENGE', { domai
   }
 }
 
-export class VerifyScaleTimeout extends NowError<'VERIFY_SCALE_TIMEOUT', { timeout: number }> {
+export class VerifyScaleTimeout extends NowError<
+  'VERIFY_SCALE_TIMEOUT',
+  { timeout: number }
+> {
   constructor(timeout: number) {
     super({
       code: 'VERIFY_SCALE_TIMEOUT',
@@ -353,7 +433,10 @@ export class InvalidAllForScale extends NowError<'INVALID_ALL_FOR_SCALE', {}> {
   }
 }
 
-export class InvalidRegionOrDCForScale extends NowError<'INVALID_REGION_OR_DC_FOR_SCALE', { regionOrDC: string }> {
+export class InvalidRegionOrDCForScale extends NowError<
+  'INVALID_REGION_OR_DC_FOR_SCALE',
+  { regionOrDC: string }
+> {
   constructor(regionOrDC: string) {
     super({
       code: 'INVALID_REGION_OR_DC_FOR_SCALE',
@@ -363,7 +446,10 @@ export class InvalidRegionOrDCForScale extends NowError<'INVALID_REGION_OR_DC_FO
   }
 }
 
-export class InvalidMinForScale extends NowError<'INVALID_MIN_FOR_SCALE', { value: string }> {
+export class InvalidMinForScale extends NowError<
+  'INVALID_MIN_FOR_SCALE',
+  { value: string }
+> {
   constructor(value: string) {
     super({
       code: 'INVALID_MIN_FOR_SCALE',
@@ -373,7 +459,10 @@ export class InvalidMinForScale extends NowError<'INVALID_MIN_FOR_SCALE', { valu
   }
 }
 
-export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { value: string }> {
+export class InvalidMaxForScale extends NowError<
+  'INVALID_MAX_FOR_SCALE',
+  { value: string }
+> {
   constructor(value: string) {
     super({
       code: 'INVALID_MAX_FOR_SCALE',
@@ -383,7 +472,10 @@ export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { valu
   }
 }
 
-export class InvalidArgsForMinMaxScale extends NowError<'INVALID_ARGS_FOR_MIN_MAX_SCALE', { min: number | 'auto' }> {
+export class InvalidArgsForMinMaxScale extends NowError<
+  'INVALID_ARGS_FOR_MIN_MAX_SCALE',
+  { min: number | 'auto' }
+> {
   constructor(min: number | 'auto') {
     super({
       code: 'INVALID_ARGS_FOR_MIN_MAX_SCALE',
@@ -393,7 +485,10 @@ export class InvalidArgsForMinMaxScale extends NowError<'INVALID_ARGS_FOR_MIN_MA
   }
 }
 
-export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_INSTANCES', { url: string, min: number }> {
+export class ForbiddenScaleMinInstances extends NowError<
+  'FORBIDDEN_SCALE_MIN_INSTANCES',
+  { url: string, min: number }
+> {
   constructor(url: string, min: number) {
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
@@ -403,7 +498,10 @@ export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_IN
   }
 }
 
-export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_INSTANCES', { url: string, max: number }> {
+export class ForbiddenScaleMaxInstances extends NowError<
+  'FORBIDDEN_SCALE_MAX_INSTANCES',
+  { url: string, max: number }
+> {
   constructor(url: string, max: number) {
     super({
       code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
@@ -413,27 +511,36 @@ export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_IN
   }
 }
 
-export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_RELATION', {url: string}> {
+export class InvalidScaleMinMaxRelation extends NowError<
+  'INVALID_SCALE_MIN_MAX_RELATION',
+  { url: string }
+> {
   constructor(url: string) {
     super({
       code: 'INVALID_SCALE_MIN_MAX_RELATION',
-      meta: {url},
+      meta: { url },
       message: `Min number of instances can't be higher than max.`
     });
   }
 }
 
-export class NotSupportedMinScaleSlots extends NowError<'NOT_SUPPORTED_MIN_SCALE_SLOTS', {url: string}> {
+export class NotSupportedMinScaleSlots extends NowError<
+  'NOT_SUPPORTED_MIN_SCALE_SLOTS',
+  { url: string }
+> {
   constructor(url: string) {
     super({
       code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
-      meta: {url},
+      meta: { url },
       message: `Cloud v2 does not yet support setting a non-zero min scale setting.`
     });
   }
 }
 
-export class InvalidCoupon extends NowError<'INVALID_COUPON', { coupon: string }> {
+export class InvalidCoupon extends NowError<
+  'INVALID_COUPON',
+  { coupon: string }
+> {
   constructor(coupon: string) {
     super({
       code: 'INVALID_COUPON',
@@ -453,7 +560,10 @@ export class UsedCoupon extends NowError<'USED_COUPON', { coupon: string }> {
   }
 }
 
-export class UnsupportedTLD extends NowError<'UNSUPPORTED_TLD', { name: string }> {
+export class UnsupportedTLD extends NowError<
+  'UNSUPPORTED_TLD',
+  { name: string }
+> {
   constructor(name: string) {
     super({
       code: 'UNSUPPORTED_TLD',
@@ -473,7 +583,10 @@ export class MissingCreditCard extends NowError<'MISSING_CREDIT_CARD', {}> {
   }
 }
 
-export class DomainNotAvailable extends NowError<'DOMAIN_NOT_AVAILABLE', { domain: string }> {
+export class DomainNotAvailable extends NowError<
+  'DOMAIN_NOT_AVAILABLE',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_NOT_AVAILABLE',
@@ -483,7 +596,10 @@ export class DomainNotAvailable extends NowError<'DOMAIN_NOT_AVAILABLE', { domai
   }
 }
 
-export class InvalidDomain extends NowError<'INVALID_DOMAIN', { domain: string }> {
+export class InvalidDomain extends NowError<
+  'INVALID_DOMAIN',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'INVALID_DOMAIN',
@@ -493,7 +609,10 @@ export class InvalidDomain extends NowError<'INVALID_DOMAIN', { domain: string }
   }
 }
 
-export class DomainServiceNotAvailable extends NowError<'DOMAIN_SERVICE_NOT_AVAILABLE', {}> {
+export class DomainServiceNotAvailable extends NowError<
+  'DOMAIN_SERVICE_NOT_AVAILABLE',
+  {}
+> {
   constructor() {
     super({
       code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
@@ -503,7 +622,10 @@ export class DomainServiceNotAvailable extends NowError<'DOMAIN_SERVICE_NOT_AVAI
   }
 }
 
-export class UnexpectedDomainPurchaseError extends NowError<'UNEXPECTED_DOMAIN_PURCHASE_ERROR', {}> {
+export class UnexpectedDomainPurchaseError extends NowError<
+  'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
+  {}
+> {
   constructor() {
     super({
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
@@ -513,7 +635,10 @@ export class UnexpectedDomainPurchaseError extends NowError<'UNEXPECTED_DOMAIN_P
   }
 }
 
-export class PremiumDomainForbidden extends NowError<'PREMIUM_DOMAIN_FORBIDDEN', {}> {
+export class PremiumDomainForbidden extends NowError<
+  'PREMIUM_DOMAIN_FORBIDDEN',
+  {}
+> {
   constructor() {
     super({
       code: 'PREMIUM_DOMAIN_FORBIDDEN',

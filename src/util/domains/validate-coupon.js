@@ -1,6 +1,6 @@
 // @flow
 import { Now } from '../types';
-import {InvalidCoupon, UsedCoupon} from '../errors';
+import { InvalidCoupon, UsedCoupon } from '../errors';
 import getCouponInfo from './get-coupon-info';
 
 export default async function validateCoupon(now: Now, coupon: string) {

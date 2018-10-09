@@ -9,9 +9,12 @@ const retry = require('async-retry');
 // Utilities
 const createOutput = require('./output');
 
-async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
-  mode, onOpen = ()=>{}, onEvent, quiet, debugEnabled, findOpts
-} = {}) {
+async function printEvents(
+  now,
+  deploymentIdOrURL,
+  currentTeam = null,
+  { mode, onOpen = () => {}, onEvent, quiet, debugEnabled, findOpts } = {}
+) {
   const { log, debug } = createOutput({ debug: debugEnabled });
 
   let onOpenCalled = false;
@@ -47,105 +50,111 @@ async function printEvents(now, deploymentIdOrURL, currentTeam = null, {
   // drop the connection and have to start over
   let o = 0;
 
-  await retry(async (bail, attemptNumber) => {
-    if (attemptNumber > 1) {
-      debug('Retrying events');
-    }
+  await retry(
+    async (bail, attemptNumber) => {
+      if (attemptNumber > 1) {
+        debug('Retrying events');
+      }
 
-    const eventsRes = await now._fetch(eventsUrl);
+      const eventsRes = await now._fetch(eventsUrl);
 
-    if (eventsRes.ok) {
-      const readable = eventsRes.readable ? await eventsRes.readable() : eventsRes.body;
+      if (eventsRes.ok) {
+        const readable = eventsRes.readable
+          ? await eventsRes.readable()
+          : eventsRes.body;
 
-      // handle the event stream and make the promise get rejected
-      // if errors occur so we can retry
-      return new Promise((resolve, reject) => {
-        const stream = readable.pipe(jsonlines.parse());
+        // handle the event stream and make the promise get rejected
+        // if errors occur so we can retry
+        return new Promise((resolve, reject) => {
+          const stream = readable.pipe(jsonlines.parse());
 
-        let poller;
+          let poller;
 
-        if (mode === 'deploy') {
-          poller = (function startPoller() {
-            return setTimeout(async () => {
-              try {
-                const pollRes = await now._fetch(pollUrl);
-                if (!pollRes.ok) throw new Error(`Response ${pollRes.status}`);
-                const json = await pollRes.json();
-                if (json.state === 'READY') {
+          if (mode === 'deploy') {
+            poller = (function startPoller() {
+              return setTimeout(async () => {
+                try {
+                  const pollRes = await now._fetch(pollUrl);
+                  if (!pollRes.ok)
+                    throw new Error(`Response ${pollRes.status}`);
+                  const json = await pollRes.json();
+                  if (json.state === 'READY') {
+                    stream.end();
+                    finish();
+                    return;
+                  }
+                  poller = startPoller();
+                } catch (error) {
                   stream.end();
-                  finish();
-                  return;
+                  finish(error);
                 }
-                poller = startPoller();
-              } catch (error) {
-                stream.end();
-                finish(error);
-              }
-            }, 5000);
-          })();
-        }
-
-        let finishCalled = false;
-        function finish(error) {
-          if (finishCalled) return;
-          finishCalled = true;
-          callOnOpenOnce();
-          clearTimeout(poller);
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
+              }, 5000);
+            })();
           }
-        }
 
-        const onData = (data) => {
-          const { event } = data;
-          if (event === 'state' && data.payload.value === 'READY') {
-            if (mode === 'deploy') {
-              stream.end();
-              finish();
+          let finishCalled = false;
+          function finish(error) {
+            if (finishCalled) return;
+            finishCalled = true;
+            callOnOpenOnce();
+            clearTimeout(poller);
+            if (error) {
+              reject(error);
+            } else {
+              resolve();
             }
-          } else {
-            const linesPrinted = onEvent(data, callOnOpenOnce);
-            o += linesPrinted || 0;
           }
-        };
 
-        const onError = (err) => {
-          if (finishCalled) return;
-          o++;
-          callOnOpenOnce();
-          log(`Deployment event stream error: ${err.message}`);
-        };
+          const onData = data => {
+            const { event } = data;
+            if (event === 'state' && data.payload.value === 'READY') {
+              if (mode === 'deploy') {
+                stream.end();
+                finish();
+              }
+            } else {
+              const linesPrinted = onEvent(data, callOnOpenOnce);
+              o += linesPrinted || 0;
+            }
+          };
 
-        stream.on('end', finish);
-        stream.on('data', onData);
-        stream.on('error', onError);
-        readable.on('error', onError);
-      });
-    } else {
-      callOnOpenOnce();
-      const err = new Error(`Deployment events status ${eventsRes.status}`);
+          const onError = err => {
+            if (finishCalled) return;
+            o++;
+            callOnOpenOnce();
+            log(`Deployment event stream error: ${err.message}`);
+          };
 
-      if (eventsRes.status < 500) {
-        bail(err);
+          stream.on('end', finish);
+          stream.on('data', onData);
+          stream.on('error', onError);
+          readable.on('error', onError);
+        });
       } else {
-        throw err;
-      }
-    }
-  }, {
-    retries: 4,
-    onRetry: (err) => {
-      // if we are retrying, we clear past logs
-      if (!quiet && o) {
-        // o + 1 because current line is counted
-        process.stdout.write(eraseLines(o + 1));
-        o = 0;
-      }
+        callOnOpenOnce();
+        const err = new Error(`Deployment events status ${eventsRes.status}`);
 
-      log(`Deployment state polling error: ${err.message}`);
+        if (eventsRes.status < 500) {
+          bail(err);
+        } else {
+          throw err;
+        }
+      }
+    },
+    {
+      retries: 4,
+      onRetry: err => {
+        // if we are retrying, we clear past logs
+        if (!quiet && o) {
+          // o + 1 because current line is counted
+          process.stdout.write(eraseLines(o + 1));
+          o = 0;
+        }
+
+        log(`Deployment state polling error: ${err.message}`);
+      }
     }
-  });
+  );
 }
 
 module.exports = printEvents;

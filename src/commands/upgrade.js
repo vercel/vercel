@@ -86,7 +86,7 @@ const main = async ctx => {
     exit(0);
   }
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
 
   try {
     await run({ token, config });
@@ -183,7 +183,11 @@ async function run({ token, config: { currentTeam, user } }) {
   let planId = args[0];
 
   if (![undefined, 'oss', 'premium', 'pro', 'advanced'].includes(planId)) {
-    console.error(error(`Invalid plan name – should be ${code('oss')} or ${code('premium')}`));
+    console.error(
+      error(
+        `Invalid plan name – should be ${code('oss')} or ${code('premium')}`
+      )
+    );
     return exit(1);
   }
 
@@ -222,13 +226,17 @@ async function run({ token, config: { currentTeam, user } }) {
     newPlan = await plans.set(planId);
   } catch (err) {
     if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
-      console.error(error(
-        `You have no payment methods available. Run ${cmd(
-          'now billing add'
-        )} to add one`
-      ));
+      console.error(
+        error(
+          `You have no payment methods available. Run ${cmd(
+            'now billing add'
+          )} to add one`
+        )
+      );
     } else {
-      console.error(error(`An unknow error occured. Please try again later ${err.message}`));
+      console.error(
+        error(`An unknow error occured. Please try again later ${err.message}`)
+      );
     }
     plans.close();
     return;

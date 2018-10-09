@@ -22,7 +22,9 @@ async function getConfig(output: Output, configFile?: string) {
   // First try with the config supplied by the user via --local-config
   if (configFile) {
     const localFilePath = path.resolve(localPath, configFile);
-    output.debug(`Found config in provided --local-config path ${localFilePath}`);
+    output.debug(
+      `Found config in provided --local-config path ${localFilePath}`
+    );
     const localConfig = await readJSONFile(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
@@ -67,9 +69,7 @@ async function readConfigFromPackage(file: string) {
     return result;
   }
 
-  return result !== null
-    ? result.now
-    : null;
+  return result !== null ? result.now : null;
 }
 
 export default getConfig;

@@ -221,8 +221,8 @@ module.exports = class Now extends EventEmitter {
         let msg = 'You have been creating deployments at a very fast pace. ';
 
         if (body.error && body.error.limit && body.error.limit.reset) {
-          const {reset} = body.error.limit;
-          const difference = (reset * 1000) - Date.now();
+          const { reset } = body.error.limit;
+          const difference = reset * 1000 - Date.now();
 
           msg += `Please retry in ${ms(difference, { long: true })}.`;
         } else {
@@ -238,7 +238,11 @@ module.exports = class Now extends EventEmitter {
       }
 
       // If the deployment domain is missing a cert, bail with the error
-      if (res.status === 400 && body.error && body.error.code === 'cert_missing') {
+      if (
+        res.status === 400 &&
+        body.error &&
+        body.error.code === 'cert_missing'
+      ) {
         bail(await responseError(res, null, body));
       }
 
@@ -313,8 +317,9 @@ module.exports = class Now extends EventEmitter {
 
     if (!quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
-        log(chalk`Using Node.js {bold ${
-          deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`);
+        log(
+          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
+        );
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
       }
@@ -337,64 +342,69 @@ module.exports = class Now extends EventEmitter {
       capacity: this._missing.length
     });
 
-    time('Uploading files', Promise.all(
-      this._missing.map(sha =>
-        retry(
-          async (bail) => {
-            const file = this._files.get(sha);
-            const fPath = file.names[0];
-            const stream = createReadStream(fPath);
-            const { data } = file;
+    time(
+      'Uploading files',
+      Promise.all(
+        this._missing.map(sha =>
+          retry(
+            async bail => {
+              const file = this._files.get(sha);
+              const fPath = file.names[0];
+              const stream = createReadStream(fPath);
+              const { data } = file;
 
-            const fstreamPush = stream.push;
+              const fstreamPush = stream.push;
 
-            let uploadedSoFar = 0;
-            stream.push = chunk => {
-              // If we're about to push the last chunk, then don't do it here
-              // But instead, we'll "hang" the progress bar and do it on 200
-              if (chunk && (uploadedSoFar + chunk.length) < data.length) {
-                this.emit('uploadProgress', chunk.length);
-                uploadedSoFar += chunk.length;
+              let uploadedSoFar = 0;
+              stream.push = chunk => {
+                // If we're about to push the last chunk, then don't do it here
+                // But instead, we'll "hang" the progress bar and do it on 200
+                if (chunk && uploadedSoFar + chunk.length < data.length) {
+                  this.emit('uploadProgress', chunk.length);
+                  uploadedSoFar += chunk.length;
+                }
+                return fstreamPush.call(stream, chunk);
+              };
+
+              const url = atlas ? '/v1/now/images' : '/v2/now/files';
+              const additionalHeaders = atlas
+                ? {
+                    'x-now-dcs': Object.keys(scale).join(',')
+                  }
+                : {};
+              const res = await this._fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  'Content-Length': data.length,
+                  'x-now-digest': sha,
+                  'x-now-size': data.length,
+                  ...additionalHeaders
+                },
+                body: stream
+              });
+
+              if (res.status === 200) {
+                // What we want
+                this.emit('uploadProgress', file.data.length - uploadedSoFar);
+                this.emit('upload', file);
+              } else if (res.status > 200 && res.status < 500) {
+                // If something is wrong with our request, we don't retry
+                return bail(await responseError(res, 'Failed to upload file'));
+              } else {
+                // If something is wrong with the server, we retry
+                throw await responseError(res, 'Failed to upload file');
               }
-              return fstreamPush.call(stream, chunk);
-            };
-
-            const url = atlas ? '/v1/now/images' : '/v2/now/files';
-            const additionalHeaders = atlas ? {
-              'x-now-dcs': Object.keys(scale).join(',')
-            } : {};
-            const res = await this._fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': data.length,
-                'x-now-digest': sha,
-                'x-now-size': data.length,
-                ...additionalHeaders
-              },
-              body: stream
-            });
-
-            if (res.status === 200) {
-              // What we want
-              this.emit('uploadProgress', file.data.length - uploadedSoFar);
-              this.emit('upload', file);
-            } else if (res.status > 200 && res.status < 500) {
-              // If something is wrong with our request, we don't retry
-              return bail(await responseError(res, 'Failed to upload file'));
-            } else {
-              // If something is wrong with the server, we retry
-              throw await responseError(res, 'Failed to upload file');
+            },
+            {
+              retries: 3,
+              randomize: true,
+              onRetry: this._onRetry
             }
-          },
-          {
-            retries: 3,
-            randomize: true,
-            onRetry: this._onRetry
-          }
+          )
         )
       )
-    ))
+    )
       .then(() => {
         this.emit('complete');
       })
@@ -402,7 +412,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listSecrets() {
-    const { secrets } = await this.retry(async (bail) => {
+    const { secrets } = await this.retry(async bail => {
       const res = await this._fetch('/now/secrets');
 
       if (res.status === 200) {
@@ -451,7 +461,9 @@ module.exports = class Now extends EventEmitter {
   async listInstances(deploymentId) {
     const { instances } = await this.retry(
       async bail => {
-        const res = await this._fetch(`/now/deployments/${deploymentId}/instances`);
+        const res = await this._fetch(
+          `/now/deployments/${deploymentId}/instances`
+        );
 
         if (res.status === 200) {
           // What we want
@@ -492,7 +504,9 @@ module.exports = class Now extends EventEmitter {
           // No retry on 4xx
           if (res.status >= 400 && res.status < 500) {
             debug(`Bailing on getting a deployment due to ${res.status}`);
-            return bail(await responseError(res, `Failed to resolve deployment "${id}"`));
+            return bail(
+              await responseError(res, `Failed to resolve deployment "${id}"`)
+            );
           }
 
           if (res.status !== 200) {
@@ -516,7 +530,9 @@ module.exports = class Now extends EventEmitter {
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
           debug(`Bailing on getting a deployment due to ${res.status}`);
-          return bail(await responseError(res, `Failed to resolve deployment "${id}"`));
+          return bail(
+            await responseError(res, `Failed to resolve deployment "${id}"`)
+          );
         }
 
         if (res.status !== 200) {
@@ -555,7 +571,9 @@ module.exports = class Now extends EventEmitter {
           return res.json();
         } else if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
-          return bail(await responseError(res, 'Failed to fetch deployment logs'));
+          return bail(
+            await responseError(res, 'Failed to fetch deployment logs')
+          );
         } else {
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to fetch deployment logs');
@@ -590,7 +608,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async listDomains() {
-    const { domains } = await this.retry(async (bail) => {
+    const { domains } = await this.retry(async bail => {
       const res = await this._fetch('/v3/domains');
 
       if (res.status === 200) {
@@ -609,7 +627,7 @@ module.exports = class Now extends EventEmitter {
   }
 
   async getDomain(domain) {
-    return this.retry(async (bail) => {
+    return this.retry(async bail => {
       const res = await this._fetch(`/v3/domains/${domain}`);
 
       if (res.status === 200) {
@@ -627,7 +645,9 @@ module.exports = class Now extends EventEmitter {
 
   async getNameservers(domain) {
     const body = await this.retry(async () => {
-      const res = await this._fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`);
+      const res = await this._fetch(
+        `/whois-ns?domain=${encodeURIComponent(domain)}`
+      );
 
       const body = await res.json();
 
@@ -653,7 +673,7 @@ module.exports = class Now extends EventEmitter {
   setupDomain(name, { isExternal } = {}) {
     const { debug } = this._output;
 
-    return this.retry(async (bail) => {
+    return this.retry(async bail => {
       const res = await this._fetch('/v3/domains', {
         method: 'POST',
         body: { name, isExternal: Boolean(isExternal) }
@@ -698,7 +718,7 @@ module.exports = class Now extends EventEmitter {
     const { log } = this._output;
 
     return this.retry(
-      async (bail) => {
+      async bail => {
         const res = await this._fetch('/now/certs', {
           method: 'POST',
           body: {
@@ -752,7 +772,7 @@ module.exports = class Now extends EventEmitter {
 
   deleteCert(domain) {
     return this.retry(
-      async (bail) => {
+      async bail => {
         const res = this._fetch(`/now/certs/${domain}`, {
           method: 'DELETE'
         });
@@ -870,7 +890,7 @@ module.exports = class Now extends EventEmitter {
   // if the response is ok and content-type json
   // it does the same for JSON` body` in opts
   async fetch(url, opts = {}) {
-    return this.retry(async (bail) => {
+    return this.retry(async bail => {
       if (false !== opts.json && opts.body && 'object' == typeof opts.body) {
         opts = Object.assign({}, opts, {
           body: JSON.stringify(opts.body),

@@ -14,9 +14,7 @@ import rm from './rm';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(
-    `${logo} now dns`
-  )} [options] <command>
+  ${chalk.bold(`${logo} now dns`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -50,9 +48,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
-      ${chalk.cyan(
-        `$ now dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`
-      )}
+      ${chalk.cyan(`$ now dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`)}
       ${chalk.cyan(`$ now dns add zeit.rocks '@' MX mail.zeit.rocks 10`)}
 
   ${chalk.gray('–')} Add an SRV record
@@ -74,7 +70,7 @@ const help = () => {
 const COMMAND_CONFIG = {
   add: ['add'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove'],
+  rm: ['rm', 'remove']
 };
 
 module.exports = async function main(ctx: any): Promise<number> {

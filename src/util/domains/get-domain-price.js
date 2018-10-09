@@ -6,14 +6,21 @@ import getCreditCards from '../billing/get-credit-cards';
 import type { DomainPrice } from '../types';
 import validateCoupon from './validate-coupon';
 
-export default async function getDomainPrice(now: Now, name: string, coupon?: string) {
+export default async function getDomainPrice(
+  now: Now,
+  name: string,
+  coupon?: string
+) {
   if (coupon) {
     const [validateResult, creditCards] = await Promise.all([
       validateCoupon(now, coupon),
       getCreditCards(now)
     ]);
 
-    if ((validateResult instanceof Errors.InvalidCoupon) || (validateResult instanceof Errors.UsedCoupon)) {
+    if (
+      validateResult instanceof Errors.InvalidCoupon ||
+      validateResult instanceof Errors.UsedCoupon
+    ) {
       return validateResult;
     }
 
@@ -23,8 +30,12 @@ export default async function getDomainPrice(now: Now, name: string, coupon?: st
   }
 
   try {
-    const payload: DomainPrice = await now.fetch(`/v3/domains/price?${stringify({name})}`);
-    const result: DomainPrice = coupon ? {price: 0, period: payload.price} : payload;
+    const payload: DomainPrice = await now.fetch(
+      `/v3/domains/price?${stringify({ name })}`
+    );
+    const result: DomainPrice = coupon
+      ? { price: 0, period: payload.price }
+      : payload;
     return result;
   } catch (error) {
     if (error.code === 'unsupported_tld') {

@@ -6,7 +6,9 @@ import { DomainNameserversNotFound } from '../errors';
 async function getDomainNameservers(now: Now, domain: string) {
   const cancelFetchingMessage = wait(`Fetching DNS nameservers for ${domain}`);
   try {
-    let { nameservers } = await now.fetch(`/whois-ns?domain=${encodeURIComponent(domain)}`);
+    let { nameservers } = await now.fetch(
+      `/whois-ns?domain=${encodeURIComponent(domain)}`
+    );
     cancelFetchingMessage();
     return nameservers.filter(ns => {
       // Temporary hack since sometimes we get a response that looks like: ['ns', 'ns', '', '']

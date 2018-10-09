@@ -5,7 +5,7 @@ export type DC = {
   gru: 'gru1',
   sfo: 'sfo1',
   iad: 'iad1'
-}
+};
 
 export const REGION_TO_DC = {
   all: 'all',

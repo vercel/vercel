@@ -91,7 +91,7 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const {authConfig: { token }, config} = ctx;
+  const { authConfig: { token }, config } = ctx;
 
   try {
     return run({ token, config });
@@ -116,7 +116,7 @@ module.exports = async ctx => {
 };
 
 async function run({ token, config }) {
-  const {currentTeam} = config;
+  const { currentTeam } = config;
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
   const args = argv._;
 
@@ -134,7 +134,7 @@ async function run({ token, config }) {
     }
     case 'switch':
     case 'change': {
-     exitCode = await change({
+      exitCode = await change({
         args,
         config,
         apiUrl,
@@ -161,7 +161,9 @@ async function run({ token, config }) {
     }
     default: {
       if (subcommand !== 'help') {
-        console.error(error('Please specify a valid subcommand: add | ls | switch | invite'));
+        console.error(
+          error('Please specify a valid subcommand: add | ls | switch | invite')
+        );
         exitCode = 1;
       }
       help();

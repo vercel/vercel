@@ -21,9 +21,7 @@ import getAliases from '../util/alias/get-aliases';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(
-    `${logo} now remove`
-  )} [...deploymentId|deploymentName]
+  ${chalk.bold(`${logo} now remove`)} [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
@@ -64,7 +62,7 @@ const help = () => {
 
 // Options
 
-module.exports = async function main (ctx: any): Promise<number>{
+module.exports = async function main(ctx: any): Promise<number> {
   let argv;
 
   argv = mri(ctx.argv.slice(2), {
@@ -98,13 +96,22 @@ module.exports = async function main (ctx: any): Promise<number>{
     return 2;
   }
 
-  const {authConfig: { token }, config} = ctx;
-  const {currentTeam} = config;
-  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const { authConfig: { token }, config } = ctx;
+  const { currentTeam } = config;
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam
+  });
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
-  const cancelWait = wait(`Fetching deployment(s) ${ids.map(id => `"${id}"`).join(' ')} in ${chalk.bold(contextName)}`);
+  const cancelWait = wait(
+    `Fetching deployment(s) ${ids
+      .map(id => `"${id}"`)
+      .join(' ')} in ${chalk.bold(contextName)}`
+  );
 
   let deployments;
   const findStart = Date.now();
@@ -152,10 +159,21 @@ module.exports = async function main (ctx: any): Promise<number>{
     return 1;
   }
 
-  log(`Found ${plural('deployment', matches.length, true)} for removal in ${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`);
+  log(
+    `Found ${plural(
+      'deployment',
+      matches.length,
+      true
+    )} for removal in ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - findStart
+    )}`
+  );
 
   if (!skipConfirmation) {
-    const confirmation = (await readConfirmation(matches, output)).toLowerCase();
+    const confirmation = (await readConfirmation(
+      matches,
+      output
+    )).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
@@ -168,7 +186,11 @@ module.exports = async function main (ctx: any): Promise<number>{
 
   await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })));
 
-  success(`${plural('deployment', matches.length, true)} removed ${elapsed(Date.now() - start)}`);
+  success(
+    `${plural('deployment', matches.length, true)} removed ${elapsed(
+      Date.now() - start
+    )}`
+  );
   matches.forEach(depl => {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
   });
@@ -187,9 +209,11 @@ module.exports = async function main (ctx: any): Promise<number>{
 function readConfirmation(matches, output) {
   return new Promise(resolve => {
     output.log(
-      `The following ${
-        plural('deployment', matches.length, true)
-      } will be permanently removed:`
+      `The following ${plural(
+        'deployment',
+        matches.length,
+        true
+      )} will be permanently removed:`
     );
 
     const tbl = table(

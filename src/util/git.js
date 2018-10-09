@@ -28,7 +28,8 @@ const cloneRepo = (parts, tmpDir, { ssh }) =>
       ? `git@${host}:${parts.main}`
       : `https://${host}/${parts.main}`;
 
-    const ref = parts.ref || (parts.type === 'Bitbucket' ? 'default' : 'master');
+    const ref =
+      parts.ref || (parts.type === 'Bitbucket' ? 'default' : 'master');
     const cmd = `git clone ${url} --single-branch ${ref}`;
 
     childProcess.exec(cmd, { cwd: tmpDir.path }, (err, stdout) => {

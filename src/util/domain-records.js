@@ -92,10 +92,12 @@ module.exports = class DomainRecords extends Now {
           new Error(body.error ? body.error.message : 'Unknown error')
         );
       } else if (res.status === 403) {
-        console.error(error({
-          message: `Not authorized to access domain ${domain}`,
-          slug: 'unauthorized-domain'
-        }));
+        console.error(
+          error({
+            message: `Not authorized to access domain ${domain}`,
+            slug: 'unauthorized-domain'
+          })
+        );
         await exit(1);
       } else if (res.status === 404) {
         let err;
@@ -129,10 +131,12 @@ module.exports = class DomainRecords extends Now {
 
       const body = await res.json();
       if (res.status === 403) {
-        console.error(error({
-          message: `Not authorized to access domain ${domain}`,
-          slug: 'unauthorized-domain'
-        }));
+        console.error(
+          error({
+            message: `Not authorized to access domain ${domain}`,
+            slug: 'unauthorized-domain'
+          })
+        );
         await exit(1);
       } else if (res.status === 404) {
         let err;

@@ -75,7 +75,9 @@ module.exports = class Domains extends Now {
         console.time(label);
       }
 
-      const res = await this._fetch(`/v3/domains/${name}`, { method: 'DELETE' });
+      const res = await this._fetch(`/v3/domains/${name}`, {
+        method: 'DELETE'
+      });
 
       if (this._debug) {
         console.timeEnd(label);
@@ -125,7 +127,9 @@ module.exports = class Domains extends Now {
       const json = await res.json();
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /v3/domains/status?${query}`);
+        console.timeEnd(
+          `> [debug] #${attempt} GET /v3/domains/status?${query}`
+        );
       }
 
       return json.available;

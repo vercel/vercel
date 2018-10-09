@@ -89,7 +89,7 @@ const COMMAND_CONFIG = {
   default: 'set',
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
-  set: ['set'],
+  set: ['set']
 };
 
 module.exports = async function main(ctx: any): Promise<number> {
@@ -103,7 +103,7 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--yes': Boolean,
       '-n': '--no-verify',
       '-r': '--rules',
-      '-y': '--yes',
+      '-y': '--yes'
     });
   } catch (err) {
     handleError(err);

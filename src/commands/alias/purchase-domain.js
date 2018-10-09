@@ -6,8 +6,8 @@ import { Now, Output } from '../../util/types';
 import { PaymentSourceNotFound } from '../../util/errors';
 
 type PurchaseDomainPayload = {
-  uid: string,
-}
+  uid: string
+};
 
 async function purchaseDomain(output: Output, now: Now, domain: string) {
   const purchaseStamp = stamp();
@@ -18,7 +18,11 @@ async function purchaseDomain(output: Output, now: Now, domain: string) {
       method: 'POST'
     });
     cancelWait();
-    output.log(`Domain purchased and created ${chalk.gray(`(${uid})`)} ${purchaseStamp()}`);
+    output.log(
+      `Domain purchased and created ${chalk.gray(
+        `(${uid})`
+      )} ${purchaseStamp()}`
+    );
     return { uid };
   } catch (error) {
     cancelWait();

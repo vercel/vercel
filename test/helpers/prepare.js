@@ -42,7 +42,7 @@ const getIndexFile = session => `
 
 module.exports = async session => {
   const files = {
-    'Dockerfile': getDockerFile(session),
+    Dockerfile: getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
     'first.png': getImageFile(session, {
@@ -54,25 +54,13 @@ module.exports = async session => {
   };
 
   const spec = {
-    'dockerfile': [
-      'index.js',
-      'Dockerfile',
-      'package.json'
-    ],
-    'node': [
-      'index.js',
-      'package.json'
-    ],
-    'static-single-file': [
-      'first.png'
-    ],
-    'static-multiple-files': [
-      'first.png',
-      'second.png'
-    ],
+    dockerfile: ['index.js', 'Dockerfile', 'package.json'],
+    node: ['index.js', 'package.json'],
+    'static-single-file': ['first.png'],
+    'static-multiple-files': ['first.png', 'second.png'],
     'now-static-builds': {
       'now.json': '{"type": "static"}',
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 RUN mkdir /public
 RUN echo hello > /public/index.html
@@ -82,10 +70,10 @@ RUN echo hello > /public/index.html
       'now.json': JSON.stringify({
         type: 'static',
         build: {
-          env: {FOO: 'bar'}
+          env: { FOO: 'bar' }
         }
       }),
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 ARG FOO
 RUN mkdir /public
@@ -96,7 +84,7 @@ RUN echo $FOO > /public/index.html
       'now.json': JSON.stringify({
         type: 'static'
       }),
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 ARG NONCE
 RUN mkdir /public
@@ -110,7 +98,7 @@ RUN echo $NONCE > /public/index.html
     const directory = join(__dirname, '..', 'fixtures', 'integration', type);
     await ensureDir(directory);
 
-    if(Array.isArray(needed)) {
+    if (Array.isArray(needed)) {
       // Get content from the defined files
       for (const name of needed) {
         const file = join(directory, name);
