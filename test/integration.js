@@ -631,7 +631,7 @@ test('use `--build-env` CLI flag', async t => {
 })
 
 test('try to deploy non-existing path', async t => {
-  const goal = `> Error! The specified directory "${session}" doesn't exist.`
+  const goal = `> Error! The specified file or directory "${session}" does not exist.`
 
   const { stderr, code } = await execa(binaryPath, [
     session,
