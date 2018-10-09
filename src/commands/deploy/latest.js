@@ -2,6 +2,7 @@
 
 import ms from 'ms';
 import bytes from 'bytes';
+import type { Readable } from 'stream';
 import { write as copy } from 'clipboardy';
 import { eraseLines } from 'ansi-escapes';
 import { basename } from 'path';
@@ -12,7 +13,7 @@ import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-import type { CLIContext, Output, NewDeployment } from '../../util/types';
+import type { CLIContext, Output, NewDeployment, DeploymentEvent } from '../../util/types';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
