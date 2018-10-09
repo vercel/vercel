@@ -27,12 +27,7 @@ export interface Output {
   warn(msg: string): void,
 }
 
-export type User = {
-  uid: string,
-  email: string,
-  username: string,
-  avatar: string
-}
+export type User = string
 
 export type Config = {
   alias?: string[] | string,

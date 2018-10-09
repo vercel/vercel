@@ -363,7 +363,6 @@ exports.pipe = async function main(ctx: CLIContext, contextName: string, output:
   warn(`https://zeit.co/docs`)
 
   const { authConfig: {token}, config } = ctx
-  alwaysForwardNpm = config.forwardNpm
 
   try {
     return sync({ contextName, output, token, config, firstRun: true, deploymentType: undefined })
