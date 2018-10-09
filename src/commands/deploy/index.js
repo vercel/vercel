@@ -45,10 +45,11 @@ module.exports = async (ctx: CLIContext) => {
 
   const output = createOutput({ debug: argv['--debug'] });
   const isHelp = argv['--help'];
+  const stats = {};
 
   for (const path of paths) {
     try {
-      await lstat(path);
+      stats[path] = await lstat(path);
     } catch (err) {
       if (!isHelp) {
         output.error(`The specified file or directory "${basename(path)}" does not exist.`);
@@ -97,7 +98,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (platformVersion === null || platformVersion > 1) {
-    return latestPipe(ctx, contextName, output);
+    return latestPipe(ctx, contextName, output, stats);
   }
 
   return legacyPipe(ctx, contextName, output);
