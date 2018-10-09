@@ -397,10 +397,7 @@ test('simple to host', t => {
 });
 
 test('leading // to host', t => {
-  t.is(
-    toHost('//zeit-logos-rnemgaicnc.now.sh'),
-    'zeit-logos-rnemgaicnc.now.sh'
-  );
+  t.is(toHost('//zeit-logos-rnemgaicnc.now.sh'), 'zeit-logos-rnemgaicnc.now.sh');
 });
 
 test('leading http:// to host', t => {
@@ -453,7 +450,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
   const timeOut = 200;
 
   const delayedWait = () => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub);
 
       setTimeout(() => {
@@ -477,7 +474,7 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
   const timeOut = 200;
 
   const delayedWait = () => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const stop = wait('test', timeOut, oraStub);
       stop();
 
