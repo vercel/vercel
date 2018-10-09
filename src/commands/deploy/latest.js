@@ -63,10 +63,10 @@ const help = () => {
       billing | cc         [cmd]       Manages your credit cards and billing methods
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
       teams                [team]      Manages your teams
-      switch                           Switches between teams and your account
-      login                            Logs into your account or creates a new one
+      switch               [scope]     Switches between teams and your personal account
+      login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      whoami                           Displays the currently logged in username
+      whoami                           Displays the current scope
 
   ${chalk.dim('Options:')}
 
