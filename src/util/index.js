@@ -72,7 +72,8 @@ module.exports = class Now extends EventEmitter {
       hasNowJson = false,
       sessionAffinity = 'ip',
       isFile = false,
-      atlas = false
+      atlas = false,
+      isLatest
     }
   ) {
     const { log, warn, time } = this._output;
@@ -89,7 +90,7 @@ module.exports = class Now extends EventEmitter {
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
+        if (!isLatest && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'

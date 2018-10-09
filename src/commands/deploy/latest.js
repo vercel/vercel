@@ -184,10 +184,10 @@ async function sync({
   token,
   currentTeam
 }) {
-  return new Promise(async (_resolve, reject) => {
+  return new Promise(async (resolveRoot, rejectRoot) => {
     const { log, debug, error, note } = output;
     const paths = Object.keys(stats);
-    const isFile = paths.length === 1 && stats[0].isFile();
+    const isFile = paths.length === 1 && stats[paths[0]].isFile();
     const debugEnabled = argv['--debug'];
     let wantsPublic = argv['--public'];
     const deploymentName = argv['--name'];
@@ -239,7 +239,8 @@ async function sync({
           scale: {},
           wantsPublic,
           sessionAffinity: null,
-          isFile
+          isFile,
+          isLatest: true
         },
         meta
       );
@@ -269,7 +270,9 @@ async function sync({
         firstDeployCall instanceof Errors.TooManyRequests
       ) {
         handleCreateDeployError(output, firstDeployCall);
-        return 1;
+        resolveRoot(1);
+
+        return;
       }
 
       deployment = firstDeployCall;
@@ -312,7 +315,7 @@ async function sync({
 
           now.on('error', err => {
             error('Upload failed');
-            reject(err);
+            rejectRoot(err);
           });
         });
 
@@ -348,7 +351,9 @@ async function sync({
             secondDeployCall instanceof Errors.TooManyRequests
           ) {
             handleCreateDeployError(output, secondDeployCall);
-            return 1;
+            resolveRoot(1);
+
+            return;
           }
 
           if (now.syncFileCount === 0) {
@@ -359,7 +364,9 @@ async function sync({
 
         if (deployment === null) {
           error('Uploading failed. Please try again.');
-          return 1;
+          resolveRoot(1);
+
+          return;
         }
       }
     } catch (err) {
@@ -395,12 +402,16 @@ async function sync({
               const message = `If you agree with that, please run again with ${cmd(
                 '--public'
               )}.`;
-              error(message);
 
-              return 1;
+              error(message);
+              resolveRoot(1);
+
+              return;
             } else {
               log('Aborted');
-              return 0;
+              resolveRoot(0);
+
+              return;
             }
           }
         }
@@ -429,7 +440,7 @@ async function sync({
       }
 
       handleError(err);
-      _resolve(1);
+      resolveRoot(1);
 
       return;
     }
@@ -492,7 +503,9 @@ async function sync({
             event.payload.value === 'ERROR'
           ) {
             output.error(`Build failed`);
-            return 1;
+
+            resolveRoot(1);
+            return;
           }
 
           // For any relevant event we receive, print the result
@@ -527,7 +540,8 @@ async function sync({
               'Read more: https://err.sh/now-cli/verification-timeout'
             );
 
-            return 1;
+            resolveRoot(1);
+            return;
           } else if (Array.isArray(dcOrEvent)) {
             const [dc, instances] = dcOrEvent;
             output.log(
@@ -552,10 +566,9 @@ async function sync({
       }
 
       output.success(`Deployment ready`);
-      return 0;
     }
 
-    return 0;
+    resolveRoot(0);
   });
 }
 
