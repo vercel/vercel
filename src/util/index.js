@@ -316,7 +316,7 @@ module.exports = class Now extends EventEmitter {
       return null;
     }
 
-    if (!quiet && type === 'npm' && deployment.nodeVersion) {
+    if (!isLatest && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
           chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
