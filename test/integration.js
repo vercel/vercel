@@ -347,8 +347,6 @@ test('scale the alias', async t => {
     reject: false
   })
 
-  console.log(stdout, code)
-
   t.is(code, 0)
   t.true(stdout.includes(`(min: 1, max: 1)`))
 })
@@ -559,7 +557,7 @@ test('use build-env', async t => {
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile')
 
-  const { stdout, stderr, code } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     target,
     '--public',
     '--name',
@@ -572,8 +570,6 @@ test('deploy a dockerfile project', async t => {
   })
 
   // Ensure the exit code is right
-  console.log(stdout)
-  console.log(stderr)
   t.is(code, 0)
 
   // Test if the output is really a URL
