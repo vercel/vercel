@@ -1,7 +1,7 @@
-const { bold } = require('chalk')
-const cmd = require('../util/output/cmd')
-const li = require('../util/output/list-item')
-const link = require('../util/output/link')
+const { bold } = require('chalk');
+const cmd = require('../util/output/cmd');
+const li = require('../util/output/list-item');
+const link = require('../util/output/link');
 
 // prettier-disable
 const help = () =>
@@ -20,6 +20,6 @@ const help = () =>
 
   For more information: ${link('https://github.com/zeit/now-cli')}.
 `
-  )
+  );
 
-module.exports = help
+module.exports = help;

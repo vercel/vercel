@@ -2,26 +2,26 @@
 //@flow
 
 // Packages
-const chalk = require('chalk')
-const ms = require('ms')
-const plural = require('pluralize')
-const table = require('text-table')
+const chalk = require('chalk');
+const ms = require('ms');
+const plural = require('pluralize');
+const table = require('text-table');
 
 // Utilities
-const Now = require('../util')
-const createOutput = require('../util/output')
-const { handleError } = require('../util/error')
-const cmd = require('../util/output/cmd')
-const logo = require('../util/output/logo')
-const elapsed = require('../util/output/elapsed')
-const wait = require('../util/output/wait')
-const strlen = require('../util/strlen')
-const getContextName = require('../util/get-context-name')
-const toHost = require('../util/to-host')
+const Now = require('../util');
+const createOutput = require('../util/output');
+const { handleError } = require('../util/error');
+const cmd = require('../util/output/cmd');
+const logo = require('../util/output/logo');
+const elapsed = require('../util/output/elapsed');
+const wait = require('../util/output/wait');
+const strlen = require('../util/strlen');
+const getContextName = require('../util/get-context-name');
+const toHost = require('../util/to-host');
 
-import getAliases from '../util/alias/get-aliases'
-import getArgs from '../util/get-args'
-import getDeploymentInstances from '../util/deploy/get-deployment-instances'
+import getAliases from '../util/alias/get-aliases';
+import getArgs from '../util/get-args';
+import getDeploymentInstances from '../util/deploy/get-deployment-instances';
 
 const help = () => {
   console.log(`
@@ -56,93 +56,93 @@ const help = () => {
   ${chalk.gray('–')} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app --all')}
-`)
-}
+`);
+};
 
 // Options
 // $FlowFixMe
 module.exports = async function main(ctx) {
-  let argv
+  let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
       '-a': '--all',
-    })
+    });
   } catch (err) {
-    handleError(err)
+    handleError(err);
     return 1;
   }
 
-  const debugEnabled = argv['--debug']
-  const { print, log, error, note, debug } = createOutput({ debug: debugEnabled })
+  const debugEnabled = argv['--debug'];
+  const { print, log, error, note, debug } = createOutput({ debug: debugEnabled });
 
   if (argv._.length > 2) {
     error(`${cmd('now ls [app]')} accepts at most one argument`);
     return 1;
   }
 
-  let app = argv._[1]
-  let host = null
+  let app = argv._[1];
+  let host = null;
 
-  const apiUrl = ctx.apiUrl
+  const apiUrl = ctx.apiUrl;
 
   if (argv['--help']) {
-    help()
-    return 0
+    help();
+    return 0;
   }
 
-  const {authConfig: { token }, config} = ctx
-  const {currentTeam, includeScheme} = config
-  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam })
+  const {authConfig: { token }, config} = ctx;
+  const {currentTeam, includeScheme} = config;
+  const {contextName} = await getContextName({ apiUrl, token, debug: debugEnabled, currentTeam });
 
-  const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`)
+  const stopSpinner = wait(`Fetching deployments in ${chalk.bold(contextName)}`);
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam })
-  const start = new Date()
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const start = new Date();
 
   if (argv['--all'] && !app) {
-    error('You must define an app when using `-a` / `--all`')
+    error('You must define an app when using `-a` / `--all`');
     return 1;
   }
 
   // Some people are using entire domains as app names, so
   // we need to account for this here
   if (app && toHost(app).endsWith('.now.sh')) {
-    note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment')
+    note('We suggest using `now inspect <deployment>` for retrieving details about a single deployment');
 
-    const asHost = toHost(app)
-    const hostParts = asHost.split('-')
+    const asHost = toHost(app);
+    const hostParts = asHost.split('-');
 
     if (hostParts < 2) {
-      stopSpinner()
-      error('Only deployment hostnames are allowed, no aliases')
-      return 1
+      stopSpinner();
+      error('Only deployment hostnames are allowed, no aliases');
+      return 1;
     }
 
-    app = null
-    host = asHost
+    app = null;
+    host = asHost;
   }
 
-  let deployments
+  let deployments;
 
   try {
-    debug('Fetching deployments')
-    deployments = await now.list(app, { version: 3 })
+    debug('Fetching deployments');
+    deployments = await now.list(app, { version: 3 });
   } catch (err) {
     stopSpinner();
     throw err;
   }
 
   if (app && !deployments.length) {
-    debug('No deployments: attempting to find deployment that matches supplied app name')
-    let match
+    debug('No deployments: attempting to find deployment that matches supplied app name');
+    let match;
 
     try {
-      await now.findDeployment(app)
+      await now.findDeployment(app);
     } catch (err) {
       if (err.status === 404) {
-        debug('Ignore findDeployment 404')
+        debug('Ignore findDeployment 404');
       } else {
         stopSpinner();
         throw err;
@@ -151,50 +151,50 @@ module.exports = async function main(ctx) {
 
     if (match !== null && typeof match !== 'undefined') {
       debug('Found deployment that matches app name');
-      deployments = Array.of(match)
+      deployments = Array.of(match);
     }
   }
 
   if (app && !deployments.length) {
-    debug('No deployments: attempting to find aliases that matches supplied app name')
-    const aliases = await getAliases(now)
-    const item = aliases.find(e => e.uid === app || e.alias === app)
+    debug('No deployments: attempting to find aliases that matches supplied app name');
+    const aliases = await getAliases(now);
+    const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {
       debug('Found alias that matches app name');
-      const match = await now.findDeployment(item.deploymentId)
-      const instances = await getDeploymentInstances(now, item.deploymentId, 'now_cli_alias_instances')
-      match.instanceCount = Object.keys(instances).reduce((count, dc) => count + instances[dc].instances.length, 0)
+      const match = await now.findDeployment(item.deploymentId);
+      const instances = await getDeploymentInstances(now, item.deploymentId, 'now_cli_alias_instances');
+      match.instanceCount = Object.keys(instances).reduce((count, dc) => count + instances[dc].instances.length, 0);
       if (match !== null && typeof match !== 'undefined') {
-        deployments = Array.of(match)
+        deployments = Array.of(match);
       }
     }
   }
 
-  now.close()
+  now.close();
 
   if (argv['--all']) {
     await Promise.all(
       deployments.map(async ({ uid, instanceCount }, i) => {
         deployments[i].instances = instanceCount > 0
           ? await now.listInstances(uid)
-          : []
+          : [];
       })
-    )
+    );
   }
 
   if (host) {
     deployments = deployments.filter(deployment => {
-      return deployment.url === host
-    })
+      return deployment.url === host;
+    });
   }
 
-  stopSpinner()
+  stopSpinner();
   log(
     `${
       plural('total deployment', deployments.length, true)
     } found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
-  )
+  );
 
   // we don't output the table headers if we have no deployments
   if (!deployments.length) {
@@ -203,12 +203,12 @@ module.exports = async function main(ctx) {
 
   // information to help the user find other deployments or instances
   if (app == null) {
-    log(`To list more deployments for an app run ${cmd('now ls [app]')}`)
+    log(`To list more deployments for an app run ${cmd('now ls [app]')}`);
   } else if (!argv['--all']) {
-    log(`To list deployment instances run ${cmd('now ls --all [app]')}`)
+    log(`To list deployment instances run ${cmd('now ls --all [app]')}`);
   }
 
-  print('\n')
+  print('\n');
 
   console.log(table([
     ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
@@ -252,8 +252,8 @@ module.exports = async function main(ctx) {
     align: ['l','l','r','l','b'],
     hsep: ' '.repeat(4),
     stringLength: strlen
-  }).replace(/^/gm, '  ') + '\n\n')
-}
+  }).replace(/^/gm, '  ') + '\n\n');
+};
 
 // renders the state string
 function stateString(s: string) {
@@ -268,7 +268,7 @@ function stateString(s: string) {
       return s;
 
     default:
-      return chalk.gray('UNKNOWN')
+      return chalk.gray('UNKNOWN');
   }
 }
 
@@ -276,14 +276,14 @@ function stateString(s: string) {
 function sortRecent() {
   return function recencySort(a, b) {
     return b.created - a.created;
-  }
+  };
 }
 
 // filters only one deployment per app, so that
 // the user doesn't see so many deployments at once.
 // this mode can be bypassed by supplying an app name
 function filterUniqueApps() {
-  const uniqueApps = new Set()
+  const uniqueApps = new Set();
   return function uniqueAppFilter([appName]) {
     if (uniqueApps.has(appName)) {
       return false;
@@ -291,5 +291,5 @@ function filterUniqueApps() {
       uniqueApps.add(appName);
       return true;
     }
-  }
+  };
 }

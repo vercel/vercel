@@ -1,24 +1,24 @@
 // Utilities
-const resolvers = require('./resolvers')
+const resolvers = require('./resolvers');
 
-const resolverNames = Object.keys(resolvers)
+const resolverNames = Object.keys(resolvers);
 
 module.exports = async (param, opts) => {
   for (const name of resolverNames) {
-    const resolver = resolvers[name]
-    let resolved
+    const resolver = resolvers[name];
+    let resolved;
 
     // give the caller the ability to create
     // nicer errors by attaching the resolver name
     try {
-      resolved = await resolver(param, opts)
+      resolved = await resolver(param, opts);
     } catch (err) {
-      err.resolverName = name
-      throw err
+      err.resolverName = name;
+      throw err;
     }
 
     if (resolved !== null) {
-      return resolved
+      return resolved;
     }
 
     // otherwise continue onto the next resolver
@@ -27,5 +27,5 @@ module.exports = async (param, opts) => {
     // when the parameter is unresolvable instead
   }
 
-  return null
-}
+  return null;
+};

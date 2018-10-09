@@ -1,29 +1,29 @@
 // Native
-const { resolve } = require('path')
+const { resolve } = require('path');
 
 // Packages
-const flatten = require('arr-flatten')
-const ignore = require('ignore')
-const dockerignore = require('@zeit/dockerignore')
-const _glob = require('glob')
-const { stat, readdir, readFile } = require('fs-extra')
+const flatten = require('arr-flatten');
+const ignore = require('ignore');
+const dockerignore = require('@zeit/dockerignore');
+const _glob = require('glob');
+const { stat, readdir, readFile } = require('fs-extra');
 
 // Utilities
-const IGNORED = require('./ignored')
-const uniqueStrings = require('./unique-strings')
-const getLocalConfigPath = require('../config/local-path')
+const IGNORED = require('./ignored');
+const uniqueStrings = require('./unique-strings');
+const getLocalConfigPath = require('../config/local-path');
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
     _glob(pattern, options, (error, files) => {
       if (error) {
-        reject(error)
+        reject(error);
       } else {
-        resolve(files)
+        resolve(files);
       }
-    })
-  })
-}
+    });
+  });
+};
 
 /**
  * Will recursivly walk through a directory and return an array of the files found within.
@@ -35,21 +35,21 @@ const glob = async function(pattern, options) {
  * @returns {Array}
  */
 const walkSync = async (dir, path, filelist = [], { output } = {}) => {
-  const { debug } = output
-  const dirc = await readdir(asAbsolute(dir, path))
+  const { debug } = output;
+  const dirc = await readdir(asAbsolute(dir, path));
   for (let file of dirc) {
-    file = asAbsolute(file, dir)
+    file = asAbsolute(file, dir);
     try {
-      const file_stat = await stat(file)
+      const file_stat = await stat(file);
       filelist = file_stat.isDirectory()
         ? await walkSync(file, path, filelist, { output })
-        : filelist.concat(file)
+        : filelist.concat(file);
     } catch (e) {
-      debug(`Ignoring invalid file ${file}`)
+      debug(`Ignoring invalid file ${file}`);
     }
   }
-  return filelist
-}
+  return filelist;
+};
 
 /**
  * Will return an array containing the expaneded list of all files included in the whitelist.
@@ -64,27 +64,27 @@ const getFilesInWhitelist = async function(
   path,
   { output } = {}
 ) {
-  const { debug } = output
-  let files = []
+  const { debug } = output;
+  let files = [];
 
   await Promise.all(
     whitelist.map(async file => {
-      file = asAbsolute(file, path)
+      file = asAbsolute(file, path);
       try {
-        const file_stat = await stat(file)
+        const file_stat = await stat(file);
         if (file_stat.isDirectory()) {
-          const dir_files = await walkSync(file, path, [], { output })
-          files.push(...dir_files)
+          const dir_files = await walkSync(file, path, [], { output });
+          files.push(...dir_files);
         } else {
-          files.push(file)
+          files.push(file);
         }
       } catch (e) {
-        debug(`Ignoring invalid file ${file}`)
+        debug(`Ignoring invalid file ${file}`);
       }
     })
-  )
-  return files
-}
+  );
+  return files;
+};
 
 /**
  * Remove leading `./` from the beginning of ignores
@@ -92,8 +92,8 @@ const getFilesInWhitelist = async function(
  */
 
 const clearRelative = function(str) {
-  return str.replace(/(\n|^)\.\//g, '$1')
-}
+  return str.replace(/(\n|^)\.\//g, '$1');
+};
 
 /**
  * Returns the contents of a file if it exists.
@@ -103,11 +103,11 @@ const clearRelative = function(str) {
 
 const maybeRead = async function(path, default_ = '') {
   try {
-    return await readFile(path, 'utf8')
+    return await readFile(path, 'utf8');
   } catch (err) {
-    return default_
+    return default_;
   }
-}
+};
 
 /**
  * Transform relative paths into absolutes,
@@ -119,11 +119,11 @@ const maybeRead = async function(path, default_ = '') {
 
 const asAbsolute = function(path, parent) {
   if (path[0] === '/') {
-    return path
+    return path;
   }
 
-  return resolve(parent, path)
-}
+  return resolve(parent, path);
+};
 
 /**
  * Returns a list of files in the given
@@ -142,15 +142,15 @@ async function staticFiles(
   nowConfig = {},
   { limit = null, output } = {}
 ) {
-  const { debug, time } = output
-  let files = []
+  const { debug, time } = output;
+  let files = [];
 
   if (nowConfig.files && Array.isArray(nowConfig.files)) {
-    files = await getFilesInWhitelist(nowConfig.files, path, { output })
+    files = await getFilesInWhitelist(nowConfig.files, path, { output });
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.']
+    const search_ = ['.'];
     // Convert all filenames into absolute paths
     const search = Array.prototype.concat.apply(
       [],
@@ -159,37 +159,37 @@ async function staticFiles(
           glob(file, { cwd: path, absolute: true, dot: true })
         )
       )
-    )
+    );
 
     // Compile list of ignored patterns and files
-    const gitIgnore = await maybeRead(resolve(path, '.gitignore'))
+    const gitIgnore = await maybeRead(resolve(path, '.gitignore'));
 
     const filter = ignore()
       .add(IGNORED + '\n' + clearRelative(gitIgnore))
       .add([ 'now.json' ])
-      .createFilter()
+      .createFilter();
 
-    const prefixLength = path.length + 1
+    const prefixLength = path.length + 1;
 
     // The package.json `files` whitelist still
     // honors npmignores: https://docs.npmjs.com/files/package.json#files
     // but we don't ignore if the user is explicitly listing files
     // under the now namespace, or using files in combination with gitignore
     const accepts = file => {
-      const relativePath = file.substr(prefixLength)
+      const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
-        return true
+        return true;
       }
 
-      const accepted = filter(relativePath)
+      const accepted = filter(relativePath);
 
       if (!accepted) {
-        debug(`Ignoring ${file}`)
+        debug(`Ignoring ${file}`);
       }
 
-      return accepted
-    }
+      return accepted;
+    };
 
     // Locate files
     files = await time(
@@ -199,11 +199,11 @@ async function staticFiles(
         limit,
         output
       })
-    )
+    );
   }
 
   // Get files
-  return uniqueStrings(files)
+  return uniqueStrings(files);
 }
 
 /**
@@ -225,16 +225,16 @@ async function npm(
   nowConfig = {},
   { limit = null, hasNowJson = false, output } = {}
 ) {
-  const { debug, time } = output
-  const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files)
-  let files = []
+  const { debug, time } = output;
+  const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
+  let files = [];
 
   if (whitelist) {
-    files = await getFilesInWhitelist(whitelist, path, { output })
+    files = await getFilesInWhitelist(whitelist, path, { output });
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.']
+    const search_ = ['.'];
     // Convert all filenames into absolute paths
     const search = Array.prototype.concat.apply(
       [],
@@ -243,12 +243,12 @@ async function npm(
           glob(file, { cwd: path, absolute: true, dot: true })
         )
       )
-    )
+    );
 
     // Compile list of ignored patterns and files
-    const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null)
+    const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null);
     const gitIgnore =
-      npmIgnore === null ? await maybeRead(resolve(path, '.gitignore')) : null
+      npmIgnore === null ? await maybeRead(resolve(path, '.gitignore')) : null;
 
     const filter = ignore()
       .add(
@@ -256,9 +256,9 @@ async function npm(
           '\n' +
           clearRelative(npmIgnore === null ? gitIgnore : npmIgnore)
       )
-      .createFilter()
+      .createFilter();
 
-    const prefixLength = path.length + 1
+    const prefixLength = path.length + 1;
 
     // The package.json `files` whitelist still
     // honors npmignores: https://docs.npmjs.com/files/package.json#files
@@ -267,22 +267,22 @@ async function npm(
     const overrideIgnores =
       (pkg.now && pkg.now.files) ||
       nowConfig.files ||
-      (gitIgnore !== null && pkg.files)
+      (gitIgnore !== null && pkg.files);
     const accepts = overrideIgnores
       ? () => true
       : file => {
-          const relativePath = file.substr(prefixLength)
+          const relativePath = file.substr(prefixLength);
 
           if (relativePath === '') {
-            return true
+            return true;
           }
 
-          const accepted = filter(relativePath)
+          const accepted = filter(relativePath);
           if (!accepted) {
-            debug(`Ignoring ${file}`)
+            debug(`Ignoring ${file}`);
           }
-          return accepted
-        }
+          return accepted;
+        };
 
     // Locate files
     files = await time(
@@ -292,19 +292,19 @@ async function npm(
         limit,
         output
       })
-    )
+    );
   }
 
   // Always include manifest as npm does not allow ignoring it
   // source: https://docs.npmjs.com/files/package.json#files
-  files.push(asAbsolute('package.json', path))
+  files.push(asAbsolute('package.json', path));
 
   if (hasNowJson) {
-    files.push(asAbsolute(getLocalConfigPath(path), path))
+    files.push(asAbsolute(getLocalConfigPath(path), path));
   }
 
   // Get files
-  return uniqueStrings(files)
+  return uniqueStrings(files);
 }
 
 /**
@@ -325,65 +325,65 @@ async function docker(
   nowConfig = {},
   { limit = null, hasNowJson = false, output } = {}
 ) {
-  const { debug, time } = output
-  let files = []
+  const { debug, time } = output;
+  let files = [];
 
   if (nowConfig.files) {
-    files = await getFilesInWhitelist(nowConfig.files, path, { output })
+    files = await getFilesInWhitelist(nowConfig.files, path, { output });
   } else {
     // Base search path
     // the now.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.']
+    const search_ = ['.'];
 
     // Convert all filenames into absolute paths
-    const search = search_.map(file => asAbsolute(file, path))
+    const search = search_.map(file => asAbsolute(file, path));
 
     // Compile list of ignored patterns and files
-    const dockerIgnore = await maybeRead(resolve(path, '.dockerignore'), null)
+    const dockerIgnore = await maybeRead(resolve(path, '.dockerignore'), null);
 
     const ignoredFiles = clearRelative(
       dockerIgnore === null
         ? await maybeRead(resolve(path, '.gitignore'))
         : dockerIgnore
-    )
+    );
 
     const filter = (dockerIgnore === null ? ignore : dockerignore)()
       .add(IGNORED + '\n' + ignoredFiles)
-      .createFilter()
+      .createFilter();
 
-    const prefixLength = path.length + 1
+    const prefixLength = path.length + 1;
     const accepts = function(file) {
-      const relativePath = file.substr(prefixLength)
+      const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
-        return true
+        return true;
       }
 
-      const accepted = filter(relativePath)
+      const accepted = filter(relativePath);
       if (!accepted) {
-        debug(`Ignoring ${file}`)
+        debug(`Ignoring ${file}`);
       }
-      return accepted
-    }
+      return accepted;
+    };
 
     // Locate files
     files = await time(
       `Locating files ${path}`,
       explode(search, { accepts, limit, output })
-    )
+    );
   }
 
   if (hasNowJson) {
-    files.push(asAbsolute(getLocalConfigPath(path), path))
+    files.push(asAbsolute(getLocalConfigPath(path), path));
   }
 
   // Always include manifest as npm does not allow ignoring it
   // source: https://docs.npmjs.com/files/package.json#files
-  files.push(asAbsolute('Dockerfile', path))
+  files.push(asAbsolute('Dockerfile', path));
 
   // Get files
-  return uniqueStrings(files)
+  return uniqueStrings(files);
 }
 
 /**
@@ -401,50 +401,50 @@ async function docker(
  */
 
 async function explode(paths, { accepts, output }) {
-  const { debug } = output
+  const { debug } = output;
   const list = async file => {
-    let path = file
-    let s
+    let path = file;
+    let s;
 
     if (!accepts(file)) {
-      return null
+      return null;
     }
 
     try {
-      s = await stat(path)
+      s = await stat(path);
     } catch (e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
-      path = file + '.js'
+      path = file + '.js';
 
       try {
-        s = await stat(path)
+        s = await stat(path);
       } catch (e2) {
-        debug(`Ignoring invalid file ${file}`)
-        return null
+        debug(`Ignoring invalid file ${file}`);
+        return null;
       }
     }
 
     if (s.isDirectory()) {
-      const all = await readdir(file)
+      const all = await readdir(file);
       /* eslint-disable no-use-before-define */
-      return many(all.map(subdir => asAbsolute(subdir, file)))
+      return many(all.map(subdir => asAbsolute(subdir, file)));
       /* eslint-enable no-use-before-define */
     } else if (!s.isFile()) {
-      debug(`Ignoring special file ${file}`)
-      return null
+      debug(`Ignoring special file ${file}`);
+      return null;
     }
 
-    return path
-  }
+    return path;
+  };
 
 
-  const many = all => Promise.all(all.map(file => list(file)))
-  return flatten(await many(paths)).filter(v => v !== null)
+  const many = all => Promise.all(all.map(file => list(file)));
+  return flatten(await many(paths)).filter(v => v !== null);
 }
 
 module.exports = {
   npm,
   docker,
   staticFiles
-}
+};

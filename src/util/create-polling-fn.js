@@ -1,5 +1,5 @@
 // @flow
-import sleep from 'then-sleep'
+import sleep from 'then-sleep';
 
 function createPollingFn<T>(
   future: (...args: any[]) => Promise<T>,
@@ -7,10 +7,10 @@ function createPollingFn<T>(
 ): (...args: any[]) => AsyncGenerator<T, void, void> {
   return async function* (...args: any[]) {
     while (true) {
-      yield await future(...args)
-      await sleep(sleepTime)
+      yield await future(...args);
+      await sleep(sleepTime);
     }
-  }
+  };
 }
 
-export default createPollingFn
+export default createPollingFn;

@@ -1,9 +1,9 @@
 // Packages
-const chalk = require('chalk')
-const table = require('text-table')
+const chalk = require('chalk');
+const table = require('text-table');
 
 // Utilities
-const strlen = require('./strlen')
+const strlen = require('./strlen');
 
 // header:
 // [ 'a', 'b', 'c', ... ]
@@ -27,35 +27,35 @@ module.exports = function formatTable(header, align, blocks, hsep = '    ') {
 
   for (let i = 0; i < nrCols; i++) {
     padding[i] = blocks.reduce((acc, block) => {
-      const maxLen = Math.max(...block.rows.map((row) => strlen(`${row[i]}`)))
-      return Math.max(acc, Math.ceil(maxLen / 8))
-    }, 1)
+      const maxLen = Math.max(...block.rows.map((row) => strlen(`${row[i]}`)));
+      return Math.max(acc, Math.ceil(maxLen / 8));
+    }, 1);
   }
 
   for (const block of blocks) {
     if (block.name) {
-      out += `${block.name}\n`
+      out += `${block.name}\n`;
     }
 
-    const rows = [ header.map(s => chalk.dim(s)) ].concat(block.rows)
+    const rows = [ header.map(s => chalk.dim(s)) ].concat(block.rows);
 
     if (rows.length > 0) {
-      rows[0][0] = ' ' + rows[0][0]
+      rows[0][0] = ' ' + rows[0][0];
 
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i].slice(0)
-        row[0] = ' ' + row[0]
+        const row = rows[i].slice(0);
+        row[0] = ' ' + row[0];
         for (let j = 0; j < nrCols; j++) {
-          const col = `${row[j]}`
-          const al = align[j] || 'l'
+          const col = `${row[j]}`;
+          const al = align[j] || 'l';
           const pad = padding[j] > 1 ? ' '.repeat(padding[j] * 8 - strlen(col)) : '';
-          rows[i][j] = al === 'l' ? col + pad : pad + col
+          rows[i][j] = al === 'l' ? col + pad : pad + col;
         }
       }
-      out += table(rows, { align, hsep, stringLength: strlen })
+      out += table(rows, { align, hsep, stringLength: strlen });
     }
-    out += '\n\n'
+    out += '\n\n';
   }
 
   return out.slice(0, -1);
-}
+};

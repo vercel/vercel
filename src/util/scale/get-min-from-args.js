@@ -1,13 +1,13 @@
 // @flow
-import getRawMinFromArgs from './get-raw-min-from-args'
+import getRawMinFromArgs from './get-raw-min-from-args';
 
 export default function getMinFromArgs(args: string[]) {
-  const result = getRawMinFromArgs(args)
+  const result = getRawMinFromArgs(args);
   return typeof result === 'string'
     ? toMinValue(result)
-    : result
+    : result;
 }
 
 function toMinValue(value: 'auto' | number) {
-  return value === 'auto' ? 0 : value
+  return value === 'auto' ? 0 : value;
 }

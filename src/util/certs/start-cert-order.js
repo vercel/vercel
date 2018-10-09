@@ -1,8 +1,8 @@
 // @flow
-import chalk from 'chalk'
-import { Now } from '../types'
-import wait from '../output/wait'
-import type { CertificateOrder } from '../types'
+import chalk from 'chalk';
+import { Now } from '../types';
+import wait from '../output/wait';
+import type { CertificateOrder } from '../types';
 
 export default async function startCertOrder(now: Now, cns: string[], contextName: string) {
   const cancelWait = wait(`Starting certificate issuance for ${chalk.bold(cns.join(', '))} under ${chalk.bold(contextName)}`);
@@ -13,11 +13,11 @@ export default async function startCertOrder(now: Now, cns: string[], contextNam
         op: "startOrder",
         domains: cns
       },
-    })
-    cancelWait()
-    return order
+    });
+    cancelWait();
+    return order;
   } catch (error) {
-    cancelWait()
-    throw error
+    cancelWait();
+    throw error;
   }
 }

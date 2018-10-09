@@ -1,17 +1,17 @@
 // @flow
-import chalk from 'chalk'
-import { handleError } from '../../util/error'
-import { Output } from '../../util/types'
-import createOutput from '../../util/output'
-import getArgs from '../../util/get-args'
-import getSubcommand from '../../util/get-subcommand'
-import logo from '../../util/output/logo'
-import type { CLIDomainsOptions } from '../../util/types'
+import chalk from 'chalk';
+import { handleError } from '../../util/error';
+import { Output } from '../../util/types';
+import createOutput from '../../util/output';
+import getArgs from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
+import logo from '../../util/output/logo';
+import type { CLIDomainsOptions } from '../../util/types';
 
-import add from './add'
-import buy from './buy'
-import ls from './ls'
-import rm from './rm'
+import add from './add';
+import buy from './buy';
+import ls from './ls';
+import rm from './rm';
 
 const help = () => {
   console.log(`
@@ -63,15 +63,15 @@ const help = () => {
   )} Add a domain using an external nameserver
 
       ${chalk.cyan('$ now domain add -e my-app.com')}
-`)
-}
+`);
+};
 
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
-}
+};
 
 module.exports = async function main(ctx: any): Promise<number> {
   let argv: CLIDomainsOptions;
@@ -84,19 +84,19 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--external': Boolean,
       '-c': '--coupon',
       '-e': '--external'
-    })
+    });
   } catch (error) {
     handleError(error);
     return 1;
   }
 
   if (argv['--help']) {
-    help()
+    help();
     return 2;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] })
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
+  const output: Output = createOutput({ debug: argv['--debug'] });
+  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
@@ -107,4 +107,4 @@ module.exports = async function main(ctx: any): Promise<number> {
     default:
       return ls(ctx, argv, args, output);
   }
-}
+};

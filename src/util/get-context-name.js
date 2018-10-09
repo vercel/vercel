@@ -1,57 +1,57 @@
-const getUser = require('./get-user')
-const NowTeams = require('./teams')
-const param = require('./output/param')
+const getUser = require('./get-user');
+const NowTeams = require('./teams');
+const param = require('./output/param');
 
-const loginCommand = param('now login')
-const TokenError = new Error(`Your access token has been revoked. You can log in again using ${loginCommand}.`)
+const loginCommand = param('now login');
+const TokenError = new Error(`Your access token has been revoked. You can log in again using ${loginCommand}.`);
 
-TokenError.code = 'not_authorized'
+TokenError.code = 'not_authorized';
 
 module.exports = async function getContextName({ apiUrl, token, debug, currentTeam }) {
   if (currentTeam) {
-    let list = []
+    let list = [];
 
     try {
-      const teams = new NowTeams({ apiUrl, token, debug })
-      list = (await teams.ls()).teams
+      const teams = new NowTeams({ apiUrl, token, debug });
+      list = (await teams.ls()).teams;
     } catch (err) {
       if (err.code === 'not_authorized') {
-        throw TokenError
+        throw TokenError;
       }
 
-      throw err
+      throw err;
     }
 
-    const related = list.find(team => team.id === currentTeam)
+    const related = list.find(team => team.id === currentTeam);
 
     if (!related) {
-      const cmd = param('now switch')
-      const error = new Error(`Your team was deleted. You can switch to a different one using ${cmd}.`)
+      const cmd = param('now switch');
+      const error = new Error(`Your team was deleted. You can switch to a different one using ${cmd}.`);
 
-      error.code = 'team_deleted'
-      throw error
+      error.code = 'team_deleted';
+      throw error;
     }
 
     return {
       contextName: related.slug,
       platformVersion: related.platformVersion
-    }
+    };
   }
 
-  let user = null
+  let user = null;
 
   try {
-    user = await getUser({ apiUrl, token })
+    user = await getUser({ apiUrl, token });
   } catch (err) {
     if (err.code === 'not_authorized') {
-      throw TokenError
+      throw TokenError;
     }
 
-    throw err
+    throw err;
   }
 
   return {
     contextName: user.username || user.email,
     platformVersion: user.platformVersion
-  }
-}
+  };
+};

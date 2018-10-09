@@ -17,7 +17,7 @@ const mainCommands = new Set([
   'logout',
   'whoami',
   'inspect'
-])
+]);
 
 const aliases = {
   list: ['ls'],
@@ -30,38 +30,38 @@ const aliases = {
   upgrade: ['downgrade'],
   teams: ['team', 'switch'],
   logs: ['log']
-}
+};
 
-const subcommands = new Set(mainCommands)
+const subcommands = new Set(mainCommands);
 
 // Add aliases to available sub commands
 for (const alias in aliases) {
-  const items = aliases[alias]
+  const items = aliases[alias];
 
   for (const item of items) {
-    subcommands.add(item)
+    subcommands.add(item);
   }
 }
 
 const details = {
   title: 'now.sh',
   subcommands
-}
+};
 
 for (const subcommand of mainCommands) {
-  let handlers = [subcommand]
+  let handlers = [subcommand];
 
   if (aliases[subcommand]) {
-    handlers = handlers.concat(aliases[subcommand])
+    handlers = handlers.concat(aliases[subcommand]);
   }
 
   for (const handler of handlers) {
     Object.defineProperty(details, handler, {
       get() {
-        return require(`./${subcommand}`)
+        return require(`./${subcommand}`);
       }
-    })
+    });
   }
 }
 
-module.exports = details
+module.exports = details;

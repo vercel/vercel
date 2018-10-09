@@ -12,7 +12,7 @@ export class NowError<T, M> extends Error {
   code: T;
 
   constructor({ code, message, meta }: NowErrorArgs<T, M>) {
-    super(message)
+    super(message);
     this.code = code;
     this.meta = meta;
   }

@@ -1,5 +1,5 @@
-const { yellow } = require('chalk')
+const { yellow } = require('chalk');
 
-const note = msg => `${yellow('> NOTE:')} ${msg}`
+const note = msg => `${yellow('> NOTE:')} ${msg}`;
 
-module.exports = note
+module.exports = note;

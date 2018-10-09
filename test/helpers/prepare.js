@@ -1,9 +1,9 @@
 // Native
-const { join } = require('path')
+const { join } = require('path');
 
 // Packages
-const { imageSync: getImageFile } = require('qr-image')
-const { ensureDir, writeFile } = require('fs-extra')
+const { imageSync: getImageFile } = require('qr-image');
+const { ensureDir, writeFile } = require('fs-extra');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest
@@ -18,7 +18,7 @@ const getDockerFile = session => `
 
   EXPOSE 3000
   CMD ["yarn", "start"]
-`
+`;
 
 const getPackageFile = session => `
   {
@@ -32,13 +32,13 @@ const getPackageFile = session => `
       "micro": "latest"
     }
   }
-`
+`;
 
 const getIndexFile = session => `
   module.exports = () => ({
     id: '${session}'
   })
-`
+`;
 
 module.exports = async session => {
   const files = {
@@ -51,7 +51,7 @@ module.exports = async session => {
     'second.png': getImageFile(session, {
       size: 20
     })
-  }
+  };
 
   const spec = {
     'dockerfile': [
@@ -103,28 +103,28 @@ RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `
     }
-  }
+  };
 
   for (const type of Object.keys(spec)) {
-    const needed = spec[type]
-    const directory = join(__dirname, '..', 'fixtures', 'integration', type)
-    await ensureDir(directory)
+    const needed = spec[type];
+    const directory = join(__dirname, '..', 'fixtures', 'integration', type);
+    await ensureDir(directory);
 
     if(Array.isArray(needed)) {
       // Get content from the defined files
       for (const name of needed) {
-        const file = join(directory, name)
-        const content = files[name]
-        await writeFile(file, content)
+        const file = join(directory, name);
+        const content = files[name];
+        await writeFile(file, content);
       }
     } else {
       // Get content from the object property
-      const names = Object.keys(needed)
+      const names = Object.keys(needed);
       for (const name of names) {
-        const file = join(directory, name)
-        const content = needed[name]
-        await writeFile(file, content)
+        const file = join(directory, name);
+        const content = needed[name];
+        await writeFile(file, content);
       }
     }
   }
-}
+};

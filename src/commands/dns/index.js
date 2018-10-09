@@ -1,16 +1,16 @@
 // @flow
-import chalk from 'chalk'
-import createOutput from '../../util/output'
-import getArgs from '../../util/get-args'
-import getSubcommand from '../../util/get-subcommand'
-import logo from '../../util/output/logo'
-import { Output } from '../../util/types'
-import { handleError } from '../../util/error'
-import type { CLIDNSOptions } from '../../util/types'
+import chalk from 'chalk';
+import createOutput from '../../util/output';
+import getArgs from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
+import logo from '../../util/output/logo';
+import { Output } from '../../util/types';
+import { handleError } from '../../util/error';
+import type { CLIDNSOptions } from '../../util/types';
 
-import add from './add'
-import ls from './ls'
-import rm from './rm'
+import add from './add';
+import ls from './ls';
+import rm from './rm';
 
 const help = () => {
   console.log(`
@@ -68,14 +68,14 @@ const help = () => {
         `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
       ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
-`)
-}
+`);
+};
 
 const COMMAND_CONFIG = {
   add: ['add'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
-}
+};
 
 module.exports = async function main(ctx: any): Promise<number> {
   let argv: CLIDNSOptions;
@@ -88,12 +88,12 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
 
   if (argv['--help']) {
-    help()
+    help();
     return 2;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] })
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
+  const output: Output = createOutput({ debug: argv['--debug'] });
+  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
@@ -102,4 +102,4 @@ module.exports = async function main(ctx: any): Promise<number> {
     default:
       return ls(ctx, argv, args, output);
   }
-}
+};

@@ -1,8 +1,8 @@
 // Native
-const { createHash } = require('crypto')
+const { createHash } = require('crypto');
 
 // Packages
-const { readFile } = require('fs-extra')
+const { readFile } = require('fs-extra');
 
 /**
   * Computes hashes for the contents of each file given.
@@ -12,22 +12,22 @@ const { readFile } = require('fs-extra')
   */
 
 async function hashes(files) {
-  const map = new Map()
+  const map = new Map();
 
   await Promise.all(
     files.map(async name => {
-      const data = await readFile(name)
+      const data = await readFile(name);
 
-      const h = hash(data)
-      const entry = map.get(h)
+      const h = hash(data);
+      const entry = map.get(h);
       if (entry) {
-        entry.names.push(name)
+        entry.names.push(name);
       } else {
-        map.set(hash(data), { names: [name], data })
+        map.set(hash(data), { names: [name], data });
       }
     })
-  )
-  return map
+  );
+  return map;
 }
 
 /**
@@ -38,7 +38,7 @@ async function hashes(files) {
  */
 
 function hash(buf) {
-  return createHash('sha1').update(buf).digest('hex')
+  return createHash('sha1').update(buf).digest('hex');
 }
 
-module.exports = hashes
+module.exports = hashes;

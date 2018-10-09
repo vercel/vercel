@@ -1,5 +1,5 @@
-const { gray, cyan } = require('chalk')
+const { gray, cyan } = require('chalk');
 
-const cmd = text => `${gray('`')}${cyan(text)}${gray('`')}`
+const cmd = text => `${gray('`')}${cyan(text)}${gray('`')}`;
 
-module.exports = cmd
+module.exports = cmd;

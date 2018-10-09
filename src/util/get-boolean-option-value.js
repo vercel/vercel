@@ -1,9 +1,9 @@
 // @flow
-import { ConflictingOption } from './errors'
+import { ConflictingOption } from './errors';
 
 export default function getBooleanOptionValue(opts: {}, name: string) {
-  const positiveValue = typeof opts[`--${name}`] !== 'undefined'
-  const negativeValue = typeof opts[`--no-${name}`] !== 'undefined'
+  const positiveValue = typeof opts[`--${name}`] !== 'undefined';
+  const negativeValue = typeof opts[`--no-${name}`] !== 'undefined';
 
   if (positiveValue && negativeValue) {
     return new ConflictingOption(name);

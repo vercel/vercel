@@ -13,4 +13,4 @@ export const REGION_TO_DC = {
   gru: 'gru1',
   sfo: 'sfo1',
   iad: 'iad1'
-}
+};

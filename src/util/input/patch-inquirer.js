@@ -1,5 +1,5 @@
-const inquirer = require('inquirer')
-const chalk = require('chalk')
+const inquirer = require('inquirer');
+const chalk = require('chalk');
 
 // Here we patch inquirer to use a `>` instead of the ugly green `?`
 
@@ -16,5 +16,5 @@ const getQuestion = function() {
 }
 /* eslint-enable */
 
-inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion
-inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion
+inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
+inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;

@@ -1,16 +1,16 @@
 // Native
-const { resolve } = require('path')
+const { resolve } = require('path');
 
 // Packages
-const { existsSync } = require('fs-extra')
+const { existsSync } = require('fs-extra');
 
 const fsResolver = async (param, { cwd = process.cwd() } = {}) => {
-  const resolved = resolve(cwd, param)
+  const resolved = resolve(cwd, param);
   if (existsSync(resolved)) {
-    return resolved
+    return resolved;
   } else {
-    return null
+    return null;
   }
-}
+};
 
-module.exports = fsResolver
+module.exports = fsResolver;

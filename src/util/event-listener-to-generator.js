@@ -1,5 +1,5 @@
 // @flow
-import type { Readable } from 'stream'
+import type { Readable } from 'stream';
 
 async function* eventListenerToGenerator(event: string, emitter: Readable): AsyncGenerator<any, any, any> {
   while (true) {
@@ -13,4 +13,4 @@ async function* eventListenerToGenerator(event: string, emitter: Readable): Asyn
   }
 }
 
-export default eventListenerToGenerator
+export default eventListenerToGenerator;

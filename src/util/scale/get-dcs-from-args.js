@@ -1,8 +1,8 @@
 // @flow
-import isValidMinMaxValue from './is-valid-min-max-value'
-import normalizeRegionsList from './normalize-regions-list'
+import isValidMinMaxValue from './is-valid-min-max-value';
+import normalizeRegionsList from './normalize-regions-list';
 
 export default function getDCsFromArgs(args: string[]) {
-  const dcIds = (isValidMinMaxValue(args[2]) ? 'all' : args[2]).split(',')
-  return normalizeRegionsList(dcIds)
+  const dcIds = (isValidMinMaxValue(args[2]) ? 'all' : args[2]).split(',');
+  return normalizeRegionsList(dcIds);
 }

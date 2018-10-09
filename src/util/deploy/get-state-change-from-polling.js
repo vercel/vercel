@@ -1,11 +1,11 @@
 // @flow
-import sleep from 'then-sleep'
-import { Now } from '../types'
-import createPollingFn from '../create-polling-fn'
-import type { StateChangeEvent } from '../types'
-import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw'
+import sleep from 'then-sleep';
+import { Now } from '../types';
+import createPollingFn from '../create-polling-fn';
+import type { StateChangeEvent } from '../types';
+import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw';
 
-const POLLING_INTERVAL = 5000
+const POLLING_INTERVAL = 5000;
 
 async function* getStatusChangeFromPolling(
   now: Now,
@@ -13,20 +13,20 @@ async function* getStatusChangeFromPolling(
   idOrHost: string,
   initialState: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
 ): AsyncGenerator<StateChangeEvent, void, void> {
-  const pollDeployment = createPollingFn(getDeploymentByIdOrThrow, POLLING_INTERVAL)
-  let prevState = initialState
+  const pollDeployment = createPollingFn(getDeploymentByIdOrThrow, POLLING_INTERVAL);
+  let prevState = initialState;
   for await (const deployment of pollDeployment(now, contextName, idOrHost)) {
     if (prevState !== deployment.state) {
-      await sleep(5000)
+      await sleep(5000);
       yield {
         type: 'state-change',
         created: Date.now(),
         payload: { value: deployment.state }
-      }
+      };
     } else {
-      prevState = deployment.state
+      prevState = deployment.state;
     }
   }
 }
 
-export default getStatusChangeFromPolling
+export default getStatusChangeFromPolling;

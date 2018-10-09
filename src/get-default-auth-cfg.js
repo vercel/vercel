@@ -1,9 +1,9 @@
 module.exports = async (existing) => {
-  let migrated = false
+  let migrated = false;
 
   const config = {
     _: 'This is your Now credentials file. DON\'T SHARE! More: https://goo.gl/mbf4CZ'
-  }
+  };
 
   if (existing) {
     try {
@@ -13,9 +13,9 @@ module.exports = async (existing) => {
         config.token = sh.token;
       }
 
-      migrated = true
+      migrated = true;
     } catch (err) {}
   }
 
-  return {config, migrated}
-}
+  return {config, migrated};
+};

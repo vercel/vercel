@@ -1,10 +1,10 @@
 //@flow
 
-import chalk from 'chalk'
-import logo from '../../util/output/logo'
-import { handleError } from '../../util/error'
-import getArgs from '../../util/get-args'
-import type { CLIContext, Output } from '../../util/types'
+import chalk from 'chalk';
+import logo from '../../util/output/logo';
+import { handleError } from '../../util/error';
+import getArgs from '../../util/get-args';
+import type { CLIContext, Output } from '../../util/types';
 
 const help = () => {
   console.log(`
@@ -119,8 +119,8 @@ exports.pipe = async function main(ctx: CLIContext, contextName: string, output:
     return 2;
   }
 
-  console.log(output)
-  console.log(await new Promise(resolve => resolve('test')))
+  console.log(output);
+  console.log(await new Promise(resolve => resolve('test')));
 
   return 2;
-}
+};

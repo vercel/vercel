@@ -5,9 +5,9 @@
  */
 function isZeitWorld(ns) {
   if (!ns.length) {
-    return false
+    return false;
   }
-  return ns.every(host => host.endsWith('.zeit.world'))
+  return ns.every(host => host.endsWith('.zeit.world'));
 }
 
-module.exports = isZeitWorld
+module.exports = isZeitWorld;

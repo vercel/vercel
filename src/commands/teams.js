@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
 // Packages
-const chalk = require('chalk')
-const mri = require('mri')
+const chalk = require('chalk');
+const mri = require('mri');
 
 // Utilities
-const error = require('../util/output/error')
-const NowTeams = require('../util/teams')
-const logo = require('../util/output/logo')
-const exit = require('../util/exit')
-const { handleError } = require('../util/error')
-const list = require('./teams/list')
-const add = require('./teams/add')
-const change = require('./teams/switch')
-const invite = require('./teams/invite')
+const error = require('../util/output/error');
+const NowTeams = require('../util/teams');
+const logo = require('../util/output/logo');
+const exit = require('../util/exit');
+const { handleError } = require('../util/error');
+const list = require('./teams/list');
+const add = require('./teams/add');
+const change = require('./teams/switch');
+const invite = require('./teams/invite');
 
 const help = () => {
   console.log(`
@@ -55,13 +55,13 @@ const help = () => {
   ${chalk.gray('–')} Invite new members (interactively)
 
       ${chalk.cyan(`$ now teams invite`)}
-  `)
-}
+  `);
+};
 
-let argv
-let debug
-let apiUrl
-let subcommand
+let argv;
+let debug;
+let apiUrl;
+let subcommand;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -71,56 +71,56 @@ const main = async ctx => {
       debug: 'd',
       switch: 'change'
     }
-  })
+  });
 
-  debug = argv.debug
-  apiUrl = ctx.apiUrl
+  debug = argv.debug;
+  apiUrl = ctx.apiUrl;
 
-  const isSwitch = argv._[0] && argv._[0] === 'switch'
+  const isSwitch = argv._[0] && argv._[0] === 'switch';
 
-  argv._ = argv._.slice(1)
+  argv._ = argv._.slice(1);
 
   if (isSwitch) {
-    subcommand = 'switch'
+    subcommand = 'switch';
   } else {
-    subcommand = argv._.shift()
+    subcommand = argv._.shift();
   }
 
   if (argv.help || !subcommand) {
-    help()
-    await exit(0)
+    help();
+    await exit(0);
   }
 
-  const {authConfig: { token }, config} = ctx
+  const {authConfig: { token }, config} = ctx;
 
   try {
-    return run({ token, config })
+    return run({ token, config });
   } catch (err) {
     if (err.userError) {
-      console.error(error(err.message))
+      console.error(error(err.message));
     } else {
-      console.error(error(`Unknown error: ${err.stack}`))
+      console.error(error(`Unknown error: ${err.stack}`));
     }
 
-    return 1
+    return 1;
   }
-}
+};
 
 module.exports = async ctx => {
   try {
-    return main(ctx)
+    return main(ctx);
   } catch (err) {
-    handleError(err)
-    return 1
+    handleError(err);
+    return 1;
   }
-}
+};
 
 async function run({ token, config }) {
-  const {currentTeam} = config
-  const teams = new NowTeams({ apiUrl, token, debug, currentTeam })
-  const args = argv._
+  const {currentTeam} = config;
+  const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
+  const args = argv._;
 
-  let exitCode
+  let exitCode;
   switch (subcommand) {
     case 'list':
     case 'ls': {
@@ -129,8 +129,8 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token
-      })
-      break
+      });
+      break;
     }
     case 'switch':
     case 'change': {
@@ -140,13 +140,13 @@ async function run({ token, config }) {
         apiUrl,
         token,
         debug
-      })
-      break
+      });
+      break;
     }
     case 'add':
     case 'create': {
-      exitCode = await add({ teams, config })
-      break
+      exitCode = await add({ teams, config });
+      break;
     }
 
     case 'invite': {
@@ -156,17 +156,17 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token
-      })
-      break
+      });
+      break;
     }
     default: {
       if (subcommand !== 'help') {
-        console.error(error('Please specify a valid subcommand: add | ls | switch | invite'))
-        exitCode = 1
+        console.error(error('Please specify a valid subcommand: add | ls | switch | invite'));
+        exitCode = 1;
       }
-      help()
+      help();
     }
   }
-  teams.close()
-  return exitCode || 0
+  teams.close();
+  return exitCode || 0;
 }

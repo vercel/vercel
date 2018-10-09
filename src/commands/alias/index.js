@@ -1,17 +1,17 @@
 // @flow
-import chalk from 'chalk'
+import chalk from 'chalk';
 
-import { handleError } from '../../util/error'
-import { Output } from '../../util/types'
-import createOutput from '../../util/output'
-import getArgs from '../../util/get-args'
-import getSubcommand from '../../util/get-subcommand'
-import logo from '../../util/output/logo'
-import type { CLIAliasOptions } from '../../util/types'
+import { handleError } from '../../util/error';
+import { Output } from '../../util/types';
+import createOutput from '../../util/output';
+import getArgs from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
+import logo from '../../util/output/logo';
+import type { CLIAliasOptions } from '../../util/types';
 
-import ls from './ls'
-import rm from './rm'
-import set from './set'
+import ls from './ls';
+import rm from './rm';
+import set from './set';
 
 const help = () => {
   console.log(`
@@ -82,18 +82,18 @@ const help = () => {
       ${chalk.cyan(
         `$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`
       )}
-`)
-}
+`);
+};
 
 const COMMAND_CONFIG = {
   default: 'set',
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
   set: ['set'],
-}
+};
 
 module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLIAliasOptions
+  let argv: CLIAliasOptions;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -104,19 +104,19 @@ module.exports = async function main(ctx: any): Promise<number> {
       '-n': '--no-verify',
       '-r': '--rules',
       '-y': '--yes',
-    })
+    });
   } catch (err) {
-    handleError(err)
+    handleError(err);
     return 1;
   }
 
   if (argv['--help']) {
-    help()
+    help();
     return 2;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] })
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
+  const output: Output = createOutput({ debug: argv['--debug'] });
+  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'ls':
       return ls(ctx, argv, args, output);
@@ -125,4 +125,4 @@ module.exports = async function main(ctx: any): Promise<number> {
     default:
       return set(ctx, argv, args, output);
   }
-}
+};

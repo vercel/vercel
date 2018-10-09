@@ -1,6 +1,6 @@
 // @flow
-import arg from 'arg'
-const getCommonArgs = require('./arg-common')
+import arg from 'arg';
+const getCommonArgs = require('./arg-common');
 
 type ArgOptions = {
   permissive?: boolean
@@ -10,7 +10,7 @@ function getArgs(argv: string[], argsOptions?: Object = {}, argOptions?: ArgOpti
   return arg({
     ...getCommonArgs(),
     ...argsOptions
-  }, { ...argOptions, argv })
+  }, { ...argOptions, argv });
 }
 
-export default getArgs
+export default getArgs;

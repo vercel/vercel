@@ -1,25 +1,25 @@
 // Packages
-const chalk = require('chalk')
+const chalk = require('chalk');
 
 // Utilities
-const regexes = require('../../util/input/regexes')
-const wait = require('../../util/output/wait')
-const fatalError = require('../../util/fatal-error')
-const cmd = require('../../util/output/cmd')
-const info = require('../../util/output/info')
-const stamp = require('../../util/output/stamp')
-const param = require('../../util/output/param')
-const { tick } = require('../../util/output/chars')
-const rightPad = require('../../util/output/right-pad')
-const textInput = require('../../util/input/text')
-const eraseLines = require('../../util/output/erase-lines')
-const success = require('../../util/output/success')
-const error = require('../../util/output/error')
-const getUser = require('../../util/get-user')
+const regexes = require('../../util/input/regexes');
+const wait = require('../../util/output/wait');
+const fatalError = require('../../util/fatal-error');
+const cmd = require('../../util/output/cmd');
+const info = require('../../util/output/info');
+const stamp = require('../../util/output/stamp');
+const param = require('../../util/output/param');
+const { tick } = require('../../util/output/chars');
+const rightPad = require('../../util/output/right-pad');
+const textInput = require('../../util/input/text');
+const eraseLines = require('../../util/output/erase-lines');
+const success = require('../../util/output/success');
+const error = require('../../util/output/error');
+const getUser = require('../../util/get-user');
 
 const validateEmail = data => {
-  return regexes.email.test(data.trim()) || data.length === 0
-}
+  return regexes.email.test(data.trim()) || data.length === 0;
+};
 
 const domains = Array.from(
   new Set([
@@ -36,137 +36,137 @@ const domains = Array.from(
     'gmx.com',
     'icloud.com'
   ])
-)
+);
 
 const emailAutoComplete = (value, teamSlug) => {
-  const parts = value.split('@')
+  const parts = value.split('@');
 
   if (parts.length === 2 && parts[1].length > 0) {
-    const [, host] = parts
-    let suggestion = false
+    const [, host] = parts;
+    let suggestion = false;
 
-    domains.unshift(teamSlug)
+    domains.unshift(teamSlug);
     for (const domain of domains) {
       if (domain.startsWith(host)) {
-        suggestion = domain.substr(host.length)
-        break
+        suggestion = domain.substr(host.length);
+        break;
       }
     }
 
-    domains.shift()
-    return suggestion
+    domains.shift();
+    return suggestion;
   }
 
-  return false
-}
+  return false;
+};
 
 module.exports = async function(
   { teams, args, config, introMsg, noopMsg = 'No changes made', apiUrl, token } = {}
 ) {
-  const { currentTeam: currentTeamId } = config
+  const { currentTeam: currentTeamId } = config;
 
-  let stopSpinner = wait('Fetching teams')
+  let stopSpinner = wait('Fetching teams');
 
-  const list = (await teams.ls()).teams
-  const currentTeam = list.find(team => team.id === currentTeamId)
+  const list = (await teams.ls()).teams;
+  const currentTeam = list.find(team => team.id === currentTeamId);
 
-  stopSpinner()
+  stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information')
-  const user = await getUser({ apiUrl, token })
+  let stopUserSpinner = wait('Fetching user information');
+  const user = await getUser({ apiUrl, token });
 
-  stopUserSpinner()
+  stopUserSpinner();
 
-  domains.push(user.email.split('@')[1])
+  domains.push(user.email.split('@')[1]);
 
   if (!currentTeam) {
     let err = `You can't run this command under ${param(
       user.username || user.email
-    )}.\n`
-    err += `${chalk.gray('>')} Run ${cmd('now switch')} to choose to a team.`
-    return fatalError(err)
+    )}.\n`;
+    err += `${chalk.gray('>')} Run ${cmd('now switch')} to choose to a team.`;
+    return fatalError(err);
   }
 
-  console.log(info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`))
+  console.log(info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`));
 
   if (args.length > 0) {
     for (const email of args) {
       if (regexes.email.test(email)) {
-        const stopSpinner = wait(email)
-        const elapsed = stamp()
+        const stopSpinner = wait(email);
+        const elapsed = stamp();
         // eslint-disable-next-line no-await-in-loop
-        await teams.inviteUser({ teamId: currentTeam.id, email })
-        stopSpinner()
-        console.log(`${chalk.cyan(tick)} ${email} ${elapsed()}`)
+        await teams.inviteUser({ teamId: currentTeam.id, email });
+        stopSpinner();
+        console.log(`${chalk.cyan(tick)} ${email} ${elapsed()}`);
       } else {
-        console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`)
+        console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
     }
-    return
+    return;
   }
 
-  const inviteUserPrefix = rightPad('Invite User', 14)
-  const emails = []
-  let hasError = false
-  let email
+  const inviteUserPrefix = rightPad('Invite User', 14);
+  const emails = [];
+  let hasError = false;
+  let email;
   do {
-    email = ''
+    email = '';
     try {
       // eslint-disable-next-line no-await-in-loop
       email = await textInput({
         label: `- ${inviteUserPrefix}`,
         validateValue: validateEmail,
         autoComplete: value => emailAutoComplete(value, currentTeam.slug)
-      })
+      });
     } catch (err) {
       if (err.message !== 'USER_ABORT') {
-        throw err
+        throw err;
       }
     }
-    let elapsed
-    let stopSpinner
+    let elapsed;
+    let stopSpinner;
     if (email) {
-      elapsed = stamp()
-      stopSpinner = wait(inviteUserPrefix + email)
+      elapsed = stamp();
+      stopSpinner = wait(inviteUserPrefix + email);
       try {
         // eslint-disable-next-line no-await-in-loop
-        await teams.inviteUser({ teamId: currentTeam.id, email })
-        stopSpinner()
-        email = `${email} ${elapsed()}`
-        emails.push(email)
-        console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
+        await teams.inviteUser({ teamId: currentTeam.id, email });
+        stopSpinner();
+        email = `${email} ${elapsed()}`;
+        emails.push(email);
+        console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
         if (hasError) {
-          hasError = false
-          process.stdout.write(eraseLines(emails.length + 2))
+          hasError = false;
+          process.stdout.write(eraseLines(emails.length + 2));
           console.log(info(
             introMsg ||
               `Inviting team members to ${chalk.bold(currentTeam.name)}`
-          ))
+          ));
           for (const email of emails) {
-            console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
+            console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
           }
         }
       } catch (err) {
-        stopSpinner()
-        process.stdout.write(eraseLines(emails.length + 2))
-        console.error(error(err.message))
-        hasError = true
+        stopSpinner();
+        process.stdout.write(eraseLines(emails.length + 2));
+        console.error(error(err.message));
+        hasError = true;
         for (const email of emails) {
-          console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
+          console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
         }
       }
     }
-  } while (email !== '')
+  } while (email !== '');
 
-  process.stdout.write(eraseLines(emails.length + 2))
+  process.stdout.write(eraseLines(emails.length + 2));
 
-  const n = emails.length
+  const n = emails.length;
   if (emails.length === 0) {
-    console.log(info(noopMsg))
+    console.log(info(noopMsg));
   } else {
-    console.log(success(`Invited ${n} team mate${n > 1 ? 's' : ''}`))
+    console.log(success(`Invited ${n} team mate${n > 1 ? 's' : ''}`));
     for (const email of emails) {
-      console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`)
+      console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
     }
   }
-}
+};

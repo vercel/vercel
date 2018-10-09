@@ -1,6 +1,6 @@
-import chalk from 'chalk'
-import table from 'text-table'
-import strlen from './strlen'
+import chalk from 'chalk';
+import table from 'text-table';
+import strlen from './strlen';
 
 export default function zeitWorldTable() {
   return table([
@@ -11,5 +11,5 @@ export default function zeitWorldTable() {
     align: ['l', 'l'],
     hsep: ' '.repeat(8),
     stringLength: strlen
-  }).replace(/^(.*)/gm, '    $1')
+  }).replace(/^(.*)/gm, '    $1');
 }

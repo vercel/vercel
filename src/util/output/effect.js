@@ -1,5 +1,5 @@
-const { gray } = require('chalk')
+const { gray } = require('chalk');
 
-const effect = msg => `${gray(`+ ${msg}`)}`
+const effect = msg => `${gray(`+ ${msg}`)}`;
 
-module.exports = effect
+module.exports = effect;

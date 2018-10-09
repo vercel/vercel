@@ -30,17 +30,17 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (argv._[0] === 'deploy') {
-    argv._.shift()
+    argv._.shift();
   }
 
-  let paths = []
+  let paths = [];
 
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(process.cwd(), item))
+    paths = argv._.map(item => resolve(process.cwd(), item));
   } else {
-    paths = [process.cwd()]
+    paths = [process.cwd()];
   }
 
   const output = createOutput({ debug: argv['--debug'] });
@@ -101,4 +101,4 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   return legacyPipe(ctx, contextName, output);
-}
+};

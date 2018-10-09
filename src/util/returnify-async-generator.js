@@ -11,18 +11,18 @@ type Maybe<T> = [Error, null] | [null, T]
 async function* returnify<T>(
   gx: () => AsyncIterator<T>
 ): AsyncGenerator<Maybe<T>, void, void> {
-  let it = gx()
+  let it = gx();
   while (true) {
     try {
       for await (const v of it) {
-        yield [null, v]
+        yield [null, v];
       }
       break;
     } catch (e) {
-      yield [(e: Error), null]
-      it = gx()
+      yield [(e: Error), null];
+      it = gx();
     }
   }
 }
 
-export default returnify
+export default returnify;

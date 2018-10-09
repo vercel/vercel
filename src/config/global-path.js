@@ -1,9 +1,9 @@
 // Native
-const { homedir } = require('os')
-const path = require('path')
+const { homedir } = require('os');
+const path = require('path');
 
 // Packages
-const mri = require('mri')
+const mri = require('mri');
 
 const getNowDir = () => {
   const args = mri(process.argv.slice(2), {
@@ -11,15 +11,15 @@ const getNowDir = () => {
     alias: {
       'global-config': 'Q'
     }
-  })
+  });
 
-  const customPath = args['global-config']
+  const customPath = args['global-config'];
 
   if (!customPath) {
-    return path.join(homedir(), '.now')
+    return path.join(homedir(), '.now');
   }
 
-  return path.resolve(customPath)
-}
+  return path.resolve(customPath);
+};
 
-module.exports = getNowDir
+module.exports = getNowDir;

@@ -1,42 +1,42 @@
 // @flow
-import chalk from 'chalk'
-import ms from 'ms'
-import plural from 'pluralize'
-import psl from 'psl'
-import table from 'text-table'
+import chalk from 'chalk';
+import ms from 'ms';
+import plural from 'pluralize';
+import psl from 'psl';
+import table from 'text-table';
 
-import Now from '../../util'
-import getContextName from '../../util/get-context-name'
-import stamp from '../../util/output/stamp'
-import getCerts from '../../util/certs/get-certs'
-import strlen from '../../util/strlen'
-import { CLIContext, Output } from '../../util/types'
-import type { CLICertsOptions } from '../../util/types'
+import Now from '../../util';
+import getContextName from '../../util/get-context-name';
+import stamp from '../../util/output/stamp';
+import getCerts from '../../util/certs/get-certs';
+import strlen from '../../util/strlen';
+import { CLIContext, Output } from '../../util/types';
+import type { CLICertsOptions } from '../../util/types';
 
 async function ls(ctx: CLIContext, opts: CLICertsOptions, args: string[], output: Output): Promise<number> {
-  const {authConfig: {token}, config} = ctx
+  const {authConfig: {token}, config} = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const debug = opts['--debug']
-  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam })
+  const debug = opts['--debug'];
+  const {contextName} = await getContextName({ apiUrl, token, debug, currentTeam });
 
   // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug, currentTeam })
-  const lsStamp = stamp()
+  const now = new Now({ apiUrl, token, debug, currentTeam });
+  const lsStamp = stamp();
 
   if (args.length !== 0) {
-    output.error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`)
+    output.error(`Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`);
     return 1;
   }
 
   // Get the list of certificates
-  const certs = sortByCn(await getCerts(output, now))
-  output.log(`${plural('certificate', certs.length, true)} found under ${chalk.bold(contextName)} ${lsStamp()}`)
+  const certs = sortByCn(await getCerts(output, now));
+  output.log(`${plural('certificate', certs.length, true)} found under ${chalk.bold(contextName)} ${lsStamp()}`);
 
   if (certs.length > 0) {
-    console.log(formatCertsTable(certs))
+    console.log(formatCertsTable(certs));
   }
-  return 0
+  return 0;
 }
 
 function formatCertsTable(certsList) {
@@ -48,7 +48,7 @@ function formatCertsTable(certsList) {
       hsep: ' '.repeat(2),
       stringLength: strlen
     }
-  ).replace(/^(.*)/gm, '  $1') + '\n'
+  ).replace(/^(.*)/gm, '  $1') + '\n';
 }
 
 function formatCertsTableHead() {
@@ -66,7 +66,7 @@ function formatCertsTableBody(certsList) {
   return certsList.reduce((result, cert) => ([
     ...result,
     ...formatCert(now, cert)
-  ]), [])
+  ]), []);
 }
 
 function formatCert(time, cert) {
@@ -74,17 +74,17 @@ function formatCert(time, cert) {
     (idx === 0)
       ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
       : formatCertNonFirstCn(cn, cert.cns.length > 1)
-  ))
+  ));
 }
 
 function formatCertNonFirstCn(cn, multiple) {
-  return ['', formatCertCn(cn, multiple), '', '', '']
+  return ['', formatCertCn(cn, multiple), '', '', ''];
 }
 
 function formatCertCn(cn, multiple) {
   return multiple
     ? `${chalk.gray('-')} ${chalk.bold(cn)}`
-    : chalk.bold(cn)
+    : chalk.bold(cn);
 }
 
 function formatCertFirstCn(time, cert, cn, multiple) {
@@ -94,14 +94,14 @@ function formatCertFirstCn(time, cert, cn, multiple) {
     formatExpirationDate(new Date(cert.expiration)),
     cert.autoRenew ? 'yes' : 'no',
     chalk.gray(ms(time - new Date(cert.created))),
-  ]
+  ];
 }
 
 function formatExpirationDate(date) {
-  const diff = date - Date.now()
+  const diff = date - Date.now();
   return diff < 0
     ? chalk.gray(ms(-diff) + ' ago')
-    : chalk.gray('in ' + ms(diff))
+    : chalk.gray('in ' + ms(diff));
 }
 
 /**
@@ -111,11 +111,11 @@ function formatExpirationDate(date) {
  */
 function sortByCn(certsList) {
   return certsList.concat().sort((a, b) => {
-    const domainA = psl.get(a.cns[0].replace('*', 'wildcard'))
-    const domainB = psl.get(b.cns[0].replace('*', 'wildcard'))
+    const domainA = psl.get(a.cns[0].replace('*', 'wildcard'));
+    const domainB = psl.get(b.cns[0].replace('*', 'wildcard'));
     if (!domainA || !domainB) return 0;
-    return domainA.localeCompare(domainB)
-  })
+    return domainA.localeCompare(domainB);
+  });
 }
 
-export default ls
+export default ls;

@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
 // Packages
-const mri = require('mri')
-const chalk = require('chalk')
-const fetch = require('node-fetch')
-const ora = require('ora')
+const mri = require('mri');
+const chalk = require('chalk');
+const fetch = require('node-fetch');
+const ora = require('ora');
 
 // Utilities
-const logo = require('../util/output/logo')
-const { handleError } = require('../util/error')
+const logo = require('../util/output/logo');
+const { handleError } = require('../util/error');
 const {
   readConfigFile,
   writeToConfigFile,
   readAuthConfigFile,
   writeToAuthConfigFile
-} = require('../util/config-files')
-const error = require('../util/output/error')
-const exit = require('../util/exit')
+} = require('../util/config-files');
+const error = require('../util/output/error');
+const exit = require('../util/exit');
 
 const help = () => {
   console.log(`
@@ -37,12 +37,12 @@ const help = () => {
   ${chalk.gray('–')} Logout from the CLI:
 
     ${chalk.cyan('$ now logout')}
-`)
-}
+`);
+};
 
-let argv
-let apiUrl
-let endpoint
+let argv;
+let apiUrl;
+let endpoint;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -50,115 +50,115 @@ const main = async ctx => {
     alias: {
       help: 'h'
     }
-  })
+  });
 
-  apiUrl = ctx.apiUrl
-  endpoint = apiUrl + '/user/tokens/'
+  apiUrl = ctx.apiUrl;
+  endpoint = apiUrl + '/user/tokens/';
 
-  argv._ = argv._.slice(1)
+  argv._ = argv._.slice(1);
 
   if (argv.help || argv._[0] === 'help') {
-    help()
-    await exit(0)
+    help();
+    await exit(0);
   }
 
-  logout()
-}
+  logout();
+};
 
 module.exports = async ctx => {
   try {
-    await main(ctx)
+    await main(ctx);
   } catch (err) {
-    handleError(err)
-    process.exit(1)
+    handleError(err);
+    process.exit(1);
   }
-}
+};
 
 const requestHeaders = token => ({
   headers: {
     Authorization: `bearer ${token}`
   }
-})
+});
 
 const getTokenId = async token => {
-  const result = await fetch(endpoint, requestHeaders(token))
-  const tokenList = await result.json()
+  const result = await fetch(endpoint, requestHeaders(token));
+  const tokenList = await result.json();
 
   if (!tokenList.tokens) {
-    return
+    return;
   }
 
-  const tokenInfo = tokenList.tokens.find(t => token === t.token)
+  const tokenInfo = tokenList.tokens.find(t => token === t.token);
 
   if (!tokenInfo) {
-    return
+    return;
   }
 
-  return tokenInfo.id
-}
+  return tokenInfo.id;
+};
 
 const revokeToken = async (token, tokenId) => {
   const details = {
     method: 'DELETE'
-  }
+  };
 
-  Object.assign(details, requestHeaders(token))
-  const result = await fetch(endpoint + encodeURIComponent(tokenId), details)
+  Object.assign(details, requestHeaders(token));
+  const result = await fetch(endpoint + encodeURIComponent(tokenId), details);
 
   if (!result.ok) {
-    console.error(error('Not able to log out'))
+    console.error(error('Not able to log out'));
   }
-}
+};
 
 const logout = async () => {
   const spinner = ora({
     text: 'Logging out...'
-  }).start()
+  }).start();
 
-  const configContent = readConfigFile()
-  const authContent = readAuthConfigFile()
+  const configContent = readConfigFile();
+  const authContent = readAuthConfigFile();
 
   // Copy the content
-  const token = `${authContent.token}`
+  const token = `${authContent.token}`;
 
-  delete configContent.user
-  delete configContent.currentTeam
+  delete configContent.user;
+  delete configContent.currentTeam;
 
   // The new user might have completely different teams, so
   // we should wipe the order.
   if (configContent.desktop) {
-    delete configContent.desktop.teamOrder
+    delete configContent.desktop.teamOrder;
   }
 
-  delete authContent.token
+  delete authContent.token;
 
   try {
-    await writeToConfigFile(configContent)
-    await writeToAuthConfigFile(authContent)
+    await writeToConfigFile(configContent);
+    await writeToAuthConfigFile(authContent);
   } catch (err) {
-    spinner.fail(`Couldn't remove config while logging out`)
-    process.exit(1)
+    spinner.fail(`Couldn't remove config while logging out`);
+    process.exit(1);
   }
 
-  let tokenId
+  let tokenId;
 
   try {
-    tokenId = await getTokenId(token)
+    tokenId = await getTokenId(token);
   } catch (err) {
-    spinner.fail('Not able to get token id on logout')
-    process.exit(1)
+    spinner.fail('Not able to get token id on logout');
+    process.exit(1);
   }
 
   if (!tokenId) {
-    return
+    return;
   }
 
   try {
-    await revokeToken(token, tokenId)
+    await revokeToken(token, tokenId);
   } catch (err) {
-    spinner.fail('Could not revoke token on logout')
-    process.exit(1)
+    spinner.fail('Could not revoke token on logout');
+    process.exit(1);
   }
 
-  spinner.succeed('Logged out!')
-}
+  spinner.succeed('Logged out!');
+};

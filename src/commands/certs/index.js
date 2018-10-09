@@ -1,18 +1,18 @@
 // @flow
-import chalk from 'chalk'
+import chalk from 'chalk';
 
-import { handleError } from '../../util/error'
-import { Output } from '../../util/types'
-import createOutput from '../../util/output'
-import getArgs from '../../util/get-args'
-import getSubcommand from '../../util/get-subcommand'
-import logo from '../../util/output/logo'
-import type { CLICertsOptions } from '../../util/types'
+import { handleError } from '../../util/error';
+import { Output } from '../../util/types';
+import createOutput from '../../util/output';
+import getArgs from '../../util/get-args';
+import getSubcommand from '../../util/get-subcommand';
+import logo from '../../util/output/logo';
+import type { CLICertsOptions } from '../../util/types';
 
-import add from './add'
-import issue from './issue'
-import ls from './ls'
-import rm from './rm'
+import add from './add';
+import issue from './issue';
+import ls from './ls';
+import rm from './rm';
 
 const help = () => {
   console.log(`
@@ -63,8 +63,8 @@ const help = () => {
       ${chalk.cyan(
         '$ now certs rm acme.com'
       )}
-  `)
-}
+  `);
+};
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -72,10 +72,10 @@ const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
   renew: ['renew'],
   rm: ['rm', 'remove']
-}
+};
 
 module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLICertsOptions
+  let argv: CLICertsOptions;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -85,34 +85,34 @@ module.exports = async function main(ctx: any): Promise<number> {
       '--crt': String,
       '--key': String,
       '--ca': String
-    })
+    });
   } catch (err) {
-    handleError(err)
-    return 1
+    handleError(err);
+    return 1;
   }
 
   if (argv['--help']) {
-    help()
-    return 0
+    help();
+    return 0;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] })
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG)
+  const output: Output = createOutput({ debug: argv['--debug'] });
+  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'issue':
-      return issue(ctx, argv, args, output)
+      return issue(ctx, argv, args, output);
     case 'ls':
-      return ls(ctx, argv, args, output)
+      return ls(ctx, argv, args, output);
     case 'rm':
-      return rm(ctx, argv, args, output)
+      return rm(ctx, argv, args, output);
     case 'add':
-      return add(ctx, argv, args, output)
+      return add(ctx, argv, args, output);
     case 'renew':
-      output.error('Renewing certificates is deprecated, issue a new one.')
-      return 1
+      output.error('Renewing certificates is deprecated, issue a new one.');
+      return 1;
     default:
-      output.error('Please specify a valid subcommand: ls | issue | rm')
-      help()
-      return 2
+      output.error('Please specify a valid subcommand: ls | issue | rm');
+      help();
+      return 2;
   }
-}
+};

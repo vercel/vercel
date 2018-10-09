@@ -1,7 +1,7 @@
 // @flow
-import wait from '../../util/output/wait'
-import { DomainPermissionDenied } from '../../util/errors'
-import { Now } from '../../util/types'
+import wait from '../../util/output/wait';
+import { DomainPermissionDenied } from '../../util/errors';
+import { Now } from '../../util/types';
 
 export type DomainInfo = {
   uid: string,
@@ -21,21 +21,21 @@ export type DomainInfo = {
 }
 
 async function getDomainInfo(now: Now, domain: string, context: string) {
-  const cancelMessage = wait(`Fetching domain info`)
+  const cancelMessage = wait(`Fetching domain info`);
   try {
-    const info: DomainInfo = await now.fetch(`/domains/${domain}`)
-    cancelMessage()
-    return info
+    const info: DomainInfo = await now.fetch(`/domains/${domain}`);
+    cancelMessage();
+    return info;
   } catch (error) {
-    cancelMessage()
+    cancelMessage();
     if (error.code === 'forbidden') {
-      return new DomainPermissionDenied(domain, context)
+      return new DomainPermissionDenied(domain, context);
     } else if (error.status === 404) {
-      return null
+      return null;
     } else {
-      throw error
+      throw error;
     }
   }
 }
 
-export default getDomainInfo
+export default getDomainInfo;

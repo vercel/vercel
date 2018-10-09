@@ -1,6 +1,6 @@
 // @flow
-import { Now, Output } from '../types'
-import { DomainNotFound, DNSPermissionDenied } from '../errors'
+import { Now, Output } from '../types';
+import { DomainNotFound, DNSPermissionDenied } from '../errors';
 
 export type RecordParams = {
   mxPriority?: number,
@@ -23,19 +23,19 @@ async function addDNSRecord(output: Output, now: Now, domain: string, recordPara
     const record: {uid: string, updated: number} = await now.fetch(`/v3/domains/${domain}/records`, {
       body: recordParams,
       method: 'POST'
-    })
-    return record
+    });
+    return record;
   } catch (error) {
     if (error.status === 403) {
-      return new DNSPermissionDenied(domain)
+      return new DNSPermissionDenied(domain);
     }
 
     if (error.status === 404) {
-      return new DomainNotFound(domain)
+      return new DomainNotFound(domain);
     }
 
-    throw error
+    throw error;
   }
 }
 
-export default addDNSRecord
+export default addDNSRecord;

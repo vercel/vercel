@@ -20,6 +20,6 @@ const ARG_COMMON = {
   '-Q': '--global-config',
 
   '--api': String
-}
+};
 
-module.exports = () => ARG_COMMON
+module.exports = () => ARG_COMMON;

@@ -1,26 +1,26 @@
 // Combines two o more async generators into one that stops when the first
 // generator finishes.
 export default async function* raceAsyncGenerators(...args) {
-  let nextPromises = args.map(i => i.next())
+  let nextPromises = args.map(i => i.next());
   while (nextPromises.length === args.length) {
     yield new Promise(resolve => {
-      let resolved = false
+      let resolved = false;
       nextPromises.forEach((nextPromise, idx) => {
         nextPromise.then(({ value, done }) => {
           if (!resolved) {
-            resolved = true
-            resolve(value)
+            resolved = true;
+            resolve(value);
             if (!done) {
-              nextPromises[idx] = args[idx].next()
+              nextPromises[idx] = args[idx].next();
             } else {
               nextPromises = [
                 ...nextPromises.slice(0, idx),
                 ...nextPromises.slice(idx + 1)
-              ]
+              ];
             }
           }
-        })
-      })
-    })
+        });
+      });
+    });
   }
 }
