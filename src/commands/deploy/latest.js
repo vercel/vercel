@@ -198,7 +198,7 @@ async function sync({ contextName, output, argv, apiUrl, stats, token, currentTe
   let deployStamp = stamp();
   let deployment: NewDeployment | null = null;
 
-    try {
+  try {
       // $FlowFixMe
       const createArgs = Object.assign(
         {
