@@ -59,7 +59,8 @@ const mriOpts = {
     'docker',
     'npm',
     'static',
-    'public'
+    'public',
+    'no-verify'
   ],
   default: {
     C: false,

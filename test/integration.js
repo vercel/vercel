@@ -559,7 +559,7 @@ test('use build-env', async t => {
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile')
 
-  const { stdout, code } = await execa(binaryPath, [
+  const { stdout, stderr, code } = await execa(binaryPath, [
     target,
     '--public',
     '--name',
@@ -572,6 +572,8 @@ test('deploy a dockerfile project', async t => {
   })
 
   // Ensure the exit code is right
+  console.log(stdout)
+  console.log(stderr)
   t.is(code, 0)
 
   // Test if the output is really a URL
