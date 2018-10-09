@@ -9,7 +9,7 @@ const POLLING_INTERVAL = 5000
 
 async function* getStatusChangeFromPolling(
   now: Now,
-  contextName: string,
+  contextName: ?string,
   idOrHost: string,
   initialState: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
 ): AsyncGenerator<StateChangeEvent, void, void> {

@@ -49,22 +49,8 @@ export interface CLIContext {
   apiUrl: string,
   config: {
     updateChannel: string,
-    type: string,
-    files: string[],
-    forwardNpm: boolean,
-    user: {
-      uid: string,
-      email: string,
-      username: string,
-      avatar: string
-    },
-    currentTeam: {
-      id: string,
-      slug: string,
-      name: string,
-      creatorId: string,
-      avatar: string,
-    }
+    user: string,
+    currentTeam: string
   },
 }
 

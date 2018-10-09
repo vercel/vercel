@@ -1,37 +1,29 @@
 //@flow
 
-// Native
-const { resolve, basename } = require('path')
-
-// Packages
-const { eraseLines } = require('ansi-escapes')
-const { write: copy } = require('clipboardy')
-const bytes = require('bytes')
-const chalk = require('chalk')
-const dotenv = require('dotenv')
-const fs = require('fs-extra')
-const inquirer = require('inquirer')
-const mri = require('mri')
-const ms = require('ms')
-const plural = require('pluralize')
-const Progress = require('progress')
-
-// Utilities
-const { handleError } = require('../../util/error')
-const { tick } = require('../../util/output/chars')
-const checkPath = require('../../util/check-path')
-const cmd = require('../../util/output/cmd')
-const createOutput = require('../../util/output')
-const exit = require('../../util/exit')
-const logo = require('../../util/output/logo')
-const Now = require('../../util')
-const uniq = require('../../util/unique-strings')
-const promptBool = require('../../util/input/prompt-bool')
-const promptOptions = require('../../util/prompt-options')
-const readMetaData = require('../../util/read-metadata')
-const toHumanPath = require('../../util/humanize-path')
-
-import { Output } from '../../util/types'
+import { resolve, basename } from 'path'
+import { eraseLines } from 'ansi-escapes'
+import { write as copy } from 'clipboardy'
+import bytes from 'bytes'
+import chalk from 'chalk'
+import dotenv from 'dotenv'
+import fs from 'fs-extra'
+import inquirer from 'inquirer'
+import mri from 'mri'
+import ms from 'ms'
+import plural from 'pluralize'
+import Progress from 'progress'
+import { handleError } from '../../util/error'
+import { tick } from '../../util/output/chars'
+import checkPath from '../../util/check-path'
+import cmd from '../../util/output/cmd'
+import exit from'../../util/exit'
+import logo from '../../util/output/logo'
+import Now from '../../util'
+import uniq from '../../util/unique-strings'
+import promptBool from '../../util/input/prompt-bool'
+import promptOptions from '../../util/prompt-options'
+import readMetaData from '../../util/read-metadata'
+import toHumanPath from '../../util/humanize-path'
 import * as Errors from '../../util/errors'
 import combineAsyncGenerators from '../../util/combine-async-generators'
 import createDeploy from '../../util/deploy/create-deploy'
@@ -50,7 +42,7 @@ import stamp from '../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import zeitWorldTable from '../../util/zeit-world-table'
 import type { Readable } from 'stream'
-import type { NewDeployment, DeploymentEvent } from '../../util/types'
+import type { Output, CLIContext, NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
 const mriOpts = {
@@ -89,6 +81,25 @@ const mriOpts = {
     alias: 'a'
   }
 }
+
+// The following arg parsing is simply to make it compatible
+// with the index. Let's not migrate it to the new args parsing, as
+// we are gonna delete this file soon anyways.
+const argList = {}
+
+for (const item of mriOpts.string) {
+  argList[`--${item}`] = String
+}
+
+for (const item of mriOpts.boolean) {
+  argList[`--${item}`] = Boolean
+}
+
+for (const item of Object.keys(mriOpts.alias)) {
+  argList[`-${mriOpts.alias[item]}`] = `--${item}`
+}
+
+exports.args = argList
 
 const help = () => {
   console.log(`
@@ -309,7 +320,7 @@ const promptForEnvFields = async list => {
   return answers
 }
 
-async function main(ctx: any, contextName: string) {
+exports.pipe = async function main(ctx: CLIContext, contextName: string, output: Output) {
   argv = mri(ctx.argv.slice(2), mriOpts)
 
   if (argv._[0] === 'deploy') {
@@ -336,7 +347,6 @@ async function main(ctx: any, contextName: string) {
   regions = (argv.regions || '').split(',').map(s => s.trim()).filter(Boolean)
   noVerify = argv['verify'] === false
   apiUrl = ctx.apiUrl
-  const output = createOutput({ debug: debugEnabled })
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
   isTTY = process.stdout.isTTY
@@ -1076,7 +1086,7 @@ async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
   }
 }
 
-function getEventsGenerator(now: Now, contextName: string, deployment: NewDeployment, eventsStream: null | Readable): AsyncGenerator<DeploymentEvent, void, void> {
+function getEventsGenerator(now: Now, contextName: ?string, deployment: NewDeployment, eventsStream: null | Readable): AsyncGenerator<DeploymentEvent, void, void> {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(now, contextName, deployment.deploymentId, deployment.readyState)
   if (eventsStream !== null) {
     return combineAsyncGenerators(
@@ -1172,5 +1182,3 @@ function handleCreateDeployError<OtherError>(output: Output, error: CreateDeploy
 
   return error
 }
-
-module.exports = main

@@ -4,8 +4,7 @@ import chalk from 'chalk'
 import logo from '../../util/output/logo'
 import { handleError } from '../../util/error'
 import getArgs from '../../util/get-args'
-import createOutput from '../../util/output'
-import type { CLIDomainsOptions, Output } from '../../util/types'
+import type { CLIContext, Output } from '../../util/types'
 
 const help = () => {
   console.log(`
@@ -90,24 +89,26 @@ const help = () => {
 `);
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLIDomainsOptions;
+exports.args = {
+  '--name': String,
+  '--force': Boolean,
+  '--links': Boolean,
+  '--public': Boolean,
+  '--env': [String],
+  '--build-env': [String],
+  '-n': '--name',
+  '-f': '--force',
+  '-l': '--links',
+  '-p': '--public',
+  '-e': '--env',
+  '-b': '--build-env'
+};
+
+exports.pipe = async function main(ctx: CLIContext, contextName: string, output: Output): Promise<number> {
+  let argv = null;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
-      '--name': String,
-      '--force': Boolean,
-      '--links': Boolean,
-      '--public': Boolean,
-      '--env': [String],
-      '--build-env': [String],
-      '-n': '--name',
-      '-f': '--force',
-      '-l': '--links',
-      '-p': '--public',
-      '-e': '--env',
-      '-b': '--build-env'
-    });
+    argv = getArgs(ctx.argv.slice(2), exports.args);
   } catch (error) {
     handleError(error);
     return 1;
@@ -118,9 +119,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     return 2;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] });
   console.log(output)
-
   console.log(await new Promise(resolve => resolve('test')))
 
   return 2;
