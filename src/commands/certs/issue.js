@@ -8,7 +8,7 @@ import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
 import dnsTable from '../../util/dns-table';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import type { CLICertsOptions } from '../../util/types';
@@ -40,7 +40,7 @@ export default async function issue(
     ['--ca']: caPath
   } = opts;
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

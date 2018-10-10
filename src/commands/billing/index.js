@@ -17,7 +17,7 @@ const info = require('../../util/output/info');
 const logo = require('../../util/output/logo');
 const addBilling = require('./add');
 const exit = require('../../util/exit');
-const getContextName = require('../../util/get-context-name');
+const getScope = require('../../util/get-scope');
 
 const help = () => {
   console.log(`
@@ -118,7 +118,7 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

@@ -5,7 +5,7 @@ import table from 'text-table';
 
 import Now from '../../util';
 import cmd from '../../util/output/cmd';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
@@ -25,7 +25,7 @@ export default async function rm(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

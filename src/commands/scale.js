@@ -10,7 +10,7 @@ import stamp from '../util/output/stamp';
 import * as Errors from '../util/errors';
 import Now from '../util/';
 import getArgs from '../util/get-args';
-import getContextName from '../util/get-context-name';
+import getScope from '../util/get-scope';
 import getDCsFromArgs from '../util/scale/get-dcs-from-args';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 import getDeploymentByIdOrThrow from '../util/deploy/get-deployment-by-id-or-throw';
@@ -98,7 +98,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const output: Output = createOutput({ debug });
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

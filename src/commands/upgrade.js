@@ -15,7 +15,7 @@ const success = require('../util/output/success');
 const cmd = require('../util/output/cmd');
 const logo = require('../util/output/logo');
 const { handleError } = require('../util/error');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 
 const { bold } = chalk;
 
@@ -89,7 +89,7 @@ const main = async ctx => {
 
   const { authConfig: { token }, config: { currentTeam } } = ctx;
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

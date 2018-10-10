@@ -16,7 +16,7 @@ const logo = require('../util/output/logo');
 const elapsed = require('../util/output/elapsed');
 const wait = require('../util/output/wait');
 const strlen = require('../util/strlen');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 const toHost = require('../util/to-host');
 
 import getAliases from '../util/alias/get-aliases';
@@ -98,7 +98,7 @@ module.exports = async function main(ctx) {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam, includeScheme } = config;
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

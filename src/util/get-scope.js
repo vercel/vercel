@@ -59,7 +59,7 @@ const allowed = new Set([
   'team'
 ]);
 
-module.exports = async function getContextName({
+module.exports = async function getScope({
   apiUrl,
   token,
   debug,

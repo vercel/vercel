@@ -1,7 +1,7 @@
 // @flow
 import chalk from 'chalk';
 import Now from '../../util';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
@@ -19,7 +19,7 @@ async function add(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

@@ -7,7 +7,7 @@ const chalk = require('chalk');
 // Utilities
 const logo = require('../util/output/logo');
 const { handleError } = require('../util/error');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 
 const help = () => {
   console.log(`
@@ -57,7 +57,7 @@ const main = async ctx => {
   const debug = argv['--debug'];
   const { authConfig: { token }, apiUrl } = ctx;
 
-  const { contextName: username } = await getContextName({
+  const { contextName: username } = await getScope({
     apiUrl,
     token,
     debug

@@ -13,7 +13,7 @@ const elapsed = require('../util/output/elapsed');
 const { maybeURL, normalizeURL, parseInstanceURL } = require('../util/url');
 const printEvents = require('../util/events');
 const wait = require('../util/output/wait');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 
 const help = () => {
   console.log(`
@@ -144,7 +144,7 @@ module.exports = async function main(ctx: any) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

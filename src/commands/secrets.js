@@ -13,7 +13,7 @@ const { handleError, error } = require('../util/error');
 const NowSecrets = require('../util/secrets');
 const exit = require('../util/exit');
 const logo = require('../util/output/logo');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 
 const help = () => {
   console.log(`
@@ -93,7 +93,7 @@ const main = async ctx => {
 
   const { authConfig: { token }, config: { currentTeam }} = ctx;
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

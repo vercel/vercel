@@ -6,7 +6,7 @@ import table from 'text-table';
 
 import { CLIContext, Output } from '../../util/types';
 import cmd from '../../util/output/cmd';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import type { CLIDomainsOptions, Certificate, Domain } from '../../util/types';
@@ -28,7 +28,7 @@ async function rm(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

@@ -4,7 +4,7 @@ import { resolve, basename } from 'path';
 import { lstat } from 'fs-extra';
 import { args as latestArgs, pipe as latestPipe } from './latest';
 import { args as legacyArgs, pipe as legacyPipe } from './legacy';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -61,7 +61,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (authConfig && authConfig.token) {
-    ({ contextName, platformVersion } = await getContextName({
+    ({ contextName, platformVersion } = await getScope({
       apiUrl,
       token: authConfig.token,
       debug: false,

@@ -8,7 +8,7 @@ import { CLIContext, Output } from '../../util/types';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import type { CLICertsOptions } from '../../util/types';
@@ -24,7 +24,7 @@ async function rm(
   const { apiUrl } = ctx;
   const rmStamp = stamp();
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

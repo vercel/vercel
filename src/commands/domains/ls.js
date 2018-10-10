@@ -5,7 +5,7 @@ import plural from 'pluralize';
 import table from 'text-table';
 
 import { CLIContext, Output } from '../../util/types';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import getDomains from '../../util/domains/get-domains';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import Now from '../../util';
@@ -24,7 +24,7 @@ async function ls(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

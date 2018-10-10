@@ -4,7 +4,7 @@ import ms from 'ms';
 import table from 'text-table';
 
 import Now from '../../util';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import stamp from '../../util/output/stamp';
@@ -22,7 +22,7 @@ async function rm(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

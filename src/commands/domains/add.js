@@ -10,7 +10,7 @@ import isDomainExternal from '../../util/domains/is-domain-external';
 import updateDomain from '../../util/domains/update-domain.js';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/dns-table';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import getBooleanOptionValue from '../../util/get-boolean-option-value';
 import Now from '../../util';
 import promptBool from '../../util/input/prompt-bool';
@@ -28,7 +28,7 @@ export default async function add(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

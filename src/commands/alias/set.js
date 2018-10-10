@@ -6,7 +6,7 @@ import { CLIContext, Output } from '../../util/types';
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/dns-table';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -36,7 +36,7 @@ export default async function set(
     ['--rules']: rulesPath
   } = opts;
 
-  const { contextName, user } = await getContextName({
+  const { contextName, user } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

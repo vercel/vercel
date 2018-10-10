@@ -5,7 +5,7 @@ import psl from 'psl';
 import { CLIContext, Output } from '../../util/types';
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import Now from '../../util';
@@ -26,7 +26,7 @@ export default async function buy(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

@@ -4,7 +4,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 
 import Now from '../../util';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import stamp from '../../util/output/stamp';
@@ -23,7 +23,7 @@ async function ls(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug,

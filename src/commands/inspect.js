@@ -13,7 +13,7 @@ const elapsed = require('../util/output/elapsed');
 const wait = require('../util/output/wait');
 const { handleError } = require('../util/error');
 const strlen = require('../util/strlen');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 
 import getArgs from '../util/get-args';
 
@@ -83,7 +83,7 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

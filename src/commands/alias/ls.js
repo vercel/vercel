@@ -7,7 +7,7 @@ import table from 'text-table';
 import Now from '../../util';
 import { CLIContext, Output } from '../../util/types';
 import getAliases from '../../util/alias/get-aliases';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
@@ -23,7 +23,7 @@ export default async function ls(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { ['--debug']: debugEnabled } = opts;
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

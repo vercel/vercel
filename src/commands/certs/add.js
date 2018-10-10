@@ -3,7 +3,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 
 import Now from '../../util';
-import getContextName from '../../util/get-context-name';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
 import dnsTable from '../../util/dns-table';
@@ -36,7 +36,7 @@ async function add(
     ['--ca']: caPath
   } = opts;
 
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,

@@ -16,7 +16,7 @@ const logo = require('../util/output/logo');
 const cmd = require('../util/output/cmd');
 const elapsed = require('../util/output/elapsed');
 const { normalizeURL } = require('../util/url');
-const getContextName = require('../util/get-context-name');
+const getScope = require('../util/get-scope');
 import getAliases from '../util/alias/get-aliases';
 
 const help = () => {
@@ -98,7 +98,7 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getContextName({
+  const { contextName } = await getScope({
     apiUrl,
     token,
     debug: debugEnabled,
