@@ -24,7 +24,6 @@ const ready = require('../util/output/ready');
 const param = require('../util/output/param');
 const eraseLines = require('../util/output/erase-lines');
 const sleep = require('../util/sleep');
-const getUser = require('../util/get-user');
 const {
   writeToAuthConfigFile,
   writeToConfigFile
@@ -313,30 +312,15 @@ const login = async ctx => {
   stopSpinner();
   console.log(ok('Email confirmed'));
 
-  stopSpinner = wait('Feching your personal details');
-
-  let user;
-
-  try {
-    user = await getUser({ apiUrl, token });
-  } catch (err) {
-    stopSpinner();
-    console.log(err);
-    return 1;
-  }
-
+  // There's no need to save the user since we always
+  // pull the user data fresh from the server.
   ctx.authConfig.token = token;
 
-  // Make sure we keep existing properties in the config
-  ctx.config.user = user.uid;
-
+  // New user, so we can't keep the team
   delete ctx.config.currentTeam;
 
   writeToAuthConfigFile(ctx.authConfig);
   writeToConfigFile(ctx.config);
-
-  stopSpinner();
-  console.log(ok('Fetched your personal details'));
 
   console.log(
     ready(

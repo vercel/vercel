@@ -9,11 +9,11 @@ module.exports = async existingCopy => {
   if (existingCopy) {
     const keep = [
       '_',
-      'user',
       'currentTeam',
       'desktop',
       'updateChannel',
       'api',
+      // This is deleted later in the code
       'shownTips'
     ];
 
