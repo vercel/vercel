@@ -55,15 +55,15 @@ const main = async ctx => {
   }
 
   const debug = argv['--debug'];
-  const { authConfig: { token }, config: { currentTeam }, apiUrl } = ctx;
-  const { contextName } = await getContextName({
+  const { authConfig: { token }, apiUrl } = ctx;
+
+  const { contextName: username } = await getContextName({
     apiUrl,
     token,
-    debug,
-    currentTeam
+    debug
   });
 
-  await whoami(contextName);
+  await whoami(username);
 };
 
 module.exports = async ctx => {
