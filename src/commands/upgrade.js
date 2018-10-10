@@ -15,6 +15,7 @@ const success = require('../util/output/success');
 const cmd = require('../util/output/cmd');
 const logo = require('../util/output/logo');
 const { handleError } = require('../util/error');
+const getContextName = require('../util/get-context-name');
 
 const { bold } = chalk;
 
@@ -86,10 +87,17 @@ const main = async ctx => {
     exit(0);
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const { authConfig: { token }, config: { currentTeam } } = ctx;
+
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   try {
-    await run({ token, config });
+    await run({ token, contextName, currentTeam });
   } catch (err) {
     if (err.userError) {
       console.error(error(err.message));
@@ -170,7 +178,7 @@ function buildInquirerChoices(current, until) {
   ];
 }
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, contextName, currentTeam }) {
   const args = argv._;
   if (args.length > 1) {
     console.error(error('Invalid number of arguments'));
@@ -198,11 +206,9 @@ async function run({ token, config: { currentTeam, user } }) {
 
     let message = `For more info, please head to https://zeit.co`;
     message = currentTeam
-      ? `${message}/${currentTeam.slug}/settings/plan`
+      ? `${message}/${contextName}/settings/plan`
       : `${message}/account/plan`;
-    message += `\n> Select a plan for ${bold(
-      (currentTeam && currentTeam.slug) || user.username || user.email
-    )} ${chalk.gray(`[${elapsed}]`)}`;
+    message += `\n> Select a plan for ${bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`;
     const choices = buildInquirerChoices(currentPlan.id, currentPlan.until);
 
     planId = await listInput({
