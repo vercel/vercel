@@ -206,7 +206,7 @@ async function run({ token, contextName, currentTeam }) {
 
     let message = `For more info, please head to https://zeit.co`;
     message = currentTeam
-      ? `${message}/${contextName}/settings/plan`
+      ? `${message}/teams/${contextName}/settings/plan`
       : `${message}/account/plan`;
     message += `\n> Select a plan for ${bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`;
     const choices = buildInquirerChoices(currentPlan.id, currentPlan.until);
