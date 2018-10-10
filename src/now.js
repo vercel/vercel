@@ -39,7 +39,6 @@ const getDefaultAuthCfg = require('./get-default-auth-cfg');
 const hp = require('./util/humanize-path');
 const commands = require('./commands');
 const configFiles = require('./util/config-files');
-const getUser = require('./util/get-user');
 const pkg = require('./util/pkg');
 
 import { Output } from './util/types';
@@ -367,13 +366,12 @@ const main = async argv_ => {
     ctx.argv.push('-h');
   }
 
-  const sh = ctx.config;
   ctx.apiUrl = 'https://api.zeit.co';
 
   if (argv['--api'] && typeof argv['--api'] === 'string') {
     ctx.apiUrl = argv['--api'];
-  } else if (sh && sh.api) {
-    ctx.apiUrl = sh.api;
+  } else if (ctx.config && ctx.config.api) {
+    ctx.apiUrl = ctx.config.api;
   }
 
   // If no credentials are set at all, prompt for
@@ -437,28 +435,13 @@ const main = async argv_ => {
 
     ctx.authConfig.token = token;
 
-    let user;
-
-    try {
-      user = await getUser({
-        apiUrl: ctx.apiUrl,
-        token
-      });
-    } catch (err) {
-      console.error(error(err));
-      return 1;
-    }
-
     // Don't use team from config if `--token` was set
     if (ctx.config && ctx.config.currentTeam) {
       delete ctx.config.currentTeam;
     }
-
-    ctx.config.sh = Object.assign(ctx.config || {}, { user });
   }
 
   if (typeof argv['--team'] === 'string' && subcommand !== 'login') {
-    const { sh } = ctx.config;
     const team = argv['--team'];
 
     if (team.length === 0) {
@@ -472,64 +455,47 @@ const main = async argv_ => {
       return 1;
     }
 
-    const cachedUser = sh && sh.user && sh.user.username === team;
+    const { token } = ctx.authConfig;
 
-    if (cachedUser) {
-      delete ctx.config.sh.currentTeam;
-    }
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
 
-    const cachedTeam = sh && sh.currentTeam && sh.currentTeam.slug === team;
+    const url = `https://api.zeit.co/teams/?slug=${team}`;
+    let body;
 
-    // Only download team data if not cached
-    if (!cachedTeam && !cachedUser) {
-      const { token } = ctx.authConfig;
+    try {
+      const res = await fetch(url, { headers });
 
-      const headers = {
-        Authorization: `Bearer ${token}`
-      };
-
-      const url = `https://api.zeit.co/teams/?slug=${team}`;
-      let body;
-
-      try {
-        const res = await fetch(url, { headers });
-
-        if (res.status === 403) {
-          console.error(
-            error({
-              message: `You don't have access to the specified team`,
-              slug: 'team-not-accessible'
-            })
-          );
-
-          return 1;
-        }
-
-        body = await res.json();
-      } catch (err) {
-        console.error(error('Not able to load teams'));
-        return 1;
-      }
-
-      if (!body || body.error) {
+      if (res.status === 403) {
         console.error(
           error({
-            message: "The specified team doesn't exist",
-            slug: 'team-not-existent'
+            message: `You don't have access to the specified team`,
+            slug: 'team-not-accessible'
           })
         );
 
         return 1;
       }
 
-      // $FlowFixMe
-      delete body.creator_id;
-
-      // $FlowFixMe
-      delete body.created;
-
-      ctx.config.sh.currentTeam = body;
+      body = await res.json();
+    } catch (err) {
+      console.error(error('Not able to load teams'));
+      return 1;
     }
+
+    if (!body || body.error) {
+      console.error(
+        error({
+          message: "The specified team doesn't exist",
+          slug: 'team-not-existent'
+        })
+      );
+
+      return 1;
+    }
+
+    ctx.config.currentTeam = body.id;
   }
 
   const runner = await commands[subcommand];

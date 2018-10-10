@@ -401,7 +401,7 @@ async function sync({
   contextName,
   output,
   token,
-  config: { currentTeam, user },
+  config: { currentTeam },
   firstRun,
   deploymentType
 }) {
@@ -985,8 +985,7 @@ async function sync({
           output,
           token,
           config: {
-            currentTeam,
-            user
+            currentTeam
           },
           firstRun: false,
           deploymentType

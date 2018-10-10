@@ -121,7 +121,6 @@ const logout = async () => {
   // Copy the content
   const token = `${authContent.token}`;
 
-  delete configContent.user;
   delete configContent.currentTeam;
 
   // The new user might have completely different teams, so

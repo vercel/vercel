@@ -13,6 +13,7 @@ const { handleError, error } = require('../util/error');
 const NowSecrets = require('../util/secrets');
 const exit = require('../util/exit');
 const logo = require('../util/output/logo');
+const getContextName = require('../util/get-context-name');
 
 const help = () => {
   console.log(`
@@ -90,10 +91,17 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const { authConfig: { token }, config: { currentTeam }} = ctx;
+
+  const { contextName } = await getContextName({
+    apiUrl,
+    token,
+    debug,
+    currentTeam
+  });
 
   try {
-    await run({ token, config });
+    await run({ token, contextName, currentTeam });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -109,7 +117,7 @@ module.exports = async ctx => {
   }
 };
 
-async function run({ token, config: { currentTeam, user } }) {
+async function run({ token, contextName, currentTeam }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -128,9 +136,7 @@ async function run({ token, config: { currentTeam, user } }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${plural('secret', list.length, true)} found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -243,9 +249,7 @@ async function run({ token, config: { currentTeam, user } }) {
     console.log(
       `${chalk.cyan('> Success!')} Secret ${chalk.bold(
         name.toLowerCase()
-      )} added (${chalk.bold(
-        (currentTeam && currentTeam.slug) || user.username || user.email
-      )}) ${chalk.gray(`[${elapsed}]`)}`
+      )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
