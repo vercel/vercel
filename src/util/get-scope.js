@@ -87,9 +87,12 @@ module.exports = async function getScope({
     user = await retrieveUser(apiUrl, token);
   }
 
+  // It's important to check for `currentTeam` here and not `team` because
+  // we only want to prefer the team if the config file has current team set
+  // and not if the function was asked to include it in the output.
   return {
-    contextName: team ? team.slug : (user.username || user.email),
-    platformVersion: (team || user).platformVersion,
+    contextName: currentTeam ? team.slug : (user.username || user.email),
+    platformVersion: currentTeam ? team.platformVersion : user.platformVersion,
     user,
     team
   };
