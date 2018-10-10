@@ -26,7 +26,7 @@ export default async function set(
   output: Output
 ): Promise<number> {
   const { authConfig: { token }, config } = ctx;
-  const { currentTeam, user } = config;
+  const { currentTeam } = config;
   const { apiUrl } = ctx;
   const setStamp = stamp();
 
@@ -36,11 +36,12 @@ export default async function set(
     ['--rules']: rulesPath
   } = opts;
 
-  const { contextName } = await getContextName({
+  const { contextName, user } = await getContextName({
     apiUrl,
     token,
     debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    required: new Set(['user'])
   });
 
   // $FlowFixMe

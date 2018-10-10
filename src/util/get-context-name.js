@@ -9,44 +9,7 @@ const TokenError = new Error(
 
 TokenError.code = 'not_authorized';
 
-module.exports = async function getContextName({
-  apiUrl,
-  token,
-  debug,
-  currentTeam
-}) {
-  if (currentTeam) {
-    let list = [];
-
-    try {
-      const teams = new NowTeams({ apiUrl, token, debug });
-      list = (await teams.ls()).teams;
-    } catch (err) {
-      if (err.code === 'not_authorized') {
-        throw TokenError;
-      }
-
-      throw err;
-    }
-
-    const related = list.find(team => team.id === currentTeam);
-
-    if (!related) {
-      const cmd = param('now switch');
-      const error = new Error(
-        `Your team was deleted. You can switch to a different one using ${cmd}.`
-      );
-
-      error.code = 'team_deleted';
-      throw error;
-    }
-
-    return {
-      contextName: related.slug,
-      platformVersion: related.platformVersion
-    };
-  }
-
+const retrieveUser = async (apiUrl, token) => {
   let user = null;
 
   try {
@@ -59,8 +22,75 @@ module.exports = async function getContextName({
     throw err;
   }
 
+  return user;
+};
+
+const retrieveTeam = async (apiUrl, token, debug, currentTeam) => {
+  let list = [];
+
+  try {
+    const teams = new NowTeams({ apiUrl, token, debug });
+    list = (await teams.ls()).teams;
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      throw TokenError;
+    }
+
+    throw err;
+  }
+
+  const related = list.find(team => team.id === currentTeam);
+
+  if (!related) {
+    const cmd = param('now switch');
+    const error = new Error(
+      `Your team was deleted. You can switch to a different one using ${cmd}.`
+    );
+
+    error.code = 'team_deleted';
+    throw error;
+  }
+
+  return related;
+};
+
+const allowed = new Set([
+  'user',
+  'team'
+]);
+
+module.exports = async function getContextName({
+  apiUrl,
+  token,
+  debug,
+  currentTeam,
+  required = new Set()
+}) {
+  if (Array.from(required).find(item => !allowed.has(item))) {
+    throw new Error('Only "user" and "team" are allowed inside `required`');
+  }
+
+  let team = null;
+  let user = null;
+
+  if (currentTeam) {
+    required.add('team');
+  } else {
+    required.add('user');
+  }
+
+  if (required.has('team')) {
+    team = await retrieveTeam(apiUrl, token, debug, currentTeam);
+  }
+
+  if (required.has('user')) {
+    user = await retrieveUser(apiUrl, token);
+  }
+
   return {
-    contextName: user.username || user.email,
-    platformVersion: user.platformVersion
+    contextName: team ? team.slug : (user.username || user.email),
+    platformVersion: (team || user).platformVersion,
+    user,
+    team
   };
 };
