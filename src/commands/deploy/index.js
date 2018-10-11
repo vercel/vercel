@@ -77,9 +77,11 @@ module.exports = async (ctx: CLIContext) => {
   );
 
   if (!localConfig) {
-    output.warn(
-      `Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`
-    );
+    if (!isHelp) {
+      output.warn(
+        `Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`
+      );
+    }
   } else {
     const { version } = localConfig;
 
