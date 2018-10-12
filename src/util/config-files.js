@@ -15,7 +15,6 @@ const NOW_DIR = getNowDir();
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json');
 const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json');
 const LOCAL_CONFIG_FILE_PATH = getLocalPathConfig(process.cwd());
-const PACKAGE_JSON_PATH = joinPath(process.cwd(), 'package.json');
 
 // reads `CONFIG_FILE_PATH` atomically
 const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
@@ -58,36 +57,6 @@ function readLocalConfig() {
       } else {
         const code = err.code ? `(${err.code})` : '';
         console.error(error(`Failed to read the \`now.json\` file ${code}`));
-      }
-
-      process.exit(1);
-    }
-  }
-
-  let packageJsonExists;
-
-  try {
-    packageJsonExists = existsSync(PACKAGE_JSON_PATH);
-  } catch (err) {
-    console.error(error('Failed to check if `package.json` exists'));
-    process.exit(1);
-  }
-
-  if (packageJsonExists) {
-    try {
-      const { now } = loadJSON.sync(PACKAGE_JSON_PATH);
-
-      if (now) {
-        return now;
-      }
-    } catch (err) {
-      if (err.name === 'JSONError') {
-        console.log(error(err.message));
-      } else {
-        const code = err.code ? `(${err.code})` : '';
-        console.error(
-          error(`Failed to read the \`package.json\` file ${code}`)
-        );
       }
 
       process.exit(1);
