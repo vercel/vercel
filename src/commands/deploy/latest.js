@@ -322,14 +322,6 @@ async function sync({
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
     const filesName = isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files';
 
-    const meta = {
-      name: argv['--name'] || filesName,
-      deploymentType: 'npm',
-      pkg: undefined,
-      nowConfig: undefined,
-      hasNowJson: false
-    };
-
     let syncCount;
     let deployStamp = stamp();
     let deployment: HandlersDeployment | null = null;
@@ -370,7 +362,9 @@ async function sync({
           isFile,
           isHandlers: true
         },
-        meta
+        {
+          name: argv['--name'] || filesName
+        }
       );
 
       deployStamp = stamp();
