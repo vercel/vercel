@@ -128,12 +128,15 @@ exports.args = {
 
 const prepareState = state => title(state.replace('_', ' '));
 
+// That's how long the word "Initializing" is
+const longestState = 12;
+
 const renderHandlers = (print, list, run) => {
   const final = table(
     [
       ...list.map(handler => {
         const {path, readyState, id} = handler;
-        const state = prepareState(readyState);
+        const state = prepareState(readyState).padEnd(longestState);
         const url = id ? `https://${id.replace('hdl_', '')}.invoke.sh` : '';
 
         let stateColor = chalk.grey;
