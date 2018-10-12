@@ -663,6 +663,25 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal))
 })
 
+test('try to deploy with invalid metadata key', async t => {
+  const target = fixture('node')
+
+  const { stderr, code } = await execa(binaryPath, [
+    target,
+    '--public',
+    '--name',
+    session,
+    '-m',
+    'a.b.c=hello',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 1)
+  t.true(stderr.includes('contains invalid characters'))
+})
+
 test.after.always(async t => {
   const { stdout, code } = await execa(binaryPath, [
     'ls',
