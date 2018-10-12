@@ -334,7 +334,11 @@ exports.pipe = async function main(
           quiet,
           wantsPublic: argv['--public'],
           isFile,
-          isHandlers: true
+          // The `handlers` or `routes` props are not
+          // strictly needed, so we need an additional argument.
+          isHandlers: true,
+          handlers: localConfig.handlers,
+          routes: localConfig.routes
         },
         {
           name: argv['--name'] || filesName

@@ -73,7 +73,9 @@ module.exports = class Now extends EventEmitter {
       sessionAffinity = 'ip',
       isFile = false,
       atlas = false,
-      isHandlers
+      isHandlers,
+      handlers = null,
+      routes = null
     }
   ) {
     const { log, warn, time } = this._output;
@@ -197,6 +199,8 @@ module.exports = class Now extends EventEmitter {
         name,
         description,
         files,
+        handlers,
+        routes
       } : {
         env,
         public: wantsPublic || nowConfig.public,
