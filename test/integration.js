@@ -110,7 +110,7 @@ test('log in', async t => {
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
-  const configFile = path.join(location, 'config.json');
+  const configFile = path.join(homedir(), '.now', 'config.json');
   const content = await readJSON(configFile);
   content.api = 'https://staging-bru1.zeit.co';
   await writeJSON(configFile, content);
