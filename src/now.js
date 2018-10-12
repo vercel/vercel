@@ -106,7 +106,7 @@ const main = async argv_ => {
 
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
-  // (as in: `now ls` or `now aws help`)
+  // (as in: `now ls`)
   let targetOrSubcommand: ?string = argv._[2];
 
   // we want to handle version or help directly only
