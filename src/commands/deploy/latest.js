@@ -490,7 +490,9 @@ async function sync({
       renderHandlers(print, handlers, run);
       run++;
 
-      await sleep(sleepingTime);
+      if (!allDone(handlers)) {
+        await sleep(sleepingTime);
+      }
     }
 
     output.success(`Deployment ready`);
