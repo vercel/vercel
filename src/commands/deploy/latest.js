@@ -5,11 +5,12 @@ import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import sleep from 'es7-sleep';
 import { basename } from 'path';
+import table from 'text-table';
 import chalk from 'chalk';
 import Progress from 'progress';
 import logo from '../../util/output/logo';
+import eraseLines from '../../util/output/erase-lines';
 import strlen from '../../util/strlen';
-import table from '../../util/output/table';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import type { CLIContext, HandlersDeployment, Output } from '../../util/types';
@@ -126,23 +127,52 @@ exports.args = {
 
 const prepareState = state => state.toLowerCase().replace(/^\w/, c => c.toUpperCase());
 
-const renderHandlers = (list) => {
-  let output = '';
+const renderHandlers = (print, list, run) => {
+  const final = table(
+    [
+      ...list.map(handler => {
+        const {path, readyState, id} = handler;
+        const state = prepareState(readyState);
+        const url = id ? `https://${id.replace('hdl_', '')}.invoke.sh` : '';
 
-  for (const handler of list) {
-    const {path, readyState, id} = handler;
-    output += `${chalk.grey('-')} ${chalk.cyan(path)} ${prepareState(readyState)} ${id}\n`;
-  }
+        let stateColor = chalk.grey;
 
-  const input = [['ddas', 'dasdas', 'dasda'], ['dsad', 'dsadasA', 'dsaadsads']];
-  console.log(output);
+        if (readyState === 'READY') {
+          stateColor = item => item;
+        } else if (readyState.endsWith('_ERROR')) {
+          stateColor = chalk.red;
+        }
 
-  console.log(table(input, {
-  align: ['l', 'l', 'r', 'c', 'r'],
-      hsep: ' '.repeat(2),
+        return [
+          `${chalk.grey('-')} ${chalk.cyan(path)}`,
+          stateColor(state),
+          url && stateColor(url)
+        ];
+      })
+    ],
+    {
+      align: ['l', 'l', 'l'],
+      hsep: ' '.repeat(3),
       stringLength: strlen
+    }
+  );
+
+  if (run > 1) {
+    // Account for the newline at the end
+    print(eraseLines(list.length + 1));
   }
-  ));
+
+  print(`${final}\n`);
+};
+
+const allDone = (list) => {
+  if (list.length === 0) {
+    return false;
+  }
+
+  return list.every(({ readyState }) => {
+    return readyState === 'READY' || readyState.endsWith('_ERROR');
+  });
 };
 
 exports.pipe = async function main(
@@ -193,7 +223,7 @@ async function sync({
   currentTeam
 }) {
   return new Promise(async (resolveRoot, rejectRoot) => {
-    const { log, debug, error } = output;
+    const { log, debug, error, print } = output;
     const paths = Object.keys(stats);
     const isFile = paths.length === 1 && stats[paths[0]].isFile();
     const debugEnabled = argv['--debug'];
@@ -427,16 +457,12 @@ async function sync({
       return;
     }
 
-    const handlers = [];
     const sleepingTime = ms('3s');
 
-    const allDone = handlers.every(({ readyState }) => {
-      return readyState === 'READY' || readyState.endsWith('_ERROR');
-    });
-
+    let handlers = [];
     let run = 1;
 
-    while (handlers.length === 0 || !allDone) {
+    while (!allDone(handlers)) {
       const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
       const response = await now.fetch(handlersUrl);
 
@@ -459,12 +485,9 @@ async function sync({
           readyState = 'READY';
       }
 
-      for (const item of response.handlers) {
-        const modified = Object.assign({}, item, { readyState });
-        handlers.push(modified);
-      }
+      handlers = response.handlers.map(handler => Object.assign({}, handler, { readyState }));
 
-      renderHandlers(handlers);
+      renderHandlers(print, handlers, run);
       run++;
 
       await sleep(sleepingTime);
