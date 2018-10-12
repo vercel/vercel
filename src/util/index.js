@@ -73,7 +73,7 @@ module.exports = class Now extends EventEmitter {
       sessionAffinity = 'ip',
       isFile = false,
       atlas = false,
-      isLatest
+      isHandlers
     }
   ) {
     const { log, warn, time } = this._output;
@@ -90,7 +90,7 @@ module.exports = class Now extends EventEmitter {
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!isLatest && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
+        if (!isHandlers && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
@@ -184,7 +184,20 @@ module.exports = class Now extends EventEmitter {
         )
       );
 
-      const requestBody = {
+      const queryProps = {};
+
+      if (isHandlers && forceNew) {
+        queryProps.forceNew = 1;
+      }
+
+      const requestBody = isHandlers ? {
+        version: 2,
+        env,
+        public: wantsPublic || nowConfig.public,
+        name,
+        description,
+        files,
+      } : {
         env,
         public: wantsPublic || nowConfig.public,
         forceNew,
@@ -200,11 +213,13 @@ module.exports = class Now extends EventEmitter {
         atlas
       };
 
-      if (Object.keys(nowConfig).length > 0) {
+      if (!isHandlers && Object.keys(nowConfig).length > 0) {
         requestBody.config = nowConfig;
       }
 
-      const res = await this._fetch('/v4/now/deployments', {
+      const query = qs.stringify(queryProps);
+
+      const res = await this._fetch(`/v6/now/deployments${query}`, {
         method: 'POST',
         body: requestBody
       });
@@ -316,7 +331,7 @@ module.exports = class Now extends EventEmitter {
       return null;
     }
 
-    if (!isLatest && !quiet && type === 'npm' && deployment.nodeVersion) {
+    if (!isHandlers && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
           chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`

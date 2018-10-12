@@ -2,18 +2,15 @@
 
 import ms from 'ms';
 import bytes from 'bytes';
-import type { Readable } from 'stream';
 import { write as copy } from 'clipboardy';
-import { eraseLines } from 'ansi-escapes';
+import sleep from 'es7-sleep';
 import { basename } from 'path';
 import chalk from 'chalk';
 import Progress from 'progress';
-import plural from 'pluralize';
 import logo from '../../util/output/logo';
-import cmd from '../../util/output/cmd';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-import type { CLIContext, Output, NewDeployment, DeploymentEvent } from '../../util/types';
+import type { CLIContext, HandlersDeployment, Output } from '../../util/types';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -21,19 +18,7 @@ import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
 import type { CreateDeployError } from '../../util/deploy/create-deploy';
-import combineAsyncGenerators from '../../util/combine-async-generators';
-import promptBool from '../../util/input/prompt-bool';
 import * as Errors from '../../util/errors';
-import formatLogCmd from '../../util/output/format-log-cmd';
-import formatLogOutput from '../../util/output/format-log-output';
-import joinWords from '../../util/output/join-words';
-import getStateChangeFromPolling from '../../util/deploy/get-state-change-from-polling';
-import eventListenerToGenerator from '../../util/event-listener-to-generator';
-import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
-import raceAsyncGenerators from '../../util/race-async-generators';
-import { tick } from '../../util/output/chars';
-import getEventsStream from '../../util/deploy/get-events-stream';
-import getInstanceIndex from '../../util/deploy/get-instance-index';
 
 const help = () => {
   console.log(`
@@ -185,7 +170,7 @@ async function sync({
   currentTeam
 }) {
   return new Promise(async (resolveRoot, rejectRoot) => {
-    const { log, debug, error, note } = output;
+    const { log, debug, error } = output;
     const paths = Object.keys(stats);
     const isFile = paths.length === 1 && stats[paths[0]].isFile();
     const debugEnabled = argv['--debug'];
@@ -225,7 +210,7 @@ async function sync({
 
     let syncCount;
     let deployStamp = stamp();
-    let deployment: NewDeployment | null = null;
+    let deployment: HandlersDeployment | null = null;
 
     try {
       // $FlowFixMe
@@ -236,16 +221,15 @@ async function sync({
           forceNew: argv['--force'],
           forwardNpm: null,
           quiet,
-          scale: {},
           wantsPublic,
-          sessionAffinity: null,
           isFile,
-          isLatest: true
+          isHandlers: true
         },
         meta
       );
 
       deployStamp = stamp();
+
       const firstDeployCall = await createDeploy(
         output,
         now,
@@ -253,6 +237,7 @@ async function sync({
         paths,
         createArgs
       );
+
       if (
         firstDeployCall instanceof Errors.CantSolveChallenge ||
         firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
@@ -279,6 +264,7 @@ async function sync({
 
       if (now.syncFileCount > 0) {
         const uploadStamp = stamp();
+
         await new Promise(resolve => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
@@ -370,67 +356,6 @@ async function sync({
         }
       }
     } catch (err) {
-      if (err.code === 'plan_requires_public') {
-        if (!wantsPublic) {
-          const who = currentTeam ? 'your team is' : 'you are';
-
-          let proceed;
-          log(
-            `Your deployment's code and logs will be publicly accessible because ${who} subscribed to the OSS plan.`
-          );
-
-          if (isTTY) {
-            proceed = await promptBool('Are you sure you want to proceed?', {
-              trailing: eraseLines(1)
-            });
-          }
-
-          let url = 'https://zeit.co/account/plan';
-
-          if (currentTeam) {
-            url = `https://zeit.co/teams/${contextName}/settings/plan`;
-          }
-
-          note(
-            `You can use ${cmd(
-              'now --public'
-            )} or upgrade your plan (${url}) to skip this prompt`
-          );
-
-          if (!proceed) {
-            if (typeof proceed === 'undefined') {
-              const message = `If you agree with that, please run again with ${cmd(
-                '--public'
-              )}.`;
-
-              error(message);
-              resolveRoot(1);
-
-              return;
-            } else {
-              log('Aborted');
-              resolveRoot(0);
-
-              return;
-            }
-          }
-        }
-
-        wantsPublic = true;
-
-        sync({
-          contextName,
-          output,
-          argv,
-          apiUrl,
-          stats,
-          token,
-          currentTeam
-        });
-
-        return;
-      }
-
       debug(`Error: ${err}\n${err.stack}`);
 
       if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
@@ -472,158 +397,40 @@ async function sync({
       process.stdout.write(url);
     }
 
-    // Show build logs
-    // (We have to add this check for flow but it will never happen)
-    if (deployment !== null) {
-      // If the created deployment is ready it was a deduping and we should exit
-      if (deployment.readyState !== 'READY') {
-        require('assert')(deployment); // mute linter
-        const instanceIndex = getInstanceIndex();
-        const eventsStream = await maybeGetEventsStream(now, deployment);
-        const eventsGenerator = getEventsGenerator(
-          now,
-          contextName,
-          deployment,
-          eventsStream
-        );
-
-        for await (const event of eventsGenerator) {
-          // Stop when the deployment is ready
-          if (
-            event.type === 'state-change' &&
-            event.payload.value === 'READY'
-          ) {
-            output.log(`Build completed`);
-            break;
-          }
-
-          // Stop then there is an error state
-          if (
-            event.type === 'state-change' &&
-            event.payload.value === 'ERROR'
-          ) {
-            output.error(`Build failed`);
-
-            resolveRoot(1);
-            return;
-          }
-
-          // For any relevant event we receive, print the result
-          if (event.type === 'build-start') {
-            output.log('Building…');
-          } else if (event.type === 'command') {
-            output.log(formatLogCmd(event.payload.text));
-          } else if (event.type === 'stdout' || event.type === 'stderr') {
-            formatLogOutput(event.payload.text).forEach(msg => output.log(msg));
-          }
-        }
-
-        output.log(
-          `Verifying instantiation in ${joinWords(
-            Object.keys(deployment.scale).map(dc => chalk.bold(dc))
-          )}`
-        );
-        const verifyStamp = stamp();
-        const verifyDCsGenerator = getVerifyDCsGenerator(
-          output,
-          now,
-          deployment,
-          eventsStream
-        );
-
-        for await (const dcOrEvent of verifyDCsGenerator) {
-          if (dcOrEvent instanceof Errors.VerifyScaleTimeout) {
-            output.error(
-              `Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`
-            );
-            output.log(
-              'Read more: https://err.sh/now-cli/verification-timeout'
-            );
-
-            resolveRoot(1);
-            return;
-          } else if (Array.isArray(dcOrEvent)) {
-            const [dc, instances] = dcOrEvent;
-            output.log(
-              `${chalk.cyan(tick)} Scaled ${plural(
-                'instance',
-                instances,
-                true
-              )} in ${chalk.bold(dc)} ${verifyStamp()}`
-            );
-          } else if (
-            dcOrEvent &&
-            (dcOrEvent.type === 'stdout' || dcOrEvent.type === 'stderr')
-          ) {
-            const prefix = chalk.gray(
-              `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
-            );
-            formatLogOutput(dcOrEvent.payload.text, prefix).forEach(msg =>
-              output.log(msg)
-            );
-          }
-        }
-      }
-
+    if (deployment.readyState === 'READY') {
       output.success(`Deployment ready`);
+      resolveRoot(0);
+
+      return;
     }
 
+    const handlers = [];
+    const sleepingTime = ms('3s');
+
+    const notFinished = handlers.some(({ readyState }) => {
+      return readyState !== 'READY' && readyState.endsWith('_ERROR');
+    });
+
+    while (handlers.length === 0 || notFinished) {
+      const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
+      const response = await now.fetch(handlersUrl);
+
+      for (const item of response.handlers) {
+        const modified = Object.assign({}, item, {
+          readyState: 'INITIALIZING'
+        });
+
+        handlers.push(modified);
+      }
+
+      console.log(handlers);
+
+      await sleep(sleepingTime);
+    }
+
+    output.success(`Deployment ready`);
     resolveRoot(0);
   });
-}
-
-function getEventsGenerator(
-  now: Now,
-  contextName: ?string,
-  deployment: NewDeployment,
-  eventsStream: null | Readable
-): AsyncGenerator<DeploymentEvent, void, void> {
-  const stateChangeFromPollingGenerator = getStateChangeFromPolling(
-    now,
-    contextName,
-    deployment.deploymentId,
-    deployment.readyState
-  );
-  if (eventsStream !== null) {
-    return combineAsyncGenerators(
-      eventListenerToGenerator('data', eventsStream),
-      stateChangeFromPollingGenerator
-    );
-  }
-
-  return stateChangeFromPollingGenerator;
-}
-
-function getVerifyDCsGenerator(
-  output: Output,
-  now: Now,
-  deployment: NewDeployment,
-  eventsStream: Readable | null
-) {
-  const verifyDeployment = verifyDeploymentScale(
-    output,
-    now,
-    deployment.deploymentId,
-    deployment.scale
-  );
-
-  return eventsStream
-    ? raceAsyncGenerators(
-        eventListenerToGenerator('data', eventsStream),
-        verifyDeployment
-      )
-    : verifyDeployment;
-}
-
-async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
-  try {
-    return await getEventsStream(now, deployment.deploymentId, {
-      direction: 'forward',
-      follow: true
-    });
-  } catch (error) {
-    return null;
-  }
 }
 
 function handleCreateDeployError<OtherError>(

@@ -12,7 +12,7 @@ type FetchOptions = {
 
 export interface Now {
   retry<T>(fn: RetryFunction<T>, options?: RetryOptions): Promise<T>;
-  create(paths: string[], createArgs: Object): Promise<NewDeployment>;
+  create(paths: string[], createArgs: Object): Promise<NewDeployment | HandlersDeployment>;
   fetch(url: string, options?: FetchOptions): Promise<any>;
   list(appName: string, { version: number }): Deployment[];
 }
@@ -399,6 +399,8 @@ export type NewDeployment = {
   readyState: 'INITIALIZING' | 'READY',
   blob?: null
 };
+
+export type HandlersDeployment = any;
 
 export type CLIOptions<T> = {
   '--help'?: string,
