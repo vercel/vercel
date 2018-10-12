@@ -8,6 +8,8 @@ import { basename } from 'path';
 import chalk from 'chalk';
 import Progress from 'progress';
 import logo from '../../util/output/logo';
+import strlen from '../../util/strlen';
+import table from '../../util/output/table';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import type { CLIContext, HandlersDeployment, Output } from '../../util/types';
@@ -122,14 +124,25 @@ exports.args = {
   '-b': '--build-env'
 };
 
+const prepareState = state => state.toLowerCase().replace(/^\w/, c => c.toUpperCase());
+
 const renderHandlers = (list) => {
   let output = '';
 
   for (const handler of list) {
-    output += `- ${chalk.blue(handler.path)} ${handler.readyState} ${handler.id}\n`;
+    const {path, readyState, id} = handler;
+    output += `${chalk.grey('-')} ${chalk.cyan(path)} ${prepareState(readyState)} ${id}\n`;
   }
 
+  const input = [['ddas', 'dasdas', 'dasda'], ['dsad', 'dsadasA', 'dsaadsads']];
   console.log(output);
+
+  console.log(table(input, {
+  align: ['l', 'l', 'r', 'c', 'r'],
+      hsep: ' '.repeat(2),
+      stringLength: strlen
+  }
+  ));
 };
 
 exports.pipe = async function main(
@@ -417,13 +430,13 @@ async function sync({
     const handlers = [];
     const sleepingTime = ms('3s');
 
-    const notFinished = handlers.some(({ readyState }) => {
-      return readyState !== 'READY' && readyState.endsWith('_ERROR');
+    const allDone = handlers.every(({ readyState }) => {
+      return readyState === 'READY' || readyState.endsWith('_ERROR');
     });
 
     let run = 1;
 
-    while (handlers.length === 0 || notFinished) {
+    while (handlers.length === 0 || !allDone) {
       const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
       const response = await now.fetch(handlersUrl);
 

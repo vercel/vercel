@@ -1476,10 +1476,10 @@ babel-plugin-syntax-exponentiation-operator@^6.8.0:
   resolved "https://registry.yarnpkg.com/babel-plugin-syntax-exponentiation-operator/-/babel-plugin-syntax-exponentiation-operator-6.13.0.tgz#9ee7e8337290da95288201a6a57f4170317830de"
   integrity sha1-nufoM3KQ2pUoggGmpX9BcDF4MN4=
 
-babel-plugin-syntax-flow@^6.8.0:
-  version "6.18.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-flow/-/babel-plugin-syntax-flow-6.18.0.tgz#4c3ab20a2af26aa20cd25995c398c4eb70310c8d"
-  integrity sha1-TDqyCiryaqIM0lmVw5jE63AxDI0=
+babel-plugin-syntax-flow@7.0.0-beta.3:
+  version "7.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-flow/-/babel-plugin-syntax-flow-7.0.0-beta.3.tgz#b96eceea4ffa380b95ccb21e8c75a556bffce879"
+  integrity sha512-ICjURxIiOU54kzbdZJnmFlGN6HnZ6HFUzU/6wrrgfhnleIwwSfYUDs5c9ubg8ib5yFLiR3u2PkPXnntUT1Aadg==
 
 babel-plugin-syntax-object-rest-spread@^6.13.0:
   version "6.13.0"
@@ -1572,13 +1572,12 @@ babel-plugin-transform-exponentiation-operator@^6.8.0:
     babel-plugin-syntax-exponentiation-operator "^6.8.0"
     babel-runtime "^6.22.0"
 
-babel-plugin-transform-flow-comments@^6.17.0:
-  version "6.22.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-transform-flow-comments/-/babel-plugin-transform-flow-comments-6.22.0.tgz#8d9491132f2b48abd0656f96c20f3bbd6fc17529"
-  integrity sha1-jZSREy8rSKvQZW+Wwg87vW/BdSk=
+babel-plugin-transform-flow-strip-types@7.0.0-beta.3:
+  version "7.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-flow-strip-types/-/babel-plugin-transform-flow-strip-types-7.0.0-beta.3.tgz#40d7c030895dc9811e7dd09997ee96df6054eed6"
+  integrity sha512-3pefz3Z4ce8RvwMAwJX4QVWzkCfIcJMW/WUtB6QEkRMnsYnAxZyQkUzWEVULGHly0MQoBRdB3m+cRrD9Zi0xoA==
   dependencies:
-    babel-plugin-syntax-flow "^6.8.0"
-    babel-runtime "^6.22.0"
+    babel-plugin-syntax-flow "7.0.0-beta.3"
 
 babel-plugin-transform-strict-mode@^6.24.1:
   version "6.24.1"
@@ -1587,6 +1586,13 @@ babel-plugin-transform-strict-mode@^6.24.1:
   dependencies:
     babel-runtime "^6.22.0"
     babel-types "^6.24.1"
+
+babel-preset-flow@7.0.0:
+  version "7.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/babel-preset-flow/-/babel-preset-flow-7.0.0-beta.3.tgz#011d8b86825849b83bf1d2b47ec277c15eabfd97"
+  integrity sha512-Dv59OC+oR/XICgHenCeMpRUKZIWPgTYJAZSz6h9+DChk6Tm2Z3LdJLD69vHYn3EL5WR2mFfpiOrskLkBbwufLQ==
+  dependencies:
+    babel-plugin-transform-flow-strip-types "7.0.0-beta.3"
 
 babel-register@^6.26.0:
   version "6.26.0"
@@ -3589,20 +3595,6 @@ flat-cache@^1.2.1:
     del "^2.0.2"
     graceful-fs "^4.1.2"
     write "^0.2.1"
-
-flow-babel-webpack-plugin@1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/flow-babel-webpack-plugin/-/flow-babel-webpack-plugin-1.1.1.tgz#7dd41110b96045eab8d8af6df48883310de54e91"
-  integrity sha512-xgZt6sWUWMek1P+rdzJqXG9OaWCUqTfaDb1OoEVh2mXFb7Nppcd4Rm9WW9Dz4uS5T3MTe/BFVH0ZjUX8Oxh1JQ==
-  dependencies:
-    babel-plugin-transform-flow-comments "^6.17.0"
-    flow-bin ">=0.44.2 <1"
-    lodash.merge "^4.6.0"
-
-"flow-bin@>=0.44.2 <1":
-  version "0.82.0"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.82.0.tgz#fbec84c0d6cab7877565eca8214d655f3aefb8db"
-  integrity sha512-D7ViTCVJSVv19CB6dFWS9k2iKQlavtkRXn9el0ofVTTpGuybe+EPE8DZwdyohzEt6wRhHV8gwkteWvxdcVuOzg==
 
 fn-name@^2.0.0:
   version "2.0.1"
