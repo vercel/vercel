@@ -14,7 +14,6 @@ import { handleError } from '../../util/error';
 import type { CLIContext } from '../../util/types';
 
 module.exports = async (ctx: CLIContext) => {
-  const localConfig = readLocalConfig();
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
   const combinedArgs = Object.assign({}, legacyArgs, latestArgs);
 
@@ -43,6 +42,7 @@ module.exports = async (ctx: CLIContext) => {
     paths = [process.cwd()];
   }
 
+  const localConfig = readLocalConfig(paths[0]);
   const output = createOutput({ debug: argv['--debug'] });
   const isHelp = argv['--help'];
   const stats = {};

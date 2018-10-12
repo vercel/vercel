@@ -218,8 +218,9 @@ module.exports = class Now extends EventEmitter {
       }
 
       const query = qs.stringify(queryProps);
+      const version = isHandlers ? 'v6' : 'v4';
 
-      const res = await this._fetch(`/v6/now/deployments${query}`, {
+      const res = await this._fetch(`/${version}/now/deployments${query}`, {
         method: 'POST',
         body: requestBody
       });

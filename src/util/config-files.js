@@ -14,7 +14,6 @@ const error = require('./output/error');
 const NOW_DIR = getNowDir();
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json');
 const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json');
-const LOCAL_CONFIG_FILE_PATH = getLocalPathConfig(process.cwd());
 
 // reads `CONFIG_FILE_PATH` atomically
 const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
@@ -38,11 +37,12 @@ function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-function readLocalConfig() {
+function readLocalConfig(prefix) {
+  const target = getLocalPathConfig(prefix || process.cwd());
   let localConfigExists;
 
   try {
-    localConfigExists = existsSync(LOCAL_CONFIG_FILE_PATH);
+    localConfigExists = existsSync(target);
   } catch (err) {
     console.error(error('Failed to check if `now.json` exists'));
     process.exit(1);
@@ -50,7 +50,7 @@ function readLocalConfig() {
 
   if (localConfigExists) {
     try {
-      return loadJSON.sync(LOCAL_CONFIG_FILE_PATH);
+      return loadJSON.sync(target);
     } catch (err) {
       if (err.name === 'JSONError') {
         console.log(error(err.message));
