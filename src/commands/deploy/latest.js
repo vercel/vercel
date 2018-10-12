@@ -2,6 +2,7 @@
 
 import ms from 'ms';
 import bytes from 'bytes';
+import title from 'title';
 import { write as copy } from 'clipboardy';
 import sleep from 'es7-sleep';
 import { basename } from 'path';
@@ -125,7 +126,7 @@ exports.args = {
   '-b': '--build-env'
 };
 
-const prepareState = state => state.toLowerCase().replace(/^\w/, c => c.toUpperCase());
+const prepareState = state => title(state.replace('_', ' '));
 
 const renderHandlers = (print, list, run) => {
   const final = table(
@@ -136,15 +137,17 @@ const renderHandlers = (print, list, run) => {
         const url = id ? `https://${id.replace('hdl_', '')}.invoke.sh` : '';
 
         let stateColor = chalk.grey;
+        let pathColor = chalk.cyan;
 
         if (readyState === 'READY') {
           stateColor = item => item;
         } else if (readyState.endsWith('_ERROR')) {
           stateColor = chalk.red;
+          pathColor = chalk.red;
         }
 
         return [
-          `${chalk.grey('-')} ${chalk.cyan(path)}`,
+          `${chalk.grey('-')} ${pathColor(path)}`,
           stateColor(state),
           url && stateColor(url)
         ];
