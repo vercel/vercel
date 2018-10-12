@@ -116,6 +116,7 @@ exports.args = {
   '--force': Boolean,
   '--links': Boolean,
   '--public': Boolean,
+  '--no-clipboard': Boolean,
   '--env': [String],
   '--build-env': [String],
   '-n': '--name',
@@ -123,7 +124,8 @@ exports.args = {
   '-l': '--links',
   '-p': '--public',
   '-e': '--env',
-  '-b': '--build-env'
+  '-b': '--build-env',
+  '-C': '--no-clipboard'
 };
 
 const prepareState = state => title(state.replace('_', ' '));
@@ -184,11 +186,71 @@ const allDone = (list) => {
   return list.every(isDone);
 };
 
+const addProcessEnv = async (log, env) => {
+  let val;
+
+  for (const key of Object.keys(env)) {
+    if (typeof env[key] !== 'undefined') {
+      continue;
+    }
+
+    val = process.env[key];
+
+    if (typeof val === 'string') {
+      log(
+        `Reading ${chalk.bold(
+          `"${chalk.bold(key)}"`
+        )} from your env (as no value was specified)`
+      );
+      // Escape value if it begins with @
+      env[key] = val.replace(/^@/, '\\@');
+    } else {
+      throw new Error(
+        `No value specified for env ${chalk.bold(
+          `"${chalk.bold(key)}"`
+        )} and it was not found in your env.`
+      );
+    }
+  }
+};
+
+// Converts `env` Arrays, Strings and Objects into env Objects.
+// `null` empty value means to prompt user for value upon deployment.
+// `undefined` empty value means to inherit value from user's env.
+const parseEnv = (env, empty) => {
+  if (!env) {
+    return {};
+  }
+  if (typeof env === 'string') {
+    // a single `--env` arg comes in as a String
+    env = [env];
+  }
+  if (Array.isArray(env)) {
+    return env.reduce((o, e) => {
+      let key;
+      let value;
+      const equalsSign = e.indexOf('=');
+      if (equalsSign === -1) {
+        key = e;
+        value = empty;
+      } else {
+        key = e.substr(0, equalsSign);
+        value = e.substr(equalsSign + 1);
+      }
+      o[key] = value;
+      return o;
+    }, {});
+  }
+  // assume it's already an Object
+  return env;
+};
+
 exports.pipe = async function main(
   ctx: CLIContext,
   contextName: string,
   output: Output,
-  stats: any
+  stats: any,
+  localConfig: any
 ): Promise<number> {
   let argv = null;
 
@@ -214,7 +276,8 @@ exports.pipe = async function main(
       apiUrl,
       stats,
       token,
-      currentTeam
+      currentTeam,
+      localConfig
     });
   } catch (err) {
     handleError(err);
@@ -229,16 +292,14 @@ async function sync({
   apiUrl,
   stats,
   token,
-  currentTeam
+  currentTeam,
+  localConfig
 }) {
   return new Promise(async (resolveRoot, rejectRoot) => {
     const { log, debug, error, print } = output;
     const paths = Object.keys(stats);
     const isFile = paths.length === 1 && stats[paths[0]].isFile();
     const debugEnabled = argv['--debug'];
-    let wantsPublic = argv['--public'];
-    const deploymentName = argv['--name'];
-    const clipboard = true;
 
     // $FlowFixMe
     const isTTY = process.stdout.isTTY;
@@ -259,11 +320,10 @@ async function sync({
     log(`Deploying ${list} under ${chalk.bold(contextName)}`);
 
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+    const filesName = isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files';
 
     const meta = {
-      name:
-        deploymentName ||
-        (isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files'),
+      name: argv['--name'] || filesName,
       deploymentType: 'npm',
       pkg: undefined,
       nowConfig: undefined,
@@ -274,16 +334,39 @@ async function sync({
     let deployStamp = stamp();
     let deployment: HandlersDeployment | null = null;
 
+    // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+    const deploymentEnv = Object.assign(
+      {},
+      parseEnv(localConfig.env, null),
+      parseEnv(argv.env, undefined)
+    );
+
+    // Merge build env out of  `build.env` from now.json, and `--build-env` args
+    const deploymentBuildEnv = Object.assign(
+      {},
+      parseEnv(localConfig.build && localConfig.build.env, null),
+      parseEnv(argv['build-env'], undefined)
+    );
+
+    // If there's any undefined values, then inherit them from this process
+    try {
+      await addProcessEnv(log, deploymentEnv);
+      await addProcessEnv(log, deploymentBuildEnv);
+    } catch (err) {
+      error(err.message);
+      return 1;
+    }
+
     try {
       // $FlowFixMe
       const createArgs = Object.assign(
         {
-          env: {},
+          env: deploymentEnv,
+          buildEnv: deploymentBuildEnv,
           followSymlinks: argv['--links'],
           forceNew: argv['--force'],
-          forwardNpm: null,
           quiet,
-          wantsPublic,
+          wantsPublic: argv['--public'],
           isFile,
           isHandlers: true
         },
@@ -436,7 +519,7 @@ async function sync({
     const dcs = '';
 
     if (isTTY) {
-      if (clipboard) {
+      if (!argv['--no-clipboard']) {
         try {
           await copy(url);
           log(
