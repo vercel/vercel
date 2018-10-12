@@ -131,19 +131,21 @@ const prepareState = state => title(state.replace('_', ' '));
 // That's how long the word "Initializing" is
 const longestState = 12;
 
-const renderHandlers = (print, list, run) => {
+const renderHandlers = (print, list, times, run) => {
   const final = table(
     [
       ...list.map(handler => {
         const {path, readyState, id} = handler;
         const state = prepareState(readyState).padEnd(longestState);
-        const url = id ? `https://${id.replace('hdl_', '')}.invoke.sh` : '';
+        const url = `https://${id.replace('hdl_', '')}.invoke.sh`;
 
         let stateColor = chalk.grey;
         let pathColor = chalk.cyan;
+        let time = '';
 
         if (readyState === 'READY') {
           stateColor = item => item;
+          time = times[id];
         } else if (readyState.endsWith('_ERROR')) {
           stateColor = chalk.red;
           pathColor = chalk.red;
@@ -152,12 +154,13 @@ const renderHandlers = (print, list, run) => {
         return [
           `${chalk.grey('-')} ${pathColor(path)}`,
           stateColor(state),
-          url && stateColor(url)
+          url && stateColor(url),
+          time
         ];
       })
     ],
     {
-      align: ['l', 'l', 'l'],
+      align: ['l', 'l', 'l', 'l'],
       hsep: ' '.repeat(3),
       stringLength: strlen
     }
@@ -171,14 +174,14 @@ const renderHandlers = (print, list, run) => {
   print(`${final}\n`);
 };
 
+const isDone = ({ readyState }) => readyState === 'READY' || readyState.endsWith('_ERROR');
+
 const allDone = (list) => {
   if (list.length === 0) {
     return false;
   }
 
-  return list.every(({ readyState }) => {
-    return readyState === 'READY' || readyState.endsWith('_ERROR');
-  });
+  return list.every(isDone);
 };
 
 exports.pipe = async function main(
@@ -464,6 +467,7 @@ async function sync({
     }
 
     const sleepingTime = ms('3s');
+    const times = {};
 
     let handlers = [];
     let run = 1;
@@ -491,9 +495,22 @@ async function sync({
           readyState = 'READY';
       }
 
-      handlers = response.handlers.map(handler => Object.assign({}, handler, { readyState }));
+      handlers = response.handlers.map(handler => {
+        const id = handler.id;
+        const filled = Object.assign({}, handler, { readyState });
 
-      renderHandlers(print, handlers, run);
+        if (times[id]) {
+          if (isDone(filled)) {
+            times[id] = times[id]();
+          }
+        } else {
+          times[id] = stamp();
+        }
+
+        return filled;
+      });
+
+      renderHandlers(print, handlers, times, run);
       run++;
 
       if (!allDone(handlers)) {
