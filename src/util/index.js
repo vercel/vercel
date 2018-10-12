@@ -66,7 +66,7 @@ module.exports = class Now extends EventEmitter {
       // From readMetaData
       name,
       description,
-      type = 'npm',
+      type = 'static',
       pkg = {},
       nowConfig = {},
       hasNowJson = false,
