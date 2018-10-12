@@ -341,8 +341,7 @@ exports.pipe = async function main(
           routes: localConfig.routes
         },
         {
-          name: argv['--name'] || filesName,
-          type: 'static'
+          name: argv['--name'] || filesName
         }
       );
 
