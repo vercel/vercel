@@ -221,6 +221,7 @@ const parseEnv = (env, empty) => {
   if (!env) {
     return {};
   }
+
   if (typeof env === 'string') {
     // a single `--env` arg comes in as a String
     env = [env];
