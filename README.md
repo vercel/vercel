@@ -24,7 +24,7 @@ For details on how to use Now CLI, check out our [documentation](https://zeit.co
 2. Link the package to the global module directory: `yarn run link` (not `yarn link`)
 3. You can now start using `now` anywhere inside the command line
 
-As always, you can use `yarn test` to run the tests and see if your changes have broken anything.
+As always, you should use `yarn test` to run the tests and see if your changes have broken anything.
 
 ## How to Create a Release
 
