@@ -268,33 +268,6 @@ exports.pipe = async function main(
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
 
-  try {
-    return sync({
-      contextName,
-      output,
-      argv,
-      apiUrl,
-      stats,
-      token,
-      currentTeam,
-      localConfig
-    });
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
-};
-
-async function sync({
-  contextName,
-  output,
-  argv,
-  apiUrl,
-  stats,
-  token,
-  currentTeam,
-  localConfig
-}) {
   return new Promise(async (resolveRoot, rejectRoot) => {
     const { log, debug, error, print } = output;
     const paths = Object.keys(stats);
@@ -598,7 +571,7 @@ async function sync({
     output.success(`Deployment ready`);
     resolveRoot(0);
   });
-}
+};
 
 function handleCreateDeployError<OtherError>(
   output: Output,
