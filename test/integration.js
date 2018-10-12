@@ -6,7 +6,7 @@ const { URL } = require('url');
 // Packages
 const test = require('ava');
 const semVer = require('semver');
-const { readFile, writeJSON, readJSON } = require('fs-extra');
+const { readFile } = require('fs-extra');
 const execa = require('execa');
 const fetch = require('node-fetch');
 const tmp = require('tmp-promise');
@@ -109,12 +109,6 @@ test('log in', async t => {
   const goal = `> Ready! Authentication token and personal details saved in "${location}"`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
-
-  const configFile = path.join(homedir(), '.now', 'config.json');
-  const content = await readJSON(configFile);
-  content.api = 'https://staging-bru1.zeit.co';
-  await writeJSON(configFile, content);
-  console.log(content);
 
   t.is(code, 0);
   t.is(last, goal);
