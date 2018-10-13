@@ -367,7 +367,7 @@ exports.pipe = async function main(
           meta
         },
         {
-          name: argv['--name'] || filesName
+          name: argv['--name'] || localConfig.name || filesName
         }
       );
 
