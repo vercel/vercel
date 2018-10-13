@@ -40,11 +40,16 @@ const getIndexFile = session => `
   })
 `;
 
+const getConfigFile = () => `{
+  "version": 1
+}`;
+
 module.exports = async session => {
   const files = {
     'Dockerfile': getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
+    'now.json': getConfigFile(session),
     'first.png': getImageFile(session, {
       size: 30
     }),
@@ -57,11 +62,13 @@ module.exports = async session => {
     'dockerfile': [
       'index.js',
       'Dockerfile',
-      'package.json'
+      'package.json',
+      'now.json'
     ],
     'node': [
       'index.js',
-      'package.json'
+      'package.json',
+      'now.json'
     ],
     'static-single-file': [
       'first.png'
@@ -71,7 +78,7 @@ module.exports = async session => {
       'second.png'
     ],
     'now-static-builds': {
-      'now.json': '{"type": "static"}',
+      'now.json': '{"version": 1, "type": "static"}',
       'Dockerfile': `
 FROM alpine
 RUN mkdir /public
@@ -80,6 +87,7 @@ RUN echo hello > /public/index.html
     },
     'build-env': {
       'now.json': JSON.stringify({
+        version: 1,
         type: 'static',
         build: {
           env: {FOO: 'bar'}
@@ -94,6 +102,7 @@ RUN echo $FOO > /public/index.html
     },
     'build-env-arg': {
       'now.json': JSON.stringify({
+        version: 1,
         type: 'static'
       }),
       'Dockerfile': `
