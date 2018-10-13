@@ -73,8 +73,8 @@ module.exports = class Now extends EventEmitter {
       sessionAffinity = 'ip',
       isFile = false,
       atlas = false,
-      handlers = null,
-      routes = null,
+      handlers = [],
+      routes = [],
       meta = null
     }
   ) {
