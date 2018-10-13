@@ -66,20 +66,20 @@ module.exports = class Now extends EventEmitter {
       // From readMetaData
       name,
       description,
-      type = 'static',
+      type = 'npm',
       pkg = {},
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'ip',
       isFile = false,
       atlas = false,
-      isHandlers,
       handlers = null,
       routes = null,
       meta = null
     }
   ) {
     const { log, warn, time } = this._output;
+    const isHandlers = type === null;
 
     let files = [];
     let relatives = {};
@@ -125,6 +125,27 @@ module.exports = class Now extends EventEmitter {
         }
       } else if (type === 'docker') {
         files = await getDockerFiles(paths[0], nowConfig, opts);
+      } else if (isHandlers) {
+        opts.isHandlers = isHandlers;
+
+        if (isFile) {
+          files = [resolvePath(paths[0])];
+        } else if (paths.length === 1) {
+          files = await getFiles(paths[0], nowConfig, opts);
+        } else {
+          if (!files) {
+            files = [];
+          }
+
+          for (const path of paths) {
+            const list = await getFiles(path, {}, opts);
+            files = files.concat(list);
+
+            for (const file of list) {
+              relatives[file] = path;
+            }
+          }
+        }
       }
     });
 
