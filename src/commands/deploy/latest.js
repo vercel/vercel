@@ -220,6 +220,10 @@ const addProcessEnv = async (log, env) => {
 };
 
 const parseMeta = (meta) => {
+  if (!meta) {
+    return {};
+  }
+
   if (typeof meta === 'string') {
     meta = [meta];
   }
@@ -315,7 +319,7 @@ exports.pipe = async function main(
 
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
     const filesName = isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files';
-    const meta = argv['--meta'] ? parseMeta(argv['--meta']) : {};
+    const meta = Object.assign({}, parseMeta(localConfig.meta), parseMeta(argv['--meta']));
 
     let syncCount;
     let deployStamp = stamp();
