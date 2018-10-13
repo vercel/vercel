@@ -75,7 +75,8 @@ module.exports = class Now extends EventEmitter {
       atlas = false,
       isHandlers,
       handlers = null,
-      routes = null
+      routes = null,
+      meta = null
     }
   ) {
     const { log, warn, time } = this._output;
@@ -200,7 +201,8 @@ module.exports = class Now extends EventEmitter {
         description,
         files,
         handlers,
-        routes
+        routes,
+        meta
       } : {
         env,
         public: wantsPublic || nowConfig.public,

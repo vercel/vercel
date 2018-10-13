@@ -83,6 +83,9 @@ const help = () => {
     -b, --build-env                Similar to ${chalk.dim(
       '`--env`'
     )} but for build time only.
+    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
+      '`-m KEY=value`'
+    )}). Can appear many times.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
@@ -119,13 +122,15 @@ exports.args = {
   '--no-clipboard': Boolean,
   '--env': [String],
   '--build-env': [String],
+  '--meta': [String],
   '-n': '--name',
   '-f': '--force',
   '-l': '--links',
   '-p': '--public',
   '-e': '--env',
   '-b': '--build-env',
-  '-C': '--no-clipboard'
+  '-C': '--no-clipboard',
+  '-m': '--meta'
 };
 
 const prepareState = state => title(state.replace('_', ' '));
@@ -214,6 +219,21 @@ const addProcessEnv = async (log, env) => {
   }
 };
 
+const parseMeta = (meta) => {
+  if (typeof meta === 'string') {
+    meta = [meta];
+  }
+
+  const parsed = {};
+
+  meta.forEach(item => {
+    const [key, value] = item.split('=');
+    parsed[key] = value || '';
+  });
+
+  return parsed;
+};
+
 // Converts `env` Arrays, Strings and Objects into env Objects.
 // `null` empty value means to prompt user for value upon deployment.
 // `undefined` empty value means to inherit value from user's env.
@@ -295,6 +315,7 @@ exports.pipe = async function main(
 
     const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
     const filesName = isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files';
+    const meta = argv['--meta'] ? parseMeta(argv['--meta']) : {};
 
     let syncCount;
     let deployStamp = stamp();
@@ -338,7 +359,8 @@ exports.pipe = async function main(
           // strictly needed, so we need an additional argument.
           isHandlers: true,
           handlers: localConfig.handlers,
-          routes: localConfig.routes
+          routes: localConfig.routes,
+          meta
         },
         {
           name: argv['--name'] || filesName
