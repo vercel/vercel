@@ -357,7 +357,7 @@ exports.pipe = async function main(
           followSymlinks: argv['--links'],
           forceNew: argv['--force'],
           quiet,
-          wantsPublic: argv['--public'],
+          wantsPublic: argv['--public'] || localConfig.public,
           isFile,
           // The `handlers` or `routes` props are not
           // strictly needed, so we need an additional argument.
