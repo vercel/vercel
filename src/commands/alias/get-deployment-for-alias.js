@@ -26,7 +26,8 @@ async function getDeploymentForAlias(
     deployment = await fetchDeploymentByIdOrHost(
       now,
       contextName,
-      deploymentId
+      deploymentId,
+      true
     );
   } else {
     const appName = await getAppName(output, localConfig);

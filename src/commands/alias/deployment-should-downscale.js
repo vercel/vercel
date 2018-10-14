@@ -11,10 +11,12 @@ async function deploymentShouldDownscale(
 ) {
   const isAliased = await deploymentIsAliased(now, deployment);
   output.debug(`Previous deployment is aliased: ${isAliased.toString()}`);
-  if (deployment.type === 'DOCKER' && !!deployment.slot) {
-    // Don't downscale a previous slot deployment
+
+  if ((deployment.type === 'DOCKER' && !!deployment.slot) || deployment.version === 2) {
+    // Don't downscale a previous slot or handlers deployment
     return false;
   }
+
   return (
     !isAliased &&
     Object.keys(deployment.scale).reduce((result, dc) => {
