@@ -7,13 +7,12 @@ import toHost from '../to-host';
 async function getDeploymentByIdOrHost(
   now: Now,
   contextName: string,
-  idOrHost: string,
-  noState: boolean
+  idOrHost: string
 ) {
   try {
     const { deployment } =
       idOrHost.indexOf('.') !== -1
-        ? await getDeploymentByHost(now, toHost(idOrHost), noState)
+        ? await getDeploymentByHost(now, toHost(idOrHost))
         : await getDeploymentById(now, idOrHost);
     return deployment;
   } catch (error) {
@@ -45,11 +44,10 @@ type DeploymentHostResponse = {
 
 async function getDeploymentByHost(
   now: Now,
-  host: string,
-  noState: boolean
+  host: string
 ): Promise<{ deployment: Deployment }> {
   const response: DeploymentHostResponse = await now.fetch(
-    `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1${noState ? '&noState=1' : ''}`
+    `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
   );
   return getDeploymentById(now, response.deployment.id);
 }
