@@ -127,8 +127,11 @@ module.exports = async function main(ctx: any): Promise<number> {
     sessionAffinity,
     url,
     created,
-    limits
+    limits,
+    version
   } = deployment;
+
+  const isHandlers = version === 2;
 
   const [scale, events] = await Promise.all([
     caught(
@@ -155,7 +158,9 @@ module.exports = async function main(ctx: any): Promise<number> {
   print(`    ${chalk.dim('uid')}\t\t${uid}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
   print(`    ${chalk.dim('state')}\t${stateString(state)}\n`);
-  print(`    ${chalk.dim('type')}\t${type}\n`);
+  if (!isHandlers) {
+    print(`    ${chalk.dim('type')}\t${type}\n`);
+  }
   if (slot) {
     print(`    ${chalk.dim('slot')}\t${slot}\n`);
   }
@@ -188,7 +193,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     print('\n');
   }
 
-  if (type === STATIC) {
+  if (type === STATIC || isHandlers) {
     return 0;
   }
 
