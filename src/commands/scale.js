@@ -208,6 +208,10 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     output.error('Cannot scale a deployment in the ERROR state');
     now.close();
     return 1;
+  } else if (deployment.version === 2) {
+    output.error('Cannot scale a deployment containing handlers');
+    now.close();
+    return 1;
   }
 
   const scaleArgs: DeploymentScaleArgs = dcs.reduce(
