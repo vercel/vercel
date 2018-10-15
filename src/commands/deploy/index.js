@@ -60,6 +60,8 @@ module.exports = async (ctx: CLIContext) => {
     }
   }
 
+  const isFile = paths.length === 1 && stats[paths[0]].isFile();
+
   if (authConfig && authConfig.token) {
     ({ contextName, platformVersion } = await getScope({
       apiUrl,
@@ -77,7 +79,7 @@ module.exports = async (ctx: CLIContext) => {
   );
 
   if (!localConfig) {
-    if (!isHelp) {
+    if (!isHelp && !isFile) {
       output.warn(
         `Your project is missing a ${file} file with a ${prop} property. Falling back to ${fallback}.`
       );
@@ -112,7 +114,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (platformVersion === null || platformVersion > 1) {
-    return latestPipe(ctx, contextName, output, stats, localConfig || {});
+    return latestPipe(ctx, contextName, output, stats, localConfig || {}, isFile);
   }
 
   return legacyPipe(ctx, contextName, output);

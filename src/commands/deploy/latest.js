@@ -275,7 +275,8 @@ exports.pipe = async function main(
   contextName: string,
   output: Output,
   stats: any,
-  localConfig: any
+  localConfig: any,
+  isFile: boolean
 ): Promise<number> {
   let argv = null;
 
@@ -296,7 +297,6 @@ exports.pipe = async function main(
   return new Promise(async (resolveRoot, rejectRoot) => {
     const { log, debug, error, print } = output;
     const paths = Object.keys(stats);
-    const isFile = paths.length === 1 && stats[paths[0]].isFile();
     const debugEnabled = argv['--debug'];
 
     // $FlowFixMe
