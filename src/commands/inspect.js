@@ -155,6 +155,7 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   print('\n');
   print(chalk.bold('  Meta\n'));
+  print(`    ${chalk.dim('version')}\t${version < 2 ? 'legacy' : 'latest'}\n`);
   print(`    ${chalk.dim('uid')}\t\t${uid}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
   print(`    ${chalk.dim('state')}\t${stateString(state)}\n`);
