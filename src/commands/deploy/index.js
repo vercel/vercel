@@ -60,7 +60,7 @@ module.exports = async (ctx: CLIContext) => {
     }
   }
 
-  const isFile = paths.length === 1 && stats[paths[0]].isFile();
+  const isFile = stats.length === 1 && stats[paths[0]].isFile();
 
   if (authConfig && authConfig.token) {
     ({ contextName, platformVersion } = await getScope({
