@@ -86,9 +86,6 @@ const help = () => {
     -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
-    'FILE'
-  )}         Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -T, --team                     Set a custom team scope
 
