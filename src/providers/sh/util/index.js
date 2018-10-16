@@ -58,7 +58,7 @@ module.exports = class Now extends EventEmitter {
       wantsPublic,
       quiet = false,
       env = {},
-      metadata={},
+      meta={},
       followSymlinks = true,
       forceNew = false,
       forwardNpm = false,
@@ -186,7 +186,7 @@ module.exports = class Now extends EventEmitter {
 
       const requestBody = {
         env,
-        metadata,
+        meta,
         public: wantsPublic || nowConfig.public,
         forceNew,
         name,
