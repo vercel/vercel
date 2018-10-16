@@ -376,10 +376,8 @@ exports.pipe = async function main(
   }
 
   warn(
-    'You are using a legacy version of the Now Platform. We highly recommend upgrading:'
+    'You are using a legacy version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
-  // To be replaced
-  warn(`https://zeit.co/docs`);
 
   const { authConfig: { token }, config } = ctx;
 
