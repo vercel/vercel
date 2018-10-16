@@ -572,12 +572,13 @@ exports.pipe = async function main(
   const deploymentUrl = `/v5/now/deployments/${deployment.id}`;
 
   let run = 1;
-  let failedHandlersCount = null;
+
   let handlers = [];
+  let handlersCompleted = false;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (!failedHandlersCount) {
+    if (!handlersCompleted) {
       ({ handlers } = await now.fetch(handlersUrl));
 
       for (const handler of handlers) {
@@ -596,23 +597,23 @@ exports.pipe = async function main(
       renderHandlers(print, handlers, times, run);
       run++;
 
-      failedHandlersCount = handlers.filter(isFailed).length;
-    }
+      handlersCompleted = handlers.every(isDone);
 
-    if (typeof failedHandlersCount === 'number') {
-      if (failedHandlersCount > 0) {
+      if (handlers.some(isFailed)) {
         break;
       }
+    }
 
+    if (handlersCompleted) {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
       if (isDone(deploymentResponse)) {
         deployment = deploymentResponse;
         break;
       }
-    } else {
-      await sleep(sleepingTime);
     }
+
+    await sleep(sleepingTime);
   }
 
   return printDeploymentStatus(output, deployment, handlers);
