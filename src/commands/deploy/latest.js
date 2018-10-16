@@ -565,7 +565,7 @@ exports.pipe = async function main(
     return printDeploymentStatus(output, deployment);
   }
 
-  const sleepingTime = ms('3s');
+  const sleepingTime = ms('1.5s');
   const allHandlersTime = stamp();
   const times = {};
   const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
