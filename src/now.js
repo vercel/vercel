@@ -33,12 +33,12 @@ const error = require('./util/output/error');
 const param = require('./util/output/param');
 const info = require('./util/output/info');
 const note = require('./util/output/note');
-const getNowDir = require('./config/global-path');
+const getNowDir = require('./util/config/global-path');
 const getDefaultCfg = require('./get-default-cfg');
 const getDefaultAuthCfg = require('./get-default-auth-cfg');
 const hp = require('./util/humanize-path');
 const commands = require('./commands');
-const configFiles = require('./util/config-files');
+const configFiles = require('./util/config/files');
 const pkg = require('./util/pkg');
 
 import { Output } from './util/types';
@@ -308,24 +308,6 @@ const main = async argv_ => {
     authConfig,
     argv: argv_
   };
-
-  if (targetOrSubcommand === 'config') {
-    const _config = require('./config');
-    const subcommand = _config.subcommands.has(argv._[3]) ? argv._[3] : 'help';
-
-    debug(`executing config %s`, subcommand);
-
-    try {
-      return _config[subcommand](ctx);
-    } catch (err) {
-      console.error(
-        error(
-          `An unexpected error occurred in config ${subcommand}: ${err.stack}`
-        )
-      );
-      return 1;
-    }
-  }
 
   let subcommand;
 

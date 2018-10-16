@@ -7,9 +7,9 @@ const writeJSON = require('write-json-file');
 const { existsSync } = require('fs-extra');
 
 // Utilities
-const getNowDir = require('../config/global-path');
-const getLocalPathConfig = require('../config/local-path');
-const error = require('./output/error');
+const getNowDir = require('./global-path');
+const getLocalPathConfig = require('./local-path');
+const error = require('../output/error');
 
 const NOW_DIR = getNowDir();
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json');

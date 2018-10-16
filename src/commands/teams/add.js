@@ -14,7 +14,7 @@ const cmd = require('../../util/output/cmd');
 const note = require('../../util/output/note');
 const textInput = require('../../util/input/text');
 const invite = require('./invite');
-const { writeToConfigFile } = require('../../util/config-files');
+const { writeToConfigFile } = require('../../util/config/files');
 
 const validateSlugKeypress = (data, value) => {
   // TODO: the `value` here should contain the current value + the keypress

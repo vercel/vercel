@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
-import { readLocalConfig } from '../../util/config-files';
+import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import type { CLIContext } from '../../util/types';

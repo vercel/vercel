@@ -27,8 +27,8 @@ const sleep = require('../util/sleep');
 const {
   writeToAuthConfigFile,
   writeToConfigFile
-} = require('../util/config-files');
-const getNowDir = require('../config/global-path');
+} = require('../util/config/files');
+const getNowDir = require('../util/config/global-path');
 const hp = require('../util/humanize-path');
 const logo = require('../util/output/logo');
 const exit = require('../util/exit');

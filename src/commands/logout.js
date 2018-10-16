@@ -14,7 +14,7 @@ const {
   writeToConfigFile,
   readAuthConfigFile,
   writeToAuthConfigFile
-} = require('../util/config-files');
+} = require('../util/config/files');
 const error = require('../util/output/error');
 const exit = require('../util/exit');
 

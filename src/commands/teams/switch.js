@@ -8,7 +8,7 @@ const success = require('../../util/output/success');
 const info = require('../../util/output/info');
 const error = require('../../util/output/error');
 const param = require('../../util/output/param');
-const { writeToConfigFile } = require('../../util/config-files');
+const { writeToConfigFile } = require('../../util/config/files');
 const getUser = require('../../util/get-user');
 const NowTeams = require('../../util/teams');
 
