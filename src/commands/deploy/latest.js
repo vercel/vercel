@@ -183,30 +183,6 @@ const isFailed = ({ readyState }) =>
 const isDone = ({ readyState }) =>
   isReady({ readyState }) || isFailed({ readyState });
 
-const allDone = list => {
-  if (list.length === 0) {
-    return false;
-  }
-
-  return list.every(isDone);
-};
-
-const allFailed = list => {
-  if (list.length === 0) {
-    return false;
-  }
-
-  return list.every(isFailed);
-};
-
-const allReady = list => {
-  if (list.length === 0) {
-    return false;
-  }
-
-  return list.every(isReady);
-};
-
 const addProcessEnv = async (log, env) => {
   let val;
 
@@ -592,36 +568,48 @@ exports.pipe = async function main(
   const sleepingTime = ms('3s');
   const allHandlersTime = stamp();
   const times = {};
+  const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
+  const deploymentUrl = `/v5/now/deployments/${deployment.id}`;
 
-  let handlers = [];
   let run = 1;
+  let failedHandlersCount = null;
+  let handlers = [];
 
-  while (!allDone(handlers)) {
-    const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
-    const response = await now.fetch(handlersUrl);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (!failedHandlersCount) {
+      ({ handlers } = await now.fetch(handlersUrl));
 
-    handlers = response.handlers.map(handler => {
-      const id = handler.id;
-      const done = isDone(handler);
+      for (const handler of handlers) {
+        const id = handler.id;
+        const done = isDone(handler);
 
-      if (times[id]) {
-        if (done && typeof times[id] === 'function') {
-          times[id] = times[id]();
+        if (times[id]) {
+          if (done && typeof times[id] === 'function') {
+            times[id] = times[id]();
+          }
+        } else {
+          times[id] = done ? allHandlersTime() : stamp();
         }
-      } else {
-        times[id] = done ? allHandlersTime() : stamp();
       }
 
-      return handler;
-    });
+      renderHandlers(print, handlers, times, run);
+      run++;
 
-    renderHandlers(print, handlers, times, run);
-    run++;
+      failedHandlersCount = handlers.filter(isFailed).length;
+    }
 
-    if (allReady(handlers)) {
-      deployment.readyState = 'READY';
-    } else if (allFailed(handlers)) {
-      deployment.readyState = 'ERROR';
+    if (typeof failedHandlersCount === 'number') {
+      if (failedHandlersCount > 0) {
+        break;
+      }
+
+      const deploymentResponse = await now.fetch(deploymentUrl);
+
+      if (isDone(deploymentResponse)) {
+        deployment = deploymentResponse;
+        break;
+      }
     } else {
       await sleep(sleepingTime);
     }
