@@ -142,15 +142,14 @@ const renderHandlers = (print, list, times, run) => {
         const {path, readyState, id} = handler;
         const state = prepareState(readyState).padEnd(longestState);
         const url = `${id.replace('hdl_', '')}.invoke.sh`;
+        const time = typeof times[id] === 'string' ? times[id] : '';
 
         let stateColor = chalk.grey;
         let pathColor = chalk.cyan;
-        let time = '';
 
-        if (readyState === 'READY') {
+        if (isReady({ readyState })) {
           stateColor = item => item;
-          time = times[id];
-        } else if (readyState.endsWith('_ERROR')) {
+        } else if (isFailed({ readyState })) {
           stateColor = chalk.red;
           pathColor = chalk.red;
         }
@@ -178,7 +177,9 @@ const renderHandlers = (print, list, times, run) => {
   print(`${final}\n`);
 };
 
-const isDone = ({ readyState }) => readyState === 'READY' || readyState.endsWith('_ERROR');
+const isReady = ({ readyState }) => readyState === 'READY';
+const isFailed = ({ readyState }) => readyState.endsWith('_ERROR') || readyState === 'ERROR';
+const isDone = ({ readyState }) => isReady({ readyState }) || isFailed({ readyState });
 
 const allDone = (list) => {
   if (list.length === 0) {
@@ -545,6 +546,7 @@ exports.pipe = async function main(
     }
 
     const sleepingTime = ms('3s');
+    const allHandlersTime = stamp();
     const times = {};
 
     let handlers = [];
@@ -556,13 +558,14 @@ exports.pipe = async function main(
 
       handlers = response.handlers.map(handler => {
         const id = handler.id;
+        const done = isDone(handler);
 
         if (times[id]) {
-          if (isDone(handler)) {
+          if (done && typeof times[id] === 'function') {
             times[id] = times[id]();
           }
         } else {
-          times[id] = stamp();
+          times[id] = done ? allHandlersTime() : stamp();
         }
 
         return handler;
