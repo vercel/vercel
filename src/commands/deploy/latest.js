@@ -241,12 +241,12 @@ const deploymentErrorMsg = `Your deployment failed. Please retry later. More: ht
 const printDeploymentStatus = (output, { readyState }, handlers) => {
   if (readyState === 'READY') {
     output.success('Deployment ready');
-    return;
+    return 0;
   }
 
   if (!handlers) {
     output.error(deploymentErrorMsg);
-    return;
+    return 1;
   }
 
   const failedHandlers = handlers.filter(isFailed);
@@ -256,10 +256,11 @@ const printDeploymentStatus = (output, { readyState }, handlers) => {
     const name = amount === 1 ? 'handler' : 'handlers';
 
     output.error(`${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/handler-deploy-error`);
-    return;
+    return 1;
   }
 
   output.error(deploymentErrorMsg);
+  return 1;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -322,7 +323,6 @@ exports.pipe = async function main(
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
 
-  return new Promise(async (resolveRoot, rejectRoot) => {
     const { log, debug, error, print } = output;
     const paths = Object.keys(stats);
     const debugEnabled = argv['--debug'];
@@ -424,9 +424,7 @@ exports.pipe = async function main(
         firstDeployCall instanceof Errors.TooManyRequests
       ) {
         handleCreateDeployError(output, firstDeployCall);
-        resolveRoot(1);
-
-        return;
+        return 1;
       }
 
       deployment = firstDeployCall;
@@ -434,7 +432,7 @@ exports.pipe = async function main(
       if (now.syncFileCount > 0) {
         const uploadStamp = stamp();
 
-        await new Promise(resolve => {
+        await new Promise((resolve, reject) => {
           if (now.syncFileCount !== now.fileCount) {
             debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
           }
@@ -470,7 +468,7 @@ exports.pipe = async function main(
 
           now.on('error', err => {
             error('Upload failed');
-            rejectRoot(err);
+            reject(err);
           });
         });
 
@@ -506,9 +504,7 @@ exports.pipe = async function main(
             secondDeployCall instanceof Errors.TooManyRequests
           ) {
             handleCreateDeployError(output, secondDeployCall);
-            resolveRoot(1);
-
-            return;
+            return 1;
           }
 
           if (now.syncFileCount === 0) {
@@ -519,9 +515,7 @@ exports.pipe = async function main(
 
         if (deployment === null) {
           error('Uploading failed. Please try again.');
-          resolveRoot(1);
-
-          return;
+          return 1;
         }
       }
     } catch (err) {
@@ -534,9 +528,7 @@ exports.pipe = async function main(
       }
 
       handleError(err);
-      resolveRoot(1);
-
-      return;
+      return 1;
     }
 
     const { url } = now;
@@ -570,10 +562,7 @@ exports.pipe = async function main(
     // If an error occured, we want to let it fall down to rendering
     // handlers so the user can see in which handler the error occured.
     if (isReady(deployment)) {
-      printDeploymentStatus(output, deployment);
-      resolveRoot(0);
-
-      return;
+      return printDeploymentStatus(output, deployment);
     }
 
     const sleepingTime = ms('3s');
@@ -610,9 +599,7 @@ exports.pipe = async function main(
       }
     }
 
-    printDeploymentStatus(output, deployment, handlers);
-    resolveRoot(0);
-  });
+    return printDeploymentStatus(output, deployment, handlers);
 };
 
 function handleCreateDeployError<OtherError>(
