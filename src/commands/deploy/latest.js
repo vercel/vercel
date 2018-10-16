@@ -191,6 +191,22 @@ const allDone = list => {
   return list.every(isDone);
 };
 
+const allFailed = list => {
+  if (list.length === 0) {
+    return false;
+  }
+
+  return list.every(isFailed);
+};
+
+const allReady = list => {
+  if (list.length === 0) {
+    return false;
+  }
+
+  return list.every(isReady);
+};
+
 const addProcessEnv = async (log, env) => {
   let val;
 
@@ -602,7 +618,11 @@ exports.pipe = async function main(
     renderHandlers(print, handlers, times, run);
     run++;
 
-    if (!allDone(handlers)) {
+    if (allReady(handlers)) {
+      deployment.readyState = 'READY';
+    } else if (allFailed(handlers)) {
+      deployment.readyState = 'ERROR';
+    } else {
       await sleep(sleepingTime);
     }
   }
