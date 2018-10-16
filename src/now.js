@@ -34,8 +34,7 @@ const param = require('./util/output/param');
 const info = require('./util/output/info');
 const note = require('./util/output/note');
 const getNowDir = require('./util/config/global-path');
-const getDefaultCfg = require('./get-default-cfg');
-const getDefaultAuthCfg = require('./get-default-auth-cfg');
+const { getDefaultConfig,  getDefaultAuthConfig } = require('./util/config/get-default');
 const hp = require('./util/humanize-path');
 const commands = require('./commands');
 const configFiles = require('./util/config/files');
@@ -198,7 +197,7 @@ const main = async argv_ => {
   }
 
   if (!configExists) {
-    const results = await getDefaultCfg(config);
+    const results = await getDefaultConfig(config);
 
     config = results.config;
     migrated = results.migrated;
@@ -273,7 +272,7 @@ const main = async argv_ => {
   }
 
   if (!authConfigExists) {
-    const results = await getDefaultAuthCfg(authConfig);
+    const results = await getDefaultAuthConfig(authConfig);
 
     authConfig = results.config;
     migrated = results.migrated;
