@@ -74,14 +74,11 @@ module.exports = async (ctx: CLIContext) => {
 
   const file = highlight('now.json');
   const prop = code('version');
-  const fallback = highlight(
-    platformVersion === null ? 'latest version' : `version ${platformVersion}`
-  );
 
   if (!localConfig) {
     if (!isHelp && !isFile) {
       output.warn(
-        `Your project is missing ${prop} in ${file}. More: htts://zeit.co/docs/version-config`
+        `Your project is missing a ${file} file with a ${prop} property inside. More: htts://zeit.co/docs/version-config`
       );
     }
   } else {
@@ -108,7 +105,7 @@ module.exports = async (ctx: CLIContext) => {
       }
     } else if (!isHelp) {
       output.warn(
-        `Your ${file} file is missing the ${prop} property. Falling back to ${fallback}.`
+        `Your project is missing ${prop} in ${file}. More: htts://zeit.co/docs/version-config`
       );
     }
   }
