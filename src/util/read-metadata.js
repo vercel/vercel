@@ -10,7 +10,7 @@ const { parse: parseDockerfile } = require('docker-file-parser');
 const determineType = require('deployment-type');
 
 // Utilities
-const getLocalConfigPath = require('../config/local-path');
+const getLocalConfigPath = require('./config/local-path');
 
 module.exports = readMetaData;
 
