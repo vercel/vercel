@@ -114,7 +114,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (platformVersion === null || platformVersion > 1) {
-    return latestPipe(ctx, contextName, output, stats, localConfig || {}, isFile);
+    return latestPipe(ctx, contextName, output, stats, localConfig || {}, isFile, platformVersion);
   }
 
   return legacyPipe(ctx, contextName, output);

@@ -273,7 +273,8 @@ exports.pipe = async function main(
   output: Output,
   stats: any,
   localConfig: any,
-  isFile: boolean
+  isFile: boolean,
+  platformVersion: number
 ): Promise<number> {
   let argv = null;
 
@@ -510,6 +511,7 @@ exports.pipe = async function main(
 
     const { url } = now;
     const dcs = '';
+    const version = platformVersion === null ? 'v2' : `v${platformVersion}`;
 
     if (isTTY) {
       if (!argv['--no-clipboard']) {
@@ -518,14 +520,14 @@ exports.pipe = async function main(
           log(
             `${chalk.bold(
               chalk.cyan(url)
-            )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+            )} ${chalk.gray(`[${version}]`)} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
           );
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
             `${chalk.bold(
               chalk.cyan(url)
-            )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+            )} ${chalk.gray(`[${version}]`)} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
           );
         }
       } else {
