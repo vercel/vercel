@@ -236,6 +236,32 @@ const parseMeta = (meta) => {
   return parsed;
 };
 
+const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
+
+const printDeploymentStatus = (output, { readyState }, handlers) => {
+  if (readyState === 'READY') {
+    output.success('Deployment ready');
+    return;
+  }
+
+  if (!handlers) {
+    output.error(deploymentErrorMsg);
+    return;
+  }
+
+  const failedHandlers = handlers.filter(isFailed);
+  const amount = failedHandlers.length;
+
+  if (amount > 0) {
+    const name = amount === 1 ? 'handler' : 'handlers';
+
+    output.error(`${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/handler-deploy-error`);
+    return;
+  }
+
+  output.error(deploymentErrorMsg);
+};
+
 // Converts `env` Arrays, Strings and Objects into env Objects.
 // `null` empty value means to prompt user for value upon deployment.
 // `undefined` empty value means to inherit value from user's env.
@@ -248,11 +274,13 @@ const parseEnv = (env, empty) => {
     // a single `--env` arg comes in as a String
     env = [env];
   }
+
   if (Array.isArray(env)) {
     return env.reduce((o, e) => {
       let key;
       let value;
       const equalsSign = e.indexOf('=');
+
       if (equalsSign === -1) {
         key = e;
         value = empty;
@@ -260,6 +288,7 @@ const parseEnv = (env, empty) => {
         key = e.substr(0, equalsSign);
         value = e.substr(equalsSign + 1);
       }
+
       o[key] = value;
       return o;
     }, {});
@@ -538,8 +567,10 @@ exports.pipe = async function main(
       process.stdout.write(url);
     }
 
-    if (deployment.readyState === 'READY') {
-      output.success(`Deployment ready`);
+    // If an error occured, we want to let it fall down to rendering
+    // handlers so the user can see in which handler the error occured.
+    if (isReady(deployment)) {
+      printDeploymentStatus(output, deployment);
       resolveRoot(0);
 
       return;
@@ -579,7 +610,7 @@ exports.pipe = async function main(
       }
     }
 
-    output.success(`Deployment ready`);
+    printDeploymentStatus(output, deployment, handlers);
     resolveRoot(0);
   });
 };
