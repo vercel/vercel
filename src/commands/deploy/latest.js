@@ -10,6 +10,7 @@ import table from 'text-table';
 import chalk from 'chalk';
 import Progress from 'progress';
 import logo from '../../util/output/logo';
+import wait from '../../util/output/wait';
 import eraseLines from '../../util/output/erase-lines';
 import strlen from '../../util/strlen';
 import { handleError } from '../../util/error';
@@ -576,6 +577,8 @@ exports.pipe = async function main(
   let handlers = [];
   let handlersCompleted = false;
 
+  let deploymentSpinner = null;
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (!handlersCompleted) {
@@ -609,7 +612,15 @@ exports.pipe = async function main(
 
       if (isDone(deploymentResponse)) {
         deployment = deploymentResponse;
+
+        if (typeof deploymentSpinner === 'function') {
+          // This stops it
+          deploymentSpinner();
+        }
+
         break;
+      } else if (!deploymentSpinner) {
+        deploymentSpinner = wait('Waiting for deployment to be ready');
       }
     }
 
