@@ -139,7 +139,7 @@ const renderHandlers = (print, list, times, run) => {
   const final = table(
     [
       ...list.map(handler => {
-        const {path, readyState, id} = handler;
+        const { path, readyState, id } = handler;
         const state = prepareState(readyState).padEnd(longestState);
         const url = `${id.replace('hdl_', '')}.invoke.sh`;
         const time = typeof times[id] === 'string' ? times[id] : '';
@@ -178,10 +178,12 @@ const renderHandlers = (print, list, times, run) => {
 };
 
 const isReady = ({ readyState }) => readyState === 'READY';
-const isFailed = ({ readyState }) => readyState.endsWith('_ERROR') || readyState === 'ERROR';
-const isDone = ({ readyState }) => isReady({ readyState }) || isFailed({ readyState });
+const isFailed = ({ readyState }) =>
+  readyState.endsWith('_ERROR') || readyState === 'ERROR';
+const isDone = ({ readyState }) =>
+  isReady({ readyState }) || isFailed({ readyState });
 
-const allDone = (list) => {
+const allDone = list => {
   if (list.length === 0) {
     return false;
   }
@@ -217,7 +219,7 @@ const addProcessEnv = async (log, env) => {
   }
 };
 
-const parseMeta = (meta) => {
+const parseMeta = meta => {
   if (!meta) {
     return {};
   }
@@ -255,7 +257,9 @@ const printDeploymentStatus = (output, { readyState }, handlers) => {
   if (amount > 0) {
     const name = amount === 1 ? 'handler' : 'handlers';
 
-    output.error(`${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/handler-deploy-error`);
+    output.error(
+      `${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/handler-deploy-error`
+    );
     return 1;
   }
 
@@ -323,283 +327,287 @@ exports.pipe = async function main(
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
 
-    const { log, debug, error, print } = output;
-    const paths = Object.keys(stats);
-    const debugEnabled = argv['--debug'];
+  const { log, debug, error, print } = output;
+  const paths = Object.keys(stats);
+  const debugEnabled = argv['--debug'];
 
+  // $FlowFixMe
+  const isTTY = process.stdout.isTTY;
+  const quiet = !isTTY;
+
+  const list = paths
+    .map((path, index) => {
+      let suffix = '';
+
+      if (paths.length > 1 && index !== paths.length - 1) {
+        suffix = index < paths.length - 2 ? ', ' : ' and ';
+      }
+
+      return chalk.bold(toHumanPath(path)) + suffix;
+    })
+    .join('');
+
+  log(`Deploying ${list} under ${chalk.bold(contextName)}`);
+
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const filesName = isFile
+    ? 'file'
+    : paths.length === 1 ? basename(paths[0]) : 'files';
+  const meta = Object.assign(
+    {},
+    parseMeta(localConfig.meta),
+    parseMeta(argv['--meta'])
+  );
+
+  let syncCount;
+  let deployStamp = stamp();
+  let deployment: HandlersDeployment | null = null;
+
+  // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+  const deploymentEnv = Object.assign(
+    {},
+    parseEnv(localConfig.env, null),
+    parseEnv(argv.env, undefined)
+  );
+
+  // Merge build env out of  `build.env` from now.json, and `--build-env` args
+  const deploymentBuildEnv = Object.assign(
+    {},
+    parseEnv(localConfig.build && localConfig.build.env, null),
+    parseEnv(argv['build-env'], undefined)
+  );
+
+  // If there's any undefined values, then inherit them from this process
+  try {
+    await addProcessEnv(log, deploymentEnv);
+    await addProcessEnv(log, deploymentBuildEnv);
+  } catch (err) {
+    error(err.message);
+    return 1;
+  }
+
+  try {
     // $FlowFixMe
-    const isTTY = process.stdout.isTTY;
-    const quiet = !isTTY;
-
-    const list = paths
-      .map((path, index) => {
-        let suffix = '';
-
-        if (paths.length > 1 && index !== paths.length - 1) {
-          suffix = index < paths.length - 2 ? ', ' : ' and ';
-        }
-
-        return chalk.bold(toHumanPath(path)) + suffix;
-      })
-      .join('');
-
-    log(`Deploying ${list} under ${chalk.bold(contextName)}`);
-
-    const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-    const filesName = isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files';
-    const meta = Object.assign({}, parseMeta(localConfig.meta), parseMeta(argv['--meta']));
-
-    let syncCount;
-    let deployStamp = stamp();
-    let deployment: HandlersDeployment | null = null;
-
-    // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
-    const deploymentEnv = Object.assign(
-      {},
-      parseEnv(localConfig.env, null),
-      parseEnv(argv.env, undefined)
+    const createArgs = Object.assign(
+      {
+        env: deploymentEnv,
+        buildEnv: deploymentBuildEnv,
+        followSymlinks: argv['--links'],
+        forceNew: argv['--force'],
+        quiet,
+        wantsPublic: argv['--public'] || localConfig.public,
+        isFile,
+        type: null,
+        handlers: localConfig.handlers,
+        routes: localConfig.routes,
+        meta
+      },
+      {
+        name: argv['--name'] || localConfig.name || filesName
+      }
     );
 
-    // Merge build env out of  `build.env` from now.json, and `--build-env` args
-    const deploymentBuildEnv = Object.assign(
-      {},
-      parseEnv(localConfig.build && localConfig.build.env, null),
-      parseEnv(argv['build-env'], undefined)
+    deployStamp = stamp();
+
+    const firstDeployCall = await createDeploy(
+      output,
+      now,
+      contextName,
+      paths,
+      createArgs
     );
 
-    // If there's any undefined values, then inherit them from this process
-    try {
-      await addProcessEnv(log, deploymentEnv);
-      await addProcessEnv(log, deploymentBuildEnv);
-    } catch (err) {
-      error(err.message);
+    if (
+      firstDeployCall instanceof Errors.CantSolveChallenge ||
+      firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
+      firstDeployCall instanceof Errors.DomainConfigurationError ||
+      firstDeployCall instanceof Errors.DomainNameserversNotFound ||
+      firstDeployCall instanceof Errors.DomainNotFound ||
+      firstDeployCall instanceof Errors.DomainNotVerified ||
+      firstDeployCall instanceof Errors.DomainPermissionDenied ||
+      firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
+      firstDeployCall instanceof Errors.DomainValidationRunning ||
+      firstDeployCall instanceof Errors.DomainVerificationFailed ||
+      firstDeployCall instanceof Errors.InvalidWildcardDomain ||
+      firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
+      firstDeployCall instanceof Errors.TooManyCertificates ||
+      firstDeployCall instanceof Errors.TooManyRequests
+    ) {
+      handleCreateDeployError(output, firstDeployCall);
       return 1;
     }
 
-    try {
-      // $FlowFixMe
-      const createArgs = Object.assign(
-        {
-          env: deploymentEnv,
-          buildEnv: deploymentBuildEnv,
-          followSymlinks: argv['--links'],
-          forceNew: argv['--force'],
-          quiet,
-          wantsPublic: argv['--public'] || localConfig.public,
-          isFile,
-          type: null,
-          handlers: localConfig.handlers,
-          routes: localConfig.routes,
-          meta
-        },
-        {
-          name: argv['--name'] || localConfig.name || filesName
+    deployment = firstDeployCall;
+
+    if (now.syncFileCount > 0) {
+      const uploadStamp = stamp();
+
+      await new Promise((resolve, reject) => {
+        if (now.syncFileCount !== now.fileCount) {
+          debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
         }
-      );
 
-      deployStamp = stamp();
-
-      const firstDeployCall = await createDeploy(
-        output,
-        now,
-        contextName,
-        paths,
-        createArgs
-      );
-
-      if (
-        firstDeployCall instanceof Errors.CantSolveChallenge ||
-        firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
-        firstDeployCall instanceof Errors.DomainConfigurationError ||
-        firstDeployCall instanceof Errors.DomainNameserversNotFound ||
-        firstDeployCall instanceof Errors.DomainNotFound ||
-        firstDeployCall instanceof Errors.DomainNotVerified ||
-        firstDeployCall instanceof Errors.DomainPermissionDenied ||
-        firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
-        firstDeployCall instanceof Errors.DomainValidationRunning ||
-        firstDeployCall instanceof Errors.DomainVerificationFailed ||
-        firstDeployCall instanceof Errors.InvalidWildcardDomain ||
-        firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
-        firstDeployCall instanceof Errors.TooManyCertificates ||
-        firstDeployCall instanceof Errors.TooManyRequests
-      ) {
-        handleCreateDeployError(output, firstDeployCall);
-        return 1;
-      }
-
-      deployment = firstDeployCall;
-
-      if (now.syncFileCount > 0) {
-        const uploadStamp = stamp();
-
-        await new Promise((resolve, reject) => {
-          if (now.syncFileCount !== now.fileCount) {
-            debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
+        const size = bytes(now.syncAmount);
+        syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+          ? 's'
+          : ''}`;
+        const bar = new Progress(
+          `${chalk.gray(
+            '>'
+          )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+          {
+            width: 20,
+            complete: '=',
+            incomplete: '',
+            total: now.syncAmount,
+            clear: true
           }
+        );
 
-          const size = bytes(now.syncAmount);
-          syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-            ? 's'
-            : ''}`;
-          const bar = new Progress(
-            `${chalk.gray(
-              '>'
-            )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-            {
-              width: 20,
-              complete: '=',
-              incomplete: '',
-              total: now.syncAmount,
-              clear: true
-            }
-          );
+        now.upload({ scale: {} });
 
-          now.upload({ scale: {} });
-
-          now.on('upload', ({ names, data }) => {
-            debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
-          });
-
-          now.on('uploadProgress', progress => {
-            bar.tick(progress);
-          });
-
-          now.on('complete', resolve);
-
-          now.on('error', err => {
-            error('Upload failed');
-            reject(err);
-          });
+        now.on('upload', ({ names, data }) => {
+          debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
         });
 
-        if (!quiet && syncCount) {
-          log(
-            `Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`
-          );
-        }
+        now.on('uploadProgress', progress => {
+          bar.tick(progress);
+        });
 
-        for (let i = 0; i < 4; i += 1) {
-          deployStamp = stamp();
-          const secondDeployCall = await createDeploy(
-            output,
-            now,
-            contextName,
-            paths,
-            createArgs
-          );
-          if (
-            secondDeployCall instanceof Errors.CantSolveChallenge ||
-            secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
-            secondDeployCall instanceof Errors.DomainConfigurationError ||
-            secondDeployCall instanceof Errors.DomainNameserversNotFound ||
-            secondDeployCall instanceof Errors.DomainNotFound ||
-            secondDeployCall instanceof Errors.DomainNotVerified ||
-            secondDeployCall instanceof Errors.DomainPermissionDenied ||
-            secondDeployCall instanceof Errors.DomainsShouldShareRoot ||
-            secondDeployCall instanceof Errors.DomainValidationRunning ||
-            secondDeployCall instanceof Errors.DomainVerificationFailed ||
-            secondDeployCall instanceof Errors.InvalidWildcardDomain ||
-            secondDeployCall instanceof Errors.CDNNeedsUpgrade ||
-            secondDeployCall instanceof Errors.TooManyCertificates ||
-            secondDeployCall instanceof Errors.TooManyRequests
-          ) {
-            handleCreateDeployError(output, secondDeployCall);
-            return 1;
-          }
+        now.on('complete', resolve);
 
-          if (now.syncFileCount === 0) {
-            deployment = secondDeployCall;
-            break;
-          }
-        }
-
-        if (deployment === null) {
-          error('Uploading failed. Please try again.');
-          return 1;
-        }
-      }
-    } catch (err) {
-      debug(`Error: ${err}\n${err.stack}`);
-
-      if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
-        const { additionalProperty = '' } = err.params || {};
-        const message = `Invalid DC name for the scale option: ${additionalProperty}`;
-        error(message);
-      }
-
-      handleError(err);
-      return 1;
-    }
-
-    const { url } = now;
-    const dcs = '';
-    const version = platformVersion === null ? 'v2' : `v${platformVersion}`;
-
-    if (isTTY) {
-      if (!argv['--no-clipboard']) {
-        try {
-          await copy(url);
-          log(
-            `${chalk.bold(
-              chalk.cyan(url)
-            )} ${chalk.gray(`[${version}]`)} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
-          );
-        } catch (err) {
-          debug(`Error copying to clipboard: ${err}`);
-          log(
-            `${chalk.bold(
-              chalk.cyan(url)
-            )} ${chalk.gray(`[${version}]`)} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
-          );
-        }
-      } else {
-        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
-      }
-    } else {
-      process.stdout.write(url);
-    }
-
-    // If an error occured, we want to let it fall down to rendering
-    // handlers so the user can see in which handler the error occured.
-    if (isReady(deployment)) {
-      return printDeploymentStatus(output, deployment);
-    }
-
-    const sleepingTime = ms('3s');
-    const allHandlersTime = stamp();
-    const times = {};
-
-    let handlers = [];
-    let run = 1;
-
-    while (!allDone(handlers)) {
-      const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
-      const response = await now.fetch(handlersUrl);
-
-      handlers = response.handlers.map(handler => {
-        const id = handler.id;
-        const done = isDone(handler);
-
-        if (times[id]) {
-          if (done && typeof times[id] === 'function') {
-            times[id] = times[id]();
-          }
-        } else {
-          times[id] = done ? allHandlersTime() : stamp();
-        }
-
-        return handler;
+        now.on('error', err => {
+          error('Upload failed');
+          reject(err);
+        });
       });
 
-      renderHandlers(print, handlers, times, run);
-      run++;
+      if (!quiet && syncCount) {
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`);
+      }
 
-      if (!allDone(handlers)) {
-        await sleep(sleepingTime);
+      for (let i = 0; i < 4; i += 1) {
+        deployStamp = stamp();
+        const secondDeployCall = await createDeploy(
+          output,
+          now,
+          contextName,
+          paths,
+          createArgs
+        );
+        if (
+          secondDeployCall instanceof Errors.CantSolveChallenge ||
+          secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
+          secondDeployCall instanceof Errors.DomainConfigurationError ||
+          secondDeployCall instanceof Errors.DomainNameserversNotFound ||
+          secondDeployCall instanceof Errors.DomainNotFound ||
+          secondDeployCall instanceof Errors.DomainNotVerified ||
+          secondDeployCall instanceof Errors.DomainPermissionDenied ||
+          secondDeployCall instanceof Errors.DomainsShouldShareRoot ||
+          secondDeployCall instanceof Errors.DomainValidationRunning ||
+          secondDeployCall instanceof Errors.DomainVerificationFailed ||
+          secondDeployCall instanceof Errors.InvalidWildcardDomain ||
+          secondDeployCall instanceof Errors.CDNNeedsUpgrade ||
+          secondDeployCall instanceof Errors.TooManyCertificates ||
+          secondDeployCall instanceof Errors.TooManyRequests
+        ) {
+          handleCreateDeployError(output, secondDeployCall);
+          return 1;
+        }
+
+        if (now.syncFileCount === 0) {
+          deployment = secondDeployCall;
+          break;
+        }
+      }
+
+      if (deployment === null) {
+        error('Uploading failed. Please try again.');
+        return 1;
       }
     }
+  } catch (err) {
+    debug(`Error: ${err}\n${err.stack}`);
 
-    return printDeploymentStatus(output, deployment, handlers);
+    if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
+      const { additionalProperty = '' } = err.params || {};
+      const message = `Invalid DC name for the scale option: ${additionalProperty}`;
+      error(message);
+    }
+
+    handleError(err);
+    return 1;
+  }
+
+  const { url } = now;
+  const dcs = '';
+  const version = platformVersion === null ? 'v2' : `v${platformVersion}`;
+
+  if (isTTY) {
+    if (!argv['--no-clipboard']) {
+      try {
+        await copy(url);
+        log(
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
+            `[${version}]`
+          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+        );
+      } catch (err) {
+        debug(`Error copying to clipboard: ${err}`);
+        log(
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
+            `[${version}]`
+          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+        );
+      }
+    } else {
+      log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
+    }
+  } else {
+    process.stdout.write(url);
+  }
+
+  // If an error occured, we want to let it fall down to rendering
+  // handlers so the user can see in which handler the error occured.
+  if (isReady(deployment)) {
+    return printDeploymentStatus(output, deployment);
+  }
+
+  const sleepingTime = ms('3s');
+  const allHandlersTime = stamp();
+  const times = {};
+
+  let handlers = [];
+  let run = 1;
+
+  while (!allDone(handlers)) {
+    const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
+    const response = await now.fetch(handlersUrl);
+
+    handlers = response.handlers.map(handler => {
+      const id = handler.id;
+      const done = isDone(handler);
+
+      if (times[id]) {
+        if (done && typeof times[id] === 'function') {
+          times[id] = times[id]();
+        }
+      } else {
+        times[id] = done ? allHandlersTime() : stamp();
+      }
+
+      return handler;
+    });
+
+    renderHandlers(print, handlers, times, run);
+    run++;
+
+    if (!allDone(handlers)) {
+      await sleep(sleepingTime);
+    }
+  }
+
+  return printDeploymentStatus(output, deployment, handlers);
 };
 
 function handleCreateDeployError<OtherError>(
