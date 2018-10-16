@@ -55,7 +55,7 @@ import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity', 'regions', 'metadata'],
+  string: ['name', 'alias', 'session-affinity', 'regions', 'meta'],
   boolean: [
     'help',
     'version',
@@ -88,7 +88,7 @@ const mriOpts = {
     'session-affinity': 'S',
     name: 'n',
     alias: 'a',
-    metadata: 'm'
+    meta: 'm'
   }
 }
 
@@ -150,7 +150,7 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
-    -m, --metatdata                Add metadata for the deployment (e.g.: ${chalk.dim(
+    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
@@ -744,7 +744,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       })
     )
 
-    const metadata = parseMetadata(argv.metadata)
+    const metadata = parseMetadata(argv.meta)
     const env = {}
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
@@ -762,7 +762,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       const createArgs = Object.assign(
         {
           env,
-          metadata,
+          meta: metadata,
           followSymlinks,
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,
