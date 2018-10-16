@@ -554,38 +554,18 @@ exports.pipe = async function main(
       const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
       const response = await now.fetch(handlersUrl);
 
-      let readyState = null;
-
-      switch (run) {
-        case 1:
-          readyState = 'INITIALIZING';
-          break;
-        case 2:
-          readyState = 'ANALYZING';
-          break;
-        case 3:
-          readyState = 'BUILDING';
-          break;
-        case 4:
-          readyState = 'DEPLOYING';
-          break;
-        default:
-          readyState = 'READY';
-      }
-
       handlers = response.handlers.map(handler => {
         const id = handler.id;
-        const filled = Object.assign({}, handler, { readyState });
 
         if (times[id]) {
-          if (isDone(filled)) {
+          if (isDone(handler)) {
             times[id] = times[id]();
           }
         } else {
           times[id] = stamp();
         }
 
-        return filled;
+        return handler;
       });
 
       renderHandlers(print, handlers, times, run);
