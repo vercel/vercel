@@ -141,7 +141,7 @@ const renderHandlers = (print, list, times, run) => {
       ...list.map(handler => {
         const {path, readyState, id} = handler;
         const state = prepareState(readyState).padEnd(longestState);
-        const url = `https://${id.replace('hdl_', '')}.invoke.sh`;
+        const url = `${id.replace('hdl_', '')}.invoke.sh`;
 
         let stateColor = chalk.grey;
         let pathColor = chalk.cyan;
