@@ -233,9 +233,9 @@ const parseMeta = meta => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (output, { readyState }, handlers) => {
+const printDeploymentStatus = (output, { readyState }, deployStamp, handlers) => {
   if (readyState === 'READY') {
-    output.success('Deployment ready');
+    output.success(`Deployment ready ${deployStamp()}`);
     return 0;
   }
 
@@ -563,7 +563,7 @@ exports.pipe = async function main(
   // If an error occured, we want to let it fall down to rendering
   // handlers so the user can see in which handler the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment);
+    return printDeploymentStatus(output, deployment, deployStamp);
   }
 
   const sleepingTime = ms('1.5s');
@@ -627,7 +627,7 @@ exports.pipe = async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, handlers);
+  return printDeploymentStatus(output, deployment, deployStamp, handlers);
 };
 
 function handleCreateDeployError<OtherError>(
