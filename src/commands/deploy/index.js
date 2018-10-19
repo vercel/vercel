@@ -117,8 +117,7 @@ module.exports = async (ctx: CLIContext) => {
       output,
       stats,
       localConfig || {},
-      isFile,
-      platformVersion
+      isFile
     );
   }
 

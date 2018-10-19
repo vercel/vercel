@@ -1020,14 +1020,14 @@ async function sync({
           log(
             `${chalk.bold(
               chalk.cyan(url)
-            )} [in clipboard]${dcs} ${deployStamp()}`
+            )} ${chalk.gray('[v1]')} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
           );
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
             `${chalk.bold(
               chalk.cyan(url)
-            )} [in clipboard]${dcs} ${deployStamp()}`
+            )} ${chalk.gray('[v1]')} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
           );
         }
       } else {
