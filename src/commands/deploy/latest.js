@@ -582,9 +582,9 @@ exports.pipe = async function main(
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (!handlersCompleted) {
-      ({ handlers } = await now.fetch(handlersUrl));
+      const { handlers: freshHandlers } = await now.fetch(handlersUrl);
 
-      for (const handler of handlers) {
+      for (const handler of freshHandlers ) {
         const id = handler.id;
         const done = isDone(handler);
 
@@ -597,14 +597,22 @@ exports.pipe = async function main(
         }
       }
 
-      renderHandlers(print, handlers, times, run);
-      run++;
+      if (JSON.stringify(handlers) !== JSON.stringify(freshHandlers)) {
+        handlers = freshHandlers;
 
-      handlersCompleted = handlers.every(isDone);
+        debug(`Re-rendering handlers, because their state changed.`);
+        renderHandlers(print, handlers, times, run);
 
-      if (handlers.some(isFailed)) {
-        break;
+        handlersCompleted = handlers.every(isDone);
+
+        if (handlers.some(isFailed)) {
+          break;
+        }
+      } else {
+        debug(`Not re-rendering, as the handler states did not change.`);
       }
+
+      run++;
     }
 
     if (handlersCompleted) {
