@@ -189,6 +189,7 @@ const main = async argv_ => {
     // need to migrate.
     if (
       config.sh ||
+      config.user ||
       typeof config.user === 'object' ||
       typeof config.currentTeam === 'object'
     ) {
