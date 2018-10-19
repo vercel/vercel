@@ -155,10 +155,10 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   print('\n');
   print(chalk.bold('  Meta\n'));
-  print(`    ${chalk.dim('version')}\t${version < 2 ? 'legacy' : 'latest'}\n`);
-  print(`    ${chalk.dim('uid')}\t\t${uid}\n`);
+  print(`    ${chalk.dim('version')}\t${version}\n`);
+  print(`    ${chalk.dim('id')}\t\t${uid}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
-  print(`    ${chalk.dim('state')}\t${stateString(state)}\n`);
+  print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
   if (!isHandlers) {
     print(`    ${chalk.dim('type')}\t${type}\n`);
   }
@@ -170,7 +170,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
   print(`    ${chalk.dim('url')}\t\t${url}\n`);
   print(
-    `    ${chalk.dim('created')}\t${new Date(created)} ${elapsed(
+    `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
       Date.now() - created
     )}\n`
   );
