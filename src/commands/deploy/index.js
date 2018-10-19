@@ -78,7 +78,7 @@ module.exports = async (ctx: CLIContext) => {
   if (!localConfig) {
     if (!isHelp && !isFile) {
       output.warn(
-        `Your project is missing a ${file} file with a ${prop} property inside. More: htts://zeit.co/docs/version-config`
+        `Your project is missing a ${file} file with a ${prop} property. More: htts://zeit.co/docs/version-config`
       );
     }
   } else {
@@ -91,7 +91,7 @@ module.exports = async (ctx: CLIContext) => {
           const second = code(2);
 
           output.error(
-            `The value of the ${prop} property inside ${file} can only be ${first} or ${second}.`
+            `The value of the ${prop} property within ${file} can only be ${first} or ${second}.`
           );
           return 1;
         }
