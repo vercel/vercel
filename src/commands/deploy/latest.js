@@ -89,6 +89,7 @@ const help = () => {
     )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -T, --team                     Set a custom team scope
+    --regions                      Set default regions to enable the deployment on
 
   ${chalk.dim('Examples:')}
 
@@ -121,6 +122,9 @@ exports.args = {
   '--env': [String],
   '--build-env': [String],
   '--meta': [String],
+  // This is not an array in favor of matching
+  // the config property name.
+  '--regions': String,
   '-n': '--name',
   '-f': '--force',
   '-l': '--links',
@@ -378,6 +382,9 @@ exports.pipe = async function main(
     return 1;
   }
 
+  const regionFlag = (argv['--regions'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
+
   try {
     // $FlowFixMe
     const createArgs = Object.assign(
@@ -392,7 +399,7 @@ exports.pipe = async function main(
         type: null,
         handlers: localConfig.handlers,
         routes: localConfig.routes,
-        regions: localConfig.regions,
+        regions,
         meta
       },
       {
