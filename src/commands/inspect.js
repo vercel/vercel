@@ -174,14 +174,20 @@ module.exports = async function main(ctx: any): Promise<number> {
   print(`    ${chalk.dim('url')}\t\t${url}\n`);
   print(
     `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created
-    )}\n`
+      Date.now() - created, true)}\n`
   );
   print('\n');
 
   if (handlers.length > 0) {
+    const times = {};
+
+    for (const handler of handlers) {
+      const {id, createdAt, readyStateAt} = handler;
+      times[id] = createdAt ? elapsed(createdAt - readyStateAt) : null;
+    }
+
     print(chalk.bold('  Handlers\n'));
-    print(handlersList(handlers, {}, true));
+    print(handlersList(handlers, times, true));
     print('\n');
   }
 

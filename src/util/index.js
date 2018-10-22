@@ -225,8 +225,7 @@ module.exports = class Now extends EventEmitter {
         files,
         handlers,
         routes,
-        meta,
-        regions
+        meta
       } : {
         env,
         meta,
@@ -244,7 +243,11 @@ module.exports = class Now extends EventEmitter {
         atlas
       };
 
-      if (!isHandlers && Object.keys(nowConfig).length > 0) {
+      if (isHandlers) {
+        if (regions.length > 0) {
+          requestBody.regions = regions;
+        }
+      } else if (Object.keys(nowConfig).length > 0) {
         requestBody.config = nowConfig;
       }
 
