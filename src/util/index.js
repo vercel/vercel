@@ -229,6 +229,7 @@ module.exports = class Now extends EventEmitter {
         regions
       } : {
         env,
+        meta,
         public: wantsPublic || nowConfig.public,
         forceNew,
         name,

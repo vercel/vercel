@@ -73,6 +73,7 @@ const mriOpts = {
   },
   alias: {
     env: 'e',
+    meta: 'm',
     'build-env': 'b',
     dotenv: 'E',
     help: 'h',
@@ -166,6 +167,9 @@ const help = () => {
     -b, --build-env                Similar to ${chalk.dim(
       '`--env`'
     )} but for build time only.
+    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
+      '`-m KEY=value`'
+    )}). Can appear many times.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
@@ -261,6 +265,25 @@ const addProcessEnv = async env => {
       return;
     }
   }
+};
+
+const parseMeta = meta => {
+  if (!meta) {
+    return {};
+  }
+
+  if (typeof meta === 'string') {
+    meta = [meta];
+  }
+
+  const parsed = {};
+
+  meta.forEach(item => {
+    const [key, value] = item.split('=');
+    parsed[key] = value || '';
+  });
+
+  return parsed;
 };
 
 const stopDeployment = async msg => {
@@ -791,6 +814,12 @@ async function sync({
       env[key] = val;
     });
 
+    const metadata = Object.assign(
+      {},
+      parseMeta(nowConfig.meta),
+      parseMeta(argv['meta'])
+    );
+
     let syncCount;
 
     try {
@@ -798,6 +827,7 @@ async function sync({
       const createArgs = Object.assign(
         {
           env,
+          meta: metadata,
           followSymlinks,
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,
