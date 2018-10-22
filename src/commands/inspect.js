@@ -16,6 +16,7 @@ const strlen = require('../util/strlen');
 const getScope = require('../util/get-scope');
 
 import getArgs from '../util/get-args';
+import handlersList from '../util/output/handlers';
 
 const STATIC = 'STATIC';
 
@@ -119,7 +120,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
 
   const {
-    uid,
+    id: finalId,
     name,
     state,
     type,
@@ -132,18 +133,20 @@ module.exports = async function main(ctx: any): Promise<number> {
   } = deployment;
 
   const isHandlers = version === 2;
+  const handlersUrl = `/v1/now/deployments/${finalId}/handlers`;
 
-  const [scale, events] = await Promise.all([
+  const [scale, events, {handlers}] = await Promise.all([
     caught(
-      now.fetch(`/v3/now/deployments/${encodeURIComponent(uid)}/instances`)
+      now.fetch(`/v3/now/deployments/${encodeURIComponent(finalId)}/instances`)
     ),
     type === STATIC
       ? null
       : caught(
           now.fetch(
-            `/v1/now/deployments/${encodeURIComponent(uid)}/events?types=event`
+            `/v1/now/deployments/${encodeURIComponent(finalId)}/events?types=event`
           )
-        )
+      ),
+    isHandlers ? now.fetch(handlersUrl): { handlers: [] }
   ]);
 
   cancelWait();
@@ -156,7 +159,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   print('\n');
   print(chalk.bold('  Meta\n'));
   print(`    ${chalk.dim('version')}\t${version}\n`);
-  print(`    ${chalk.dim('id')}\t\t${uid}\n`);
+  print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
   print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
   if (!isHandlers) {
@@ -175,6 +178,12 @@ module.exports = async function main(ctx: any): Promise<number> {
     )}\n`
   );
   print('\n');
+
+  if (handlers.length > 0) {
+    print(chalk.bold('  Handlers\n'));
+    print(handlersList(handlers, {}, true));
+    print('\n');
+  }
 
   if (limits) {
     print(chalk.bold('  Limits\n'));

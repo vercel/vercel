@@ -2,23 +2,22 @@
 
 import ms from 'ms';
 import bytes from 'bytes';
-import title from 'title';
 import { write as copy } from 'clipboardy';
 import sleep from 'es7-sleep';
 import { basename } from 'path';
-import table from 'text-table';
 import chalk from 'chalk';
 import Progress from 'progress';
 import logo from '../../util/output/logo';
-import wait from '../../util/output/wait';
 import eraseLines from '../../util/output/erase-lines';
-import strlen from '../../util/strlen';
+import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import type { CLIContext, HandlersDeployment, Output } from '../../util/types';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
+import handlersList from '../../util/output/handlers';
+import {isReady, isDone, isFailed} from '../../util/handler-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
@@ -135,59 +134,6 @@ exports.args = {
   '-m': '--meta'
 };
 
-const prepareState = state => title(state.replace('_', ' '));
-
-// That's how long the word "Initializing" is
-const longestState = 12;
-
-const renderHandlers = (print, list, times, run) => {
-  const final = table(
-    [
-      ...list.map(handler => {
-        const { path, readyState, id } = handler;
-        const state = prepareState(readyState).padEnd(longestState);
-        const url = `${id.replace('hdl_', '')}.invoke.sh`;
-        const time = typeof times[id] === 'string' ? times[id] : '';
-
-        let stateColor = chalk.grey;
-        let pathColor = chalk.cyan;
-
-        if (isReady({ readyState })) {
-          stateColor = item => item;
-        } else if (isFailed({ readyState })) {
-          stateColor = chalk.red;
-          pathColor = chalk.red;
-        }
-
-        return [
-          `${chalk.grey('-')} ${pathColor(path)}`,
-          stateColor(state),
-          url && stateColor(url),
-          time
-        ];
-      })
-    ],
-    {
-      align: ['l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(3),
-      stringLength: strlen
-    }
-  );
-
-  if (run > 1) {
-    // Account for the newline at the end
-    print(eraseLines(list.length + 1));
-  }
-
-  print(`${final}\n`);
-};
-
-const isReady = ({ readyState }) => readyState === 'READY';
-const isFailed = ({ readyState }) =>
-  readyState.endsWith('_ERROR') || readyState === 'ERROR';
-const isDone = ({ readyState }) =>
-  isReady({ readyState }) || isFailed({ readyState });
-
 const addProcessEnv = async (log, env) => {
   let val;
 
@@ -262,6 +208,14 @@ const printDeploymentStatus = (output, { readyState }, deployStamp, handlers) =>
 
   output.error(deploymentErrorMsg);
   return 1;
+};
+
+const renderHandlers = (print, list, times, run) => {
+  if (run > 1) {
+    print(eraseLines(list.length + 1));
+  }
+
+  print(handlersList(list, times, false));
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
