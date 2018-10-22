@@ -392,6 +392,7 @@ exports.pipe = async function main(
         type: null,
         handlers: localConfig.handlers,
         routes: localConfig.routes,
+        regions: localConfig.regions,
         meta
       },
       {

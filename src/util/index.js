@@ -55,16 +55,9 @@ module.exports = class Now extends EventEmitter {
   async create(
     paths,
     {
-      wantsPublic,
-      quiet = false,
-      env = {},
-      followSymlinks = true,
-      forceNew = false,
+      // Legacy
       forwardNpm = false,
       scale = {},
-
-      // From readMetaData
-      name,
       description,
       type = 'npm',
       pkg = {},
@@ -73,9 +66,18 @@ module.exports = class Now extends EventEmitter {
       sessionAffinity = 'ip',
       isFile = false,
       atlas = false,
+
+      // Latest
+      name,
+      wantsPublic,
       handlers = [],
       routes = [],
-      meta = null
+      meta = null,
+      regions = [],
+      quiet = false,
+      env = {},
+      followSymlinks = true,
+      forceNew = false
     }
   ) {
     const { log, warn, time } = this._output;
@@ -223,7 +225,8 @@ module.exports = class Now extends EventEmitter {
         files,
         handlers,
         routes,
-        meta
+        meta,
+        regions
       } : {
         env,
         public: wantsPublic || nowConfig.public,
