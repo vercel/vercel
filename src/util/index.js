@@ -221,7 +221,6 @@ module.exports = class Now extends EventEmitter {
         env,
         public: wantsPublic || nowConfig.public,
         name,
-        description,
         files,
         builds,
         routes,
@@ -267,6 +266,8 @@ module.exports = class Now extends EventEmitter {
       } catch (err) {
         throw new Error('Unexpected response');
       }
+
+      console.log(body);
 
       if (res.status === 429) {
         let msg = 'You have been creating deployments at a very fast pace. ';
