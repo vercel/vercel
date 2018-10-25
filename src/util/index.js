@@ -70,7 +70,7 @@ module.exports = class Now extends EventEmitter {
       // Latest
       name,
       wantsPublic,
-      handlers = [],
+      builds = [],
       routes = [],
       meta = null,
       regions = [],
@@ -81,7 +81,7 @@ module.exports = class Now extends EventEmitter {
     }
   ) {
     const { log, warn, time } = this._output;
-    const isHandlers = type === null;
+    const isBuilds = type === null;
 
     let files = [];
     let relatives = {};
@@ -95,7 +95,7 @@ module.exports = class Now extends EventEmitter {
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!isHandlers && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
+        if (!isBuilds && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
@@ -127,8 +127,8 @@ module.exports = class Now extends EventEmitter {
         }
       } else if (type === 'docker') {
         files = await getDockerFiles(paths[0], nowConfig, opts);
-      } else if (isHandlers) {
-        opts.isHandlers = isHandlers;
+      } else if (isBuilds) {
+        opts.isBuilds = isBuilds;
 
         if (isFile) {
           files = [resolvePath(paths[0])];
@@ -212,18 +212,18 @@ module.exports = class Now extends EventEmitter {
 
       const queryProps = {};
 
-      if (isHandlers && forceNew) {
+      if (isBuilds && forceNew) {
         queryProps.forceNew = 1;
       }
 
-      const requestBody = isHandlers ? {
+      const requestBody = isBuilds ? {
         version: 2,
         env,
         public: wantsPublic || nowConfig.public,
         name,
         description,
         files,
-        handlers,
+        builds,
         routes,
         meta
       } : {
@@ -243,7 +243,7 @@ module.exports = class Now extends EventEmitter {
         atlas
       };
 
-      if (isHandlers) {
+      if (isBuilds) {
         if (regions.length > 0) {
           requestBody.regions = regions;
         }
@@ -252,7 +252,7 @@ module.exports = class Now extends EventEmitter {
       }
 
       const query = qs.stringify(queryProps);
-      const version = isHandlers ? 'v6' : 'v4';
+      const version = isBuilds ? 'v6' : 'v4';
 
       const res = await this._fetch(`/${version}/now/deployments${query ? `?${query}` : ''}`, {
         method: 'POST',
@@ -366,7 +366,7 @@ module.exports = class Now extends EventEmitter {
       return null;
     }
 
-    if (!isHandlers && !quiet && type === 'npm' && deployment.nodeVersion) {
+    if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
           chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`

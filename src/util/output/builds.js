@@ -1,7 +1,7 @@
 import table from 'text-table';
 import chalk from 'chalk';
 import title from 'title';
-import {isReady, isFailed} from '../handler-state';
+import {isReady, isFailed} from '../build-state';
 import strlen from '../strlen';
 
 const prepareState = state => title(state.replace('_', ' '));
@@ -12,8 +12,8 @@ const longestState = 12;
 module.exports = (list, times, inspecting) => {
   const final = table(
     [
-      ...list.map(handler => {
-        const { path, readyState, id } = handler;
+      ...list.map(build => {
+        const { path, readyState, id } = build;
         const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState);
         const url = `${id.replace('hdl_', '')}.invoke.sh`;
         const time = typeof times[id] === 'string' ? times[id] : '';

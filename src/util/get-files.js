@@ -136,12 +136,12 @@ const asAbsolute = function(path, parent) {
 async function staticFiles(
   path,
   nowConfig = {},
-  { limit = null, output, isHandlers } = {}
+  { limit = null, output, isBuilds } = {}
 ) {
   const { debug, time } = output;
   let files = [];
 
-  if (!isHandlers && nowConfig.files && Array.isArray(nowConfig.files)) {
+  if (!isBuilds && nowConfig.files && Array.isArray(nowConfig.files)) {
     files = await getFilesInWhitelist(nowConfig.files, path, { output });
   } else {
     // The package.json `files` whitelist still
@@ -158,7 +158,7 @@ async function staticFiles(
     );
 
     // Compile list of ignored patterns and files
-    const ignoreName = isHandlers ? '.nowignore' : '.gitignore';
+    const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
     const ignoreFile = await maybeRead(resolve(path, ignoreName));
 
     const filter = ignore()

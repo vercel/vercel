@@ -16,7 +16,7 @@ const strlen = require('../util/strlen');
 const getScope = require('../util/get-scope');
 
 import getArgs from '../util/get-args';
-import handlersList from '../util/output/handlers';
+import buildsList from '../util/output/builds';
 
 const STATIC = 'STATIC';
 
@@ -132,10 +132,10 @@ module.exports = async function main(ctx: any): Promise<number> {
     version
   } = deployment;
 
-  const isHandlers = version === 2;
-  const handlersUrl = `/v1/now/deployments/${finalId}/handlers`;
+  const isBuilds = version === 2;
+  const buildsUrl = `/v1/now/deployments/${finalId}/builds`;
 
-  const [scale, events, {handlers}] = await Promise.all([
+  const [scale, events, {builds}] = await Promise.all([
     caught(
       now.fetch(`/v3/now/deployments/${encodeURIComponent(finalId)}/instances`)
     ),
@@ -146,7 +146,7 @@ module.exports = async function main(ctx: any): Promise<number> {
             `/v1/now/deployments/${encodeURIComponent(finalId)}/events?types=event`
           )
       ),
-    isHandlers ? now.fetch(handlersUrl): { handlers: [] }
+    isBuilds ? now.fetch(buildsUrl): { builds: [] }
   ]);
 
   cancelWait();
@@ -162,7 +162,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
   print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
-  if (!isHandlers) {
+  if (!isBuilds) {
     print(`    ${chalk.dim('type')}\t${type}\n`);
   }
   if (slot) {
@@ -178,16 +178,16 @@ module.exports = async function main(ctx: any): Promise<number> {
   );
   print('\n');
 
-  if (handlers.length > 0) {
+  if (builds.length > 0) {
     const times = {};
 
-    for (const handler of handlers) {
-      const {id, createdAt, readyStateAt} = handler;
+    for (const build of builds) {
+      const {id, createdAt, readyStateAt} = build;
       times[id] = createdAt ? elapsed(createdAt - readyStateAt) : null;
     }
 
-    print(chalk.bold('  Handlers\n'));
-    print(handlersList(handlers, times, true));
+    print(chalk.bold('  Builds\n'));
+    print(buildsList(builds, times, true));
     print('\n');
   }
 
@@ -209,7 +209,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     print('\n');
   }
 
-  if (type === STATIC || isHandlers) {
+  if (type === STATIC || isBuilds) {
     return 0;
   }
 

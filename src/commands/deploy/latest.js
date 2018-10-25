@@ -12,12 +12,12 @@ import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-import type { CLIContext, HandlersDeployment, Output } from '../../util/types';
+import type { CLIContext, BuildsDeployment, Output } from '../../util/types';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import handlersList from '../../util/output/handlers';
-import {isReady, isDone, isFailed} from '../../util/handler-state';
+import buildsList from '../../util/output/builds';
+import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
@@ -183,25 +183,25 @@ const parseMeta = meta => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (output, { readyState }, deployStamp, handlers) => {
+const printDeploymentStatus = (output, { readyState }, deployStamp, builds) => {
   if (readyState === 'READY') {
     output.success(`Deployment ready ${deployStamp()}`);
     return 0;
   }
 
-  if (!handlers) {
+  if (!builds) {
     output.error(deploymentErrorMsg);
     return 1;
   }
 
-  const failedHandlers = handlers.filter(isFailed);
-  const amount = failedHandlers.length;
+  const failedBuils = builds.filter(isFailed);
+  const amount = failedBuils.length;
 
   if (amount > 0) {
-    const name = amount === 1 ? 'handler' : 'handlers';
+    const name = amount === 1 ? 'build' : 'builds';
 
     output.error(
-      `${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/handler-deploy-error`
+      `${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/build-deploy-error`
     );
     return 1;
   }
@@ -210,12 +210,12 @@ const printDeploymentStatus = (output, { readyState }, deployStamp, handlers) =>
   return 1;
 };
 
-const renderHandlers = (print, list, times, run) => {
+const renderBuilds = (print, list, times, run) => {
   if (run > 1) {
     print(eraseLines(list.length + 1));
   }
 
-  print(handlersList(list, times, false));
+  print(buildsList(list, times, false));
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -311,7 +311,7 @@ exports.pipe = async function main(
 
   let syncCount;
   let deployStamp = stamp();
-  let deployment: HandlersDeployment | null = null;
+  let deployment: BuildsDeployment | null = null;
 
   // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -351,7 +351,7 @@ exports.pipe = async function main(
         wantsPublic: argv['--public'] || localConfig.public,
         isFile,
         type: null,
-        handlers: localConfig.handlers,
+        builds: localConfig.builds,
         routes: localConfig.routes,
         regions,
         meta
@@ -521,61 +521,61 @@ exports.pipe = async function main(
   }
 
   // If an error occured, we want to let it fall down to rendering
-  // handlers so the user can see in which handler the error occured.
+  // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
     return printDeploymentStatus(output, deployment, deployStamp);
   }
 
   const sleepingTime = ms('1.5s');
-  const allHandlersTime = stamp();
+  const allBuildsTime = stamp();
   const times = {};
-  const handlersUrl = `/v1/now/deployments/${deployment.id}/handlers`;
+  const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
   const deploymentUrl = `/v5/now/deployments/${deployment.id}`;
 
   let run = 1;
 
-  let handlers = [];
-  let handlersCompleted = false;
+  let builds = [];
+  let buildsCompleted = false;
 
   let deploymentSpinner = null;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (!handlersCompleted) {
-      const { handlers: freshHandlers } = await now.fetch(handlersUrl);
+    if (!buildsCompleted) {
+      const { builds: freshBuilds } = await now.fetch(buildsUrl);
 
-      for (const handler of freshHandlers ) {
-        const id = handler.id;
-        const done = isDone(handler);
+      for (const build of freshBuilds) {
+        const id = build.id;
+        const done = isDone(build);
 
         if (times[id]) {
           if (done && typeof times[id] === 'function') {
             times[id] = times[id]();
           }
         } else {
-          times[id] = done ? allHandlersTime() : stamp();
+          times[id] = done ? allBuildsTime() : stamp();
         }
       }
 
-      if (JSON.stringify(handlers) !== JSON.stringify(freshHandlers)) {
-        handlers = freshHandlers;
+      if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
+        builds = freshBuilds;
 
-        debug(`Re-rendering handlers, because their state changed.`);
-        renderHandlers(print, handlers, times, run);
+        debug(`Re-rendering builds, because their state changed.`);
+        renderBuilds(print, builds, times, run);
 
-        handlersCompleted = handlers.every(isDone);
+        buildsCompleted = builds.every(isDone);
 
-        if (handlers.some(isFailed)) {
+        if (builds.some(isFailed)) {
           break;
         }
       } else {
-        debug(`Not re-rendering, as the handler states did not change.`);
+        debug(`Not re-rendering, as the build states did not change.`);
       }
 
       run++;
     }
 
-    if (handlersCompleted) {
+    if (buildsCompleted) {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
       if (isDone(deploymentResponse)) {
@@ -595,7 +595,7 @@ exports.pipe = async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, handlers);
+  return printDeploymentStatus(output, deployment, deployStamp, builds);
 };
 
 function handleCreateDeployError<OtherError>(

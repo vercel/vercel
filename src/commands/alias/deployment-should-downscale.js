@@ -13,7 +13,7 @@ async function deploymentShouldDownscale(
   output.debug(`Previous deployment is aliased: ${isAliased.toString()}`);
 
   if ((deployment.type === 'DOCKER' && !!deployment.slot) || deployment.version === 2) {
-    // Don't downscale a previous slot or handlers deployment
+    // Don't downscale a previous slot or builds deployment
     return false;
   }
 

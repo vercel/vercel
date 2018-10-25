@@ -209,7 +209,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     now.close();
     return 1;
   } else if (deployment.version === 2) {
-    output.error('Cannot scale a deployment containing handlers');
+    output.error('Cannot scale a deployment containing builds');
     now.close();
     return 1;
   }
