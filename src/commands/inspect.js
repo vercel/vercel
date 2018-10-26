@@ -183,11 +183,11 @@ module.exports = async function main(ctx: any): Promise<number> {
 
     for (const build of builds) {
       const {id, createdAt, readyStateAt} = build;
-      times[id] = createdAt ? elapsed(createdAt - readyStateAt) : null;
+      times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
     print(chalk.bold('  Builds\n'));
-    print(buildsList(builds, times, true));
+    print(buildsList(builds, times, true).toPrint);
     print('\n');
   }
 

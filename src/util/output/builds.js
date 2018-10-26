@@ -46,7 +46,7 @@ const styleOutput = (output, inspecting) => {
   }
 
   return [
-    `${inspecting ? `    ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`
+    `${inspecting ? `      ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`
   ];
 };
 
