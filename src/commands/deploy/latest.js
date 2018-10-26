@@ -210,12 +210,15 @@ const printDeploymentStatus = (output, { readyState }, deployStamp, builds) => {
   return 1;
 };
 
-const renderBuilds = (print, list, times, run) => {
-  if (run > 1) {
-    print(eraseLines(list.length + 1));
+const renderBuilds = (print, list, times, linesPrinted) => {
+  if (linesPrinted !== null) {
+    print(eraseLines(linesPrinted));
   }
 
-  print(buildsList(list, times, false));
+  const {lines, toPrint} = buildsList(list, times, false);
+  print(toPrint);
+
+  return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -532,12 +535,11 @@ exports.pipe = async function main(
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
   const deploymentUrl = `/v5/now/deployments/${deployment.id}`;
 
-  let run = 1;
-
   let builds = [];
   let buildsCompleted = false;
 
   let deploymentSpinner = null;
+  let linesPrinted = null;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -561,8 +563,8 @@ exports.pipe = async function main(
         builds = freshBuilds;
 
         debug(`Re-rendering builds, because their state changed.`);
-        renderBuilds(print, builds, times, run);
 
+        linesPrinted = renderBuilds(print, builds, times, linesPrinted);
         buildsCompleted = builds.every(isDone);
 
         if (builds.some(isFailed)) {
@@ -571,8 +573,6 @@ exports.pipe = async function main(
       } else {
         debug(`Not re-rendering, as the build states did not change.`);
       }
-
-      run++;
     }
 
     if (buildsCompleted) {
