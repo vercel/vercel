@@ -10,9 +10,7 @@ const prepareState = state => title(state.replace('_', ' '));
 const longestState = 12;
 
 module.exports = (list, times, inspecting) => {
-  const final = table(
-    [
-      ...list.map(build => {
+  const final = table(list.map(build => {
         const { entrypoint, readyState, id } = build;
         const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState);
         const time = typeof times[id] === 'string' ? times[id] : '';
@@ -32,8 +30,7 @@ module.exports = (list, times, inspecting) => {
           stateColor(state),
           time
         ];
-      })
-    ],
+      }),
     {
       align: ['l', 'l', 'l', 'l'],
       hsep: ' '.repeat(3),
