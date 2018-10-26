@@ -267,8 +267,6 @@ module.exports = class Now extends EventEmitter {
         throw new Error('Unexpected response');
       }
 
-      console.log(body);
-
       if (res.status === 429) {
         let msg = 'You have been creating deployments at a very fast pace. ';
 

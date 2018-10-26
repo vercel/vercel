@@ -13,9 +13,8 @@ module.exports = (list, times, inspecting) => {
   const final = table(
     [
       ...list.map(build => {
-        const { path, readyState, id } = build;
+        const { entrypoint, readyState, id } = build;
         const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState);
-        const url = `${id.replace('hdl_', '')}.invoke.sh`;
         const time = typeof times[id] === 'string' ? times[id] : '';
 
         let stateColor = chalk.grey;
@@ -29,9 +28,8 @@ module.exports = (list, times, inspecting) => {
         }
 
         return [
-          `${inspecting ? `    ` : `${chalk.grey('-')} `}${pathColor(path)}`,
+          `${inspecting ? `    ` : `${chalk.grey('-')} `}${pathColor(entrypoint)}`,
           stateColor(state),
-          url && stateColor(url),
           time
         ];
       })
