@@ -1,6 +1,7 @@
 import table from 'text-table';
 import chalk from 'chalk';
 import title from 'title';
+import bytes from 'bytes';
 import {isReady, isFailed} from '../build-state';
 import strlen from '../strlen';
 
@@ -32,19 +33,20 @@ const styleBuild = (build, times, inspecting) => {
 };
 
 const styleOutput = (output, inspecting) => {
-  const {type, path, readyState} = output;
-  const prefix = type === 'lambda' ? ' λ' : '';
+  const {type, path, readyState, size} = output;
+  const prefix = type === 'lambda' ? 'λ ' : '';
+  const suffix = size ? ` (${bytes(size)})` : '';
 
-  let pathColor = chalk.grey;
+  let mainColor = chalk.grey;
 
   if (isReady({ readyState })) {
-    pathColor = item => item;
+    mainColor = item => item;
   } else if (isFailed({ readyState })) {
-    pathColor = chalk.red;
+    mainColor = chalk.red;
   }
 
   return [
-    `${inspecting ? `    ` : `  ${chalk.grey('-' + prefix)} `}${pathColor(path)}`
+    `${inspecting ? `    ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`
   ];
 };
 
