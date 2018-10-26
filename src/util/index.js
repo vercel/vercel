@@ -70,10 +70,10 @@ module.exports = class Now extends EventEmitter {
       // Latest
       name,
       wantsPublic,
-      builds = [],
-      routes = [],
-      meta = null,
-      regions = [],
+      builds,
+      routes,
+      meta,
+      regions,
       quiet = false,
       env = {},
       followSymlinks = true,
@@ -224,7 +224,8 @@ module.exports = class Now extends EventEmitter {
         files,
         builds,
         routes,
-        meta
+        meta,
+        regions
       } : {
         env,
         meta,
@@ -242,11 +243,7 @@ module.exports = class Now extends EventEmitter {
         atlas
       };
 
-      if (isBuilds) {
-        if (regions.length > 0) {
-          requestBody.regions = regions;
-        }
-      } else if (Object.keys(nowConfig).length > 0) {
+      if (!isBuilds && Object.keys(nowConfig).length > 0) {
         requestBody.config = nowConfig;
       }
 
