@@ -32,11 +32,19 @@ const styleBuild = (build, times, inspecting) => {
 };
 
 const styleOutput = (output, inspecting) => {
-  const {path} = output;
-  let pathColor = inspecting ? chalk.grey : chalk.grey;
+  const {type, path, readyState} = output;
+  const prefix = type === 'lambda' ? ' λ' : '';
+
+  let pathColor = chalk.grey;
+
+  if (isReady({ readyState })) {
+    pathColor = item => item;
+  } else if (isFailed({ readyState })) {
+    pathColor = chalk.red;
+  }
 
   return [
-    `${inspecting ? `    ` : `  ${chalk.grey('-')} `}${pathColor(path)}`
+    `${inspecting ? `    ` : `  ${chalk.grey('-' + prefix)} `}${pathColor(path)}`
   ];
 };
 
@@ -50,6 +58,8 @@ module.exports = (builds, times, inspecting) => {
     if (output && output.length > 0) {
       for (const item of output) {
         item.isOutput = true;
+        item.readyState = build.readyState;
+
         buildsAndOutput.push(item);
       }
     }
