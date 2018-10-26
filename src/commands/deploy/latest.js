@@ -23,6 +23,7 @@ import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
 import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import * as Errors from '../../util/errors';
+import parseMeta from '../../util/parse-meta';
 
 const help = () => {
   console.log(`
@@ -160,25 +161,6 @@ const addProcessEnv = async (log, env) => {
       );
     }
   }
-};
-
-const parseMeta = meta => {
-  if (!meta) {
-    return {};
-  }
-
-  if (typeof meta === 'string') {
-    meta = [meta];
-  }
-
-  const parsed = {};
-
-  meta.forEach(item => {
-    const [key, value] = item.split('=');
-    parsed[key] = value || '';
-  });
-
-  return parsed;
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;

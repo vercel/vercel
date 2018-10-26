@@ -18,6 +18,7 @@ const wait = require('../util/output/wait');
 const strlen = require('../util/strlen');
 const getScope = require('../util/get-scope');
 const toHost = require('../util/to-host');
+const parseMeta = require('../util/parse-meta');
 
 import getAliases from '../util/alias/get-aliases';
 import getArgs from '../util/get-args';
@@ -42,6 +43,9 @@ const help = () => {
   )}        Login token
     -T, --team                     Set a custom team scope
     -a, --all                      See all instances for each deployment (requires [app])
+    -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
+      '`-m KEY=value`'
+    )}). Can appear many times.
 
   ${chalk.dim('Examples:')}
 
@@ -58,6 +62,10 @@ const help = () => {
   )} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
 
     ${chalk.cyan('$ now ls my-app --all')}
+
+  ${chalk.gray('–')} Filter deployments by metadata 
+
+    ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
 `);
 };
 
@@ -69,7 +77,9 @@ module.exports = async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
-      '-a': '--all'
+      '--meta': [String],
+      '-a': '--all',
+      '-m': '--meta'
     });
   } catch (err) {
     handleError(err);
@@ -96,6 +106,7 @@ module.exports = async function main(ctx) {
     return 0;
   }
 
+  const meta = parseMeta(argv['--meta']);
   const { authConfig: { token }, config } = ctx;
   const { currentTeam, includeScheme } = config;
   const { contextName } = await getScope({
@@ -141,7 +152,7 @@ module.exports = async function main(ctx) {
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 3 });
+    deployments = await now.list(app, { version: 3, meta });
   } catch (err) {
     stopSpinner();
     throw err;

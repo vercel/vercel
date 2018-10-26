@@ -49,6 +49,7 @@ import type {
   DeploymentEvent
 } from '../../util/types';
 import type { CreateDeployError } from '../../util/deploy/create-deploy';
+import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
   string: ['name', 'alias', 'session-affinity', 'regions'],
@@ -265,25 +266,6 @@ const addProcessEnv = async env => {
       return;
     }
   }
-};
-
-const parseMeta = meta => {
-  if (!meta) {
-    return {};
-  }
-
-  if (typeof meta === 'string') {
-    meta = [meta];
-  }
-
-  const parsed = {};
-
-  meta.forEach(item => {
-    const [key, value] = item.split('=');
-    parsed[key] = value || '';
-  });
-
-  return parsed;
 };
 
 const stopDeployment = async msg => {
