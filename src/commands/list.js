@@ -246,7 +246,7 @@ module.exports = async function main(ctx) {
               dep.name,
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
-              dep.type === 'BUILDS' ? chalk.gray('-') : dep.type,
+              (dep.type === 'LAMBDAS' || dep.type === 'BUILDS') ? chalk.gray('-') : dep.type,
               stateString(dep.state),
               chalk.gray(ms(Date.now() - new Date(dep.created)))
             ],
