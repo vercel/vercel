@@ -44,8 +44,6 @@ import { Output } from './util/types';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
 
-require('./util/sentry');
-
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
