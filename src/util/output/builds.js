@@ -55,9 +55,9 @@ module.exports = (builds, times, inspecting) => {
 
   for (const build of builds) {
     buildsAndOutput.push(build);
-    const {output} = build;
+    const {output, copiedFrom} = build;
 
-    if (output && output.length > 0) {
+    if (!copiedFrom && output && output.length > 0) {
       for (const item of output) {
         item.isOutput = true;
         item.readyState = build.readyState;
