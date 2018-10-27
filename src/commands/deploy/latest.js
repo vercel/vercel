@@ -515,7 +515,7 @@ exports.pipe = async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v5/now/deployments/${deployment.id}`;
+  const deploymentUrl = `/v6/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
