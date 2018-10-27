@@ -47,7 +47,7 @@ async function getDeploymentByHost(
   host: string
 ): Promise<{ deployment: Deployment }> {
   const response: DeploymentHostResponse = await now.fetch(
-    `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
+    `/v3/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
   );
   return getDeploymentById(now, response.deployment.id);
 }
