@@ -1,5 +1,5 @@
 // @flow
-import sleep from 'then-sleep';
+import sleep from './sleep';
 
 function createPollingFn<T>(
   future: (...args: any[]) => Promise<T>,

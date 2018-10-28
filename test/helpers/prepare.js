@@ -3,7 +3,8 @@ const { join } = require('path');
 
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
-const { ensureDir, writeFile } = require('fs-extra');
+const { promises: { writeFile } } = require('fs');
+const ensureDir = require('mkdirp-promise');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest

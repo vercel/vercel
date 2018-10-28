@@ -3,7 +3,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
-import sleep from 'es7-sleep';
 import { basename } from 'path';
 import chalk from 'chalk';
 import Progress from 'progress';
@@ -23,6 +22,7 @@ import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
 import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import * as Errors from '../../util/errors';
+import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 
 const help = () => {

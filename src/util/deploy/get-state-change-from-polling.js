@@ -1,5 +1,5 @@
 // @flow
-import sleep from 'then-sleep';
+import sleep from '../sleep';
 import { Now } from '../types';
 import createPollingFn from '../create-polling-fn';
 import type { StateChangeEvent } from '../types';

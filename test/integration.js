@@ -6,14 +6,14 @@ const { URL } = require('url');
 // Packages
 const test = require('ava');
 const semVer = require('semver');
-const { readFile } = require('fs-extra');
+const { promises: { readFile } } = require('fs');
 const execa = require('execa');
 const fetch = require('node-fetch');
 const tmp = require('tmp-promise');
-const sleep = require('es7-sleep');
 
 // Utilities
 const logo = require('../src/util/output/logo');
+const sleep = require('../src/util/sleep');
 const pkg = require('../package');
 const parseList = require('./helpers/parse-list');
 const removeDeployment = require('./helpers/remove');
