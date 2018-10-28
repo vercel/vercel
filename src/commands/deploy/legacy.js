@@ -6,7 +6,7 @@ import { write as copy } from 'clipboardy';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import inquirer from 'inquirer';
 import mri from 'mri';
 import ms from 'ms';

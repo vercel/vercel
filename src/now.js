@@ -21,7 +21,7 @@ const { join } = require('path');
 
 // Packages
 const debug = require('debug')('now:main');
-const { existsSync } = require('fs-extra');
+const { existsSync } = require('fs');
 const mkdirp = require('mkdirp-promise');
 const fetch = require('node-fetch');
 const chalk = require('chalk');

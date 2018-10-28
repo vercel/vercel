@@ -2,7 +2,7 @@
 const { createHash } = require('crypto');
 
 // Packages
-const { readFile } = require('fs-extra');
+const { promises: { readFile } } = require('fs');
 
 /**
   * Computes hashes for the contents of each file given.

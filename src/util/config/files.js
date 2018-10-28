@@ -4,7 +4,7 @@ const { join: joinPath } = require('path');
 // Packages
 const loadJSON = require('load-json-file');
 const writeJSON = require('write-json-file');
-const { existsSync } = require('fs-extra');
+const { existsSync } = require('fs');
 
 // Utilities
 const getNowDir = require('./global-path');

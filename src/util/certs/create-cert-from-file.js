@@ -1,5 +1,5 @@
 // @flow
-import { readFileSync } from 'fs-extra';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import wait from '../output/wait';
 

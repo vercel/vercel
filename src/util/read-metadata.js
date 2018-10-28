@@ -5,7 +5,7 @@ const { basename, resolve: resolvePath } = require('path');
 const chalk = require('chalk');
 const loadJSON = require('load-json-file');
 const loadPackageJSON = require('read-pkg');
-const { readFile } = require('fs-extra');
+const { promises: { readFile } } = require('fs');
 const { parse: parseDockerfile } = require('docker-file-parser');
 const determineType = require('deployment-type');
 

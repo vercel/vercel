@@ -10,7 +10,7 @@ const bytes = require('bytes');
 const chalk = require('chalk');
 const retry = require('async-retry');
 const { parse: parseIni } = require('ini');
-const { createReadStream, readFile, stat, lstat } = require('fs-extra');
+const { createReadStream, promises: { readFile, stat, lstat } } = require('fs');
 const ms = require('ms');
 
 // Utilities

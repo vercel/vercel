@@ -1,5 +1,5 @@
 // @flow
-import fs from 'fs-extra';
+import fs from 'fs';
 import { CantParseJSONFile } from '../../util/errors';
 
 async function readJSONFile(
@@ -19,7 +19,7 @@ async function readJSONFile(
 }
 
 async function readFileSafe(file: string): Promise<string | null> {
-  return (await fs.exists(file)) ? await fs.readFile(file) : null;
+  return fs.existsSync(file) ? await fs.promises.readFile(file) : null;
 }
 
 export default readJSONFile;

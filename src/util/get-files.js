@@ -6,7 +6,7 @@ const flatten = require('arr-flatten');
 const ignore = require('ignore');
 const dockerignore = require('@zeit/dockerignore');
 const _glob = require('glob');
-const { stat, readdir, readFile } = require('fs-extra');
+const { promises: { stat, readdir, readFile } } = require('fs');
 
 // Utilities
 const IGNORED = require('./ignored');
