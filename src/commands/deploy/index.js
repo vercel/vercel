@@ -1,7 +1,7 @@
 //@flow
 
 import { resolve, basename } from 'path';
-import { lstat } from 'fs-extra';
+import { promises as fs } from 'fs';
 import { args as latestArgs, pipe as latestPipe } from './latest';
 import { args as legacyArgs, pipe as legacyPipe } from './legacy';
 import getScope from '../../util/get-scope';
@@ -49,7 +49,7 @@ module.exports = async (ctx: CLIContext) => {
 
   for (const path of paths) {
     try {
-      stats[path] = await lstat(path);
+      stats[path] = await fs.lstat(path);
     } catch (err) {
       if (!isHelp) {
         output.error(
@@ -60,7 +60,7 @@ module.exports = async (ctx: CLIContext) => {
     }
   }
 
-  const isFile = stats.length === 1 && stats[paths[0]].isFile();
+  const isFile = Object.keys(stats).length === 1 && stats[paths[0]].isFile();
 
   if (authConfig && authConfig.token) {
     ({ contextName, platformVersion } = await getScope({
