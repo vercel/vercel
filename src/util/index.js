@@ -477,7 +477,7 @@ module.exports = class Now extends EventEmitter {
     return secrets;
   }
 
-  async list(app, { version = 2, meta } = {}) {
+  async list(app, { version = 2, meta = {} } = {}) {
     const metaQs = Object.keys(meta)
       .map((key) => `meta-${key}=${encodeURIComponent(meta[key])}`)
       .join('&');
