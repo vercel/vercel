@@ -75,7 +75,6 @@ exports.help = () => `
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
     'TOKEN'
   )}        Login token
-    -l, --links                    Copy symlinks without resolving their target
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
     )} is exposed)
@@ -119,7 +118,6 @@ exports.help = () => `
 exports.args = {
   '--name': String,
   '--force': Boolean,
-  '--links': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
   '--env': [String],
@@ -130,7 +128,6 @@ exports.args = {
   '--regions': String,
   '-n': '--name',
   '-f': '--force',
-  '-l': '--links',
   '-p': '--public',
   '-e': '--env',
   '-b': '--build-env',
@@ -328,7 +325,6 @@ exports.pipe = async function main(
       {
         env: deploymentEnv,
         buildEnv: deploymentBuildEnv,
-        followSymlinks: argv['--links'],
         forceNew: argv['--force'],
         quiet,
         wantsPublic: argv['--public'] || localConfig.public,
