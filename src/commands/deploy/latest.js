@@ -78,7 +78,7 @@ exports.help = () => `
     -l, --links                    Copy symlinks without resolving their target
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
-    )} is exposed) [on for oss, off for premium]
+    )} is exposed)
     -e, --env                      Include an env var during run time (e.g.: ${chalk.dim(
       '`-e KEY=value`'
     )}). Can appear many times.
