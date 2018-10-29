@@ -51,7 +51,7 @@ module.exports = async (ctx: CLIContext) => {
     const help = lastArg === 'deploy-v1' ? legacy.help : latest.help;
 
     output.print(help());
-    return 0;
+    return 2;
   }
 
   for (const path of paths) {
