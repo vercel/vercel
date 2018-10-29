@@ -212,8 +212,19 @@ module.exports = class Now extends EventEmitter {
 
       const queryProps = {};
 
-      if (isBuilds && forceNew) {
-        queryProps.forceNew = 1;
+      if (isBuilds) {
+        if (forceNew) {
+          queryProps.forceNew = 1;
+        }
+
+        if (isFile) {
+          routes = [
+            {
+              src: '/',
+              dest: `/${files[0].file}`
+            }
+          ];
+        }
       }
 
       const requestBody = isBuilds ? {
