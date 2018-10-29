@@ -109,8 +109,7 @@ for (const item of Object.keys(mriOpts.alias)) {
 
 exports.args = argList;
 
-const help = () => {
-  console.log(`
+exports.help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -210,8 +209,8 @@ const help = () => {
   )}
 
     ${chalk.cyan('$ now help list')}
-`);
-};
+
+`;
 
 let argv;
 let paths;
@@ -374,11 +373,6 @@ exports.pipe = async function main(
   isTTY = process.stdout.isTTY;
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
-
-  if (argv.h || argv.help) {
-    help();
-    await exit(0);
-  }
 
   warn(
     'You are using a legacy version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'

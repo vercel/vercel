@@ -2,8 +2,8 @@
 
 import { resolve, basename } from 'path';
 import { promises as fs } from 'fs';
-import { args as latestArgs, pipe as latestPipe } from './latest';
-import { args as legacyArgs, pipe as legacyPipe } from './legacy';
+import latest from './latest';
+import legacy from './legacy';
 import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
@@ -15,7 +15,7 @@ import type { CLIContext } from '../../util/types';
 
 module.exports = async (ctx: CLIContext) => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
-  const combinedArgs = Object.assign({}, legacyArgs, latestArgs);
+  const combinedArgs = Object.assign({}, legacy.args, latest.args);
 
   let platformVersion = null;
   let contextName = currentTeam || 'current user';
@@ -44,19 +44,24 @@ module.exports = async (ctx: CLIContext) => {
 
   const localConfig = readLocalConfig(paths[0]);
   const output = createOutput({ debug: argv['--debug'] });
-  const isHelp = argv['--help'];
   const stats = {};
+
+  if (argv['--help']) {
+    const lastArg = argv._[argv._.length - 1];
+    const help = lastArg === 'deploy-v1' ? legacy.help : latest.help;
+
+    output.print(help());
+    return 0;
+  }
 
   for (const path of paths) {
     try {
       stats[path] = await fs.lstat(path);
     } catch (err) {
-      if (!isHelp) {
-        output.error(
-          `The specified file or directory "${basename(path)}" does not exist.`
-        );
-        return 1;
-      }
+      output.error(
+        `The specified file or directory "${basename(path)}" does not exist.`
+      );
+      return 1;
     }
   }
 
@@ -76,7 +81,7 @@ module.exports = async (ctx: CLIContext) => {
   const prop = code('version');
 
   if (!localConfig) {
-    if (!isHelp && !isFile) {
+    if (!isFile) {
       output.warn(
         `Your project is missing a ${file} file with a ${prop} property. More: htts://zeit.co/docs/version-config`
       );
@@ -103,7 +108,7 @@ module.exports = async (ctx: CLIContext) => {
         );
         return 1;
       }
-    } else if (!isHelp) {
+    } else {
       output.warn(
         `Your project is missing ${prop} in ${file}. More: htts://zeit.co/docs/version-config`
       );
@@ -111,7 +116,7 @@ module.exports = async (ctx: CLIContext) => {
   }
 
   if (platformVersion === null || platformVersion > 1) {
-    return latestPipe(
+    return latest.pipe(
       ctx,
       contextName,
       output,
@@ -121,5 +126,5 @@ module.exports = async (ctx: CLIContext) => {
     );
   }
 
-  return legacyPipe(ctx, contextName, output);
+  return legacy.pipe(ctx, contextName, output);
 };

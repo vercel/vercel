@@ -25,8 +25,7 @@ import * as Errors from '../../util/errors';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 
-const help = () => {
-  console.log(`
+exports.help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -110,8 +109,8 @@ const help = () => {
   )}
 
     ${chalk.cyan('$ now help list')}
-`);
-};
+
+`;
 
 exports.args = {
   '--name': String,
@@ -253,11 +252,6 @@ exports.pipe = async function main(
   } catch (error) {
     handleError(error);
     return 1;
-  }
-
-  if (argv['--help']) {
-    help();
-    return 2;
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;

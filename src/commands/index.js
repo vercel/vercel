@@ -29,7 +29,10 @@ const aliases = {
   billing: ['cc'],
   upgrade: ['downgrade'],
   teams: ['team', 'switch'],
-  logs: ['log']
+  logs: ['log'],
+  // This is only needed as long as the v1 platform
+  // is still supported.
+  deploy: ['deploy-v1', 'deploy-v2']
 };
 
 const subcommands = new Set(mainCommands);
