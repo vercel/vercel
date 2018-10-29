@@ -67,7 +67,13 @@ if (!process.env.CI) {
   defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
 }
 
-test.before(async () => prepareFixtures(session));
+test.before(async () => {
+  try {
+    prepareFixtures(session);
+  } catch (err) {
+    console.error(err);
+  }
+});
 
 test('print the deploy help message', async t => {
   const { stdout, code } = await execa(binaryPath, [
@@ -192,6 +198,47 @@ test('try to add a payment method', async t => {
 
   t.is(code, 1);
   t.true(stdout.startsWith(`> Enter your card details for ${email}`));
+});
+
+test('create a builds deployments', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    // Make sure to the deploy in SFO
+    '--api',
+    'https://alias-sfo1.zeit.co'
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [
+    session,
+    'contact.php',
+    'index.html'
+  ];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/plain');
+
+  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('deploy a node microservice', async t => {
@@ -493,7 +540,7 @@ test('deploy a static directory', async t => {
 });
 
 test('deploy a static build deployment', async t => {
-  const directory = fixture('now-static-builds');
+  const directory = fixture('now-static-build');
 
   const { stdout, code } = await execa(binaryPath, [
     directory,

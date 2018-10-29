@@ -41,23 +41,60 @@ const getIndexFile = session => `
   })
 `;
 
-const getConfigFile = () => `{
+const getConfigFile = builds => builds ? `{
+  "version": 2,
+  "builds": [
+    { "src": "*.php", "use": "@now/php" },
+    { "src": "*.html", "use": "@now/static" }
+  ]
+}` : `{
   "version": 1
 }`;
+
+const getIndexHTMLFile = session => `
+<form action="/contact.php" method="POST">
+  Post message for ${session} right here:
+  <textarea name="Message" />
+  <button>Submit</button>
+</form>
+`;
+
+const getContactFile = session => `
+<?php
+if (empty($_ENV["AIRTABLE_KEY"])) {
+  die("This is a test for ${session}");
+}
+
+http_request(
+  "POST",
+  "https://api.airtable.com/v0/appPkEQBBcdg0NIni/Messages",
+  json_encode(array("fields" => $_POST)),
+  array("headers" => array(
+    "Authorization" => "Bearer " . $_ENV["AIRTABLE_KEY"],
+    "Content-Type" => "application/json"
+  ))
+);
+?>
+
+<marquee>Thanks for your feedback!</marquee>
+`;
 
 module.exports = async session => {
   const files = {
     'Dockerfile': getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
-    'now.json': getConfigFile(session),
+    'now.json': getConfigFile(false),
     'first.png': getImageFile(session, {
       size: 30
     }),
     'second.png': getImageFile(session, {
       size: 20
-    })
-  };
+    }),
+    'now.json-builds': getConfigFile(true),
+    'index.html': getIndexHTMLFile(session),
+    'contact.php': getContactFile(session)
+ };
 
   const spec = {
     'dockerfile': [
@@ -71,6 +108,11 @@ module.exports = async session => {
       'package.json',
       'now.json'
     ],
+    'builds': [
+      'contact.php',
+      'index.html',
+      'now.json-builds'
+    ],
     'static-single-file': [
       'first.png'
     ],
@@ -78,7 +120,7 @@ module.exports = async session => {
       'first.png',
       'second.png'
     ],
-    'now-static-builds': {
+    'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
       'Dockerfile': `
 FROM alpine
@@ -125,7 +167,7 @@ RUN echo $NONCE > /public/index.html
       for (const name of needed) {
         const file = join(directory, name);
         const content = files[name];
-        await writeFile(file, content);
+        await writeFile(file.replace('-builds', ''), content);
       }
     } else {
       // Get content from the object property
@@ -133,7 +175,7 @@ RUN echo $NONCE > /public/index.html
       for (const name of names) {
         const file = join(directory, name);
         const content = needed[name];
-        await writeFile(file, content);
+        await writeFile(file.replace('-builds', ''), content);
       }
     }
   }
