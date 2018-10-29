@@ -24,6 +24,8 @@ import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import * as Errors from '../../util/errors';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
+import code from '../../util/output/code';
+import note from '../../util/output/note';
 
 exports.help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
@@ -89,6 +91,8 @@ exports.help = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -T, --team                     Set a custom team scope
     --regions                      Set default regions to enable the deployment on
+
+  ${note(`To view the usage information for Now 1.0, run ${code('now help deploy-v1')}`)}
 
   ${chalk.dim('Examples:')}
 
