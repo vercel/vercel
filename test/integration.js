@@ -76,7 +76,7 @@ test.before(async () => {
 });
 
 test('print the deploy help message', async t => {
-  const { stdout, code } = await execa(binaryPath, [
+  const { stderr, code } = await execa(binaryPath, [
     'help',
     ...defaultArgs
   ], {
@@ -84,7 +84,7 @@ test('print the deploy help message', async t => {
   });
 
   t.is(code, 2);
-  t.true(stdout.includes(deployHelpMessage));
+  t.true(stderr.includes(deployHelpMessage));
 });
 
 test('output the version', async t => {
