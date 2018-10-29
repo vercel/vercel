@@ -297,7 +297,7 @@ const main = async argv_ => {
     const directory = param(hp(NOW_DIR));
     console.log(
       note(
-        `Your credentials and configuration within the ${directory} directory were migrated`
+        `Your credentials and configuration within the ${directory} directory were upgraded`
       )
     );
   }
