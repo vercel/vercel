@@ -260,7 +260,9 @@ const main = async argv_ => {
       authConfigExists = false;
     } else if (
       !authConfig.token &&
-      !subcommandsWithoutToken.includes(targetOrSubcommand)
+      !subcommandsWithoutToken.includes(targetOrSubcommand) &&
+      !argv['--help'] &&
+      !argv['--token']
     ) {
       console.error(
         error(
