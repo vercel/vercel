@@ -165,7 +165,7 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (output, { readyState }, deployStamp, builds) => {
+const printDeploymentStatus = (output, { url, readyState }, deployStamp, builds) => {
   if (readyState === 'READY') {
     output.success(`Deployment ready ${deployStamp()}`);
     return 0;
@@ -180,11 +180,11 @@ const printDeploymentStatus = (output, { readyState }, deployStamp, builds) => {
   const amount = failedBuils.length;
 
   if (amount > 0) {
-    const name = amount === 1 ? 'build' : 'builds';
+    const name = amount === 1 ? 'failure' : 'failures';
 
-    output.error(
-      `${amount} ${name} failed to deploy. Please retry later. More: https://err.sh/now-cli/build-deploy-error`
-    );
+    output.error(`${amount} build ${name} occured.`);
+    output.error(`Check your logs at https://${url}/_logs or run ${code(`now logs ${url}`)}.`);
+
     return 1;
   }
 
