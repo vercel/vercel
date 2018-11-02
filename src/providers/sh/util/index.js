@@ -422,8 +422,11 @@ module.exports = class Now extends EventEmitter {
     return secrets
   }
 
-  async list(app, { version = 2 } = {}) {
-    const query = app ? `?app=${encodeURIComponent(app)}` : ''
+  async list(app, { version = 2, meta = {} } = {}) {
+    const metaQs = Object.keys(meta)
+      .map((key) => `meta-${key}=${encodeURIComponent(meta[key])}`)
+      .join('&');
+    const query = app ? `?app=${encodeURIComponent(app)}&${metaQs}` : `?${metaQs}`;
 
     const { deployments } = await this.retry(
       async bail => {

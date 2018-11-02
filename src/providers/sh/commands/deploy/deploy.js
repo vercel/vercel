@@ -50,6 +50,7 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import zeitWorldTable from '../../util/zeit-world-table'
+import parseMetadata from '../../util/parse-meta'
 import type { Readable } from 'stream'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
@@ -281,24 +282,6 @@ const parseEnv = (env, empty) => {
   }
   // assume it's already an Object
   return env
-}
-
-const parseMetadata = (metadata) => {
-  if (!metadata) {
-    return {};
-  }
-
-  if (typeof metadata === 'string') {
-    metadata = [metadata];
-  }
-
-  const parsed = {}
-  metadata.forEach(item => {
-    const [key, value] = item.split('=');
-    parsed[key] = value || ''
-  })
-
-  return parsed;
 }
 
 const promptForEnvFields = async list => {
