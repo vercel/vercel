@@ -50,12 +50,13 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc'
 import stamp from '../../../../util/output/stamp'
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale'
 import zeitWorldTable from '../../util/zeit-world-table'
+import parseMetadata from '../../util/parse-meta'
 import type { Readable } from 'stream'
 import type { NewDeployment, DeploymentEvent } from '../../util/types'
 import type { CreateDeployError } from '../../util/deploy/create-deploy'
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity', 'regions'],
+  string: ['name', 'alias', 'session-affinity', 'regions', 'meta'],
   boolean: [
     'help',
     'version',
@@ -87,7 +88,8 @@ const mriOpts = {
     'forward-npm': 'N',
     'session-affinity': 'S',
     name: 'n',
-    alias: 'a'
+    alias: 'a',
+    meta: 'm'
   }
 }
 
@@ -149,6 +151,9 @@ const help = () => {
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
     'FILE'
   )}         Include env vars from .env file. Defaults to '.env'
+    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
+      '`-m KEY=value`'
+    )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
@@ -722,6 +727,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       })
     )
 
+    const metadata = parseMetadata(argv.meta)
     const env = {}
 
     env_.filter(v => Boolean(v)).forEach(([key, val]) => {
@@ -739,6 +745,7 @@ async function sync({ contextName, output, token, config: { currentTeam, user },
       const createArgs = Object.assign(
         {
           env,
+          meta: metadata,
           followSymlinks,
           forceNew,
           forwardNpm: alwaysForwardNpm || forwardNpm,

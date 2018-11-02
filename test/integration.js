@@ -11,6 +11,7 @@ const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
 const sleep = require('es7-sleep')
+const uid = require('uid-promise')
 
 // Utilities
 const logo = require('../src/util/output/logo')
@@ -661,6 +662,55 @@ test('try to deploy with non-existing team', async t => {
 
   t.is(code, 1)
   t.true(stderr.includes(goal))
+})
+
+test('try to deploy with invalid metadata key', async t => {
+  const target = fixture('node')
+
+  const { stderr, code } = await execa(binaryPath, [
+    target,
+    '--public',
+    '--name',
+    session,
+    '-m',
+    'a.b.c=hello',
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(code, 1)
+  t.true(stderr.includes('contains invalid characters'))
+})
+
+test('try to filter deployments based on metadata', async t => {
+  const target = fixture('node')
+  const metaValue = await uid(20)
+
+  const out1 = await execa(binaryPath, [
+    target,
+    '--public',
+    '--name',
+    session,
+    '-m',
+    `testKey=${metaValue}`,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.is(out1.code, 0)
+
+  const out2 = await execa(binaryPath, [
+    'ls',
+    '-m',
+    `testKey=${metaValue}`,
+    ...defaultArgs
+  ], {
+    reject: false
+  })
+
+  t.true(out2.stdout.includes(session))
 })
 
 test.after.always(async t => {
