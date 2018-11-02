@@ -11,7 +11,7 @@ const execa = require('execa')
 const fetch = require('node-fetch')
 const tmp = require('tmp-promise')
 const sleep = require('es7-sleep')
-const uid = require('uid-promise');
+const uid = require('uid-promise')
 
 // Utilities
 const logo = require('../src/util/output/logo')
