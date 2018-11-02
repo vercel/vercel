@@ -111,7 +111,8 @@ module.exports = async function main (ctx: any): Promise<number> {
     sessionAffinity,
     url,
     created,
-    limits
+    limits,
+    meta
   } = deployment
 
   const [scale, events] = await Promise.all([
@@ -123,11 +124,12 @@ module.exports = async function main (ctx: any): Promise<number> {
   log(`Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(Date.now() - depFetchStart)}`);
 
   print('\n');
-  print(chalk.bold('  Meta\n'))
+  print(chalk.bold('  General Information\n'))
   print(`    ${chalk.dim('uid')}\t\t${uid}\n`)
   print(`    ${chalk.dim('name')}\t${name}\n`)
   print(`    ${chalk.dim('state')}\t${stateString(state)}\n`)
   print(`    ${chalk.dim('type')}\t${type}\n`)
+
   if (slot) {
     print(`    ${chalk.dim('slot')}\t${slot}\n`)
   }
@@ -137,6 +139,16 @@ module.exports = async function main (ctx: any): Promise<number> {
   print(`    ${chalk.dim('url')}\t\t${url}\n`)
   print(`    ${chalk.dim('created')}\t${new Date(created)} ${elapsed(Date.now() - created)}\n`)
   print('\n');
+
+  const metaKeys = Object.keys(meta)
+  if (metaKeys.length > 0) {
+    print(chalk.bold('  Deployment Metadata\n'))
+    metaKeys.forEach(key => {
+      const value = meta[key]
+      print(`    ${chalk.dim(key)} = ${value}\n`)
+    })
+    print('\n')
+  }
 
   if (limits) {
     print(chalk.bold('  Limits\n'))
