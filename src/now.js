@@ -183,6 +183,11 @@ const main = async (argv_) => {
     }
   }
 
+  // Support top-level "sh" config
+  if (config && !config.sh) {
+    config.sh = config;
+  }
+
   let authConfigExists
 
   try {
@@ -214,6 +219,11 @@ const main = async (argv_) => {
       )
 
       return 1;
+    }
+
+    // Support top-level "sh" auth
+    if (!Array.isArray(authConfig.credentials) && authConfig.token) {
+      authConfig.credentials = [{ provider: 'sh', token: authConfig.token }];
     }
 
     if (!Array.isArray(authConfig.credentials)) {
