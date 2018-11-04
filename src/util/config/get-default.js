@@ -3,7 +3,7 @@ exports.getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. See `now config help`. More: https://goo.gl/5aRS2s'
+      'This is your Now config file. See `now config help`. More: https://bit.ly/2qAK8bb'
   };
 
   if (existingCopy) {
@@ -64,7 +64,7 @@ exports.getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      "This is your Now credentials file. DON'T SHARE! More: https://goo.gl/mbf4CZ"
+      "This is your Now credentials file. DON'T SHARE! More: https://bit.ly/2qAK8bb"
   };
 
   if (existing) {
