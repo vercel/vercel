@@ -32,7 +32,6 @@ const ms = require('ms');
 const error = require('./util/output/error');
 const param = require('./util/output/param');
 const info = require('./util/output/info');
-const note = require('./util/output/note');
 const getNowDir = require('./util/config/global-path');
 const { getDefaultConfig,  getDefaultAuthConfig } = require('./util/config/get-default');
 const hp = require('./util/humanize-path');
@@ -297,11 +296,7 @@ const main = async argv_ => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR));
-    console.log(
-      note(
-        `Your credentials and configuration within the ${directory} directory were upgraded`
-      )
-    );
+    debug(`The credentials and configuration within the ${directory} directory were upgraded`);
   }
 
   // the context object to supply to the providers or the commands
