@@ -12,7 +12,7 @@ const longestState = 12;
 const padding = 8;
 
 const styleBuild = (build, times, inspecting, longestSource) => {
-  const {entrypoint, readyState, id} = build;
+  const {entrypoint, readyState, id, hasOutput} = build;
   const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
 
@@ -28,12 +28,13 @@ const styleBuild = (build, times, inspecting, longestSource) => {
 
   const pad = longestSource + padding;
   const entry = entrypoint.padEnd(pad);
+  const prefix = hasOutput ? '┌' : '╶';
 
-  return `${inspecting ? `    ` : `${chalk.grey('-')} `}${pathColor(entry)}${stateColor(state)}${time}`;
+  return `${inspecting ? `    ` : `${chalk.grey(prefix)} `}${pathColor(entry)}${stateColor(state)}${time}`;
 };
 
 const styleOutput = (output, inspecting) => {
-  const {type, path, readyState, size} = output;
+  const {type, path, readyState, size, isLast} = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
   const suffix = size ? ` (${bytes(size)})` : '';
 
@@ -45,7 +46,8 @@ const styleOutput = (output, inspecting) => {
     mainColor = chalk.red;
   }
 
-  return `${inspecting ? `      ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`;
+  const corner = isLast ? '└──' : '├──';
+  return `${inspecting ? `      ` : `${chalk.grey(corner)} `}${mainColor(prefix + path + suffix)}`;
 };
 
 module.exports = (builds, times, inspecting) => {
@@ -56,9 +58,15 @@ module.exports = (builds, times, inspecting) => {
     const {output, copiedFrom} = build;
 
     if (!copiedFrom && output && output.length > 0) {
+      build.hasOutput = true;
+
       for (const item of output) {
         item.isOutput = true;
         item.readyState = build.readyState;
+
+        if (output.indexOf(item) === output.length - 1) {
+          item.isLast = true;
+        }
 
         buildsAndOutput.push(item);
       }
