@@ -26,8 +26,7 @@ const styleBuild = (build, times, inspecting, longestSource) => {
     pathColor = chalk.red;
   }
 
-  const pad = longestSource + padding;
-  const entry = entrypoint.padEnd(pad);
+  const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput ? '┌' : '╶';
 
   return `${inspecting ? `    ` : `${chalk.grey(prefix)} `}${pathColor(entry)}${stateColor(state)}${time}`;
