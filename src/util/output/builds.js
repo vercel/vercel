@@ -1,18 +1,19 @@
-import table from 'text-table';
 import chalk from 'chalk';
 import title from 'title';
 import bytes from 'bytes';
 import {isReady, isFailed} from '../build-state';
-import strlen from '../strlen';
 
 const prepareState = state => title(state.replace('_', ' '));
 
 // That's how long the word "Initializing" is
 const longestState = 12;
 
-const styleBuild = (build, times, inspecting) => {
+// That's the spacing between the source, state and time
+const padding = 8;
+
+const styleBuild = (build, times, inspecting, longestSource) => {
   const {entrypoint, readyState, id} = build;
-  const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState);
+  const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
 
   let stateColor = chalk.grey;
@@ -25,11 +26,10 @@ const styleBuild = (build, times, inspecting) => {
     pathColor = chalk.red;
   }
 
-  return [
-    `${inspecting ? `    ` : `${chalk.grey('-')} `}${pathColor(entrypoint)}`,
-    stateColor(state),
-    time
-  ];
+  const pad = longestSource + padding;
+  const entry = entrypoint.padEnd(pad);
+
+  return `${inspecting ? `    ` : `${chalk.grey('-')} `}${pathColor(entry)}${stateColor(state)}${time}`;
 };
 
 const styleOutput = (output, inspecting) => {
@@ -45,9 +45,7 @@ const styleOutput = (output, inspecting) => {
     mainColor = chalk.red;
   }
 
-  return [
-    `${inspecting ? `      ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`
-  ];
+  return `${inspecting ? `      ` : `  ${chalk.grey('-')} `}${mainColor(prefix + path + suffix)}`;
 };
 
 module.exports = (builds, times, inspecting) => {
@@ -67,22 +65,26 @@ module.exports = (builds, times, inspecting) => {
     }
   }
 
-  const input = buildsAndOutput.map(item => {
+  const longestSource = builds.reduce((final, current) => {
+    const { length } = current.entrypoint;
+    return length > final ? length : final;
+  }, 0);
+
+  const final = buildsAndOutput.map((item, index) => {
+    let log = null;
+
     if (item.isOutput) {
-      return styleOutput(item, inspecting);
+      log = styleOutput(item, inspecting);
+    } else {
+      log = styleBuild(item, times, inspecting, longestSource);
     }
 
-    return styleBuild(item, times, inspecting);
-  });
-
-  const final = table(input, {
-    align: ['l', 'l', 'l', 'l'],
-    hsep: ' '.repeat(3),
-    stringLength: strlen
+    const newline = (index === buildsAndOutput.length - 1) ? '' : '\n';
+    return log + newline;
   });
 
   return {
-    lines: input.length + 1,
-    toPrint: `${final}\n`
+    lines: final.length + 1,
+    toPrint: `${final.join('')}\n`
   };
 };
