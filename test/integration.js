@@ -236,7 +236,7 @@ test('create a builds deployments', async t => {
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
-  t.is(contentType, 'text/plain');
+  t.is(contentType, 'text/html');
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
