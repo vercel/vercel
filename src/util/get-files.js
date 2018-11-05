@@ -163,7 +163,6 @@ async function staticFiles(
 
     const filter = ignore()
       .add(IGNORED + '\n' + clearRelative(ignoreFile))
-      .add(['now.json'])
       .createFilter();
 
     const prefixLength = path.length + 1;
