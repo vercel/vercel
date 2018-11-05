@@ -33,20 +33,31 @@ const styleBuild = (build, times, inspecting, longestSource) => {
 };
 
 const styleOutput = (output, inspecting) => {
-  const {type, path, readyState, size, isLast} = output;
+  const {type, path, readyState, size, isLast, lambda} = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
-  const suffix = size ? ` (${bytes(size)})` : '';
+  const finalSize = size ? ` ${chalk.grey(`(${bytes(size)})`)}` : '';
 
-  let mainColor = chalk.grey;
+  let color = chalk.grey;
+  let finalRegion = '';
 
   if (isReady({ readyState })) {
-    mainColor = item => item;
+    color = item => item;
   } else if (isFailed({ readyState })) {
-    mainColor = chalk.red;
+    color = chalk.red;
+  }
+
+  if (lambda) {
+    const { deployedTo } = lambda;
+
+    if (deployedTo && deployedTo.length > 0) {
+      finalRegion = ` ${chalk.grey(`[${deployedTo.join(',')}]`)}`;
+    }
   }
 
   const corner = isLast ? '└──' : '├──';
-  return `${inspecting ? `      ` : `${chalk.grey(corner)} `}${mainColor(prefix + path + suffix)}`;
+  const main = prefix + path + finalSize + finalRegion;
+
+  return `${inspecting ? `      ` : `${chalk.grey(corner)} `}${color(main)}`;
 };
 
 module.exports = (builds, times, inspecting) => {
