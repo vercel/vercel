@@ -50,7 +50,7 @@ const styleOutput = (output, inspecting) => {
     const { deployedTo } = lambda;
 
     if (deployedTo && deployedTo.length > 0) {
-      finalRegion = ` ${chalk.grey(`[${deployedTo.join(',')}]`)}`;
+      finalRegion = ` ${chalk.grey(`[${deployedTo.join(', ')}]`)}`;
     }
   }
 
