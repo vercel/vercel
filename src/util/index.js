@@ -75,7 +75,8 @@ module.exports = class Now extends EventEmitter {
       meta,
       regions,
       quiet = false,
-      env = {},
+      env,
+      build,
       followSymlinks = true,
       forceNew = false
     }
@@ -230,6 +231,7 @@ module.exports = class Now extends EventEmitter {
       const requestBody = isBuilds ? {
         version: 2,
         env,
+        build,
         public: wantsPublic || nowConfig.public,
         name,
         files,
@@ -239,6 +241,7 @@ module.exports = class Now extends EventEmitter {
         regions
       } : {
         env,
+        build,
         meta,
         public: wantsPublic || nowConfig.public,
         forceNew,

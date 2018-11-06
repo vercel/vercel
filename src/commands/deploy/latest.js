@@ -297,14 +297,14 @@ exports.pipe = async function main(
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env, null),
-    parseEnv(argv.env, undefined)
+    parseEnv(argv['--env'], undefined)
   );
 
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env, null),
-    parseEnv(argv['build-env'], undefined)
+    parseEnv(argv['--build-env'], undefined)
   );
 
   // If there's any undefined values, then inherit them from this process
