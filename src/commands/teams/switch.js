@@ -45,6 +45,8 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
     currentTeam = {
       slug: user.username || user.email
     };
+  } else {
+    currentTeam = list.find(team => team.id === currentTeam);
   }
 
   if (args.length !== 0) {
@@ -83,7 +85,7 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
   const choices = list.map(({ id, slug, name }) => {
     name = `${slug} (${name})`;
 
-    if (id === currentTeam) {
+    if (id === currentTeam.id) {
       name += ` ${chalk.bold('(current)')}`;
     }
 
