@@ -324,7 +324,7 @@ exports.pipe = async function main(
     const createArgs = Object.assign(
       {
         env: deploymentEnv,
-        buildEnv: deploymentBuildEnv,
+        build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
         quiet,
         wantsPublic: argv['--public'] || localConfig.public,
