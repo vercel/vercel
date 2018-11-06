@@ -105,6 +105,8 @@ async function printEvents(
             }
           }
 
+          let latestLogDate = 0;
+
           const onData = data => {
             const { event } = data;
             if (event === 'state' && data.payload.value === 'READY') {
@@ -113,16 +115,44 @@ async function printEvents(
                 finish();
               }
             } else {
+              latestLogDate = Math.max(latestLogDate, data.date);
               const linesPrinted = onEvent(data, callOnOpenOnce);
               o += linesPrinted || 0;
             }
           };
 
+          let onErrorCalled = false;
           const onError = err => {
-            if (finishCalled) return;
+            if (finishCalled || onErrorCalled) return;
+            onErrorCalled = true;
             o++;
             callOnOpenOnce();
-            log(`Deployment event stream error: ${err.message}`);
+
+            const errorMessage = `Deployment event stream error: ${err.message}`;
+            if (!findOpts.follow) {
+              log(errorMessage);
+              return;
+            }
+
+            debug(errorMessage);
+            clearTimeout(poller);
+            stream.destroy(err);
+            readable.destroy(err);
+
+            const retryFindOpts = {
+              ...findOpts,
+              since: latestLogDate
+            };
+
+            setTimeout(() => {
+              // retry without maximum amount nor clear past logs etc
+              printEvents(
+                now,
+                deploymentIdOrURL,
+                currentTeam,
+                { mode, onOpen, onEvent, quiet, debugEnabled, findOpts: retryFindOpts }
+              ).then(resolve, reject);
+            }, 2000);
           };
 
           stream.on('end', finish);

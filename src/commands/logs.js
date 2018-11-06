@@ -212,12 +212,19 @@ module.exports = async function main(ctx: any) {
     findOpts: findOpts1
   });
 
-  const printEvent = event => logPrinters[outputMode](event);
+  const printedEventIds = new Set();
+  const printEvent = event => {
+    if (printedEventIds.has(event.id)) return 0;
+    printedEventIds.add(event.id);
+    return logPrinters[outputMode](event);
+  };
   storage.sort(compareEvents).forEach(printEvent);
 
   if (follow) {
     const lastEvent = storage[storage.length - 1];
-    const since2 = lastEvent ? lastEvent.created + 1 : Date.now();
+    // NOTE: the API ignores `since` on follow mode.
+    // (but not sure if it's always true on legacy deployments)
+    const since2 = lastEvent ? lastEvent.date : Date.now();
     const findOpts2 = {
       direction: 'forward',
       query,
