@@ -83,7 +83,7 @@ module.exports = async (ctx: CLIContext) => {
   if (!localConfig) {
     if (!isFile) {
       output.warn(
-        `Your project is missing a ${file} file with a ${prop} property. More: htts://zeit.co/docs/version-config`
+        `Your project is missing a ${file} file with a ${prop} property. More: https://zeit.co/docs/version-config`
       );
     }
   } else {
@@ -110,7 +110,7 @@ module.exports = async (ctx: CLIContext) => {
       }
     } else {
       output.warn(
-        `Your project is missing ${prop} in ${file}. More: htts://zeit.co/docs/version-config`
+        `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
       );
     }
   }
