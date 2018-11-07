@@ -26,6 +26,7 @@ import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import note from '../../util/output/note';
+import highlight from '../../util/output/highlight';
 
 exports.help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
@@ -290,18 +291,40 @@ exports.pipe = async function main(
   let deployStamp = stamp();
   let deployment: BuildsDeployment | null = null;
 
+  const isObject = item => Object.prototype.toString.call(item) === '[object Object]';
+
+  // This validation needs to happen on the client side because
+  // the data is merged with other data before it is passed to the API (which
+  // also does schema validation).
+  if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
+    error(`The ${code('env')} property in ${highlight('now.json')} needs to be an object`);
+    return 1;
+  }
+
+  if (typeof localConfig.build !== 'undefined') {
+    if (!isObject(localConfig.build)) {
+      error(`The ${code('build')} property in ${highlight('now.json')} needs to be an object`);
+      return 1;
+    }
+
+    if (typeof localConfig.build.env !== 'undefined' && !isObject(localConfig.build.env)) {
+      error(`The ${code('build.env')} property in ${highlight('now.json')} needs to be an object`);
+      return 1;
+    }
+  }
+
   // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
-    parseEnv(localConfig.env, null),
-    parseEnv(argv['--env'], undefined)
+    parseEnv(localConfig.env),
+    parseEnv(argv['--env'])
   );
 
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
-    parseEnv(localConfig.build && localConfig.build.env, null),
-    parseEnv(argv['--build-env'], undefined)
+    parseEnv(localConfig.build && localConfig.build.env),
+    parseEnv(argv['--build-env'])
   );
 
   // If there's any undefined values, then inherit them from this process
