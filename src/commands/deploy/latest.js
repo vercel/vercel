@@ -204,9 +204,7 @@ const renderBuilds = (print, list, times, linesPrinted) => {
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-// `null` empty value means to prompt user for value upon deployment.
-// `undefined` empty value means to inherit value from user's env.
-const parseEnv = (env, empty) => {
+const parseEnv = (env) => {
   if (!env) {
     return {};
   }
@@ -224,7 +222,6 @@ const parseEnv = (env, empty) => {
 
       if (equalsSign === -1) {
         key = e;
-        value = empty;
       } else {
         key = e.substr(0, equalsSign);
         value = e.substr(equalsSign + 1);
