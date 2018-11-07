@@ -13,7 +13,7 @@ const padding = 8;
 
 const styleBuild = (build, times, inspecting, longestSource) => {
   const {entrypoint, readyState, id, hasOutput} = build;
-  const state = prepareState(readyState).padEnd(inspecting ? 0 : longestState + padding);
+  const state = prepareState(readyState).padEnd(longestState + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
 
   let stateColor = chalk.grey;
