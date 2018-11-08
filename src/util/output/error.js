@@ -1,17 +1,17 @@
 // Packages
-const { red } = require('chalk')
+const { red } = require('chalk');
 
 module.exports = (...input) => {
-  let messages = input
+  let messages = input;
 
   if (typeof input[0] === 'object') {
-    const {slug, message} = input[0]
-    messages = [ message ]
+    const { slug, message } = input[0];
+    messages = [message];
 
     if (slug) {
-      messages.push(`> More details: https://err.sh/now-cli/${slug}`)
+      messages.push(`> More details: https://err.sh/now-cli/${slug}`);
     }
   }
 
-  return `${red('> Error!')} ${messages.join('\n')}`
-}
+  return `${red('> Error!')} ${messages.join('\n')}`;
+};

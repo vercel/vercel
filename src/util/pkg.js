@@ -1,16 +1,16 @@
 /* eslint-disable import/no-unresolved */
 
 // Native
-const path = require('path')
+const path = require('path');
 
 // Utilities
-const pkg = require('../../package.json')
+const pkg = require('../../package.json');
 
 try {
-  const distDir = path.dirname(process.execPath)
-  pkg._npmPkg = require(`${path.join(distDir, '../../package.json')}`)
+  const distDir = path.dirname(process.execPath);
+  pkg._npmPkg = require(`${path.join(distDir, '../../package.json')}`);
 } catch (err) {
-  pkg._npmPkg = null
+  pkg._npmPkg = null;
 }
 
-module.exports = pkg
+module.exports = pkg;

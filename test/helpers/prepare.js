@@ -1,9 +1,10 @@
 // Native
-const { join } = require('path')
+const { join } = require('path');
 
 // Packages
-const { imageSync: getImageFile } = require('qr-image')
-const { ensureDir, writeFile } = require('fs-extra')
+const { imageSync: getImageFile } = require('qr-image');
+const { promises: { writeFile } } = require('fs');
+const ensureDir = require('mkdirp-promise');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest
@@ -18,7 +19,7 @@ const getDockerFile = session => `
 
   EXPOSE 3000
   CMD ["yarn", "start"]
-`
+`;
 
 const getPackageFile = session => `
   {
@@ -32,36 +33,83 @@ const getPackageFile = session => `
       "micro": "latest"
     }
   }
-`
+`;
 
 const getIndexFile = session => `
   module.exports = () => ({
     id: '${session}'
   })
-`
+`;
+
+const getConfigFile = builds => builds ? `{
+  "version": 2,
+  "builds": [
+    { "src": "*.html", "use": "@now/static" }
+  ]
+}` : `{
+  "version": 1
+}`;
+
+const getIndexHTMLFile = session => `
+<form action="/contact.php" method="POST">
+  Post message for ${session} right here:
+  <textarea name="Message" />
+  <button>Submit</button>
+</form>
+`;
+
+const getContactFile = session => `
+<?php
+if (empty($_ENV["AIRTABLE_KEY"])) {
+  die("This is a test for ${session}");
+}
+
+http_request(
+  "POST",
+  "https://api.airtable.com/v0/appPkEQBBcdg0NIni/Messages",
+  json_encode(array("fields" => $_POST)),
+  array("headers" => array(
+    "Authorization" => "Bearer " . $_ENV["AIRTABLE_KEY"],
+    "Content-Type" => "application/json"
+  ))
+);
+?>
+
+<marquee>Thanks for your feedback!</marquee>
+`;
 
 module.exports = async session => {
   const files = {
     'Dockerfile': getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
+    'now.json': getConfigFile(false),
     'first.png': getImageFile(session, {
       size: 30
     }),
     'second.png': getImageFile(session, {
       size: 20
-    })
-  }
+    }),
+    'now.json-builds': getConfigFile(true),
+    'index.html': getIndexHTMLFile(session),
+    'contact.php': getContactFile(session)
+ };
 
   const spec = {
     'dockerfile': [
       'index.js',
       'Dockerfile',
-      'package.json'
+      'package.json',
+      'now.json'
     ],
     'node': [
       'index.js',
-      'package.json'
+      'package.json',
+      'now.json'
+    ],
+    'builds': [
+      'index.html',
+      'now.json-builds'
     ],
     'static-single-file': [
       'first.png'
@@ -70,8 +118,8 @@ module.exports = async session => {
       'first.png',
       'second.png'
     ],
-    'now-static-builds': {
-      'now.json': '{"type": "static"}',
+    'now-static-build': {
+      'now.json': '{"version": 1, "type": "static"}',
       'Dockerfile': `
 FROM alpine
 RUN mkdir /public
@@ -80,6 +128,7 @@ RUN echo hello > /public/index.html
     },
     'build-env': {
       'now.json': JSON.stringify({
+        version: 1,
         type: 'static',
         build: {
           env: {FOO: 'bar'}
@@ -94,6 +143,7 @@ RUN echo $FOO > /public/index.html
     },
     'build-env-arg': {
       'now.json': JSON.stringify({
+        version: 1,
         type: 'static'
       }),
       'Dockerfile': `
@@ -103,28 +153,28 @@ RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `
     }
-  }
+  };
 
   for (const type of Object.keys(spec)) {
-    const needed = spec[type]
-    const directory = join(__dirname, '..', 'fixtures', 'integration', type)
-    await ensureDir(directory)
+    const needed = spec[type];
+    const directory = join(__dirname, '..', 'fixtures', 'integration', type);
+    await ensureDir(directory);
 
     if(Array.isArray(needed)) {
       // Get content from the defined files
       for (const name of needed) {
-        const file = join(directory, name)
-        const content = files[name]
-        await writeFile(file, content)
+        const file = join(directory, name);
+        const content = files[name];
+        await writeFile(file.replace('-builds', ''), content);
       }
     } else {
       // Get content from the object property
-      const names = Object.keys(needed)
+      const names = Object.keys(needed);
       for (const name of names) {
-        const file = join(directory, name)
-        const content = needed[name]
-        await writeFile(file, content)
+        const file = join(directory, name);
+        const content = needed[name];
+        await writeFile(file.replace('-builds', ''), content);
       }
     }
   }
-}
+};
