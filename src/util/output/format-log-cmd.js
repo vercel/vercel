@@ -1,6 +1,6 @@
 // @flow
-import formatLogText from './format-log-text'
+import formatLogText from './format-log-text';
 
 export default function formatLogCmd(text: string) {
-  return `▲ ${formatLogText(text)}`
+  return `▲ ${formatLogText(text)}`;
 }

@@ -1,4 +1,4 @@
-const chalk = require('chalk')
+const chalk = require('chalk');
 
 module.exports = (
   label,
@@ -14,34 +14,34 @@ module.exports = (
   } = {}
 ) => {
   return new Promise(resolve => {
-    const isRaw = stdin.isRaw
+    const isRaw = stdin.isRaw;
 
-    stdin.setRawMode(true)
-    stdin.resume()
+    stdin.setRawMode(true);
+    stdin.resume();
 
     function restore() {
-      stdout.write(trailing)
-      stdin.setRawMode(isRaw)
-      stdin.pause()
-      stdin.removeListener('data', onData)
+      stdout.write(trailing);
+      stdin.setRawMode(isRaw);
+      stdin.pause();
+      stdin.removeListener('data', onData);
     }
 
     function onData(buffer) {
-      const data = buffer.toString()
+      const data = buffer.toString();
 
       if (data[0].toLowerCase() === yesChar) {
-        restore()
-        stdout.write(`\n`)
-        resolve(true)
+        restore();
+        stdout.write(`\n`);
+        resolve(true);
       } else if (data[0].toLowerCase() === noChar) {
-        restore()
-        resolve(false)
+        restore();
+        resolve(false);
       } else if (abortSequences.has(data)) {
-        restore()
-        resolve(false)
+        restore();
+        resolve(false);
       } else if (resolveChars.has(data[0])) {
-        restore()
-        resolve(defaultValue)
+        restore();
+        resolve(defaultValue);
       } else {
         // ignore extraneous input
       }
@@ -52,8 +52,8 @@ module.exports = (
         ? `[${yesChar}|${noChar}]`
         : defaultValue
           ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
-          : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`
-    stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `)
-    stdin.on('data', onData)
-  })
-}
+          : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`;
+    stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `);
+    stdin.on('data', onData);
+  });
+};

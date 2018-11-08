@@ -1,5 +1,5 @@
-const { red } = require('chalk')
+const { red } = require('chalk');
 
-const error = msg => `${red('> Aborted!')} ${msg}`
+const error = msg => `${red('> Aborted!')} ${msg}`;
 
-module.exports = error
+module.exports = error;

@@ -1,7 +1,10 @@
 // @flow
-import type { Readable } from 'stream'
+import type { Readable } from 'stream';
 
-async function* eventListenerToGenerator(event: string, emitter: Readable): AsyncGenerator<any, any, any> {
+async function* eventListenerToGenerator(
+  event: string,
+  emitter: Readable
+): AsyncGenerator<any, any, any> {
   while (true) {
     yield new Promise(resolve => {
       const handler = (...args) => {
@@ -13,4 +16,4 @@ async function* eventListenerToGenerator(event: string, emitter: Readable): Asyn
   }
 }
 
-export default eventListenerToGenerator
+export default eventListenerToGenerator;

@@ -3,7 +3,7 @@ jobs:
 
   install:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -26,7 +26,7 @@ jobs:
 
   build:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -44,7 +44,7 @@ jobs:
 
   test-lint:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -56,7 +56,7 @@ jobs:
 
   test-unit:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -68,7 +68,7 @@ jobs:
 
   test-integration:
     macos:
-      xcode: '9.2.0'
+      xcode: '10.0.0'
     working_directory: ~/repo
     steps:
       - checkout
@@ -83,7 +83,7 @@ jobs:
 
   compress:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -126,7 +126,7 @@ jobs:
 
   publish-stable:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
@@ -141,7 +141,7 @@ jobs:
 
   publish-canary:
     docker:
-      - image: circleci/node:9.10.0
+      - image: circleci/node:10
     working_directory: ~/repo
     steps:
       - checkout
