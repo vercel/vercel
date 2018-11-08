@@ -421,14 +421,8 @@ test('scale down the deployment directly', async t => {
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
-  const files = [
-    path.join(directory, 'first.png'),
-    path.join(directory, 'second.png')
-  ];
-
   const { stdout, code } = await execa(binaryPath, [
-    files[0],
-    files[1],
+    directory,
     '--public',
     '--name',
     session,
@@ -457,10 +451,6 @@ test('deploy multiple static files', async t => {
   const content = await response.json();
   t.is(content.files.length, 2);
 
-  const bareGoal = files.map(file => path.basename(file));
-  const bareCurrent = content.files.map(item => item.base);
-
-  t.deepEqual(bareGoal, bareCurrent);
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
