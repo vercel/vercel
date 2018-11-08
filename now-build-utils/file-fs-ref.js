@@ -1,7 +1,10 @@
 const assert = require('assert');
 const fs = require('fs-extra');
-const lazyReadStream = require('graceful-fs-stream').createReadStream;
+const MultiStream = require('multistream');
 const path = require('path');
+const Sema = require('async-sema');
+
+const semaToPreventEMFILE = new Sema(30);
 
 class FileFsRef {
   constructor ({ mode = 0o100644, fsPath }) {
@@ -30,15 +33,28 @@ class FileFsRef {
     return new FileFsRef({ mode, fsPath });
   }
 
+  async toStreamAsync () {
+    await semaToPreventEMFILE.acquire();
+    const release = () => semaToPreventEMFILE.release();
+    const stream = fs.createReadStream(this.fsPath);
+    stream.on('end', release);
+    stream.on('error', release);
+    return stream;
+  }
+
   toStream () {
-    // this is done to make yazl work properly. `addFile` is useless as it calls `fs.stat` on
-    // all files at once, and no way to avoid it. so i sticked with `addReadStream`, but it has
-    // a flaw as well - it requires all streams to be passed, thus `createReadStream` to be
-    // called against all files at once. however, a workaround is possible. if we defer a call
-    // to `createReadStream` and make it happen in first read call, it makes all streams, passed
-    // to addReadStream "dry" (without file handle) and make the file handle be created in `read`
-    // calls one-after-one as the library does correctly
-    return lazyReadStream(this.fsPath);
+    let flag;
+
+    return new MultiStream((cb) => {
+      if (flag) return cb();
+      flag = true;
+
+      this.toStreamAsync().then((stream) => {
+        cb(undefined, stream);
+      }).catch((error) => {
+        cb(error);
+      });
+    });
   }
 }
 
