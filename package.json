@@ -75,6 +75,7 @@
       "no-empty": 0,
       "semi": 2,
       "flowtype/generic-spacing": 0,
+      "flowtype/no-types-missing-file-annotation": 0,
       "no-control-regex": 0
     }
   },
