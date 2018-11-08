@@ -222,7 +222,6 @@ test('create a builds deployments', async t => {
   // Ensure the listing includes the necessary parts
   const wanted = [
     session,
-    'contact.php',
     'index.html'
   ];
 

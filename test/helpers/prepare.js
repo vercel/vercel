@@ -109,7 +109,6 @@ module.exports = async session => {
       'now.json'
     ],
     'builds': [
-      'contact.php',
       'index.html',
       'now.json-builds'
     ],
