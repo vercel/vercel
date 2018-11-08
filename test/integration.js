@@ -691,7 +691,7 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
-  const goal = `> Error! The specified team doesn't exist`;
+  const goal = `> Error! The specified team does not exist`;
 
   const { stderr, code } = await execa(binaryPath, [
     target,
