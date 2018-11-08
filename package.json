@@ -23,7 +23,7 @@
   "lint-staged": {
     "*.js": [
       "yarn test-lint",
-      "prettier --write --single-quote --no-semi",
+      "prettier --write --single-quote",
       "git add"
     ]
   },
@@ -39,10 +39,10 @@
       "dist/*.js"
     ],
     "targets": [
-      "node9-alpine-x64",
-      "node9-linux-x64",
-      "node9-macos-x64",
-      "node9-win-x64"
+      "node10-alpine-x64",
+      "node10-linux-x64",
+      "node10-macos-x64",
+      "node10-win-x64"
     ]
   },
   "eslintIgnore": [
@@ -72,11 +72,15 @@
       "no-console": 0,
       "no-shadow": 0,
       "no-extra-semi": 0,
-      "no-empty": 0
+      "no-empty": 0,
+      "semi": 2,
+      "flowtype/generic-spacing": 0,
+      "no-control-regex": 0
     }
   },
   "babel": {
     "presets": [
+      "flow",
       [
         "@babel/preset-env",
         {
@@ -102,25 +106,21 @@
     "@babel/runtime": "7.0.0-beta.44",
     "@zeit/dockerignore": "0.0.3",
     "@zeit/source-map-support": "0.6.2",
-    "ajv": "6.4.0",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "ansi-regex": "3.0.0",
-    "archiver": "2.0.3",
     "arg": "2.0.0",
     "arr-flatten": "1.1.0",
     "async-retry": "1.1.3",
     "async-sema": "1.2.0",
     "ava": "0.25.0",
-    "aws-sdk": "2.124.0",
     "babel-eslint": "8.2.2",
     "babel-loader": "8.0.0-beta.2",
+    "babel-preset-flow": "7.0.0-beta.3",
     "bytes": "3.0.0",
     "chalk": "2.3.1",
-    "child-process-promise": "2.2.1",
     "clipboardy": "1.1.4",
     "convert-stream": "1.0.2",
-    "copy-webpack-plugin": "4.0.1",
     "credit-card": "3.0.1",
     "death": "1.1.0",
     "debug": "3.1.0",
@@ -131,13 +131,10 @@
     "email-prompt": "0.3.2",
     "email-validator": "1.1.1",
     "epipebomb": "1.0.0",
-    "es7-sleep": "1.0.0",
     "eslint": "4.7.2",
     "eslint-plugin-flowtype": "2.46.1",
     "execa": "0.9.0",
-    "fetch-h2": "0.2.5",
-    "flow-babel-webpack-plugin": "1.1.1",
-    "fs-extra": "4.0.2",
+    "fetch-h2": "1.0.0",
     "glob": "7.1.2",
     "ignore": "3.3.5",
     "ini": "1.3.4",
@@ -152,10 +149,8 @@
     "mri": "1.1.0",
     "ms": "2.0.0",
     "node-fetch": "1.7.3",
-    "opn": "5.1.0",
     "ora": "1.3.0",
-    "pipe-streams-to-promise": "0.2.0",
-    "pkg": "4.3.0",
+    "pkg": "4.3.4",
     "pluralize": "7.0.0",
     "pre-commit": "1.2.2",
     "prettier": "1.7.2",
@@ -171,13 +166,11 @@
     "strip-ansi": "4.0.0",
     "stripe": "5.1.0",
     "supports-color": "5.2.0",
-    "tar-fs": "1.15.3",
     "test-listen": "1.1.0",
     "text-table": "0.2.0",
-    "then-sleep": "1.0.1",
     "through2": "2.0.3",
+    "title": "3.4.0",
     "tmp-promise": "1.0.3",
-    "uid-promise": "1.0.0",
     "update-check": "1.5.0",
     "webpack": "3.6.0",
     "webpack-node-externals": "1.6.0",

@@ -1,5 +1,5 @@
-const { cyan } = require('chalk')
+const { cyan } = require('chalk');
 
-const ready = msg => `${cyan('> Ready!')} ${msg}`
+const ready = msg => `${cyan('> Ready!')} ${msg}`;
 
-module.exports = ready
+module.exports = ready;

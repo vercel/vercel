@@ -1,6 +1,6 @@
-const { cyan } = require('chalk')
-const { tick } = require('./chars')
+const { cyan } = require('chalk');
+const { tick } = require('./chars');
 
-const ok = msg => `${cyan(tick)} ${msg}`
+const ok = msg => `${cyan(tick)} ${msg}`;
 
-module.exports = ok
+module.exports = ok;

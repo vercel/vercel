@@ -1,49 +1,49 @@
 // Native
-const os = require('os')
-const path = require('path')
+const os = require('os');
+const path = require('path');
 
 const checkPath = async dir => {
   if (!dir) {
-    return
+    return;
   }
 
-  const home = os.homedir()
-  let location
+  const home = os.homedir();
+  let location;
 
   const paths = {
     home,
     desktop: path.join(home, 'Desktop'),
     downloads: path.join(home, 'Downloads')
-  }
+  };
 
   for (const locationPath in paths) {
     if (!{}.hasOwnProperty.call(paths, locationPath)) {
-      continue
+      continue;
     }
 
     if (dir === paths[locationPath]) {
-      location = locationPath
+      location = locationPath;
     }
   }
 
   if (!location) {
-    return
+    return;
   }
 
-  let locationName
+  let locationName;
 
   switch (location) {
     case 'home':
-      locationName = 'user directory'
-      break
+      locationName = 'user directory';
+      break;
     case 'downloads':
-      locationName = 'downloads directory'
-      break
+      locationName = 'downloads directory';
+      break;
     default:
-      locationName = location
+      locationName = location;
   }
 
-  throw new Error(`You're trying to deploy your ${locationName}.`)
-}
+  throw new Error(`You're trying to deploy your ${locationName}.`);
+};
 
-module.exports = checkPath
+module.exports = checkPath;

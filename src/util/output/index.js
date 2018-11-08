@@ -1,31 +1,31 @@
-const chalk = require('chalk')
-const { format } = require('util')
-const { Console } = require('console')
+const chalk = require('chalk');
+const { format } = require('util');
+const { Console } = require('console');
 
 function createOutput({ debug: debugEnabled = false } = {}) {
   function print(v) {
-    process.stderr.write(v)
+    process.stderr.write(v);
   }
 
   function log(v, color = chalk.grey) {
-    print(`${color('>')} ${v}\n`)
+    print(`${color('>')} ${v}\n`);
   }
 
   function warn(v, slug = null) {
-    log(chalk`{yellow.bold WARN!} ${v}`)
+    log(chalk`{yellow.bold WARN!} ${v}`);
     if (slug !== null) {
-      log(`More details: https://err.sh/now-cli/${slug}`)
+      log(`More details: https://err.sh/now-cli/${slug}`);
     }
   }
 
   function note(v) {
-    log(chalk`{yellow.bold NOTE:} ${v}`, chalk.yellow)
+    log(chalk`{yellow.bold NOTE:} ${v}`, chalk.yellow);
   }
 
   function error(v, slug = null) {
-    log(chalk`{red.bold Error!} ${v}`, chalk.red)
+    log(chalk`{red.bold Error!} ${v}`, chalk.red);
     if (slug !== null) {
-      log(`More details: https://err.sh/now-cli/${slug}`)
+      log(`More details: https://err.sh/now-cli/${slug}`);
     }
   }
 
@@ -35,7 +35,11 @@ function createOutput({ debug: debugEnabled = false } = {}) {
 
   function debug(v) {
     if (debugEnabled) {
-      log(`${chalk.bold('[debug]')} ${chalk.gray(`[${new Date().toISOString()}]`)} ${v}`)
+      log(
+        `${chalk.bold('[debug]')} ${chalk.gray(
+          `[${new Date().toISOString()}]`
+        )} ${v}`
+      );
     }
   }
 
@@ -43,19 +47,21 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   // being used because of `pkg` it's safe to do in this case.
   const c = {
     _times: new Map(),
-    log(...args) { debug(format(...args)) }
-  }
+    log(...args) {
+      debug(format(...args));
+    }
+  };
 
   async function time(label, fn) {
-    const promise = !fn.then && typeof fn === 'function' ? fn() : fn
+    const promise = !fn.then && typeof fn === 'function' ? fn() : fn;
     if (debugEnabled) {
       c.log(label);
-      Console.prototype.time.call(c, label)
-      const r = await promise
-      Console.prototype.timeEnd.call(c, label)
-      return r
+      Console.prototype.time.call(c, label);
+      const r = await promise;
+      Console.prototype.timeEnd.call(c, label);
+      return r;
     } else {
-      return promise
+      return promise;
     }
   }
 
@@ -68,7 +74,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
     debug,
     time,
     note
-  }
+  };
 }
 
-module.exports = createOutput
+module.exports = createOutput;
