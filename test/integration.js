@@ -138,8 +138,7 @@ test('trigger OSS confirmation message', async t => {
 test('try to deploy user directory', async t => {
   const goal = `> Error! You're trying to deploy your user directory`;
 
-  const { stderr, code } = await execa(binaryPath, defaultArgs, {
-    reject: false,
+  const { stderr, code } = await execa(binaryPath, defaultArgs, { reject: false,
     cwd: homedir()
   });
 

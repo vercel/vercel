@@ -44,7 +44,6 @@ const getIndexFile = session => `
 const getConfigFile = builds => builds ? `{
   "version": 2,
   "builds": [
-    { "src": "*.php", "use": "@now/php" },
     { "src": "*.html", "use": "@now/static" }
   ]
 }` : `{
