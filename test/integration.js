@@ -1,6 +1,5 @@
 // Native
 const path = require('path');
-const { homedir } = require('os');
 const { URL } = require('url');
 
 // Packages
@@ -129,17 +128,6 @@ test('trigger OSS confirmation message', async t => {
     ...defaultArgs
   ], {
     reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stderr.includes(goal));
-});
-
-test('try to deploy user directory', async t => {
-  const goal = `> Error! You're trying to deploy your user directory`;
-
-  const { stderr, code } = await execa(binaryPath, defaultArgs, { reject: false,
-    cwd: homedir()
   });
 
   t.is(code, 1);

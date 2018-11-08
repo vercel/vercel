@@ -52,7 +52,7 @@ import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity', 'regions'],
+  string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
   boolean: [
     'help',
     'version',
