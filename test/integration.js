@@ -1,6 +1,5 @@
 // Native
 const path = require('path');
-const { homedir } = require('os');
 const { URL } = require('url');
 
 // Packages
@@ -129,17 +128,6 @@ test('trigger OSS confirmation message', async t => {
     ...defaultArgs
   ], {
     reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stderr.includes(goal));
-});
-
-test('try to deploy user directory', async t => {
-  const goal = `> Error! You're trying to deploy your user directory`;
-
-  const { stderr, code } = await execa(binaryPath, defaultArgs, { reject: false,
-    cwd: homedir()
   });
 
   t.is(code, 1);
@@ -433,14 +421,8 @@ test('scale down the deployment directly', async t => {
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
-  const files = [
-    path.join(directory, 'first.png'),
-    path.join(directory, 'second.png')
-  ];
-
   const { stdout, code } = await execa(binaryPath, [
-    files[0],
-    files[1],
+    directory,
     '--public',
     '--name',
     session,
@@ -467,12 +449,8 @@ test('deploy multiple static files', async t => {
   t.is(contentType, 'application/json; charset=utf-8');
 
   const content = await response.json();
-  t.is(content.files.length, 2);
+  t.is(content.files.length, 3);
 
-  const bareGoal = files.map(file => path.basename(file));
-  const bareCurrent = content.files.map(item => item.base);
-
-  t.deepEqual(bareGoal, bareCurrent);
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
@@ -529,10 +507,8 @@ test('deploy a static directory', async t => {
   // Send a test request to the deployment
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
-  const file = path.join(directory, 'first.png');
 
-  t.is(contentType, 'image/png');
-  t.deepEqual(await readFile(file), await response.buffer());
+  t.is(contentType, 'text/html; charset=utf-8');
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });

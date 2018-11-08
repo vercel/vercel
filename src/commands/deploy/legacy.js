@@ -52,7 +52,7 @@ import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
-  string: ['name', 'alias', 'session-affinity', 'regions'],
+  string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
   boolean: [
     'help',
     'version',
@@ -375,7 +375,7 @@ exports.pipe = async function main(
   ({ log, error, note, debug, warn } = output);
 
   warn(
-    'You are using a legacy version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
+    'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
 
   const { authConfig: { token }, config } = ctx;

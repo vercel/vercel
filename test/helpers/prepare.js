@@ -112,11 +112,13 @@ module.exports = async session => {
       'now.json-builds'
     ],
     'static-single-file': [
-      'first.png'
+      'first.png',
+      'now.json'
     ],
     'static-multiple-files': [
       'first.png',
-      'second.png'
+      'second.png',
+      'now.json'
     ],
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
