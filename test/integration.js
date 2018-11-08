@@ -449,7 +449,7 @@ test('deploy multiple static files', async t => {
   t.is(contentType, 'application/json; charset=utf-8');
 
   const content = await response.json();
-  t.is(content.files.length, 2);
+  t.is(content.files.length, 3);
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
