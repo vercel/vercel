@@ -1,0 +1,26 @@
+{
+  "name": "@now/go",
+  "version": "0.2.6",
+  "scripts": {
+    "test": "best -I test/*.js",
+    "prepublish": "./build.sh"
+  },
+  "files": [
+    "bin",
+    "download-go-bin.js",
+    "index.js",
+    "main.go"
+  ],
+  "dependencies": {
+    "execa": "^1.0.0",
+    "fs-extra": "^7.0.0",
+    "lambda-git": "^0.1.2",
+    "mkdirp-promise": "5.0.1",
+    "now-fetch": "0.1.1",
+    "tar": "4.4.6"
+  },
+  "devDependencies": {
+    "@zeit/best": "0.4.3",
+    "rmfr": "2.0.0"
+  }
+}

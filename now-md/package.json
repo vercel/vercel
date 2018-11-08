@@ -1,0 +1,13 @@
+{
+  "name": "@now/md",
+  "version": "0.4.3",
+  "dependencies": {
+    "rehype-document": "^2.2.0",
+    "rehype-format": "^2.3.0",
+    "rehype-stringify": "^4.0.0",
+    "remark-parse": "^6.0.1",
+    "remark-rehype": "^3.0.1",
+    "unified": "^7.0.0",
+    "unified-stream": "^1.0.2"
+  }
+}
