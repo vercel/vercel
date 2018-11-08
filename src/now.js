@@ -23,7 +23,6 @@ const { join } = require('path');
 const debug = require('debug')('now:main');
 const { existsSync } = require('fs');
 const mkdirp = require('mkdirp-promise');
-const fetch = require('node-fetch');
 const chalk = require('chalk');
 const checkForUpdate = require('update-check');
 const ms = require('ms');
@@ -38,6 +37,8 @@ const hp = require('./util/humanize-path');
 const commands = require('./commands');
 const configFiles = require('./util/config/files');
 const pkg = require('./util/pkg');
+const getUser = require('./util/get-user');
+const NowTeams = require('./util/teams');
 
 import { Output } from './util/types';
 import createOutput from './util/output';
@@ -434,22 +435,17 @@ const main = async argv_ => {
       return 1;
     }
 
-    const { token } = ctx.authConfig;
+    const { apiUrl, authConfig: { token } } = ctx;
 
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-
-    const url = `https://api.zeit.co/teams/?slug=${team}`;
-    let body;
+    let user = null;
 
     try {
-      const res = await fetch(url, { headers });
-
-      if (res.status === 403) {
+      user = await getUser({ apiUrl, token });
+    } catch (err) {
+      if (err.code === 'not_authorized') {
         console.error(
           error({
-            message: `You don't have access to the specified team`,
+            message: `You do not have access to the specified team`,
             slug: 'team-not-accessible'
           })
         );
@@ -457,24 +453,49 @@ const main = async argv_ => {
         return 1;
       }
 
-      body = await res.json();
-    } catch (err) {
-      console.error(error('Not able to load teams'));
+      console.error(error('Not able to load user'));
       return 1;
     }
 
-    if (!body || body.error) {
-      console.error(
-        error({
-          message: "The specified team doesn't exist",
-          slug: 'team-not-existent'
-        })
-      );
+    if (user.uid === team || user.email === team || user.username === team) {
+      delete ctx.config.currentTeam;
+    } else {
+      let list = [];
 
-      return 1;
+      try {
+        const teams = new NowTeams({ apiUrl, token, debug: isDebugging });
+        list = (await teams.ls()).teams;
+      } catch (err) {
+        if (err.code === 'not_authorized') {
+          console.error(
+            error({
+              message: `You do not have access to the specified team`,
+              slug: 'team-not-accessible'
+            })
+          );
+
+          return 1;
+        }
+
+        console.error(error('Not able to load teams'));
+        return 1;
+      }
+
+      const related = list.find(item => item.id === team || item.slug == team);
+
+      if (!related) {
+        console.error(
+          error({
+            message: "The specified team does not exist",
+            slug: 'team-not-existent'
+          })
+        );
+
+        return 1;
+      }
+
+      ctx.config.currentTeam = related.id;
     }
-
-    ctx.config.currentTeam = body.id;
   }
 
   const runner = await commands[subcommand];
