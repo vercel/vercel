@@ -1,5 +1,4 @@
 const download = require('@now/build-utils/fs/download.js');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const { runNpmInstall, runPackageJsonScript,
@@ -18,7 +17,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
     if (await runPackageJsonScript(entrypointFsDirname, 'now-build')) {
       return await glob('**', distPath, mountpoint);
     } else {
-      throw new Error(`A "now-build" script must be defined in "${entrypoint}"`);
+      throw new Error(`An error running "now-build" script in "${entrypoint}"`);
     }
   }
 
