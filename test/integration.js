@@ -507,10 +507,8 @@ test('deploy a static directory', async t => {
   // Send a test request to the deployment
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
-  const file = path.join(directory, 'first.png');
 
-  t.is(contentType, 'image/png');
-  t.deepEqual(await readFile(file), await response.buffer());
+  t.is(contentType, 'text/html; charset=utf-8');
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
