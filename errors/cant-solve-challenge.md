@@ -14,7 +14,7 @@ it could be that:
 - The domain was acquired recently, and it might not be ready for use yet.
 - Required DNS records have not propagated yet.
 
-When running into this, ensure that your nameservers have configuration is correct. Also, if you bought the domain recently or have made changes, please be patient,
+When running into this, ensure that your nameservers are configured correctly. Also, if you bought the domain recently or have made changes, please be patient,
 it might take a while for these to be ready.
 
 If your domain is _not_ pointing to ZEIT World DNS and you’re getting this
