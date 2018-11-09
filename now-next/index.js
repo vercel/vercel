@@ -36,6 +36,14 @@ exports.build = async ({ files, workPath, entrypoint }) => {
       return true
     }
 
+    if(file === 'package-lock.json') {
+      return true
+    }
+
+    if(file === 'yarn.lock') {
+      return true
+    }
+
     return false
   })
   files = await download(rename(filesToDownload, (file) => {
@@ -168,7 +176,6 @@ exports.prepareCache = async ({ files, cachePath, workPath }) => {
     ...await glob('.next/records.json', cachePath),
     ...await glob('.next/server/records.json', cachePath),
     ...await glob('node_modules/**', cachePath),
-    ...await glob('package-lock.json', cachePath),
     ...await glob('yarn.lock', cachePath)
   };
 };
