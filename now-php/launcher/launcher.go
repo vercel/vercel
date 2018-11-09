@@ -84,8 +84,6 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 	context.Output = &stdout
 	context.Exec(phpScriptFull)
 
-	fmt.Printf("request!\n") // TODO remove
-
 	headers := make(map[string]string)
 	headers["content-type"] = "text/html"
 	for k, v := range context.Header {
