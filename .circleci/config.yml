@@ -35,7 +35,7 @@ workflows:
             - build
           filters:
             tags:
-              only: /^.*canary.*($|\b)/
+              only: /.*/
             branches:
               ignore: /.*/
       # - publish-stable:
