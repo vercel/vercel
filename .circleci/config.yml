@@ -6,8 +6,18 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run: yarn install
-      - run: yarn bootstrap
+      - run:
+          name: Updating apt-get list
+          command: sudo apt-get update
+      - run:
+          name: Installing the latest version of Go
+          command: sudo apt-get install golang-go
+      - run:
+          name: Installing dependencies
+          command: yarn install
+      - run:
+          name: Bootstrapping
+          command: yarn bootstrap
       - run:
           name: Saving Authentication Information
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
