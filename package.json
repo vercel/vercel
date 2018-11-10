@@ -1,0 +1,17 @@
+{
+  "name": "now-builders",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "lerna": "^3.4.3"
+  },
+  "workspaces": [
+    "packages"
+  ],
+  "scripts": {
+    "lerna": "lerna",
+    "bootstrap": "lerna bootstrap",
+    "prepublish": "lerna run prepublish",
+    "publish-canary": "lerna version prerelease --preid canary"
+  }
+}
