@@ -1,5 +1,6 @@
 const download = require('@now/build-utils/fs/download.js');
 const fs = require('fs');
+const { promisify } = require('util');
 const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
@@ -9,13 +10,15 @@ exports.analyze = ({ files, entrypoint }) => {
   return files[entrypoint].digest;
 };
 
+const writeFile = promisify(fs.writeFile);
+
 exports.build = async ({ files, entrypoint, workPath }) => {
   console.log('downloading user files...');
   files = await download(files, workPath);
   console.log('writing package.json...');
   const packageJson = { dependencies: { 'mdx-deck': '1.7.7' } };
   const packageJsonPath = path.join(workPath, 'package.json');
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson));
+  await writeFile(packageJsonPath, JSON.stringify(packageJson));
   console.log('running npm install...');
   process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = '1'; // TODO opts argument for runNpmInstall
   await runNpmInstall(path.dirname(packageJsonPath), [ '--prod', '--prefer-offline' ]);
@@ -42,7 +45,7 @@ exports.prepareCache = async ({ cachePath }) => {
   console.log('writing package.json...');
   const packageJson = { dependencies: { 'mdx-deck': '1.7.7' } };
   const packageJsonPath = path.join(cachePath, 'package.json');
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson));
+  await writeFile(packageJsonPath, JSON.stringify(packageJson));
   console.log('running npm install...');
   await runNpmInstall(path.dirname(packageJsonPath), [ '--prod' ]);
 
