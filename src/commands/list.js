@@ -63,7 +63,7 @@ const help = () => {
 
     ${chalk.cyan('$ now ls my-app --all')}
 
-  ${chalk.gray('–')} Filter deployments by metadata 
+  ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
 `);
@@ -217,6 +217,15 @@ module.exports = async function main(ctx) {
     );
   }
 
+  if (app) {
+    await Promise.all(
+      deployments.map(async ({ uid }, i) => {
+        const aliases = await getAliases(now, uid);
+        deployments[i].aliases = aliases.map(alias => alias.alias).join(', ');
+      })
+    );
+  }
+
   if (host) {
     deployments = deployments.filter(deployment => {
       return deployment.url === host;
@@ -244,12 +253,18 @@ module.exports = async function main(ctx) {
     log(`To list deployment instances run ${cmd('now ls --all [app]')}`);
   }
 
+  const tableHeaders = ['app', 'url', 'inst #', 'type', 'state', 'age'];
+
+  if (app) {
+    tableHeaders.push('aliases');
+  }
+
   print('\n');
 
   console.log(
     table(
       [
-        ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        tableHeaders.map(s => chalk.dim(s)),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -259,7 +274,8 @@ module.exports = async function main(ctx) {
               dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
               dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.created)))
+              chalk.gray(ms(Date.now() - new Date(dep.created))),
+              !app ? '' : dep.aliases || chalk.gray('-')
             ],
             ...(argv['--all']
               ? dep.instances.map(i => [
