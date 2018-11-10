@@ -1,6 +1,6 @@
 {
   "name": "@now/optipng",
-  "version": "0.4.4-canary.3",
+  "version": "0.4.4-canary.4",
   "dependencies": {
     "multipipe": "2.0.3",
     "optipng": "1.1.0"

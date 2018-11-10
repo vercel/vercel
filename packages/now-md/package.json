@@ -1,6 +1,6 @@
 {
   "name": "@now/md",
-  "version": "0.4.4-canary.3",
+  "version": "0.4.4-canary.4",
   "dependencies": {
     "rehype-document": "^2.2.0",
     "rehype-format": "^2.3.0",
