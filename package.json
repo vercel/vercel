@@ -12,12 +12,14 @@
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
     "publish-canary": "lerna version prerelease --preid canary",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "jest"
   },
   "devDependencies": {
     "eslint": "^5.9.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^3.1.0",
-    "eslint-plugin-import": "^2.14.0"
+    "eslint-plugin-import": "^2.14.0",
+    "jest": "^23.6.0"
   }
 }

@@ -19,6 +19,12 @@ jobs:
           name: Bootstrapping
           command: yarn bootstrap
       - run:
+          name: Linting
+          command: yarn lint
+      - run:
+          name: Tests
+          command: yarn test
+      - run:
           name: Saving Authentication Information
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
       - run:
