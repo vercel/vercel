@@ -1,7 +1,7 @@
 {
   "name": "@now/node",
-  "version": "0.4.22",
+  "version": "0.4.23-canary.0",
   "dependencies": {
-    "@now/node-bridge": "0.1.5"
+    "@now/node-bridge": "^0.1.6-canary.0"
   }
 }
