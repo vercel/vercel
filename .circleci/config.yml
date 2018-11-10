@@ -8,6 +8,12 @@ jobs:
       - checkout
       - run: yarn install
       - run: yarn bootstrap
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Canary Channel
+          command: yarn run lerna publish from-git --npm-tag canary --yes
   publish-canary:
     docker:
       - image: circleci/node:10
@@ -31,8 +37,6 @@ workflows:
             tags:
               only: /.*/
       - publish-canary:
-          requires:
-            - build
           filters:
             tags:
               only: /.*/
