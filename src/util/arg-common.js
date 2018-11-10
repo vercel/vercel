@@ -4,6 +4,9 @@ const ARG_COMMON = {
   '--help': Boolean,
   '-h': '--help',
 
+  '--platform-version': Number,
+  '-V': '--platform-version',
+
   '--debug': Boolean,
   '-d': '--debug',
 
