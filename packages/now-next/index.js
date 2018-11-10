@@ -8,6 +8,7 @@ const { runNpmInstall, runPackageJsonScript
 } = require('@now/build-utils/fs/run-user-scripts.js');
 const glob = require('@now/build-utils/fs/glob.js');
 
+// Exclude certain files from the files object
 function excludeFiles(files, matchFn) {
   return Object.keys(files).reduce((newFiles, fileName) => {
     if(matchFn(fileName)) {
