@@ -8,6 +8,7 @@ import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+import param from '../../util/output/param';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
@@ -113,6 +114,19 @@ module.exports = async (ctx: CLIContext) => {
         `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
       );
     }
+  }
+
+  const versionFlag = argv['--platform-version'];
+
+  if (versionFlag) {
+    if (versionFlag !== 1 && versionFlag !== 2) {
+        output.error(
+          `The ${param('--platform-version')} option must be either ${code('1')} or ${code('2')}.`
+        );
+        return 1;
+    }
+
+    platformVersion = versionFlag;
   }
 
   if (platformVersion === null || platformVersion > 1) {
