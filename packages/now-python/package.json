@@ -7,5 +7,8 @@
     "execa": "^1.0.0",
     "fs.promised": "^3.0.0",
     "node-fetch": "^2.2.0"
+  },
+  "peerDependencies": {
+    "@now/build-utils": ">=0.0.1"
   }
 }

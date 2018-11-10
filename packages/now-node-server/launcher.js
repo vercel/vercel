@@ -1,10 +1,11 @@
-const { Bridge } = require('./bridge.js');
 const { Server } = require('http');
+const { Bridge } = require('./bridge.js');
+
 const bridge = new Bridge();
 
 const saveListen = Server.prototype.listen;
-Server.prototype.listen = function (...args) {
-  this.on('listening', function () {
+Server.prototype.listen = function listen(...args) {
+  this.on('listening', function listening() {
     bridge.port = this.address().port;
   });
   saveListen.apply(this, args);

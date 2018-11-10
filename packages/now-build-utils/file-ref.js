@@ -7,7 +7,7 @@ const Sema = require('async-sema');
 const semaToDownloadFromS3 = new Sema(10);
 
 class FileRef {
-  constructor ({ mode = 0o100644, digest }) {
+  constructor({ mode = 0o100644, digest }) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
     this.type = 'FileRef';
@@ -15,7 +15,7 @@ class FileRef {
     this.digest = digest;
   }
 
-  async toStreamAsync () {
+  async toStreamAsync() {
     let url;
     // sha:24be087eef9fac01d61b30a725c1a10d7b45a256
     const digestParts = this.digest.split(':');
@@ -44,9 +44,10 @@ class FileRef {
     }
   }
 
-  toStream () {
+  toStream() {
     let flag;
 
+    // eslint-disable-next-line consistent-return
     return new MultiStream((cb) => {
       if (flag) return cb();
       flag = true;

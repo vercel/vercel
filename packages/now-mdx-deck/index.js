@@ -6,25 +6,23 @@ const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js');
 
-exports.analyze = ({ files, entrypoint }) => {
-  return files[entrypoint].digest;
-};
+exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
 const writeFile = promisify(fs.writeFile);
 
 exports.build = async ({ files, entrypoint, workPath }) => {
   console.log('downloading user files...');
-  files = await download(files, workPath);
+  const downloadedFiles = await download(files, workPath);
   console.log('writing package.json...');
   const packageJson = { dependencies: { 'mdx-deck': '1.7.7' } };
   const packageJsonPath = path.join(workPath, 'package.json');
   await writeFile(packageJsonPath, JSON.stringify(packageJson));
   console.log('running npm install...');
   process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = '1'; // TODO opts argument for runNpmInstall
-  await runNpmInstall(path.dirname(packageJsonPath), [ '--prod', '--prefer-offline' ]);
+  await runNpmInstall(path.dirname(packageJsonPath), ['--prod', '--prefer-offline']);
   console.log('building...');
   const outDir = await getWritableDirectory();
-  const entrypointFsPath = files[entrypoint].fsPath;
+  const entrypointFsPath = downloadedFiles[entrypoint].fsPath;
   const mountpoint = path.dirname(entrypoint);
 
   const build = require(path.join(workPath, 'node_modules/mdx-deck/lib/build.js'));
@@ -34,11 +32,11 @@ exports.build = async ({ files, entrypoint, workPath }) => {
     dirname: workPath,
     outDir,
     globals: {
-      FILENAME: JSON.stringify(entrypointFsPath)
-    }
+      FILENAME: JSON.stringify(entrypointFsPath),
+    },
   });
 
-  return await glob('**', outDir, mountpoint);
+  return glob('**', outDir, mountpoint);
 };
 
 exports.prepareCache = async ({ cachePath }) => {
@@ -47,11 +45,11 @@ exports.prepareCache = async ({ cachePath }) => {
   const packageJsonPath = path.join(cachePath, 'package.json');
   await writeFile(packageJsonPath, JSON.stringify(packageJson));
   console.log('running npm install...');
-  await runNpmInstall(path.dirname(packageJsonPath), [ '--prod' ]);
+  await runNpmInstall(path.dirname(packageJsonPath), ['--prod']);
 
   return {
     ...await glob('node_modules/**', cachePath),
     ...await glob('package-lock.json', cachePath),
-    ...await glob('yarn.lock', cachePath)
+    ...await glob('yarn.lock', cachePath),
   };
 };

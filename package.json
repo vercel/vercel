@@ -11,6 +11,13 @@
   "scripts": {
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
-    "publish-canary": "lerna version prerelease --preid canary"
+    "publish-canary": "lerna version prerelease --preid canary",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^5.9.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-import": "^2.14.0"
   }
 }

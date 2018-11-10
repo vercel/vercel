@@ -1,13 +1,13 @@
-const FileFsRef = require('../file-fs-ref.js');
 const path = require('path');
+const FileFsRef = require('../file-fs-ref.js');
 
-async function downloadFile (file, fsPath) {
+async function downloadFile(file, fsPath) {
   const { mode } = file;
   const stream = file.toStream();
-  return await FileFsRef.fromStream({ mode, stream, fsPath });
+  return FileFsRef.fromStream({ mode, stream, fsPath });
 }
 
-module.exports = async function download (files, basePath) {
+module.exports = async function download(files, basePath) {
   const files2 = {};
 
   await Promise.all(Object.keys(files).map(async (name) => {

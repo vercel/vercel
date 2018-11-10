@@ -1,12 +1,48 @@
 const assert = require('assert');
 const http = require('http');
 
+function normalizeEvent(event) {
+  if (event.Action === 'Invoke') {
+    const invokeEvent = JSON.parse(event.body);
+    const {
+      method, path, headers, encoding,
+    } = invokeEvent;
+    let { body } = invokeEvent;
+    if (body) {
+      assert(encoding === 'base64', JSON.stringify(event)); // do we support anything else?
+      body = Buffer.from(body, encoding);
+    }
+
+    return {
+      method,
+      path,
+      headers,
+      body,
+    };
+  }
+
+  const {
+    httpMethod: method,
+    path,
+    headers,
+    body,
+  } = event;
+
+  return {
+    method,
+    path,
+    headers,
+    body,
+  };
+}
+
 class Bridge {
-  constructor () {
+  constructor() {
     this.launcher = this.launcher.bind(this);
   }
 
-  launcher (event) {
+  launcher(event) {
+    // eslint-disable-next-line consistent-return
     return new Promise((resolve, reject) => {
       if (this.userError) {
         console.error('Error while initializing entrypoint:', this.userError);
@@ -17,45 +53,32 @@ class Bridge {
         return resolve({ statusCode: 504, body: '' });
       }
 
-      let method, path, headers, body;
-
-      if (event.Action === 'Invoke') {
-        event = JSON.parse(event.body);
-        method = event.method;
-        path = event.path;
-        headers = event.headers;
-        if (event.body) {
-          assert(event.encoding === 'base64', JSON.stringify(event)); // do we support anything else?
-          body = Buffer.from(event.body, event.encoding);
-        }
-      } else {
-        method = event.httpMethod;
-        path = event.path;
-        headers = event.headers;
-        body = event.body;
-      }
+      const {
+        method, path, headers, body,
+      } = normalizeEvent(event);
 
       const opts = {
         hostname: '127.0.0.1',
         port: this.port,
         path,
         method,
-        headers
+        headers,
       };
 
-      const req = http.request(opts, (resp) => {
+      const req = http.request(opts, (res) => {
+        const response = res;
         const respBodyChunks = [];
-        resp.on('data', (chunk) => respBodyChunks.push(Buffer.from(chunk)));
-        resp.on('error', (error) => reject(error));
-        resp.on('end', () => {
-          delete resp.headers.connection;
-          delete resp.headers['content-length'];
+        response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
+        response.on('error', error => reject(error));
+        response.on('end', () => {
+          delete response.headers.connection;
+          delete response.headers['content-length'];
 
           resolve({
-            statusCode: resp.statusCode,
-            headers: resp.headers,
+            statusCode: response.statusCode,
+            headers: response.headers,
             body: Buffer.concat(respBodyChunks).toString('base64'),
-            encoding: 'base64'
+            encoding: 'base64',
           });
         });
       });
@@ -67,5 +90,5 @@ class Bridge {
 }
 
 module.exports = {
-  Bridge
+  Bridge,
 };
