@@ -1,6 +1,7 @@
 const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
 const FileFsRef = require('@now/build-utils/file-fs-ref.js');
+const FileBlob = require('@now/build-utils/file-blob')
 const path = require('path');
 const { readFile, writeFile, unlink } = require('fs.promised');
 const rename = require('@now/build-utils/fs/rename.js');
@@ -126,7 +127,6 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   const dotNextServerRootFiles = await glob('.next/server/*', workPath);
   const nodeModules = excludeFiles(await glob('node_modules/**', workPath), file => file.startsWith('node_modules/.cache'));
   const launcherFiles = {
-    'now__launcher.js': new FileFsRef({ fsPath: path.join(__dirname, 'launcher.js') }),
     'now__bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
   };
   const nextFiles = {
@@ -136,6 +136,8 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     nextFiles['next.config.js'] = downloadedFiles['next.config.js'];
   }
   const pages = await glob('**/*.js', path.join(workPath, '.next', 'server', 'static', buildId, 'pages'));
+  const launcherPath = path.join(__dirname, 'launcher.js');
+  const launcherData = await readFile(launcherPath, 'utf8');
 
   const lambdas = {};
   await Promise.all(Object.keys(pages).map(async (page) => {
@@ -144,6 +146,9 @@ exports.build = async ({ files, workPath, entrypoint }) => {
       return;
     }
 
+    const pathname = page.replace(/\.js$/, '')
+    const launcher = launcherData.replace('PATHNAME_PLACEHOLDER', `/${pathname.replace(/(^|\/)index$/, '')}`);
+
     const pageFiles = {
       [`.next/server/static/${buildId}/pages/_document.js`]: downloadedFiles[`.next/server/static/${buildId}/pages/_document.js`],
       [`.next/server/static/${buildId}/pages/_app.js`]: downloadedFiles[`.next/server/static/${buildId}/pages/_app.js`],
@@ -151,8 +156,12 @@ exports.build = async ({ files, workPath, entrypoint }) => {
       [`.next/server/static/${buildId}/pages/${page}`]: downloadedFiles[`.next/server/static/${buildId}/pages/${page}`],
     };
 
-    lambdas[path.join(entryDirectory, page.replace(/\.js$/, ''))] = await createLambda({
-      files: { ...nextFiles, ...pageFiles },
+    lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+      files: { 
+        ...nextFiles,
+        ...pageFiles,
+        'now__launcher.js': new FileBlob({ data: launcher }),
+      },
       handler: 'now__launcher.launcher',
       runtime: 'nodejs8.10',
     });
