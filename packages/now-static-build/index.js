@@ -2,17 +2,22 @@ const download = require('@now/build-utils/fs/download.js');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const {
-  runNpmInstall, runPackageJsonScript,
-  runShellScript,
+  runNpmInstall, runPackageJsonScript, runShellScript,
 } = require('@now/build-utils/fs/run-user-scripts.js');
 
-exports.build = async ({ files, entrypoint, workPath }) => {
+exports.build = async ({
+  files, entrypoint, workPath, config,
+}) => {
   console.log('downloading user files...');
   await download(files, workPath);
   console.log('running user scripts...');
   const mountpoint = path.dirname(entrypoint);
   const entrypointFsDirname = path.join(workPath, mountpoint);
-  const distPath = path.join(workPath, path.dirname(entrypoint), 'dist');
+  const distPath = path.join(
+    workPath,
+    path.dirname(entrypoint),
+    (config && config.distDir) || 'dist',
+  );
 
   if (path.basename(entrypoint) === 'package.json') {
     await runNpmInstall(entrypointFsDirname, ['--prefer-offline']);
