@@ -1,6 +1,6 @@
 const { Server } = require('http');
 const next = require('next-server');
-const url = require('url')
+const url = require('url');
 const { Bridge } = require('./now__bridge.js');
 
 const bridge = new Bridge();
@@ -11,8 +11,8 @@ process.env.NODE_ENV = 'production';
 const app = next({});
 
 const server = new Server((req, res) => {
-  const parsedUrl = url.parse(req.url)
-  app.render(req, res, 'PATHNAME_PLACEHOLDER', parsedUrl.query, parsedUrl)
+  const parsedUrl = url.parse(req.url);
+  app.render(req, res, 'PATHNAME_PLACEHOLDER', parsedUrl.query, parsedUrl);
 });
 server.listen(bridge.port);
 

@@ -14,7 +14,7 @@
     "publish-canary": "lerna version prerelease --preid canary",
     "lint": "eslint .",
     "test": "jest",
-    "list-staged": "lint-staged"
+    "lint-staged": "lint-staged"
   },
   "pre-commit": "lint-staged",
   "lint-staged": {
