@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'production';
 const app = next({});
 
 const server = new Server((req, res) => {
-  const parsedUrl = url.parse(req.url);
+  const parsedUrl = url.parse(req.url, true);
   app.render(req, res, 'PATHNAME_PLACEHOLDER', parsedUrl.query, parsedUrl);
 });
 server.listen(bridge.port);
