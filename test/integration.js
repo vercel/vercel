@@ -187,7 +187,99 @@ test('try to add a payment method', async t => {
   t.true(stdout.startsWith(`> Enter your card details for ${email}`));
 });
 
-test('create a builds deployments', async t => {
+test('set platform version using `-V` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal = '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '-V',
+    1
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal = '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '--platform-version',
+    1
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `-V` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal = '> Error! The "--platform-version" option must be either `1` or `2`.';
+
+  const { stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '-V',
+    3
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal = '> Error! The "--platform-version" option must be either `1` or `2`.';
+
+  const { stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '--platform-version',
+    3
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
 
   const { stdout, stderr, code } = await execa(binaryPath, [
@@ -196,9 +288,90 @@ test('create a builds deployments', async t => {
     '--name',
     session,
     ...defaultArgs,
-    // Make sure to the deploy in SFO
-    '--api',
-    'https://alias-sfo1.zeit.co'
+    '-V',
+    2,
+    '--force'
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [
+    session,
+    'index.html'
+  ];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html');
+
+  await removeDeployment(t, binaryPath, defaultArgs, stdout);
+});
+
+test('set platform version using `--platform-version` to `2`', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '--platform-version',
+    2,
+    '--force'
+  ], {
+    reject: false
+  });
+
+  console.log(stdout);
+  console.log(stderr);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [
+    session,
+    'index.html'
+  ];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html');
+
+  await removeDeployment(t, binaryPath, defaultArgs, stdout);
+});
+
+test('create a builds deployments without platform version flag', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '--force'
   ], {
     reject: false
   });
