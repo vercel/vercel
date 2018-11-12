@@ -289,7 +289,8 @@ test('set platform version using `-V` to `2`', async t => {
     session,
     ...defaultArgs,
     '-V',
-    2
+    2,
+    '--force'
   ], {
     reject: false
   });
@@ -328,7 +329,8 @@ test('set platform version using `--platform-version` to `2`', async t => {
     session,
     ...defaultArgs,
     '--platform-version',
-    2
+    2,
+    '--force'
   ], {
     reject: false
   });
@@ -368,7 +370,8 @@ test('create a builds deployments without platform version flag', async t => {
     '--public',
     '--name',
     session,
-    ...defaultArgs
+    ...defaultArgs,
+    '--force'
   ], {
     reject: false
   });
