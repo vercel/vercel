@@ -289,7 +289,10 @@ test('set platform version using `-V` to `2`', async t => {
     session,
     ...defaultArgs,
     '-V',
-    2
+    2,
+    // Make sure to the deploy in SFO
+    '--api',
+    'https://alias-sfo1.zeit.co'
   ], {
     reject: false
   });
@@ -328,13 +331,13 @@ test('set platform version using `--platform-version` to `2`', async t => {
     session,
     ...defaultArgs,
     '--platform-version',
-    2
+    2,
+    // Make sure to the deploy in SFO
+    '--api',
+    'https://alias-sfo1.zeit.co'
   ], {
     reject: false
   });
-
-  console.log(stdout);
-  console.log(stderr);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -368,7 +371,10 @@ test('create a builds deployments without platform version flag', async t => {
     '--public',
     '--name',
     session,
-    ...defaultArgs
+    ...defaultArgs,
+    // Make sure to the deploy in SFO
+    '--api',
+    'https://alias-sfo1.zeit.co'
   ], {
     reject: false
   });
