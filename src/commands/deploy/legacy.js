@@ -66,7 +66,8 @@ const mriOpts = {
     'npm',
     'static',
     'public',
-    'no-verify'
+    'no-verify',
+    'dotenv'
   ],
   default: {
     C: false,
