@@ -1,5 +1,5 @@
 {
-  "extends": ["prettier", "airbnb-base"],
+  "extends": ["airbnb-base", "prettier"],
   "rules": {
     "no-console": 0,
     "import/no-unresolved": 0,

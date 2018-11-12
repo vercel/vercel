@@ -1,0 +1,9 @@
+{
+  "name": "airtable",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "airtable": "^0.5.7"
+  }
+}
