@@ -156,7 +156,7 @@ module.exports = async function main(ctx: any): Promise<number> {
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${cmd('now ls')} to list.`
     );
-    return 1;
+    return 0;
   }
 
   log(
