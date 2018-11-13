@@ -102,6 +102,8 @@ const main = async argv_ => {
       )
     );
   }
+  
+  debug(`Using Now CLI ${pkg.version}`);
 
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
