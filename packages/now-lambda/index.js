@@ -1,5 +1,6 @@
 const { Lambda } = require('@now/build-utils/lambda.js');
 const path = require('path');
+const streamToBuffer = require('@now/build-utils/fs/stream-to-buffer.js');
 
 exports.build = async ({ files, entrypoint }) => {
   if (!files[entrypoint]) throw new Error('Entrypoint not found in files');
@@ -15,8 +16,10 @@ exports.build = async ({ files, entrypoint }) => {
   if (!config.handler) throw new Error('Handler not found in config');
   if (!config.runtime) throw new Error('Runtime not found in config');
 
+  const zipBuffer = await streamToBuffer(files[entrypoint].toStream());
+
   const lambda = new Lambda({
-    zipStream: files[entrypoint].toStream(), // TODO zipBuffer
+    zipBuffer,
     handler: config.handler,
     runtime: config.runtime,
   });
