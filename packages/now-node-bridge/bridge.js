@@ -4,13 +4,22 @@ const http = require('http');
 function normalizeEvent(event) {
   if (event.Action === 'Invoke') {
     const invokeEvent = JSON.parse(event.body);
+
     const {
       method, path, headers, encoding,
     } = invokeEvent;
+
     let { body } = invokeEvent;
+
     if (body) {
-      assert(encoding === 'base64', JSON.stringify(event)); // do we support anything else?
-      body = Buffer.from(body, encoding);
+      if (encoding === 'base64') {
+        body = Buffer.from(body, encoding);
+      } else
+      if (encoding === undefined) {
+        body = Buffer.from(body);
+      } else {
+        throw new Error('Unsupported encoding: ' + encoding);
+      }
     }
 
     return {
