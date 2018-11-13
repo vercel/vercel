@@ -29,7 +29,7 @@ async function assignAlias(
   let externalDomain = false;
 
   // If there was a previous deployment, we should fetch it to scale and downscale later
-  const prevDeployment = await fetchDeploymentFromAlias(
+  let prevDeployment = await fetchDeploymentFromAlias(
     output,
     now,
     contextName,
@@ -37,9 +37,14 @@ async function assignAlias(
     deployment
   );
 
+  // If there is an alias laying around that points to a deleted
+  // deployment, we need to account for it here.
+  if (prevDeployment instanceof Errors.DeploymentNotFound) {
+    prevDeployment = null;
+  }
+
   if (
-    prevDeployment instanceof Errors.DeploymentPermissionDenied ||
-    prevDeployment instanceof Errors.DeploymentNotFound
+    prevDeployment instanceof Errors.DeploymentPermissionDenied
   ) {
     return prevDeployment;
   }
