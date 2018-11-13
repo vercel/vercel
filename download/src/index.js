@@ -133,7 +133,7 @@ async function download() {
       disableProgress()
     }
   }, {
-    retries: 500,
+    retries: 10,
     onRetry: (err) => console.error(err)
   })
 
