@@ -44,8 +44,7 @@ async function assignAlias(
   }
 
   if (
-    prevDeployment instanceof Errors.DeploymentPermissionDenied ||
-    prevDeployment instanceof Errors.DeploymentNotFound
+    prevDeployment instanceof Errors.DeploymentPermissionDenied
   ) {
     return prevDeployment;
   }
