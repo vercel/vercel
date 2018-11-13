@@ -357,7 +357,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
-  t.is(contentType, 'text/html');
+  t.is(contentType, 'text/html; charset=utf-8');
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
