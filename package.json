@@ -176,5 +176,8 @@
     "webpack-node-externals": "1.6.0",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0"
+  },
+  "dependencies": {
+    "@sentry/node": "4.3.0"
   }
 }

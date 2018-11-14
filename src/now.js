@@ -26,6 +26,7 @@ const mkdirp = require('mkdirp-promise');
 const chalk = require('chalk');
 const checkForUpdate = require('update-check');
 const ms = require('ms');
+const Sentry = require('@sentry/node');
 
 // Utilities
 const error = require('./util/output/error');
@@ -49,6 +50,9 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+
+// Send errors away
+Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
 
 const main = async argv_ => {
   // $FlowFixMe
@@ -102,7 +106,7 @@ const main = async argv_ => {
       )
     );
   }
-  
+
   debug(`Using Now CLI ${pkg.version}`);
 
   // the second argument to the command can be a path
