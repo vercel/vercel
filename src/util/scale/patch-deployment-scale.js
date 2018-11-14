@@ -31,7 +31,7 @@ async function patchDeploymentScale(
   } catch (error) {
     cancelWait();
     if (error.code === 'forbidden_min_instances') {
-      return new Errors.ForbiddenScaleMinInstances(url, error.min);
+      return new Errors.ForbiddenScaleMinInstances(url, error.max);
     } else if (error.code === 'forbidden_max_instances') {
       return new Errors.ForbiddenScaleMaxInstances(url, error.max);
     } else if (error.code === 'wrong_min_max_relation') {
