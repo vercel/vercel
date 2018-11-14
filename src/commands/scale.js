@@ -234,7 +234,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
   if (result instanceof Errors.ForbiddenScaleMinInstances) {
     output.error(
       `You can't scale to more than ${result.meta
-        .max} min instances with your current plan.`
+        .min} min instances with your current plan.`
     );
     now.close();
     return 1;
