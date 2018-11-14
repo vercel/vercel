@@ -10,6 +10,7 @@ import promptBool from '../util/prompt-bool';
 import Now from '../util/';
 import wait from '../util/output/wait';
 import type { CLIDomainsOptions } from '../../util/types';
+import plans from '../util/plans';
 
 const help = (type) => {
   console.log(`
@@ -80,6 +81,31 @@ const upgradeToUnlimited = async ({ error }, now, reactivation = false) => {
   cancelWait();
 };
 
+const downgradeToFree = async ({ error }, now) => {
+  const cancelWait = wait('Downgrading');
+
+  try {
+    await now.fetch(`/plan`, {
+      method: 'PUT',
+      body: {
+        plan: 'free'
+      }
+    });
+  } catch (err) {
+    cancelWait();
+
+    if (err.code === 'no_team_owner') {
+      error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
+      return 1;
+    }
+
+    error(`Not able to downgrade. Please try again later.`);
+    return 1;
+  }
+
+  cancelWait();
+};
+
 module.exports = async function main(ctx: any): Promise<number> {
   let argv: CLIDomainsOptions;
 
@@ -104,7 +130,7 @@ module.exports = async function main(ctx: any): Promise<number> {
   const apiUrl = ctx.apiUrl;
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
-  const { log, error, success } = output;
+  const { log, success } = output;
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -133,7 +159,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     }
 
     await upgradeToUnlimited(output, now, true);
-    success(`${prefix} back on the ${chalk.bold('Unlimited')} plan. Enjoy!`);
+    success(`${prefix} back on the ${chalk.bold(plans[plan])} plan. Enjoy!`);
 
     return 0;
   }
@@ -153,29 +179,8 @@ module.exports = async function main(ctx: any): Promise<number> {
         return 0;
       }
 
-      const cancelWait = wait('Downgrading');
-
-      try {
-        await now.fetch(`/plan`, {
-          method: 'PUT',
-          body: {
-            plan: 'free'
-          }
-        });
-      } catch (err) {
-        cancelWait();
-
-        if (err.code === 'no_team_owner') {
-          error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
-          return 1;
-        }
-
-        error(`Not able to upgrade. Please try again later.`);
-        return 1;
-      }
-
-      cancelWait();
-      success(`${prefix} now on the ${chalk.bold('Free')} plan. Enjoy!`);
+      await downgradeToFree(output, now);
+      success(`${prefix} now on the ${chalk.bold('Free')} plan. We are sad to see you go!`);
     }
   }
 
@@ -198,4 +203,30 @@ module.exports = async function main(ctx: any): Promise<number> {
       success(`${prefix} now on the ${chalk.bold('Unlimited')} plan. Enjoy!`);
     }
   }
+
+  log(`${prefix} on the old ${chalk.bold(plans[plan])} plan (Now 1.0).`);
+
+  if (type === 'upgrade') {
+    const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the new ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
+
+    if (!confirmed) {
+      log(`Aborted`);
+      return 0;
+    }
+
+    await upgradeToUnlimited(output, now);
+    success(`${prefix} now on the new ${chalk.bold('Unlimited')} plan. Enjoy!`);
+
+    return 0;
+  }
+
+  const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the new ${chalk.bold('Free')} plan?`);
+
+  if (!confirmed) {
+    log(`Aborted`);
+    return 0;
+  }
+
+  await downgradeToFree(output, now);
+  success(`${prefix} now on the new ${chalk.bold('Free')} plan. We are sad to see you go!`);
 };
