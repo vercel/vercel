@@ -11,6 +11,7 @@
   "scripts": {
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
+    "publish-stable": "lerna version",
     "publish-canary": "lerna version prerelease --preid canary",
     "lint": "eslint .",
     "test": "jest",
