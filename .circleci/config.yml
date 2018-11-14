@@ -62,7 +62,7 @@ workflows:
               only: /.*/
       - publish-stable:
           requires:
-            - build
+            - upload
           filters:
             tags:
               only: /^.*(\d+\.)(\d+\.)(\*|\d+)$/
