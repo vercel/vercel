@@ -547,22 +547,20 @@ const handleRejection = err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
+      Sentry.captureException(err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
   }
-
-  process.exit(1);
 };
 
 const handleUnexpected = err => {
+  Sentry.captureException(err);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
-
-  process.exit(1);
 };
 
 process.on('unhandledRejection', handleRejection);
