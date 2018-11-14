@@ -47,16 +47,8 @@ workflows:
             tags:
               only: /.*/
       - publish-canary:
+          requires:
+            - build
           filters:
             tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      # - publish-stable:
-      #     requires:
-      #       - build
-      #     filters:
-      #       tags:
-      #         only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
-      #       branches:
-      #         ignore: /.*/
+              only: /^.*canary.*($|\b)/
