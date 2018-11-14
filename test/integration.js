@@ -119,21 +119,6 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('trigger OSS confirmation message', async t => {
-  const target = fixture('node');
-  const goal = `Your deployment's code and logs will be publicly accessible`;
-
-  const { stderr, code } = await execa(binaryPath, [
-    target,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stderr.includes(goal));
-});
-
 test('list the payment methods', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'billing',
