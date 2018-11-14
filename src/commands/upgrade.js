@@ -1,14 +1,14 @@
 // @flow
-const chalk = require('chalk');
-const createOutput = require('../util/output');
-const cmd = require('../util/output/cmd');
-const logo = require('../util/output/logo');
-const { handleError } = require('../util/error');
-const getScope = require('../util/get-scope');
+import chalk from 'chalk';
+import createOutput from '../util/output';
+import cmd from '../util/output/cmd';
+import logo from '../util/output/logo';
+import { handleError } from '../util/error';
+import getScope from '../util/get-scope';
 import getArgs from '../util/get-args';
 import promptBool from '../util/prompt-bool';
-const Now = require('../util/');
-const wait = require('../util/output/wait');
+import Now from '../util/';
+import wait from '../util/output/wait';
 import type { CLIDomainsOptions } from '../../util/types';
 
 const help = (type) => {
