@@ -527,6 +527,13 @@ const main = async argv_ => {
 
     Sentry.captureException(err);
 
+    const client = Sentry.getCurrentHub().getClient();
+
+    // Ensure all Sentry events are flushed
+    if (client) {
+      await client.close();
+    }
+
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
     console.error(
@@ -541,7 +548,7 @@ const main = async argv_ => {
 
 debug('start');
 
-const handleRejection = err => {
+const handleRejection = async err => {
   debug('handling rejection');
 
   if (err) {
@@ -554,15 +561,33 @@ const handleRejection = err => {
   } else {
     console.error(error('An unexpected empty rejection occurred'));
   }
+
+  const client = Sentry.getCurrentHub().getClient();
+
+  // Ensure all Sentry events are flushed
+  if (client) {
+    await client.close();
+  }
+
+  process.exit(1);
 };
 
-const handleUnexpected = err => {
+const handleUnexpected = async err => {
   Sentry.captureException(err);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
+
+  const client = Sentry.getCurrentHub().getClient();
+
+  // Ensure all Sentry events are flushed
+  if (client) {
+    await client.close();
+  }
+
+  process.exit(1);
 };
 
 process.on('unhandledRejection', handleRejection);
