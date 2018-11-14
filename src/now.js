@@ -525,6 +525,8 @@ const main = async argv_ => {
       return 1;
     }
 
+    Sentry.captureException(err);
+
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
     console.error(
