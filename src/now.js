@@ -551,7 +551,6 @@ const handleRejection = err => {
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
-    process.exit(0);
   }
 };
 

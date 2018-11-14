@@ -159,19 +159,6 @@ test('try to remove a non-existing payment method', async t => {
   t.true(stderr.includes(`You have no credit cards to choose from to delete under ${email}`));
 });
 
-test('try to add a payment method', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'billing',
-    'add',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stdout.startsWith(`> Enter your card details for ${email}`));
-});
-
 test('set platform version using `-V` to `1`', async t => {
   const directory = fixture('builds');
   const goal = '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
