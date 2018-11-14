@@ -1,6 +1,6 @@
 // @flow
 import chalk from 'chalk';
-import { Output } from '../../util/types';
+import { Output } from './types';
 
 async function promptBool(output: Output, message: string) {
   return new Promise(resolve => {

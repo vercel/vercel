@@ -1,27 +1,20 @@
-#!/usr/bin/env node
+// @flow
+import chalk from 'chalk';
+import createOutput from '../util/output';
+import cmd from '../util/output/cmd';
+import logo from '../util/output/logo';
+import { handleError } from '../util/error';
+import getScope from '../util/get-scope';
+import getArgs from '../util/get-args';
+import promptBool from '../util/prompt-bool';
+import Now from '../util/';
+import wait from '../util/output/wait';
+import type { CLIDomainsOptions } from '../../util/types';
+import plans from '../util/plans';
 
-// Packages
-const chalk = require('chalk');
-const mri = require('mri');
-const ms = require('ms');
-
-// Utilities
-const NowPlans = require('../util/plans');
-const indent = require('../util/indent');
-const listInput = require('../util/input/list');
-const code = require('../util/output/code');
-const error = require('../util/output/error');
-const success = require('../util/output/success');
-const cmd = require('../util/output/cmd');
-const logo = require('../util/output/logo');
-const { handleError } = require('../util/error');
-const getScope = require('../util/get-scope');
-
-const { bold } = chalk;
-
-const help = () => {
+const help = (type) => {
   console.log(`
-  ${chalk.bold(`${logo} now upgrade`)} [options] <plan>
+  ${chalk.bold(`${logo} now ${type}`)} [options]
 
   ${chalk.dim('Options:')}
 
@@ -37,232 +30,203 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
+    -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} List available plans and pick one interactively
+  ${chalk.gray('–')} ${type === 'upgrade' ? 'Upgrade to the Unlimited plan' : 'Downgrade to the Free plan'}
 
-      ${chalk.cyan('$ now upgrade')}
-
+      ${chalk.cyan(`$ now ${type}`)}
+      ${type === 'upgrade' ? `
       ${chalk.yellow('NOTE:')} ${chalk.gray(
     'Make sure you have a payment method, or add one:'
   )}
 
       ${chalk.cyan(`$ now billing add`)}
+      ` : ''}
+  ${chalk.gray('–')} ${type === 'upgrade' ? 'Upgrade to the Unlimited plan without confirming' : 'Downgrade to the Free plan without confirming'}
 
-  ${chalk.gray('–')} Pick a specific plan (e.g. "premium")
-
-      ${chalk.cyan(`$ now upgrade premium`)}
+      ${chalk.cyan(`$ now ${type} --yes`)}
   `);
 };
 
-const exit = code => {
-  // We give stdout some time to flush out
-  // because there's a node bug where
-  // stdout writes are asynchronous
-  // https://github.com/nodejs/node/issues/6456
-  setTimeout(() => process.exit(code || 0), 100);
-};
+const upgradeToUnlimited = async ({ error }, now, reactivation = false) => {
+  const cancelWait = wait(reactivation ? 'Re-activating' : 'Upgrading');
 
-let argv;
-let debug;
-let apiUrl;
+  try {
+    await now.fetch(`/plan`, {
+      method: 'PUT',
+      body: {
+        plan: 'unlimited',
+        reactivation
+      }
+    });
+  } catch (err) {
+    cancelWait();
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug'],
-    alias: {
-      help: 'h',
-      debug: 'd'
+    if (err.code === 'no_team_owner') {
+      error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
+      return 1;
     }
-  });
 
-  argv._ = argv._.slice(1);
+    if (err.code === 'customer_not_found') {
+      error(`No payment method available. Please add one using ${cmd('now billing add')} before upgrading.`);
+      return 1;
+    }
 
-  debug = argv.debug;
-  apiUrl = ctx.apiUrl;
-
-  if (argv.help || argv._[0] === 'help') {
-    help();
-    exit(0);
+    error(`Not able to upgrade. Please try again later.`);
+    return 1;
   }
 
-  const { authConfig: { token }, config: { currentTeam } } = ctx;
+  cancelWait();
+};
 
-  const { contextName } = await getScope({
+const downgradeToFree = async ({ error }, now) => {
+  const cancelWait = wait('Downgrading');
+
+  try {
+    await now.fetch(`/plan`, {
+      method: 'PUT',
+      body: {
+        plan: 'free'
+      }
+    });
+  } catch (err) {
+    cancelWait();
+
+    if (err.code === 'no_team_owner') {
+      error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
+      return 1;
+    }
+
+    error(`Not able to downgrade. Please try again later.`);
+    return 1;
+  }
+
+  cancelWait();
+};
+
+module.exports = async function main(ctx: any): Promise<number> {
+  let argv: CLIDomainsOptions;
+
+  try {
+    argv = getArgs(ctx.argv.slice(2), {
+      '--yes': Boolean,
+      '-y': '--yes'
+    });
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+
+  const type = argv._[0];
+  const skipConfirmation = argv['--yes'];
+
+  if (argv['--help']) {
+    help(type);
+    return 2;
+  }
+
+  const apiUrl = ctx.apiUrl;
+  const debugEnabled = argv['--debug'];
+  const output = createOutput({ debug: debugEnabled });
+  const { log, success } = output;
+
+  const { authConfig: { token }, config } = ctx;
+  const { currentTeam } = config;
+
+  const { team, user } = await getScope({
     apiUrl,
     token,
-    debug,
+    debug: debugEnabled,
     currentTeam
   });
 
-  try {
-    await run({ token, contextName, currentTeam });
-  } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message));
-    } else {
-      console.error(error(`Unknown error: ${err.stack}`));
+  const prefix = currentTeam ? `Your team ${chalk.bold(team.name)} is` : 'You are';
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const billing = currentTeam ? team.billing : user.billing;
+  const plan = (billing && billing.plan) || 'free';
+
+  if (billing && billing.cancelation) {
+    const date = new Date(billing.cancelation).toLocaleString();
+
+    log(`Your subscription is set to ${chalk.bold('downgrade')} on ${chalk.bold(date)}.`);
+    const confirmed = skipConfirmation || await promptBool(output, `Would you like to prevent this from happening?`);
+
+    if (!confirmed) {
+      log(`No action taken`);
+      return 0;
     }
 
-    exit(1);
+    await upgradeToUnlimited(output, now, true);
+    success(`${prefix} back on the ${chalk.bold(plans[plan])} plan. Enjoy!`);
+
+    return 0;
   }
+
+  if (plan === 'unlimited') {
+    if (type === 'upgrade') {
+      log(`${prefix} already on the ${chalk.bold('Unlimited')} plan. This is the highest plan.`);
+      log(`If you want to upgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
+
+      return 0;
+    } else if (type === 'downgrade') {
+      log(`${prefix} on the ${chalk.bold('Unlimited')} plan.`);
+      const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the ${chalk.bold('Free')} plan?`);
+
+      if (!confirmed) {
+        log(`Aborted`);
+        return 0;
+      }
+
+      await downgradeToFree(output, now);
+      success(`${prefix} now on the ${chalk.bold('Free')} plan. We are sad to see you go!`);
+    }
+  }
+
+  if ((plan === 'free' || plan === 'oss')) {
+    if (type === 'downgrade') {
+      log(`${prefix} already on the ${chalk.bold('Free')} plan. This is the lowest plan.`);
+      log(`If you want to downgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
+
+      return 0;
+    } else if (type === 'upgrade') {
+      log(`${prefix} on the ${chalk.bold('Free')} plan.`);
+      const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
+
+      if (!confirmed) {
+        log(`Aborted`);
+        return 0;
+      }
+
+      await upgradeToUnlimited(output, now);
+      success(`${prefix} now on the ${chalk.bold('Unlimited')} plan. Enjoy!`);
+    }
+  }
+
+  log(`${prefix} on the old ${chalk.bold(plans[plan])} plan (Now 1.0).`);
+
+  if (type === 'upgrade') {
+    const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the new ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
+
+    if (!confirmed) {
+      log(`Aborted`);
+      return 0;
+    }
+
+    await upgradeToUnlimited(output, now);
+    success(`${prefix} now on the new ${chalk.bold('Unlimited')} plan. Enjoy!`);
+
+    return 0;
+  }
+
+  const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the new ${chalk.bold('Free')} plan?`);
+
+  if (!confirmed) {
+    log(`Aborted`);
+    return 0;
+  }
+
+  await downgradeToFree(output, now);
+  success(`${prefix} now on the new ${chalk.bold('Free')} plan. We are sad to see you go!`);
 };
-
-module.exports = async ctx => {
-  try {
-    await main(ctx);
-  } catch (err) {
-    handleError(err);
-    process.exit(1);
-  }
-};
-
-function buildInquirerChoices(current, until) {
-  if (until) {
-    until = until.split(' ');
-    until = ' for ' + chalk.bold(until[0]) + ' more ' + until[1];
-  } else {
-    until = '';
-  }
-
-  const currentText = bold('(current)');
-  let ossName = `OSS ${bold('FREE')}`;
-  let premiumName = `Premium ${bold('$15')}`;
-  let proName = `Pro ${bold('$50')}`;
-  let advancedName = `Advanced ${bold('$200')}`;
-
-  switch (current) {
-    case 'oss': {
-      ossName += indent(currentText, 6);
-      break;
-    }
-    case 'premium': {
-      premiumName += indent(currentText, 3);
-      break;
-    }
-    case 'pro': {
-      proName += indent(currentText, 7);
-      break;
-    }
-    case 'advanced': {
-      advancedName += indent(currentText, 1);
-      break;
-    }
-    default: {
-      ossName += indent(currentText, 6);
-    }
-  }
-
-  return [
-    {
-      name: ossName,
-      value: 'oss',
-      short: `OSS ${bold('FREE')}`
-    },
-    {
-      name: premiumName,
-      value: 'premium',
-      short: `Premium ${bold('$15')}`
-    },
-    {
-      name: proName,
-      value: 'pro',
-      short: `Pro ${bold('$50')}`
-    },
-    {
-      name: advancedName,
-      value: 'advanced',
-      short: `Advanced ${bold('$200')}`
-    }
-  ];
-}
-
-async function run({ token, contextName, currentTeam }) {
-  const args = argv._;
-  if (args.length > 1) {
-    console.error(error('Invalid number of arguments'));
-    return exit(1);
-  }
-
-  const start = new Date();
-  const plans = new NowPlans({ apiUrl, token, debug, currentTeam });
-
-  let planId = args[0];
-
-  if (![undefined, 'oss', 'premium', 'pro', 'advanced'].includes(planId)) {
-    console.error(
-      error(
-        `Invalid plan name – should be ${code('oss')} or ${code('premium')}`
-      )
-    );
-    return exit(1);
-  }
-
-  const currentPlan = await plans.getCurrent();
-
-  if (planId === undefined) {
-    const elapsed = ms(new Date() - start);
-
-    let message = `For more info, please head to https://zeit.co`;
-    message = currentTeam
-      ? `${message}/teams/${contextName}/settings/plan`
-      : `${message}/account/plan`;
-    message += `\n> Select a plan for ${bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`;
-    const choices = buildInquirerChoices(currentPlan.id, currentPlan.until);
-
-    planId = await listInput({
-      message,
-      choices,
-      separator: false,
-      abort: 'end'
-    });
-  }
-
-  if (
-    planId === undefined ||
-    (planId === currentPlan.id && currentPlan.until === undefined)
-  ) {
-    return console.log('No changes made');
-  }
-
-  let newPlan;
-
-  try {
-    newPlan = await plans.set(planId);
-  } catch (err) {
-    if (err.code === 'customer_not_found' || err.code === 'source_not_found') {
-      console.error(
-        error(
-          `You have no payment methods available. Run ${cmd(
-            'now billing add'
-          )} to add one`
-        )
-      );
-    } else {
-      console.error(
-        error(`An unknow error occured. Please try again later ${err.message}`)
-      );
-    }
-    plans.close();
-    return;
-  }
-
-  if (currentPlan.until && newPlan.id !== 'oss') {
-    success(
-      `The cancelation has been undone. You're back on the ${chalk.bold(
-        `${newPlan.name} plan`
-      )}`
-    );
-  } else if (newPlan.until) {
-    success(
-      `Your plan will be switched to ${chalk.bold(
-        newPlan.name
-      )} in ${chalk.bold(newPlan.until)}. Your card will not be charged again`
-    );
-  } else {
-    success(`You're now on the ${chalk.bold(`${newPlan.name} plan`)}`);
-  }
-
-  plans.close();
-}

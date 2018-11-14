@@ -11,9 +11,9 @@ import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import { CLIContext, Output } from '../../util/types';
 import type { CLIAliasOptions, Alias } from '../../util/types';
+import promptBool from '../../util/prompt-bool';
 
 import findAliasByAliasOrId from './find-alias-by-alias-or-id';
-import promptBool from './prompt-bool';
 
 export default async function rm(
   ctx: CLIContext,
