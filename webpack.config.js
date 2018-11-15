@@ -1,6 +1,5 @@
 // Packages
 const nodeExternals = require('webpack-node-externals');
-const FlowBabelWebpackPlugin = require('flow-babel-webpack-plugin');
 
 module.exports = {
   entry: './src/now.js',
@@ -24,8 +23,5 @@ module.exports = {
         loaders: ['shebang-loader', 'babel-loader']
       }
     ]
-  },
-  plugins: [
-    new FlowBabelWebpackPlugin()
-  ]
+  }
 };
