@@ -16,7 +16,7 @@ module.exports = {
         filename: 'download.js'
     },
     module: {
-        loaders: [ {
+        rules: [ {
             test: /.js$/,
             loader: 'babel-loader',
             exclude: /node_modules/,
