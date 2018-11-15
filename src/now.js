@@ -26,6 +26,7 @@ const mkdirp = require('mkdirp-promise');
 const chalk = require('chalk');
 const checkForUpdate = require('update-check');
 const ms = require('ms');
+const Sentry = require('@sentry/node');
 
 // Utilities
 const error = require('./util/output/error');
@@ -49,6 +50,9 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+
+// Send errors away
+Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
 
 const main = async argv_ => {
   // $FlowFixMe
@@ -102,7 +106,7 @@ const main = async argv_ => {
       )
     );
   }
-  
+
   debug(`Using Now CLI ${pkg.version}`);
 
   // the second argument to the command can be a path
@@ -521,6 +525,15 @@ const main = async argv_ => {
       return 1;
     }
 
+    Sentry.captureException(err);
+
+    const client = Sentry.getCurrentHub().getClient();
+
+    // Ensure all Sentry events are flushed
+    if (client) {
+      await client.close();
+    }
+
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
     console.error(
@@ -535,7 +548,7 @@ const main = async argv_ => {
 
 debug('start');
 
-const handleRejection = err => {
+const handleRejection = async err => {
   debug('handling rejection');
 
   if (err) {
@@ -543,20 +556,36 @@ const handleRejection = err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
+      Sentry.captureException(err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
   }
 
+  const client = Sentry.getCurrentHub().getClient();
+
+  // Ensure all Sentry events are flushed
+  if (client) {
+    await client.close();
+  }
+
   process.exit(1);
 };
 
-const handleUnexpected = err => {
+const handleUnexpected = async err => {
+  Sentry.captureException(err);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
+
+  const client = Sentry.getCurrentHub().getClient();
+
+  // Ensure all Sentry events are flushed
+  if (client) {
+    await client.close();
+  }
 
   process.exit(1);
 };
