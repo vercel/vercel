@@ -11,7 +11,7 @@ module.exports = {
     ];
 
     if (prevent.includes(request)) {
-      return callback(null, 'commonjs ' + request);
+      return callback(null, 'commonjs ' + request.replace(prevent[1], 'rx-lite'));
     }
 
     callback();
