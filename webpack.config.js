@@ -1,5 +1,6 @@
 // Packages
 const nodeExternals = require('webpack-node-externals');
+const FlowBabelWebpackPlugin = require('flow-babel-webpack-plugin');
 
 module.exports = {
   entry: './src/now.js',
@@ -16,12 +17,15 @@ module.exports = {
     devtoolModuleFilenameTemplate: '[absolute-resource-path]',
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.js$/,
         exclude: /node_modules/,
         loaders: ['shebang-loader', 'babel-loader']
       }
     ]
-  }
+  },
+  plugins: [
+    new FlowBabelWebpackPlugin()
+  ]
 };
