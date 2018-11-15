@@ -120,7 +120,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   );
 
   if (process.env.NPM_AUTH_TOKEN) {
-    console.log('found NPM_AUTH_TOKEN in environement, creating .npmrc');
+    console.log('found NPM_AUTH_TOKEN in environment, creating .npmrc');
     await writeFile(
       path.join(workPath, '.npmrc'),
       `//registry.npmjs.org/:_authToken=${process.env.NPM_AUTH_TOKEN}`
