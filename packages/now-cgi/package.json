@@ -1,0 +1,22 @@
+{
+  "name": "@now/cgi",
+  "version": "0.0.11",
+  "scripts": {
+    "test": "best -I test/*.js",
+    "prepublish": "./build.sh"
+  },
+  "files": [
+    "index.js",
+    "handler"
+  ],
+  "dependencies": {
+    "fs-extra": "7.0.0"
+  },
+  "devDependencies": {
+    "@zeit/best": "0.4.3",
+    "rmfr": "2.0.0"
+  },
+  "peerDependencies": {
+    "@now/build-utils": ">=0.0.1"
+  }
+}
