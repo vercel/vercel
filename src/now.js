@@ -517,14 +517,6 @@ const main = async argv_ => {
   try {
     exitCode = await commands[subcommand](ctx);
   } catch (err) {
-    // If there is a code we should not consider the error unexpected
-    // but instead show the message
-    if (err.code) {
-      output.debug(err.stack);
-      output.error(err.message);
-      return 1;
-    }
-
     Sentry.captureException(err);
 
     const client = Sentry.getCurrentHub().getClient();
@@ -532,6 +524,17 @@ const main = async argv_ => {
     // Ensure all Sentry events are flushed
     if (client) {
       await client.close();
+    }
+
+    // If there is a code we should not consider the error unexpected
+    // but instead show the message. Any error that is handled by this should
+    // actually be handled in the sub command instead. Please make sure
+    // that happens for anything that lands here. It should NOT bubble up to here.
+    if (err.code) {
+      output.debug(err.stack);
+      output.error(err.message);
+
+      return 1;
     }
 
     // Otherwise it is an unexpected error and we should show the trace
