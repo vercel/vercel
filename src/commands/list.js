@@ -46,6 +46,9 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
+    -s ${chalk.bold.underline('STATE')}, --state=${chalk.bold.underline(
+    'STATE'
+  )}        Filter deployments by state
 
   ${chalk.dim('Examples:')}
 
@@ -78,8 +81,10 @@ module.exports = async function main(ctx) {
     argv = getArgs(ctx.argv.slice(2), {
       '--all': Boolean,
       '--meta': [String],
+      '--state': String,
       '-a': '--all',
-      '-m': '--meta'
+      '-m': '--meta',
+      '-s': '--state',
     });
   } catch (err) {
     handleError(err);
@@ -98,6 +103,7 @@ module.exports = async function main(ctx) {
 
   let app = argv._[1];
   let host = null;
+  let state = argv['--state'];
 
   const apiUrl = ctx.apiUrl;
 
@@ -220,6 +226,14 @@ module.exports = async function main(ctx) {
   if (host) {
     deployments = deployments.filter(deployment => {
       return deployment.url === host;
+    });
+  }
+
+  if (state) {
+    debug(state);
+    deployments = deployments.filter(deployment => {
+      debug(deployment);
+      return deployment.state.toLowerCase() === state.toLowerCase();
     });
   }
 
