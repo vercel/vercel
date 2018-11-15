@@ -1,10 +1,21 @@
-// Packages
 const nodeExternals = require('webpack-node-externals');
+const production = process.argv.includes('-p');
 
 module.exports = {
   entry: './src/now.js',
   target: 'node',
-  externals: [nodeExternals()],
+  externals: production ? (context, request, callback) => {
+    const prevent = [
+      'electron',
+      './rx.lite'
+    ];
+
+    if (prevent.includes(request)) {
+      return callback(null, 'commonjs ' + request);
+    }
+
+    callback();
+  } : [nodeExternals()],
   devtool: 'source-map',
   node: {
     __dirname: false
