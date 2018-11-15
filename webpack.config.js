@@ -10,7 +10,7 @@ module.exports = {
     __dirname: false
   },
   output: {
-    filename: 'dist/now.js',
+    filename: 'now.js',
     // this makes sure that the pathnames in the stack traces
     // are correct, avoiding a webpack: prefix inside a segment
     devtoolModuleFilenameTemplate: '[absolute-resource-path]',
