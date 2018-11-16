@@ -2,7 +2,7 @@ const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
 const FileBlob = require('@now/build-utils/file-blob.js');
 const FileFsRef = require('@now/build-utils/file-fs-ref.js');
-const fs = require('fs');
+const fs = require('fs-extra');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const { promisify } = require('util');
@@ -30,7 +30,7 @@ const readFile = promisify(fs.readFile);
  */
 async function downloadInstallAndBundle(
   { files, entrypoint, workPath },
-  { npmArguments = [] },
+  { npmArguments = [] } = {},
 ) {
   const userPath = path.join(workPath, 'user');
   const nccPath = path.join(workPath, 'ncc');
@@ -119,7 +119,10 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   return { [entrypoint]: lambda };
 };
 
-exports.prepareCache = async ({ files, entrypoint, cachePath }) => {
+exports.prepareCache = async ({
+  files, entrypoint, workPath, cachePath,
+}) => {
+  await fs.remove(workPath);
   await downloadInstallAndBundle({ files, entrypoint, workPath: cachePath });
 
   return {
