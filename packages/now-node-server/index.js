@@ -37,7 +37,7 @@ async function commonForTwo({
       'package.json': new FileBlob({
         data: JSON.stringify({
           dependencies: {
-            '@zeit/ncc': '0.1.3-webpack',
+            '@zeit/ncc': '0.1.4-webpack',
           },
         }),
       }),
