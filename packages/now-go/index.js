@@ -17,6 +17,10 @@ async function createGoPathTree(goPath) {
   await mkdirp(path.join(goPath, 'pkg', 'linux_amd64'));
 }
 
+exports.config = {
+  maxLambdaSize: '10mb'
+};
+
 exports.build = async ({ files, entrypoint }) => {
   console.log('downloading files...');
 

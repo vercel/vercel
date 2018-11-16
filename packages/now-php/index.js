@@ -3,6 +3,10 @@ const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const rename = require('@now/build-utils/fs/rename.js');
 
+exports.config = {
+  maxLambdaSize: '10mb'
+};
+
 exports.build = async ({ files, entrypoint }) => {
   // move all user code to 'user' subdirectory
   const userFiles = rename(files, name => path.join('user', name));

@@ -117,6 +117,10 @@ async function compile(workRollupPath, input) {
   })).code;
 }
 
+exports.config = {
+  maxLambdaSize: '5mb'
+};
+
 /**
  * @param {BuildParamsType} buildParams
  * @returns {Promise<Files>}

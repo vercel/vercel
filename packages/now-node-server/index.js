@@ -85,6 +85,10 @@ async function compile(workRollupPath, input) {
   })).code;
 }
 
+exports.config = {
+  maxLambdaSize: '15mb'
+};
+
 exports.build = async ({ files, entrypoint, workPath }) => {
   const [
     filesOnDisk,

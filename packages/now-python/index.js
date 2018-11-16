@@ -25,6 +25,10 @@ async function pipInstall(pipPath, srcDir, ...args) {
   }
 }
 
+exports.config = {
+  maxLambdaSize: '5mb'
+};
+
 exports.build = async ({ files, entrypoint }) => {
   console.log('downloading files...');
 
