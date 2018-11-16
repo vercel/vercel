@@ -1,8 +1,8 @@
 {
   "name": "@now/node-server",
-  "version": "0.4.22",
+  "version": "0.4.23-canary.0",
   "dependencies": {
-    "@now/node-bridge": "^0.1.7"
+    "@now/node-bridge": "^0.1.8-canary.0"
   },
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"

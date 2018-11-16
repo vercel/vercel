@@ -1,6 +1,6 @@
 {
   "name": "@now/build-utils",
-  "version": "0.4.28",
+  "version": "0.4.29-canary.0",
   "dependencies": {
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",

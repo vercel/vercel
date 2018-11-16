@@ -1,6 +1,6 @@
 {
   "name": "@now/cgi",
-  "version": "0.0.11",
+  "version": "0.0.12-canary.0",
   "scripts": {
     "test": "best -I test/*.js",
     "prepublish": "./build.sh"
