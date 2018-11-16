@@ -4,7 +4,9 @@ function normalizeEvent(event) {
   if (event.Action === 'Invoke') {
     const invokeEvent = JSON.parse(event.body);
 
-    const { method, path, headers, encoding } = invokeEvent;
+    const {
+      method, path, headers, encoding,
+    } = invokeEvent;
 
     let { body } = invokeEvent;
 
@@ -22,17 +24,19 @@ function normalizeEvent(event) {
       method,
       path,
       headers,
-      body
+      body,
     };
   }
 
-  const { httpMethod: method, path, headers, body } = event;
+  const {
+    httpMethod: method, path, headers, body,
+  } = event;
 
   return {
     method,
     path,
     headers,
-    body
+    body,
   };
 }
 
@@ -53,17 +57,19 @@ class Bridge {
         return resolve({ statusCode: 504, body: '' });
       }
 
-      const { method, path, headers, body } = normalizeEvent(event);
+      const {
+        method, path, headers, body,
+      } = normalizeEvent(event);
 
       const opts = {
         hostname: '127.0.0.1',
         port: this.port,
         path,
         method,
-        headers
+        headers,
       };
 
-      const req = http.request(opts, res => {
+      const req = http.request(opts, (res) => {
         const response = res;
         const respBodyChunks = [];
         response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
@@ -76,7 +82,7 @@ class Bridge {
             statusCode: response.statusCode,
             headers: response.headers,
             body: Buffer.concat(respBodyChunks).toString('base64'),
-            encoding: 'base64'
+            encoding: 'base64',
           });
         });
       });
@@ -88,5 +94,5 @@ class Bridge {
 }
 
 module.exports = {
-  Bridge
+  Bridge,
 };

@@ -13,19 +13,21 @@
     "bootstrap": "lerna bootstrap",
     "publish-stable": "lerna version",
     "publish-canary": "lerna version prerelease --preid canary",
-    "lint": "eslint .",
+    "lint": "tsc && eslint .",
     "test": "jest",
     "lint-staged": "lint-staged"
   },
   "pre-commit": "lint-staged",
   "lint-staged": {
     "*.js": [
-      "eslint",
       "prettier --write --single-quote",
+      "eslint --fix",
       "git add"
     ]
   },
   "devDependencies": {
+    "@types/multistream": "^2.1.1",
+    "@types/node": "^10.12.8",
     "eslint": "^5.9.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^3.1.0",
@@ -33,6 +35,7 @@
     "jest": "^23.6.0",
     "lint-staged": "^8.0.4",
     "pre-commit": "^1.2.2",
-    "prettier": "^1.15.2"
+    "prettier": "^1.15.2",
+    "typescript": "^3.1.6"
   }
 }

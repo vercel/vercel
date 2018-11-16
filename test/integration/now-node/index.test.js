@@ -14,7 +14,7 @@ it(
     const { buildResult } = await runBuildForFolder('airtable');
     expect(buildResult['index.js']).toBeDefined();
   },
-  TWO_MINUTES
+  TWO_MINUTES,
 );
 
 it(
@@ -23,7 +23,7 @@ it(
     const { buildResult } = await runBuildForFolder('aws-sdk');
     expect(buildResult['index.js']).toBeDefined();
   },
-  TWO_MINUTES
+  TWO_MINUTES,
 );
 
 it(
@@ -32,7 +32,7 @@ it(
     const { buildResult } = await runBuildForFolder('axios');
     expect(buildResult['index.js']).toBeDefined();
   },
-  TWO_MINUTES
+  TWO_MINUTES,
 );
 
 it(
@@ -41,5 +41,5 @@ it(
     const { buildResult } = await runBuildForFolder('mongoose');
     expect(buildResult['index.js']).toBeDefined();
   },
-  TWO_MINUTES
+  TWO_MINUTES,
 );

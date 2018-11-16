@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "commonjs",
+    "lib": ["es2017"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "types": ["node"],
+    "esModuleInterop": true
+  },
+  "include": [
+    "./packages/now-node/index.js",
+    "./packages/now-build-utils/file-ref.js"
+  ]
+}
