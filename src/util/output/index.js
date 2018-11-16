@@ -66,6 +66,7 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   return {
+    debugEnabled,
     print,
     log,
     warn,
