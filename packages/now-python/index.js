@@ -10,15 +10,9 @@ const downloadAndInstallPip = require('./download-and-install-pip');
 async function pipInstall(pipPath, srcDir, ...args) {
   console.log(`running "pip install -t ${srcDir} ${args.join(' ')}"...`);
   try {
-    await execa(
-      pipPath,
-      [
-        'install',
-        '-t', srcDir,
-        ...args,
-      ],
-      { stdio: 'inherit' },
-    );
+    await execa(pipPath, ['install', '-t', srcDir, ...args], {
+      stdio: 'inherit',
+    });
   } catch (err) {
     console.log(`failed to run "pip install -t ${srcDir} ${args.join(' ')}"`);
     throw err;
@@ -26,7 +20,7 @@ async function pipInstall(pipPath, srcDir, ...args) {
 }
 
 exports.config = {
-  maxLambdaSize: '5mb'
+  maxLambdaSize: '5mb',
 };
 
 exports.build = async ({ files, entrypoint }) => {
@@ -53,11 +47,16 @@ exports.build = async ({ files, entrypoint }) => {
     await pipInstall(pipPath, srcDir, '-r', requirementsTxtPath);
   }
 
-  const originalNowHandlerPyContents = await readFile(path.join(__dirname, 'now_handler.py'), 'utf8');
+  const originalNowHandlerPyContents = await readFile(
+    path.join(__dirname, 'now_handler.py'),
+    'utf8',
+  );
   // will be used on `from $here import handler`
   // for example, `from api.users import handler`
   console.log('entrypoint is', entrypoint);
-  const userHandlerFilePath = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const userHandlerFilePath = entrypoint
+    .replace(/\//g, '.')
+    .replace(/\.py$/, '');
   const nowHandlerPyContents = originalNowHandlerPyContents.replace(
     '__NOW_HANDLER_FILENAME',
     userHandlerFilePath,
@@ -67,7 +66,10 @@ exports.build = async ({ files, entrypoint }) => {
   // somethig else
   const nowHandlerPyFilename = 'now__handler__python';
 
-  await writeFile(path.join(srcDir, `${nowHandlerPyFilename}.py`), nowHandlerPyContents);
+  await writeFile(
+    path.join(srcDir, `${nowHandlerPyFilename}.py`),
+    nowHandlerPyContents,
+  );
 
   const lambda = await createLambda({
     files: await glob('**', srcDir),

@@ -18,7 +18,7 @@ async function createGoPathTree(goPath) {
 }
 
 exports.config = {
-  maxLambdaSize: '10mb'
+  maxLambdaSize: '10mb',
 };
 
 exports.build = async ({ files, entrypoint }) => {
@@ -61,15 +61,25 @@ exports.build = async ({ files, entrypoint }) => {
   }
 
   if (handlerFunctionName === '') {
-    const e = new Error(`Could not find an exported function on "${entrypoint}"`);
+    const e = new Error(
+      `Could not find an exported function on "${entrypoint}"`,
+    );
     console.log(e.message);
     throw e;
   }
 
-  console.log(`Found exported function "${handlerFunctionName}" on "${entrypoint}"`);
+  console.log(
+    `Found exported function "${handlerFunctionName}" on "${entrypoint}"`,
+  );
 
-  const origianlMainGoContents = await readFile(path.join(__dirname, 'main.go'), 'utf8');
-  const mainGoContents = origianlMainGoContents.replace('__NOW_HANDLER_FUNC_NAME', handlerFunctionName);
+  const origianlMainGoContents = await readFile(
+    path.join(__dirname, 'main.go'),
+    'utf8',
+  );
+  const mainGoContents = origianlMainGoContents.replace(
+    '__NOW_HANDLER_FUNC_NAME',
+    handlerFunctionName,
+  );
   // in order to allow the user to have `main.go`, we need our `main.go` to be called something else
   const mainGoFileName = 'main__now__go__.go';
 
@@ -81,12 +91,15 @@ exports.build = async ({ files, entrypoint }) => {
   // so now we place `main.go` together with the user code
   await writeFile(path.join(entrypointDirname, mainGoFileName), mainGoContents);
 
-
   console.log('installing dependencies');
   // `go get` will look at `*.go` (note we set `cwd`), parse
   // the `import`s and download any packages that aren't part of the stdlib
   try {
-    await execa(goBin, ['get'], { env: goEnv, cwd: entrypointDirname, stdio: 'inherit' });
+    await execa(goBin, ['get'], {
+      env: goEnv,
+      cwd: entrypointDirname,
+      stdio: 'inherit',
+    });
   } catch (err) {
     console.log('failed to `go get`');
     throw err;
@@ -94,11 +107,17 @@ exports.build = async ({ files, entrypoint }) => {
 
   console.log('running go build...');
   try {
-    await execa(goBin, [
-      'build',
-      '-o', path.join(outDir, 'handler'),
-      path.join(entrypointDirname, mainGoFileName), downloadedFiles[entrypoint].fsPath,
-    ], { env: goEnv, cwd: entrypointDirname, stdio: 'inherit' });
+    await execa(
+      goBin,
+      [
+        'build',
+        '-o',
+        path.join(outDir, 'handler'),
+        path.join(entrypointDirname, mainGoFileName),
+        downloadedFiles[entrypoint].fsPath,
+      ],
+      { env: goEnv, cwd: entrypointDirname, stdio: 'inherit' },
+    );
   } catch (err) {
     console.log('failed to `go build`');
     throw err;
