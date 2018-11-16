@@ -33,7 +33,7 @@ async function downloadInstallAndBundle(
   { npmArguments = [] },
 ) {
   const userPath = path.join(workPath, 'user');
-  const rollupPath = path.join(workPath, 'rollup');
+  const nccPath = path.join(workPath, 'ncc');
 
   console.log('downloading user files...');
   const filesOnDisk = await download(files, userPath);
@@ -42,83 +42,32 @@ async function downloadInstallAndBundle(
   const entrypointFsDirname = path.join(userPath, path.dirname(entrypoint));
   await runNpmInstall(entrypointFsDirname, npmArguments);
 
-  console.log('writing rollup package.json...');
+  console.log('writing ncc package.json...');
   await download(
     {
       'package.json': new FileBlob({
         data: JSON.stringify({
           dependencies: {
-            builtins: '2.0.0',
-            rollup: '0.67.0',
-            'rollup-plugin-commonjs': '9.2.0',
-            'rollup-plugin-json': '3.1.0',
-            'rollup-plugin-node-resolve': '3.4.0',
-            'rollup-plugin-terser': '3.0.0',
+            '@zeit/ncc': '0.1.3-webpack',
           },
         }),
       }),
     },
-    rollupPath,
+    nccPath,
   );
 
-  console.log('running npm install for rollup...');
-  await runNpmInstall(rollupPath, npmArguments);
-  return [filesOnDisk, rollupPath, entrypointFsDirname];
+  console.log('running npm install for ncc...');
+  await runNpmInstall(nccPath, npmArguments);
+  return [filesOnDisk, nccPath, entrypointFsDirname];
 }
 
-async function compile(workRollupPath, input) {
-  const rollup = require(path.join(workRollupPath, 'node_modules/rollup'));
-  const nodeResolve = require(path.join(
-    workRollupPath,
-    'node_modules/rollup-plugin-node-resolve',
-  ));
-  const commonjs = require(path.join(
-    workRollupPath,
-    'node_modules/rollup-plugin-commonjs',
-  ));
-  const json = require(path.join(
-    workRollupPath,
-    'node_modules/rollup-plugin-json',
-  ));
-  const { terser } = require(path.join(
-    workRollupPath,
-    'node_modules/rollup-plugin-terser',
-  ));
-  const builtins = require(path.join(
-    workRollupPath,
-    'node_modules/builtins',
-  ))();
-
-  const bundle = await rollup.rollup({
-    input,
-    plugins: [
-      nodeResolve({
-        module: false,
-        jsnext: false,
-        browser: false,
-        preferBuiltins: true,
-      }),
-      json(),
-      commonjs(),
-      terser(),
-    ],
-    onwarn(error) {
-      if (/external dependency/.test(error.message)) {
-        const mod = error.message.split("'")[1];
-        // ignore rollup warnings about known node.js modules
-        if (builtins.indexOf(mod) > -1) return;
-      }
-      console.error(error.message);
-    },
-  });
-
-  return (await bundle.generate({
-    format: 'cjs',
-  })).code;
+async function compile(workNccPath, input) {
+  const ncc = require(path.join(workNccPath, 'node_modules/@zeit/ncc'));
+  return ncc(input);
 }
 
 exports.config = {
-  maxLambdaSize: '5mb'
+  maxLambdaSize: '5mb',
 };
 
 /**
@@ -128,7 +77,7 @@ exports.config = {
 exports.build = async ({ files, entrypoint, workPath }) => {
   const [
     filesOnDisk,
-    workRollupPath,
+    workNccPath,
     entrypointFsDirname,
   ] = await downloadInstallAndBundle(
     { files, entrypoint, workPath },
@@ -138,8 +87,8 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   console.log('running user script...');
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
 
-  console.log('compiling entrypoint with rollup...');
-  const data = await compile(workRollupPath, filesOnDisk[entrypoint].fsPath);
+  console.log('compiling entrypoint with ncc...');
+  const data = await compile(workNccPath, filesOnDisk[entrypoint].fsPath);
   const blob = new FileBlob({ data });
 
   console.log('preparing lambda files...');
@@ -177,8 +126,8 @@ exports.prepareCache = async ({ files, entrypoint, cachePath }) => {
     ...(await glob('user/node_modules/**', cachePath)),
     ...(await glob('user/package-lock.json', cachePath)),
     ...(await glob('user/yarn.lock', cachePath)),
-    ...(await glob('rollup/node_modules/**', cachePath)),
-    ...(await glob('rollup/package-lock.json', cachePath)),
-    ...(await glob('rollup/yarn.lock', cachePath)),
+    ...(await glob('ncc/node_modules/**', cachePath)),
+    ...(await glob('ncc/package-lock.json', cachePath)),
+    ...(await glob('ncc/yarn.lock', cachePath)),
   };
 };
