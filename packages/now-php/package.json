@@ -1,6 +1,6 @@
 {
   "name": "@now/php",
-  "version": "0.4.10-canary.0",
+  "version": "0.4.10-canary.1",
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"
   }

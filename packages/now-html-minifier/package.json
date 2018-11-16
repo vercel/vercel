@@ -1,6 +1,6 @@
 {
   "name": "@now/html-minifier",
-  "version": "1.0.4",
+  "version": "1.0.5-canary.0",
   "dependencies": {
     "html-minifier": "3.5.21"
   },
