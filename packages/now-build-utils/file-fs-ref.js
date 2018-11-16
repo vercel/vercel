@@ -24,9 +24,9 @@ class FileFsRef {
     await new Promise((resolve, reject) => {
       const dest = fs.createWriteStream(fsPath);
       stream.pipe(dest);
-      stream.on('error', error => reject(error));
-      dest.on('finish', () => resolve());
-      dest.on('error', error => reject(error));
+      stream.on('error', reject);
+      dest.on('finish', resolve);
+      dest.on('error', reject);
     });
 
     await fs.chmod(fsPath, mode.toString(8).slice(-3));
@@ -37,7 +37,7 @@ class FileFsRef {
     await semaToPreventEMFILE.acquire();
     const release = () => semaToPreventEMFILE.release();
     const stream = fs.createReadStream(this.fsPath);
-    stream.on('end', release);
+    stream.on('close', release);
     stream.on('error', release);
     return stream;
   }
