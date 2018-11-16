@@ -1,5 +1,6 @@
 const mainCommands = new Set([
   'deploy',
+  'dev',
   'help',
   'list',
   'remove',
