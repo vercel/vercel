@@ -4,6 +4,8 @@ const multiStream = require('multistream');
 const retry = require('async-retry');
 const Sema = require('async-sema');
 
+/** @typedef {{[filePath: string]: FileRef}} Files */
+
 const semaToDownloadFromS3 = new Sema(10);
 
 class BailableError extends Error {

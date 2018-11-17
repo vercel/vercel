@@ -4,128 +4,100 @@ const FileFsRef = require('@now/build-utils/file-fs-ref.js');
 const FileBlob = require('@now/build-utils/file-blob');
 const path = require('path');
 const { readFile, writeFile, unlink } = require('fs.promised');
-const rename = require('@now/build-utils/fs/rename.js');
 const {
   runNpmInstall,
   runPackageJsonScript,
 } = require('@now/build-utils/fs/run-user-scripts.js');
 const glob = require('@now/build-utils/fs/glob.js');
+const {
+  excludeFiles,
+  validateEntrypoint,
+  includeOnlyEntryDirectory,
+  moveEntryDirectoryToRoot,
+  excludeLockFiles,
+  normalizePackageJson,
+  excludeStaticDirectory,
+} = require('./utils');
 
-// Exclude certain files from the files object
-function excludeFiles(files, matchFn) {
-  return Object.keys(files).reduce((newFiles, fileName) => {
-    if (matchFn(fileName)) {
-      return newFiles;
-    }
-    return {
-      ...newFiles,
-      [fileName]: files[fileName],
-    };
-  }, {});
+/** @typedef { import('@now/build-utils/file-ref').Files } Files */
+/** @typedef { import('@now/build-utils/fs/download').DownloadedFiles } DownloadedFiles */
+
+/**
+ * @typedef {Object} BuildParamsType
+ * @property {Files} files - Files object
+ * @property {string} entrypoint - Entrypoint specified for the builder
+ * @property {string} workPath - Working directory for this build
+ */
+
+/**
+ * Read package.json from files
+ * @param {DownloadedFiles} files
+ */
+async function readPackageJson(files) {
+  if (!files['package.json']) {
+    return {};
+  }
+
+  const packageJsonPath = files['package.json'].fsPath;
+  return JSON.parse(await readFile(packageJsonPath, 'utf8'));
 }
 
-function shouldExcludeFile(entryDirectory) {
-  return (file) => {
-    // If the file is not in the entry directory
-    if (entryDirectory !== '.' && !file.startsWith(entryDirectory)) {
-      return true;
-    }
-
-    // Exclude static directory
-    if (file.startsWith(path.join(entryDirectory, 'static'))) {
-      return true;
-    }
-
-    if (file === 'package-lock.json') {
-      return true;
-    }
-
-    if (file === 'yarn.lock') {
-      return true;
-    }
-
-    return false;
-  };
-}
-
-exports.build = async ({ files, workPath, entrypoint }) => {
-  if (
-    !/package\.json$/.exec(entrypoint)
-    && !/next\.config\.js$/.exec(entrypoint)
-  ) {
-    throw new Error(
-      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
-    );
-  }
-
-  console.log('downloading user files...');
-  const entryDirectory = path.dirname(entrypoint);
-  const filesToDownload = excludeFiles(
-    files,
-    shouldExcludeFile(entryDirectory),
-  );
-  const entrypointHandledFilesToDownload = rename(filesToDownload, (file) => {
-    if (entryDirectory !== '.') {
-      return file.replace(new RegExp(`^${entryDirectory}/`), '');
-    }
-    return file;
-  });
-  let downloadedFiles = await download(
-    entrypointHandledFilesToDownload,
-    workPath,
-  );
-
-  let packageJson = {};
-  if (downloadedFiles['package.json']) {
-    console.log('found package.json, overwriting');
-    const packageJsonPath = downloadedFiles['package.json'].fsPath;
-    packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
-  }
-
-  packageJson = {
-    ...packageJson,
-    dependencies: {
-      ...packageJson.dependencies,
-      'next-server': 'canary',
-    },
-    devDependencies: {
-      ...packageJson.devDependencies,
-      next: 'canary',
-    },
-    scripts: {
-      ...packageJson.scripts,
-      'now-build': 'next build',
-    },
-  };
-
-  if (!packageJson.dependencies.react) {
-    console.log(
-      '"react" not found in dependencies, adding to "package.json" "dependencies"',
-    );
-    packageJson.dependencies.react = 'latest';
-  }
-  if (!packageJson.dependencies['react-dom']) {
-    console.log(
-      '"react-dom" not found in dependencies, adding to "package.json" "dependencies"',
-    );
-    packageJson.dependencies['react-dom'] = 'latest';
-  }
-
-  // in case the user has `next` on their `dependencies`, we remove it
-  delete packageJson.dependencies.next;
-
+/**
+ * Write package.json
+ * @param {string} workPath
+ * @param {Object} packageJson
+ */
+async function writePackageJson(workPath, packageJson) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2),
   );
+}
+
+/**
+ * Write .npmrc with npm auth token
+ * @param {string} workPath
+ * @param {string} token
+ */
+async function writeNpmRc(workPath, token) {
+  await writeFile(
+    path.join(workPath, '.npmrc'),
+    `//registry.npmjs.org/:_authToken=${token}`,
+  );
+}
+
+/**
+ * @param {BuildParamsType} buildParams
+ * @returns {Promise<Files>}
+ */
+exports.build = async ({ files, workPath, entrypoint }) => {
+  validateEntrypoint(entrypoint);
+
+  console.log('downloading user files...');
+  const entryDirectory = path.dirname(entrypoint);
+  const filesOnlyEntryDirectory = includeOnlyEntryDirectory(
+    files,
+    entryDirectory,
+  );
+  const filesWithEntryDirectoryRoot = moveEntryDirectoryToRoot(
+    filesOnlyEntryDirectory,
+    entryDirectory,
+  );
+  const filesWithoutLockfiles = excludeLockFiles(filesWithEntryDirectoryRoot);
+  const filesWithoutStaticDirectory = excludeStaticDirectory(
+    filesWithoutLockfiles,
+  );
+  let downloadedFiles = await download(filesWithoutStaticDirectory, workPath);
+
+  console.log('normalizing package.json');
+  const packageJson = normalizePackageJson(readPackageJson(downloadedFiles));
+  await writePackageJson(workPath, packageJson);
 
   if (process.env.NPM_AUTH_TOKEN) {
     console.log('found NPM_AUTH_TOKEN in environment, creating .npmrc');
-    await writeFile(
-      path.join(workPath, '.npmrc'),
-      `//registry.npmjs.org/:_authToken=${process.env.NPM_AUTH_TOKEN}`,
-    );
+    await writeNpmRc(workPath, process.env.NPM_AUTH_TOKEN);
   }
+
   downloadedFiles = await glob('**', workPath);
 
   console.log('running npm install...');
@@ -137,6 +109,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   if (process.env.NPM_AUTH_TOKEN) {
     await unlink(path.join(workPath, '.npmrc'));
   }
+
   downloadedFiles = await glob('**', workPath);
 
   console.log('preparing lambda files...');
@@ -203,6 +176,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
         ],
       };
 
+      console.log(`Creating lambda for page: "${page}"...`);
       lambdas[path.join(entryDirectory, pathname)] = await createLambda({
         files: {
           ...nextFiles,
@@ -212,6 +186,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
         handler: 'now__launcher.launcher',
         runtime: 'nodejs8.10',
       });
+      console.log(`Created lambda for page: "${page}"`);
     }),
   );
 

@@ -26,6 +26,8 @@
     ]
   },
   "devDependencies": {
+    "@types/fs-extra": "^5.0.4",
+    "@types/glob": "^7.1.1",
     "@types/multistream": "^2.1.1",
     "@types/node": "^10.12.8",
     "eslint": "^5.9.0",

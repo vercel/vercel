@@ -12,6 +12,14 @@
   },
   "include": [
     "./packages/now-node/index.js",
-    "./packages/now-build-utils/file-ref.js"
+    "./packages/now-build-utils/file-ref.js",
+    "./packages/now-build-utils/file-fs-ref.js",
+    "./packages/now-build-utils/fs/rename.js",
+    "./packages/now-build-utils/fs/download.js",
+    "./packages/now-build-utils/fs/glob.js",
+    "./packages/now-next"
+  ],
+  "exclude": [
+    "./packages/now-next/launcher.js"
   ]
 }

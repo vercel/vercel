@@ -3,11 +3,24 @@ const path = require('path');
 const vanillaGlob = require('glob');
 const FileFsRef = require('../file-fs-ref.js');
 
+/** @typedef {import('fs').Stats} Stats */
+/** @typedef {import('glob').IOptions} GlobOptions */
+/** @typedef {import('../file-fs-ref').FsFiles|{}} GlobFiles */
+
+/**
+ * @argument {string} pattern
+ * @argument {GlobOptions|string} opts
+ * @argument {string} [mountpoint]
+ * @returns {Promise<GlobFiles>}
+ */
 module.exports = function glob(pattern, opts = {}, mountpoint) {
   return new Promise((resolve, reject) => {
-    let options = opts;
-    if (typeof options === 'string') {
-      options = { cwd: options };
+    /** @type {GlobOptions} */
+    let options;
+    if (typeof opts === 'string') {
+      options = { cwd: opts };
+    } else {
+      options = opts;
     }
 
     if (!options.cwd) {
@@ -31,12 +44,13 @@ module.exports = function glob(pattern, opts = {}, mountpoint) {
       resolve(
         files.reduce((files2, relativePath) => {
           const fsPath = path.join(options.cwd, relativePath);
+          /** @type {Stats|any} */
           const stat = options.statCache[fsPath];
           assert(
             stat,
             `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`,
           );
-          if (stat.isFile()) {
+          if (stat && stat.isFile()) {
             let finalPath = relativePath;
             if (mountpoint) finalPath = path.join(mountpoint, finalPath);
             return {

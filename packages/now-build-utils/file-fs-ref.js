@@ -1,20 +1,38 @@
 const assert = require('assert');
 const fs = require('fs-extra');
-const MultiStream = require('multistream');
+const multiStream = require('multistream');
 const path = require('path');
 const Sema = require('async-sema');
 
+/** @typedef {{[filePath: string]: FileFsRef}} FsFiles */
+
 const semaToPreventEMFILE = new Sema(30);
 
+/**
+ * @constructor
+ * @argument {Object} options
+ * @argument {number} [options.mode=0o100644]
+ * @argument {string} options.fsPath
+ */
 class FileFsRef {
   constructor({ mode = 0o100644, fsPath }) {
     assert(typeof mode === 'number');
     assert(typeof fsPath === 'string');
+    /** @type {string} */
     this.type = 'FileFsRef';
+    /** @type {number} */
     this.mode = mode;
+    /** @type {string} */
     this.fsPath = fsPath;
   }
 
+  /**
+   * @argument {Object} options
+   * @argument {number} [options.mode=0o100644]
+   * @argument {NodeJS.ReadableStream} options.stream
+   * @argument {string} options.fsPath
+   * @returns {Promise<FileFsRef>}
+   */
   static async fromStream({ mode = 0o100644, stream, fsPath }) {
     assert(typeof mode === 'number');
     assert(typeof stream.pipe === 'function'); // is-stream
@@ -33,6 +51,9 @@ class FileFsRef {
     return new FileFsRef({ mode, fsPath });
   }
 
+  /**
+   * @returns {Promise<NodeJS.ReadableStream>}
+   */
   async toStreamAsync() {
     await semaToPreventEMFILE.acquire();
     const release = () => semaToPreventEMFILE.release();
@@ -42,20 +63,23 @@ class FileFsRef {
     return stream;
   }
 
+  /**
+   * @returns {NodeJS.ReadableStream}
+   */
   toStream() {
     let flag;
 
     // eslint-disable-next-line consistent-return
-    return new MultiStream((cb) => {
-      if (flag) return cb();
+    return multiStream((cb) => {
+      if (flag) return cb(null, null);
       flag = true;
 
       this.toStreamAsync()
         .then((stream) => {
-          cb(undefined, stream);
+          cb(null, stream);
         })
         .catch((error) => {
-          cb(error);
+          cb(error, null);
         });
     });
   }
