@@ -22,12 +22,17 @@ exports.build = async ({ files, entrypoint, config }) => {
     .use(markdown)
     .use(remark2rehype)
     .use(doc, {
-      title, language, meta, css,
+      title,
+      language,
+      meta,
+      css,
     })
     .use(format)
     .use(html);
 
-  const result = await FileBlob.fromStream({ stream: stream.pipe(unifiedStream(processor)) });
+  const result = await FileBlob.fromStream({
+    stream: stream.pipe(unifiedStream(processor)),
+  });
 
   console.log(result.data.toString());
 

@@ -50,11 +50,13 @@ class FileFsRef {
       if (flag) return cb();
       flag = true;
 
-      this.toStreamAsync().then((stream) => {
-        cb(undefined, stream);
-      }).catch((error) => {
-        cb(error);
-      });
+      this.toStreamAsync()
+        .then((stream) => {
+          cb(undefined, stream);
+        })
+        .catch((error) => {
+          cb(error);
+        });
     });
   }
 }

@@ -37,7 +37,9 @@ async function downloadAndInstallPip() {
     // installed to. `--user` will assume `~` if this
     // is not set, and `~` is not writeable on AWS Lambda.
     // let's refuse to proceed
-    throw new Error('Could not install "pip": "PYTHONUSERBASE" env var is not set');
+    throw new Error(
+      'Could not install "pip": "PYTHONUSERBASE" env var is not set',
+    );
   }
   const getPipFilePath = await downloadGetPipScript();
 

@@ -2,7 +2,8 @@ const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
 const FileBlob = require('@now/build-utils/file-blob.js');
 const FileFsRef = require('@now/build-utils/file-fs-ref.js');
-const fs = require('fs-extra');
+const fsExtra = require('fs-extra');
+const fs = require('fs');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const { promisify } = require('util');
@@ -122,7 +123,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
 exports.prepareCache = async ({
   files, entrypoint, workPath, cachePath,
 }) => {
-  await fs.remove(workPath);
+  await fsExtra.remove(workPath);
   await downloadInstallAndBundle({ files, entrypoint, workPath: cachePath });
 
   return {

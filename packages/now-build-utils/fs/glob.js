@@ -11,7 +11,9 @@ module.exports = function glob(pattern, opts = {}, mountpoint) {
     }
 
     if (!options.cwd) {
-      throw new Error('Second argument (basePath) must be specified for names of resulting files');
+      throw new Error(
+        'Second argument (basePath) must be specified for names of resulting files',
+      );
     }
 
     if (!path.isAbsolute(options.cwd)) {
@@ -26,21 +28,26 @@ module.exports = function glob(pattern, opts = {}, mountpoint) {
     vanillaGlob(pattern, options, (error, files) => {
       if (error) return reject(error);
 
-      resolve(files.reduce((files2, relativePath) => {
-        const fsPath = path.join(options.cwd, relativePath);
-        const stat = options.statCache[fsPath];
-        assert(stat, `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`);
-        if (stat.isFile()) {
-          let finalPath = relativePath;
-          if (mountpoint) finalPath = path.join(mountpoint, finalPath);
-          return {
-            ...files2,
-            [finalPath]: new FileFsRef({ mode: stat.mode, fsPath }),
-          };
-        }
+      resolve(
+        files.reduce((files2, relativePath) => {
+          const fsPath = path.join(options.cwd, relativePath);
+          const stat = options.statCache[fsPath];
+          assert(
+            stat,
+            `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`,
+          );
+          if (stat.isFile()) {
+            let finalPath = relativePath;
+            if (mountpoint) finalPath = path.join(mountpoint, finalPath);
+            return {
+              ...files2,
+              [finalPath]: new FileFsRef({ mode: stat.mode, fsPath }),
+            };
+          }
 
-        return files2;
-      }, {}));
+          return files2;
+        }, {}),
+      );
     });
   });
 };
