@@ -29,7 +29,7 @@ jobs:
           command: "[[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc"
       - run:
           name: Potentially publish canary release
-          command: "ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes"
+          command: "(ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes) || echo \"Did not publish\""
       # - run:
       #     name: Potentially publish stable release
       #     command: "ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes"
