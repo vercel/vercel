@@ -24,26 +24,6 @@ jobs:
       - run:
           name: Tests
           command: yarn test
-  # publish-canary:
-  #   docker:
-  #     - image: circleci/node:10
-  #   working_directory: ~/repo
-  #   steps:
-  #     - checkout
-  #     - run:
-  #         name: Updating apt-get list
-  #         command: sudo apt-get update
-  #     - run:
-  #         name: Installing the latest version of Go
-  #         command: sudo apt-get install golang-go
-  #     - run: yarn install
-  #     - run: yarn bootstrap
-  #     - run:
-  #         name: Saving Authentication Information
-  #         command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-  #     - run:
-  #         name: Publishing to Canary Channel
-  #         command: yarn run lerna publish from-git --npm-tag canary --yes
   publish-stable:
     docker:
       - image: circleci/node:10
@@ -64,20 +44,45 @@ jobs:
       - run:
           name: Publishing to Stable Channel
           command: yarn run lerna publish from-git --yes
+  publish-canary:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: Updating apt-get list
+          command: sudo apt-get update
+      - run:
+          name: Installing the latest version of Go
+          command: sudo apt-get install golang-go
+      - run: yarn install
+      - run: yarn bootstrap
+      - run:
+          name: Saving Authentication Information
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publishing to Stable Channel
+          command: yarn run lerna publish from-git --npm-tag canary --yes
 workflows:
   version: 2
-  unscheduled:
+  build-and-deploy:
     jobs:
-      - build:
-          filters:
-            tags:
-              only: /.*/
+      - build
       - publish-stable:
           requires:
             - build
           filters:
             tags:
-              only: /^.*(\d+\.)(\d+\.)(\*|\d+)$/
+              only: /.*\d+\.\d+\.\d+$/
+            branches:
+              ignore: /.*/
+      - publish-canary:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*-canary.*$/
             branches:
               ignore: /.*/
       # - publish-canary:
