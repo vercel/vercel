@@ -26,10 +26,10 @@ jobs:
           command: yarn test
       - run:
           name: Potentially save npm token
-          command: "[[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc"
+          command: "([[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc) || echo \"Did not write npm token\""
       - run:
           name: Potentially publish canary release
-          command: "(ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes) || echo \"Did not publish\""
+          command: "if ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]]; then yarn run lerna publish from-git --npm-tag canary --yes; else  echo \"Did not publish\"; fi"
       # - run:
       #     name: Potentially publish stable release
       #     command: "ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe --exact-match 2> /dev/null || :) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes"
