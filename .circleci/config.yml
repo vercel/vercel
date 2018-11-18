@@ -24,46 +24,15 @@ jobs:
       - run:
           name: Tests
           command: yarn test
-  publish-stable:
-    docker:
-      - image: circleci/node:10
-    working_directory: ~/repo
-    steps:
-      - checkout
       - run:
-          name: Updating apt-get list
-          command: sudo apt-get update
+          name: Potentially save npm token
+          command: "[[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc"
       - run:
-          name: Installing the latest version of Go
-          command: sudo apt-get install golang-go
-      - run: yarn install
-      - run: yarn bootstrap
+          name: Potentially publish canary release
+          command: "ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes"
       - run:
-          name: Saving Authentication Information
-          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-      - run:
-          name: Publishing to Stable Channel
-          command: yarn run lerna publish from-git --yes
-  publish-canary:
-    docker:
-      - image: circleci/node:10
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - run:
-          name: Updating apt-get list
-          command: sudo apt-get update
-      - run:
-          name: Installing the latest version of Go
-          command: sudo apt-get install golang-go
-      - run: yarn install
-      - run: yarn bootstrap
-      - run:
-          name: Saving Authentication Information
-          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-      - run:
-          name: Publishing to Stable Channel
-          command: yarn run lerna publish from-git --npm-tag canary --yes
+          name: Potentially publish stable release
+          command: "ls ~/.npmrc >/dev/null 2>&1 && [[ $(git describe) =~ -canary ]] && yarn run lerna publish from-git --npm-tag canary --yes"
 workflows:
   version: 2
   build-and-deploy:
@@ -72,19 +41,3 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - publish-stable:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*\d+\.\d+\.\d+$/
-            branches:
-              ignore: /.*/
-      - publish-canary:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*-canary.*$/
-            branches:
-              ignore: /.*/
