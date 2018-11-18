@@ -91,6 +91,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
 
   console.log('normalizing package.json');
   const packageJson = normalizePackageJson(readPackageJson(downloadedFiles));
+  console.log('normalized package.json result: ', packageJson);
   await writePackageJson(workPath, packageJson);
 
   if (process.env.NPM_AUTH_TOKEN) {
