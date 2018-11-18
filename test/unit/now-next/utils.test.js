@@ -289,4 +289,111 @@ describe('normalizePackageJson', () => {
       },
     });
   });
+
+  // https://github.com/zeit/next.js/issues/5700
+  it('should normalize user report zeit/next.js#5700 correctly', () => {
+    const defaultPackage = {
+      version: '1.0.0',
+      scripts: {
+        dev: 'next',
+        build: 'next build',
+        start: 'next start',
+        test: "xo && stylelint './pages/**/*.js' && jest",
+      },
+      main: 'pages/index.js',
+      license: 'MIT',
+      devDependencies: {
+        'babel-plugin-styled-components': '^1.8.0',
+        'eslint-config-xo-react': '^0.17.0',
+        'eslint-plugin-react': '^7.11.1',
+        jest: '^23.6.0',
+        'jest-styled-components': '^6.3.1',
+        'react-test-renderer': '^16.6.3',
+        stylelint: '^9.8.0',
+        'stylelint-config-recommended': '^2.1.0',
+        'stylelint-config-styled-components': '^0.1.1',
+        'stylelint-processor-styled-components': '^1.5.1',
+        xo: '^0.23.0',
+      },
+      dependencies: {
+        consola: '^2.2.6',
+        fontfaceobserver: '^2.0.13',
+        next: '^7.0.2',
+        react: '^16.6.3',
+        'react-dom': '^16.6.3',
+        'styled-components': '^4.1.1',
+      },
+      xo: {
+        extends: 'xo-react',
+        envs: 'browser',
+        esnext: true,
+        ignores: [
+          'test',
+          'pages/_document.js',
+          'pages/index.js',
+          'pages/home.js',
+        ],
+        rules: {
+          'react/no-unescaped-entities': null,
+        },
+      },
+      jest: {
+        testEnvironment: 'node',
+      },
+    };
+    const result = normalizePackageJson(defaultPackage);
+    expect(result).toEqual({
+      version: '1.0.0',
+      scripts: {
+        dev: 'next',
+        build: 'next build',
+        'now-build': 'next build',
+        start: 'next start',
+        test: "xo && stylelint './pages/**/*.js' && jest",
+      },
+      main: 'pages/index.js',
+      license: 'MIT',
+      devDependencies: {
+        'babel-plugin-styled-components': '^1.8.0',
+        'eslint-config-xo-react': '^0.17.0',
+        'eslint-plugin-react': '^7.11.1',
+        jest: '^23.6.0',
+        'jest-styled-components': '^6.3.1',
+        'react-test-renderer': '^16.6.3',
+        stylelint: '^9.8.0',
+        'stylelint-config-recommended': '^2.1.0',
+        'stylelint-config-styled-components': '^0.1.1',
+        'stylelint-processor-styled-components': '^1.5.1',
+        next: 'canary',
+        'next-server': undefined,
+        xo: '^0.23.0',
+      },
+      dependencies: {
+        'next-server': 'canary',
+        consola: '^2.2.6',
+        fontfaceobserver: '^2.0.13',
+        next: undefined,
+        react: '^16.6.3',
+        'react-dom': '^16.6.3',
+        'styled-components': '^4.1.1',
+      },
+      xo: {
+        extends: 'xo-react',
+        envs: 'browser',
+        esnext: true,
+        ignores: [
+          'test',
+          'pages/_document.js',
+          'pages/index.js',
+          'pages/home.js',
+        ],
+        rules: {
+          'react/no-unescaped-entities': null,
+        },
+      },
+      jest: {
+        testEnvironment: 'node',
+      },
+    });
+  });
 });
