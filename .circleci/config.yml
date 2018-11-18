@@ -85,9 +85,3 @@ workflows:
               only: /.*-canary.*$/
             branches:
               ignore: /.*/
-      # - publish-canary:
-      #     requires:
-      #       - build
-      #     filters:
-      #       tags:
-      #         only: /^.*canary.*($|\b)/
