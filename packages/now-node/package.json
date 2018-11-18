@@ -1,8 +1,8 @@
 {
   "name": "@now/node",
-  "version": "0.4.26-canary.4",
+  "version": "0.4.26-canary.5",
   "dependencies": {
-    "@now/node-bridge": "^0.1.9-canary.4",
+    "@now/node-bridge": "^0.1.9-canary.5",
     "fs-extra": "7.0.1"
   },
   "peerDependencies": {
