@@ -116,26 +116,42 @@ function excludeStaticDirectory(files) {
  * @param {{dependencies?: any, devDependencies?: any, scripts?: any}} defaultPackageJson
  */
 function normalizePackageJson(defaultPackageJson = {}) {
+  const dependencies = {};
+  const devDependencies = {
+    ...defaultPackageJson.dependencies,
+    ...defaultPackageJson.devDependencies,
+  };
+
+  if (devDependencies.react) {
+    dependencies.react = devDependencies.react;
+    delete devDependencies.react;
+  }
+
+  if (devDependencies['react-dom']) {
+    dependencies['react-dom'] = devDependencies['react-dom'];
+    delete devDependencies['react-dom'];
+  }
+
   return {
     ...defaultPackageJson,
     dependencies: {
       // react and react-dom can be overwritten
       react: 'latest',
       'react-dom': 'latest',
-      ...defaultPackageJson.dependencies,
+      ...dependencies, // override react if user provided it
       // next-server is forced to canary
       'next-server': 'canary',
-      next: undefined,
     },
     devDependencies: {
-      ...defaultPackageJson.devDependencies,
+      ...devDependencies,
       // next is forced to canary
       next: 'canary',
+      // next-server is a dependency here
       'next-server': undefined,
     },
     scripts: {
       ...defaultPackageJson.scripts,
-      'now-build': 'next build',
+      'now-build': 'next build --lambdas',
     },
   };
 }

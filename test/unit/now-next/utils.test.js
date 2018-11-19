@@ -183,7 +183,7 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
       },
     });
   });
@@ -213,7 +213,7 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
       },
     });
   });
@@ -237,7 +237,7 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
       },
     });
   });
@@ -261,7 +261,7 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
       },
     });
   });
@@ -285,7 +285,7 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
       },
     });
   });
@@ -347,7 +347,7 @@ describe('normalizePackageJson', () => {
       scripts: {
         dev: 'next',
         build: 'next build',
-        'now-build': 'next build',
+        'now-build': 'next build --lambdas',
         start: 'next start',
         test: "xo && stylelint './pages/**/*.js' && jest",
       },
@@ -367,15 +367,14 @@ describe('normalizePackageJson', () => {
         next: 'canary',
         'next-server': undefined,
         xo: '^0.23.0',
+        consola: '^2.2.6',
+        fontfaceobserver: '^2.0.13',
+        'styled-components': '^4.1.1',
       },
       dependencies: {
         'next-server': 'canary',
-        consola: '^2.2.6',
-        fontfaceobserver: '^2.0.13',
-        next: undefined,
         react: '^16.6.3',
         'react-dom': '^16.6.3',
-        'styled-components': '^4.1.1',
       },
       xo: {
         extends: 'xo-react',
