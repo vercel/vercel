@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "0.0.79-canary.6",
+  "version": "0.0.79-canary.7",
   "dependencies": {
     "@now/node-bridge": "0.1.4",
     "execa": "^1.0.0",
