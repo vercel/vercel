@@ -90,7 +90,9 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   let downloadedFiles = await download(filesWithoutStaticDirectory, workPath);
 
   console.log('normalizing package.json');
-  const packageJson = normalizePackageJson(readPackageJson(downloadedFiles));
+  const packageJson = normalizePackageJson(
+    await readPackageJson(downloadedFiles),
+  );
   console.log('normalized package.json result: ', packageJson);
   await writePackageJson(workPath, packageJson);
 

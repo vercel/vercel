@@ -113,7 +113,7 @@ function excludeStaticDirectory(files) {
 
 /**
  * Enforce specific package.json configuration for smallest possible lambda
- * @param {Object} defaultPackageJson
+ * @param {{dependencies?: any, devDependencies?: any, scripts?: any}} defaultPackageJson
  */
 function normalizePackageJson(defaultPackageJson = {}) {
   return {
