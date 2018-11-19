@@ -66,6 +66,10 @@ async function writeNpmRc(workPath, token) {
   );
 }
 
+exports.config = {
+  maxLambdaSize: '5mb',
+};
+
 /**
  * @param {BuildParamsType} buildParams
  * @returns {Promise<Files>}
