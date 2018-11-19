@@ -35,7 +35,6 @@ const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
 const target = platform === 'win32' ? targetWin32 : now
 const partial = target + '.partial'
-const backup = target + '.' + packageJSON.version + '.backup'
 
 const platformToName = {
   alpine: 'now-alpine',
@@ -138,7 +137,6 @@ async function download() {
   })
 
   fs.renameSync(partial, target)
-  fs.writeFileSync(backup, fs.readFileSync(target))
 }
 
 function modifyGitBashFile (content) {
@@ -155,11 +153,7 @@ function modifyGitBashFile (content) {
 }
 
 async function main() {
-  if (fs.existsSync(backup)) {
-    fs.writeFileSync(target, fs.readFileSync(backup))
-  } else {
-    await download()
-  }
+  await download()
 
   if (platform === 'win32') {
     try {
