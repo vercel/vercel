@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "isomorphic-unfetch": "latest"
+  }
+}
