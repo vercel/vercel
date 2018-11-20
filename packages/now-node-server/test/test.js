@@ -1,25 +1,24 @@
+/* global expect, it, jest */
 const path = require('path');
 const {
   packAndDeploy,
   testDeployment,
-} = require('../../../test/deployment/test-deployment.js');
+} = require('../../../test/lib/deployment/test-deployment.js');
 
-async function main() {
+jest.setTimeout(10 * 60 * 1000);
+
+it('should build 01-cowsay', async () => {
   const builderPath = path.resolve(__dirname, '..');
   const builderUrl = await packAndDeploy(builderPath);
 
-  await testDeployment(
-    builderUrl,
-    path.resolve(__dirname, 'fixtures/01-cowsay'),
-  );
+  await expect(
+    testDeployment(builderUrl, path.resolve(__dirname, 'fixtures/01-cowsay')),
+  ).resolves.toBe(undefined);
 
-  await testDeployment(
+  /*
+  await expect(testDeployment(
     builderUrl,
     path.resolve(__dirname, 'fixtures/02-others'),
-  );
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
+  )).resolves.toBe(undefined);
+*/
 });

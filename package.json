@@ -34,10 +34,11 @@
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^3.1.0",
     "eslint-plugin-import": "^2.14.0",
-    "glob": "7.1.3",
+    "fs-extra": "^7.0.1",
+    "glob": "^7.1.3",
     "jest": "^23.6.0",
     "lint-staged": "^8.0.4",
-    "node-fetch": "2.3.0",
+    "node-fetch": "^2.3.0",
     "pre-commit": "^1.2.2",
     "prettier": "^1.15.2",
     "typescript": "^3.1.6"
