@@ -11,7 +11,7 @@ import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLICertsOptions } from '../../util/types';
+import type { Certificate, CLICertsOptions } from '../../util/types';
 
 async function rm(
   ctx: CLIContext,
@@ -77,7 +77,17 @@ async function rm(
 
 async function getCertsToDelete(output: Output, now: Now, idOrCn: string) {
   const cert = await getCertById(output, now, idOrCn);
-  return !cert ? await getCerts(output, now, [idOrCn]) : [cert];
+
+  // Currently getCertById() returns a collection of all existing certs
+  // even if a cert with the specified ID wasn't found. Next line makes sure that
+  // the result returned by getCertById() represents a cert *uniquely matched* by ID.
+  const matchedById = cert && cert.uid === idOrCn;
+
+  return matchedById ? [cert] : await getCerts(output, now, [idOrCn]).then(filterMatchingCert(idOrCn));
+}
+
+function filterMatchingCert(idOrCn: string) {
+  return (certs: Certificate[]) => certs.filter(cert => cert.cns.some(cn => cn === idOrCn));
 }
 
 function readConfirmation(output, msg, certs) {
