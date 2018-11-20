@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -100,6 +99,5 @@ func main() {
 	ex, _ := os.Executable()
 	phpScript = os.Getenv("NOW_PHP_SCRIPT")
 	phpScriptFull = path.Join(filepath.Dir(ex), phpScript)
-	fmt.Printf("phpScriptFull %s\n", phpScriptFull)
 	lambda.Start(handler)
 }
