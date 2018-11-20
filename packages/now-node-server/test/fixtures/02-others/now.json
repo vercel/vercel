@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "apollo/index.js", "use": "@now/node-server" }
+  ],
+  "routes": [
+    { "src": "/.*", "dest": "apollo/index.js" }
+  ],
+  "probes": [
+    { "path": "/graphql", "method": "POST", "body": { "query": "{hello}" }, "mustContain": "apollo:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
