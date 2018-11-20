@@ -66,6 +66,7 @@ async function ls(
 
   const dnsRecords = await getDNSRecords(output, now, contextName);
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
+
   output.log(
     `${plural('Record', nRecords, true)} found under ${chalk.bold(
       contextName

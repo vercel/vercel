@@ -12,9 +12,23 @@ async function getDNSRecords(output: Output, now: Now, contextName: string) {
     .filter(domain => !isDomainExternal(domain))
     .map(domain => domain.name)
     .sort((a, b) => a.localeCompare(b));
-  const domainsDnsRecords = await Promise.all(
-    domainNames.map(domainName => getDomainDNSRecords(output, now, domainName))
-  );
+
+  const domainsDnsRecords = (await Promise.all(domainNames.map(domainName => {
+    return new Promise(async resolve => {
+      let records = null;
+
+      try {
+        records = await getDomainDNSRecords(output, now, domainName);
+      } catch (err) {
+        if (err.code !== 'external_nameserver') {
+          output.error(err.message);
+        }
+      }
+
+      resolve(records);
+    });
+  }))).filter(Boolean);
+
   return domainsDnsRecords.reduce((result, dnsRecords, idx) => {
     if (!(dnsRecords instanceof DomainNotFound)) {
       return [

@@ -90,6 +90,7 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   const output: Output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
