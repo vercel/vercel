@@ -119,6 +119,19 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
+test('try creating a team', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'teams',
+    'add',
+    ...defaultArgs
+  ], {
+    reject: false
+  });
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(`> Pick a team identifier for its url`));
+});
+
 test('list the payment methods', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'billing',
