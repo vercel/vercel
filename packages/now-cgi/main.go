@@ -70,7 +70,7 @@ func (h *CgiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Path: h.Script,
 		Root: "/" + h.Script,
 		Dir: h.Dir,
-		Env: []string{"SERVER_PORT=443"},
+		Env: []string{"SERVER_PORT=443", "HTTPS=on", "SERVER_SOFTWARE=@now/cgi"},
 	}
 	cgih.ServeHTTP(w, r)
 }
