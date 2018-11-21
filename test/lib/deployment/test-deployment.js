@@ -76,28 +76,36 @@ async function nowDeployIndexTgz (file) {
 }
 
 async function fetchDeploymentUrl (url, opts) {
-  let text;
-
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url, opts);
-    text = await resp.text();
-    if (!text.includes('Join Free')) return text;
+    if (resp.status === 200) {
+      const text = await resp.text();
+      if (!text.includes('Join Free')) {
+        return text;
+      }
+    }
+
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  console.error(`Failed to wait for deployment READY. Url is ${url}`);
-  return text;
+  throw new Error(`Failed to wait for deployment READY. Url is ${url}`);
 }
 
 async function fetchBuilderUrl (url) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url);
-    const buffer = await resp.buffer();
-    if (buffer[0] === 0x1f) return; // tar beginning
+    if (resp.status === 200) {
+      const buffer = await resp.buffer();
+      if (buffer[0] === 0x1f) {
+        // tgz beginning
+        return;
+      }
+    }
+
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  console.error(`Failed to wait for builder url READY. Url is ${url}`);
+  throw new Error(`Failed to wait for builder url READY. Url is ${url}`);
 }
 
 async function spawnAsync (...args) {
