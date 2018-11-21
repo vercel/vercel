@@ -49,7 +49,7 @@ async function nowDeploy (bodies) {
 
   for (let i = 0; i < 500; i += 1) {
     const { state } = await deploymentGet(deploymentId);
-    if (state === 'ERROR') throw new Error(`Deployment state is ${state}`);
+    if (state === 'ERROR') throw new Error(`State of ${deploymentUrl} is ${state}`);
     if (state === 'READY') break;
     await new Promise((r) => setTimeout(r, 1000));
   }
