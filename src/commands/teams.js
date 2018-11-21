@@ -145,7 +145,7 @@ async function run({ token, config }) {
     }
     case 'add':
     case 'create': {
-      exitCode = await add({ teams, config });
+      exitCode = await add({ apiUrl, token, teams, config });
       break;
     }
 
