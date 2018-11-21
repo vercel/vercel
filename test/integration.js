@@ -128,7 +128,9 @@ test('try creating a team', async t => {
     reject: false
   });
 
-  t.is(code, 0);
+  // The error code is `1` because the command is expecting TTY
+  // because it provides an interactive interface.
+  t.is(code, 1);
   t.true(stdout.startsWith(`> Pick a team identifier for its url`));
 });
 
