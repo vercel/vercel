@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "now-build": "mkdir dist && node build.js"
+  }
+}
