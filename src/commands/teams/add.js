@@ -40,7 +40,7 @@ const gracefulExit = () => {
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/');
 const teamNamePrefix = rightPad('Team Name', 14);
 
-module.exports = async function({ teams, config }) {
+module.exports = async function({ apiUrl, token, teams, config }) {
   let slug;
   let team;
   let elapsed;
@@ -128,7 +128,13 @@ module.exports = async function({ teams, config }) {
 
   // Update config file
   const configCopy = Object.assign({}, config);
-  configCopy.sh.currentTeam = team;
+
+  if (configCopy.sh) {
+    configCopy.sh.currentTeam = team;
+  } else {
+    configCopy.currentTeam = team.id;
+  }
+
   writeToConfigFile(configCopy);
 
   stopSpinner();
@@ -136,6 +142,8 @@ module.exports = async function({ teams, config }) {
   await invite({
     teams,
     args: [],
+    token,
+    apiUrl,
     config,
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${cmd(
