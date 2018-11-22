@@ -7,7 +7,7 @@ const path = require('path');
 
 const API_URL = 'https://api.zeit.co';
 
-async function nowDeploy (bodies) {
+async function nowDeploy (bodies, randomness) {
   const files = Object.keys(bodies)
     .filter((n) => n !== 'now.json')
     .map((n) => ({
@@ -21,7 +21,8 @@ async function nowDeploy (bodies) {
 
   const nowDeployPayload = {
     version: 2,
-    env: {},
+    env: { RANDOMNESS_ENV_VAR: randomness },
+    build: { env: { RANDOMNESS_BUILD_ENV_VAR: randomness } },
     name: 'test',
     files,
     builds: nowJson.builds,

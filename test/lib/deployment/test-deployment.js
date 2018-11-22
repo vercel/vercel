@@ -40,7 +40,7 @@ async function testDeployment (builderUrl, fixturePath) {
   const nowJson = JSON.parse(bodies['now.json']);
   for (const build of nowJson.builds) build.use = `https://${builderUrl}`;
   bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
-  const deploymentUrl = await nowDeploy(bodies);
+  const deploymentUrl = await nowDeploy(bodies, randomness);
   console.log('deploymentUrl', deploymentUrl);
 
   for (const probe of nowJson.probes) {
