@@ -70,8 +70,6 @@ module.exports = class Now extends EventEmitter {
       // Latest
       name,
       wantsPublic,
-      builds,
-      routes,
       meta,
       regions,
       quiet = false,
@@ -134,7 +132,7 @@ module.exports = class Now extends EventEmitter {
         if (isFile) {
           files = [resolvePath(paths[0])];
         } else if (paths.length === 1) {
-          files = await getFiles(paths[0], nowConfig, opts);
+          files = await getFiles(paths[0], {}, opts);
         } else {
           if (!files) {
             files = [];
@@ -213,21 +211,6 @@ module.exports = class Now extends EventEmitter {
 
       const queryProps = {};
 
-      if (isBuilds) {
-        if (forceNew) {
-          queryProps.forceNew = 1;
-        }
-
-        if (isFile) {
-          routes = [
-            {
-              src: '/',
-              dest: `/${files[0].file}`
-            }
-          ];
-        }
-      }
-
       const requestBody = isBuilds ? {
         version: 2,
         env,
@@ -235,8 +218,6 @@ module.exports = class Now extends EventEmitter {
         public: wantsPublic || nowConfig.public,
         name,
         files,
-        builds,
-        routes,
         meta,
         regions
       } : {
@@ -257,8 +238,37 @@ module.exports = class Now extends EventEmitter {
         atlas
       };
 
-      if (!isBuilds && Object.keys(nowConfig).length > 0) {
-        requestBody.config = nowConfig;
+      if (Object.keys(nowConfig).length > 0) {
+        if (isBuilds) {
+          // Request properties that are made of a combination of
+          // command flags and config properties were already set
+          // earlier. Here, we are setting request properties that
+          // are purely made of their equally-named config property.
+          for (const key of Object.keys(nowConfig)) {
+            const value = nowConfig[key];
+
+            if (!requestBody[key]) {
+              requestBody[key] = value;
+            }
+          }
+        } else {
+          requestBody.config = nowConfig;
+        }
+      }
+
+      if (isBuilds) {
+        if (forceNew) {
+          queryProps.forceNew = 1;
+        }
+
+        if (isFile) {
+          requestBody.routes = [
+            {
+              src: '/',
+              dest: `/${files[0].file}`
+            }
+          ];
+        }
       }
 
       const query = qs.stringify(queryProps);

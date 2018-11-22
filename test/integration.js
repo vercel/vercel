@@ -362,6 +362,25 @@ test('set platform version using `--platform-version` to `2`', async t => {
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
+test('try to create a builds deployments with wrong config', async t => {
+  const directory = fixture('builds-wrong');
+
+  const { stderr, code } = await execa(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    '--force'
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+  t.true(stderr.includes('> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'));
+});
+
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 
