@@ -120,6 +120,10 @@ module.exports = async session => {
       'second.png',
       'now.json'
     ],
+    'config-alias-property': {
+      'now.json': '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
+      'index.html': '<span>test alias</span'
+    },
     'builds-wrong': {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span'
