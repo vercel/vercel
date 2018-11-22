@@ -8,5 +8,5 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('SED_PLACEHOLDER', process.env.RANDOMNESS_BUILD_ENV_VAR),
+    .replace('BUILD_TIME_PLACEHOLDER', process.env.RANDOMNESS_BUILD_ENV_VAR),
 );
