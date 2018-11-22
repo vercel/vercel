@@ -70,8 +70,6 @@ module.exports = class Now extends EventEmitter {
       // Latest
       name,
       wantsPublic,
-      builds,
-      routes,
       meta,
       regions,
       quiet = false,
@@ -213,21 +211,6 @@ module.exports = class Now extends EventEmitter {
 
       const queryProps = {};
 
-      if (isBuilds) {
-        if (forceNew) {
-          queryProps.forceNew = 1;
-        }
-
-        if (isFile) {
-          routes = [
-            {
-              src: '/',
-              dest: `/${files[0].file}`
-            }
-          ];
-        }
-      }
-
       const requestBody = isBuilds ? {
         version: 2,
         env,
@@ -235,8 +218,6 @@ module.exports = class Now extends EventEmitter {
         public: wantsPublic || nowConfig.public,
         name,
         files,
-        builds,
-        routes,
         meta,
         regions
       } : {
@@ -272,6 +253,21 @@ module.exports = class Now extends EventEmitter {
           }
         } else {
           requestBody.config = nowConfig;
+        }
+      }
+
+      if (isBuilds) {
+        if (forceNew) {
+          queryProps.forceNew = 1;
+        }
+
+        if (isFile) {
+          requestBody.routes = [
+            {
+              src: '/',
+              dest: `/${files[0].file}`
+            }
+          ];
         }
       }
 
