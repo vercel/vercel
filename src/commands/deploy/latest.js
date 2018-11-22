@@ -5,6 +5,7 @@ import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import { basename } from 'path';
 import chalk from 'chalk';
+import title from 'title';
 import Progress from 'progress';
 import logo from '../../util/output/logo';
 import eraseLines from '../../util/output/erase-lines';
@@ -351,8 +352,7 @@ exports.pipe = async function main(
         wantsPublic: argv['--public'] || localConfig.public,
         isFile,
         type: null,
-        builds: localConfig.builds,
-        routes: localConfig.routes,
+        nowConfig: localConfig,
         regions,
         meta
       },
@@ -382,6 +382,7 @@ exports.pipe = async function main(
       firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
       firstDeployCall instanceof Errors.DomainValidationRunning ||
       firstDeployCall instanceof Errors.DomainVerificationFailed ||
+      firstDeployCall instanceof Errors.SchemaValidationFailed||
       firstDeployCall instanceof Errors.InvalidWildcardDomain ||
       firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
       firstDeployCall instanceof Errors.TooManyCertificates ||
@@ -680,6 +681,28 @@ function handleCreateDeployError<OtherError>(
         error.meta.domain
       )}. Wait until it finishes.`
     );
+    return 1;
+  } else if (error instanceof Errors.SchemaValidationFailed) {
+    const { params, keyword, dataPath } = error.meta;
+
+    if (params && params.additionalProperty) {
+      const prop = params.additionalProperty;
+      output.error(`The property ${code(prop)} is not allowed in ${highlight('now.json')} when using Now 2.0 – please remove it.`);
+
+      if (prop === 'build.env' || prop === 'builds.env') {
+        output.note(`Do you mean ${code('build')} (object) with a property ${code('env')} (object) instead of ${code(prop)}?`);
+      }
+
+      return 1;
+    } else if (keyword === 'type') {
+      const prop = dataPath.substr(1, dataPath.length);
+      output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
+      return 1;
+    }
+
+    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+    output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
+
     return 1;
   } else if (error instanceof Errors.DomainVerificationFailed) {
     output.error(

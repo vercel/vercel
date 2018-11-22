@@ -120,6 +120,10 @@ module.exports = async session => {
       'second.png',
       'now.json'
     ],
+    'builds-wrong': {
+      'now.json': '{"builder": 1, "type": "static"}',
+      'index.html': '<span>test</span'
+    },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
       'Dockerfile': `

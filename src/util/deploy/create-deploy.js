@@ -17,6 +17,7 @@ export type CreateDeployError =
   | Errors.DomainVerificationFailed
   | Errors.InvalidWildcardDomain
   | Errors.TooManyCertificates
+  | Errors.SchemaValidationFailed
   | Errors.TooManyRequests;
 
 export default async function createDeploy(
@@ -42,6 +43,10 @@ export default async function createDeploy(
     // If the user doesn't have permissions over the domain used as a suffix we fail
     if (error.code === 'forbidden') {
       return new Errors.DomainPermissionDenied(error.value, contextName);
+    }
+
+    if (error.code === 'bad_request' && error.keyword) {
+      return new Errors.SchemaValidationFailed(error.message, error.keyword, error.dataPath, error.params);
     }
 
     // If the cert is missing we try to generate a new one and the retry

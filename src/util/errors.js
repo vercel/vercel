@@ -131,6 +131,19 @@ export class DomainVerificationFailed extends NowError<
   }
 }
 
+export class SchemaValidationFailed extends NowError<
+  'SCHEMA_VALIDATION_FAILED',
+  { message: string, keyword: string, dataPath: string, params: any }
+> {
+  constructor(message: string, keyword: string, dataPath: string, params: any) {
+    super({
+      code: 'SCHEMA_VALIDATION_FAILED',
+      meta: { message, keyword, dataPath, params },
+      message: `Schema verification failed`
+    });
+  }
+}
+
 export class DomainNotVerified extends NowError<
   'DOMAIN_NOT_VERIFIED',
   { domain: string }
