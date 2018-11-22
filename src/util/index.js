@@ -240,6 +240,12 @@ module.exports = class Now extends EventEmitter {
 
       if (Object.keys(nowConfig).length > 0) {
         if (isBuilds) {
+          // These properties are only used inside Now CLI and
+          // are not supported on the API.
+          const exclude = [
+            'alias'
+          ];
+
           // Request properties that are made of a combination of
           // command flags and config properties were already set
           // earlier. Here, we are setting request properties that
@@ -247,7 +253,7 @@ module.exports = class Now extends EventEmitter {
           for (const key of Object.keys(nowConfig)) {
             const value = nowConfig[key];
 
-            if (!requestBody[key]) {
+            if (!requestBody[key] && !exclude.includes(key)) {
               requestBody[key] = value;
             }
           }
