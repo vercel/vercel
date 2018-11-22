@@ -1,5 +1,7 @@
 /* global beforeAll, expect, it, jest */
+const fs = require('fs');
 const path = require('path');
+
 const {
   packAndDeploy,
   testDeployment,
@@ -13,8 +15,14 @@ beforeAll(async () => {
   builderUrl = await packAndDeploy(builderPath);
 });
 
-it('should build 01-cowsay', async () => {
-  await expect(
-    testDeployment(builderUrl, path.resolve(__dirname, 'fixtures/01-cowsay')),
-  ).resolves.toBe(undefined);
-});
+const fixturesPath = path.resolve(__dirname, 'fixtures');
+
+// eslint-disable-next-line no-restricted-syntax
+for (const fixture of fs.readdirSync(fixturesPath)) {
+  // eslint-disable-next-line no-loop-func
+  it(`should build ${fixture}`, async () => {
+    await expect(
+      testDeployment(builderUrl, path.join(fixturesPath, fixture)),
+    ).resolves.toBe(undefined);
+  });
+}
