@@ -34,5 +34,5 @@ exports.build = async ({
     return glob('**', distPath, mountpoint);
   }
 
-  return {};
+  throw new Error('Proper build script must be specified as entrypoint');
 };

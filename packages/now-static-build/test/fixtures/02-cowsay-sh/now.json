@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "some-build.sh", "use": "@now/static-build" },
+    { "src": "subdirectory/some-build.sh", "use": "@now/static-build" }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
