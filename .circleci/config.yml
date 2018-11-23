@@ -4,6 +4,8 @@ jobs:
     docker:
       - image: circleci/node:10
     working_directory: ~/repo
+    environment:
+      GOPATH: $HOME/go
     steps:
       - checkout
       - run:
