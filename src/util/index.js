@@ -243,7 +243,8 @@ module.exports = class Now extends EventEmitter {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
           const exclude = [
-            'alias'
+            'alias',
+            'github'
           ];
 
           // Request properties that are made of a combination of
