@@ -1,6 +1,6 @@
 {
   "name": "@now/go",
-  "version": "0.2.10-canary.5",
+  "version": "0.2.10-canary.6",
   "scripts": {
     "test": "best -I test/*.js",
     "prepublish": "./build.sh"
