@@ -2,17 +2,13 @@ const { createLambda } = require('@now/build-utils/lambda.js');
 const download = require('@now/build-utils/fs/download.js');
 const FileBlob = require('@now/build-utils/file-blob.js');
 const FileFsRef = require('@now/build-utils/file-fs-ref.js');
-const fsExtra = require('fs-extra');
-const fs = require('fs');
+const fs = require('fs-extra');
 const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
-const { promisify } = require('util');
 const {
   runNpmInstall,
   runPackageJsonScript,
 } = require('@now/build-utils/fs/run-user-scripts.js');
-
-const readFile = promisify(fs.readFile);
 
 /** @typedef { import('@now/build-utils/file-ref') } FileRef */
 /** @typedef {{[filePath: string]: FileRef}} Files */
@@ -37,7 +33,7 @@ async function downloadInstallAndBundle(
   const nccPath = path.join(workPath, 'ncc');
 
   console.log('downloading user files...');
-  const filesOnDisk = await download(files, userPath);
+  const downloadedFiles = await download(files, userPath);
 
   console.log('running npm install for user...');
   const entrypointFsDirname = path.join(userPath, path.dirname(entrypoint));
@@ -59,7 +55,7 @@ async function downloadInstallAndBundle(
 
   console.log('running npm install for ncc...');
   await runNpmInstall(nccPath, npmArguments);
-  return [filesOnDisk, nccPath, entrypointFsDirname];
+  return [downloadedFiles, nccPath, entrypointFsDirname];
 }
 
 async function compile(workNccPath, input) {
@@ -77,7 +73,7 @@ exports.config = {
  */
 exports.build = async ({ files, entrypoint, workPath }) => {
   const [
-    filesOnDisk,
+    downloadedFiles,
     workNccPath,
     entrypointFsDirname,
   ] = await downloadInstallAndBundle(
@@ -89,14 +85,14 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
 
   console.log('compiling entrypoint with ncc...');
-  const data = await compile(workNccPath, filesOnDisk[entrypoint].fsPath);
+  const data = await compile(workNccPath, downloadedFiles[entrypoint].fsPath);
   const blob = new FileBlob({ data });
 
   console.log('preparing lambda files...');
   // move all user code to 'user' subdirectory
-  const compiledFiles = { [path.join('user', entrypoint)]: blob };
+  const preparedFiles = { [path.join('user', entrypoint)]: blob };
   const launcherPath = path.join(__dirname, 'launcher.js');
-  let launcherData = await readFile(launcherPath, 'utf8');
+  let launcherData = await fs.readFile(launcherPath, 'utf8');
 
   launcherData = launcherData.replace(
     '// PLACEHOLDER',
@@ -112,7 +108,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   };
 
   const lambda = await createLambda({
-    files: { ...compiledFiles, ...launcherFiles },
+    files: { ...preparedFiles, ...launcherFiles },
     handler: 'launcher.launcher',
     runtime: 'nodejs8.10',
   });
@@ -123,7 +119,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
 exports.prepareCache = async ({
   files, entrypoint, workPath, cachePath,
 }) => {
-  await fsExtra.remove(workPath);
+  await fs.remove(workPath);
   await downloadInstallAndBundle({ files, entrypoint, workPath: cachePath });
 
   return {

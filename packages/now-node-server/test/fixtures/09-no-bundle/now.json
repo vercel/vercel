@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "with-bundle/index.js", "use": "@now/node-server" },
+    { "src": "without-bundle/index.js", "use": "@now/node-server", "config": { "bundle": false } }
+  ],
+  "probes": [
+    { "path": "/with-bundle", "mustContain": "RANDOMNESS_PLACEHOLDER" },
+    { "path": "/without-bundle", "mustContain": "RANDOMNESS_PLACEHOLDER" }
+  ]
+}
