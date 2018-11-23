@@ -1,9 +1,11 @@
+import { Server } from 'http';
+
 import createOutput from '../../util/output';
 import { readLocalConfig } from '../../util/config/files';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-import installBuilds from './install-builds';
-import runBuilds from './run-builds';
+import createOnboard from './onboard';
+import createLauncher from './launcher';
 
 module.exports = async function main(ctx) {
   let argv = null;
@@ -24,9 +26,20 @@ module.exports = async function main(ctx) {
     return 2;
   }
 
-  const { builds } = localConfig;
+  const server = new Server();
 
-  await installBuilds({ builds, output });
+  server.on('request', async (req, res) => {
+    // Only do this once
+    await createOnboard({ localConfig, output })(req, res);
+    server.removeAllListeners('request');
+
+    // Subsequent calls will use the default behavior
+    server.on('request', createLauncher({ localConfig, output }));
+  });
+
+  server.listen(process.env.PORT || 3000, undefined, undefined, () => {
+    output.log(`🚀 Ready! http://localhost:${server.address().port}`);
+  });
+
   // TODO `wait-for` the specified port for each process to become available
-  await runBuilds({ builds, output });
 };
