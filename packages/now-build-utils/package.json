@@ -11,5 +11,8 @@
     "multistream": "2.1.1",
     "node-fetch": "2.2.0",
     "yazl": "2.4.3"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }
