@@ -47,7 +47,7 @@ async function downloadInstallAndBundle(
       'package.json': new FileBlob({
         data: JSON.stringify({
           dependencies: {
-            '@zeit/ncc': '0.1.6',
+            '@zeit/ncc': '0.1.12',
           },
         }),
       }),
@@ -62,7 +62,8 @@ async function downloadInstallAndBundle(
 
 async function compile(workNccPath, input) {
   const ncc = require(path.join(workNccPath, 'node_modules/@zeit/ncc'));
-  return ncc(input);
+  const { code } = await ncc(input);
+  return code;
 }
 
 exports.config = {
