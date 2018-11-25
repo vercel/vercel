@@ -16,21 +16,37 @@ beforeAll(async () => {
   console.log('buildUtilsUrl', buildUtilsUrl);
 });
 
+// own fixtures
+
+const fixturesPath = path.resolve(__dirname, 'fixtures');
+
+// eslint-disable-next-line no-restricted-syntax
+for (const fixture of fs.readdirSync(fixturesPath)) {
+  // eslint-disable-next-line no-loop-func
+  it(`should build ${fixture}`, async () => {
+    await expect(
+      testDeployment({ buildUtilsUrl }, path.join(fixturesPath, fixture)),
+    ).resolves.toBe(undefined);
+  });
+}
+
+// few foreign tests
+
 const buildersToTestWith = ['now-node-server', 'now-static-build'];
 
 // eslint-disable-next-line no-restricted-syntax
 for (const builder of buildersToTestWith) {
-  const fixturesPath = path.resolve(
+  const fixturesPath2 = path.resolve(
     __dirname,
     `../../${builder}/test/fixtures`,
   );
 
   // eslint-disable-next-line no-restricted-syntax
-  for (const fixture of fs.readdirSync(fixturesPath)) {
+  for (const fixture of fs.readdirSync(fixturesPath2)) {
     // eslint-disable-next-line no-loop-func
     it(`should build ${builder}/${fixture}`, async () => {
       await expect(
-        testDeployment({ buildUtilsUrl }, path.join(fixturesPath, fixture)),
+        testDeployment({ buildUtilsUrl }, path.join(fixturesPath2, fixture)),
       ).resolves.toBe(undefined);
     });
   }
