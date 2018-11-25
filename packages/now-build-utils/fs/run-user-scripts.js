@@ -1,3 +1,4 @@
+const assert = require('assert');
 const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -13,22 +14,34 @@ function spawnAsync(command, args, cwd) {
 }
 
 async function runShellScript(fsPath) {
+  assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
   await spawnAsync(`./${path.basename(fsPath)}`, [], destPath);
   return true;
 }
 
-async function shouldUseNpm(destPath) {
+async function scanParentDirs(destPath, scriptName) {
+  assert(path.isAbsolute(destPath));
+
+  let hasScript = false;
+  let hasPackageLockJson = false;
   let currentDestPath = destPath;
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    const packageJsonPath = path.join(currentDestPath, 'package.json');
     // eslint-disable-next-line no-await-in-loop
-    if (await fs.exists(path.join(currentDestPath, 'package.json'))) {
+    if (await fs.exists(packageJsonPath)) {
       // eslint-disable-next-line no-await-in-loop
-      if (await fs.exists(path.join(currentDestPath, 'package-lock.json'))) {
-        return true;
-      }
-      return false;
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath));
+      hasScript = Boolean(
+        packageJson.scripts && packageJson.scripts[scriptName],
+      );
+      // eslint-disable-next-line no-await-in-loop
+      hasPackageLockJson = await fs.exists(
+        path.join(currentDestPath, 'package-lock.json'),
+      );
+      break;
     }
 
     const newDestPath = path.dirname(currentDestPath);
@@ -36,13 +49,17 @@ async function shouldUseNpm(destPath) {
     currentDestPath = newDestPath;
   }
 
-  return false;
+  return { hasScript, hasPackageLockJson };
 }
 
 async function runNpmInstall(destPath, args = []) {
+  assert(path.isAbsolute(destPath));
+
   let commandArgs = args;
   console.log(`installing to ${destPath}`);
-  if (await shouldUseNpm(destPath)) {
+  const { hasPackageLockJson } = await scanParentDirs(destPath);
+
+  if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync('npm', ['install'].concat(commandArgs), destPath);
     await spawnAsync('npm', ['cache', 'clean', '--force'], destPath);
@@ -53,21 +70,19 @@ async function runNpmInstall(destPath, args = []) {
 }
 
 async function runPackageJsonScript(destPath, scriptName) {
-  try {
-    if (await shouldUseNpm(destPath)) {
-      console.log(`running "npm run ${scriptName}"`);
-      await spawnAsync('npm', ['run', scriptName], destPath);
-    } else {
-      console.log(`running "yarn run ${scriptName}"`);
-      await spawnAsync(
-        'yarn',
-        ['--cwd', destPath, 'run', scriptName],
-        destPath,
-      );
-    }
-  } catch (error) {
-    console.log(error.message);
-    return false;
+  assert(path.isAbsolute(destPath));
+  const { hasScript, hasPackageLockJson } = await scanParentDirs(
+    destPath,
+    scriptName,
+  );
+  if (!hasScript) return false;
+
+  if (hasPackageLockJson) {
+    console.log(`running "npm run ${scriptName}"`);
+    await spawnAsync('npm', ['run', scriptName], destPath);
+  } else {
+    console.log(`running "yarn run ${scriptName}"`);
+    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], destPath);
   }
 
   return true;
