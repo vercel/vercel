@@ -63,7 +63,7 @@ const help = () => {
 
     ${chalk.cyan('$ now ls my-app --all')}
 
-  ${chalk.gray('–')} Filter deployments by metadata 
+  ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
 `);
@@ -256,7 +256,7 @@ module.exports = async function main(ctx) {
             [
               dep.name,
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-              dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+              (dep.instanceCount == null || dep.type === 'LAMBDAS') ? chalk.gray('-') : dep.instanceCount,
               dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
               chalk.gray(ms(Date.now() - new Date(dep.created)))
