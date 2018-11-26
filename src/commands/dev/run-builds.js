@@ -26,11 +26,9 @@ module.exports = async function runBuilds({ builds, output }) {
     // Configs like next.config.js don't indicate which paths they support!
 
     // TODO Determine _when_ this should ran
-    if (devBuilder.build) {
-      output.log(`Building ${chalk.bold(use)}...`);
-      await devBuilder.build({ build, output });
-    }
-
-    output.log(`🚀 Ready! http://localhost:${process.env.PORT || 3000}`);
+    // if (devBuilder.build) {
+    //   output.log(`Building ${chalk.bold(use)}...`);
+    //   await devBuilder.build({ build, output });
+    // }
   }
 };

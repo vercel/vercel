@@ -9,8 +9,10 @@ module.exports = function createOnboard({ localConfig, output }) {
   const { builds } = localConfig;
 
   return async function onboard(req, res) {
+    // TODO Next will request __next/*, so this should build _once_
+    // and the output should be shared *before* it's handled
     if (req.url !== '/') {
-      return;
+      throw new Error(`Cannot build for ${req.url}`);
     }
 
     // Secret sauce to stream the logs in a pretty way
@@ -189,16 +191,15 @@ module.exports = function createOnboard({ localConfig, output }) {
     res.write(`</code></pre></li>`);
 
     res.write(`<li>Initializing&hellip;`);
-    await sleep(1000); // Let the page fade-in
+    await sleep(100); // Wait for the stream
     res.write(`<pre><code>`);
     await runBuilds({ builds, output: streamOutput });
     res.write(`</code></pre></li>`);
 
-    await sleep(1000); // Let the page fade-in
+    await sleep(100); // Wait for the stream
     res.write(`<li>Reloading&hellip;</li>`);
 
     res.write(`<style>body { animation: fadeout 1s forwards; }</style>`);
-    await sleep(1000); // Let the page fade-out
     res.write(`<script>window.location.reload();</script>`);
     res.end();
   };

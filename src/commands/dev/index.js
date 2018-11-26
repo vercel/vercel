@@ -27,19 +27,23 @@ module.exports = async function main(ctx) {
   }
 
   const server = new Server();
+  const onboard = createOnboard({ localConfig, output });
+  const launcher = createLauncher({ localConfig, output });
 
   server.on('request', async (req, res) => {
-    // Only do this once
-    await createOnboard({ localConfig, output })(req, res);
-    server.removeAllListeners('request');
+    try {
+      // Only do this once
+      await onboard(req, res);
+      server.removeAllListeners('request');
+    } catch (error) {
+      return output.error(error);
+    }
 
     // Subsequent calls will use the default behavior
-    server.on('request', createLauncher({ localConfig, output }));
+    server.on('request', launcher);
   });
 
   server.listen(process.env.PORT || 3000, undefined, undefined, () => {
     output.log(`🚀 Ready! http://localhost:${server.address().port}`);
   });
-
-  // TODO `wait-for` the specified port for each process to become available
 };
