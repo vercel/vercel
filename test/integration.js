@@ -315,8 +315,26 @@ test('set platform version using `-V` to `2`', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
+});
 
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
+test('ensure type and instance count in list is right', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'ls',
+    ...defaultArgs
+  ], {
+    reject: false
+  });
+
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const columns = line.split(/\s+/);
+
+  // Ensure those columns only contain a dash
+  t.is(columns[3], '-');
+  t.is(columns[4], '-');
 });
 
 test('set platform version using `--platform-version` to `2`', async t => {
