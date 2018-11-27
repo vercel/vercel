@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "0.4.26",
+  "version": "0.4.27-canary.0",
   "dependencies": {
     "@now/node-bridge": "^0.1.9",
     "fs-extra": "7.0.1"
