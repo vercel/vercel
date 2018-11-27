@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.js", "use": "@now/node" }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "asset1:RANDOMNESS_PLACEHOLDER,asset2:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
