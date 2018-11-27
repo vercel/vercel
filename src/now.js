@@ -520,6 +520,13 @@ const main = async argv_ => {
   try {
     exitCode = await commands[subcommand](ctx);
   } catch (err) {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+      output.error('You are offline. Please ensure your device has an active internet connection.');
+      output.debug(err.stack);
+
+      return;
+    }
+
     Sentry.captureException(err);
 
     const client = Sentry.getCurrentHub().getClient();
@@ -542,10 +549,7 @@ const main = async argv_ => {
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
-    console.error(
-      error(`An unexpected error occurred in ${subcommand}: ${err.stack}`)
-    );
-
+    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
     return 1;
   }
 
