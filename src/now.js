@@ -20,7 +20,6 @@ require('epipebomb')();
 const { join } = require('path');
 
 // Packages
-const debug = require('debug')('now:main');
 const { existsSync } = require('fs');
 const mkdirp = require('mkdirp-promise');
 const chalk = require('chalk');
@@ -54,6 +53,8 @@ const GLOBAL_COMMANDS = new Set(['help']);
 // Send errors away
 Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
 
+let debug = () => {};
+
 const main = async argv_ => {
   // $FlowFixMe
   const { isTTY } = process.stdout;
@@ -71,6 +72,8 @@ const main = async argv_ => {
 
   const isDebugging = argv['--debug'];
   const output: Output = createOutput({ debug: isDebugging });
+
+  debug = output.debug;
 
   let update = null;
 
@@ -517,6 +520,13 @@ const main = async argv_ => {
   try {
     exitCode = await commands[subcommand](ctx);
   } catch (err) {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+      output.error('You are offline. Please ensure your device has an active internet connection.');
+      output.debug(err.stack);
+
+      return 1;
+    }
+
     Sentry.captureException(err);
 
     const client = Sentry.getCurrentHub().getClient();
@@ -539,10 +549,7 @@ const main = async argv_ => {
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
-    console.error(
-      error(`An unexpected error occurred in ${subcommand}: ${err.stack}`)
-    );
-
+    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
     return 1;
   }
 
@@ -576,6 +583,14 @@ const handleRejection = async err => {
 };
 
 const handleUnexpected = async err => {
+  const { message } = err;
+
+  // We do not want to render errors about Sentry not being reachable
+  if (message.includes('sentry') && message.includes('ENOTFOUND')) {
+    debug(`Sentry is not reachable: ${err}`);
+    return;
+  }
+
   Sentry.captureException(err);
   debug('handling unexpected error');
 
