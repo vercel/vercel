@@ -85,10 +85,14 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (Response
 	context.Eval("$_SERVER[\"SERVER_NAME\"]=\"" + req.Host + "\";")
 	context.Eval("$_SERVER[\"SERVER_PORT\"]=\"443\";")
 	context.Eval("$_SERVER[\"HTTPS\"]=\"on\";")
+	context.Eval("http_response_code(200);")
 
 	var stdout bytes.Buffer
 	context.Output = &stdout
 	context.Exec(phpScriptFull)
+
+	statusCodeVal, _ := context.Eval("return http_response_code();")
+	statusCode := int(statusCodeVal.Int())
 
 	headers := make(map[string]string)
 	headers["content-type"] = "text/html"
@@ -102,7 +106,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (Response
 
 	engine.Destroy()
 	return Response{
-		StatusCode: 200,
+		StatusCode: statusCode,
 		Headers:    headers,
 		Encoding:   "base64",
 		Body:       resBody,
