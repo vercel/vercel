@@ -23,6 +23,7 @@ const Agent = require('./agent');
 const ua = require('./ua');
 const hash = require('./hash');
 const cmd = require('./output/cmd');
+const highlight = require('./output/highlight');
 const createOutput = require('./output');
 const { responseError } = require('./error');
 
@@ -336,11 +337,19 @@ module.exports = class Now extends EventEmitter {
         const err = new Error();
 
         if (body.error) {
-          if (body.error.code === 'env_value_invalid_type') {
+          const { code, unreferencedBuildSpecs } = body.error;
+
+          if (code === 'env_value_invalid_type') {
             const { key } = body.error;
             err.message =
               `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
               'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)';
+          } else if (code === 'unreferenced_build_specifications') {
+            const count = unreferencedBuildSpecs.length;
+            const prefix = count === 1 ? 'build' : 'builds';
+
+            err.message = `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight('.nowignore')}):` +
+              `\n- ${unreferencedBuildSpecs.map(item => JSON.stringify(item)).join('\n- ')}`;
           } else {
             Object.assign(err, body.error);
           }
