@@ -524,7 +524,7 @@ const main = async argv_ => {
       output.error('You are offline. Please ensure your device has an active internet connection.');
       output.debug(err.stack);
 
-      return;
+      return 1;
     }
 
     Sentry.captureException(err);
