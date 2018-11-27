@@ -39,6 +39,7 @@ const configFiles = require('./util/config/files');
 const pkg = require('./util/pkg');
 const getUser = require('./util/get-user');
 const NowTeams = require('./util/teams');
+const highlight = require('./util/output/highlight');
 
 import { Output } from './util/types';
 import createOutput from './util/output';
@@ -521,7 +522,7 @@ const main = async argv_ => {
     exitCode = await commands[subcommand](ctx);
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
-      output.error('You are offline. Please ensure your device has an active internet connection.');
+      output.error(`The hostname ${highlight('api.zeit.co')} could not be resolved. Please verify your internet connectivity and DNS configuration.`);
       output.debug(err.stack);
 
       return 1;
