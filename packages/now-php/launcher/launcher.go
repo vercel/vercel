@@ -25,10 +25,17 @@ type Request struct {
 	Body     string            `json:"body"`
 }
 
+type Response struct {
+	StatusCode int               `json:"statusCode"`
+	Headers    map[string]string `json:"headers"`
+	Encoding   string            `json:"encoding,omitemtpy"`
+	Body       string            `json:"body"`
+}
+
 var phpScript = ""
 var phpScriptFull = ""
 
-func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, event events.APIGatewayProxyRequest) (Response, error) {
 	engine, _ := php.New()
 	context, _ := engine.NewContext()
 
@@ -91,8 +98,15 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 		}
 	}
 
+	resBody := base64.StdEncoding.EncodeToString(stdout.Bytes())
+
 	engine.Destroy()
-	return events.APIGatewayProxyResponse{StatusCode: 200, Headers: headers, Body: stdout.String()}, nil
+	return Response{
+		StatusCode: 200,
+		Headers:    headers,
+		Encoding:   "base64",
+		Body:       resBody,
+	}, nil
 }
 
 func main() {
