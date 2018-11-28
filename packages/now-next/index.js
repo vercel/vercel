@@ -91,7 +91,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   const filesWithoutStaticDirectory = excludeStaticDirectory(
     filesWithoutLockfiles,
   );
-  let downloadedFiles = await download(filesWithoutStaticDirectory, workPath);
+  const downloadedFiles = await download(filesWithoutStaticDirectory, workPath);
 
   console.log('normalizing package.json');
   const packageJson = normalizePackageJson(
@@ -105,8 +105,6 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     await writeNpmRc(workPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  downloadedFiles = await glob('**', workPath);
-
   console.log('running npm install...');
   await runNpmInstall(workPath, ['--prefer-offline']);
   console.log('running user script...');
@@ -117,7 +115,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     await unlink(path.join(workPath, '.npmrc'));
   }
 
-  downloadedFiles = await glob('**', workPath);
+  const filesAfterBuild = await glob('**', workPath);
 
   console.log('preparing lambda files...');
   let buildId;
@@ -144,8 +142,8 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     ...dotNextServerRootFiles,
     ...launcherFiles,
   };
-  if (downloadedFiles['next.config.js']) {
-    nextFiles['next.config.js'] = downloadedFiles['next.config.js'];
+  if (filesAfterBuild['next.config.js']) {
+    nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
   }
   const pages = await glob(
     '**/*.js',
@@ -169,16 +167,16 @@ exports.build = async ({ files, workPath, entrypoint }) => {
       );
 
       const pageFiles = {
-        [`.next/server/static/${buildId}/pages/_document.js`]: downloadedFiles[
+        [`.next/server/static/${buildId}/pages/_document.js`]: filesAfterBuild[
           `.next/server/static/${buildId}/pages/_document.js`
         ],
-        [`.next/server/static/${buildId}/pages/_app.js`]: downloadedFiles[
+        [`.next/server/static/${buildId}/pages/_app.js`]: filesAfterBuild[
           `.next/server/static/${buildId}/pages/_app.js`
         ],
-        [`.next/server/static/${buildId}/pages/_error.js`]: downloadedFiles[
+        [`.next/server/static/${buildId}/pages/_error.js`]: filesAfterBuild[
           `.next/server/static/${buildId}/pages/_error.js`
         ],
-        [`.next/server/static/${buildId}/pages/${page}`]: downloadedFiles[
+        [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
           `.next/server/static/${buildId}/pages/${page}`
         ],
       };
@@ -212,9 +210,24 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   return { ...lambdas, ...staticFiles };
 };
 
-exports.prepareCache = async ({ files, cachePath, workPath }) => {
+exports.prepareCache = async ({
+  files, entrypoint, cachePath, workPath,
+}) => {
   console.log('downloading user files...');
-  await download(files, cachePath);
+  const entryDirectory = path.dirname(entrypoint);
+  const filesOnlyEntryDirectory = includeOnlyEntryDirectory(
+    files,
+    entryDirectory,
+  );
+  const filesWithEntryDirectoryRoot = moveEntryDirectoryToRoot(
+    filesOnlyEntryDirectory,
+    entryDirectory,
+  );
+  const filesWithoutLockfiles = excludeLockFiles(filesWithEntryDirectoryRoot);
+  const filesWithoutStaticDirectory = excludeStaticDirectory(
+    filesWithoutLockfiles,
+  );
+  await download(filesWithoutStaticDirectory, workPath);
   await download(await glob('.next/**', workPath), cachePath);
   await download(await glob('node_modules/**', workPath), cachePath);
 
