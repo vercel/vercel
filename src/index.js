@@ -1,6 +1,3 @@
-#!/usr/bin/env node
-//
-
 // This should be automatically included by @babel/preset-env but it's
 // not being load right now. We have to remove it once it's fixed
 require('core-js/modules/es7.symbol.async-iterator');
@@ -40,7 +37,6 @@ const pkg = require('./util/pkg');
 const getUser = require('./util/get-user');
 const NowTeams = require('./util/teams');
 const highlight = require('./util/output/highlight');
-
 
 import createOutput from './util/output';
 import getArgs from './util/get-args';

@@ -243,6 +243,11 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"
   integrity sha512-tO000RCJxEbRBhQpWEaTF+aAIkMRSuQVnC1g7Y1l/duhxjp6CotepHcUerQBFa5lgjVesh/zlblq2t1GvfAEbQ==
 
+"@zeit/ncc@0.1.18":
+  version "0.1.18"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.1.18.tgz#5c8e5be91a9a0c7215f5ce0c983a9d52a42dc899"
+  integrity sha512-ymWv9m/E22loFWXV+7MY/fxREbD3J3ksxqJCkAQ1Po4tJTt/lx7zGRnVxvILWs7T/K2OEj7v7x704zBnOSDnUQ==
+
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/@zeit/source-map-support/-/source-map-support-0.6.2.tgz#0efd478f24a606726948165e53a8efe89e24036f"

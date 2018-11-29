@@ -11,15 +11,14 @@
     "test-lint": "eslint .",
     "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "dev": "webpack -w -d",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
     "gzip": "ls packed/now* | xargs gzip",
     "bundle": "pkg dist/now.js -c package.json -o packed/now --options no-warnings",
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "webpack -p --context download --config download/webpack.config.js",
-    "link": "webpack && cd link && npm link",
-    "build": "webpack -p"
+    "link": "yarn run build && cd link && npm link",
+    "build": "ncc build ./src"
   },
   "nyc": {
     "include": [
@@ -82,6 +81,7 @@
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@zeit/dockerignore": "0.0.3",
+    "@zeit/ncc": "0.1.18",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
