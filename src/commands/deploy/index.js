@@ -61,6 +61,7 @@ module.exports = async (ctx: CLIContext) => {
       stats[path] = await fs.lstat(path);
     } catch (err) {
       const { ext } = parse(path);
+
       if (versionFlag === 1 && !ext) {
         // This will ensure `-V 1 zeit/serve` (GitHub deployments) work. Since
         // GitHub repositories are never just one file, we need to set
