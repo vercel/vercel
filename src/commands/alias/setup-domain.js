@@ -70,7 +70,7 @@ async function setupDomain(
           purchased instanceof Errors.UserAborted
         ) {
           return purchased;
-        } else if (!purchased) {
+        } if (!purchased) {
           return verified;
         }
       } else {
@@ -81,7 +81,7 @@ async function setupDomain(
       return domainInfo === null
         ? new Errors.DomainNotFound(domain)
         : domainInfo;
-    } else {
+    } 
       // If we couldn't find nameservers we try to purchase the domain
       const purchased = await purchaseDomainIfAvailable(
         output,
@@ -105,8 +105,8 @@ async function setupDomain(
       return domainInfo === null
         ? new Errors.DomainNotFound(domain)
         : domainInfo;
-    }
-  } else {
+    
+  } 
     // If we have records from the domain we have to try to verify in case it is not
     // verified and from this point we can be sure about its verification
     output.debug(`Domain is known for ZEIT World`);
@@ -125,7 +125,7 @@ async function setupDomain(
     }
 
     return info;
-  }
+  
 }
 
 export default setupDomain;

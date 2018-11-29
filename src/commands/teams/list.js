@@ -17,7 +17,7 @@ module.exports = async function({ teams, config, apiUrl, token }) {
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
+  const stopUserSpinner = wait('Fetching user information');
   const user = await getUser({ apiUrl, token });
 
   stopUserSpinner();
@@ -28,13 +28,11 @@ module.exports = async function({ teams, config, apiUrl, token }) {
     };
   }
 
-  const teamList = list.map(({ slug, name }) => {
-    return {
+  const teamList = list.map(({ slug, name }) => ({
       name,
       value: slug,
       current: slug === currentTeam.slug ? tickChar : ''
-    };
-  });
+    }));
 
   teamList.unshift({
     name: user.email,

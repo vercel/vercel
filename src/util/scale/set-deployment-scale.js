@@ -32,15 +32,15 @@ async function setScale(
     cancelWait();
     if (error.code === 'forbidden_min_instances') {
       return new Errors.ForbiddenScaleMinInstances(url, error.min);
-    } else if (error.code === 'forbidden_max_instances') {
+    } if (error.code === 'forbidden_max_instances') {
       return new Errors.ForbiddenScaleMaxInstances(url, error.max);
-    } else if (error.code === 'wrong_min_max_relation') {
+    } if (error.code === 'wrong_min_max_relation') {
       return new Errors.InvalidScaleMinMaxRelation(url);
-    } else if (error.code === 'not_supported_min_scale_slots') {
+    } if (error.code === 'not_supported_min_scale_slots') {
       return new Errors.NotSupportedMinScaleSlots(url);
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

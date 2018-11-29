@@ -170,17 +170,17 @@ module.exports = async function main(ctx     ) {
         `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
       );
       return 1;
-    } else if (err.status === 403) {
+    } if (err.status === 403) {
       output.error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
         )}`
       );
       return 1;
-    } else {
+    } 
       // unexpected
       throw err;
-    }
+    
   }
 
   cancelWait();

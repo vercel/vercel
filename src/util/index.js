@@ -84,7 +84,7 @@ module.exports = class Now extends EventEmitter {
     const isBuilds = type === null;
 
     let files = [];
-    let relatives = {};
+    const relatives = {};
     let engines;
 
     await time('Getting files', async () => {
@@ -505,13 +505,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list secrets'));
-      } else {
+      } 
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to list secrets');
-      }
+      
     });
 
     return secrets;
@@ -530,13 +530,13 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list deployments'));
-        } else {
+        } 
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to list deployments');
-        }
+        
       },
       {
         retries: 3,
@@ -558,13 +558,13 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list instances'));
-        } else {
+        } 
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to list instances');
-        }
+        
       },
       {
         retries: 3,
@@ -661,15 +661,15 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(
             await responseError(res, 'Failed to fetch deployment logs')
           );
-        } else {
+        } 
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to fetch deployment logs');
-        }
+        
       },
       {
         retries: 3,
@@ -685,9 +685,7 @@ module.exports = class Now extends EventEmitter {
     const deployments = await this.list(app);
 
     const last = deployments
-      .sort((a, b) => {
-        return b.created - a.created;
-      })
+      .sort((a, b) => b.created - a.created)
       .shift();
 
     if (!last) {
@@ -706,13 +704,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list domains'));
-      } else {
+      } 
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to list domains');
-      }
+      
     });
 
     return domains;
@@ -725,13 +723,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to fetch domain'));
-      } else {
+      } 
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to fetch domain');
-      }
+      
     });
   }
 
@@ -750,13 +748,13 @@ module.exports = class Now extends EventEmitter {
       throw new Error(`Whois error (${res.status}): ${body.error.message}`);
     });
 
-    body.nameservers = body.nameservers.filter(ns => {
+    body.nameservers = body.nameservers.filter(ns => 
       // Temporary hack:
       // sometimes we get a response that looks like:
       // ['ns', 'ns', '', '']
       // so we filter the empty ones
-      return ns.length > 0;
-    });
+       ns.length > 0
+    );
 
     return body;
   }
@@ -778,8 +776,8 @@ module.exports = class Now extends EventEmitter {
         let err;
         if (code === 'custom_domain_needs_upgrade') {
           err = new Error(
-            `Custom domains are only enabled for premium accounts. ` +
-              chalk`Please upgrade at {underline https://zeit.co/account}`
+            `Custom domains are only enabled for premium accounts. ${ 
+              chalk`Please upgrade at {underline https://zeit.co/account}`}`
           );
         } else {
           err = new Error(
@@ -788,11 +786,11 @@ module.exports = class Now extends EventEmitter {
         }
         err.userError = true;
         return bail(err);
-      } else if (res.status === 409) {
+      } if (res.status === 409) {
         // Domain already exists
         debug('Domain already exists (noop)');
         return { uid: body.error.uid, code: body.error.code };
-      } else if (
+      } if (
         res.status === 401 &&
         body.error &&
         body.error.code === 'verification_failed'
@@ -894,7 +892,7 @@ module.exports = class Now extends EventEmitter {
 
       if (res.status === 200) {
         // What we want
-        return;
+        
       } else if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to remove deployment'));
@@ -983,7 +981,7 @@ module.exports = class Now extends EventEmitter {
   // it does the same for JSON` body` in opts
   async fetch(url, opts = {}) {
     return this.retry(async bail => {
-      if (false !== opts.json && opts.body && 'object' == typeof opts.body) {
+      if (opts.json !== false && opts.body && typeof opts.body === 'object') {
         opts = Object.assign({}, opts, {
           body: JSON.stringify(opts.body),
           headers: Object.assign({}, opts.headers, {
@@ -1004,14 +1002,14 @@ module.exports = class Now extends EventEmitter {
         return res.headers.get('content-type').includes('application/json')
           ? res.json()
           : res;
-      } else {
+      } 
         const err = await responseError(res);
         if (res.status >= 400 && res.status < 500) {
           return bail(err);
-        } else {
+        } 
           throw err;
-        }
-      }
+        
+      
     }, opts.retry);
   }
 

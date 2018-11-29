@@ -82,10 +82,10 @@ function readConfirmation(
   return new Promise(resolve => {
     output.log(msg);
     output.print(
-      table([getDeleteTableRow(domainName, record)], {
+      `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1') + '\n'
+      }).replace(/^(.*)/gm, '  $1')  }\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -106,14 +106,14 @@ function readConfirmation(
 
 function getDeleteTableRow(domainName        , record           ) {
   const recordName = `${record.name.length > 0
-    ? record.name + '.'
+    ? `${record.name  }.`
     : ''}${domainName}`;
   return [
     record.id,
     chalk.bold(
       `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
     ),
-    chalk.gray(ms(new Date() - new Date(Number(record.created))) + ' ago')
+    chalk.gray(`${ms(new Date() - new Date(Number(record.created)))  } ago`)
   ];
 }
 

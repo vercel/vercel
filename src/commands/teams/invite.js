@@ -17,9 +17,7 @@ const success = require('../../util/output/success');
 const error = require('../../util/output/error');
 const getUser = require('../../util/get-user');
 
-const validateEmail = data => {
-  return regexes.email.test(data.trim()) || data.length === 0;
-};
+const validateEmail = data => regexes.email.test(data.trim()) || data.length === 0;
 
 const domains = Array.from(
   new Set([
@@ -73,14 +71,14 @@ module.exports = async function(
 ) {
   const { currentTeam: currentTeamId } = config;
 
-  let stopSpinner = wait('Fetching teams');
+  const stopSpinner = wait('Fetching teams');
 
   const list = (await teams.ls()).teams;
   const currentTeam = list.find(team => team.id === currentTeamId);
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
+  const stopUserSpinner = wait('Fetching user information');
   const user = await getUser({ apiUrl, token });
 
   stopUserSpinner();

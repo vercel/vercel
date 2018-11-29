@@ -24,7 +24,7 @@ const binary = {
   win32: 'now-win.exe'
 }[process.platform];
 
-const binaryPath = path.resolve(__dirname, '../packed/' + binary);
+const binaryPath = path.resolve(__dirname, `../packed/${  binary}`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random().toString(36).split('.')[1];
@@ -576,9 +576,7 @@ test('find deployment in list', async t => {
   t.true(deployments.length > 0);
   t.is(code, 0);
 
-  const target = deployments.find(deployment => {
-    return deployment.includes(`${session}-`);
-  });
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
   t.truthy(target);
 
@@ -601,9 +599,7 @@ test('find deployment in list with mixed args', async t => {
   t.true(deployments.length > 0);
   t.is(code, 0);
 
-  const target = deployments.find(deployment => {
-    return deployment.includes(`${session}-`);
-  });
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
   t.truthy(target);
 

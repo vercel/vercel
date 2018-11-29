@@ -28,9 +28,9 @@ function handleError(err, { debug = false } = {}) {
     } else {
       console.error(
         error(
-          'Rate limit exceeded error. Try again in ' +
-            ms(err.retryAfter * 1000, { long: true }) +
-            ', or upgrade your account by running ' +
+          `Rate limit exceeded error. Try again in ${ 
+            ms(err.retryAfter * 1000, { long: true }) 
+            }, or upgrade your account by running ` +
             `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
         )
       );

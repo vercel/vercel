@@ -2,6 +2,10 @@
 //     
 
 // Packages
+import getAliases from '../util/alias/get-aliases';
+import getArgs from '../util/get-args';
+import getDeploymentInstances from '../util/deploy/get-deployment-instances';
+
 const chalk = require('chalk');
 const ms = require('ms');
 const plural = require('pluralize');
@@ -19,10 +23,6 @@ const strlen = require('../util/strlen');
 const getScope = require('../util/get-scope');
 const toHost = require('../util/to-host');
 const parseMeta = require('../util/parse-meta');
-
-import getAliases from '../util/alias/get-aliases';
-import getArgs from '../util/get-args';
-import getDeploymentInstances from '../util/deploy/get-deployment-instances';
 
 const help = () => {
   console.log(`
@@ -218,9 +218,7 @@ module.exports = async function main(ctx) {
   }
 
   if (host) {
-    deployments = deployments.filter(deployment => {
-      return deployment.url === host;
-    });
+    deployments = deployments.filter(deployment => deployment.url === host);
   }
 
   stopSpinner();
@@ -247,7 +245,7 @@ module.exports = async function main(ctx) {
   print('\n');
 
   console.log(
-    table(
+    `${table(
       [
         ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
         ...deployments
@@ -287,7 +285,7 @@ module.exports = async function main(ctx) {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ') + '\n\n'
+    ).replace(/^/gm, '  ')  }\n\n`
   );
 };
 
@@ -323,9 +321,9 @@ function filterUniqueApps() {
   return function uniqueAppFilter([appName]) {
     if (uniqueApps.has(appName)) {
       return false;
-    } else {
+    } 
       uniqueApps.add(appName);
       return true;
-    }
+    
   };
 }

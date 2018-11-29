@@ -60,9 +60,9 @@ function createOutput({ debug: debugEnabled = false } = {}) {
       const r = await promise;
       Console.prototype.timeEnd.call(c, label);
       return r;
-    } else {
+    } 
       return promise;
-    }
+    
   }
 
   return {

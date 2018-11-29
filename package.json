@@ -50,34 +50,47 @@
       "node10-win-x64"
     ]
   },
+  "eslintConfig": {
+    "extends": [
+      "airbnb",
+      "prettier"
+    ],
+    "rules": {
+      "import/no-dynamic-require": 0,
+      "global-require": 0,
+      "import/no-duplicates": 0,
+      "global-require": 0,
+      "guard-for-in": 0,
+      "no-restricted-globals": 0,
+      "import/prefer-default-export": 0,
+      "no-loop-func": 0,
+      "prefer-const": 0,
+      "no-nested-ternary": 0,
+      "class-methods-use-this": 0,
+      "no-continue": 0,
+      "no-control-regex": 0,
+      "no-empty": 0,
+      "camelcase": 0,
+      "func-names": 0,
+      "no-shadow": 0,
+      "no-plusplus": 0,
+      "no-param-reassign": 0,
+      "consistent-return": 0,
+      "prefer-destructuring": 0,
+      "no-bitwise": 0,
+      "no-console": 0,
+      "no-use-before-define": 0,
+      "no-restricted-syntax": 0,
+      "no-await-in-loop": 0,
+      "no-underscore-dangle": 0,
+      "import/no-extraneous-dependencies": 0
+    }
+  },
   "eslintIgnore": [
     "download",
     "dist",
     "test/fixtures"
   ],
-  "eslintConfig": {
-    "parserOptions": {
-      "ecmaVersion": 2018,
-      "sourceType": "module"
-    },
-    "parser": "babel-eslint",
-    "extends": [
-      "eslint:recommended"
-    ],
-    "env": {
-      "es6": true,
-      "node": true
-    },
-    "rules": {
-      "func-names": 0,
-      "no-console": 0,
-      "no-shadow": 0,
-      "no-extra-semi": 0,
-      "no-empty": 0,
-      "semi": 2,
-      "no-control-regex": 0
-    }
-  },
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@zeit/dockerignore": "0.0.3",
@@ -91,7 +104,6 @@
     "async-retry": "1.1.3",
     "async-sema": "1.2.0",
     "ava": "0.25.0",
-    "babel-eslint": "8.2.2",
     "bytes": "3.0.0",
     "chalk": "2.3.1",
     "clipboardy": "1.1.4",
@@ -107,7 +119,12 @@
     "email-prompt": "0.3.2",
     "email-validator": "1.1.1",
     "epipebomb": "1.0.0",
-    "eslint": "4.7.2",
+    "eslint": "5.3.0",
+    "eslint-config-airbnb": "17.1.0",
+    "eslint-config-prettier": "3.3.0",
+    "eslint-plugin-import": "2.14.0",
+    "eslint-plugin-jsx-a11y": "6.1.1",
+    "eslint-plugin-react": "7.11.0",
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
     "glob": "7.1.2",
@@ -136,7 +153,6 @@
     "qr-image": "3.2.0",
     "read-pkg": "2.0.0",
     "semver": "5.5.0",
-    "shebang-loader": "0.0.1",
     "single-line-log": "1.1.2",
     "sinon": "4.4.2",
     "strip-ansi": "4.0.0",

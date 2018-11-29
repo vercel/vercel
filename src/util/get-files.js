@@ -61,7 +61,7 @@ const walkSync = async (dir, path, filelist = [], { output } = {}) => {
  */
 const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
   const { debug } = output;
-  let files = [];
+  const files = [];
 
   await Promise.all(
     whitelist.map(async file => {
@@ -162,7 +162,7 @@ async function staticFiles(
     const ignoreFile = await maybeRead(resolve(path, ignoreName));
 
     const filter = ignore()
-      .add(IGNORED + '\n' + clearRelative(ignoreFile))
+      .add(`${IGNORED  }\n${  clearRelative(ignoreFile)}`)
       .createFilter();
 
     const prefixLength = path.length + 1;
@@ -248,9 +248,9 @@ async function npm(
 
     const filter = ignore()
       .add(
-        IGNORED +
-          '\n' +
-          clearRelative(npmIgnore === null ? gitIgnore : npmIgnore)
+        `${IGNORED 
+          }\n${ 
+          clearRelative(npmIgnore === null ? gitIgnore : npmIgnore)}`
       )
       .createFilter();
 
@@ -345,7 +345,7 @@ async function docker(
     );
 
     const filter = (dockerIgnore === null ? ignore : dockerignore)()
-      .add(IGNORED + '\n' + ignoredFiles)
+      .add(`${IGNORED  }\n${  ignoredFiles}`)
       .createFilter();
 
     const prefixLength = path.length + 1;
@@ -411,7 +411,7 @@ async function explode(paths, { accepts, output }) {
     } catch (e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
-      path = file + '.js';
+      path = `${file  }.js`;
 
       try {
         s = await stat(path);
@@ -426,7 +426,7 @@ async function explode(paths, { accepts, output }) {
       /* eslint-disable no-use-before-define */
       return many(all.map(subdir => asAbsolute(subdir, file)));
       /* eslint-enable no-use-before-define */
-    } else if (!s.isFile()) {
+    } if (!s.isFile()) {
       debug(`Ignoring special file ${file}`);
       return null;
     }

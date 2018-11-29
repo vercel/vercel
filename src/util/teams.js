@@ -28,7 +28,7 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      } if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -71,7 +71,7 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      } if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -107,7 +107,7 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      } if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;

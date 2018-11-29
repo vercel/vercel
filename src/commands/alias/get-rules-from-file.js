@@ -1,7 +1,7 @@
-//      
+//
 import path from 'path';
 import humanizePath from '../../util/humanize-path';
-                                                 
+
 import {
   CantParseJSONFile,
   FileNotFound,
@@ -10,12 +10,12 @@ import {
 import validatePathAliasRules from './validate-path-alias-rules';
 import readJSONFile from './read-json-file';
 
-                  
-                   
-  
+
+
+
 
 async function getRulesFromFile(filePath        ) {
-  return typeof filePath === 'string' ? await readRulesFile(filePath) : null;
+  return typeof filePath === 'string' ? readRulesFile(filePath) : null;
 }
 
 async function readRulesFile(rulesPath        ) {
@@ -23,9 +23,9 @@ async function readRulesFile(rulesPath        ) {
   const result = await readJSONFile(fullPath);
   if (result instanceof CantParseJSONFile) {
     return result;
-  } else if (result === null) {
+  } if (result === null) {
     return new FileNotFound(fullPath);
-  } else if (!result.rules) {
+  } if (!result.rules) {
     return new RulesFileValidationError(
       humanizePath(fullPath),
       'Your rules file must include a rules field'

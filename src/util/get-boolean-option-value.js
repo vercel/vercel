@@ -7,9 +7,9 @@ export default function getBooleanOptionValue(opts    , name        ) {
 
   if (positiveValue && negativeValue) {
     return new ConflictingOption(name);
-  } else if (positiveValue) {
+  } if (positiveValue) {
     return true;
-  } else if (negativeValue) {
+  } if (negativeValue) {
     return false;
   }
 

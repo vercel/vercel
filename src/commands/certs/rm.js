@@ -1,8 +1,7 @@
-//      
+//
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-const plural = require('pluralize');
 
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
@@ -11,13 +10,15 @@ import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-                                                        
+
+const plural = require('pluralize');
+
 
 async function rm(
   ctx            ,
   opts                 ,
   args          ,
-  output        
+  output
 )                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -77,17 +78,17 @@ async function rm(
 
 async function getCertsToDelete(output        , now     , idOrCn        ) {
   const cert = await getCertById(output, now, idOrCn);
-  return !cert ? await getCerts(output, now, [idOrCn]) : [cert];
+  return !cert ? getCerts(output, now, [idOrCn]) : [cert];
 }
 
 function readConfirmation(output, msg, certs) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
-      table([...certs.map(formatCertRow)], {
+      `${table([...certs.map(formatCertRow)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1') + '\n'
+      }).replace(/^(.*)/gm, '  $1')  }\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -110,7 +111,7 @@ function formatCertRow(cert) {
   return [
     cert.uid,
     chalk.bold(cert.cns.join(', ')),
-    chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
+    chalk.gray(`${ms(new Date() - new Date(cert.created))  } ago`)
   ];
 }
 

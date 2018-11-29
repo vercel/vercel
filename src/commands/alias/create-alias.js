@@ -48,7 +48,7 @@ async function createAlias(
         cert instanceof Errors.TooManyRequests
       ) {
         return cert;
-      } else {
+      } 
         return createAlias(
           output,
           now,
@@ -57,7 +57,7 @@ async function createAlias(
           alias,
           !externalDomain
         );
-      }
+      
     }
 
     // The alias already exists so we fail in silence returning the id

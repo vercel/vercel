@@ -2,6 +2,8 @@
 //     
 
 // Packages
+import getAliases from '../util/alias/get-aliases';
+
 const mri = require('mri');
 const chalk = require('chalk');
 const ms = require('ms');
@@ -17,7 +19,6 @@ const cmd = require('../util/output/cmd');
 const elapsed = require('../util/output/elapsed');
 const { normalizeURL } = require('../util/url');
 const getScope = require('../util/get-scope');
-import getAliases from '../util/alias/get-aliases';
 
 const help = () => {
   console.log(`
@@ -123,11 +124,7 @@ module.exports = async function main(ctx     )                  {
     throw err;
   }
 
-  let matches = deployments.filter(d => {
-    return ids.some(id => {
-      return d.uid === id || d.name === id || d.url === normalizeURL(id);
-    });
-  });
+  let matches = deployments.filter(d => ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id)));
 
   let aliases;
 
@@ -201,7 +198,7 @@ module.exports = async function main(ctx     )                  {
   //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
   // which seems fixable only by exiting directly here, and only
   // impacts this command, consistently
-  //now.close()
+  // now.close()
   process.exit(0);
   return 0;
 };
@@ -218,13 +215,13 @@ function readConfirmation(matches, output) {
 
     const tbl = table(
       matches.map(depl => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
+        const time = chalk.gray(`${ms(new Date() - depl.created)  } ago`);
         const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return ['  ' + depl.uid, url, time];
+        return [`  ${  depl.uid}`, url, time];
       }),
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
-    output.print(tbl + '\n');
+    output.print(`${tbl  }\n`);
 
     for (const depl of matches) {
       for (const alias of depl.aliases) {

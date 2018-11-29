@@ -57,11 +57,11 @@ async function ls(
 
 function formatCertsTable(certsList) {
   return (
-    table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
+    `${table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
       stringLength: strlen
-    }).replace(/^(.*)/gm, '  $1') + '\n'
+    }).replace(/^(.*)/gm, '  $1')  }\n`
   );
 }
 
@@ -113,8 +113,8 @@ function formatCertFirstCn(time, cert, cn, multiple) {
 function formatExpirationDate(date) {
   const diff = date - Date.now();
   return diff < 0
-    ? chalk.gray(ms(-diff) + ' ago')
-    : chalk.gray('in ' + ms(diff));
+    ? chalk.gray(`${ms(-diff)  } ago`)
+    : chalk.gray(`in ${  ms(diff)}`);
 }
 
 /**

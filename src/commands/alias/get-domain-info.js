@@ -30,11 +30,11 @@ async function getDomainInfo(now     , domain        , context        ) {
     cancelMessage();
     if (error.code === 'forbidden') {
       return new DomainPermissionDenied(domain, context);
-    } else if (error.status === 404) {
+    } if (error.status === 404) {
       return null;
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

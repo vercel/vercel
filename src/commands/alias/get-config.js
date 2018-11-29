@@ -28,7 +28,7 @@ async function getConfig(output        , configFile         ) {
     const localConfig = await readJSONFile(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
-    } else if (localConfig !== null) {
+    } if (localConfig !== null) {
       const castedConfig         = localConfig;
       config = castedConfig;
       return config;
@@ -40,7 +40,7 @@ async function getConfig(output        , configFile         ) {
   const mainConfig = await readJSONFile(nowFilePath);
   if (mainConfig instanceof CantParseJSONFile) {
     return mainConfig;
-  } else if (mainConfig !== null) {
+  } if (mainConfig !== null) {
     output.debug(`Found config in file ${nowFilePath}`);
     const castedConfig         = mainConfig;
     config = castedConfig;
@@ -52,7 +52,7 @@ async function getConfig(output        , configFile         ) {
   const pkgConfig = await readConfigFromPackage(pkgFilePath);
   if (pkgConfig instanceof CantParseJSONFile) {
     return pkgConfig;
-  } else if (pkgConfig) {
+  } if (pkgConfig) {
     output.debug(`Found config in package ${nowFilePath}`);
     const castedConfig         = pkgConfig;
     config = castedConfig;

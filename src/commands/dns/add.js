@@ -49,14 +49,14 @@ async function add(
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } else if (record instanceof DNSPermissionDenied) {
+  } if (record instanceof DNSPermissionDenied) {
     output.error(
       `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
         contextName
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } else {
+  } 
     console.log(
       `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
         domain
@@ -64,7 +64,7 @@ async function add(
         contextName
       )} ${chalk.gray(addStamp())}`
     );
-  }
+  
 
   return 0;
 }
@@ -81,12 +81,12 @@ function parseAddArgs(args          ) {
 
   if (!(domain && typeof name === 'string' && type)) {
     return null;
-  } else if (type === 'MX' && args.length === 5) {
+  } if (type === 'MX' && args.length === 5) {
     return {
       domain,
       data: { name, type, value, mxPriority: Number(args[4]) }
     };
-  } else if (type === 'SRV' && args.length === 7) {
+  } if (type === 'SRV' && args.length === 7) {
     return {
       domain,
       data: {
@@ -100,7 +100,7 @@ function parseAddArgs(args          ) {
         }
       }
     };
-  } else if (args.length === 4) {
+  } if (args.length === 4) {
     return {
       domain,
       data: {

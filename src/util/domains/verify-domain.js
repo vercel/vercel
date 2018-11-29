@@ -22,9 +22,9 @@ async function verifyDomain(
     result instanceof Errors.DomainVerificationFailed
   ) {
     return result;
-  } else if (result instanceof Errors.DomainAlreadyExists) {
+  } if (result instanceof Errors.DomainAlreadyExists) {
     return undefined;
-  } else if (result.verified === false) {
+  } if (result.verified === false) {
     return new Errors.DomainNotVerified(domain);
   }
 }

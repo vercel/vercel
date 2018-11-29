@@ -144,13 +144,11 @@ async function run({ token, contextName, currentTeam }) {
       const header = [['', 'name', 'created'].map(s => chalk.dim(s))];
       const out = table(
         header.concat(
-          list.map(secret => {
-            return [
+          list.map(secret => [
               '',
               chalk.bold(secret.name),
-              chalk.gray(ms(cur - new Date(secret.created)) + ' ago')
-            ];
-          })
+              chalk.gray(`${ms(cur - new Date(secret.created))  } ago`)
+            ])
         ),
         {
           align: ['l', 'l', 'l'],
@@ -160,7 +158,7 @@ async function run({ token, contextName, currentTeam }) {
       );
 
       if (out) {
-        console.log('\n' + out + '\n');
+        console.log(`\n${  out  }\n`);
       }
     }
     return secrets.close();
@@ -268,7 +266,7 @@ process.on('uncaughtException', err => {
 
 function readConfirmation(secret) {
   return new Promise(resolve => {
-    const time = chalk.gray(ms(new Date() - new Date(secret.created)) + ' ago');
+    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))  } ago`);
     const tbl = table([[chalk.bold(secret.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -277,7 +275,7 @@ function readConfirmation(secret) {
     process.stdout.write(
       '> The following secret will be removed permanently\n'
     );
-    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${  tbl  }\n`);
 
     process.stdout.write(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`

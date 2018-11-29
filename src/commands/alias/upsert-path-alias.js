@@ -72,9 +72,9 @@ async function upsertPathAlias(
         cert instanceof Errors.TooManyRequests
       ) {
         return cert;
-      } else {
+      } 
         return upsertPathAlias(output, now, rules, alias, contextName);
-      }
+      
     }
 
     // The alias already exists so we fail in silence returning the id

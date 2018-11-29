@@ -79,7 +79,7 @@ module.exports = async function({ creditCards, clear = false, contextName }) {
         try {
           /* eslint-disable no-await-in-loop */
           result = await textInput({
-            label: '- ' + piece.label,
+            label: `- ${  piece.label}`,
             initialValue: piece.initialValue || piece.value,
             placeholder: piece.placeholder,
             mask: piece.mask,

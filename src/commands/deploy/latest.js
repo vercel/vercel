@@ -607,7 +607,7 @@ function handleCreateDeployError            (
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.CantSolveChallenge) {
+  } if (error instanceof Errors.CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
         `The certificate provider could not resolve the DNS queries for ${error
@@ -624,10 +624,10 @@ function handleCreateDeployError            (
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
-  } else if (error instanceof Errors.DomainConfigurationError) {
+  } if (error instanceof Errors.DomainConfigurationError) {
     output.error(
       `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
         error.meta.domain
@@ -638,11 +638,11 @@ function handleCreateDeployError            (
         `  The propagation may take a few minutes, but please verify your settings:\n\n`
       );
       output.print(
-        dnsTable([
+        `${dnsTable([
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ]) + '\n'
+        ])  }\n`
       );
     } else {
       output.print(
@@ -651,38 +651,38 @@ function handleCreateDeployError            (
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } else if (error instanceof Errors.DomainNameserversNotFound) {
+  } if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(
       `Couldn't find nameservers for the domain ${chalk.underline(
         error.meta.domain
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.DomainNotVerified) {
+  } if (error instanceof Errors.DomainNotVerified) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
       )} is not verified and can't be used as custom suffix.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainPermissionDenied) {
+  } if (error instanceof Errors.DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainsShouldShareRoot) {
+  } if (error instanceof Errors.DomainsShouldShareRoot) {
     // this is not going to happen
     return 1;
-  } else if (error instanceof Errors.DomainValidationRunning) {
+  } if (error instanceof Errors.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } else if (error instanceof Errors.SchemaValidationFailed) {
+  } if (error instanceof Errors.SchemaValidationFailed) {
     const { params, keyword, dataPath } = error.meta;
 
     if (params && params.additionalProperty) {
@@ -694,7 +694,7 @@ function handleCreateDeployError            (
       }
 
       return 1;
-    } else if (keyword === 'type') {
+    } if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
       output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
       return 1;
@@ -704,7 +704,7 @@ function handleCreateDeployError            (
     output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
 
     return 1;
-  } else if (error instanceof Errors.DomainVerificationFailed) {
+  } if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
       `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
     );
@@ -716,12 +716,12 @@ function handleCreateDeployError            (
     output.print(
       `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
     );
-    output.print(zeitWorldTable() + '\n');
+    output.print(`${zeitWorldTable()  }\n`);
     output.print(
       `\n  As an alternative, you can add following records to your DNS settings:\n`
     );
     output.print(
-      dnsTable(
+      `${dnsTable(
         [
           ['_now', 'TXT', error.meta.token],
           error.meta.subdomain === null
@@ -729,10 +729,10 @@ function handleCreateDeployError            (
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
         ],
         { extraSpace: '  ' }
-      ) + '\n'
+      )  }\n`
     );
     return 1;
-  } else if (error instanceof Errors.InvalidWildcardDomain) {
+  } if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
     output.error(
       `Invalid domain ${chalk.underline(
@@ -740,17 +740,17 @@ function handleCreateDeployError            (
       )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
-  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+  } if (error instanceof Errors.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } else if (error instanceof Errors.TooManyCertificates) {
+  } if (error instanceof Errors.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.TooManyRequests) {
+  } if (error instanceof Errors.TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta
         .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
@@ -758,7 +758,7 @@ function handleCreateDeployError            (
       })}.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainNotFound) {
+  } if (error instanceof Errors.DomainNotFound) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain

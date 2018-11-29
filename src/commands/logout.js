@@ -53,7 +53,7 @@ const main = async ctx => {
   });
 
   apiUrl = ctx.apiUrl;
-  endpoint = apiUrl + '/user/tokens/';
+  endpoint = `${apiUrl  }/user/tokens/`;
 
   argv._ = argv._.slice(1);
 

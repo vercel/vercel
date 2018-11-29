@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import { tick } from '../output/chars';
-import { VerifyScaleTimeout } from '../../util/errors';
+import { VerifyScaleTimeout } from "../errors";
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
 import wait from '../output/wait';

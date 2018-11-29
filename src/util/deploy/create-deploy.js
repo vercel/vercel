@@ -73,9 +73,9 @@ export default async function createDeploy(
         result instanceof Errors.TooManyRequests
       ) {
         return result;
-      } else {
+      } 
         return createDeploy(output, now, contextName, paths, createArgs);
-      }
+      
     }
 
     // If the error is unknown, we just throw

@@ -1,5 +1,8 @@
 // This should be automatically included by @babel/preset-env but it's
 // not being load right now. We have to remove it once it's fixed
+import createOutput from './util/output';
+import getArgs from './util/get-args';
+
 require('core-js/modules/es7.symbol.async-iterator');
 
 // we only enable source maps while developing, since
@@ -37,9 +40,6 @@ const pkg = require('./util/pkg');
 const getUser = require('./util/get-user');
 const NowTeams = require('./util/teams');
 const highlight = require('./util/output/highlight');
-
-import createOutput from './util/output';
-import getArgs from './util/get-args';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -112,14 +112,14 @@ const main = async argv_ => {
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls`)
-  let targetOrSubcommand          = argv._[2];
+  const targetOrSubcommand          = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
       console.log(
-        require('../package').version +
-          `${// $FlowFixMe
+        `${require('../package').version
+          }${// $FlowFixMe
           process.pkg ? '' : chalk.magenta(' (dev)')}`
       );
       return 0;
@@ -133,9 +133,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          'now global directory: ' +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          'now global directory: '}${
+          err.message}`
       )
     );
 
@@ -148,9 +148,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to create the ' +
+            `now global directory "${hp(NOW_DIR)}" `}${
+            err.message}`
         )
       );
     }
@@ -164,9 +164,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" ` +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          `now config file "${hp(NOW_CONFIG_PATH)}" `}${
+          err.message}`
       )
     );
 
@@ -181,9 +181,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to read the ' +
+            `now config in "${hp(NOW_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -214,9 +214,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to write the ' +
+            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -231,9 +231,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+          err.message}`
       )
     );
 
@@ -248,9 +248,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to read the ' +
+            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -291,9 +291,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to write the ' +
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
       return 1;
@@ -487,7 +487,7 @@ const main = async argv_ => {
         return 1;
       }
 
-      const related = list.find(item => item.id === team || item.slug == team);
+      const related = list.find(item => item.id === team || item.slug === team);
 
       if (!related) {
         console.error(

@@ -36,7 +36,7 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
+  const stopUserSpinner = wait('Fetching user information');
   const user = await getUser({ apiUrl, token });
 
   stopUserSpinner();

@@ -1,6 +1,9 @@
 //      
 
 // Packages
+import getArgs from '../util/get-args';
+import buildsList from '../util/output/builds';
+
 const chalk = require('chalk');
 const table = require('text-table');
 
@@ -14,9 +17,6 @@ const wait = require('../util/output/wait');
 const { handleError } = require('../util/error');
 const strlen = require('../util/strlen');
 const getScope = require('../util/get-scope');
-
-import getArgs from '../util/get-args';
-import buildsList from '../util/output/builds';
 
 const STATIC = 'STATIC';
 
@@ -106,17 +106,17 @@ module.exports = async function main(ctx     )                  {
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
       return 1;
-    } else if (err.status === 403) {
+    } if (err.status === 403) {
       error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
         )}`
       );
       return 1;
-    } else {
+    } 
       // unexpected
       throw err;
-    }
+    
   }
 
   const {
@@ -229,11 +229,11 @@ module.exports = async function main(ctx     )                  {
       t.push([dc, cfg.min || 0, cfg.max || 0, instances.length]);
     }
     print(
-      table(t, {
+      `${table(t, {
         align: ['l', 'c', 'c', 'c'],
         hsep: ' '.repeat(8),
         stringLength: strlen
-      }).replace(/^(.*)/gm, '    $1') + '\n'
+      }).replace(/^(.*)/gm, '    $1')  }\n`
     );
     print('\n');
   }

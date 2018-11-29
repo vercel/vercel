@@ -1,17 +1,10 @@
-//      
 import ms from 'ms';
-import uuid from '../../util/uuid';
+import uuid from "../uuid";
 import createPollingFn from '../create-polling-fn';
-import returnify from '../returnify-async-generator.js';
+import returnify from '../returnify-async-generator';
 
 import { VerifyScaleTimeout } from '../errors';
 import getDeploymentInstances from '../deploy/get-deployment-instances';
-                                                                
-
-                
-                   
-                          
-  
 
 async function* verifyDeploymentScale(
   output        ,
@@ -70,7 +63,7 @@ async function* verifyDeploymentScale(
 
 function allDcsMatched(
   target                ,
-  current                
+  current
 )          {
   return Object.keys(target).reduce(
     (result, dc) => result && current[dc] >= target[dc],
@@ -79,7 +72,7 @@ function allDcsMatched(
 }
 
 function getTargetInstancesCountForScale(
-  scale                 
+  scale
 )                 {
   return Object.keys(scale).reduce(
     (result, dc) => ({
@@ -91,7 +84,7 @@ function getTargetInstancesCountForScale(
 }
 
 function getInitialInstancesCountForScale(
-  scale                 
+  scale
 )                 {
   return Object.keys(scale).reduce(
     (result, dc) => ({

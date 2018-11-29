@@ -12,8 +12,7 @@ module.exports = (
     stdout = process.stdout,
     trailing = ''
   } = {}
-) => {
-  return new Promise(resolve => {
+) => new Promise(resolve => {
     const isRaw = stdin.isRaw;
 
     stdin.setRawMode(true);
@@ -56,4 +55,3 @@ module.exports = (
     stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `);
     stdin.on('data', onData);
   });
-};

@@ -19,9 +19,9 @@ async function copyToClipboard(
     if (isTTY) {
       await write(str);
       return true;
-    } else {
+    } 
       return false;
-    }
+    
   }
 
   if (shouldCopy === true) {

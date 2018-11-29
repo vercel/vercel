@@ -1,9 +1,9 @@
-//      
+//
 import fs from 'fs';
 import { CantParseJSONFile } from '../../util/errors';
 
 async function readJSONFile(
-  file        
+  file
 )                                             {
   const content = await readFileSafe(file);
   if (content === null) {
@@ -19,7 +19,7 @@ async function readJSONFile(
 }
 
 async function readFileSafe(file        )                         {
-  return fs.existsSync(file) ? await fs.promises.readFile(file) : null;
+  return fs.existsSync(file) ? fs.promises.readFile(file) : null;
 }
 
 export default readJSONFile;

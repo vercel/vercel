@@ -1,6 +1,6 @@
-//      
+//
 
-                                             
+
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import fetchDeploymentsByAppName from './get-deployments-by-appname';
 
@@ -9,7 +9,7 @@ async function getAppLastDeployment(
   now     ,
   appName        ,
   user      ,
-  contextName        
+  contextName
 ) {
   output.debug(`Looking for deployments matching app ${appName}`);
   const deployments = await fetchDeploymentsByAppName(now, appName);
@@ -19,7 +19,7 @@ async function getAppLastDeployment(
 
   // Try to fetch deployment details
   return deploymentItem
-    ? await fetchDeploymentByIdOrHost(now, contextName, deploymentItem.uid)
+    ? fetchDeploymentByIdOrHost(now, contextName, deploymentItem.uid)
     : null;
 }
 

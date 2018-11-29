@@ -28,9 +28,9 @@ async function purchaseDomain(output        , now     , domain        ) {
     cancelWait();
     if (error.code === 'source_not_found') {
       return new PaymentSourceNotFound();
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

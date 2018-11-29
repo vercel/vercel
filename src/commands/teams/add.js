@@ -16,11 +16,11 @@ const textInput = require('../../util/input/text');
 const invite = require('./invite');
 const { writeToConfigFile } = require('../../util/config/files');
 
-const validateSlugKeypress = (data, value) => {
+const validateSlugKeypress = (data, value) => 
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
-  return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
-};
+   /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data)
+;
 
 const validateNameKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -88,7 +88,7 @@ module.exports = async function({ apiUrl, token, teams, config }) {
 
   process.stdout.write(eraseLines(2));
   console.log(success(`Team created ${elapsed()}`));
-  console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n');
+  console.log(`${chalk.cyan(`${tick} `) + teamUrlPrefix + slug  }\n`);
 
   console.log(info('Pick a display name for your team'));
   let name;
@@ -101,9 +101,9 @@ module.exports = async function({ apiUrl, token, teams, config }) {
     if (err.message === 'USER_ABORT') {
       console.log(info('No name specified'));
       return gracefulExit();
-    } else {
+    } 
       throw err;
-    }
+    
   }
   elapsed = stamp();
   stopSpinner = wait(teamNamePrefix + name);
@@ -122,7 +122,7 @@ module.exports = async function({ apiUrl, token, teams, config }) {
   team = Object.assign(team, res);
 
   console.log(success(`Team name saved ${elapsed()}`));
-  console.log(chalk.cyan(`${tick} `) + teamNamePrefix + team.name + '\n');
+  console.log(`${chalk.cyan(`${tick} `) + teamNamePrefix + team.name  }\n`);
 
   stopSpinner = wait('Saving');
 

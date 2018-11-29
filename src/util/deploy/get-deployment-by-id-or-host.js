@@ -18,11 +18,11 @@ async function getDeploymentByIdOrHost(
   } catch (error) {
     if (error.status === 404) {
       return new DeploymentNotFound(idOrHost, contextName);
-    } else if (error.status === 403) {
+    } if (error.status === 403) {
       return new DeploymentPermissionDenied(idOrHost, contextName);
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

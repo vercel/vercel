@@ -90,7 +90,7 @@ function getDNSRecordsTable(
 
 function getDNSRecordRow(domainName        , record           ) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = ms(Date.now() - new Date(Number(record.created))) + ' ago';
+  const createdAt = `${ms(Date.now() - new Date(Number(record.created)))  } ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',

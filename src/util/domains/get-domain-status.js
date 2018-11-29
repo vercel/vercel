@@ -1,16 +1,10 @@
-//      
 import qs from 'querystring';
-
-
-                     
-                    
-  
 
 async function getDomainStatus(
   now     ,
-  domain        
+  domain
 )                        {
-  return await now.fetch(
+  return now.fetch(
     `/v3/domains/status?${qs.stringify({ name: domain })}`
   );
 }

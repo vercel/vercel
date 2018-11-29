@@ -69,11 +69,11 @@ async function purchaseDomainIfAvailable(
     }
 
     return true;
-  } else {
+  } 
     output.debug(`Domain can't be purchased`);
     cancelWait();
     return false;
-  }
+  
 }
 
 export default purchaseDomainIfAvailable;

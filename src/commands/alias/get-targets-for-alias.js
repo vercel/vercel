@@ -19,9 +19,7 @@ async function getTargetsForAlias(
     return targets;
   }
 
-  const hostTargets           = targets.map(target => {
-    return target.indexOf('.') !== -1 ? toHost(target) : target;
-  });
+  const hostTargets           = targets.map(target => target.indexOf('.') !== -1 ? toHost(target) : target);
 
   return hostTargets;
 }

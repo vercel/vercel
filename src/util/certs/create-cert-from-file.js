@@ -34,11 +34,11 @@ async function createCertFromFile(
     cancelWait();
     if (error.code === 'invalid_cert') {
       return new InvalidCert();
-    } else if (error.code === 'forbidden') {
+    } if (error.code === 'forbidden') {
       return new DomainPermissionDenied(error.domain, context);
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

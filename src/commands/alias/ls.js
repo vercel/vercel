@@ -22,7 +22,7 @@ export default async function ls(
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
+  const { '--debug': debugEnabled } = opts;
   const { contextName } = await getScope({
     apiUrl,
     token,
@@ -95,7 +95,7 @@ export default async function ls(
 
 function printAliasTable(aliases         )         {
   return (
-    table(
+    `${table(
       [
         ['source', 'url', 'age'].map(h => chalk.gray(h)),
         ...aliases.map(a => [
@@ -116,28 +116,26 @@ function printAliasTable(aliases         )         {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ') + '\n\n'
+    ).replace(/^/gm, '  ')  }\n\n`
   );
 }
 
 function printPathAliasTable(rules                 )         {
   const header = [['pathname', 'method', 'dest'].map(s => chalk.gray(s))];
   return (
-    table(
+    `${table(
       header.concat(
-        rules.map(rule => {
-          return [
+        rules.map(rule => [
             rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
             rule.method ? rule.method : '*',
             rule.dest
-          ];
-        })
+          ])
       ),
       {
         align: ['l', 'l', 'l', 'l'],
         hsep: ' '.repeat(6),
         stringLength: strlen
       }
-    ).replace(/^(.*)/gm, '  $1') + '\n'
+    ).replace(/^(.*)/gm, '  $1')  }\n`
   );
 }

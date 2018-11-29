@@ -70,7 +70,7 @@ const splittedURL = fullURL => {
   pathParts.shift();
 
   // Set path to repo...
-  const main = pathParts[0] + '/' + pathParts[1];
+  const main = `${pathParts[0]  }/${  pathParts[1]}`;
 
   // ...and then remove it from the parts
   pathParts.splice(0, 2);
@@ -152,7 +152,7 @@ const downloadRepo = async repoPath => {
   switch (pathParts.type) {
     case 'GitLab': {
       const ref = pathParts.ref ? `?ref=${pathParts.ref}` : '';
-      url = `https://gitlab.com/${pathParts.main}/repository/archive.tar` + ref;
+      url = `https://gitlab.com/${pathParts.main}/repository/archive.tar${  ref}`;
       break;
     }
     case 'Bitbucket':

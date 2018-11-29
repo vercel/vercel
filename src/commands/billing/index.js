@@ -97,7 +97,7 @@ module.exports = async ctx => {
 function buildInquirerChoices(cards) {
   return cards.sources.map(source => {
     const _default =
-      source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : '';
+      source.id === cards.defaultSource ? ` ${  chalk.bold('(default)')}` : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
     const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
       source.card.last4}`;
@@ -142,7 +142,7 @@ async function run({ token, config: { currentTeam } }) {
         .map(source => {
           const _default =
             source.id === cards.defaultSource
-              ? ' ' + chalk.bold('(default)')
+              ? ` ${  chalk.bold('(default)')}`
               : '';
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`

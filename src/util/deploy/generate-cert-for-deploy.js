@@ -24,15 +24,15 @@ export default async function generateCertForDeploy(
   ) {
     cancelSetupWait();
     return result;
-  } else {
+  } 
     cancelSetupWait();
-  }
+  
 
   // Generate the certificate with the given parameters
   const cancelCertWait = wait(
     `Generating a wildcard certificate for ${domain}`
   );
-  let cert = await createCertForCns(now, [domain, `*.${domain}`], contextName);
+  const cert = await createCertForCns(now, [domain, `*.${domain}`], contextName);
   if (
     cert instanceof Errors.CantGenerateWildcardCert ||
     cert instanceof Errors.CantSolveChallenge ||
@@ -47,7 +47,7 @@ export default async function generateCertForDeploy(
   ) {
     cancelCertWait();
     return cert;
-  } else {
+  } 
     cancelCertWait();
-  }
+  
 }

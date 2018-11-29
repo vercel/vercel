@@ -1,7 +1,7 @@
-exports.maybeURL = id => {
+exports.maybeURL = id => 
   // E.g, "appname-asdf"
-  return id.includes('-');
-};
+   id.includes('-')
+;
 
 exports.normalizeURL = u => {
   // Normalize URL by removing slash from the end

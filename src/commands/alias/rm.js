@@ -24,7 +24,7 @@ export default async function rm(
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
+  const { '--debug': debugEnabled } = opts;
   const { contextName } = await getScope({
     apiUrl,
     token,
@@ -87,7 +87,7 @@ async function confirmAliasRemove(output        , alias       ) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(ms(new Date() - new Date(alias.created)) + ' ago')
+        chalk.gray(`${ms(new Date() - new Date(alias.created))  } ago`)
       ]
     ],
     {

@@ -160,7 +160,7 @@ async function printEvents(
           stream.on('error', onError);
           readable.on('error', onError);
         });
-      } else {
+      } 
         callOnOpenOnce();
         const err = new Error(`Deployment events status ${eventsRes.status}`);
 
@@ -169,7 +169,7 @@ async function printEvents(
         } else {
           throw err;
         }
-      }
+      
     },
     {
       retries: 4,

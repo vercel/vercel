@@ -8,7 +8,7 @@ import logo from '../util/output/logo';
 import stamp from '../util/output/stamp';
 
 import * as Errors from '../util/errors';
-import Now from '../util/';
+import Now from "../util";
 import getArgs from '../util/get-args';
 import getScope from '../util/get-scope';
 import getDCsFromArgs from '../util/scale/get-dcs-from-args';
@@ -135,7 +135,7 @@ module.exports = async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } else if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
+  } if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
     output.error(
       `The value "${dcs.meta
         .regionOrDC}" is not a valid region or DC identifier`
@@ -162,14 +162,14 @@ module.exports = async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } else if (max instanceof Errors.InvalidArgsForMinMaxScale) {
+  } if (max instanceof Errors.InvalidArgsForMinMaxScale) {
     output.error(
       `Invalid number of arguments: expected <min> ("${max.meta
         .min}") and [max]`
     );
     now.close();
     return 1;
-  } else if (max instanceof Errors.InvalidMaxForScale) {
+  } if (max instanceof Errors.InvalidMaxForScale) {
     output.error(
       `Invalid <max> parameter "${max.meta
         .value}". A number or "auto" were expected`
@@ -189,7 +189,7 @@ module.exports = async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } else if (deployment instanceof Errors.DeploymentNotFound) {
+  } if (deployment instanceof Errors.DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${argv._[1]}" in ${chalk.bold(contextName)}`
     );
@@ -204,11 +204,11 @@ module.exports = async function main(ctx            )                  {
     output.error('Scaling rules cannot be set on static deployments');
     now.close();
     return 1;
-  } else if (deployment.state === 'ERROR') {
+  } if (deployment.state === 'ERROR') {
     output.error('Cannot scale a deployment in the ERROR state');
     now.close();
     return 1;
-  } else if (deployment.version === 2) {
+  } if (deployment.version === 2) {
     output.error('Cannot scale a deployment containing builds');
     now.close();
     return 1;
@@ -238,18 +238,18 @@ module.exports = async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } else if (result instanceof Errors.ForbiddenScaleMaxInstances) {
+  } if (result instanceof Errors.ForbiddenScaleMaxInstances) {
     output.error(
       `You can't scale to more than ${result.meta
         .max} max instances with your current plan.`
     );
     now.close();
     return 1;
-  } else if (result instanceof Errors.InvalidScaleMinMaxRelation) {
+  } if (result instanceof Errors.InvalidScaleMinMaxRelation) {
     output.error(`Min number of instances can't be higher than max.`);
     now.close();
     return 1;
-  } else if (result instanceof Errors.NotSupportedMinScaleSlots) {
+  } if (result instanceof Errors.NotSupportedMinScaleSlots) {
     output.error(
       `Cloud v2 does not yet support setting a non-zero min number of instances.`
     );

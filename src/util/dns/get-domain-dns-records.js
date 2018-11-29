@@ -1,6 +1,6 @@
 //      
 
-import { DomainNotFound } from '../../util/errors';
+import { DomainNotFound } from "../errors";
                                                   
 
 async function getDomainDNSRecords(output        , now     , domain        ) {
