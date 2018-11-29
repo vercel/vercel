@@ -105,7 +105,7 @@ async function fetchWithAuth (url, opts = {}) {
   const authJsonPath = path.join(homedir(), '.now/auth.json');
   if (!(await fs.exists(authJsonPath))) {
     const tokens = process.env.NOW_AUTH_TOKENS.split(',');
-    const token = tokens[Math.floor(Math.random() * tokens.length)];
+    const token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
     await fs.mkdirp(path.dirname(authJsonPath));
     await fs.writeFile(
       authJsonPath,
