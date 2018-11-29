@@ -64,7 +64,7 @@ jobs:
           at: .
       - run:
           name: Running Unit Tests
-          command: yarn test-unit
+          command: yarn test-unit && yarn coverage
 
   test-integration:
     macos:
