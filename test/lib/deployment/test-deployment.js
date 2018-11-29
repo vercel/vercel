@@ -30,7 +30,11 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
 
   const randomness = Math.floor(Math.random() * 0x7fffffff).toString(16);
   for (const file of Object.keys(bodies)) {
-    if ([ '.js', '.json', '.php', '.sh', '.txt' ].includes(path.extname(file))) {
+    if (
+      [ '.js', '.json', '.php', '.sh', '.txt', '.md', '.mdx' ].includes(
+        path.extname(file)
+      )
+    ) {
       bodies[file] = Buffer.from(
         bodies[file].toString().replace(/RANDOMNESS_PLACEHOLDER/g, randomness)
       );

@@ -12,5 +12,8 @@
   },
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }

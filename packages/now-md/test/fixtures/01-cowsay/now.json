@@ -1,8 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@now/static-build" },
-    { "src": "subdirectory/package.json", "use": "@now/static-build" }
+    { "src": "index.md", "use": "@now/md" },
+    { "src": "subdirectory/index.md", "use": "@now/md" }
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },

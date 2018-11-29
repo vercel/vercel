@@ -6,6 +6,6 @@
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
-    { "path": "/subdirectory", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
   ]
 }
