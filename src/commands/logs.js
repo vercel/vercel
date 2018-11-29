@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @flow
+//      
 
 // Packages
 const mri = require('mri');
@@ -63,7 +63,7 @@ const help = () => {
 `);
 };
 
-module.exports = async function main(ctx: any) {
+module.exports = async function main(ctx     ) {
   let argv;
   let deploymentIdOrURL;
 

@@ -1,4 +1,4 @@
-// @flow
+//      
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -10,17 +10,17 @@ import dnsTable from '../../util/dns-table';
 import { CLIContext, Output } from '../../util/types';
 import * as Errors from '../../util/errors';
 import { handleDomainConfigurationError } from '../../util/error-handlers';
-import type { CLICertsOptions } from '../../util/types';
+                                                        
 
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 
 async function add(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

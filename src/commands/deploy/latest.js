@@ -1,4 +1,4 @@
-//@flow
+//     
 
 import ms from 'ms';
 import bytes from 'bytes';
@@ -12,7 +12,7 @@ import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-import type { CLIContext, BuildsDeployment, Output } from '../../util/types';
+                                                                             
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -21,7 +21,7 @@ import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
-import type { CreateDeployError } from '../../util/deploy/create-deploy';
+                                                                         
 import * as Errors from '../../util/errors';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -239,13 +239,13 @@ const parseEnv = (env) => {
 };
 
 exports.pipe = async function main(
-  ctx: CLIContext,
-  contextName: string,
-  output: Output,
-  stats: any,
-  localConfig: any,
-  isFile: boolean
-): Promise<number> {
+  ctx            ,
+  contextName        ,
+  output        ,
+  stats     ,
+  localConfig     ,
+  isFile         
+)                  {
   let argv = null;
 
   try {
@@ -291,7 +291,7 @@ exports.pipe = async function main(
 
   let syncCount;
   let deployStamp = stamp();
-  let deployment: BuildsDeployment | null = null;
+  let deployment                          = null;
 
   const isObject = item => Object.prototype.toString.call(item) === '[object Object]';
 
@@ -596,10 +596,10 @@ exports.pipe = async function main(
   return printDeploymentStatus(output, deployment, deployStamp, builds);
 };
 
-function handleCreateDeployError<OtherError>(
-  output: Output,
-  error: CreateDeployError | OtherError
-): 1 | OtherError {
+function handleCreateDeployError            (
+  output        ,
+  error                                
+)                 {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(
       `Custom suffixes are only allowed for domains in ${chalk.underline(

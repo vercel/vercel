@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
@@ -9,14 +9,14 @@ import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import stamp from '../../util/output/stamp';
 import { CLIContext, Output } from '../../util/types';
-import type { CLIDNSOptions, DNSRecord } from '../../util/types';
+                                                                 
 
 async function rm(
-  ctx: CLIContext,
-  opts: CLIDNSOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts               ,
+  args          ,
+  output        
+)                  {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -74,10 +74,10 @@ async function rm(
 }
 
 function readConfirmation(
-  output: Output,
-  msg: string,
-  domainName: string,
-  record: DNSRecord
+  output        ,
+  msg        ,
+  domainName        ,
+  record           
 ) {
   return new Promise(resolve => {
     output.log(msg);
@@ -104,7 +104,7 @@ function readConfirmation(
   });
 }
 
-function getDeleteTableRow(domainName: string, record: DNSRecord) {
+function getDeleteTableRow(domainName        , record           ) {
   const recordName = `${record.name.length > 0
     ? record.name + '.'
     : ''}${domainName}`;

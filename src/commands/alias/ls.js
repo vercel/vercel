@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -11,14 +11,14 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
-import type { CLIAliasOptions, Alias, PathAliasRule } from '../../util/types';
+                                                                              
 
 export default async function ls(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -54,7 +54,7 @@ export default async function ls(
     );
   }
 
-  const aliases: Alias[] = await getAliases(now);
+  const aliases          = await getAliases(now);
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -70,7 +70,7 @@ export default async function ls(
     if (opts['--json']) {
       output.print(JSON.stringify({ rules: alias.rules }, null, 2));
     } else {
-      const rules: PathAliasRule[] = alias.rules || [];
+      const rules                  = alias.rules || [];
       output.log(
         `${rules.length} path alias ${plural(
           'rule',
@@ -93,7 +93,7 @@ export default async function ls(
   return 0;
 }
 
-function printAliasTable(aliases: Alias[]): string {
+function printAliasTable(aliases         )         {
   return (
     table(
       [
@@ -120,7 +120,7 @@ function printAliasTable(aliases: Alias[]): string {
   );
 }
 
-function printPathAliasTable(rules: PathAliasRule[]): string {
+function printPathAliasTable(rules                 )         {
   const header = [['pathname', 'method', 'dest'].map(s => chalk.gray(s))];
   return (
     table(

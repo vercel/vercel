@@ -1,4 +1,4 @@
-//@flow
+//     
 
 import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
@@ -41,14 +41,14 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
-import type { Readable } from 'stream';
-import type {
-  Output,
-  CLIContext,
-  NewDeployment,
-  DeploymentEvent
-} from '../../util/types';
-import type { CreateDeployError } from '../../util/deploy/create-deploy';
+                                       
+             
+         
+             
+                
+                 
+                          
+                                                                         
 import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
@@ -337,9 +337,9 @@ const promptForEnvFields = async list => {
 };
 
 exports.pipe = async function main(
-  ctx: CLIContext,
-  contextName: string,
-  output: Output
+  ctx            ,
+  contextName        ,
+  output        
 ) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
@@ -409,7 +409,7 @@ async function sync({
     const rawPath = argv._[0];
 
     let meta;
-    let deployment: NewDeployment | null = null;
+    let deployment                       = null;
     let isFile;
 
     if (paths.length === 1) {
@@ -1208,15 +1208,15 @@ async function readMeta(
   }
 }
 
-function getRegionsFromConfig(config = {}): Array<string> {
+function getRegionsFromConfig(config = {})                {
   return config.regions || [];
 }
 
-function getScaleFromConfig(config = {}): Object {
+function getScaleFromConfig(config = {})         {
   return config.scale || {};
 }
 
-async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
+async function maybeGetEventsStream(now     , deployment               ) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
@@ -1228,11 +1228,11 @@ async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
 }
 
 function getEventsGenerator(
-  now: Now,
-  contextName: ?string,
-  deployment: NewDeployment,
-  eventsStream: null | Readable
-): AsyncGenerator<DeploymentEvent, void, void> {
+  now     ,
+  contextName         ,
+  deployment               ,
+  eventsStream                 
+)                                              {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(
     now,
     contextName,
@@ -1250,10 +1250,10 @@ function getEventsGenerator(
 }
 
 function getVerifyDCsGenerator(
-  output: Output,
-  now: Now,
-  deployment: NewDeployment,
-  eventsStream: Readable | null
+  output        ,
+  now     ,
+  deployment               ,
+  eventsStream                 
 ) {
   const verifyDeployment = verifyDeploymentScale(
     output,
@@ -1270,10 +1270,10 @@ function getVerifyDCsGenerator(
     : verifyDeployment;
 }
 
-function handleCreateDeployError<OtherError>(
-  output: Output,
-  error: CreateDeployError | OtherError
-): 1 | OtherError {
+function handleCreateDeployError            (
+  output        ,
+  error                                
+)                 {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(
       `Custom suffixes are only allowed for domains in ${chalk.underline(

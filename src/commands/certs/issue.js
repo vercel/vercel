@@ -1,4 +1,4 @@
-// @flow
+//      
 import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
@@ -11,7 +11,7 @@ import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLICertsOptions } from '../../util/types';
+                                                        
 
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -19,11 +19,11 @@ import finishCertOrder from '../../util/certs/finish-cert-order';
 import startCertOrder from '../../util/certs/start-cert-order';
 
 export default async function issue(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -208,12 +208,12 @@ export default async function issue(
 }
 
 async function runStartOrder(
-  output: Output,
-  now: Now,
-  cns: string[],
-  contextName: string,
-  stamp: () => string,
-  { fallingBack = false }: { fallingBack: boolean } = {}
+  output        ,
+  now     ,
+  cns          ,
+  contextName        ,
+  stamp              ,
+  { fallingBack = false }                           = {}
 ) {
   const { challengesToResolve } = await startCertOrder(now, cns, contextName);
   const pendingChallenges = challengesToResolve.filter(

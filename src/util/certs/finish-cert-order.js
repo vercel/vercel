@@ -1,21 +1,21 @@
-// @flow
+//      
 import chalk from 'chalk';
 import psl from 'psl';
 import { Now } from '../types';
 import * as Errors from '../errors';
 import wait from '../output/wait';
-import type { Certificate } from '../types';
+                                            
 
 export default async function startCertOrder(
-  now: Now,
-  cns: string[],
-  context: string
+  now     ,
+  cns          ,
+  context        
 ) {
   const cancelWait = wait(
     `Issuing a certificate for ${chalk.bold(cns.join(', '))}`
   );
   try {
-    const cert: Certificate = await now.fetch('/v3/now/certs', {
+    const cert              = await now.fetch('/v3/now/certs', {
       method: 'PATCH',
       body: {
         op: 'finalizeOrder',

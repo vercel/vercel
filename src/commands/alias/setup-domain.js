@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import psl from 'psl';
 
@@ -13,12 +13,12 @@ import { Output, Now } from '../../util/types';
 import * as Errors from '../../util/errors';
 
 async function setupDomain(
-  output: Output,
-  now: Now,
-  alias: string,
-  contextName: string
+  output        ,
+  now     ,
+  alias        ,
+  contextName        
 ) {
-  const { domain }: { domain: string, subdomain: string | null } = psl.parse(
+  const { domain }                                               = psl.parse(
     alias
   );
   const info = await getDomainInfo(now, domain, contextName);

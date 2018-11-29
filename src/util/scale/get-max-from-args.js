@@ -1,4 +1,4 @@
-// @flow
+//      
 import {
   InvalidArgsForMinMaxScale,
   InvalidMaxForScale,
@@ -8,9 +8,9 @@ import toNumberOrAuto from './to-number-or-auto';
 import isValidMinMaxValue from './is-valid-min-max-value';
 import getRawMinFromArgs from './get-raw-min-from-args';
 
-const AUTO: 'auto' = 'auto';
+const AUTO         = 'auto';
 
-export default function getMaxFromArgs(args: string[]) {
+export default function getMaxFromArgs(args          ) {
   const min = getRawMinFromArgs(args);
   if (min instanceof InvalidMinForScale) {
     return min;

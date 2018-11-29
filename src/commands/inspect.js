@@ -1,4 +1,4 @@
-// @flow
+//      
 
 // Packages
 const chalk = require('chalk');
@@ -51,7 +51,7 @@ const help = () => {
   `);
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
+module.exports = async function main(ctx     )                  {
   let id;
   let deployment;
   let argv;
@@ -260,13 +260,13 @@ module.exports = async function main(ctx: any): Promise<number> {
 // gets the metadata that should be printed next to
 // each event
 
-type Event = {
-  event: string,
-  payload: any,
-  created: number
-};
+              
+                
+               
+                 
+  
 
-function getEventMetadata({ event, payload }: Event): string {
+function getEventMetadata({ event, payload }       )         {
   if (event === 'state') {
     return chalk.bold(payload.value);
   }
@@ -282,14 +282,14 @@ function getEventMetadata({ event, payload }: Event): string {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught(p): Promise<any> {
+function caught(p)               {
   return new Promise(r => {
     p.then(r).catch(r);
   });
 }
 
 // renders the state string
-function stateString(s: string): string {
+function stateString(s        )         {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

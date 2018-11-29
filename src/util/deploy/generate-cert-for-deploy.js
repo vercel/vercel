@@ -1,4 +1,4 @@
-// @flow
+//      
 import psl from 'psl';
 import * as Errors from '../errors';
 import { Now, Output } from '../types';
@@ -7,10 +7,10 @@ import setupDomain from '../../commands/alias/setup-domain';
 import wait from '../output/wait';
 
 export default async function generateCertForDeploy(
-  output: Output,
-  now: Now,
-  contextName: string,
-  deployURL: string
+  output        ,
+  now     ,
+  contextName        ,
+  deployURL        
 ) {
   const { domain } = psl.parse(deployURL);
   const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`);

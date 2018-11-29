@@ -1,4 +1,4 @@
-// @flow
+//      
 import joinWords from '../../util/output/join-words';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
@@ -8,11 +8,11 @@ import createCertForCns from '../../util/certs/create-cert-for-cns';
 import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
 
 async function createCertificateForAlias(
-  output: Output,
-  now: Now,
-  context: string,
-  alias: string,
-  shouldBeWildcard: boolean
+  output        ,
+  now     ,
+  context        ,
+  alias        ,
+  shouldBeWildcard         
 ) {
   const cns = shouldBeWildcard ? getWildcardCnsForAlias(alias) : [alias];
   const cancelMessage = wait(`Generating a certificate...`);

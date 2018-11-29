@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-//@flow
+//     
 
 // Packages
 const mri = require('mri');
@@ -62,7 +62,7 @@ const help = () => {
 
 // Options
 
-module.exports = async function main(ctx: any): Promise<number> {
+module.exports = async function main(ctx     )                  {
   let argv;
 
   argv = mri(ctx.argv.slice(2), {

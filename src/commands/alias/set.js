@@ -1,4 +1,4 @@
-// @flow
+//      
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -11,7 +11,7 @@ import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import zeitWorldTable from '../../util/zeit-world-table';
-import type { CLIAliasOptions } from '../../util/types';
+                                                        
 
 import assignAlias from './assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';
@@ -20,11 +20,11 @@ import getTargetsForAlias from './get-targets-for-alias';
 import upsertPathAlias from './upsert-path-alias';
 
 export default async function set(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -195,24 +195,24 @@ export default async function set(
   return 0;
 }
 
-export type SetupDomainError =
-  | Errors.DomainNameserversNotFound
-  | Errors.DomainNotFound
-  | Errors.DomainNotVerified
-  | Errors.DomainPermissionDenied
-  | Errors.DomainVerificationFailed
-  | Errors.InvalidCoupon
-  | Errors.MissingCreditCard
-  | Errors.CDNNeedsUpgrade
-  | Errors.PaymentSourceNotFound
-  | Errors.UnsupportedTLD
-  | Errors.UsedCoupon
-  | Errors.UserAborted;
+                              
+                                    
+                         
+                            
+                                 
+                                   
+                        
+                            
+                          
+                                
+                         
+                     
+                       
 
-function handleSetupDomainErrorImpl<Other>(
-  output: Output,
-  error: SetupDomainError | Other
-): 1 | Other {
+function handleSetupDomainErrorImpl       (
+  output        ,
+  error                          
+)            {
   if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
       `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
@@ -299,31 +299,31 @@ function handleSetupDomainErrorImpl<Other>(
   }
 }
 
-type CreateAliasError =
-  | Errors.AliasInUse
-  | Errors.CantSolveChallenge
-  | Errors.CDNNeedsUpgrade
-  | Errors.DeploymentNotFound
-  | Errors.DeploymentPermissionDenied
-  | Errors.DomainConfigurationError
-  | Errors.DomainPermissionDenied
-  | Errors.DomainsShouldShareRoot
-  | Errors.DomainValidationRunning
-  | Errors.ForbiddenScaleMaxInstances
-  | Errors.ForbiddenScaleMinInstances
-  | Errors.InvalidAlias
-  | Errors.InvalidScaleMinMaxRelation
-  | Errors.InvalidWildcardDomain
-  | Errors.NotSupportedMinScaleSlots
-  | Errors.RuleValidationFailed
-  | Errors.TooManyCertificates
-  | Errors.TooManyRequests
-  | Errors.VerifyScaleTimeout;
+                       
+                     
+                             
+                          
+                             
+                                     
+                                   
+                                 
+                                 
+                                  
+                                     
+                                     
+                       
+                                     
+                                
+                                    
+                               
+                              
+                          
+                              
 
-function handleCreateAliasErrorImpl<OtherError>(
-  output: Output,
-  error: CreateAliasError | OtherError
-): 1 | OtherError {
+function handleCreateAliasErrorImpl            (
+  output        ,
+  error                               
+)                 {
   if (error instanceof Errors.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(

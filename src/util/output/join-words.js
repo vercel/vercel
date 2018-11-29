@@ -1,5 +1,5 @@
-// @flow
-function joinWords(words: string[] = []) {
+//      
+function joinWords(words           = []) {
   if (words.length === 0) {
     return '';
   } else if (words.length === 1) {

@@ -1,4 +1,4 @@
-// @flow
+//      
 import elapsed from './elapsed';
 
 // Returns a time delta with the right color

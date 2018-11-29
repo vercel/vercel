@@ -1,10 +1,10 @@
-// @flow
+//      
 import fs from 'fs';
 import { CantParseJSONFile } from '../../util/errors';
 
 async function readJSONFile(
-  file: string
-): Promise<Object | null | CantParseJSONFile> {
+  file        
+)                                             {
   const content = await readFileSafe(file);
   if (content === null) {
     return content;
@@ -18,7 +18,7 @@ async function readJSONFile(
   }
 }
 
-async function readFileSafe(file: string): Promise<string | null> {
+async function readFileSafe(file        )                         {
   return fs.existsSync(file) ? await fs.promises.readFile(file) : null;
 }
 

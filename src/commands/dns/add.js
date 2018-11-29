@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import Now from '../../util';
 import getScope from '../../util/get-scope';
@@ -6,14 +6,14 @@ import stamp from '../../util/output/stamp';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
 import { CLIContext, Output } from '../../util/types';
-import type { CLIDNSOptions } from '../../util/types';
+                                                      
 
 async function add(
-  ctx: CLIContext,
-  opts: CLIDNSOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts               ,
+  args          ,
+  output        
+)                  {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -69,7 +69,7 @@ async function add(
   return 0;
 }
 
-function parseAddArgs(args: string[]) {
+function parseAddArgs(args          ) {
   if (!args || args.length < 4) {
     return null;
   }

@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import plural from 'pluralize';
 
@@ -18,10 +18,10 @@ import purchaseDomain from './purchase-domain';
 const isTTY = process.stdout.isTTY;
 
 async function purchaseDomainIfAvailable(
-  output: Output,
-  now: Now,
-  domain: string,
-  contextName: string
+  output        ,
+  now     ,
+  domain        ,
+  contextName        
 ) {
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();

@@ -1,18 +1,18 @@
-// @flow
+//      
 import psl from 'psl';
 import chalk from 'chalk';
 import retry from 'async-retry';
 import * as Errors from '../errors';
 import { Now } from '../types';
-import type { Certificate } from '../types';
+                                            
 import wait from '../output/wait';
 
-async function createCertForCns(now: Now, cns: string[], context: string) {
+async function createCertForCns(now     , cns          , context        ) {
   const cancelWait = wait(
     `Issuing a certificate for ${chalk.bold(cns.join(', '))}`
   );
   try {
-    const certificate: Certificate = await retry(
+    const certificate              = await retry(
       async bail => {
         try {
           return await now.fetch('/v3/now/certs', {

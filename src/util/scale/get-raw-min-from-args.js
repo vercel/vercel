@@ -1,9 +1,9 @@
-// @flow
+//      
 import { InvalidMinForScale } from '../errors';
 import toNumberOrAuto from './to-number-or-auto';
 import isValidMinMaxValue from './is-valid-min-max-value';
 
-export default function getRawMinFromArgs(args: string[]) {
+export default function getRawMinFromArgs(args          ) {
   if (isValidMinMaxValue(args[2])) {
     return toNumberOrAuto(args[2]);
   } else if (isValidMinMaxValue(args[3])) {

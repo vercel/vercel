@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import psl from 'psl';
 
@@ -13,15 +13,15 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
-import type { CLIDomainsOptions } from '../../util/types';
+                                                          
 import wait from '../../util/output/wait';
 
 export default async function buy(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

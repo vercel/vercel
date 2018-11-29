@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import table from 'text-table';
 
@@ -7,8 +7,8 @@ import { Output } from './types';
 import { DomainConfigurationError } from './errors';
 
 export function handleDomainConfigurationError(
-  output: Output,
-  error: DomainConfigurationError
+  output        ,
+  error                          
 ) {
   output.error(
     `We couldn't verify the propagation of the DNS settings for ${chalk.underline(

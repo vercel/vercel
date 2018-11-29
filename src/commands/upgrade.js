@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import createOutput from '../util/output';
 import cmd from '../util/output/cmd';
@@ -9,7 +9,7 @@ import getArgs from '../util/get-args';
 import promptBool from '../util/prompt-bool';
 import Now from '../util/';
 import wait from '../util/output/wait';
-import type { CLIDomainsOptions } from '../../util/types';
+                                                          
 import plans from '../util/plans';
 
 const help = (type) => {
@@ -106,8 +106,8 @@ const downgradeToFree = async ({ error }, now) => {
   cancelWait();
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLIDomainsOptions;
+module.exports = async function main(ctx     )                  {
+  let argv                   ;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {

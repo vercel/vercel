@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -9,7 +9,7 @@ import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLIDomainsOptions, Certificate, Domain } from '../../util/types';
+                                                                               
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertsForDomain from '../../util/certs/get-certs-for-domain';
@@ -18,11 +18,11 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
 async function rm(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -95,9 +95,9 @@ async function rm(
 }
 
 async function confirmDomainRemove(
-  output: Output,
-  domain: Domain,
-  certs: Certificate[]
+  output        ,
+  domain        ,
+  certs               
 ) {
   return new Promise(resolve => {
     const time = chalk.gray(ms(new Date() - new Date(domain.created)) + ' ago');

@@ -1,9 +1,9 @@
-// @flow
+//      
 import wait from '../output/wait';
 import { Now } from '../types';
 import { DomainNameserversNotFound } from '../errors';
 
-async function getDomainNameservers(now: Now, domain: string) {
+async function getDomainNameservers(now     , domain        ) {
   const cancelFetchingMessage = wait(`Fetching DNS nameservers for ${domain}`);
   try {
     let { nameservers } = await now.fetch(

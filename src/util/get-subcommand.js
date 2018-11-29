@@ -1,12 +1,12 @@
-// @flow
-type CommandConfig = {
-  default?: string,
-  [command: string]: string[]
-};
+//      
+                      
+                   
+                             
+  
 
 export default function getSubcommand(
-  cliArgs: string[],
-  config: CommandConfig
+  cliArgs          ,
+  config               
 ) {
   const [subcommand, ...rest] = cliArgs;
   for (const k of Object.keys(config)) {

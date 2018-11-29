@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -11,14 +11,14 @@ import isDomainExternal from '../../util/domains/is-domain-external';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
-import type { CLIDomainsOptions, Domain } from '../../util/types';
+                                                                  
 
 async function ls(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -55,7 +55,7 @@ async function ls(
   return 0;
 }
 
-function formatDomainsTable(domains: Domain[]) {
+function formatDomainsTable(domains          ) {
   const current = new Date();
   return table(
     [

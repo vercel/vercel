@@ -1,4 +1,4 @@
-// @flow
+//      
 
 const ARG_COMMON = {
   '--help': Boolean,

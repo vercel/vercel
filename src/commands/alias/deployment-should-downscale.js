@@ -1,13 +1,13 @@
-// @flow
+//      
 import { Output, Now } from '../../util/types';
-import type { NpmDeployment, DockerDeployment } from '../../util/types';
+                                                                        
 import deploymentIsAliased from './deployment-is-aliased';
 import getScaleForDC from './get-scale-for-dc';
 
 async function deploymentShouldDownscale(
-  output: Output,
-  now: Now,
-  deployment: NpmDeployment | DockerDeployment
+  output        ,
+  now     ,
+  deployment                                  
 ) {
   const isAliased = await deploymentIsAliased(now, deployment);
   output.debug(`Previous deployment is aliased: ${isAliased.toString()}`);

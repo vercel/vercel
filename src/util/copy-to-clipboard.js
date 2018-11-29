@@ -1,4 +1,4 @@
-// @flow
+//      
 
 // Packages
 const { write } = require('clipboardy');
@@ -7,9 +7,9 @@ const { write } = require('clipboardy');
 const _isTTY = process.stdout.isTTY;
 
 async function copyToClipboard(
-  str: string,
-  shouldCopy: boolean | string = 'auto',
-  isTTY: boolean = _isTTY
+  str        ,
+  shouldCopy                   = 'auto',
+  isTTY          = _isTTY
 ) {
   if (shouldCopy === false) {
     return false;

@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import psl from 'psl';
 
@@ -15,15 +15,15 @@ import getBooleanOptionValue from '../../util/get-boolean-option-value';
 import Now from '../../util';
 import promptBool from '../../util/input/prompt-bool';
 import stamp from '../../util/output/stamp';
-import type { CLIDomainsOptions } from '../../util/types';
+                                                          
 import zeitWorldTable from '../../util/zeit-world-table';
 
 export default async function add(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -218,9 +218,9 @@ export default async function add(
 }
 
 function maybeWarnAboutUnverified(
-  output: Output,
-  domainName: string,
-  isVerified: boolean
+  output        ,
+  domainName        ,
+  isVerified         
 ) {
   if (!isVerified) {
     output.warn(

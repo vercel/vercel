@@ -1,13 +1,13 @@
-// @flow
+//      
 import { Now } from '../../util/types';
 import { DeploymentNotFound, DeploymentPermissionDenied } from '../errors';
-import type { Deployment } from '../types';
+                                           
 import toHost from '../to-host';
 
 async function getDeploymentByIdOrHost(
-  now: Now,
-  contextName: string,
-  idOrHost: string
+  now     ,
+  contextName        ,
+  idOrHost        
 ) {
   try {
     const { deployment } =
@@ -27,26 +27,26 @@ async function getDeploymentByIdOrHost(
 }
 
 async function getDeploymentById(
-  now: Now,
-  id: string
-): Promise<{ deployment: Deployment }> {
+  now     ,
+  id        
+)                                      {
   const deployment = await now.fetch(
     `/v5/now/deployments/${encodeURIComponent(id)}`
   );
   return { deployment };
 }
 
-type DeploymentHostResponse = {
-  deployment: {
-    id: string
-  }
-};
+                               
+               
+              
+   
+  
 
 async function getDeploymentByHost(
-  now: Now,
-  host: string
-): Promise<{ deployment: Deployment }> {
-  const response: DeploymentHostResponse = await now.fetch(
+  now     ,
+  host        
+)                                      {
+  const response                         = await now.fetch(
     `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
   );
   return getDeploymentById(now, response.deployment.id);

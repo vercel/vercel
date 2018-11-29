@@ -1,29 +1,29 @@
-// @flow
+//      
 import wait from '../../util/output/wait';
 import { DomainPermissionDenied } from '../../util/errors';
 import { Now } from '../../util/types';
 
-export type DomainInfo = {
-  uid: string,
-  creator: {
-    email: string,
-    uid: string,
-    username: string
-  },
-  created: string,
-  boughtAt?: string,
-  expiresAt: string,
-  isExternal: boolean,
-  serviceType: string,
-  verified: boolean,
-  aliases: string[],
-  certs: string[]
-};
+                          
+              
+            
+                  
+                
+                    
+    
+                  
+                    
+                    
+                      
+                      
+                    
+                    
+                 
+  
 
-async function getDomainInfo(now: Now, domain: string, context: string) {
+async function getDomainInfo(now     , domain        , context        ) {
   const cancelMessage = wait(`Fetching domain info`);
   try {
-    const info: DomainInfo = await now.fetch(`/domains/${domain}`);
+    const info             = await now.fetch(`/domains/${domain}`);
     cancelMessage();
     return info;
   } catch (error) {

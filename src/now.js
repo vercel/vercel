@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-//@flow
+//
 
 // This should be automatically included by @babel/preset-env but it's
 // not being load right now. We have to remove it once it's fixed
@@ -72,7 +72,7 @@ const main = async argv_ => {
   );
 
   const isDebugging = argv['--debug'];
-  const output: Output = createOutput({ debug: isDebugging });
+  const output         = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 
@@ -116,7 +116,7 @@ const main = async argv_ => {
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls`)
-  let targetOrSubcommand: ?string = argv._[2];
+  let targetOrSubcommand          = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
@@ -311,7 +311,7 @@ const main = async argv_ => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx: Object = {
+  const ctx         = {
     config,
     authConfig,
     argv: argv_

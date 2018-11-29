@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
@@ -11,14 +11,14 @@ import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLICertsOptions } from '../../util/types';
+                                                        
 
 async function rm(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -75,7 +75,7 @@ async function rm(
   return 0;
 }
 
-async function getCertsToDelete(output: Output, now: Now, idOrCn: string) {
+async function getCertsToDelete(output        , now     , idOrCn        ) {
   const cert = await getCertById(output, now, idOrCn);
   return !cert ? await getCerts(output, now, [idOrCn]) : [cert];
 }

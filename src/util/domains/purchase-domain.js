@@ -1,13 +1,13 @@
-// @flow
+//      
 import * as Errors from '../errors';
 import { Now, Output } from '../types';
 
 export default async function purchaseDomain(
-  output: Output,
-  now: Now,
-  name: string,
-  coupon: string,
-  expectedPrice: number
+  output        ,
+  now     ,
+  name        ,
+  coupon        ,
+  expectedPrice        
 ) {
   try {
     return await now.fetch(`/v3/domains/buy`, {

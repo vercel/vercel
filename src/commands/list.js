@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-//@flow
+//     
 
 // Packages
 const chalk = require('chalk');
@@ -292,7 +292,7 @@ module.exports = async function main(ctx) {
 };
 
 // renders the state string
-function stateString(s: string) {
+function stateString(s        ) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

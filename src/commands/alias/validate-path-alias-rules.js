@@ -1,7 +1,7 @@
-// @flow
+//      
 import { RulesFileValidationError } from '../../util/errors';
 
-function validatePathAliasRules(location: string, rules: any) {
+function validatePathAliasRules(location        , rules     ) {
   if (!Array.isArray(rules)) {
     return new RulesFileValidationError(location, 'rules must be an array');
   } else if (rules.length === 0) {

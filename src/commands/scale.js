@@ -1,4 +1,4 @@
-// @flow
+//      
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -18,7 +18,7 @@ import getMaxFromArgs from '../util/scale/get-max-from-args';
 import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
-import type { CLIScaleOptions, DeploymentScaleArgs } from '../util/types';
+                                                                          
 import { CLIContext, Output } from '../util/types';
 import { handleError } from '../util/error';
 import { VerifyScaleTimeout } from '../util/errors';
@@ -70,8 +70,8 @@ const help = () => {
   `);
 };
 
-module.exports = async function main(ctx: CLIContext): Promise<number> {
-  let argv: CLIScaleOptions;
+module.exports = async function main(ctx            )                  {
+  let argv                 ;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -97,7 +97,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const output: Output = createOutput({ debug });
+  const output         = createOutput({ debug });
   const { contextName } = await getScope({
     apiUrl,
     token,
@@ -214,7 +214,7 @@ module.exports = async function main(ctx: CLIContext): Promise<number> {
     return 1;
   }
 
-  const scaleArgs: DeploymentScaleArgs = dcs.reduce(
+  const scaleArgs                      = dcs.reduce(
     (result, dc) => ({ ...result, [dc]: { min, max } }),
     {}
   );

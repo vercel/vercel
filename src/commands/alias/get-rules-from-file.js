@@ -1,7 +1,7 @@
-// @flow
+//      
 import path from 'path';
 import humanizePath from '../../util/humanize-path';
-import type { PathRule } from '../../util/types';
+                                                 
 import {
   CantParseJSONFile,
   FileNotFound,
@@ -10,15 +10,15 @@ import {
 import validatePathAliasRules from './validate-path-alias-rules';
 import readJSONFile from './read-json-file';
 
-type JSONRules = {
-  rules: PathRule[]
-};
+                  
+                   
+  
 
-async function getRulesFromFile(filePath: string) {
+async function getRulesFromFile(filePath        ) {
   return typeof filePath === 'string' ? await readRulesFile(filePath) : null;
 }
 
-async function readRulesFile(rulesPath: string) {
+async function readRulesFile(rulesPath        ) {
   const fullPath = path.resolve(process.cwd(), rulesPath);
   const result = await readJSONFile(fullPath);
   if (result instanceof CantParseJSONFile) {
@@ -37,7 +37,7 @@ async function readRulesFile(rulesPath: string) {
     return error;
   }
 
-  const json: JSONRules = result;
+  const json            = result;
   return json.rules;
 }
 

@@ -1,17 +1,17 @@
-// @flow
+//      
 import chalk from 'chalk';
 import wait from '../output/wait';
 import joinWords from '../output/join-words';
 import { Output, Now } from '../../util/types';
-import type { DeploymentScaleArgs, DeploymentScale } from '../../util/types';
+                                                                             
 import * as Errors from '../errors';
 
 async function patchDeploymentScale(
-  output: Output,
-  now: Now,
-  deploymentId: string,
-  scaleArgs: DeploymentScaleArgs | DeploymentScale,
-  url: string
+  output        ,
+  now     ,
+  deploymentId        ,
+  scaleArgs                                       ,
+  url        
 ) {
   const cancelWait = wait(
     `Setting scale rules for ${joinWords(

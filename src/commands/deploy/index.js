@@ -1,4 +1,4 @@
-//@flow
+//     
 
 import { resolve, basename, parse } from 'path';
 import { promises as fs } from 'fs';
@@ -12,9 +12,9 @@ import param from '../../util/output/param';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
-import type { CLIContext } from '../../util/types';
+                                                   
 
-module.exports = async (ctx: CLIContext) => {
+module.exports = async (ctx            ) => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
   const combinedArgs = Object.assign({}, legacy.args, latest.args);
 
