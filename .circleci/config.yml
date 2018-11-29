@@ -213,7 +213,8 @@ workflows:
               only: /.*/
       - test-coverage:
           requires:
-            - build
+            - test-integration
+            - test-unit
           filters:
             tags:
               only: /.*/
