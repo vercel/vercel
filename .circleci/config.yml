@@ -68,7 +68,6 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - coverage
             - .nyc_output
 
   test-integration:
@@ -88,7 +87,6 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - coverage
             - .nyc_output
 
   test-coverage:
