@@ -1,5 +1,5 @@
 //      
-import { Now, Output } from '../types';
+
 import getDomainDNSRecords from './get-domain-dns-records';
 import isDomainExternal from '../domains/is-domain-external';
 import getDomains from '../domains/get-domains';

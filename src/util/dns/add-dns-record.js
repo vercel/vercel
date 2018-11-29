@@ -1,5 +1,5 @@
 //      
-import { Now, Output } from '../types';
+
 import { DomainNotFound, DNSPermissionDenied } from '../errors';
 
                           

@@ -4,7 +4,7 @@ import ms from 'ms';
 import table from 'text-table';
 const plural = require('pluralize');
 
-import { CLIContext, Output } from '../../util/types';
+
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';

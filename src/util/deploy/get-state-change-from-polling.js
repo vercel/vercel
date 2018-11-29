@@ -1,6 +1,6 @@
 //      
 import sleep from '../sleep';
-import { Now } from '../types';
+
 import createPollingFn from '../create-polling-fn';
                                                  
 import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw';

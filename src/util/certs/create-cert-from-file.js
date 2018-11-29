@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import wait from '../output/wait';
 
-import { Now } from '../types';
+
 import { InvalidCert, DomainPermissionDenied } from '../errors';
                                             
 

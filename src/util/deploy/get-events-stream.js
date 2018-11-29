@@ -3,7 +3,7 @@ import through2 from 'through2';
 import jsonlines from 'jsonlines';
 import { stringify } from 'querystring';
                                        
-import { Now } from '../types';
+
 import noop from '../noop';
 
                 

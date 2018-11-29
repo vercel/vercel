@@ -1,5 +1,5 @@
 //      
-import { Output, Now } from '../types';
+
 import getCerts from './get-certs';
 
 async function getCertsForDomain(output        , now     , domain        ) {

@@ -1,6 +1,6 @@
 //      
 import toHost from '../../util/to-host';
-import { Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import getInferredTargets from './get-inferred-targets';
 

@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import wait from '../output/wait';
 import joinWords from '../output/join-words';
-import { Output, Now } from '../../util/types';
+
                                                                              
 import * as Errors from '../errors';
 

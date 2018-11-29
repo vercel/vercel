@@ -4,7 +4,7 @@ import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-import { Output } from '../../util/types';
+
 import { handleError } from '../../util/error';
                                                       
 

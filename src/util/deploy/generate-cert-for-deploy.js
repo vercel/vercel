@@ -1,7 +1,7 @@
 //      
 import psl from 'psl';
 import * as Errors from '../errors';
-import { Now, Output } from '../types';
+
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../../commands/alias/setup-domain';
 import wait from '../output/wait';

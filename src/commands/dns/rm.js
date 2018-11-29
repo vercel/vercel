@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import stamp from '../../util/output/stamp';
-import { CLIContext, Output } from '../../util/types';
+
                                                                  
 
 async function rm(

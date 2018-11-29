@@ -3,7 +3,7 @@ import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
 
-import { CLIContext, Output } from '../../util/types';
+
 import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
 import dnsTable from '../../util/dns-table';

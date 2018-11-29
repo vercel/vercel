@@ -1,7 +1,7 @@
 //      
 import wait from '../output/wait';
 
-import { Now } from '../types';
+
 import * as Errors from '../errors';
 import addDomain from './add-domain';
 

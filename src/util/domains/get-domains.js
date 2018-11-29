@@ -1,6 +1,6 @@
 //      
 import chalk from 'chalk';
-import { Output, Now } from '../types';
+
                                        
 import wait from '../output/wait';
 

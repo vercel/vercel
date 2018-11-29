@@ -1,6 +1,6 @@
 //      
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
+
                                                               
 import * as Errors from '../../util/errors';
 import createCertForAlias from './create-cert-for-alias';

@@ -1,5 +1,5 @@
 //      
-import { Output, Now } from '../types';
+
 
 async function deleteCertById(output        , now     , id        ) {
   return now.fetch(`/v3/now/certs/${id}`, {

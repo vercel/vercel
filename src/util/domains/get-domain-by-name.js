@@ -1,6 +1,6 @@
 //      
 import getDomains from './get-domains';
-import { Output, Now } from '../types';
+
 import toHost from '../to-host';
 
 async function getDomainByIdOrName(

@@ -19,7 +19,7 @@ import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
                                                                           
-import { CLIContext, Output } from '../util/types';
+
 import { handleError } from '../util/error';
 import { VerifyScaleTimeout } from '../util/errors';
 

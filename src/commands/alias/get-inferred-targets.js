@@ -1,6 +1,6 @@
 //      
 import getConfig from './get-config';
-import { Output } from '../../util/types';
+
 import {
   NoAliasInConfig,
   InvalidAliasInConfig,

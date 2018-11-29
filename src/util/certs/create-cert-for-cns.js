@@ -3,7 +3,7 @@ import psl from 'psl';
 import chalk from 'chalk';
 import retry from 'async-retry';
 import * as Errors from '../errors';
-import { Now } from '../types';
+
                                             
 import wait from '../output/wait';
 

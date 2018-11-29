@@ -1,7 +1,7 @@
 //      
 import chalk from 'chalk';
 import psl from 'psl';
-import { Now } from '../types';
+
 import * as Errors from '../errors';
 import wait from '../output/wait';
                                             

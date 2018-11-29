@@ -1,5 +1,5 @@
 //      
-import { Now } from '../types';
+
 import { InvalidCoupon, UsedCoupon } from '../errors';
 import getCouponInfo from './get-coupon-info';
 

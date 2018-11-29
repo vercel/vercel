@@ -9,7 +9,7 @@ import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { CLIContext, Output } from '../../util/types';
+
 import { DomainNotFound } from '../../util/errors';
                                                                  
 

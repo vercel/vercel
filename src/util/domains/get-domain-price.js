@@ -1,6 +1,6 @@
 //      
 import { stringify } from 'querystring';
-import { Now } from '../types';
+
 import * as Errors from '../errors';
 import getCreditCards from '../billing/get-credit-cards';
                                             

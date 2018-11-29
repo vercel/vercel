@@ -41,7 +41,7 @@ const getUser = require('./util/get-user');
 const NowTeams = require('./util/teams');
 const highlight = require('./util/output/highlight');
 
-import { Output } from './util/types';
+
 import createOutput from './util/output';
 import getArgs from './util/get-args';
 

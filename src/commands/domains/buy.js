@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { CLIContext, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';

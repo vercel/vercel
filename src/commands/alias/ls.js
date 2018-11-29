@@ -5,7 +5,7 @@ import plural from 'pluralize';
 import table from 'text-table';
 
 import Now from '../../util';
-import { CLIContext, Output } from '../../util/types';
+
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';

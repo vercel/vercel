@@ -1,6 +1,6 @@
 //      
 import getDNSRecords from './get-dns-records';
-import { Now, Output } from '../../util/types';
+
                                           
 
 async function getDNSRecordById(

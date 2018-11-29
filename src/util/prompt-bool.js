@@ -1,6 +1,6 @@
 //      
 import chalk from 'chalk';
-import { Output } from './types';
+
 
 async function promptBool(output        , message        ) {
   return new Promise(resolve => {

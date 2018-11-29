@@ -1,12 +1,9 @@
-//      
 import chalk from 'chalk';
 import plural from 'pluralize';
-import { Output, Now } from '../../util/types';
 import { tick } from '../output/chars';
 import { VerifyScaleTimeout } from '../../util/errors';
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
-                                                        
 import wait from '../output/wait';
 import verifyDeploymentScale from './verify-deployment-scale';
 
@@ -14,7 +11,7 @@ async function waitForScale(
   output        ,
   now     ,
   deploymentId        ,
-  scale                 
+  scale
 ) {
   const remainingDCs = new Set(Object.keys(scale));
   const scaleStamp = stamp();

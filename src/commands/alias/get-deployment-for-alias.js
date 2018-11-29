@@ -1,6 +1,6 @@
 //      
 import chalk from 'chalk';
-import { Now, Output } from '../../util/types';
+
                                              
 import getAppLastDeployment from './get-app-last-deployment';
 import getAppName from './get-app-name';

@@ -1,5 +1,5 @@
 //      
-import { Output, Now } from '../../util/types';
+
                                                                         
 import deploymentIsAliased from './deployment-is-aliased';
 import getScaleForDC from './get-scale-for-dc';

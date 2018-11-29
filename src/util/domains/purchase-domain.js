@@ -1,6 +1,6 @@
 //      
 import * as Errors from '../errors';
-import { Now, Output } from '../types';
+
 
 export default async function purchaseDomain(
   output        ,

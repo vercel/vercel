@@ -1,5 +1,5 @@
 //      
-import { Output, Now } from '../../util/types';
+
                                              
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import fetchDeploymentsByAppName from './get-deployments-by-appname';

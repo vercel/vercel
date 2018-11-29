@@ -5,7 +5,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
-import { CLIContext, Output } from '../../util/types';
+
                                                       
 
 async function add(

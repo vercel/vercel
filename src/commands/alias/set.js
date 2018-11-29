@@ -2,7 +2,7 @@
 import ms from 'ms';
 import chalk from 'chalk';
 
-import { CLIContext, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/dns-table';

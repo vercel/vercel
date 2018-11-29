@@ -1,5 +1,5 @@
 //      
-import { Now, Output } from '../types';
+
 import generateCertForDeploy from './generate-cert-for-deploy';
 import * as Errors from '../errors';
 

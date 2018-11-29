@@ -9,7 +9,7 @@ import getDomainNameservers from '../../util/domains/get-domain-nameservers';
 import verifyDomain from '../../util/domains/verify-domain';
 
 // Types and errors
-import { Output, Now } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 
 async function setupDomain(

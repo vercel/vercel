@@ -7,7 +7,7 @@ import eraseLines from '../../util/output/erase-lines';
 import promptBool from '../../util/input/prompt-bool';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
+
 import { NowError } from '../../util/now-error';
 import * as Errors from '../../util/errors';
 import getDomainPrice from '../../util/domains/get-domain-price';

@@ -1,5 +1,5 @@
 //      
-import { Now } from '../types';
+
                                            
 
 export default async function getCreditCards(now     ) {

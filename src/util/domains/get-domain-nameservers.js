@@ -1,6 +1,6 @@
 //      
 import wait from '../output/wait';
-import { Now } from '../types';
+
 import { DomainNameserversNotFound } from '../errors';
 
 async function getDomainNameservers(now     , domain        ) {

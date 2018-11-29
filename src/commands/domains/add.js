@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { CLIContext, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';

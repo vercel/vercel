@@ -1,5 +1,5 @@
 //      
-import { Now } from '../types';
+
 import { DeploymentPermissionDenied, DeploymentNotFound } from '../errors';
 import getDeploymentByIdOrHost from './get-deployment-by-id-or-host';
 

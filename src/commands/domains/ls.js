@@ -4,7 +4,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 
-import { CLIContext, Output } from '../../util/types';
+
 import getScope from '../../util/get-scope';
 import getDomains from '../../util/domains/get-domains';
 import isDomainExternal from '../../util/domains/is-domain-external';

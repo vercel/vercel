@@ -4,7 +4,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 
-import { CLIContext, Output } from '../../util/types';
+
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import Now from '../../util';

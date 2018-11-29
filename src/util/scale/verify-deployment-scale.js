@@ -3,7 +3,7 @@ import ms from 'ms';
 import uuid from '../../util/uuid';
 import createPollingFn from '../create-polling-fn';
 import returnify from '../returnify-async-generator.js';
-import { Output, Now } from '../types';
+
 import { VerifyScaleTimeout } from '../errors';
 import getDeploymentInstances from '../deploy/get-deployment-instances';
                                                                 
