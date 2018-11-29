@@ -187,6 +187,68 @@ test('try to add a payment method', async t => {
   t.true(stdout.startsWith(`> Enter your card details for ${email}`));
 });
 
+test('use `-V 1` to deploy a GitHub repository', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    '-V',
+    1,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    'leo/hub',
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
+test('use `--platform-version 1` to deploy a GitHub repository', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    '--platform-version',
+    1,
+    '--public',
+    '--name',
+    session,
+    ...defaultArgs,
+    'leo/hub',
+  ], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
 test('set platform version using `-V` to `1`', async t => {
   const directory = fixture('builds');
   const goal = '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';

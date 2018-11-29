@@ -1,6 +1,6 @@
 //@flow
 
-import { resolve, basename } from 'path';
+import { resolve, basename, parse } from 'path';
 import { promises as fs } from 'fs';
 import latest from './latest';
 import legacy from './legacy';
@@ -46,6 +46,7 @@ module.exports = async (ctx: CLIContext) => {
   const localConfig = readLocalConfig(paths[0]);
   const output = createOutput({ debug: argv['--debug'] });
   const stats = {};
+  const versionFlag = argv['--platform-version'];
 
   if (argv['--help']) {
     const lastArg = argv._[argv._.length - 1];
@@ -59,10 +60,21 @@ module.exports = async (ctx: CLIContext) => {
     try {
       stats[path] = await fs.lstat(path);
     } catch (err) {
-      output.error(
-        `The specified file or directory "${basename(path)}" does not exist.`
-      );
-      return 1;
+      const { ext } = parse(path);
+
+      if (versionFlag === 1 && !ext) {
+        // This will ensure `-V 1 zeit/serve` (GitHub deployments) work. Since
+        // GitHub repositories are never just one file, we need to set
+        // the `isFile` property accordingly.
+        stats[path] = {
+          isFile: () => false
+        };
+      } else {
+        output.error(
+          `The specified file or directory "${basename(path)}" does not exist.`
+        );
+        return 1;
+      }
     }
   }
 
@@ -115,8 +127,6 @@ module.exports = async (ctx: CLIContext) => {
       );
     }
   }
-
-  const versionFlag = argv['--platform-version'];
 
   if (versionFlag) {
     if (versionFlag !== 1 && versionFlag !== 2) {
