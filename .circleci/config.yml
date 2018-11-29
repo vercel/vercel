@@ -64,11 +64,7 @@ jobs:
           at: .
       - run:
           name: Running Unit Tests
-          command: yarn test-unit
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .nyc_output
+          command: yarn test-unit && yarn coverage
 
   test-integration:
     macos:
@@ -84,25 +80,6 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .nyc_output
-
-  test-coverage:
-    macos:
-      xcode: '10.0.0'
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Output version
-          command: node --version
-      - run:
-          name: Storing Code Coverage
-          command: yarn coverage
 
   compress:
     docker:
@@ -209,19 +186,11 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-coverage:
-          requires:
-            - test-integration
-            - test-unit
-          filters:
-            tags:
-              only: /.*/
       - compress:
           requires:
             - test-lint
             - test-integration
             - test-unit
-            - test-coverage
           filters:
             tags:
               only: /.*/
