@@ -6,10 +6,11 @@
   "repository": "zeit/now-cli",
   "scripts": {
     "test": "yarn test-lint",
-    "test-unit": "ava test/unit.js --fail-fast",
-    "test-integration": "ava test/integration.js --serial --fail-fast",
+    "test-unit": "nyc --reporter=html --reporter=text ava test/unit.js --fail-fast",
+    "test-integration": "nyc --reporter=html --reporter=text ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint .",
     "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "dev": "webpack -w -d",
     "precommit": "lint-staged",
     "postinstall": "node download/install.js",
@@ -19,6 +20,11 @@
     "build-download": "webpack -p --context download --config download/webpack.config.js",
     "link": "webpack && cd link && npm link",
     "build": "webpack -p"
+  },
+  "nyc": {
+    "include": [
+      "src/*"
+    ]
   },
   "lint-staged": {
     "*.js": [
@@ -121,6 +127,7 @@
     "bytes": "3.0.0",
     "chalk": "2.3.1",
     "clipboardy": "1.1.4",
+    "codecov": "3.1.0",
     "convert-stream": "1.0.2",
     "credit-card": "3.0.1",
     "death": "1.1.0",
@@ -150,6 +157,7 @@
     "mri": "1.1.0",
     "ms": "2.0.0",
     "node-fetch": "1.7.3",
+    "nyc": "13.1.0",
     "ora": "1.3.0",
     "pkg": "4.3.4",
     "pluralize": "7.0.0",
