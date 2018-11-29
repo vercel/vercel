@@ -23,7 +23,7 @@
   },
   "nyc": {
     "include": [
-      "./src/**"
+      "src/*"
     ]
   },
   "lint-staged": {
