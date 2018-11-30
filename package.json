@@ -89,7 +89,9 @@
   "eslintIgnore": [
     "download",
     "dist",
-    "test/fixtures"
+    "test/fixtures",
+    "bin",
+    "link"
   ],
   "devDependencies": {
     "@sentry/node": "4.3.0",
