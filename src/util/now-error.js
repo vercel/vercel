@@ -1,17 +1,17 @@
-// @flow
+//      
 
-type NowErrorArgs<T, M> = {
-  code: T,
-  meta: M,
-  message: string
-};
+                           
+          
+          
+                 
+  
 
 // A generic error to rule them all
-export class NowError<T, M> extends Error {
-  meta: M;
-  code: T;
+export class NowError       extends Error {
+          
+          
 
-  constructor({ code, message, meta }: NowErrorArgs<T, M>) {
+  constructor({ code, message, meta }                    ) {
     super(message);
     this.code = code;
     this.meta = meta;

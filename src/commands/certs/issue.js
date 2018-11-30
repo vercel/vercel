@@ -1,9 +1,9 @@
-// @flow
+//
 import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
 
-import { CLIContext, Output } from '../../util/types';
+
 import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
 import dnsTable from '../../util/dns-table';
@@ -11,7 +11,7 @@ import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLICertsOptions } from '../../util/types';
+
 
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -19,11 +19,11 @@ import finishCertOrder from '../../util/certs/finish-cert-order';
 import startCertOrder from '../../util/certs/start-cert-order';
 
 export default async function issue(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -32,12 +32,12 @@ export default async function issue(
   let cert;
 
   const {
-    ['--challenge-only']: challengeOnly,
-    ['--overwrite']: overwite,
-    ['--debug']: debugEnabled,
-    ['--crt']: crtPath,
-    ['--key']: keyPath,
-    ['--ca']: caPath
+    '--challenge-only': challengeOnly,
+    '--overwrite': overwite,
+    '--debug': debugEnabled,
+    '--crt': crtPath,
+    '--key': keyPath,
+    '--ca': caPath
   } = opts;
 
   const { contextName } = await getScope({
@@ -77,7 +77,7 @@ export default async function issue(
         `The provided certificate is not valid and cannot be added.`
       );
       return 1;
-    } else if (cert instanceof Errors.DomainPermissionDenied) {
+    } if (cert instanceof Errors.DomainPermissionDenied) {
       output.error(
         `You do not have permissions over domain ${chalk.underline(
           cert.meta.domain
@@ -109,7 +109,7 @@ export default async function issue(
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.
   if (challengeOnly) {
-    return await runStartOrder(output, now, cns, contextName, addStamp);
+    return runStartOrder(output, now, cns, contextName, addStamp);
   }
 
   // If the user does not specify anything, we try to fullfill a pending order that may exist
@@ -139,7 +139,7 @@ export default async function issue(
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n\n');
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n\n`);
       output.log(
         `Alternatively, you can solve DNS challenges manually after running:\n`
       );
@@ -151,7 +151,7 @@ export default async function issue(
       );
     }
     return 1;
-  } else if (cert instanceof Errors.TooManyRequests) {
+  } if (cert instanceof Errors.TooManyRequests) {
     output.error(
       `Too many requests detected for ${cert.meta
         .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
@@ -159,38 +159,38 @@ export default async function issue(
       })}.`
     );
     return 1;
-  } else if (cert instanceof Errors.TooManyCertificates) {
+  } if (cert instanceof Errors.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } else if (cert instanceof Errors.DomainValidationRunning) {
+  } if (cert instanceof Errors.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         cert.meta.domain
       )}. Please wait for it to complete.`
     );
     return 1;
-  } else if (cert instanceof Errors.DomainConfigurationError) {
+  } if (cert instanceof Errors.DomainConfigurationError) {
     handleDomainConfigurationError(output, cert);
     return 1;
-  } else if (cert instanceof Errors.CantGenerateWildcardCert) {
-    return await runStartOrder(output, now, cns, contextName, addStamp, {
+  } if (cert instanceof Errors.CantGenerateWildcardCert) {
+    return runStartOrder(output, now, cns, contextName, addStamp, {
       fallingBack: true
     });
-  } else if (cert instanceof Errors.DomainsShouldShareRoot) {
+  } if (cert instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
-  } else if (cert instanceof Errors.InvalidWildcardDomain) {
+  } if (cert instanceof Errors.InvalidWildcardDomain) {
     output.error(
       `Invalid domain ${chalk.underline(
         cert.meta.domain
       )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
-  } else if (cert instanceof Errors.DomainPermissionDenied) {
+  } if (cert instanceof Errors.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
         cert.meta.domain
@@ -208,12 +208,12 @@ export default async function issue(
 }
 
 async function runStartOrder(
-  output: Output,
-  now: Now,
-  cns: string[],
-  contextName: string,
-  stamp: () => string,
-  { fallingBack = false }: { fallingBack: boolean } = {}
+  output        ,
+  now     ,
+  cns          ,
+  contextName        ,
+  stamp              ,
+  { fallingBack = false }                           = {}
 ) {
   const { challengesToResolve } = await startCertOrder(now, cns, contextName);
   const pendingChallenges = challengesToResolve.filter(
@@ -257,8 +257,8 @@ async function runStartOrder(
     ])
   ).split('\n');
 
-  output.print(header + '\n');
-  process.stdout.write(rows.join('\n') + '\n\n');
+  output.print(`${header  }\n`);
+  process.stdout.write(`${rows.join('\n')  }\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
   output.print(

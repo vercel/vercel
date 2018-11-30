@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -9,16 +9,16 @@ import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { CLIContext, Output } from '../../util/types';
+
 import { DomainNotFound } from '../../util/errors';
-import type { CLIDNSOptions, DNSRecord } from '../../util/types';
+                                                                 
 
 async function ls(
-  ctx: CLIContext,
-  opts: CLIDNSOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts               ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -76,8 +76,8 @@ async function ls(
 }
 
 function getDNSRecordsTable(
-  dnsRecords: Array<{ domainName: string, records: DNSRecord[] }>
-): string {
+  dnsRecords                                                     
+)         {
   return formatTable(
     ['', 'id', 'name', 'type', 'value', 'created'],
     ['l', 'r', 'l', 'l', 'l', 'l'],
@@ -88,9 +88,9 @@ function getDNSRecordsTable(
   );
 }
 
-function getDNSRecordRow(domainName: string, record: DNSRecord) {
+function getDNSRecordRow(domainName        , record           ) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = ms(Date.now() - new Date(Number(record.created))) + ' ago';
+  const createdAt = `${ms(Date.now() - new Date(Number(record.created)))  } ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',

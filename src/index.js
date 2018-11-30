@@ -1,55 +1,42 @@
-#!/usr/bin/env node
-//@flow
-
-// This should be automatically included by @babel/preset-env but it's
-// not being load right now. We have to remove it once it's fixed
-require('core-js/modules/es7.symbol.async-iterator');
-
-// we only enable source maps while developing, since
-// they have a small performance hit. for this, we
-// look for `pkg`, which is only present in the final bin
-// $FlowFixMe
-if (!process.pkg) {
-  require('@zeit/source-map-support').install();
-}
-
-// fix for EPIPE when piping to a truncated pipe
-require('epipebomb')();
-
-// Native
-const { join } = require('path');
-
-// Packages
-const { existsSync } = require('fs');
-const mkdirp = require('mkdirp-promise');
-const chalk = require('chalk');
-const checkForUpdate = require('update-check');
-const ms = require('ms');
-const Sentry = require('@sentry/node');
-
-// Utilities
-const error = require('./util/output/error');
-const param = require('./util/output/param');
-const info = require('./util/output/info');
-const getNowDir = require('./util/config/global-path');
-const { getDefaultConfig,  getDefaultAuthConfig } = require('./util/config/get-default');
-const hp = require('./util/humanize-path');
-const commands = require('./commands');
-const configFiles = require('./util/config/files');
-const pkg = require('./util/pkg');
-const getUser = require('./util/get-user');
-const NowTeams = require('./util/teams');
-const highlight = require('./util/output/highlight');
-
-import { Output } from './util/types';
+import 'core-js/modules/es7.symbol.async-iterator';
+import { join } from 'path';
+import { existsSync } from 'fs';
+import sourceMap from '@zeit/source-map-support';
+import mkdirp from 'mkdirp-promise';
+import chalk from 'chalk';
+import epipebomb from 'epipebomb';
+import checkForUpdate from 'update-check';
+import ms from 'ms';
+import * as Sentry from '@sentry/node';
+import error from './util/output/error';
+import param from './util/output/param';
+import info from './util/output/info';
+import getNowDir from './util/config/global-path';
+import { getDefaultConfig, getDefaultAuthConfig } from './util/config/get-default';
+import hp from './util/humanize-path';
+import commands from './commands';
+import * as configFiles from './util/config/files';
+import pkg from './util/pkg';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
+import getUser from './util/get-user';
+import NowTeams from './util/teams';
+import highlight from './util/output/highlight';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+
+epipebomb();
+
+// we only enable source maps while developing, since
+// they have a small performance hit. for this, we
+// look for `pkg`, which is only present in the final bin
+if (!process.pkg) {
+  sourceMap.install();
+}
 
 // Send errors away
 Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
@@ -72,7 +59,7 @@ const main = async argv_ => {
   );
 
   const isDebugging = argv['--debug'];
-  const output: Output = createOutput({ debug: isDebugging });
+  const output         = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 
@@ -116,14 +103,14 @@ const main = async argv_ => {
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls`)
-  let targetOrSubcommand: ?string = argv._[2];
+  const targetOrSubcommand          = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
       console.log(
-        require('../package').version +
-          `${// $FlowFixMe
+        `${require('../package').version
+          }${// $FlowFixMe
           process.pkg ? '' : chalk.magenta(' (dev)')}`
       );
       return 0;
@@ -137,9 +124,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          'now global directory: ' +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          'now global directory: '}${
+          err.message}`
       )
     );
 
@@ -152,9 +139,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to create the ' +
+            `now global directory "${hp(NOW_DIR)}" `}${
+            err.message}`
         )
       );
     }
@@ -168,9 +155,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" ` +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          `now config file "${hp(NOW_CONFIG_PATH)}" `}${
+          err.message}`
       )
     );
 
@@ -185,9 +172,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to read the ' +
+            `now config in "${hp(NOW_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -218,9 +205,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to write the ' +
+            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -235,9 +222,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-          err.message
+        `${'An unexpected error occurred while trying to find the ' +
+          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+          err.message}`
       )
     );
 
@@ -252,9 +239,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to read the ' +
+            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
 
@@ -295,9 +282,9 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" ` +
-            err.message
+          `${'An unexpected error occurred while trying to write the ' +
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message}`
         )
       );
       return 1;
@@ -311,7 +298,7 @@ const main = async argv_ => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx: Object = {
+  const ctx         = {
     config,
     authConfig,
     argv: argv_
@@ -325,7 +312,7 @@ const main = async argv_ => {
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
-      commands.subcommands.has(targetOrSubcommand);
+      commands[targetOrSubcommand];
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -491,7 +478,7 @@ const main = async argv_ => {
         return 1;
       }
 
-      const related = list.find(item => item.id === team || item.slug == team);
+      const related = list.find(item => item.id === team || item.slug === team);
 
       if (!related) {
         console.error(
@@ -508,9 +495,9 @@ const main = async argv_ => {
     }
   }
 
-  const runner = await commands[subcommand];
+  const targetCommand = commands[subcommand];
 
-  if (typeof runner !== 'function') {
+  if (!targetCommand) {
     const cmd = param(subcommand);
     console.error(error(`The ${cmd} subcommand does not exist`));
     return 1;
@@ -519,7 +506,8 @@ const main = async argv_ => {
   let exitCode;
 
   try {
-    exitCode = await commands[subcommand](ctx);
+    const full = require(`./commands/${targetCommand}`).default;
+    exitCode = await full(ctx);
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
       output.error(`The hostname ${highlight('api.zeit.co')} could not be resolved. Please verify your internet connectivity and DNS configuration.`);

@@ -1,31 +1,30 @@
 // Native
-const { homedir } = require('os');
-const { resolve: resolvePath, join, basename } = require('path');
-const EventEmitter = require('events');
-const qs = require('querystring');
-const { parse: parseUrl } = require('url');
+import { homedir } from 'os';
+
+import { resolve as resolvePath, join, basename } from 'path';
+import EventEmitter from 'events';
+import qs from 'querystring';
+import { parse as parseUrl } from 'url';
 
 // Packages
-const bytes = require('bytes');
-const chalk = require('chalk');
-const retry = require('async-retry');
-const { parse: parseIni } = require('ini');
-const { createReadStream, promises: { readFile, stat, lstat } } = require('fs');
-const ms = require('ms');
+import bytes from 'bytes';
+
+import chalk from 'chalk';
+import retry from 'async-retry';
+import { parse as parseIni } from 'ini';
+import { createReadStream, promises } from 'fs';
+import ms from 'ms';
 
 // Utilities
-const {
-  staticFiles: getFiles,
-  npm: getNpmFiles,
-  docker: getDockerFiles
-} = require('./get-files');
-const Agent = require('./agent');
-const ua = require('./ua');
-const hash = require('./hash');
-const cmd = require('./output/cmd');
-const highlight = require('./output/highlight');
-const createOutput = require('./output');
-const { responseError } = require('./error');
+import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
+
+import Agent from './agent';
+import ua from './ua';
+import hash from './hash';
+import cmd from './output/cmd';
+import highlight from './output/highlight';
+import createOutput from './output';
+import { responseError } from './error';
 
 // How many concurrent HTTP/2 stream uploads
 const MAX_CONCURRENT = 50;
@@ -34,7 +33,7 @@ const MAX_CONCURRENT = 50;
 const IS_WIN = process.platform.startsWith('win');
 const SEP = IS_WIN ? '\\' : '/';
 
-module.exports = class Now extends EventEmitter {
+export default class Now extends EventEmitter {
   constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }) {
     super();
 
@@ -84,7 +83,7 @@ module.exports = class Now extends EventEmitter {
     const isBuilds = type === null;
 
     let files = [];
-    let relatives = {};
+    const relatives = {};
     let engines;
 
     await time('Getting files', async () => {
@@ -176,7 +175,7 @@ module.exports = class Now extends EventEmitter {
             [],
             await Promise.all(
               Array.from(this._files).map(async ([sha, { data, names }]) => {
-                const statFn = followSymlinks ? stat : lstat;
+                const statFn = followSymlinks ? promises.stat : promises.lstat;
 
                 return names.map(async name => {
                   const getMode = async () => {
@@ -505,13 +504,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list secrets'));
-      } else {
+      }
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to list secrets');
-      }
+
     });
 
     return secrets;
@@ -530,13 +529,13 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list deployments'));
-        } else {
+        }
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to list deployments');
-        }
+
       },
       {
         retries: 3,
@@ -558,13 +557,13 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list instances'));
-        } else {
+        }
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to list instances');
-        }
+
       },
       {
         retries: 3,
@@ -661,15 +660,15 @@ module.exports = class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } else if (res.status > 200 && res.status < 500) {
+        } if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(
             await responseError(res, 'Failed to fetch deployment logs')
           );
-        } else {
+        }
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to fetch deployment logs');
-        }
+
       },
       {
         retries: 3,
@@ -685,9 +684,7 @@ module.exports = class Now extends EventEmitter {
     const deployments = await this.list(app);
 
     const last = deployments
-      .sort((a, b) => {
-        return b.created - a.created;
-      })
+      .sort((a, b) => b.created - a.created)
       .shift();
 
     if (!last) {
@@ -706,13 +703,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list domains'));
-      } else {
+      }
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to list domains');
-      }
+
     });
 
     return domains;
@@ -725,13 +722,13 @@ module.exports = class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } else if (res.status > 200 && res.status < 500) {
+      } if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to fetch domain'));
-      } else {
+      }
         // If something is wrong with the server, we retry
         throw await responseError(res, 'Failed to fetch domain');
-      }
+
     });
   }
 
@@ -750,13 +747,13 @@ module.exports = class Now extends EventEmitter {
       throw new Error(`Whois error (${res.status}): ${body.error.message}`);
     });
 
-    body.nameservers = body.nameservers.filter(ns => {
+    body.nameservers = body.nameservers.filter(ns =>
       // Temporary hack:
       // sometimes we get a response that looks like:
       // ['ns', 'ns', '', '']
       // so we filter the empty ones
-      return ns.length > 0;
-    });
+       ns.length > 0
+    );
 
     return body;
   }
@@ -778,8 +775,8 @@ module.exports = class Now extends EventEmitter {
         let err;
         if (code === 'custom_domain_needs_upgrade') {
           err = new Error(
-            `Custom domains are only enabled for premium accounts. ` +
-              chalk`Please upgrade at {underline https://zeit.co/account}`
+            `Custom domains are only enabled for premium accounts. ${
+              chalk`Please upgrade at {underline https://zeit.co/account}`}`
           );
         } else {
           err = new Error(
@@ -788,11 +785,11 @@ module.exports = class Now extends EventEmitter {
         }
         err.userError = true;
         return bail(err);
-      } else if (res.status === 409) {
+      } if (res.status === 409) {
         // Domain already exists
         debug('Domain already exists (noop)');
         return { uid: body.error.uid, code: body.error.code };
-      } else if (
+      } if (
         res.status === 401 &&
         body.error &&
         body.error.code === 'verification_failed'
@@ -894,7 +891,7 @@ module.exports = class Now extends EventEmitter {
 
       if (res.status === 200) {
         // What we want
-        return;
+
       } else if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to remove deployment'));
@@ -983,7 +980,7 @@ module.exports = class Now extends EventEmitter {
   // it does the same for JSON` body` in opts
   async fetch(url, opts = {}) {
     return this.retry(async bail => {
-      if (false !== opts.json && opts.body && 'object' == typeof opts.body) {
+      if (opts.json !== false && opts.body && typeof opts.body === 'object') {
         opts = Object.assign({}, opts, {
           body: JSON.stringify(opts.body),
           headers: Object.assign({}, opts.headers, {
@@ -1004,14 +1001,14 @@ module.exports = class Now extends EventEmitter {
         return res.headers.get('content-type').includes('application/json')
           ? res.json()
           : res;
-      } else {
+      }
         const err = await responseError(res);
         if (res.status >= 400 && res.status < 500) {
           return bail(err);
-        } else {
-          throw err;
         }
-      }
+          throw err;
+
+
     }, opts.retry);
   }
 
@@ -1042,7 +1039,7 @@ function hasFile(base, files, name) {
 
 async function readAuthToken(path, name = '.npmrc') {
   try {
-    const contents = await readFile(resolvePath(path, name), 'utf8');
+    const contents = await promises.readFile(resolvePath(path, name), 'utf8');
     const npmrc = parseIni(contents);
     return npmrc['//registry.npmjs.org/:_authToken'];
   } catch (err) {

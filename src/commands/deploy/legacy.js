@@ -1,5 +1,3 @@
-//@flow
-
 import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
 import { write as copy } from 'clipboardy';
@@ -13,7 +11,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import Progress from 'progress';
 import { handleError } from '../../util/error';
-import { tick } from '../../util/output/chars';
+import chars from '../../util/output/chars';
 import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd';
 import exit from '../../util/exit';
@@ -41,14 +39,6 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
-import type { Readable } from 'stream';
-import type {
-  Output,
-  CLIContext,
-  NewDeployment,
-  DeploymentEvent
-} from '../../util/types';
-import type { CreateDeployError } from '../../util/deploy/create-deploy';
 import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
@@ -108,9 +98,9 @@ for (const item of Object.keys(mriOpts.alias)) {
   argList[`-${mriOpts.alias[item]}`] = `--${item}`;
 }
 
-exports.args = argList;
+export const args = argList;
 
-exports.help = () => `
+export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -336,10 +326,10 @@ const promptForEnvFields = async list => {
   return answers;
 };
 
-exports.pipe = async function main(
-  ctx: CLIContext,
-  contextName: string,
-  output: Output
+export const pipe = async function main(
+  ctx            ,
+  contextName        ,
+  output
 ) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
@@ -368,7 +358,7 @@ exports.pipe = async function main(
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
-  noVerify = argv['verify'] === false;
+  noVerify = argv.verify === false;
   apiUrl = ctx.apiUrl;
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
@@ -409,7 +399,7 @@ async function sync({
     const rawPath = argv._[0];
 
     let meta;
-    let deployment: NewDeployment | null = null;
+    let deployment                       = null;
     let isFile;
 
     if (paths.length === 1) {
@@ -610,7 +600,7 @@ async function sync({
         );
         await exit(1);
         return 1;
-      } else if (dcIds instanceof Errors.InvalidAllForScale) {
+      } if (dcIds instanceof Errors.InvalidAllForScale) {
         error(`You can't use all in the regions list mixed with other regions`);
         await exit(1);
         return 1;
@@ -633,9 +623,9 @@ async function sync({
           );
           await exit(1);
           return 1;
-        } else {
-          scale[dc] = scaleFromConfig[regionOrDc];
         }
+          scale[dc] = scaleFromConfig[regionOrDc];
+
       }
     }
 
@@ -716,9 +706,7 @@ async function sync({
         secrets = await now.listSecrets();
       }
 
-      return secrets.filter(secret => {
-        return secret.name === uidOrName || secret.uid === uidOrName;
-      });
+      return secrets.filter(secret => secret.name === uidOrName || secret.uid === uidOrName);
     };
 
     const env_ = await Promise.all(
@@ -795,7 +783,7 @@ async function sync({
     const metadata = Object.assign(
       {},
       parseMeta(nowConfig.meta),
-      parseMeta(argv['meta'])
+      parseMeta(argv.meta)
     );
 
     let syncCount;
@@ -1130,7 +1118,7 @@ async function sync({
             } else if (Array.isArray(dcOrEvent)) {
               const [dc, instances] = dcOrEvent;
               output.log(
-                `${chalk.cyan(tick)} Scaled ${plural(
+                `${chalk.cyan(chars.tick)} Scaled ${plural(
                   'instance',
                   instances,
                   true
@@ -1208,15 +1196,15 @@ async function readMeta(
   }
 }
 
-function getRegionsFromConfig(config = {}): Array<string> {
+function getRegionsFromConfig(config = {})                {
   return config.regions || [];
 }
 
-function getScaleFromConfig(config = {}): Object {
+function getScaleFromConfig(config = {})         {
   return config.scale || {};
 }
 
-async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
+async function maybeGetEventsStream(now     , deployment               ) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
@@ -1228,11 +1216,11 @@ async function maybeGetEventsStream(now: Now, deployment: NewDeployment) {
 }
 
 function getEventsGenerator(
-  now: Now,
-  contextName: ?string,
-  deployment: NewDeployment,
-  eventsStream: null | Readable
-): AsyncGenerator<DeploymentEvent, void, void> {
+  now     ,
+  contextName         ,
+  deployment               ,
+  eventsStream
+)                                              {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(
     now,
     contextName,
@@ -1250,10 +1238,10 @@ function getEventsGenerator(
 }
 
 function getVerifyDCsGenerator(
-  output: Output,
-  now: Now,
-  deployment: NewDeployment,
-  eventsStream: Readable | null
+  output        ,
+  now     ,
+  deployment               ,
+  eventsStream
 ) {
   const verifyDeployment = verifyDeploymentScale(
     output,
@@ -1270,10 +1258,10 @@ function getVerifyDCsGenerator(
     : verifyDeployment;
 }
 
-function handleCreateDeployError<OtherError>(
-  output: Output,
-  error: CreateDeployError | OtherError
-): 1 | OtherError {
+function handleCreateDeployError            (
+  output        ,
+  error
+)                 {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(
       `Custom suffixes are only allowed for domains in ${chalk.underline(
@@ -1281,7 +1269,7 @@ function handleCreateDeployError<OtherError>(
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.CantSolveChallenge) {
+  } if (error instanceof Errors.CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
         `The certificate provider could not resolve the DNS queries for ${error
@@ -1298,10 +1286,10 @@ function handleCreateDeployError<OtherError>(
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
-  } else if (error instanceof Errors.DomainConfigurationError) {
+  } if (error instanceof Errors.DomainConfigurationError) {
     output.error(
       `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
         error.meta.domain
@@ -1312,11 +1300,11 @@ function handleCreateDeployError<OtherError>(
         `  The propagation may take a few minutes, but please verify your settings:\n\n`
       );
       output.print(
-        dnsTable([
+        `${dnsTable([
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ]) + '\n'
+        ])  }\n`
       );
     } else {
       output.print(
@@ -1325,38 +1313,38 @@ function handleCreateDeployError<OtherError>(
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } else if (error instanceof Errors.DomainNameserversNotFound) {
+  } if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(
       `Couldn't find nameservers for the domain ${chalk.underline(
         error.meta.domain
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.DomainNotVerified) {
+  } if (error instanceof Errors.DomainNotVerified) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
       )} is not verified and can't be used as custom suffix.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainPermissionDenied) {
+  } if (error instanceof Errors.DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainsShouldShareRoot) {
+  } if (error instanceof Errors.DomainsShouldShareRoot) {
     // this is not going to happen
     return 1;
-  } else if (error instanceof Errors.DomainValidationRunning) {
+  } if (error instanceof Errors.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainVerificationFailed) {
+  } if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
       `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
     );
@@ -1368,12 +1356,12 @@ function handleCreateDeployError<OtherError>(
     output.print(
       `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
     );
-    output.print(zeitWorldTable() + '\n');
+    output.print(`${zeitWorldTable()  }\n`);
     output.print(
       `\n  As an alternative, you can add following records to your DNS settings:\n`
     );
     output.print(
-      dnsTable(
+      `${dnsTable(
         [
           ['_now', 'TXT', error.meta.token],
           error.meta.subdomain === null
@@ -1381,10 +1369,10 @@ function handleCreateDeployError<OtherError>(
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
         ],
         { extraSpace: '  ' }
-      ) + '\n'
+      )  }\n`
     );
     return 1;
-  } else if (error instanceof Errors.InvalidWildcardDomain) {
+  } if (error instanceof Errors.InvalidWildcardDomain) {
     // this should never happen
     output.error(
       `Invalid domain ${chalk.underline(
@@ -1392,17 +1380,17 @@ function handleCreateDeployError<OtherError>(
       )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
-  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+  } if (error instanceof Errors.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } else if (error instanceof Errors.TooManyCertificates) {
+  } if (error instanceof Errors.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.TooManyRequests) {
+  } if (error instanceof Errors.TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta
         .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
@@ -1410,7 +1398,7 @@ function handleCreateDeployError<OtherError>(
       })}.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainNotFound) {
+  } if (error instanceof Errors.DomainNotFound) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain

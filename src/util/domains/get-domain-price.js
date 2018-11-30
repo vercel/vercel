@@ -1,15 +1,15 @@
-// @flow
+//      
 import { stringify } from 'querystring';
-import { Now } from '../types';
+
 import * as Errors from '../errors';
 import getCreditCards from '../billing/get-credit-cards';
-import type { DomainPrice } from '../types';
+                                            
 import validateCoupon from './validate-coupon';
 
 export default async function getDomainPrice(
-  now: Now,
-  name: string,
-  coupon?: string
+  now     ,
+  name        ,
+  coupon         
 ) {
   if (coupon) {
     const [validateResult, creditCards] = await Promise.all([
@@ -30,10 +30,10 @@ export default async function getDomainPrice(
   }
 
   try {
-    const payload: DomainPrice = await now.fetch(
+    const payload              = await now.fetch(
       `/v3/domains/price?${stringify({ name })}`
     );
-    const result: DomainPrice = coupon
+    const result              = coupon
       ? { price: 0, period: payload.price }
       : payload;
     return result;

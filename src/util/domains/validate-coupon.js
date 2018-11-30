@@ -1,9 +1,9 @@
-// @flow
-import { Now } from '../types';
+//      
+
 import { InvalidCoupon, UsedCoupon } from '../errors';
 import getCouponInfo from './get-coupon-info';
 
-export default async function validateCoupon(now: Now, coupon: string) {
+export default async function validateCoupon(now     , coupon        ) {
   const couponInfo = await getCouponInfo(now, coupon);
 
   if (!couponInfo.isValid) {

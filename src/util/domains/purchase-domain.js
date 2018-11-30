@@ -1,13 +1,13 @@
-// @flow
+//      
 import * as Errors from '../errors';
-import { Now, Output } from '../types';
+
 
 export default async function purchaseDomain(
-  output: Output,
-  now: Now,
-  name: string,
-  coupon: string,
-  expectedPrice: number
+  output        ,
+  now     ,
+  name        ,
+  coupon        ,
+  expectedPrice        
 ) {
   try {
     return await now.fetch(`/v3/domains/buy`, {
@@ -17,16 +17,16 @@ export default async function purchaseDomain(
   } catch (error) {
     if (error.code === 'invalid_domain') {
       return new Errors.InvalidDomain(name);
-    } else if (error.code === 'not_available') {
+    } if (error.code === 'not_available') {
       return new Errors.DomainNotAvailable(name);
-    } else if (error.code === 'service_unavailabe') {
+    } if (error.code === 'service_unavailabe') {
       return new Errors.DomainServiceNotAvailable();
-    } else if (error.code === 'unexpected_error') {
+    } if (error.code === 'unexpected_error') {
       return new Errors.UnexpectedDomainPurchaseError();
-    } else if (error.code === 'forbidden_premium') {
+    } if (error.code === 'forbidden_premium') {
       return new Errors.PremiumDomainForbidden();
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }

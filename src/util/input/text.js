@@ -1,11 +1,12 @@
 // Packages
-const ansiEscapes = require('ansi-escapes');
-const ansiRegex = require('ansi-regex');
-const chalk = require('chalk');
-const stripAnsi = require('strip-ansi');
+import ansiEscapes from 'ansi-escapes';
+
+import ansiRegex from 'ansi-regex';
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 
 // Utilities
-const eraseLines = require('../output/erase-lines');
+import eraseLines from '../output/erase-lines';
 
 const ESCAPES = {
   LEFT: '\u001B[D',
@@ -16,14 +17,12 @@ const ESCAPES = {
   CARRIAGE: '\r'
 };
 
-const formatCC = data => {
-  return data
+const formatCC = data => data
     .replace(/\s/g, '')
     .replace(/(.{4})/g, '$1 ')
     .trim();
-};
 
-module.exports = function(
+export default function(
   {
     label = '',
     initialValue = '',

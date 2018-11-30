@@ -1,17 +1,17 @@
-// @flow
+//      
 import wait from '../output/wait';
 
-import { Now } from '../types';
+
 import * as Errors from '../errors';
 import addDomain from './add-domain';
 
-type VerifyOptions = { isExternal: boolean };
+                                             
 
 async function verifyDomain(
-  now: Now,
-  domain: string,
-  contextName: string,
-  opts: VerifyOptions
+  now     ,
+  domain        ,
+  contextName        ,
+  opts               
 ) {
   const cancelMessage = wait('Setting up and verifying the domain');
   const result = await addDomain(now, domain, contextName, opts.isExternal);
@@ -22,9 +22,9 @@ async function verifyDomain(
     result instanceof Errors.DomainVerificationFailed
   ) {
     return result;
-  } else if (result instanceof Errors.DomainAlreadyExists) {
+  } if (result instanceof Errors.DomainAlreadyExists) {
     return undefined;
-  } else if (result.verified === false) {
+  } if (result.verified === false) {
     return new Errors.DomainNotVerified(domain);
   }
 }

@@ -1,6 +1,6 @@
-const chalk = require('chalk');
-const { format } = require('util');
-const { Console } = require('console');
+import chalk from 'chalk';
+import { format } from 'util';
+import { Console } from 'console';
 
 function createOutput({ debug: debugEnabled = false } = {}) {
   function print(v) {
@@ -60,9 +60,9 @@ function createOutput({ debug: debugEnabled = false } = {}) {
       const r = await promise;
       Console.prototype.timeEnd.call(c, label);
       return r;
-    } else {
+    } 
       return promise;
-    }
+    
   }
 
   return {
@@ -77,4 +77,4 @@ function createOutput({ debug: debugEnabled = false } = {}) {
   };
 }
 
-module.exports = createOutput;
+export default createOutput;

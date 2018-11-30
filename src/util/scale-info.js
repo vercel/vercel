@@ -1,24 +1,24 @@
-const linelog = require('single-line-log').stdout;
-const range = require('lodash.range');
-const ms = require('ms');
-const chalk = require('chalk');
-const plural = require('pluralize');
-const retry = require('async-retry');
+import { stdout as linelog } from 'single-line-log';
+import range from 'lodash.range';
+import ms from 'ms';
+import chalk from 'chalk';
+import plural from 'pluralize';
+import retry from 'async-retry';
 
 function barify(cur, tot) {
   return (
-    '[' +
+    `[${ 
     range(0, cur)
       .map(() => '=')
-      .join('') +
-    range(cur, tot)
+      .join('') 
+    }${range(cur, tot)
       .map(() => '-')
-      .join('') +
-    ']'
+      .join('') 
+    }]`
   );
 }
 
-module.exports = async function(now, url) {
+export default async function(now, url) {
   const match = await now.findDeployment(url);
   const { min, max, current } = match.scale;
 
@@ -42,7 +42,7 @@ module.exports = async function(now, url) {
   linelog(
     `${chalk.gray('>')} Scaling to ${chalk.bold(
       plural('instance', targetReplicaCount, true)
-    )}: ` + barify(barcurr, end)
+    )}: ${  barify(barcurr, end)}`
   );
 
   const instances = await retry(
@@ -53,7 +53,7 @@ module.exports = async function(now, url) {
         linelog(
           `${chalk.gray('>')} Scaling to ${chalk.bold(
             plural('instance', targetReplicaCount, true)
-          )}: ` + barify(barcurr, end)
+          )}: ${  barify(barcurr, end)}`
         );
 
         if (barcurr === targetReplicaCount) {
@@ -61,7 +61,7 @@ module.exports = async function(now, url) {
           linelog(
             `> Scaled to ${chalk.bold(
               plural('instance', targetReplicaCount, true)
-            )}: ${chalk.gray('[' + ms(Date.now() - startTime) + ']')}\n`
+            )}: ${chalk.gray(`[${  ms(Date.now() - startTime)  }]`)}\n`
           );
           return res;
         }

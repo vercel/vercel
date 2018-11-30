@@ -1,9 +1,7 @@
-//@flow
-
 import { resolve, basename, parse } from 'path';
 import { promises as fs } from 'fs';
-import latest from './latest';
-import legacy from './legacy';
+import * as latest from './latest';
+import * as legacy from './legacy';
 import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
@@ -12,9 +10,8 @@ import param from '../../util/output/param';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
-import type { CLIContext } from '../../util/types';
 
-module.exports = async (ctx: CLIContext) => {
+export default async (ctx            ) => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
   const combinedArgs = Object.assign({}, legacy.args, latest.args);
 

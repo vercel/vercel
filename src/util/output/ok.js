@@ -1,6 +1,6 @@
-const { cyan } = require('chalk');
-const { tick } = require('./chars');
+import { cyan } from 'chalk';
+import chars from './chars';
 
-const ok = msg => `${cyan(tick)} ${msg}`;
+const ok = msg => `${cyan(chars.tick)} ${msg}`;
 
-module.exports = ok;
+export default ok;

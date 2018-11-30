@@ -1,4 +1,4 @@
-// @flow
-export default function isValidValueForMinOrMax(value: string) {
+//      
+export default function isValidValueForMinOrMax(value        ) {
   return value === 'auto' || /^\d+$/.test(value);
 }

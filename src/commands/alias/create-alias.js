@@ -1,21 +1,21 @@
-// @flow
+//      
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import createCertForAlias from './create-cert-for-alias';
-import type { AliasRecord, Deployment } from '../../util/types';
+                                                                
 
 async function createAlias(
-  output: Output,
-  now: Now,
-  contextName: string,
-  deployment: Deployment,
-  alias: string,
-  externalDomain: boolean
+  output        ,
+  now     ,
+  contextName        ,
+  deployment            ,
+  alias        ,
+  externalDomain         
 ) {
   const cancelMessage = wait(`Creating alias`);
   try {
-    const record: AliasRecord = await now.fetch(
+    const record              = await now.fetch(
       `/now/deployments/${deployment.uid}/aliases`,
       {
         method: 'POST',
@@ -48,7 +48,7 @@ async function createAlias(
         cert instanceof Errors.TooManyRequests
       ) {
         return cert;
-      } else {
+      } 
         return createAlias(
           output,
           now,
@@ -57,12 +57,12 @@ async function createAlias(
           alias,
           !externalDomain
         );
-      }
+      
     }
 
     // The alias already exists so we fail in silence returning the id
     if (error.status === 409) {
-      const record: AliasRecord = { uid: error.uid, alias: error.alias };
+      const record              = { uid: error.uid, alias: error.alias };
       return record;
     }
 

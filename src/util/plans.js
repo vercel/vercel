@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   oss: 'OSS',
   free: 'Free',
   premium: 'Premium',

@@ -1,6 +1,6 @@
-// @flow
+//      
 
-type Maybe<T> = [Error, null] | [null, T];
+                                          
 
 /*
  * Returnify iterates through an async generator and yields the values
@@ -8,9 +8,9 @@ type Maybe<T> = [Error, null] | [null, T];
  * the iterator is made, the generator is used to reinstantiate an iterator and
  * iteration is restarted.
  */
-async function* returnify<T>(
-  gx: () => AsyncIterator<T>
-): AsyncGenerator<Maybe<T>, void, void> {
+async function* returnify   (
+  gx                        
+)                                       {
   let it = gx();
   while (true) {
     try {
@@ -19,7 +19,7 @@ async function* returnify<T>(
       }
       break;
     } catch (e) {
-      yield [(e: Error), null];
+      yield [(e       ), null];
       it = gx();
     }
   }

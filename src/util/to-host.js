@@ -1,5 +1,5 @@
 // Native
-const { parse } = require('url');
+import { parse } from 'url';
 
 /**
  * Converts a valid deployment lookup parameter to a hostname.
@@ -17,4 +17,4 @@ function toHost(url) {
   return url.replace(/(\/\/)?([^/]+)(.*)/, '$2');
 }
 
-module.exports = toHost;
+export default toHost;

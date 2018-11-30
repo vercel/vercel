@@ -1,19 +1,19 @@
-// @flow
+//      
 import chalk from 'chalk';
 import Now from '../../util';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
-import { CLIContext, Output } from '../../util/types';
-import type { CLIDNSOptions } from '../../util/types';
+
+                                                      
 
 async function add(
-  ctx: CLIContext,
-  opts: CLIDNSOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts               ,
+  args          ,
+  output        
+)                  {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -49,14 +49,14 @@ async function add(
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } else if (record instanceof DNSPermissionDenied) {
+  } if (record instanceof DNSPermissionDenied) {
     output.error(
       `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
         contextName
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } else {
+  } 
     console.log(
       `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
         domain
@@ -64,12 +64,12 @@ async function add(
         contextName
       )} ${chalk.gray(addStamp())}`
     );
-  }
+  
 
   return 0;
 }
 
-function parseAddArgs(args: string[]) {
+function parseAddArgs(args          ) {
   if (!args || args.length < 4) {
     return null;
   }
@@ -81,12 +81,12 @@ function parseAddArgs(args: string[]) {
 
   if (!(domain && typeof name === 'string' && type)) {
     return null;
-  } else if (type === 'MX' && args.length === 5) {
+  } if (type === 'MX' && args.length === 5) {
     return {
       domain,
       data: { name, type, value, mxPriority: Number(args[4]) }
     };
-  } else if (type === 'SRV' && args.length === 7) {
+  } if (type === 'SRV' && args.length === 7) {
     return {
       domain,
       data: {
@@ -100,7 +100,7 @@ function parseAddArgs(args: string[]) {
         }
       }
     };
-  } else if (args.length === 4) {
+  } if (args.length === 4) {
     return {
       domain,
       data: {

@@ -4,4 +4,4 @@ const chars = {
   tick: process.platform === 'win32' ? '√' : '✔'
 };
 
-module.exports = chars;
+export default chars;

@@ -1,7 +1,4 @@
-// Native
-const os = require('os');
+import os from 'os';
+import pkg from './pkg';
 
-// Ours
-const { version } = require('./pkg');
-
-module.exports = `now ${version} node-${process.version} ${os.platform()} (${os.arch()})`;
+export default `now ${pkg.version} node-${process.version} ${os.platform()} (${os.arch()})`;

@@ -1,12 +1,12 @@
-// @flow
-import { Now } from '../types';
-import type { InstancesInfo } from '../types';
+//      
+
+                                              
 
 async function getDeploymentInstances(
-  now: Now,
-  deploymentId: string,
-  requestId: string
-): Promise<InstancesInfo> {
+  now     ,
+  deploymentId        ,
+  requestId        
+)                         {
   return now.fetch(
     `/v3/now/deployments/${encodeURIComponent(
       deploymentId

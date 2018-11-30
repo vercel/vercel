@@ -1,9 +1,9 @@
-const inquirer = require('inquirer');
-const stripAnsi = require('strip-ansi');
+import inquirer from 'inquirer';
+import stripAnsi from 'strip-ansi';
+import eraseLines from '../output/erase-lines';
 
-const eraseLines = require('../output/erase-lines');
 // eslint-disable-next-line import/no-unassigned-import
-require('./patch-inquirer');
+import './patch-inquirer';
 
 function getLength(string) {
   let biggestLength = 0;
@@ -17,7 +17,7 @@ function getLength(string) {
   return biggestLength;
 }
 
-module.exports = async function({
+export default async function({
   message = 'the question',
   // eslint-disable-line no-unused-vars
   choices = [

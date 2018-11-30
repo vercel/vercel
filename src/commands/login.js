@@ -1,37 +1,31 @@
-// Native
-const { stringify: stringifyQuery } = require('querystring');
-const { hostname } = require('os');
+import { stringify as stringifyQuery } from 'querystring';
+import { hostname } from 'os';
+import fetch from 'node-fetch';
+import debugFactory from 'debug';
+import promptEmail from 'email-prompt';
+import ms from 'ms';
+import { validate as validateEmail } from 'email-validator';
+import chalk from 'chalk';
+import mri from 'mri';
+import ua from '../util/ua';
+import error from '../util/output/error';
+import aborted from '../util/output/aborted';
+import wait from '../util/output/wait';
+import highlight from '../util/output/highlight';
+import info from '../util/output/info';
+import ok from '../util/output/ok';
+import cmd from '../util/output/cmd';
+import ready from '../util/output/ready';
+import param from '../util/output/param';
+import eraseLines from '../util/output/erase-lines';
+import sleep from '../util/sleep';
+import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
+import getNowDir from '../util/config/global-path';
+import hp from '../util/humanize-path';
+import logo from '../util/output/logo';
+import exit from '../util/exit';
 
-// Packaages
-const fetch = require('node-fetch');
-const debug = require('debug')('now:sh:login');
-const promptEmail = require('email-prompt');
-const ms = require('ms');
-const { validate: validateEmail } = require('email-validator');
-const chalk = require('chalk');
-const mri = require('mri');
-
-// Utilities
-const ua = require('../util/ua');
-const error = require('../util/output/error');
-const aborted = require('../util/output/aborted');
-const wait = require('../util/output/wait');
-const highlight = require('../util/output/highlight');
-const info = require('../util/output/info');
-const ok = require('../util/output/ok');
-const cmd = require('../util/output/cmd');
-const ready = require('../util/output/ready');
-const param = require('../util/output/param');
-const eraseLines = require('../util/output/erase-lines');
-const sleep = require('../util/sleep');
-const {
-  writeToAuthConfigFile,
-  writeToConfigFile
-} = require('../util/config/files');
-const getNowDir = require('../util/config/global-path');
-const hp = require('../util/humanize-path');
-const logo = require('../util/output/logo');
-const exit = require('../util/exit');
+const debug = debugFactory('now:sh:login');
 
 const help = () => {
   console.log(`
@@ -333,4 +327,4 @@ const login = async ctx => {
   return ctx;
 };
 
-module.exports = login;
+export default login;

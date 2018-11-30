@@ -1,9 +1,10 @@
 // Native
-const { homedir } = require('os');
-const path = require('path');
+import { homedir } from 'os';
+
+import path from 'path';
 
 // Packages
-const mri = require('mri');
+import mri from 'mri';
 
 const getNowDir = () => {
   const args = mri(process.argv.slice(2), {
@@ -22,4 +23,4 @@ const getNowDir = () => {
   return path.resolve(customPath);
 };
 
-module.exports = getNowDir;
+export default getNowDir;

@@ -1,4 +1,4 @@
-// @flow
+//      
 
 const ARG_COMMON = {
   '--help': Boolean,
@@ -25,4 +25,4 @@ const ARG_COMMON = {
   '--api': String
 };
 
-module.exports = () => ARG_COMMON;
+export default () => ARG_COMMON;

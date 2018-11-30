@@ -1,7 +1,7 @@
-// @flow
+//      
 import psl from 'psl';
 
-export default function getWildcardCNSForAlias(alias: string) {
+export default function getWildcardCNSForAlias(alias        ) {
   const { domain, subdomain } = psl.parse(alias);
   const secondLevel =
     subdomain && subdomain.includes('.')

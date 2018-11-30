@@ -1,18 +1,19 @@
 // Native
-const { basename, resolve: resolvePath } = require('path');
+import { basename, resolve as resolvePath } from 'path';
 
 // Packages
-const chalk = require('chalk');
-const loadJSON = require('load-json-file');
-const loadPackageJSON = require('read-pkg');
-const { promises: { readFile } } = require('fs');
-const { parse: parseDockerfile } = require('docker-file-parser');
-const determineType = require('deployment-type');
+import chalk from 'chalk';
+
+import loadJSON from 'load-json-file';
+import loadPackageJSON from 'read-pkg';
+import fs from 'fs';
+import { parse as parseDockerfile } from 'docker-file-parser';
+import determineType from 'deployment-type';
 
 // Utilities
-const getLocalConfigPath = require('./config/local-path');
+import getLocalConfigPath from './config/local-path';
 
-module.exports = readMetaData;
+export default readMetaData;
 
 async function readMetaData(
   path,
@@ -196,6 +197,6 @@ function decorateUserErrors(fn) {
 const readPkg = decorateUserErrors(loadPackageJSON);
 const readJSON = decorateUserErrors(loadJSON);
 const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
-  const contents = await readFile(resolvePath(path, name), 'utf8');
+  const contents = await fs.promises.readFile(resolvePath(path, name), 'utf8');
   return parseDockerfile(contents, { includeComments: true });
 });

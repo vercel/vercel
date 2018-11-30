@@ -1,31 +1,31 @@
-// @flow
-import { Now, Output } from '../types';
+//      
+
 import generateCertForDeploy from './generate-cert-for-deploy';
 import * as Errors from '../errors';
 
-export type CreateDeployError =
-  | Errors.CantGenerateWildcardCert
-  | Errors.CantSolveChallenge
-  | Errors.CDNNeedsUpgrade
-  | Errors.DomainConfigurationError
-  | Errors.DomainNameserversNotFound
-  | Errors.DomainNotFound
-  | Errors.DomainNotVerified
-  | Errors.DomainPermissionDenied
-  | Errors.DomainsShouldShareRoot
-  | Errors.DomainValidationRunning
-  | Errors.DomainVerificationFailed
-  | Errors.InvalidWildcardDomain
-  | Errors.TooManyCertificates
-  | Errors.SchemaValidationFailed
-  | Errors.TooManyRequests;
+                               
+                                   
+                             
+                          
+                                   
+                                    
+                         
+                            
+                                 
+                                 
+                                  
+                                   
+                                
+                              
+                                 
+                           
 
 export default async function createDeploy(
-  output: Output,
-  now: Now,
-  contextName: string,
-  paths: string[],
-  createArgs: Object
+  output        ,
+  now     ,
+  contextName        ,
+  paths          ,
+  createArgs        
 ) {
   try {
     return await now.create(paths, createArgs);
@@ -73,9 +73,9 @@ export default async function createDeploy(
         result instanceof Errors.TooManyRequests
       ) {
         return result;
-      } else {
+      } 
         return createDeploy(output, now, contextName, paths, createArgs);
-      }
+      
     }
 
     // If the error is unknown, we just throw

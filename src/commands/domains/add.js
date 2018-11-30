@@ -1,13 +1,10 @@
-// @flow
 import chalk from 'chalk';
 import psl from 'psl';
-
-import { CLIContext, Output } from '../../util/types';
 import * as Errors from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
-import updateDomain from '../../util/domains/update-domain.js';
+import updateDomain from '../../util/domains/update-domain';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/dns-table';
 import getScope from '../../util/get-scope';
@@ -15,15 +12,14 @@ import getBooleanOptionValue from '../../util/get-boolean-option-value';
 import Now from '../../util';
 import promptBool from '../../util/input/prompt-bool';
 import stamp from '../../util/output/stamp';
-import type { CLIDomainsOptions } from '../../util/types';
 import zeitWorldTable from '../../util/zeit-world-table';
 
 export default async function add(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -71,7 +67,7 @@ export default async function add(
     output.error(
       `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
         `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-          'now domain add ' + (opts['--external'] ? '-e ' : '') + domain
+          `now domain add ${  opts['--external'] ? '-e ' : ''  }${domain}`
         )}`
     );
     return 1;
@@ -113,7 +109,7 @@ export default async function add(
     if (addedDomain instanceof Errors.CDNNeedsUpgrade) {
       output.error(`You can't add domains with CDN enabled from an OSS plan.`);
       return 1;
-    } else if (addedDomain instanceof Errors.DomainPermissionDenied) {
+    } if (addedDomain instanceof Errors.DomainPermissionDenied) {
       if (domainInfo) {
         output.error(
           `You don't have permissions over domain ${chalk.underline(
@@ -121,7 +117,7 @@ export default async function add(
           )} under ${chalk.bold(addedDomain.meta.context)}.`
         );
         return 1;
-      } else {
+      }
         output.error(
           `The domain ${chalk.underline(
             addedDomain.meta.domain
@@ -129,8 +125,8 @@ export default async function add(
             `  If this seems like a mistake, please contact us at support@zeit.co`
         );
         return 1;
-      }
-    } else if (addedDomain instanceof Errors.DomainVerificationFailed) {
+
+    } if (addedDomain instanceof Errors.DomainVerificationFailed) {
       output.error(
         `We couldn't verify the domain ${chalk.underline(
           addedDomain.meta.domain
@@ -144,12 +140,12 @@ export default async function add(
       output.print(
         `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
       );
-      output.print(zeitWorldTable() + '\n');
+      output.print(`${zeitWorldTable()  }\n`);
       output.print(
         `\n  As an alternative, you can add following records to your DNS settings:\n`
       );
       output.print(
-        dnsTable(
+        `${dnsTable(
           [
             ['_now', 'TXT', addedDomain.meta.token],
             addedDomain.meta.subdomain === null
@@ -157,13 +153,13 @@ export default async function add(
               : [addedDomain.meta.subdomain, 'CNAME', 'alias.zeit.co']
           ],
           { extraSpace: '  ' }
-        ) + '\n'
+        )  }\n`
       );
       return 1;
-    } else if (addedDomain instanceof Errors.DomainAlreadyExists) {
+    } if (addedDomain instanceof Errors.DomainAlreadyExists) {
       output.error(`The domain exists already`);
       return 1;
-    } else {
+    }
       const addedDomainInfo = await getDomainByName(
         output,
         now,
@@ -187,8 +183,8 @@ export default async function add(
         )} was added. ${addStamp()}`
       );
       return 0;
-    }
-  } else if (cdnEnabled !== undefined && domainInfo.cdnEnabled !== cdnEnabled) {
+
+  } if (cdnEnabled !== undefined && domainInfo.cdnEnabled !== cdnEnabled) {
     maybeWarnAboutUnverified(output, domainName, domainInfo.verified);
     await updateDomain(now, domainName, cdnEnabled);
     if (cdnEnabled) {
@@ -198,15 +194,15 @@ export default async function add(
         )} was updated and configured with CDN enabled. ${addStamp()}`
       );
       return 0;
-    } else {
+    }
       console.log(
         `${chalk.cyan('> Success!')} Domain ${chalk.bold(
           chalk.underline(domainName)
         )} was updated and configured with CDN disabled. ${addStamp()}`
       );
       return 0;
-    }
-  } else {
+
+  }
     maybeWarnAboutUnverified(output, domainName, domainInfo.verified);
     console.log(
       `You requested to modify information for ${chalk.bold(
@@ -214,13 +210,13 @@ export default async function add(
       )} that is already as requested; nothing was changed.`
     );
     return 0;
-  }
+
 }
 
 function maybeWarnAboutUnverified(
-  output: Output,
-  domainName: string,
-  isVerified: boolean
+  output        ,
+  domainName        ,
+  isVerified
 ) {
   if (!isVerified) {
     output.warn(

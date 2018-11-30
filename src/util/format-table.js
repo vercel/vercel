@@ -1,9 +1,10 @@
 // Packages
-const chalk = require('chalk');
-const table = require('text-table');
+import chalk from 'chalk';
+
+import table from 'text-table';
 
 // Utilities
-const strlen = require('./strlen');
+import strlen from './strlen';
 
 // header:
 // [ 'a', 'b', 'c', ... ]
@@ -20,7 +21,7 @@ const strlen = require('./strlen');
 //   },
 //   ...
 // ]
-module.exports = function formatTable(header, align, blocks, hsep = '    ') {
+export default function formatTable(header, align, blocks, hsep = '    ') {
   const nrCols = header.length;
   const padding = [];
   let out = '\n';
@@ -40,11 +41,11 @@ module.exports = function formatTable(header, align, blocks, hsep = '    ') {
     const rows = [header.map(s => chalk.dim(s))].concat(block.rows);
 
     if (rows.length > 0) {
-      rows[0][0] = ' ' + rows[0][0];
+      rows[0][0] = ` ${  rows[0][0]}`;
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i].slice(0);
-        row[0] = ' ' + row[0];
+        row[0] = ` ${  row[0]}`;
         for (let j = 0; j < nrCols; j++) {
           const col = `${row[j]}`;
           const al = align[j] || 'l';

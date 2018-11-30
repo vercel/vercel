@@ -1,8 +1,8 @@
-// @flow
+//      
 import chalk from 'chalk';
-import { Output } from './types';
 
-async function promptBool(output: Output, message: string) {
+
+async function promptBool(output        , message        ) {
   return new Promise(resolve => {
     output.print(`${chalk.gray('>')} ${message} ${chalk.gray('[y/N] ')}`);
     process.stdin

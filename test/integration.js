@@ -1,22 +1,25 @@
 // Native
-const path = require('path');
-const { URL } = require('url');
+import path from 'path';
+
+import { URL } from 'url';
 
 // Packages
-const test = require('ava');
-const semVer = require('semver');
-const { promises: { readFile } } = require('fs');
-const execa = require('execa');
-const fetch = require('node-fetch');
-const tmp = require('tmp-promise');
+import test from 'ava';
+
+import semVer from 'semver';
+import fs from 'fs';
+import execa from 'execa';
+import fetch from 'node-fetch';
+import tmp from 'tmp-promise';
 
 // Utilities
-const logo = require('../src/util/output/logo');
-const sleep = require('../src/util/sleep');
-const pkg = require('../package');
-const parseList = require('./helpers/parse-list');
-const removeDeployment = require('./helpers/remove');
-const prepareFixtures = require('./helpers/prepare');
+import logo from '../src/util/output/logo';
+
+import sleep from '../src/util/sleep';
+import pkg from '../package';
+import parseList from './helpers/parse-list';
+import removeDeployment from './helpers/remove';
+import prepareFixtures from './helpers/prepare';
 
 const binary = {
   darwin: 'now-macos',
@@ -24,7 +27,7 @@ const binary = {
   win32: 'now-win.exe'
 }[process.platform];
 
-const binaryPath = path.resolve(__dirname, '../packed/' + binary);
+const binaryPath = path.resolve(__dirname, `../packed/${  binary}`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random().toString(36).split('.')[1];
@@ -576,9 +579,7 @@ test('find deployment in list', async t => {
   t.true(deployments.length > 0);
   t.is(code, 0);
 
-  const target = deployments.find(deployment => {
-    return deployment.includes(`${session}-`);
-  });
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
   t.truthy(target);
 
@@ -601,9 +602,7 @@ test('find deployment in list with mixed args', async t => {
   t.true(deployments.length > 0);
   t.is(code, 0);
 
-  const target = deployments.find(deployment => {
-    return deployment.includes(`${session}-`);
-  });
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
   t.truthy(target);
 
@@ -786,7 +785,7 @@ test('deploy single static file', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'image/png');
-  t.deepEqual(await readFile(file), await response.buffer());
+  t.deepEqual(await fs.promises.readFile(file), await response.buffer());
 
   await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });

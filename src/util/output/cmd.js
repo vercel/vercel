@@ -1,5 +1,5 @@
-const { gray, cyan } = require('chalk');
+import { gray, cyan } from 'chalk';
 
 const cmd = text => `${gray('`')}${cyan(text)}${gray('`')}`;
 
-module.exports = cmd;
+export default cmd;

@@ -1,5 +1,5 @@
-const ansiEscapes = require('ansi-escapes');
+import ansiEscapes from 'ansi-escapes';
 
 const eraseLines = n => ansiEscapes.eraseLines(n);
 
-module.exports = eraseLines;
+export default eraseLines;

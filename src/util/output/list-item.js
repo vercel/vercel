@@ -1,4 +1,4 @@
-const { gray } = require('chalk');
+import { gray } from 'chalk';
 
 // listItem('woot') === '- woot'
 // listItem('->', 'woot') === '-> woot'
@@ -14,4 +14,4 @@ const listItem = (n, msg) => {
   return `${gray(n)} ${msg}`;
 };
 
-module.exports = listItem;
+export default listItem;

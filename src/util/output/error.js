@@ -1,7 +1,6 @@
-// Packages
-const { red } = require('chalk');
+import chalk from 'chalk';
 
-module.exports = (...input) => {
+export default (...input) => {
   let messages = input;
 
   if (typeof input[0] === 'object') {
@@ -13,5 +12,5 @@ module.exports = (...input) => {
     }
   }
 
-  return `${red('> Error!')} ${messages.join('\n')}`;
+  return `${chalk.red('> Error!')} ${messages.join('\n')}`;
 };

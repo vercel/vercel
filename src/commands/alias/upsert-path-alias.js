@@ -1,7 +1,7 @@
-// @flow
+//      
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
-import type { AliasRecord, PathRule } from '../../util/types';
+
+                                                              
 import * as Errors from '../../util/errors';
 import createCertForAlias from './create-cert-for-alias';
 import setupDomain from './setup-domain';
@@ -9,11 +9,11 @@ import setupDomain from './setup-domain';
 const NOW_SH_REGEX = /\.now\.sh$/;
 
 async function upsertPathAlias(
-  output: Output,
-  now: Now,
-  rules: PathRule[],
-  alias: string,
-  contextName: string
+  output        ,
+  now     ,
+  rules            ,
+  alias        ,
+  contextName        
 ) {
   let externalDomain = false;
 
@@ -42,7 +42,7 @@ async function upsertPathAlias(
 
   const cancelMessage = wait(`Updating path alias rules for ${alias}`);
   try {
-    const record: AliasRecord = await now.fetch(`/now/aliases`, {
+    const record              = await now.fetch(`/now/aliases`, {
       body: { alias, rules },
       method: 'POST'
     });
@@ -72,14 +72,14 @@ async function upsertPathAlias(
         cert instanceof Errors.TooManyRequests
       ) {
         return cert;
-      } else {
+      } 
         return upsertPathAlias(output, now, rules, alias, contextName);
-      }
+      
     }
 
     // The alias already exists so we fail in silence returning the id
     if (error.status === 409) {
-      const sameRecord: AliasRecord = { uid: error.uid, alias: error.alias };
+      const sameRecord              = { uid: error.uid, alias: error.alias };
       return sameRecord;
     }
 

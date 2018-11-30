@@ -1,18 +1,18 @@
-// @flow
+//      
 import psl from 'psl';
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { Now } from '../types';
+
 import * as Errors from '../errors';
-import type { AddedDomain } from '../types';
+                                            
 import wait from '../output/wait';
 
 export default async function addDomain(
-  now: Now,
-  domain: string,
-  contextName: string,
-  isExternal: boolean,
-  cdnEnabled?: boolean
+  now     ,
+  domain        ,
+  contextName        ,
+  isExternal         ,
+  cdnEnabled          
 ) {
   const cancelWait = wait(
     `Adding domain ${domain} under ${chalk.bold(contextName)}`
@@ -52,16 +52,16 @@ export default async function addDomain(
 }
 
 async function performAddRequest(
-  now: Now,
-  domain: string,
-  isExternal: boolean,
-  cdnEnabled?: boolean
-): Promise<AddedDomain> {
+  now     ,
+  domain        ,
+  isExternal         ,
+  cdnEnabled          
+)                       {
   const serviceType = isExternal ? 'external' : 'zeit.world';
   return retry(
     async bail => {
       try {
-        const result: AddedDomain = await now.fetch('/v3/domains', {
+        const result              = await now.fetch('/v3/domains', {
           body: { name: domain, serviceType, cdnEnabled },
           method: 'POST'
         });

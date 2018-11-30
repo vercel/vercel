@@ -1,28 +1,28 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 
 import Now from '../../util';
-import { CLIContext, Output } from '../../util/types';
+
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
-import type { CLIAliasOptions, Alias, PathAliasRule } from '../../util/types';
+                                                                              
 
 export default async function ls(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
+  const { '--debug': debugEnabled } = opts;
   const { contextName } = await getScope({
     apiUrl,
     token,
@@ -54,7 +54,7 @@ export default async function ls(
     );
   }
 
-  const aliases: Alias[] = await getAliases(now);
+  const aliases          = await getAliases(now);
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -70,7 +70,7 @@ export default async function ls(
     if (opts['--json']) {
       output.print(JSON.stringify({ rules: alias.rules }, null, 2));
     } else {
-      const rules: PathAliasRule[] = alias.rules || [];
+      const rules                  = alias.rules || [];
       output.log(
         `${rules.length} path alias ${plural(
           'rule',
@@ -93,9 +93,9 @@ export default async function ls(
   return 0;
 }
 
-function printAliasTable(aliases: Alias[]): string {
+function printAliasTable(aliases         )         {
   return (
-    table(
+    `${table(
       [
         ['source', 'url', 'age'].map(h => chalk.gray(h)),
         ...aliases.map(a => [
@@ -116,28 +116,26 @@ function printAliasTable(aliases: Alias[]): string {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ') + '\n\n'
+    ).replace(/^/gm, '  ')  }\n\n`
   );
 }
 
-function printPathAliasTable(rules: PathAliasRule[]): string {
+function printPathAliasTable(rules                 )         {
   const header = [['pathname', 'method', 'dest'].map(s => chalk.gray(s))];
   return (
-    table(
+    `${table(
       header.concat(
-        rules.map(rule => {
-          return [
+        rules.map(rule => [
             rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
             rule.method ? rule.method : '*',
             rule.dest
-          ];
-        })
+          ])
       ),
       {
         align: ['l', 'l', 'l', 'l'],
         hsep: ' '.repeat(6),
         stringLength: strlen
       }
-    ).replace(/^(.*)/gm, '  $1') + '\n'
+    ).replace(/^(.*)/gm, '  $1')  }\n`
   );
 }

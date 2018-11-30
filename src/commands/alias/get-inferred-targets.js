@@ -1,6 +1,6 @@
-// @flow
+//      
 import getConfig from './get-config';
-import { Output } from '../../util/types';
+
 import {
   NoAliasInConfig,
   InvalidAliasInConfig,
@@ -9,8 +9,8 @@ import {
 } from '../../util/errors';
 
 async function getInferredTargets(
-  output: Output,
-  localConfigPath: string | void
+  output        ,
+  localConfigPath               
 ) {
   // Read the configuration file from the best guessed location
   const config = await getConfig(output, localConfigPath);

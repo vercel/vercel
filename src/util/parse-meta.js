@@ -1,4 +1,4 @@
-module.exports = function parseMeta(meta) {
+export default function parseMeta(meta) {
   if (!meta) {
     return {};
   }

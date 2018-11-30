@@ -1,25 +1,18 @@
-// @flow
 import ms from 'ms';
-import uuid from '../../util/uuid';
+import uuid from "../uuid";
 import createPollingFn from '../create-polling-fn';
-import returnify from '../returnify-async-generator.js';
-import { Output, Now } from '../types';
+import returnify from '../returnify-async-generator';
+
 import { VerifyScaleTimeout } from '../errors';
 import getDeploymentInstances from '../deploy/get-deployment-instances';
-import type { InstancesCount, DeploymentScale } from '../types';
-
-type Options = {
-  timeout?: number,
-  pollingInterval?: number
-};
 
 async function* verifyDeploymentScale(
-  output: Output,
-  now: Now,
-  deploymentId: string,
-  scale: DeploymentScale,
-  options: Options = {}
-): AsyncGenerator<[string, number] | VerifyScaleTimeout, void, void> {
+  output        ,
+  now     ,
+  deploymentId        ,
+  scale                 ,
+  options          = {}
+)                                                                    {
   const { timeout = ms('3m') } = options;
   const { pollingInterval = 2000 } = options;
   const getPollDeploymentInstances = createPollingFn(
@@ -69,9 +62,9 @@ async function* verifyDeploymentScale(
 }
 
 function allDcsMatched(
-  target: InstancesCount,
-  current: InstancesCount
-): boolean {
+  target                ,
+  current
+)          {
   return Object.keys(target).reduce(
     (result, dc) => result && current[dc] >= target[dc],
     true
@@ -79,8 +72,8 @@ function allDcsMatched(
 }
 
 function getTargetInstancesCountForScale(
-  scale: DeploymentScale
-): InstancesCount {
+  scale
+)                 {
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,
@@ -91,8 +84,8 @@ function getTargetInstancesCountForScale(
 }
 
 function getInitialInstancesCountForScale(
-  scale: DeploymentScale
-): InstancesCount {
+  scale
+)                 {
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,

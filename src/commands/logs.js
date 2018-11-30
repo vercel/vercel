@@ -1,19 +1,13 @@
-#!/usr/bin/env node
-// @flow
-
-// Packages
-const mri = require('mri');
-const chalk = require('chalk');
-
-// Utilities
-const Now = require('../util');
-const createOutput = require('../util/output');
-const logo = require('../util/output/logo');
-const elapsed = require('../util/output/elapsed');
-const { maybeURL, normalizeURL, parseInstanceURL } = require('../util/url');
-const printEvents = require('../util/events');
-const wait = require('../util/output/wait');
-const getScope = require('../util/get-scope');
+import mri from 'mri';
+import chalk from 'chalk';
+import Now from '../util';
+import createOutput from '../util/output';
+import logo from '../util/output/logo';
+import elapsed from '../util/output/elapsed';
+import { maybeURL, normalizeURL, parseInstanceURL } from '../util/url';
+import printEvents from '../util/events';
+import wait from '../util/output/wait';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -63,7 +57,7 @@ const help = () => {
 `);
 };
 
-module.exports = async function main(ctx: any) {
+export default async function main(ctx     ) {
   let argv;
   let deploymentIdOrURL;
 
@@ -170,17 +164,17 @@ module.exports = async function main(ctx: any) {
         `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
       );
       return 1;
-    } else if (err.status === 403) {
+    } if (err.status === 403) {
       output.error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
         )}`
       );
       return 1;
-    } else {
+    }
       // unexpected
       throw err;
-    }
+
   }
 
   cancelWait();
