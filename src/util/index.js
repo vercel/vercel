@@ -64,7 +64,7 @@ module.exports = class Now extends EventEmitter {
       pkg = {},
       nowConfig = {},
       hasNowJson = false,
-      sessionAffinity = 'ip',
+      sessionAffinity = 'random',
       isFile = false,
       atlas = false,
 
