@@ -16,7 +16,7 @@
     "gzip": "ls packed/now* | xargs gzip",
     "bundle": "pkg bin/now.js -c package.json -o packed/now --options no-warnings",
     "pack": "rm -rf packed && yarn build && yarn bundle",
-    "build-download": "ncc build ./download/src --out ./dist/download.js",
+    "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build && cd link && npm link",
     "build": "ncc build ./src"
   },
