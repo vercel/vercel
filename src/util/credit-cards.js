@@ -1,8 +1,9 @@
-const stripe = require('stripe')('pk_live_alyEi3lN0kSwbdevK0nrGwTw');
+import stripeFactory from 'stripe';
+import Now from '.';
 
-const Now = require('.');
+const stripe = stripeFactory('pk_live_alyEi3lN0kSwbdevK0nrGwTw');
 
-module.exports = class CreditCards extends Now {
+export default class CreditCards extends Now {
   async ls() {
     const res = await this._fetch('/stripe/sources/');
     const body = await res.json();

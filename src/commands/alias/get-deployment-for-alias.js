@@ -1,19 +1,19 @@
-// @flow
+//      
 import chalk from 'chalk';
-import { Now, Output } from '../../util/types';
-import type { User } from '../../util/types';
+
+                                             
 import getAppLastDeployment from './get-app-last-deployment';
 import getAppName from './get-app-name';
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import wait from '../../util/output/wait';
 
 async function getDeploymentForAlias(
-  now: Now,
-  output: Output,
-  args: Array<string>,
-  localConfig: string | void,
-  user: User,
-  contextName: string
+  now     ,
+  output        ,
+  args               ,
+  localConfig               ,
+  user      ,
+  contextName        
 ) {
   const cancelWait = wait(
     `Fetching deployment to alias in ${chalk.bold(contextName)}`

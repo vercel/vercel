@@ -1,10 +1,10 @@
-// @flow
+//      
 import { RulesFileValidationError } from '../../util/errors';
 
-function validatePathAliasRules(location: string, rules: any) {
+function validatePathAliasRules(location        , rules     ) {
   if (!Array.isArray(rules)) {
     return new RulesFileValidationError(location, 'rules must be an array');
-  } else if (rules.length === 0) {
+  } if (rules.length === 0) {
     return new RulesFileValidationError(location, 'empty rules');
   }
 
@@ -14,7 +14,7 @@ function validatePathAliasRules(location: string, rules: any) {
         location,
         'all rules must be objects'
       );
-    } else if (!rule.dest) {
+    } if (!rule.dest) {
       return new RulesFileValidationError(
         location,
         'all rules must have a dest field'

@@ -1,5 +1,5 @@
-const { gray, bold } = require('chalk');
+import { gray, bold } from 'chalk';
 
 const param = text => `${gray('"')}${bold(text)}${gray('"')}`;
 
-module.exports = param;
+export default param;

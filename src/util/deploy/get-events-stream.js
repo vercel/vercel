@@ -1,28 +1,28 @@
-// @flow
+//      
 import through2 from 'through2';
 import jsonlines from 'jsonlines';
 import { stringify } from 'querystring';
-import type { Readable } from 'stream';
-import { Now } from '../types';
+                                       
+
 import noop from '../noop';
 
-type Options = {
-  direction: 'forward' | 'backwards',
-  follow: boolean,
-  format?: 'lines',
-  instanceId?: string,
-  limit?: number,
-  query?: string,
-  since?: number,
-  types?: string[],
-  until?: number
-};
+                
+                                     
+                  
+                   
+                      
+                 
+                 
+                 
+                   
+                
+  
 
 async function getEventsStream(
-  now: Now,
-  idOrHost: string,
-  options: Options
-): Promise<Readable> {
+  now     ,
+  idOrHost        ,
+  options         
+)                    {
   const response = await now.fetch(
     `/v2/now/deployments/${idOrHost}/events?${stringify({
       direction: options.direction,

@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -10,15 +10,15 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { CLIContext, Output } from '../../util/types';
-import type { CLICertsOptions } from '../../util/types';
+
+                                                        
 
 async function ls(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -57,11 +57,11 @@ async function ls(
 
 function formatCertsTable(certsList) {
   return (
-    table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
+    `${table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
       stringLength: strlen
-    }).replace(/^(.*)/gm, '  $1') + '\n'
+    }).replace(/^(.*)/gm, '  $1')  }\n`
   );
 }
 
@@ -113,8 +113,8 @@ function formatCertFirstCn(time, cert, cn, multiple) {
 function formatExpirationDate(date) {
   const diff = date - Date.now();
   return diff < 0
-    ? chalk.gray(ms(-diff) + ' ago')
-    : chalk.gray('in ' + ms(diff));
+    ? chalk.gray(`${ms(-diff)  } ago`)
+    : chalk.gray(`in ${  ms(diff)}`);
 }
 
 /**

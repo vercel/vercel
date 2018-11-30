@@ -1,24 +1,20 @@
-// @flow
 import chalk from 'chalk';
 import ms from 'ms';
+import plural from 'pluralize';
 import table from 'text-table';
-const plural = require('pluralize');
-
-import { CLIContext, Output } from '../../util/types';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { CLICertsOptions } from '../../util/types';
 
 async function rm(
-  ctx: CLIContext,
-  opts: CLICertsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -75,19 +71,19 @@ async function rm(
   return 0;
 }
 
-async function getCertsToDelete(output: Output, now: Now, idOrCn: string) {
+async function getCertsToDelete(output        , now     , idOrCn        ) {
   const cert = await getCertById(output, now, idOrCn);
-  return !cert ? await getCerts(output, now, [idOrCn]) : [cert];
+  return !cert ? getCerts(output, now, [idOrCn]) : [cert];
 }
 
 function readConfirmation(output, msg, certs) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
-      table([...certs.map(formatCertRow)], {
+      `${table([...certs.map(formatCertRow)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1') + '\n'
+      }).replace(/^(.*)/gm, '  $1')  }\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -110,7 +106,7 @@ function formatCertRow(cert) {
   return [
     cert.uid,
     chalk.bold(cert.cns.join(', ')),
-    chalk.gray(ms(new Date() - new Date(cert.created)) + ' ago')
+    chalk.gray(`${ms(new Date() - new Date(cert.created))  } ago`)
   ];
 }
 

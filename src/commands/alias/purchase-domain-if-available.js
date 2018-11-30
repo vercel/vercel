@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import plural from 'pluralize';
 
@@ -7,7 +7,7 @@ import eraseLines from '../../util/output/erase-lines';
 import promptBool from '../../util/input/prompt-bool';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
+
 import { NowError } from '../../util/now-error';
 import * as Errors from '../../util/errors';
 import getDomainPrice from '../../util/domains/get-domain-price';
@@ -18,10 +18,10 @@ import purchaseDomain from './purchase-domain';
 const isTTY = process.stdout.isTTY;
 
 async function purchaseDomainIfAvailable(
-  output: Output,
-  now: Now,
-  domain: string,
-  contextName: string
+  output        ,
+  now     ,
+  domain        ,
+  contextName        
 ) {
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
@@ -69,11 +69,11 @@ async function purchaseDomainIfAvailable(
     }
 
     return true;
-  } else {
+  } 
     output.debug(`Domain can't be purchased`);
     cancelWait();
     return false;
-  }
+  
 }
 
 export default purchaseDomainIfAvailable;

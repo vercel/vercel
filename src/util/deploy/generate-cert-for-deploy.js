@@ -1,16 +1,16 @@
-// @flow
+//      
 import psl from 'psl';
 import * as Errors from '../errors';
-import { Now, Output } from '../types';
+
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../../commands/alias/setup-domain';
 import wait from '../output/wait';
 
 export default async function generateCertForDeploy(
-  output: Output,
-  now: Now,
-  contextName: string,
-  deployURL: string
+  output        ,
+  now     ,
+  contextName        ,
+  deployURL        
 ) {
   const { domain } = psl.parse(deployURL);
   const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`);
@@ -24,15 +24,15 @@ export default async function generateCertForDeploy(
   ) {
     cancelSetupWait();
     return result;
-  } else {
+  } 
     cancelSetupWait();
-  }
+  
 
   // Generate the certificate with the given parameters
   const cancelCertWait = wait(
     `Generating a wildcard certificate for ${domain}`
   );
-  let cert = await createCertForCns(now, [domain, `*.${domain}`], contextName);
+  const cert = await createCertForCns(now, [domain, `*.${domain}`], contextName);
   if (
     cert instanceof Errors.CantGenerateWildcardCert ||
     cert instanceof Errors.CantSolveChallenge ||
@@ -47,7 +47,7 @@ export default async function generateCertForDeploy(
   ) {
     cancelCertWait();
     return cert;
-  } else {
+  } 
     cancelCertWait();
-  }
+  
 }

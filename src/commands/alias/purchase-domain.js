@@ -1,19 +1,19 @@
-// @flow
+//      
 import chalk from 'chalk';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
-import { Now, Output } from '../../util/types';
+
 import { PaymentSourceNotFound } from '../../util/errors';
 
-type PurchaseDomainPayload = {
-  uid: string
-};
+                              
+             
+  
 
-async function purchaseDomain(output: Output, now: Now, domain: string) {
+async function purchaseDomain(output        , now     , domain        ) {
   const purchaseStamp = stamp();
   const cancelWait = wait('Purchasing');
   try {
-    const { uid }: PurchaseDomainPayload = await now.fetch('/domains/buy', {
+    const { uid }                        = await now.fetch('/domains/buy', {
       body: { name: domain },
       method: 'POST'
     });
@@ -28,9 +28,9 @@ async function purchaseDomain(output: Output, now: Now, domain: string) {
     cancelWait();
     if (error.code === 'source_not_found') {
       return new PaymentSourceNotFound();
-    } else {
+    } 
       throw error;
-    }
+    
   }
 }
 

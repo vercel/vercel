@@ -1,8 +1,8 @@
-// @flow
+//      
 import ms from 'ms';
 import chalk from 'chalk';
 
-import { CLIContext, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/dns-table';
@@ -11,7 +11,7 @@ import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import zeitWorldTable from '../../util/zeit-world-table';
-import type { CLIAliasOptions } from '../../util/types';
+                                                        
 
 import assignAlias from './assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';
@@ -20,20 +20,20 @@ import getTargetsForAlias from './get-targets-for-alias';
 import upsertPathAlias from './upsert-path-alias';
 
 export default async function set(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const setStamp = stamp();
 
   const {
-    ['--debug']: debugEnabled,
-    ['--no-verify']: noVerify,
-    ['--rules']: rulesPath
+    '--debug': debugEnabled,
+    '--no-verify': noVerify,
+    '--rules': rulesPath
   } = opts;
 
   const { contextName, user } = await getScope({
@@ -61,11 +61,11 @@ export default async function set(
     output.error(`Can't find the provided rules file at location:`);
     output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`);
     return 1;
-  } else if (rules instanceof Errors.CantParseJSONFile) {
+  } if (rules instanceof Errors.CantParseJSONFile) {
     output.error(`Error parsing provided rules.json file at location:`);
     output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`);
     return 1;
-  } else if (rules instanceof Errors.RulesFileValidationError) {
+  } if (rules instanceof Errors.RulesFileValidationError) {
     output.error(`Path Alias validation error: ${rules.meta.message}`);
     output.print(`  ${chalk.gray('-')} ${rules.meta.location}\n`);
     return 1;
@@ -92,15 +92,15 @@ export default async function set(
       )}`
     );
     return 1;
-  } else if (targets instanceof Errors.NoAliasInConfig) {
+  } if (targets instanceof Errors.NoAliasInConfig) {
     output.error(`Couldn't find a an alias in config`);
     return 1;
-  } else if (targets instanceof Errors.InvalidAliasInConfig) {
+  } if (targets instanceof Errors.InvalidAliasInConfig) {
     output.error(
       `Wrong value for alias found in config. It must be a string or array of string.`
     );
     return 1;
-  } else if (targets instanceof Errors.CantParseJSONFile) {
+  } if (targets instanceof Errors.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${targets.meta.file}.`);
     return 1;
   }
@@ -152,13 +152,13 @@ export default async function set(
         )}`
       );
       return 1;
-    } else if (deployment instanceof Errors.DeploymentPermissionDenied) {
+    } if (deployment instanceof Errors.DeploymentPermissionDenied) {
       output.error(
         `No permission to access deployment "${deployment.meta
           .id}" under ${chalk.bold(deployment.meta.context)}`
       );
       return 1;
-    } else if (deployment === null) {
+    } if (deployment === null) {
       output.error(
         `Couldn't find a deployment to alias. Please provide one as an argument.`
       );
@@ -195,24 +195,24 @@ export default async function set(
   return 0;
 }
 
-export type SetupDomainError =
-  | Errors.DomainNameserversNotFound
-  | Errors.DomainNotFound
-  | Errors.DomainNotVerified
-  | Errors.DomainPermissionDenied
-  | Errors.DomainVerificationFailed
-  | Errors.InvalidCoupon
-  | Errors.MissingCreditCard
-  | Errors.CDNNeedsUpgrade
-  | Errors.PaymentSourceNotFound
-  | Errors.UnsupportedTLD
-  | Errors.UsedCoupon
-  | Errors.UserAborted;
+                              
+                                    
+                         
+                            
+                                 
+                                   
+                        
+                            
+                          
+                                
+                         
+                     
+                       
 
-function handleSetupDomainErrorImpl<Other>(
-  output: Output,
-  error: SetupDomainError | Other
-): 1 | Other {
+function handleSetupDomainErrorImpl       (
+  output        ,
+  error                          
+)            {
   if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
       `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
@@ -225,12 +225,12 @@ function handleSetupDomainErrorImpl<Other>(
     output.print(
       `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
     );
-    output.print(zeitWorldTable() + '\n');
+    output.print(`${zeitWorldTable()  }\n`);
     output.print(
       `\n  As an alternative, you can add following records to your DNS settings:\n`
     );
     output.print(
-      dnsTable(
+      `${dnsTable(
         [
           ['_now', 'TXT', error.meta.token],
           error.meta.subdomain === null
@@ -238,92 +238,92 @@ function handleSetupDomainErrorImpl<Other>(
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
         ],
         { extraSpace: '  ' }
-      ) + '\n'
+      )  }\n`
     );
     return 1;
-  } else if (error instanceof Errors.DomainPermissionDenied) {
+  } if (error instanceof Errors.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
         error.meta.domain
       )} under ${chalk.bold(error.meta.context)}.`
     );
     return 1;
-  } else if (error instanceof Errors.PaymentSourceNotFound) {
+  } if (error instanceof Errors.PaymentSourceNotFound) {
     output.error(
       `No credit cards found to buy the domain. Please run ${cmd(
         'now cc add'
       )}.`
     );
     return 1;
-  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+  } if (error instanceof Errors.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } else if (error instanceof Errors.DomainNotVerified) {
+  } if (error instanceof Errors.DomainNotVerified) {
     output.error(
       `We couldn't verify the domain ${chalk.underline(
         error.meta.domain
       )}. If it's an external domain, add it with --external.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainNameserversNotFound) {
+  } if (error instanceof Errors.DomainNameserversNotFound) {
     output.error(
       `Couldn't find nameservers for the domain ${chalk.underline(
         error.meta.domain
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.UserAborted) {
+  } if (error instanceof Errors.UserAborted) {
     output.error(`User aborted`);
     return 1;
-  } else if (error instanceof Errors.DomainNotFound) {
+  } if (error instanceof Errors.DomainNotFound) {
     output.error(`You should buy the domain before aliasing.`);
     return 1;
-  } else if (error instanceof Errors.InvalidCoupon) {
+  } if (error instanceof Errors.InvalidCoupon) {
     output.error(`The provided coupon ${error.meta.coupon} is invalid.`);
     return 1;
-  } else if (error instanceof Errors.MissingCreditCard) {
+  } if (error instanceof Errors.MissingCreditCard) {
     output.print(
       'You have no credit cards on file. Please add one to purchase the domain.'
     );
     return 1;
-  } else if (error instanceof Errors.UnsupportedTLD) {
+  } if (error instanceof Errors.UnsupportedTLD) {
     output.error(
       `The TLD for domain name ${error.meta.name} is not supported.`
     );
     return 1;
-  } else if (error instanceof Errors.UsedCoupon) {
+  } if (error instanceof Errors.UsedCoupon) {
     output.error(`The provided coupon ${error.meta.coupon} can't be used.`);
     return 1;
-  } else {
+  } 
     return error;
-  }
+  
 }
 
-type CreateAliasError =
-  | Errors.AliasInUse
-  | Errors.CantSolveChallenge
-  | Errors.CDNNeedsUpgrade
-  | Errors.DeploymentNotFound
-  | Errors.DeploymentPermissionDenied
-  | Errors.DomainConfigurationError
-  | Errors.DomainPermissionDenied
-  | Errors.DomainsShouldShareRoot
-  | Errors.DomainValidationRunning
-  | Errors.ForbiddenScaleMaxInstances
-  | Errors.ForbiddenScaleMinInstances
-  | Errors.InvalidAlias
-  | Errors.InvalidScaleMinMaxRelation
-  | Errors.InvalidWildcardDomain
-  | Errors.NotSupportedMinScaleSlots
-  | Errors.RuleValidationFailed
-  | Errors.TooManyCertificates
-  | Errors.TooManyRequests
-  | Errors.VerifyScaleTimeout;
+                       
+                     
+                             
+                          
+                             
+                                     
+                                   
+                                 
+                                 
+                                  
+                                     
+                                     
+                       
+                                     
+                                
+                                    
+                               
+                              
+                          
+                              
 
-function handleCreateAliasErrorImpl<OtherError>(
-  output: Output,
-  error: CreateAliasError | OtherError
-): 1 | OtherError {
+function handleCreateAliasErrorImpl            (
+  output        ,
+  error                               
+)                 {
   if (error instanceof Errors.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(
@@ -331,36 +331,36 @@ function handleCreateAliasErrorImpl<OtherError>(
       )} is a deployment URL or it's in use by a different team.`
     );
     return 1;
-  } else if (error instanceof Errors.DeploymentNotFound) {
+  } if (error instanceof Errors.DeploymentNotFound) {
     output.error(
       `Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(
         error.meta.context
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.InvalidAlias) {
+  } if (error instanceof Errors.InvalidAlias) {
     output.error(
       `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: Nested domains are not supported.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainPermissionDenied) {
+  } if (error instanceof Errors.DomainPermissionDenied) {
     output.error(
       `No permission to access domain ${chalk.underline(
         error.meta.domain
       )} under ${chalk.bold(error.meta.context)}`
     );
     return 1;
-  } else if (error instanceof Errors.DeploymentPermissionDenied) {
+  } if (error instanceof Errors.DeploymentPermissionDenied) {
     output.error(
       `No permission to access deployment ${chalk.dim(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );
     return 1;
-  } else if (error instanceof Errors.CDNNeedsUpgrade) {
+  } if (error instanceof Errors.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan.`);
     return 1;
-  } else if (error instanceof Errors.DomainConfigurationError) {
+  } if (error instanceof Errors.DomainConfigurationError) {
     output.error(
       `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
         error.meta.domain
@@ -371,11 +371,11 @@ function handleCreateAliasErrorImpl<OtherError>(
         `  The propagation may take a few minutes, but please verify your settings:\n\n`
       );
       output.print(
-        dnsTable([
+        `${dnsTable([
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ]) + '\n'
+        ])  }\n`
       );
     } else {
       output.print(
@@ -384,14 +384,14 @@ function handleCreateAliasErrorImpl<OtherError>(
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } else if (error instanceof Errors.TooManyCertificates) {
+  } if (error instanceof Errors.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } else if (error instanceof Errors.CantSolveChallenge) {
+  } if (error instanceof Errors.CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
         `The certificate provider could not resolve the DNS queries for ${error
@@ -408,21 +408,21 @@ function handleCreateAliasErrorImpl<OtherError>(
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(dnsTable([['', 'ALIAS', 'alias.zeit.co']]) + '\n');
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
-  } else if (error instanceof Errors.DomainValidationRunning) {
+  } if (error instanceof Errors.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } else if (error instanceof Errors.RuleValidationFailed) {
+  } if (error instanceof Errors.RuleValidationFailed) {
     output.error(`Rule validation error: ${error.meta.message}.`);
     output.print(`  Make sure your rules file is written correctly.\n`);
     return 1;
-  } else if (error instanceof Errors.TooManyRequests) {
+  } if (error instanceof Errors.TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta
         .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
@@ -430,21 +430,21 @@ function handleCreateAliasErrorImpl<OtherError>(
       })}.`
     );
     return 1;
-  } else if (error instanceof Errors.VerifyScaleTimeout) {
+  } if (error instanceof Errors.VerifyScaleTimeout) {
     output.error(`Instance verification timed out (${ms(error.meta.timeout)})`);
     output.log('Read more: https://err.sh/now-cli/verification-timeout');
     return 1;
-  } else if (error instanceof Errors.InvalidWildcardDomain) {
+  } if (error instanceof Errors.InvalidWildcardDomain) {
     output.error(
       `Invalid domain ${chalk.underline(
         error.meta.domain
       )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
-  } else if (error instanceof Errors.DomainsShouldShareRoot) {
+  } if (error instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
-  } else if (error instanceof Errors.NotSupportedMinScaleSlots) {
+  } if (error instanceof Errors.NotSupportedMinScaleSlots) {
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
@@ -457,7 +457,7 @@ function handleCreateAliasErrorImpl<OtherError>(
     );
     output.log('Read more: https://err.sh/now-cli/v2-no-min');
     return 1;
-  } else if (error instanceof Errors.ForbiddenScaleMaxInstances) {
+  } if (error instanceof Errors.ForbiddenScaleMaxInstances) {
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
@@ -470,7 +470,7 @@ function handleCreateAliasErrorImpl<OtherError>(
       )} with \`now scale\` and try again`
     );
     return 1;
-  } else if (error instanceof Errors.ForbiddenScaleMinInstances) {
+  } if (error instanceof Errors.ForbiddenScaleMinInstances) {
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
@@ -483,7 +483,7 @@ function handleCreateAliasErrorImpl<OtherError>(
       )} with \`now scale\` and try again`
     );
     return 1;
-  } else if (error instanceof Errors.InvalidScaleMinMaxRelation) {
+  } if (error instanceof Errors.InvalidScaleMinMaxRelation) {
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
@@ -495,7 +495,7 @@ function handleCreateAliasErrorImpl<OtherError>(
       )} with \`now scale\` and try again`
     );
     return 1;
-  } else {
+  } 
     return error;
-  }
+  
 }

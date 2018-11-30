@@ -1,4 +1,4 @@
-module.exports = code =>
+export default code =>
   new Promise(() => {
     // We give stdout some time to flush out
     // because there's a node bug where

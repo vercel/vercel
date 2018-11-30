@@ -1,5 +1,5 @@
-const { cyan } = require('chalk');
+import { cyan } from 'chalk';
 
 const ready = msg => `${cyan('> Ready!')} ${msg}`;
 
-module.exports = ready;
+export default ready;

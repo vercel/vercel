@@ -1,8 +1,8 @@
-// @flow
+//      
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { CLIContext, Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
@@ -13,15 +13,15 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
-import type { CLIDomainsOptions } from '../../util/types';
+                                                          
 import wait from '../../util/output/wait';
 
 export default async function buy(
-  ctx: CLIContext,
-  opts: CLIDomainsOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                   ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -56,7 +56,7 @@ export default async function buy(
   if (domainPrice instanceof Errors.InvalidCoupon) {
     output.error(`The coupon ${param(coupon)} is not valid.`);
     return 1;
-  } else if (domainPrice instanceof Errors.UsedCoupon) {
+  } if (domainPrice instanceof Errors.UsedCoupon) {
     output.error(`The coupon ${param(coupon)} has already been used.`);
     return 1;
   }
@@ -112,18 +112,18 @@ export default async function buy(
   if (buyResult instanceof Errors.InvalidDomain) {
     output.error(`The domain ${buyResult.meta.domain} is not valid.`);
     return 1;
-  } else if (buyResult instanceof Errors.DomainNotAvailable) {
+  } if (buyResult instanceof Errors.DomainNotAvailable) {
     output.error(`The domain ${buyResult.meta.domain} is not available.`);
     return 1;
-  } else if (buyResult instanceof Errors.DomainServiceNotAvailable) {
+  } if (buyResult instanceof Errors.DomainServiceNotAvailable) {
     output.error(
       `The domain purchase service is not available. Please try again later.`
     );
     return 1;
-  } else if (buyResult instanceof Errors.UnexpectedDomainPurchaseError) {
+  } if (buyResult instanceof Errors.UnexpectedDomainPurchaseError) {
     output.error(`An unexpected error happened while performing the purchase.`);
     return 1;
-  } else if (buyResult instanceof Errors.PremiumDomainForbidden) {
+  } if (buyResult instanceof Errors.PremiumDomainForbidden) {
     output.error(`A coupon cannot be used to register a premium domain.`);
     return 1;
   }

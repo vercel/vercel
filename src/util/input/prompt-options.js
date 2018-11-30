@@ -1,7 +1,7 @@
 // Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
 
-module.exports = promptOptions;
+export default promptOptions;
 
 function promptOptions(opts) {
   return new Promise((resolve, reject) => {

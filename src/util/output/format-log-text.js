@@ -1,4 +1,4 @@
-// @flow
-export default function formatLogText(text: string): string {
+//      
+export default function formatLogText(text        )         {
   return text.replace(/\n$/, '').replace(/^\n/, '');
 }

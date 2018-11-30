@@ -1,12 +1,12 @@
-// @flow
+//      
 import chalk from 'chalk';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-import { Output } from '../../util/types';
+
 import { handleError } from '../../util/error';
-import type { CLIDNSOptions } from '../../util/types';
+
 
 import add from './add';
 import ls from './ls';
@@ -73,8 +73,8 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove']
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLIDNSOptions;
+export default async function main(ctx     )                  {
+  let argv               ;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {});
@@ -88,7 +88,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     return 2;
   }
 
-  const output: Output = createOutput({ debug: argv['--debug'] });
+  const output         = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':

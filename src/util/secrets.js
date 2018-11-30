@@ -1,9 +1,9 @@
 // Ours
-const Now = require('.');
+import Now from '.';
 
 const isUserError = res => ((res.status / 100) | 0) === 4;
 
-module.exports = class Secrets extends Now {
+export default class Secrets extends Now {
   ls() {
     return this.listSecrets();
   }

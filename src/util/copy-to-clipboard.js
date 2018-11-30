@@ -1,15 +1,15 @@
-// @flow
+//      
 
 // Packages
-const { write } = require('clipboardy');
+import { write } from 'clipboardy';
 
 // $FlowFixMe
 const _isTTY = process.stdout.isTTY;
 
 async function copyToClipboard(
-  str: string,
-  shouldCopy: boolean | string = 'auto',
-  isTTY: boolean = _isTTY
+  str        ,
+  shouldCopy                   = 'auto',
+  isTTY          = _isTTY
 ) {
   if (shouldCopy === false) {
     return false;
@@ -19,9 +19,9 @@ async function copyToClipboard(
     if (isTTY) {
       await write(str);
       return true;
-    } else {
+    } 
       return false;
-    }
+    
   }
 
   if (shouldCopy === true) {
@@ -34,4 +34,4 @@ async function copyToClipboard(
   );
 }
 
-module.exports = copyToClipboard;
+export default copyToClipboard;

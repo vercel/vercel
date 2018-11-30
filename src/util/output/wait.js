@@ -1,6 +1,6 @@
-const ora2 = require('ora');
-const { gray } = require('chalk');
-const eraseLines = require('./erase-lines');
+import ora2 from 'ora';
+import chalk from 'chalk';
+import eraseLines from './erase-lines';
 
 const wait = (msg, timeOut = 300, ora = ora2) => {
   let running = false;
@@ -10,7 +10,7 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
   setTimeout(() => {
     if (stopped) return;
 
-    spinner = ora(gray(msg));
+    spinner = ora(chalk.gray(msg));
     spinner.color = 'gray';
     spinner.start();
 
@@ -31,4 +31,4 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
   return cancel;
 };
 
-module.exports = wait;
+export default wait;

@@ -1,25 +1,20 @@
-// Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
+import { email as regexEmail } from '../../util/input/regexes';
+import wait from '../../util/output/wait';
+import fatalError from '../../util/fatal-error';
+import cmd from '../../util/output/cmd';
+import info from '../../util/output/info';
+import stamp from '../../util/output/stamp';
+import param from '../../util/output/param';
+import chars from '../../util/output/chars';
+import rightPad from '../../util/output/right-pad';
+import textInput from '../../util/input/text';
+import eraseLines from '../../util/output/erase-lines';
+import success from '../../util/output/success';
+import error from '../../util/output/error';
+import getUser from '../../util/get-user';
 
-// Utilities
-const regexes = require('../../util/input/regexes');
-const wait = require('../../util/output/wait');
-const fatalError = require('../../util/fatal-error');
-const cmd = require('../../util/output/cmd');
-const info = require('../../util/output/info');
-const stamp = require('../../util/output/stamp');
-const param = require('../../util/output/param');
-const { tick } = require('../../util/output/chars');
-const rightPad = require('../../util/output/right-pad');
-const textInput = require('../../util/input/text');
-const eraseLines = require('../../util/output/erase-lines');
-const success = require('../../util/output/success');
-const error = require('../../util/output/error');
-const getUser = require('../../util/get-user');
-
-const validateEmail = data => {
-  return regexes.email.test(data.trim()) || data.length === 0;
-};
+const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
 const domains = Array.from(
   new Set([
@@ -60,7 +55,7 @@ const emailAutoComplete = (value, teamSlug) => {
   return false;
 };
 
-module.exports = async function(
+export default async function(
   {
     teams,
     args,
@@ -73,14 +68,14 @@ module.exports = async function(
 ) {
   const { currentTeam: currentTeamId } = config;
 
-  let stopSpinner = wait('Fetching teams');
+  const stopSpinner = wait('Fetching teams');
 
   const list = (await teams.ls()).teams;
   const currentTeam = list.find(team => team.id === currentTeamId);
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
+  const stopUserSpinner = wait('Fetching user information');
   const user = await getUser({ apiUrl, token });
 
   stopUserSpinner();
@@ -101,13 +96,13 @@ module.exports = async function(
 
   if (args.length > 0) {
     for (const email of args) {
-      if (regexes.email.test(email)) {
+      if (regexEmail.test(email)) {
         const stopSpinner = wait(email);
         const elapsed = stamp();
         // eslint-disable-next-line no-await-in-loop
         await teams.inviteUser({ teamId: currentTeam.id, email });
         stopSpinner();
-        console.log(`${chalk.cyan(tick)} ${email} ${elapsed()}`);
+        console.log(`${chalk.cyan(chars.tick)} ${email} ${elapsed()}`);
       } else {
         console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
@@ -144,7 +139,7 @@ module.exports = async function(
         stopSpinner();
         email = `${email} ${elapsed()}`;
         emails.push(email);
-        console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+        console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
         if (hasError) {
           hasError = false;
           process.stdout.write(eraseLines(emails.length + 2));
@@ -155,7 +150,7 @@ module.exports = async function(
             )
           );
           for (const email of emails) {
-            console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+            console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
           }
         }
       } catch (err) {
@@ -164,7 +159,7 @@ module.exports = async function(
         console.error(error(err.message));
         hasError = true;
         for (const email of emails) {
-          console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+          console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
         }
       }
     }
@@ -178,7 +173,7 @@ module.exports = async function(
   } else {
     console.log(success(`Invited ${n} team mate${n > 1 ? 's' : ''}`));
     for (const email of emails) {
-      console.log(`${chalk.cyan(tick)} ${inviteUserPrefix}${email}`);
+      console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
 };

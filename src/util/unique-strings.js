@@ -6,7 +6,7 @@
  * @param {Array} arr Input array that potentially has duplicates
  * @returns {Array} An array of the unique values in `arr`
  */
-module.exports = arr => {
+export default arr => {
   const len = arr.length;
   const res = [];
   const o = {};

@@ -1,22 +1,18 @@
-const chalk = require('chalk');
-const printf = require('printf');
+import chalk from 'chalk';
+import printf from 'printf';
 
 const printLine = (data, sizes) =>
-  data.reduce((line, col, i) => {
-    return line + printf(`%-${sizes[i]}s`, col);
-  }, '');
+  data.reduce((line, col, i) => line + printf(`%-${sizes[i]}s`, col), '');
 
 // Print a table
-module.exports = (fieldNames = [], data = [], margins = []) => {
+export default (fieldNames = [], data = [], margins = []) => {
   // Compute size of each column
   const sizes = data
-    .reduce((acc, row) => {
-      return row.map((col, i) => {
+    .reduce((acc, row) => row.map((col, i) => {
         const currentMaxColSize = acc[i] || 0;
         const colSize = (col && col.length) || 0;
         return Math.max(currentMaxColSize, colSize);
-      });
-    }, fieldNames.map(col => col.length))
+      }), fieldNames.map(col => col.length))
     // Add margin to all columns except the last
     .map((size, i) => (i < margins.length && size + margins[i]) || size);
 

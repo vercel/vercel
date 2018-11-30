@@ -1,6 +1,6 @@
 // Base `.gitignore` to which we add entries
 // supplied by the user
-module.exports = `.hg
+export default `.hg
 .git
 .gitmodules
 .svn

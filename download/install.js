@@ -13,4 +13,4 @@ if (fs.existsSync(src)) {
   process.exit(0)
 }
 
-require(path.join(dist, 'download.js'))
+require(path.join(dist, 'index.js'))

@@ -1,8 +1,8 @@
-// @flow
-import { Now, Output } from '../../util/types';
-import type { Alias } from '../../util/types';
+//      
 
-function getSafeAlias(alias: string) {
+                                              
+
+function getSafeAlias(alias        ) {
   return alias
     .replace(/^https:\/\//i, '')
     .replace(/^\.+/, '')
@@ -11,10 +11,10 @@ function getSafeAlias(alias: string) {
 }
 
 export default async function findAliasByAliasOrId(
-  output: Output,
-  now: Now,
-  aliasOrId: string
-): Promise<Alias> {
+  output        ,
+  now     ,
+  aliasOrId        
+)                 {
   return now.fetch(
     `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
   );

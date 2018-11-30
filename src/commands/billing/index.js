@@ -1,23 +1,18 @@
-#!/usr/bin/env node
-
-// Packages
-const chalk = require('chalk');
-const mri = require('mri');
-const ms = require('ms');
-const plural = require('pluralize');
-
-// Utilities
-const { error } = require('../../util/error');
-const NowCreditCards = require('../../util/credit-cards');
-const indent = require('../../util/indent');
-const listInput = require('../../util/input/list');
-const success = require('../../util/output/success');
-const promptBool = require('../../util/input/prompt-bool');
-const info = require('../../util/output/info');
-const logo = require('../../util/output/logo');
-const addBilling = require('./add');
-const exit = require('../../util/exit');
-const getScope = require('../../util/get-scope');
+import chalk from 'chalk';
+import mri from 'mri';
+import ms from 'ms';
+import plural from 'pluralize';
+import { error } from '../../util/error';
+import NowCreditCards from '../../util/credit-cards';
+import indent from '../../util/indent';
+import listInput from '../../util/input/list';
+import success from '../../util/output/success';
+import promptBool from '../../util/input/prompt-bool';
+import info from '../../util/output/info';
+import logo from '../../util/output/logo';
+import addBilling from './add';
+import exit from '../../util/exit';
+import getScope from '../../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -58,7 +53,7 @@ let debug;
 let apiUrl;
 let subcommand;
 
-module.exports = async ctx => {
+export default async ctx => {
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
@@ -97,7 +92,7 @@ module.exports = async ctx => {
 function buildInquirerChoices(cards) {
   return cards.sources.map(source => {
     const _default =
-      source.id === cards.defaultSource ? ' ' + chalk.bold('(default)') : '';
+      source.id === cards.defaultSource ? ` ${  chalk.bold('(default)')}` : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
     const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
       source.card.last4}`;
@@ -142,7 +137,7 @@ async function run({ token, config: { currentTeam } }) {
         .map(source => {
           const _default =
             source.id === cards.defaultSource
-              ? ' ' + chalk.bold('(default)')
+              ? ` ${  chalk.bold('(default)')}`
               : '';
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`

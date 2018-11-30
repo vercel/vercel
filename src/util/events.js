@@ -1,13 +1,14 @@
 // Native
-const qs = require('querystring');
+import qs from 'querystring';
 
 // Packages
-const { eraseLines } = require('ansi-escapes');
-const jsonlines = require('jsonlines');
-const retry = require('async-retry');
+import { eraseLines } from 'ansi-escapes';
+
+import jsonlines from 'jsonlines';
+import retry from 'async-retry';
 
 // Utilities
-const createOutput = require('./output');
+import createOutput from './output';
 
 async function printEvents(
   now,
@@ -160,7 +161,7 @@ async function printEvents(
           stream.on('error', onError);
           readable.on('error', onError);
         });
-      } else {
+      } 
         callOnOpenOnce();
         const err = new Error(`Deployment events status ${eventsRes.status}`);
 
@@ -169,7 +170,7 @@ async function printEvents(
         } else {
           throw err;
         }
-      }
+      
     },
     {
       retries: 4,
@@ -187,4 +188,4 @@ async function printEvents(
   );
 }
 
-module.exports = printEvents;
+export default printEvents;

@@ -1,9 +1,9 @@
-// @flow
+//      
 import stamp from '../../util/output/stamp';
-import { Now, Output } from '../../util/types';
+
 import setDeploymentScale from '../../util/scale/set-deployment-scale';
 import waitForScale from '../../util/scale/wait-verify-deployment-scale';
-import type { Deployment } from '../../util/types';
+                                                   
 import * as Errors from '../../util/errors';
 
 import createAlias from './create-alias';
@@ -18,12 +18,12 @@ import setupDomain from './setup-domain';
 const NOW_SH_REGEX = /\.now\.sh$/;
 
 async function assignAlias(
-  output: Output,
-  now: Now,
-  deployment: Deployment,
-  alias: string,
-  contextName: string,
-  noVerify: boolean
+  output        ,
+  now     ,
+  deployment            ,
+  alias        ,
+  contextName        ,
+  noVerify         
 ) {
   const prevAlias = await getPreviousAlias(output, now, alias);
   let externalDomain = false;

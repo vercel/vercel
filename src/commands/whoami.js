@@ -1,13 +1,8 @@
-#!/usr/bin/env node
-
-// Packages
-const mri = require('mri');
-const chalk = require('chalk');
-
-// Utilities
-const logo = require('../util/output/logo');
-const { handleError } = require('../util/error');
-const getScope = require('../util/get-scope');
+import mri from 'mri';
+import chalk from 'chalk';
+import logo from '../util/output/logo';
+import { handleError } from '../util/error';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -66,7 +61,7 @@ const main = async ctx => {
   await whoami(username);
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     await main(ctx);
   } catch (err) {

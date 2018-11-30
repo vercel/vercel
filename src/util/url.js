@@ -1,9 +1,8 @@
-exports.maybeURL = id => {
+export const maybeURL = id => 
   // E.g, "appname-asdf"
-  return id.includes('-');
-};
+   id.includes('-');
 
-exports.normalizeURL = u => {
+export const normalizeURL = u => {
   // Normalize URL by removing slash from the end
   if (u.slice(-1) === '/') {
     u = u.slice(0, -1);
@@ -15,7 +14,7 @@ exports.normalizeURL = u => {
   return u;
 };
 
-exports.parseInstanceURL = u => {
+export const parseInstanceURL = u => {
   const m = /^(.+)-([a-z0-9]{24})(\.now\.sh)$/.exec(u);
   const url = m ? m[1] + m[3] : u;
   const instanceId = m ? m[2] : null;

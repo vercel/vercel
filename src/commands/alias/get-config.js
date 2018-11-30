@@ -1,17 +1,17 @@
-// @flow
+//      
 import path from 'path';
-import { Output } from '../../util/types';
+
 import humanizePath from '../../util/humanize-path';
-import type { Config } from '../../util/types';
+                                               
 
 // Local modules
 import { CantParseJSONFile, CantFindConfig } from '../../util/errors';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';
 
-let config: Config | void;
+let config               ;
 
-async function getConfig(output: Output, configFile?: string) {
+async function getConfig(output        , configFile         ) {
   const localPath = process.cwd();
 
   // If config was already read, just return it
@@ -28,8 +28,8 @@ async function getConfig(output: Output, configFile?: string) {
     const localConfig = await readJSONFile(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
-    } else if (localConfig !== null) {
-      const castedConfig: Config = localConfig;
+    } if (localConfig !== null) {
+      const castedConfig         = localConfig;
       config = castedConfig;
       return config;
     }
@@ -40,9 +40,9 @@ async function getConfig(output: Output, configFile?: string) {
   const mainConfig = await readJSONFile(nowFilePath);
   if (mainConfig instanceof CantParseJSONFile) {
     return mainConfig;
-  } else if (mainConfig !== null) {
+  } if (mainConfig !== null) {
     output.debug(`Found config in file ${nowFilePath}`);
-    const castedConfig: Config = mainConfig;
+    const castedConfig         = mainConfig;
     config = castedConfig;
     return config;
   }
@@ -52,9 +52,9 @@ async function getConfig(output: Output, configFile?: string) {
   const pkgConfig = await readConfigFromPackage(pkgFilePath);
   if (pkgConfig instanceof CantParseJSONFile) {
     return pkgConfig;
-  } else if (pkgConfig) {
+  } if (pkgConfig) {
     output.debug(`Found config in package ${nowFilePath}`);
-    const castedConfig: Config = pkgConfig;
+    const castedConfig         = pkgConfig;
     config = castedConfig;
     return config;
   }
@@ -63,7 +63,7 @@ async function getConfig(output: Output, configFile?: string) {
   return new CantFindConfig([nowFilePath, pkgFilePath].map(humanizePath));
 }
 
-async function readConfigFromPackage(file: string) {
+async function readConfigFromPackage(file        ) {
   const result = await readPackage(file);
   if (result instanceof CantParseJSONFile) {
     return result;

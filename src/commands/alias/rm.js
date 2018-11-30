@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
@@ -9,22 +9,22 @@ import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
-import { CLIContext, Output } from '../../util/types';
-import type { CLIAliasOptions, Alias } from '../../util/types';
+
+                                                               
 import promptBool from '../../util/prompt-bool';
 
 import findAliasByAliasOrId from './find-alias-by-alias-or-id';
 
 export default async function rm(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts                 ,
+  args          ,
+  output        
+)                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
+  const { '--debug': debugEnabled } = opts;
   const { contextName } = await getScope({
     apiUrl,
     token,
@@ -50,7 +50,7 @@ export default async function rm(
     return 1;
   }
 
-  const alias: Alias | void = await findAliasByAliasOrId(
+  const alias               = await findAliasByAliasOrId(
     output,
     now,
     aliasOrId
@@ -78,7 +78,7 @@ export default async function rm(
   return 0;
 }
 
-async function confirmAliasRemove(output: Output, alias: Alias) {
+async function confirmAliasRemove(output        , alias       ) {
   const srcUrl = alias.deployment
     ? chalk.underline(alias.deployment.url)
     : null;
@@ -87,7 +87,7 @@ async function confirmAliasRemove(output: Output, alias: Alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(ms(new Date() - new Date(alias.created)) + ' ago')
+        chalk.gray(`${ms(new Date() - new Date(alias.created))  } ago`)
       ]
     ],
     {

@@ -1,10 +1,10 @@
-// @flow
-import type { NpmDeployment, DockerDeployment } from '../../util/types';
+//      
+                                                                        
 import getScaleForDC from './get-scale-for-dc';
 
 function shouldCopyScalingAttributes(
-  origin: NpmDeployment | DockerDeployment,
-  dest: NpmDeployment | DockerDeployment
+  origin                                  ,
+  dest                                  
 ) {
   if (origin.version === 2 || dest.version === 2) {
     return false;

@@ -1,4 +1,4 @@
-exports.getDefaultConfig = async existingCopy => {
+export const getDefaultConfig = async existingCopy => {
   let migrated = false;
 
   const config = {
@@ -59,7 +59,7 @@ exports.getDefaultConfig = async existingCopy => {
   return { config, migrated };
 };
 
-exports.getDefaultAuthConfig = async existing => {
+export const getDefaultAuthConfig = async existing => {
   let migrated = false;
 
   const config = {

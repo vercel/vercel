@@ -1,9 +1,10 @@
 // Ours
-const error = require('./output/error');
-const exit = require('./exit');
-const Now = require('.');
+import error from './output/error';
 
-module.exports = class DomainRecords extends Now {
+import exit from './exit';
+import Now from '.';
+
+export default class DomainRecords extends Now {
   async getRecord(id) {
     const all = (await this.ls()).entries();
     for (const [domain, records] of all) {
@@ -48,7 +49,7 @@ module.exports = class DomainRecords extends Now {
 
           if (res.status === 404 && body.code === 'not_found') {
             return bail(new Error(body.message));
-          } else if (res.status !== 200) {
+          } if (res.status !== 200) {
             throw new Error(`Failed to get DNS records for domain "${domain}"`);
           }
 
@@ -91,7 +92,7 @@ module.exports = class DomainRecords extends Now {
         return bail(
           new Error(body.error ? body.error.message : 'Unknown error')
         );
-      } else if (res.status === 403) {
+      } if (res.status === 403) {
         console.error(
           error({
             message: `Not authorized to access domain ${domain}`,

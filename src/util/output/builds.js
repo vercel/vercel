@@ -60,7 +60,7 @@ const styleOutput = (output, inspecting) => {
   return `${inspecting ? `      ` : `${chalk.grey(corner)} `}${color(main)}`;
 };
 
-module.exports = (builds, times, inspecting) => {
+export default (builds, times, inspecting) => {
   const buildsAndOutput = [];
 
   for (const build of builds) {

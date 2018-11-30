@@ -1,6 +1,6 @@
-// @flow
-import type { Domain } from '../types';
+//      
+                                       
 
-export default function isDomainExternal(domain: Domain) {
+export default function isDomainExternal(domain        ) {
   return domain.serviceType !== 'zeit.world';
 }

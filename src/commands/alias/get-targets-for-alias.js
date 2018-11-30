@@ -1,13 +1,13 @@
-// @flow
+//      
 import toHost from '../../util/to-host';
-import { Output } from '../../util/types';
+
 import * as Errors from '../../util/errors';
 import getInferredTargets from './get-inferred-targets';
 
 async function getTargetsForAlias(
-  output: Output,
-  args: string[],
-  localConfigPath?: string | void
+  output        ,
+  args          ,
+  localConfigPath                
 ) {
   const targets = await getTargets(output, args, localConfigPath);
   if (
@@ -19,17 +19,15 @@ async function getTargetsForAlias(
     return targets;
   }
 
-  const hostTargets: string[] = targets.map(target => {
-    return target.indexOf('.') !== -1 ? toHost(target) : target;
-  });
+  const hostTargets           = targets.map(target => target.indexOf('.') !== -1 ? toHost(target) : target);
 
   return hostTargets;
 }
 
 async function getTargets(
-  output: Output,
-  args: string[],
-  localConfigPath: string | void
+  output        ,
+  args          ,
+  localConfigPath               
 ) {
   return args.length === 0
     ? getInferredTargets(output, localConfigPath)

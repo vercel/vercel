@@ -1,6 +1,6 @@
-const getUser = require('./get-user');
-const NowTeams = require('./teams');
-const param = require('./output/param');
+import getUser from './get-user';
+import NowTeams from './teams';
+import param from './output/param';
 
 const loginCommand = param('now login');
 const TokenError = new Error(
@@ -59,7 +59,7 @@ const allowed = new Set([
   'team'
 ]);
 
-module.exports = async function getScope({
+export default async function getScope({
   apiUrl,
   token,
   debug,

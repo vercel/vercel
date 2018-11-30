@@ -1,15 +1,16 @@
 // Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
 
 // Utilities
-const wait = require('../../util/output/wait');
-const info = require('../../util/output/info');
-const error = require('../../util/output/error');
-const { tick: tickChar } = require('../../util/output/chars');
-const table = require('../../util/output/table');
-const getUser = require('../../util/get-user');
+import wait from '../../util/output/wait';
 
-module.exports = async function({ teams, config, apiUrl, token }) {
+import info from '../../util/output/info';
+import error from '../../util/output/error';
+import chars from '../../util/output/chars';
+import table from '../../util/output/table';
+import getUser from '../../util/get-user';
+
+export default async function({ teams, config, apiUrl, token }) {
   const stopSpinner = wait('Fetching teams');
   const list = (await teams.ls()).teams;
   let { currentTeam } = config;
@@ -17,7 +18,7 @@ module.exports = async function({ teams, config, apiUrl, token }) {
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
+  const stopUserSpinner = wait('Fetching user information');
   const user = await getUser({ apiUrl, token });
 
   stopUserSpinner();
@@ -28,18 +29,16 @@ module.exports = async function({ teams, config, apiUrl, token }) {
     };
   }
 
-  const teamList = list.map(({ slug, name }) => {
-    return {
+  const teamList = list.map(({ slug, name }) => ({
       name,
       value: slug,
-      current: slug === currentTeam.slug ? tickChar : ''
-    };
-  });
+      current: slug === currentTeam.slug ? chars.tick : ''
+    }));
 
   teamList.unshift({
     name: user.email,
     value: user.username || user.email,
-    current: (accountIsCurrent && tickChar) || ''
+    current: (accountIsCurrent && chars.tick) || ''
   });
 
   // Let's bring the current team to the beginning of the list

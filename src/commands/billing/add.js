@@ -1,22 +1,17 @@
-#!/usr/bin/env node
-
-// Packages
-const ansiEscapes = require('ansi-escapes');
-const chalk = require('chalk');
-const ccValidator = require('credit-card');
-
-// Utilities
-const textInput = require('../../util/input/text');
-const cardBrands = require('../../util/billing/card-brands');
-const success = require('../../util/output/success');
-const wait = require('../../util/output/wait');
-const { tick } = require('../../util/output/chars');
-const rightPad = require('../../util/output/right-pad');
-const error = require('../../util/output/error');
+import ansiEscapes from 'ansi-escapes';
+import chalk from 'chalk';
+import ccValidator from 'credit-card';
+import textInput from '../../util/input/text';
+import cardBrands from '../../util/billing/card-brands';
+import success from '../../util/output/success';
+import wait from '../../util/output/wait';
+import chars from '../../util/output/chars';
+import rightPad from '../../util/output/right-pad';
+import error from '../../util/output/error';
 
 const expDateMiddleware = data => data;
 
-module.exports = async function({ creditCards, clear = false, contextName }) {
+export default async function({ creditCards, clear = false, contextName }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
@@ -79,7 +74,7 @@ module.exports = async function({ creditCards, clear = false, contextName }) {
         try {
           /* eslint-disable no-await-in-loop */
           result = await textInput({
-            label: '- ' + piece.label,
+            label: `- ${  piece.label}`,
             initialValue: piece.initialValue || piece.value,
             placeholder: piece.placeholder,
             mask: piece.mask,
@@ -103,19 +98,19 @@ module.exports = async function({ creditCards, clear = false, contextName }) {
             brand = chalk.cyan(`[${brand}]`);
             const masked = chalk.gray('#### '.repeat(3)) + result.split(' ')[3];
             process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${masked} ${brand}\n`
+              `${chalk.cyan(chars.tick)} ${piece.label}${masked} ${brand}\n`
             );
           } else if (key === 'ccv') {
             process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${'*'.repeat(result.length)}\n`
+              `${chalk.cyan(chars.tick)} ${piece.label}${'*'.repeat(result.length)}\n`
             );
           } else if (key === 'expDate') {
             let text = result.split(' / ');
             text = text[0] + chalk.gray(' / ') + text[1];
-            process.stdout.write(`${chalk.cyan(tick)} ${piece.label}${text}\n`);
+            process.stdout.write(`${chalk.cyan(chars.tick)} ${piece.label}${text}\n`);
           } else {
             process.stdout.write(
-              `${chalk.cyan(tick)} ${piece.label}${result}\n`
+              `${chalk.cyan(chars.tick)} ${piece.label}${result}\n`
             );
           }
         } catch (err) {

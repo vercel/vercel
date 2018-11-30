@@ -1,4 +1,4 @@
-// @flow
+//      
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
@@ -8,15 +8,15 @@ import getScope from '../../util/get-scope';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import stamp from '../../util/output/stamp';
-import { CLIContext, Output } from '../../util/types';
-import type { CLIDNSOptions, DNSRecord } from '../../util/types';
+
+                                                                 
 
 async function rm(
-  ctx: CLIContext,
-  opts: CLIDNSOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+  ctx            ,
+  opts               ,
+  args          ,
+  output        
+)                  {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -74,18 +74,18 @@ async function rm(
 }
 
 function readConfirmation(
-  output: Output,
-  msg: string,
-  domainName: string,
-  record: DNSRecord
+  output        ,
+  msg        ,
+  domainName        ,
+  record           
 ) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
-      table([getDeleteTableRow(domainName, record)], {
+      `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1') + '\n'
+      }).replace(/^(.*)/gm, '  $1')  }\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -104,16 +104,16 @@ function readConfirmation(
   });
 }
 
-function getDeleteTableRow(domainName: string, record: DNSRecord) {
+function getDeleteTableRow(domainName        , record           ) {
   const recordName = `${record.name.length > 0
-    ? record.name + '.'
+    ? `${record.name  }.`
     : ''}${domainName}`;
   return [
     record.id,
     chalk.bold(
       `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
     ),
-    chalk.gray(ms(new Date() - new Date(Number(record.created))) + ' ago')
+    chalk.gray(`${ms(new Date() - new Date(Number(record.created)))  } ago`)
   ];
 }
 

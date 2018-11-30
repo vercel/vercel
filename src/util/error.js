@@ -1,12 +1,9 @@
-// Packages
-const ms = require('ms');
-const chalk = require('chalk');
+import ms from 'ms';
+import chalk from 'chalk';
+import errorOutput from './output/error';
+import info from './output/info';
 
-// Utilities
-const error = require('./output/error');
-const info = require('./output/info');
-
-function handleError(err, { debug = false } = {}) {
+export function handleError(err, { debug = false } = {}) {
   // Coerce Strings to Error instances
   if (typeof err === 'string') {
     err = new Error(err);
@@ -18,27 +15,27 @@ function handleError(err, { debug = false } = {}) {
 
   if (err.status === 403) {
     console.error(
-      error('Authentication error. Run `now login` to log-in again.')
+      errorOutput('Authentication error. Run `now login` to log-in again.')
     );
   } else if (err.status === 429) {
     if (err.retryAfter === 'never') {
-      console.error(error(err.message));
+      console.error(errorOutput(err.message));
     } else if (err.retryAfter === null) {
-      console.error(error('Rate limit exceeded error. Please try later.'));
+      console.error(errorOutput('Rate limit exceeded error. Please try later.'));
     } else {
       console.error(
-        error(
-          'Rate limit exceeded error. Try again in ' +
-            ms(err.retryAfter * 1000, { long: true }) +
-            ', or upgrade your account by running ' +
+        errorOutput(
+          `Rate limit exceeded error. Try again in ${
+            ms(err.retryAfter * 1000, { long: true })
+            }, or upgrade your account by running ` +
             `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
         )
       );
     }
   } else if (err.userError || err.message) {
-    console.error(error(err.message));
+    console.error(errorOutput(err.message));
   } else if (err.status === 500) {
-    console.error(error('Unexpected server error. Please retry.'));
+    console.error(errorOutput('Unexpected server error. Please retry.'));
   } else if (err.code === 'USER_ABORT') {
     info('Aborted');
   } else {
@@ -48,7 +45,9 @@ function handleError(err, { debug = false } = {}) {
   }
 }
 
-async function responseError(res, fallbackMessage = null, parsedBody = {}) {
+export const error = errorOutput;
+
+export async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   let message;
   let userError;
   let bodyError;
@@ -100,7 +99,7 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   return err;
 }
 
-async function responseErrorMessage(res, fallbackMessage = null) {
+export async function responseErrorMessage(res, fallbackMessage = null) {
   let message;
 
   if (res.status >= 400 && res.status < 500) {
@@ -122,10 +121,3 @@ async function responseErrorMessage(res, fallbackMessage = null) {
 
   return `${message} (${res.status})`;
 }
-
-module.exports = {
-  handleError,
-  responseError,
-  responseErrorMessage,
-  error
-};

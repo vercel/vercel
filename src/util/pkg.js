@@ -1,10 +1,10 @@
 /* eslint-disable import/no-unresolved */
 
 // Native
-const path = require('path');
+import path from 'path';
 
 // Utilities
-const pkg = require('../../package.json');
+import pkg from '../../package.json';
 
 try {
   const distDir = path.dirname(process.execPath);
@@ -13,4 +13,4 @@ try {
   pkg._npmPkg = null;
 }
 
-module.exports = pkg;
+export default pkg;

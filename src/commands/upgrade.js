@@ -1,4 +1,3 @@
-// @flow
 import chalk from 'chalk';
 import createOutput from '../util/output';
 import cmd from '../util/output/cmd';
@@ -7,9 +6,8 @@ import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 import getArgs from '../util/get-args';
 import promptBool from '../util/prompt-bool';
-import Now from '../util/';
+import Now from "../util";
 import wait from '../util/output/wait';
-import type { CLIDomainsOptions } from '../../util/types';
 import plans from '../util/plans';
 
 const help = (type) => {
@@ -106,8 +104,8 @@ const downgradeToFree = async ({ error }, now) => {
   cancelWait();
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
-  let argv: CLIDomainsOptions;
+export default async function main(ctx     )                  {
+  let argv                   ;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -170,7 +168,7 @@ module.exports = async function main(ctx: any): Promise<number> {
       log(`If you want to upgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
 
       return 0;
-    } else if (type === 'downgrade') {
+    } if (type === 'downgrade') {
       log(`${prefix} on the ${chalk.bold('Unlimited')} plan.`);
       const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the ${chalk.bold('Free')} plan?`);
 
@@ -190,7 +188,7 @@ module.exports = async function main(ctx: any): Promise<number> {
       log(`If you want to downgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
 
       return 0;
-    } else if (type === 'upgrade') {
+    } if (type === 'upgrade') {
       log(`${prefix} on the ${chalk.bold('Free')} plan.`);
       const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
 

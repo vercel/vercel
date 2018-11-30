@@ -1,7 +1,7 @@
-const { gray } = require('chalk');
+import chalk from 'chalk';
 
 // info('woot') === '> woot'
 // info('woot', 'yay') === 'woot\nyay'
-const info = (...msgs) => `${gray('>')} ${msgs.join('\n')}`;
+const info = (...msgs) => `${chalk.gray('>')} ${msgs.join('\n')}`;
 
-module.exports = info;
+export default info;

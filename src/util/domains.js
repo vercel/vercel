@@ -1,15 +1,16 @@
 // Native
-const { encode: encodeQuery } = require('querystring');
+import { encode as encodeQuery } from 'querystring';
 
 // Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
 
 // Ours
-const Now = require('.');
-const isValidDomain = require('./domains/is-valid-domain');
-const cmd = require('./output/param');
+import Now from '.';
 
-module.exports = class Domains extends Now {
+import isValidDomain from './domains/is-valid-domain';
+import cmd from './output/param';
+
+export default class Domains extends Now {
   async ls() {
     return this.listDomains();
   }
