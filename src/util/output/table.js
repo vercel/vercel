@@ -1,11 +1,11 @@
-const chalk = require('chalk');
-const printf = require('printf');
+import chalk from 'chalk';
+import printf from 'printf';
 
 const printLine = (data, sizes) =>
   data.reduce((line, col, i) => line + printf(`%-${sizes[i]}s`, col), '');
 
 // Print a table
-module.exports = (fieldNames = [], data = [], margins = []) => {
+export default (fieldNames = [], data = [], margins = []) => {
   // Compute size of each column
   const sizes = data
     .reduce((acc, row) => row.map((col, i) => {

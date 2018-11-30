@@ -1,12 +1,14 @@
 // Native
-const { parse } = require('url');
-const http = require('http');
-const https = require('https');
-const { JsonBody, StreamBody, context } = require('fetch-h2');
+import { parse } from 'url';
+
+import http from 'http';
+import https from 'https';
+import { JsonBody, StreamBody, context } from 'fetch-h2';
 
 // Packages
-const Sema = require('async-sema');
-const createOutput = require('./output');
+import Sema from 'async-sema';
+
+import createOutput from './output';
 
 const MAX_REQUESTS_PER_CONNECTION = 1000;
 
@@ -21,7 +23,7 @@ const MAX_REQUESTS_PER_CONNECTION = 1000;
  * @return {Function} fetch
  */
 
-module.exports = class Agent {
+export default class Agent {
   constructor(url, { tls = true, debug } = {}) {
     // We use multiple contexts because each context represent one connection
     // With nginx, we're limited to 1000 requests before a connection is closed

@@ -1,3 +1,1 @@
-module.exports = {
-  email: /.+@.+\..+$/
-};
+export const email = /.+@.+\..+$/

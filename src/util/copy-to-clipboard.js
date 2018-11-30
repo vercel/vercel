@@ -1,7 +1,7 @@
 //      
 
 // Packages
-const { write } = require('clipboardy');
+import { write } from 'clipboardy';
 
 // $FlowFixMe
 const _isTTY = process.stdout.isTTY;
@@ -34,4 +34,4 @@ async function copyToClipboard(
   );
 }
 
-module.exports = copyToClipboard;
+export default copyToClipboard;

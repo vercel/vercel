@@ -1,5 +1,5 @@
-const { yellow } = require('chalk');
+import { yellow } from 'chalk';
 
 const note = msg => `${yellow('> NOTE:')} ${msg}`;
 
-module.exports = note;
+export default note;

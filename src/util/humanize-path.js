@@ -1,6 +1,7 @@
 //      
-const { homedir } = require('os');
-const { resolve } = require('path');
+import { homedir } from 'os';
+
+import { resolve } from 'path';
 
 const humanizePath = (path        ) => {
   const resolved         = resolve(path);
@@ -12,4 +13,4 @@ const humanizePath = (path        ) => {
   
 };
 
-module.exports = humanizePath;
+export default humanizePath;

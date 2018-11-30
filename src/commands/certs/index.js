@@ -7,7 +7,7 @@ import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-                                                        
+
 
 import add from './add';
 import issue from './issue';
@@ -72,7 +72,7 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove']
 };
 
-module.exports = async function main(ctx     )                  {
+export default async function main(ctx     )                  {
   let argv                 ;
 
   try {

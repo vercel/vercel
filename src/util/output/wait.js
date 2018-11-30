@@ -1,6 +1,6 @@
-const ora2 = require('ora');
-const { gray } = require('chalk');
-const eraseLines = require('./erase-lines');
+import ora2 from 'ora';
+import { gray } from 'chalk';
+import eraseLines from './erase-lines';
 
 const wait = (msg, timeOut = 300, ora = ora2) => {
   let running = false;
@@ -31,4 +31,4 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
   return cancel;
 };
 
-module.exports = wait;
+export default wait;

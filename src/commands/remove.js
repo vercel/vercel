@@ -1,24 +1,19 @@
 #!/usr/bin/env node
-//     
 
-// Packages
+import mri from 'mri';
+import chalk from 'chalk';
+import ms from 'ms';
+import plural from 'pluralize';
+import table from 'text-table';
+import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
-
-const mri = require('mri');
-const chalk = require('chalk');
-const ms = require('ms');
-const plural = require('pluralize');
-const table = require('text-table');
-
-// Utilities
-const Now = require('../util');
-const createOutput = require('../util/output');
-const wait = require('../util/output/wait');
-const logo = require('../util/output/logo');
-const cmd = require('../util/output/cmd');
-const elapsed = require('../util/output/elapsed');
-const { normalizeURL } = require('../util/url');
-const getScope = require('../util/get-scope');
+import createOutput from '../util/output';
+import wait from '../util/output/wait';
+import logo from '../util/output/logo';
+import cmd from '../util/output/cmd';
+import elapsed from '../util/output/elapsed';
+import { normalizeURL } from '../util/url';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -63,7 +58,7 @@ const help = () => {
 
 // Options
 
-module.exports = async function main(ctx     )                  {
+export default async function main(ctx     )                  {
   let argv;
 
   argv = mri(ctx.argv.slice(2), {

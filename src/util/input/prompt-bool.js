@@ -1,6 +1,6 @@
-const chalk = require('chalk');
+import chalk from 'chalk';
 
-module.exports = (
+export default (
   label,
   {
     defaultValue = false,

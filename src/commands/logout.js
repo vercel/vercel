@@ -1,22 +1,19 @@
 #!/usr/bin/env node
 
 // Packages
-const mri = require('mri');
-const chalk = require('chalk');
-const fetch = require('node-fetch');
-const ora = require('ora');
+import mri from 'mri';
+
+import chalk from 'chalk';
+import fetch from 'node-fetch';
+import ora from 'ora';
 
 // Utilities
-const logo = require('../util/output/logo');
-const { handleError } = require('../util/error');
-const {
-  readConfigFile,
-  writeToConfigFile,
-  readAuthConfigFile,
-  writeToAuthConfigFile
-} = require('../util/config/files');
-const error = require('../util/output/error');
-const exit = require('../util/exit');
+import logo from '../util/output/logo';
+
+import { handleError } from '../util/error';
+import { readConfigFile, writeToConfigFile, readAuthConfigFile, writeToAuthConfigFile } from '../util/config/files';
+import error from '../util/output/error';
+import exit from '../util/exit';
 
 const help = () => {
   console.log(`
@@ -65,7 +62,7 @@ const main = async ctx => {
   logout();
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     await main(ctx);
   } catch (err) {

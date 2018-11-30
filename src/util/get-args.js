@@ -1,11 +1,11 @@
 //      
 import arg from 'arg';
 
-const getCommonArgs = require('./arg-common');
+import getCommonArgs from './arg-common';
 
-                   
-                      
-  
+
+
+
 
 function getArgs(
   argv          ,

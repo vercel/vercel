@@ -1,5 +1,3 @@
-//     
-
 import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
 import { write as copy } from 'clipboardy';
@@ -13,7 +11,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import Progress from 'progress';
 import { handleError } from '../../util/error';
-import { tick } from '../../util/output/chars';
+import chars from '../../util/output/chars';
 import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd';
 import exit from '../../util/exit';
@@ -41,14 +39,6 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
-                                       
-             
-         
-             
-                
-                 
-                          
-                                                                         
 import parseMeta from '../../util/parse-meta';
 
 const mriOpts = {
@@ -108,9 +98,9 @@ for (const item of Object.keys(mriOpts.alias)) {
   argList[`-${mriOpts.alias[item]}`] = `--${item}`;
 }
 
-exports.args = argList;
+export const args = argList;
 
-exports.help = () => `
+export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -336,10 +326,10 @@ const promptForEnvFields = async list => {
   return answers;
 };
 
-exports.pipe = async function main(
+export const pipe = async function main(
   ctx            ,
   contextName        ,
-  output        
+  output
 ) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
@@ -633,9 +623,9 @@ async function sync({
           );
           await exit(1);
           return 1;
-        } 
+        }
           scale[dc] = scaleFromConfig[regionOrDc];
-        
+
       }
     }
 
@@ -1128,7 +1118,7 @@ async function sync({
             } else if (Array.isArray(dcOrEvent)) {
               const [dc, instances] = dcOrEvent;
               output.log(
-                `${chalk.cyan(tick)} Scaled ${plural(
+                `${chalk.cyan(chars.tick)} Scaled ${plural(
                   'instance',
                   instances,
                   true
@@ -1229,7 +1219,7 @@ function getEventsGenerator(
   now     ,
   contextName         ,
   deployment               ,
-  eventsStream                 
+  eventsStream
 )                                              {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(
     now,
@@ -1251,7 +1241,7 @@ function getVerifyDCsGenerator(
   output        ,
   now     ,
   deployment               ,
-  eventsStream                 
+  eventsStream
 ) {
   const verifyDeployment = verifyDeploymentScale(
     output,
@@ -1270,7 +1260,7 @@ function getVerifyDCsGenerator(
 
 function handleCreateDeployError            (
   output        ,
-  error                                
+  error
 )                 {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(

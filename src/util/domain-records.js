@@ -1,9 +1,10 @@
 // Ours
-const error = require('./output/error');
-const exit = require('./exit');
-const Now = require('.');
+import error from './output/error';
 
-module.exports = class DomainRecords extends Now {
+import exit from './exit';
+import Now from '.';
+
+export default class DomainRecords extends Now {
   async getRecord(id) {
     const all = (await this.ls()).entries();
     for (const [domain, records] of all) {

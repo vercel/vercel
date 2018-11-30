@@ -1,5 +1,3 @@
-//     
-
 import ms from 'ms';
 import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
@@ -12,7 +10,6 @@ import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
-                                                                             
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -21,7 +18,6 @@ import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
-                                                                         
 import * as Errors from '../../util/errors';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -29,7 +25,7 @@ import code from '../../util/output/code';
 import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
 
-exports.help = () => `
+export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -118,7 +114,7 @@ exports.help = () => `
 
 `;
 
-exports.args = {
+export const args = {
   '--name': String,
   '--force': Boolean,
   '--public': Boolean,
@@ -238,18 +234,18 @@ const parseEnv = (env) => {
   return env;
 };
 
-exports.pipe = async function main(
+export const pipe = async function main(
   ctx            ,
   contextName        ,
   output        ,
   stats     ,
   localConfig     ,
-  isFile         
+  isFile
 )                  {
   let argv = null;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), exports.args);
+    argv = getArgs(ctx.argv.slice(2), args);
   } catch (error) {
     handleError(error);
     return 1;
@@ -598,7 +594,7 @@ exports.pipe = async function main(
 
 function handleCreateDeployError            (
   output        ,
-  error                                
+  error
 )                 {
   if (error instanceof Errors.CantGenerateWildcardCert) {
     output.error(

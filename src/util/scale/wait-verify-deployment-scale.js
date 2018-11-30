@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-import { tick } from '../output/chars';
+import chars from '../output/chars';
 import { VerifyScaleTimeout } from "../errors";
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
@@ -28,7 +28,7 @@ async function waitForScale(
       const [dc, instances] = dcReady;
       remainingDCs.delete(dc);
       output.log(
-        `${chalk.cyan(tick)} Scaled ${plural(
+        `${chalk.cyan(chars.tick)} Scaled ${plural(
           'instance',
           instances,
           true

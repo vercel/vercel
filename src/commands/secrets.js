@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 
 // Packages
-const chalk = require('chalk');
-const table = require('text-table');
-const mri = require('mri');
-const ms = require('ms');
-const plural = require('pluralize');
+import chalk from 'chalk';
+
+import table from 'text-table';
+import mri from 'mri';
+import ms from 'ms';
+import plural from 'pluralize';
 
 // Utilities
-const strlen = require('../util/strlen');
-const { handleError, error } = require('../util/error');
-const NowSecrets = require('../util/secrets');
-const exit = require('../util/exit');
-const logo = require('../util/output/logo');
-const getScope = require('../util/get-scope');
+import strlen from '../util/strlen';
+
+import { handleError, error } from '../util/error';
+import NowSecrets from '../util/secrets';
+import exit from '../util/exit';
+import logo from '../util/output/logo';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -108,7 +110,7 @@ const main = async ctx => {
   }
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     await main(ctx);
   } catch (err) {

@@ -1,7 +1,7 @@
 // Packages
-const { red } = require('chalk');
+import { red } from 'chalk';
 
-module.exports = (...input) => {
+export default (...input) => {
   let messages = input;
 
   if (typeof input[0] === 'object') {

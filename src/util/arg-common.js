@@ -25,4 +25,4 @@ const ARG_COMMON = {
   '--api': String
 };
 
-module.exports = () => ARG_COMMON;
+export default () => ARG_COMMON;

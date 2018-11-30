@@ -1,5 +1,5 @@
 // Packages
-const dns = require('dns');
+import dns from 'dns';
 
 function resolve4(host) {
   return new Promise((resolve, reject) => dns.resolve4(host, (err, answer) => {
@@ -10,4 +10,4 @@ function resolve4(host) {
       resolve(answer);
     }));
 }
-module.exports = resolve4;
+export default resolve4;

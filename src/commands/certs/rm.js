@@ -1,18 +1,13 @@
-//
 import chalk from 'chalk';
 import ms from 'ms';
+import plural from 'pluralize';
 import table from 'text-table';
-
-
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-
-const plural = require('pluralize');
-
 
 async function rm(
   ctx            ,

@@ -1,6 +1,6 @@
-const Now = require('.');
+import Now from '.';
 
-module.exports = class Teams extends Now {
+export default class Teams extends Now {
   async create({ slug }) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {

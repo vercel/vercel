@@ -1,3 +1,3 @@
-exports.isReady = ({ readyState }) => readyState === 'READY';
-exports.isFailed = ({ readyState }) => readyState.endsWith('_ERROR') || readyState === 'ERROR';
-exports.isDone = ({ readyState }) => exports.isReady({ readyState }) || exports.isFailed({ readyState });
+export const isReady = ({ readyState }) => readyState === 'READY';
+export const isFailed = ({ readyState }) => readyState.endsWith('_ERROR') || readyState === 'ERROR';
+export const isDone = ({ readyState }) => isReady({ readyState }) || isFailed({ readyState });

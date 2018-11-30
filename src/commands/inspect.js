@@ -1,22 +1,16 @@
-//      
-
-// Packages
+import chalk from 'chalk';
+import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
-
-const chalk = require('chalk');
-const table = require('text-table');
-
-// Utilities
-const cmd = require('../util/output/cmd');
-const createOutput = require('../util/output');
-const Now = require('../util/');
-const logo = require('../util/output/logo');
-const elapsed = require('../util/output/elapsed');
-const wait = require('../util/output/wait');
-const { handleError } = require('../util/error');
-const strlen = require('../util/strlen');
-const getScope = require('../util/get-scope');
+import cmd from '../util/output/cmd';
+import createOutput from '../util/output';
+import Now from '../util';
+import logo from '../util/output/logo';
+import elapsed from '../util/output/elapsed';
+import wait from '../util/output/wait';
+import { handleError } from '../util/error';
+import strlen from '../util/strlen';
+import getScope from '../util/get-scope';
 
 const STATIC = 'STATIC';
 
@@ -51,7 +45,7 @@ const help = () => {
   `);
 };
 
-module.exports = async function main(ctx     )                  {
+export default async function main(ctx     )                  {
   let id;
   let deployment;
   let argv;
@@ -113,10 +107,10 @@ module.exports = async function main(ctx     )                  {
         )}`
       );
       return 1;
-    } 
+    }
       // unexpected
       throw err;
-    
+
   }
 
   const {
@@ -260,11 +254,11 @@ module.exports = async function main(ctx     )                  {
 // gets the metadata that should be printed next to
 // each event
 
-              
-                
-               
-                 
-  
+
+
+
+
+
 
 function getEventMetadata({ event, payload }       )         {
   if (event === 'state') {

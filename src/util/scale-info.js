@@ -1,9 +1,9 @@
-const linelog = require('single-line-log').stdout;
-const range = require('lodash.range');
-const ms = require('ms');
-const chalk = require('chalk');
-const plural = require('pluralize');
-const retry = require('async-retry');
+import { stdout as linelog } from 'single-line-log';
+import range from 'lodash.range';
+import ms from 'ms';
+import chalk from 'chalk';
+import plural from 'pluralize';
+import retry from 'async-retry';
 
 function barify(cur, tot) {
   return (
@@ -18,7 +18,7 @@ function barify(cur, tot) {
   );
 }
 
-module.exports = async function(now, url) {
+export default async function(now, url) {
   const match = await now.findDeployment(url);
   const { min, max, current } = match.scale;
 

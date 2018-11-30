@@ -1,17 +1,19 @@
 // Native
-const { resolve } = require('path');
+import { resolve } from 'path';
 
 // Packages
-const flatten = require('arr-flatten');
-const ignore = require('ignore');
-const dockerignore = require('@zeit/dockerignore');
-const _glob = require('glob');
-const { promises: { stat, readdir, readFile } } = require('fs');
+import flatten from 'arr-flatten';
+
+import ignore from 'ignore';
+import dockerignore from '@zeit/dockerignore';
+import _glob from 'glob';
+import { promises } from 'fs';
 
 // Utilities
-const IGNORED = require('./ignored');
-const uniqueStrings = require('./unique-strings');
-const getLocalConfigPath = require('./config/local-path');
+import IGNORED from './ignored';
+
+import uniqueStrings from './unique-strings';
+import getLocalConfigPath from './config/local-path';
 
 const glob = async function(pattern, options) {
   return new Promise((resolve, reject) => {
@@ -36,11 +38,11 @@ const glob = async function(pattern, options) {
  */
 const walkSync = async (dir, path, filelist = [], { output } = {}) => {
   const { debug } = output;
-  const dirc = await readdir(asAbsolute(dir, path));
+  const dirc = await promises.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
     file = asAbsolute(file, dir);
     try {
-      const file_stat = await stat(file);
+      const file_stat = await promises.stat(file);
       filelist = file_stat.isDirectory()
         ? await walkSync(file, path, filelist, { output })
         : filelist.concat(file);
@@ -67,7 +69,7 @@ const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
     whitelist.map(async file => {
       file = asAbsolute(file, path);
       try {
-        const file_stat = await stat(file);
+        const file_stat = await promises.stat(file);
         if (file_stat.isDirectory()) {
           const dir_files = await walkSync(file, path, [], { output });
           files.push(...dir_files);
@@ -99,7 +101,7 @@ const clearRelative = function(str) {
 
 const maybeRead = async function(path, default_ = '') {
   try {
-    return await readFile(path, 'utf8');
+    return await promises.readFile(path, 'utf8');
   } catch (err) {
     return default_;
   }
@@ -133,7 +135,7 @@ const asAbsolute = function(path, parent) {
  * @return {Array} comprehensive list of paths to sync
  */
 
-async function staticFiles(
+export async function staticFiles(
   path,
   nowConfig = {},
   { limit = null, output, isBuilds } = {}
@@ -215,7 +217,7 @@ async function staticFiles(
  * @return {Array} comprehensive list of paths to sync
  */
 
-async function npm(
+export async function npm(
   path,
   pkg = {},
   nowConfig = {},
@@ -248,8 +250,8 @@ async function npm(
 
     const filter = ignore()
       .add(
-        `${IGNORED 
-          }\n${ 
+        `${IGNORED
+          }\n${
           clearRelative(npmIgnore === null ? gitIgnore : npmIgnore)}`
       )
       .createFilter();
@@ -316,7 +318,7 @@ async function npm(
  * @return {Array} comprehensive list of paths to sync
  */
 
-async function docker(
+export async function docker(
   path,
   nowConfig = {},
   { limit = null, hasNowJson = false, output } = {}
@@ -407,14 +409,14 @@ async function explode(paths, { accepts, output }) {
     }
 
     try {
-      s = await stat(path);
+      s = await promises.stat(path);
     } catch (e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
       path = `${file  }.js`;
 
       try {
-        s = await stat(path);
+        s = await promises.stat(path);
       } catch (e2) {
         debug(`Ignoring invalid file ${file}`);
         return null;
@@ -422,7 +424,7 @@ async function explode(paths, { accepts, output }) {
     }
 
     if (s.isDirectory()) {
-      const all = await readdir(file);
+      const all = await promises.readdir(file);
       /* eslint-disable no-use-before-define */
       return many(all.map(subdir => asAbsolute(subdir, file)));
       /* eslint-enable no-use-before-define */
@@ -437,9 +439,3 @@ async function explode(paths, { accepts, output }) {
   const many = all => Promise.all(all.map(file => list(file)));
   return flatten(await many(paths)).filter(v => v !== null);
 }
-
-module.exports = {
-  npm,
-  docker,
-  staticFiles
-};

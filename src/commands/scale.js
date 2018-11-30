@@ -18,7 +18,7 @@ import getMaxFromArgs from '../util/scale/get-max-from-args';
 import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
-                                                                          
+
 
 import { handleError } from '../util/error';
 import { VerifyScaleTimeout } from '../util/errors';
@@ -70,7 +70,7 @@ const help = () => {
   `);
 };
 
-module.exports = async function main(ctx            )                  {
+export default async function main(ctx            )                  {
   let argv                 ;
 
   try {

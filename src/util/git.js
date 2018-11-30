@@ -1,13 +1,15 @@
 // Native
-const path = require('path');
-const url = require('url');
-const childProcess = require('child_process');
+import path from 'path';
+
+import url from 'url';
+import childProcess from 'child_process';
 
 // Packages
-const { promises: fs } = require('fs');
-const download = require('download');
-const tmp = require('tmp-promise');
-const isURL = require('is-url');
+import { promises as fs } from 'fs';
+
+import download from 'download';
+import tmp from 'tmp-promise';
+import isURL from 'is-url';
 
 const cloneRepo = (parts, tmpDir, { ssh }) =>
   new Promise((resolve, reject) => {
@@ -99,7 +101,7 @@ const splittedURL = fullURL => {
   };
 };
 
-const gitPathParts = main => {
+export const gitPathParts = main => {
   let ref = '';
 
   if (isURL(main)) {
@@ -176,7 +178,7 @@ const downloadRepo = async repoPath => {
   return renaming;
 };
 
-const isRepoPath = path => {
+export const isRepoPath = path => {
   if (!path) {
     return false;
   }
@@ -201,7 +203,7 @@ const isRepoPath = path => {
   return /[^\s\\]\/[^\s\\]/g.test(path);
 };
 
-const fromGit = async (path, debug) => {
+export const fromGit = async (path, debug) => {
   let tmpDir = false;
 
   try {
@@ -213,10 +215,4 @@ const fromGit = async (path, debug) => {
   }
 
   return tmpDir;
-};
-
-module.exports = {
-  gitPathParts,
-  isRepoPath,
-  fromGit
 };

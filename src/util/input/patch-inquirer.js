@@ -1,5 +1,5 @@
-const inquirer = require('inquirer');
-const chalk = require('chalk');
+import inquirer from 'inquirer';
+import chalk from 'chalk';
 
 // Here we patch inquirer to use a `>` instead of the ugly green `?`
 

@@ -10,4 +10,4 @@ function isZeitWorld(ns) {
   return ns.every(host => host.endsWith('.zeit.world'));
 }
 
-module.exports = isZeitWorld;
+export default isZeitWorld;
