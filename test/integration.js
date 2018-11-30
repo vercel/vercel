@@ -123,15 +123,13 @@ test('log in', async t => {
 });
 
 test('try creating a team', async t => {
-  const { stderr, stdout, code } = await execa(binaryPath, [
+  const { stdout, code } = await execa(binaryPath, [
     'teams',
     'add',
     ...defaultArgs
   ], {
     reject: false
   });
-
-  console.log(stderr)
 
   // The error code is `1` because the command is expecting TTY
   // because it provides an interactive interface.
