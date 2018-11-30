@@ -6,7 +6,7 @@ import chalk from 'chalk';
 
 import loadJSON from 'load-json-file';
 import loadPackageJSON from 'read-pkg';
-import { promises } from 'fs';
+import fs from 'fs';
 import { parse as parseDockerfile } from 'docker-file-parser';
 import determineType from 'deployment-type';
 
@@ -197,6 +197,6 @@ function decorateUserErrors(fn) {
 const readPkg = decorateUserErrors(loadPackageJSON);
 const readJSON = decorateUserErrors(loadJSON);
 const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
-  const contents = await promises.readFile(resolvePath(path, name), 'utf8');
+  const contents = await fs.promises.readFile(resolvePath(path, name), 'utf8');
   return parseDockerfile(contents, { includeComments: true });
 });

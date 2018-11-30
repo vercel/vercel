@@ -1,29 +1,26 @@
 // Native
-const { join } = require('path');
+import { join } from 'path';
 
 // Packages
-const { send } = require('micro');
-const test = require('ava');
-const sinon = require('sinon');
-const { asc: alpha } = require('alpha-sort');
-const loadJSON = require('load-json-file');
-const fetch = require('node-fetch');
+import { send } from 'micro';
+
+import test from 'ava';
+import sinon from 'sinon';
+import { asc as alpha } from 'alpha-sort';
+import loadJSON from 'load-json-file';
+import fetch from 'node-fetch';
 
 // Utilities
-const createOutput = require('../src/util/output');
-const hash = require('../src/util/hash');
-const readMetadata = require('../src/util/read-metadata');
-const getLocalConfigPath = require('../src/util/config/local-path');
-const toHost = require('../src/util/to-host');
-const wait = require('../src/util/output/wait');
-const { responseError } = require('../src/util/error');
-const getURL = require('./helpers/get-url');
+import createOutput from '../src/util/output';
 
-const {
-  npm: getNpmFiles_,
-  docker: getDockerFiles_,
-  staticFiles: getStaticFiles_
-} = require('../src/util/get-files');
+import hash from '../src/util/hash';
+import readMetadata from '../src/util/read-metadata';
+import getLocalConfigPath from '../src/util/config/local-path';
+import toHost from '../src/util/to-host';
+import wait from '../src/util/output/wait';
+import { responseError } from '../src/util/error';
+import getURL from './helpers/get-url';
+import { npm as getNpmFiles_, docker as getDockerFiles_, staticFiles as getStaticFiles_ } from '../src/util/get-files';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')  }/`;

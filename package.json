@@ -59,7 +59,6 @@
       "import/no-dynamic-require": 0,
       "global-require": 0,
       "import/no-duplicates": 0,
-      "global-require": 0,
       "guard-for-in": 0,
       "no-restricted-globals": 0,
       "import/prefer-default-export": 0,
@@ -93,6 +92,11 @@
     "bin",
     "link"
   ],
+  "ava": {
+    "require": [
+      "esm"
+    ]
+  },
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@zeit/dockerignore": "0.0.3",
@@ -127,6 +131,7 @@
     "eslint-plugin-import": "2.14.0",
     "eslint-plugin-jsx-a11y": "6.1.1",
     "eslint-plugin-react": "7.11.0",
+    "esm": "3.0.84",
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
     "glob": "7.1.2",

@@ -2,7 +2,7 @@
 import { createHash } from 'crypto';
 
 // Packages
-import { promises } from 'fs';
+import fs from 'fs';
 
 /**
   * Computes hashes for the contents of each file given.
@@ -16,7 +16,7 @@ async function hashes(files) {
 
   await Promise.all(
     files.map(async name => {
-      const data = await promises.readFile(name);
+      const data = await fs.promises.readFile(name);
 
       const h = hash(data);
       const entry = map.get(h);

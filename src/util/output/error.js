@@ -1,5 +1,4 @@
-// Packages
-import { red } from 'chalk';
+import chalk from 'chalk';
 
 export default (...input) => {
   let messages = input;
@@ -13,5 +12,5 @@ export default (...input) => {
     }
   }
 
-  return `${red('> Error!')} ${messages.join('\n')}`;
+  return `${chalk.red('> Error!')} ${messages.join('\n')}`;
 };

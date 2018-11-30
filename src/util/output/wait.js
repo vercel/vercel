@@ -1,5 +1,5 @@
 import ora2 from 'ora';
-import { gray } from 'chalk';
+import chalk from 'chalk';
 import eraseLines from './erase-lines';
 
 const wait = (msg, timeOut = 300, ora = ora2) => {
@@ -10,7 +10,7 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
   setTimeout(() => {
     if (stopped) return;
 
-    spinner = ora(gray(msg));
+    spinner = ora(chalk.gray(msg));
     spinner.color = 'gray';
     spinner.start();
 

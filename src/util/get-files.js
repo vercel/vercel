@@ -1,13 +1,9 @@
-// Native
 import { resolve } from 'path';
-
-// Packages
 import flatten from 'arr-flatten';
-
 import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob from 'glob';
-import { promises } from 'fs';
+import fs from 'fs';
 
 // Utilities
 import IGNORED from './ignored';
@@ -38,11 +34,11 @@ const glob = async function(pattern, options) {
  */
 const walkSync = async (dir, path, filelist = [], { output } = {}) => {
   const { debug } = output;
-  const dirc = await promises.readdir(asAbsolute(dir, path));
+  const dirc = await fs.promises.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
     file = asAbsolute(file, dir);
     try {
-      const file_stat = await promises.stat(file);
+      const file_stat = await fs.promises.stat(file);
       filelist = file_stat.isDirectory()
         ? await walkSync(file, path, filelist, { output })
         : filelist.concat(file);
@@ -69,7 +65,7 @@ const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
     whitelist.map(async file => {
       file = asAbsolute(file, path);
       try {
-        const file_stat = await promises.stat(file);
+        const file_stat = await fs.promises.stat(file);
         if (file_stat.isDirectory()) {
           const dir_files = await walkSync(file, path, [], { output });
           files.push(...dir_files);
@@ -101,7 +97,7 @@ const clearRelative = function(str) {
 
 const maybeRead = async function(path, default_ = '') {
   try {
-    return await promises.readFile(path, 'utf8');
+    return await fs.promises.readFile(path, 'utf8');
   } catch (err) {
     return default_;
   }
@@ -409,14 +405,14 @@ async function explode(paths, { accepts, output }) {
     }
 
     try {
-      s = await promises.stat(path);
+      s = await fs.promises.stat(path);
     } catch (e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
       path = `${file  }.js`;
 
       try {
-        s = await promises.stat(path);
+        s = await fs.promises.stat(path);
       } catch (e2) {
         debug(`Ignoring invalid file ${file}`);
         return null;
@@ -424,7 +420,7 @@ async function explode(paths, { accepts, output }) {
     }
 
     if (s.isDirectory()) {
-      const all = await promises.readdir(file);
+      const all = await fs.promises.readdir(file);
       /* eslint-disable no-use-before-define */
       return many(all.map(subdir => asAbsolute(subdir, file)));
       /* eslint-enable no-use-before-define */
