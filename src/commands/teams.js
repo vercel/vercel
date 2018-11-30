@@ -1,13 +1,6 @@
-#!/usr/bin/env node
-
-// Packages
 import chalk from 'chalk';
-
 import mri from 'mri';
-
-// Utilities
 import error from '../util/output/error';
-
 import NowTeams from '../util/teams';
 import logo from '../util/output/logo';
 import exit from '../util/exit';

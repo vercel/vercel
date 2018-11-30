@@ -1,16 +1,9 @@
-#!/usr/bin/env node
-
-// Packages
 import chalk from 'chalk';
-
 import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
 import plural from 'pluralize';
-
-// Utilities
 import strlen from '../util/strlen';
-
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
 import exit from '../util/exit';

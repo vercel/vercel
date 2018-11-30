@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';

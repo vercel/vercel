@@ -1,14 +1,6 @@
-#!/usr/bin/env node
-//      
-
-// Packages
 import mri from 'mri';
-
 import chalk from 'chalk';
-
-// Utilities
 import Now from '../util';
-
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
@@ -179,10 +171,10 @@ export default async function main(ctx     ) {
         )}`
       );
       return 1;
-    } 
+    }
       // unexpected
       throw err;
-    
+
   }
 
   cancelWait();

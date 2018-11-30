@@ -1,13 +1,6 @@
-#!/usr/bin/env node
-
-// Packages
 import mri from 'mri';
-
 import chalk from 'chalk';
-
-// Utilities
 import logo from '../util/output/logo';
-
 import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 

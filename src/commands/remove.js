@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import mri from 'mri';
 import chalk from 'chalk';
 import ms from 'ms';

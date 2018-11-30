@@ -1,15 +1,8 @@
-#!/usr/bin/env node
-
-// Packages
 import mri from 'mri';
-
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import ora from 'ora';
-
-// Utilities
 import logo from '../util/output/logo';
-
 import { handleError } from '../util/error';
 import { readConfigFile, writeToConfigFile, readAuthConfigFile, writeToAuthConfigFile } from '../util/config/files';
 import error from '../util/output/error';
