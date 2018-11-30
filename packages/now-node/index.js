@@ -109,6 +109,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
     [
       'process.chdir("./user");',
       `listener = require("./${path.join('user', entrypoint)}");`,
+      'if (listener.default) listener = listener.default;',
     ].join(' '),
   );
 
