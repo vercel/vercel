@@ -5231,10 +5231,10 @@ pkg-fetch@2.5.6:
     semver "5.5.0"
     unique-temp-dir "1.0.0"
 
-pkg@4.3.4-canary.1:
-  version "4.3.4-canary.1"
-  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.4-canary.1.tgz#a36d0dcc958cf24190b92d6b4deb1ea221d3e09d"
-  integrity sha512-FZTdXWiio2s9PwPOyiMb5hzaeKha0aS6ce1Vqq4BPv1ubhcKHzNXNoUo6B06EG+eVegFw6WDnQdpqS7XFoxyCA==
+pkg@4.3.5:
+  version "4.3.5"
+  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.5.tgz#9bdfb3bb3762c58719da22828b0160ab30c71db4"
+  integrity sha512-jQdbFoQN1eCvyEi/A7QV/Tpp9elfH436e8oSgDCvY6cULMTwkgnuNr3vcYVhfR7ayIhq1VZ8OMaIm/r7UEsdEg==
   dependencies:
     "@babel/parser" "7.1.6"
     babel-runtime "6.26.0"
