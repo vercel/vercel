@@ -6,6 +6,7 @@ const {
   excludeLockFiles,
   normalizePackageJson,
   excludeStaticDirectory,
+  onlyStaticDirectory,
 } = require('@now/next/utils');
 const FileRef = require('@now/build-utils/file-ref');
 
@@ -167,6 +168,38 @@ describe('excludeStaticDirectory', () => {
     expect(result['yarn.lock']).toBeDefined();
     expect(result['package-lock.json']).toBeDefined();
     expect(result['static/images/png/image.png']).toBeUndefined();
+  });
+});
+
+describe('onlyStaticDirectory', () => {
+  it('should keep only /static directory files', () => {
+    const files = {
+      'frontend/pages/index.js': new FileRef({ digest: 'index' }),
+      'package.json': new FileRef({ digest: 'package' }),
+      'yarn.lock': new FileRef({ digest: 'yarn-lock' }),
+      'package-lock.json': new FileRef({ digest: 'package-lock' }),
+      'static/image.png': new FileRef({ digest: 'image' }),
+    };
+    const result = onlyStaticDirectory(files);
+    expect(result['frontend/pages/index.js']).toBeUndefined();
+    expect(result['yarn.lock']).toBeUndefined();
+    expect(result['package-lock.json']).toBeUndefined();
+    expect(result['static/image.png']).toBeDefined();
+  });
+
+  it('should keep nested /static directory files', () => {
+    const files = {
+      'frontend/pages/index.js': new FileRef({ digest: 'index' }),
+      'package.json': new FileRef({ digest: 'package' }),
+      'yarn.lock': new FileRef({ digest: 'yarn-lock' }),
+      'package-lock.json': new FileRef({ digest: 'package-lock' }),
+      'static/images/png/image.png': new FileRef({ digest: 'image' }),
+    };
+    const result = onlyStaticDirectory(files);
+    expect(result['frontend/pages/index.js']).toBeUndefined();
+    expect(result['yarn.lock']).toBeUndefined();
+    expect(result['package-lock.json']).toBeUndefined();
+    expect(result['static/images/png/image.png']).toBeDefined();
   });
 });
 

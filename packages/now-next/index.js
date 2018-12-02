@@ -17,6 +17,7 @@ const {
   excludeLockFiles,
   normalizePackageJson,
   excludeStaticDirectory,
+  onlyStaticDirectory,
 } = require('./utils');
 
 /** @typedef { import('@now/build-utils/file-ref').Files } Files */
@@ -207,7 +208,16 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     {},
   );
 
-  return { ...lambdas, ...staticFiles };
+  const nextStaticDirectory = onlyStaticDirectory(filesWithoutLockfiles);
+  const staticDirectoryFiles = Object.keys(nextStaticDirectory).reduce(
+    (mappedFiles, file) => ({
+      ...mappedFiles,
+      [path.join(entryDirectory, file)]: nextStaticDirectory[file],
+    }),
+    {},
+  );
+
+  return { ...lambdas, ...staticFiles, ...staticDirectoryFiles };
 };
 
 exports.prepareCache = async ({

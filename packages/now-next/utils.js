@@ -112,6 +112,19 @@ function excludeStaticDirectory(files) {
 }
 
 /**
+ * Exclude the static directory from files
+ * @param {Files} files
+ * @returns {Files}
+ */
+function onlyStaticDirectory(files) {
+  function matcher(filePath) {
+    return !filePath.startsWith('static');
+  }
+
+  return excludeFiles(files, matcher);
+}
+
+/**
  * Enforce specific package.json configuration for smallest possible lambda
  * @param {{dependencies?: any, devDependencies?: any, scripts?: any}} defaultPackageJson
  */
@@ -164,4 +177,5 @@ module.exports = {
   excludeLockFiles,
   normalizePackageJson,
   excludeStaticDirectory,
+  onlyStaticDirectory,
 };
