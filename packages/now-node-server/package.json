@@ -1,6 +1,6 @@
 {
   "name": "@now/node-server",
-  "version": "0.4.25-canary.0",
+  "version": "0.4.25-canary.1",
   "dependencies": {
     "@now/node-bridge": "^0.1.9",
     "fs-extra": "7.0.1"
