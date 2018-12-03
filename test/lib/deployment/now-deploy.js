@@ -103,7 +103,11 @@ async function fetchWithAuth (url, opts = {}) {
 
   if (process.env.NOW_AUTH_TOKENS) {
     const tokens = process.env.NOW_AUTH_TOKENS.split(',');
-    token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+    if (process.env.CIRCLE_BUILD_NUM) {
+      token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+    } else {
+      token = tokens[Math.floor(Math.random() * tokens.length)];
+    }
   } else {
     const authJsonPath = path.join(homedir(), '.now/auth.json');
     token = require(authJsonPath).token;
