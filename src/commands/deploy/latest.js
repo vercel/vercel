@@ -62,6 +62,7 @@ export const help = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
+    -P, --project                  Set the project of the deployment
     -n, --name                     Set the name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
@@ -116,6 +117,7 @@ export const help = () => `
 
 export const args = {
   '--name': String,
+  '--project': String,
   '--force': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
@@ -126,6 +128,7 @@ export const args = {
   // the config property name.
   '--regions': String,
   '-n': '--name',
+  '-P': '--project',
   '-f': '--force',
   '-p': '--public',
   '-e': '--env',
@@ -353,7 +356,8 @@ export const pipe = async function main(
         meta
       },
       {
-        name: argv['--name'] || localConfig.name || filesName
+        name: argv['--name'] || localConfig.name || filesName,
+        project: argv['--project'] || localConfig.project || filesName
       }
     );
 
