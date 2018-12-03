@@ -26,7 +26,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment({ buildUtilsUrl }, path.join(fixturesPath, fixture)),
-    ).resolves.toBe(undefined);
+    ).resolves.toBeDefined();
   });
 }
 
@@ -49,7 +49,7 @@ for (const builder of buildersToTestWith) {
       it(`should build ${builder}/${fixture}`, async () => {
         await expect(
           testDeployment({ buildUtilsUrl }, path.join(fixturesPath2, fixture)),
-        ).resolves.toBe(undefined);
+        ).resolves.toBeDefined();
       });
     }
   }

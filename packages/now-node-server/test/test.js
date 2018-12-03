@@ -24,6 +24,6 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment({ builderUrl }, path.join(fixturesPath, fixture)),
-    ).resolves.toBe(undefined);
+    ).resolves.toBeDefined();
   });
 }

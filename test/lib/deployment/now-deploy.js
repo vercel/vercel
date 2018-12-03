@@ -55,7 +55,7 @@ async function nowDeploy (bodies, randomness) {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  return deploymentUrl;
+  return { deploymentId, deploymentUrl };
 }
 
 function digestOfFile (body) {

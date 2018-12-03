@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.zip", "use": "@now/lambda", "config": { "handler": "index.handler", "runtime": "nodejs8.10" } },
+    { "src": "subdirectory/index.zip", "use": "@now/lambda", "config": { "handler": "index.handler", "runtime": "nodejs8.10" } }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "cow:NO_REPLACE_TO_AVOID_CRC_MISMATCH" },
+    { "path": "/subdirectory/", "mustContain": "yoda:NO_REPLACE_TO_AVOID_CRC_MISMATCH" }
+  ]
+}
