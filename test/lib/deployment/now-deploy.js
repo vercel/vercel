@@ -1,11 +1,8 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
 const fetch = require('node-fetch');
-const fs = require('fs-extra');
 const { homedir } = require('os');
 const path = require('path');
-
-const API_URL = 'https://api.zeit.co';
 
 async function nowDeploy (bodies, randomness) {
   const files = Object.keys(bodies)
@@ -74,7 +71,7 @@ async function filePost (body, digest) {
     'x-now-size': body.length
   };
 
-  const resp = await fetchWithAuth(`${API_URL}/v2/now/files`, {
+  const resp = await fetchWithAuth('/v2/now/files', {
     method: 'POST',
     headers,
     body
@@ -84,7 +81,7 @@ async function filePost (body, digest) {
 }
 
 async function deploymentPost (payload) {
-  const resp = await fetchWithAuth(`${API_URL}/v6/now/deployments?forceNew=1`, {
+  const resp = await fetchWithAuth('/v6/now/deployments?forceNew=1', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
@@ -94,30 +91,26 @@ async function deploymentPost (payload) {
 }
 
 async function deploymentGet (deploymentId) {
-  const resp = await fetchWithAuth(
-    `${API_URL}/v3/now/deployments/${deploymentId}`
-  );
+  const resp = await fetchWithAuth(`/v3/now/deployments/${deploymentId}`);
   return await resp.json();
 }
 
 async function fetchWithAuth (url, opts = {}) {
+  const apiHost = process.env.API_HOST || 'api.zeit.co';
+  const urlWithHost = `https://${apiHost}${url}`;
   if (!opts.headers) opts.headers = {};
-  const authJsonPath = path.join(homedir(), '.now/auth.json');
-  if (!(await fs.exists(authJsonPath))) {
+  let token;
+
+  if (process.env.NOW_AUTH_TOKENS) {
     const tokens = process.env.NOW_AUTH_TOKENS.split(',');
-    const token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
-    await fs.mkdirp(path.dirname(authJsonPath));
-    await fs.writeFile(
-      authJsonPath,
-      JSON.stringify({
-        token
-      })
-    );
+    token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+  } else {
+    const authJsonPath = path.join(homedir(), '.now/auth.json');
+    token = require(authJsonPath).token;
   }
 
-  const { token } = require(authJsonPath);
   opts.headers.Authorization = `Bearer ${token}`;
-  return await fetchApiWithChecks(url, opts);
+  return await fetchApiWithChecks(urlWithHost, opts);
 }
 
 async function fetchApiWithChecks (url, opts = {}) {

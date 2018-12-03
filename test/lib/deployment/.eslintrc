@@ -19,6 +19,7 @@
         "no-restricted-syntax": "off",
         "no-return-await": "off",
         "no-use-before-define": "off",
+        "prefer-destructuring": "off",
         "space-before-function-paren": [
           "error",
           "always"
