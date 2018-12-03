@@ -47,16 +47,21 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
   const nowJson = JSON.parse(bodies['now.json']);
   for (const build of nowJson.builds) {
     if (builderUrl) {
-      build.use = `https://${builderUrl}`;
-      if (!buildUtilsUrl) {
-        build.config = build.config || {};
-        build.config.useBuildUtils = '@now/build-utils@canary';
+      if (builderUrl === '@canary') {
+        build.use = `${build.use}@canary`;
+      } else {
+        build.use = `https://${builderUrl}`;
       }
     }
     if (buildUtilsUrl) {
-      if (!builderUrl) build.use = `${build.use}@canary`;
       build.config = build.config || {};
-      build.config.useBuildUtils = `https://${buildUtilsUrl}`;
+      const { config } = build;
+      if (buildUtilsUrl === '@canary') {
+        config.useBuildUtils = config.useBuildUtils || '@now/build-utils';
+        config.useBuildUtils = `${config.useBuildUtils}@canary`;
+      } else {
+        config.useBuildUtils = `https://${buildUtilsUrl}`;
+      }
     }
   }
 

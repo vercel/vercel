@@ -8,6 +8,7 @@ const {
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(2 * 60 * 1000);
+const builderUrl = '@canary';
 let buildUtilsUrl;
 
 beforeAll(async () => {
@@ -25,7 +26,10 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
-      testDeployment({ buildUtilsUrl }, path.join(fixturesPath, fixture)),
+      testDeployment(
+        { builderUrl, buildUtilsUrl },
+        path.join(fixturesPath, fixture),
+      ),
     ).resolves.toBeDefined();
   });
 }
@@ -48,7 +52,10 @@ for (const builder of buildersToTestWith) {
       // eslint-disable-next-line no-loop-func
       it(`should build ${builder}/${fixture}`, async () => {
         await expect(
-          testDeployment({ buildUtilsUrl }, path.join(fixturesPath2, fixture)),
+          testDeployment(
+            { builderUrl, buildUtilsUrl },
+            path.join(fixturesPath2, fixture),
+          ),
         ).resolves.toBeDefined();
       });
     }
