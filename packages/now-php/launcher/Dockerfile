@@ -12,6 +12,7 @@ RUN go get -v github.com/aws/aws-lambda-go/events
 RUN go get -v github.com/deuill/go-php
 
 WORKDIR /root/go/app
+COPY ./utils/bridge.go /root/go/app/utils/bridge.go
 COPY ./launcher.go /root/go/app/launcher.go
 COPY ./php.ini /root/go/app/php.ini
 COPY ./test.go /root/go/app/test.go

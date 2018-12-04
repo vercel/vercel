@@ -1,5 +1,7 @@
 rm -rf ../dist
 mkdir -p ../dist/modules
+mkdir ./utils
+cp ../../../utils/go/bridge/bridge.go ./utils/bridge.go
 docker rmi go-php-builder --force
 docker build . -t go-php-builder
 docker run go-php-builder
@@ -10,3 +12,4 @@ docker run go-php-builder /bin/cat /usr/lib64/php/modules/curl.so > ../dist/modu
 docker run go-php-builder /bin/cat /usr/lib64/php/modules/json.so > ../dist/modules/json.so
 docker run go-php-builder /bin/cat /usr/lib64/php/modules/mbstring.so > ../dist/modules/mbstring.so
 chmod +x ../dist/launcher
+rm -rf ./utils

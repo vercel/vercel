@@ -1,7 +1,7 @@
 package main
 
 import (
-	now "../../../utils/go/bridge"
+	now "./utils"
 	"bytes"
 	php "github.com/deuill/go-php"
 	"net/http"
@@ -45,7 +45,7 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	context.Bind("_ENV", envMap)
 
-	context.Eval("$_SERVER[\"SERVER_NAME\"]=\"" + req.Host + "\";")
+	context.Eval("$_SERVER[\"SERVER_NAME\"]=\"" + r.Host + "\";")
 	context.Eval("$_SERVER[\"SERVER_PORT\"]=\"443\";")
 	context.Eval("$_SERVER[\"HTTPS\"]=\"on\";")
 	context.Eval("http_response_code(200);")
