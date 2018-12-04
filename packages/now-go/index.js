@@ -9,7 +9,7 @@ const downloadGit = require('lambda-git');
 const glob = require('@now/build-utils/fs/glob.js');
 const downloadGoBin = require('./download-go-bin');
 
-// creates a `$GOPATH` direcotry tree, as per
+// creates a `$GOPATH` directory tree, as per
 // `go help gopath`'s instructions.
 // without this, Go won't recognize the `$GOPATH`
 async function createGoPathTree(goPath) {
