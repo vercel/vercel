@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+cd "$LAMBDA_TASK_ROOT"
+
+# Configure `import`
+export IMPORT_CACHE="$LAMBDA_TASK_ROOT/.import-cache"
+export PATH="$IMPORT_CACHE/bin:$PATH"
+
+# Load `import` and runtime
+. "$(which import)"
+. "$IMPORT_CACHE/runtime.sh"
+
+# Load user code and process events in a loop forever
+_lambda_runtime_init

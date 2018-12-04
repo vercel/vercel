@@ -1,0 +1,22 @@
+{
+  "name": "@now/bash",
+  "version": "0.0.2",
+  "description": "Now 2.0 builder for HTTP endpoints written in Bash",
+  "main": "index.js",
+  "author": "Nathan Rajlich <nate@zeit.co>",
+  "license": "MIT",
+  "files": [
+    "builder.sh",
+    "runtime.sh",
+    "bootstrap",
+    "index.js",
+    "package.json"
+  ],
+  "dependencies": {
+    "execa": "^1.0.0",
+    "snake-case": "^2.1.0"
+  },
+  "peerDependencies": {
+    "@now/build-utils": ">=0.0.1"
+  }
+}
