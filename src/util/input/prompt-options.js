@@ -12,7 +12,10 @@ function promptOptions(opts) {
       const s = v.toString();
 
       const cleanup = () => {
-        process.stdin.setRawMode(false);
+        if (process.stdin.setRawMode) {
+          process.stdin.setRawMode(false);
+        }
+
         process.stdin.removeListener('data', ondata);
       };
 
@@ -31,7 +34,10 @@ function promptOptions(opts) {
       }
     };
 
-    process.stdin.setRawMode(true);
+    if (process.stdin.setRawMode) {
+      process.stdin.setRawMode(true);
+    }
+
     process.stdin.resume();
     process.stdin.on('data', ondata);
   });

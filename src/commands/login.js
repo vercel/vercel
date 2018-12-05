@@ -181,7 +181,7 @@ const readEmail = async () => {
       throw new Error(aborted('No changes made.'));
     }
 
-    if (err.message === 'stdin lacks setRawMode support') {
+    if (err.message.includes('setRawMode')) {
       throw new Error(
         error(
           `Interactive mode not supported – please run ${cmd(

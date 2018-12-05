@@ -99,11 +99,17 @@ export default function(
       regex = new RegExp(`(${regex})`, 'g');
     }
 
-    stdin.setRawMode(true);
+    if (stdin.setRawMode) {
+      stdin.setRawMode(true);
+    }
+
     stdin.resume();
 
     function restore() {
-      stdin.setRawMode(isRaw);
+      if (stdin.setRawMode) {
+        stdin.setRawMode(isRaw);
+      }
+
       stdin.pause();
       stdin.removeListener('data', onData);
 
