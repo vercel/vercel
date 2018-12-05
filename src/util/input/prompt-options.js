@@ -1,4 +1,3 @@
-// Packages
 import chalk from 'chalk';
 
 export default promptOptions;

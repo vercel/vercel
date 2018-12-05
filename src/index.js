@@ -22,6 +22,7 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
+import { handleError, reportError } from './util/error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -44,22 +45,28 @@ Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' 
 let debug = () => {};
 
 const main = async argv_ => {
-  // $FlowFixMe
   const { isTTY } = process.stdout;
 
-  const argv = getArgs(
-    argv_,
-    {
-      '--version': Boolean,
-      '-v': '--version',
-      '--debug': Boolean,
-      '-d': '--debug'
-    },
-    { permissive: true }
-  );
+  let argv = null;
+
+  try {
+    argv = getArgs(
+      argv_,
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--debug': Boolean,
+        '-d': '--debug'
+      },
+      { permissive: true }
+    );
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   const isDebugging = argv['--debug'];
-  const output         = createOutput({ debug: isDebugging });
+  const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 
@@ -516,14 +523,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    Sentry.captureException(err);
-
-    const client = Sentry.getCurrentHub().getClient();
-
-    // Ensure all Sentry events are flushed
-    if (client) {
-      await client.close();
-    }
+    await reportError(Sentry, err);
 
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
@@ -555,17 +555,10 @@ const handleRejection = async err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      Sentry.captureException(err);
+      await reportError(Sentry, err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
-  }
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
   }
 
   process.exit(1);
@@ -580,19 +573,12 @@ const handleUnexpected = async err => {
     return;
   }
 
-  Sentry.captureException(err);
+  await reportError(Sentry, err);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
-  }
 
   process.exit(1);
 };

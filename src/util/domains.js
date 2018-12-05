@@ -1,12 +1,6 @@
-// Native
 import { encode as encodeQuery } from 'querystring';
-
-// Packages
 import chalk from 'chalk';
-
-// Ours
 import Now from '.';
-
 import isValidDomain from './domains/is-valid-domain';
 import cmd from './output/param';
 
@@ -105,7 +99,6 @@ export default class Domains extends Now {
       const err = new Error(
         `The supplied value ${chalk.bold(`"${domain}"`)} is not a valid domain.`
       );
-      err.userError = true;
       throw err;
     }
 

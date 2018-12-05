@@ -105,7 +105,6 @@ export default class DomainRecords extends Now {
 
         if (body.error.code === 'not_found') {
           err = new Error(`The domain "${domain}" was not found`);
-          err.userError = true;
           return bail(err);
         }
       }
@@ -144,7 +143,6 @@ export default class DomainRecords extends Now {
 
         if (body.error.code === 'not_found') {
           err = new Error(body.error.message);
-          err.userError = true;
           return bail(err);
         }
       }

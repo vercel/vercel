@@ -99,7 +99,6 @@ export default class Now extends EventEmitter {
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
           );
-          err.userError = true;
           throw err;
         }
 
@@ -356,7 +355,6 @@ export default class Now extends EventEmitter {
           err.message = 'Not able to create deployment';
         }
 
-        err.userError = true;
         return bail(err);
       }
 
@@ -689,7 +687,6 @@ export default class Now extends EventEmitter {
 
     if (!last) {
       const e = Error(`No deployments found for "${app}"`);
-      e.userError = true;
       throw e;
     }
 
@@ -783,7 +780,6 @@ export default class Now extends EventEmitter {
             `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
           );
         }
-        err.userError = true;
         return bail(err);
       } if (res.status === 409) {
         // Domain already exists
@@ -832,12 +828,10 @@ export default class Now extends EventEmitter {
               'The certificate issuer failed to verify ownership of the domain. ' +
                 'This likely has to do with DNS propagation and caching issues. Please retry later!'
             );
-            err.userError = true;
             // Retry
             throw err;
           } else if (code === 'rate_limited') {
             const err = new Error(body.error.message);
-            err.userError = true;
             // Dont retry
             return bail(err);
           }
@@ -868,7 +862,6 @@ export default class Now extends EventEmitter {
 
         if (res.status !== 200) {
           const err = new Error(res.body.error.message);
-          err.userError = false;
 
           if (res.status === 400 || res.status === 404) {
             return bail(err);

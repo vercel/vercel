@@ -1,7 +1,4 @@
-// Ours
 import Now from '.';
-
-const isUserError = res => ((res.status / 100) | 0) === 4;
 
 export default class Secrets extends Now {
   ls() {
@@ -29,12 +26,6 @@ export default class Secrets extends Now {
       const body = await res.json();
 
       if (res.status !== 200) {
-        if (isUserError(res)) {
-          const err = new Error(body.error.message);
-          err.userError = true;
-          return bail(err);
-        }
-
         throw new Error(body.error.message);
       }
 
@@ -67,12 +58,6 @@ export default class Secrets extends Now {
       const body = await res.json();
 
       if (res.status !== 200) {
-        if (isUserError(res)) {
-          const err = new Error(body.error.message);
-          err.userError = true;
-          return bail(err);
-        }
-
         throw new Error(body.error.message);
       }
 
@@ -104,12 +89,6 @@ export default class Secrets extends Now {
       const body = await res.json();
 
       if (res.status !== 200) {
-        if (isUserError(res)) {
-          const err = new Error(body.error.message);
-          err.userError = true;
-          return bail(err);
-        }
-
         throw new Error(body.error.message);
       }
 
