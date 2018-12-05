@@ -1,4 +1,4 @@
-//      
+//
 import chalk from 'chalk';
 import { handleError } from '../../util/error';
 
@@ -9,6 +9,7 @@ import logo from '../../util/output/logo';
 
 
 import add from './add';
+import inspect from './inspect';
 import buy from './buy';
 import ls from './ls';
 import rm from './rm';
@@ -19,10 +20,11 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls             Show all domains in a list
-    add   [name]   Add a new domain that you already own
-    rm    [name]   Remove a domain
-    buy   [name]   Buy a domain that you don't yet own
+    ls               Show all domains in a list
+    inspect [name]   Displays information related to a domain
+    add     [name]   Add a new domain that you already own
+    rm      [name]   Remove a domain
+    buy     [name]   Buy a domain that you don't yet own
 
   ${chalk.dim('Options:')}
 
@@ -66,6 +68,7 @@ const help = () => {
 
 const COMMAND_CONFIG = {
   add: ['add'],
+  inspect: ['inspect'],
   buy: ['buy'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove']
@@ -98,6 +101,8 @@ export default async function main(ctx     )                  {
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
+    case 'inspect':
+      return inspect(ctx, argv, args, output);
     case 'buy':
       return buy(ctx, argv, args, output);
     case 'rm':
