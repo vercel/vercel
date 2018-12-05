@@ -22,6 +22,7 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
+import reportError from './util/report-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -516,14 +517,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    Sentry.captureException(err);
-
-    const client = Sentry.getCurrentHub().getClient();
-
-    // Ensure all Sentry events are flushed
-    if (client) {
-      await client.close();
-    }
+    await reportError(Sentry, err);
 
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
@@ -555,17 +549,10 @@ const handleRejection = async err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      Sentry.captureException(err);
+      await reportError(Sentry, err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
-  }
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
   }
 
   process.exit(1);
@@ -580,19 +567,12 @@ const handleUnexpected = async err => {
     return;
   }
 
-  Sentry.captureException(err);
+  await reportError(Sentry, err);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
-  }
 
   process.exit(1);
 };
