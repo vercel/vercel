@@ -49,7 +49,6 @@ async function rm(ctx, opts, args, output) {
     return 1;
   }
 
-  console.log(domain)
   if (!opts['--yes'] && !await confirmDomainRemove(output, domain)) {
     output.log('Aborted');
     return 0;
