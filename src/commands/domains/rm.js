@@ -8,7 +8,6 @@ import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
@@ -50,8 +49,8 @@ async function rm(ctx, opts, args, output) {
     return 1;
   }
 
-  const certs = await getCertsForDomain(output, now, domain.name);
-  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, certs)) {
+  console.log(domain)
+  if (!opts['--yes'] && !await confirmDomainRemove(output, domain)) {
     output.log('Aborted');
     return 0;
   }
@@ -63,27 +62,19 @@ async function rm(ctx, opts, args, output) {
   }
 
   output.debug(`Removing certs`);
-  for (const cert of certs) {
+  for (const cert of domain.certs) {
     await deleteCertById(output, now, cert.id);
   }
 
   output.debug(`Removing domain`);
   await removeDomainByName(output, now, domain.name);
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domain.name
-    )} removed ${removeStamp()}`
-  );
+  console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(domain.name)} removed ${removeStamp()}`);
   return 0;
 }
 
-async function confirmDomainRemove(
-  output        ,
-  domain        ,
-  certs
-) {
+async function confirmDomainRemove(output, domain) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);
+    const time = chalk.gray(`${ms(new Date() - new Date(domain.createdAt))  } ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -100,10 +91,10 @@ async function confirmDomainRemove(
       );
     }
 
-    if (certs.length > 0) {
+    if (domain.certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('certificate', certs.length, true)
+          plural('certificate', domain.certs.length, true)
         )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
