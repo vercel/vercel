@@ -123,7 +123,9 @@ export default function(
 
       if (abortSequences.has(data)) {
         restore();
-        return reject(new Error('USER_ABORT'));
+        const error = new Error('USER_ABORT');
+        error.userError = true;
+        return reject(error);
       }
 
       if (forceLowerCase) {
