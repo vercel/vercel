@@ -15,19 +15,12 @@ export default (
 ) => new Promise(resolve => {
     const isRaw = stdin.isRaw;
 
-    if (process.stdin.setRawMode) {
-      stdin.setRawMode(true);
-    }
-
+    stdin.setRawMode(true);
     stdin.resume();
 
     function restore() {
       stdout.write(trailing);
-
-      if (process.stdin.setRawMode) {
-        stdin.setRawMode(isRaw);
-      }
-
+      stdin.setRawMode(isRaw);
       stdin.pause();
       stdin.removeListener('data', onData);
     }
