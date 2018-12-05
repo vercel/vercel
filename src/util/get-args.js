@@ -6,25 +6,13 @@ function getArgs(
   argsOptions = {},
   argOptions = {}
 ) {
-  let list = null;
-
-  try {
-    list = arg(
-      {
-        ...getCommonArgs(),
-        ...argsOptions
-      },
-      { ...argOptions, argv }
-    );
-  } catch (err) {
-    // If an error occures here, it's because the user
-    // passed wrong arguments to Now CLI. In turn, we should
-    // not report to Sentry.
-    err.userError = true;
-    throw err;
-  }
-
-  return list;
+  return arg(
+    {
+      ...getCommonArgs(),
+      ...argsOptions
+    },
+    { ...argOptions, argv }
+  );
 }
 
 export default getArgs;

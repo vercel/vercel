@@ -5,6 +5,5 @@ export class NowError extends Error {
 
     this.code = code;
     this.meta = meta;
-    this.userError = true;
   }
 }

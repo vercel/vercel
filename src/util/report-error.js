@@ -1,7 +1,5 @@
 export default async (sentry, error) => {
-  if (!error.userError) {
-    sentry.captureException(error);
-  }
+  sentry.captureException(error);
 
   const client = sentry.getCurrentHub().getClient();
 

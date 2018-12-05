@@ -91,12 +91,7 @@ const main = async ctx => {
   try {
     return run({ token, config });
   } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message));
-    } else {
-      console.error(error(`Unknown error: ${err.stack}`));
-    }
-
+    console.error(error(`Unknown error: ${err.stack}`));
     return 1;
   }
 };

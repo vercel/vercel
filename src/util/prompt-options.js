@@ -1,4 +1,3 @@
-// Packages
 import chalk from 'chalk';
 
 export default promptOptions;
@@ -21,10 +20,7 @@ function promptOptions(opts) {
       if (s === '\u0003') {
         cleanup();
         const err = new Error('Aborted');
-
         err.code = 'USER_ABORT';
-        err.userError = true;
-
         return reject(err);
       }
 
