@@ -22,7 +22,7 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
-import reportError from './util/report-error';
+import { handleError, reportError } from './util/error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -45,22 +45,28 @@ Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' 
 let debug = () => {};
 
 const main = async argv_ => {
-  // $FlowFixMe
   const { isTTY } = process.stdout;
 
-  const argv = getArgs(
-    argv_,
-    {
-      '--version': Boolean,
-      '-v': '--version',
-      '--debug': Boolean,
-      '-d': '--debug'
-    },
-    { permissive: true }
-  );
+  let argv = null;
+
+  try {
+    argv = getArgs(
+      argv_,
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--debug': Boolean,
+        '-d': '--debug'
+      },
+      { permissive: true }
+    );
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   const isDebugging = argv['--debug'];
-  const output         = createOutput({ debug: isDebugging });
+  const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 

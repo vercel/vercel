@@ -116,3 +116,13 @@ export async function responseErrorMessage(res, fallbackMessage = null) {
 
   return `${message} (${res.status})`;
 }
+
+export async function reportError(sentry, error) {
+  sentry.captureException(error);
+
+  const client = sentry.getCurrentHub().getClient();
+
+  if (client) {
+    await client.close();
+  }
+};
