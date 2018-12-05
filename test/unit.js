@@ -343,7 +343,6 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
     e = err;
   }
   t.is(e.name, 'Error');
-  t.is(e.userError, true);
   t.pass(
     /please ensure there's a single source of configuration/i.test(e.message)
   );
@@ -359,7 +358,6 @@ test('throws when `package.json` and `Dockerfile` exist', async t => {
   } catch (err) {
     e = err;
   }
-  t.is(e.userError, true);
   t.is(e.code, 'MULTIPLE_MANIFESTS');
   t.pass(/ambiguous deployment/i.test(e.message));
 });

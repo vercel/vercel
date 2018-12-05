@@ -104,8 +104,8 @@ const downgradeToFree = async ({ error }, now) => {
   cancelWait();
 };
 
-export default async function main(ctx     )                  {
-  let argv                   ;
+export default async function main(ctx) {
+  let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {

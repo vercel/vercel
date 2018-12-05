@@ -1,16 +1,10 @@
-//      
 import arg from 'arg';
-
 import getCommonArgs from './arg-common';
 
-
-
-
-
 function getArgs(
-  argv          ,
-  argsOptions          = {},
-  argOptions              = {}
+  argv,
+  argsOptions = {},
+  argOptions = {}
 ) {
   return arg(
     {

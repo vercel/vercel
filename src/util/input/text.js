@@ -1,11 +1,7 @@
-// Packages
 import ansiEscapes from 'ansi-escapes';
-
 import ansiRegex from 'ansi-regex';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
-
-// Utilities
 import eraseLines from '../output/erase-lines';
 
 const ESCAPES = {
@@ -123,7 +119,8 @@ export default function(
 
       if (abortSequences.has(data)) {
         restore();
-        return reject(new Error('USER_ABORT'));
+        const error = new Error('USER_ABORT');
+        return reject(error);
       }
 
       if (forceLowerCase) {

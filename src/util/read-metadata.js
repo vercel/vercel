@@ -46,7 +46,6 @@ async function readMetaData(
           'but configuration is also present in `now.json`! ' +
           "Please ensure there's a single source of configuration by removing one."
       );
-      err.userError = true;
       throw err;
     } else {
       nowConfig = pkg.now;
@@ -74,7 +73,6 @@ async function readMetaData(
           'Please supply `--npm` or `--docker` to disambiguate.'
       );
 
-      err.userError = true;
       err.code = 'MULTIPLE_MANIFESTS';
 
       throw err;
@@ -104,8 +102,6 @@ async function readMetaData(
   } else if (type === 'docker') {
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
-      err.userError = true;
-
       throw err;
     }
 
@@ -125,7 +121,6 @@ async function readMetaData(
             `Error parsing value for LABEL ${key} in \`Dockerfile\``
           );
 
-          e.userError = true;
           throw e;
         }
       }
@@ -187,7 +182,6 @@ function decorateUserErrors(fn) {
     } catch (err) {
       // If the file doesn't exist then that's fine; any other error bubbles up
       if (err.code !== 'ENOENT') {
-        err.userError = true;
         throw err;
       }
     }

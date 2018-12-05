@@ -196,7 +196,6 @@ export const isRepoPath = path => {
 
     const err = new Error(`Host "${urlParts.host}" is unsupported.`);
     err.code = 'INVALID_URL';
-    err.userError = true;
     throw err;
   }
 
