@@ -118,7 +118,10 @@ export async function responseErrorMessage(res, fallbackMessage = null) {
 }
 
 export async function reportError(sentry, error) {
-  sentry.captureException(error);
+  // Do not report errors while developing
+  if (process.pkg) {
+    sentry.captureException(error);
+  }
 
   const client = sentry.getCurrentHub().getClient();
 
