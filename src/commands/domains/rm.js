@@ -1,28 +1,19 @@
-//      
-import chalk from 'chalk';
 import ms from 'ms';
+import chalk from 'chalk';
 import plural from 'pluralize';
 import table from 'text-table';
 
-
+import Now from '../../util';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
-import Now from '../../util';
 import stamp from '../../util/output/stamp';
-                                                                               
-
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
-async function rm(
-  ctx            ,
-  opts                   ,
-  args          ,
-  output        
-)                  {
+async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -35,11 +26,10 @@ async function rm(
     currentTeam
   });
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const [domainIdOrName] = args;
+  const [domainName] = args;
 
-  if (!domainIdOrName) {
+  if (!domainName) {
     output.error(`${cmd('now domains rm <domain>')} expects one argument`);
     return 1;
   }
@@ -53,16 +43,9 @@ async function rm(
     return 1;
   }
 
-  const domain = await getDomainByName(
-    output,
-    now,
-    contextName,
-    domainIdOrName
-  );
+  const domain = await getDomainByName(output, now, contextName, domainName);
   if (!domain) {
-    output.error(
-      `Domain not found by "${domainIdOrName}" under ${chalk.bold(contextName)}`
-    );
+    output.error(`Domain not found by "${domainName}" under ${chalk.bold(contextName)}`);
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
@@ -75,13 +58,13 @@ async function rm(
 
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
-  for (const aliasId of domain.aliases) {
-    await removeAliasById(now, aliasId);
+  for (const alias of domain.aliases) {
+    await removeAliasById(now, alias.id);
   }
 
   output.debug(`Removing certs`);
   for (const cert of certs) {
-    await deleteCertById(output, now, cert.uid);
+    await deleteCertById(output, now, cert.id);
   }
 
   output.debug(`Removing domain`);
@@ -97,7 +80,7 @@ async function rm(
 async function confirmDomainRemove(
   output        ,
   domain        ,
-  certs               
+  certs
 ) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);

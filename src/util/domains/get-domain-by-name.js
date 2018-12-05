@@ -1,16 +1,25 @@
-//      
-import getDomains from './get-domains';
+import chalk from 'chalk';
+import wait from '../output/wait';
+import { DomainPermissionDenied, DomainNotFound } from '../errors';
 
-import toHost from '../to-host';
+async function getDomainByName(output, now, contextName, domainName) {
+  const cancelWait = wait(`Fetching domains ${domainName} under ${chalk.bold(contextName)}`);
+  try {
+    const payload = await now.fetch(`/v4/domains/${domainName}`);
+    cancelWait();
+    return payload;
+  } catch (error) {
+    cancelWait();
+    if (error.status === 404) {
+      return new DomainNotFound(domainName);
+    }
 
-async function getDomainByIdOrName(
-  output        ,
-  now     ,
-  contextName        ,
-  domainIdOrName        
-) {
-  const domains = await getDomains(output, now, contextName);
-  return domains.find(domain => domain.name === toHost(domainIdOrName));
+    if (error.status === 403) {
+      return new DomainPermissionDenied(domainName, contextName);
+    }
+
+    throw error;
+  }
 }
 
-export default getDomainByIdOrName;
+export default getDomainByName;
