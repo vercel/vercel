@@ -1,17 +1,17 @@
-//      
+//
 import ms from 'ms';
 import chalk from 'chalk';
 
 
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
-import dnsTable from '../../util/dns-table';
+import dnsTable from '../../util/format-dns-table';
 import getScope from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import zeitWorldTable from '../../util/zeit-world-table';
-                                                        
+
 
 import assignAlias from './assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';
@@ -23,7 +23,7 @@ export default async function set(
   ctx            ,
   opts                 ,
   args          ,
-  output        
+  output
 )                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -195,23 +195,23 @@ export default async function set(
   return 0;
 }
 
-                              
-                                    
-                         
-                            
-                                 
-                                   
-                        
-                            
-                          
-                                
-                         
-                     
-                       
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function handleSetupDomainErrorImpl       (
   output        ,
-  error                          
+  error
 )            {
   if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
@@ -294,35 +294,35 @@ function handleSetupDomainErrorImpl       (
   } if (error instanceof Errors.UsedCoupon) {
     output.error(`The provided coupon ${error.meta.coupon} can't be used.`);
     return 1;
-  } 
+  }
     return error;
-  
+
 }
 
-                       
-                     
-                             
-                          
-                             
-                                     
-                                   
-                                 
-                                 
-                                  
-                                     
-                                     
-                       
-                                     
-                                
-                                    
-                               
-                              
-                          
-                              
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function handleCreateAliasErrorImpl            (
   output        ,
-  error                               
+  error
 )                 {
   if (error instanceof Errors.AliasInUse) {
     output.error(
@@ -495,7 +495,7 @@ function handleCreateAliasErrorImpl            (
       )} with \`now scale\` and try again`
     );
     return 1;
-  } 
+  }
     return error;
-  
+
 }

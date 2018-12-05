@@ -16,7 +16,7 @@ import stamp from '../../util/output/stamp';
 import buildsList from '../../util/output/builds';
 import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/dns-table';
+import dnsTable from '../../util/format-dns-table';
 import zeitWorldTable from '../../util/zeit-world-table';
 import * as Errors from '../../util/errors';
 import sleep from '../../util/sleep';

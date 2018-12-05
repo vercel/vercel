@@ -6,7 +6,7 @@ import ms from 'ms';
 
 import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
-import dnsTable from '../../util/dns-table';
+import dnsTable from '../../util/format-dns-table';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
