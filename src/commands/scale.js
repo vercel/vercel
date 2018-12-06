@@ -1,4 +1,4 @@
-//      
+//
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -97,13 +97,25 @@ export default async function main(ctx            )                  {
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const output         = createOutput({ debug });
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  const output = createOutput({ debug });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // Fail if the user is providing an old command
   if (argv._[1] === 'ls') {

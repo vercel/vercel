@@ -1,4 +1,4 @@
-//      
+//
 import chalk from 'chalk';
 import psl from 'psl';
 
@@ -13,25 +13,37 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
-                                                          
+
 import wait from '../../util/output/wait';
 
 export default async function buy(
   ctx            ,
   opts                   ,
   args          ,
-  output        
+  output
 )                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });

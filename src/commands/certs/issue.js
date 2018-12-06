@@ -1,9 +1,6 @@
-//
 import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
-
-
 import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
 import dnsTable from '../../util/dns-table';
@@ -11,19 +8,17 @@ import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-
-
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import startCertOrder from '../../util/certs/start-cert-order';
 
 export default async function issue(
-  ctx            ,
-  opts                 ,
-  args          ,
+  ctx,
+  opts,
+  args,
   output
-)                  {
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -40,12 +35,23 @@ export default async function issue(
     '--ca': caPath
   } = opts;
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam
-  });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });

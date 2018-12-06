@@ -1,4 +1,4 @@
-//      
+//
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -10,7 +10,7 @@ import dnsTable from '../../util/dns-table';
 
 import * as Errors from '../../util/errors';
 import { handleDomainConfigurationError } from '../../util/error-handlers';
-                                                        
+
 
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
@@ -19,7 +19,7 @@ async function add(
   ctx            ,
   opts                 ,
   args          ,
-  output        
+  output
 )                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
@@ -36,12 +36,23 @@ async function add(
     '--ca': caPath
   } = opts;
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam
-  });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });

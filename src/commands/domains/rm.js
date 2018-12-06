@@ -1,4 +1,4 @@
-//      
+//
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -9,7 +9,7 @@ import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-                                                                               
+
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertsForDomain from '../../util/certs/get-certs-for-domain';
@@ -21,19 +21,30 @@ async function rm(
   ctx            ,
   opts                   ,
   args          ,
-  output        
+  output
 )                  {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -97,7 +108,7 @@ async function rm(
 async function confirmDomainRemove(
   output        ,
   domain        ,
-  certs               
+  certs
 ) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);

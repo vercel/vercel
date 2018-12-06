@@ -45,7 +45,7 @@ if (!insidePkg) {
 Sentry.init({
   dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
   release: `now-cli@${pkg.version}`,
-  environment: insidePkg ? 'production' : 'development'
+  environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
 
 let debug = () => {};
@@ -117,7 +117,7 @@ const main = async argv_ => {
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls`)
-  const targetOrSubcommand          = argv._[2];
+  const targetOrSubcommand = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
@@ -364,6 +364,14 @@ const main = async argv_ => {
   }
 
   ctx.apiUrl = apiUrl;
+
+  try {
+    // eslint-disable-next-line no-new
+    new URL(ctx.apiUrl);
+  } catch (err) {
+    console.error(error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`));
+    return 1;
+  }
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider

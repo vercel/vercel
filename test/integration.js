@@ -122,21 +122,6 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('try creating a team', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'teams',
-    'add',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  // The error code is `1` because the command is expecting TTY
-  // because it provides an interactive interface.
-  t.is(code, 1);
-  t.true(stdout.startsWith(`> Pick a team identifier for its url`));
-});
-
 test('list the payment methods', async t => {
   const { stdout, code } = await execa(binaryPath, [
     'billing',
@@ -175,19 +160,6 @@ test('try to remove a non-existing payment method', async t => {
 
   t.is(code, 0);
   t.true(stderr.includes(`You have no credit cards to choose from to delete under ${email}`));
-});
-
-test('try to add a payment method', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'billing',
-    'add',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stdout.startsWith(`> Enter your card details for ${email}`));
 });
 
 test('use `-V 1` to deploy a GitHub repository', async t => {

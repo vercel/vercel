@@ -1,34 +1,42 @@
-//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-
 import Now from '../../util';
-
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
-                                                                              
 
 export default async function ls(
-  ctx            ,
-  opts                 ,
-  args          ,
-  output        
-)                  {
+  ctx,
+  opts,
+  args,
+  output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
