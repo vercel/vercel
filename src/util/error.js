@@ -32,7 +32,7 @@ export function handleError(err, { debug = false } = {}) {
         )
       );
     }
-  } else if (err.userError || err.message) {
+  } else if (err.message) {
     console.error(errorOutput(err.message));
   } else if (err.status === 500) {
     console.error(errorOutput('Unexpected server error. Please retry.'));
@@ -49,7 +49,6 @@ export const error = errorOutput;
 
 export async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   let message;
-  let userError;
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
@@ -64,9 +63,6 @@ export async function responseError(res, fallbackMessage = null, parsedBody = {}
     // Some APIs wrongly return `err` instead of `error`
     bodyError = body.error || body.err || {};
     message = bodyError.message;
-    userError = true;
-  } else {
-    userError = false;
   }
 
   if (message == null) {
@@ -76,7 +72,6 @@ export async function responseError(res, fallbackMessage = null, parsedBody = {}
   const err = new Error(`${message} (${res.status})`);
 
   err.status = res.status;
-  err.userError = userError;
   err.serverMessage = message;
 
   // Copy every field that was added manually to the error

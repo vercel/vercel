@@ -22,44 +22,58 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
+import { handleError } from './util/error';
+import reportError from './util/report-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+const insidePkg = process.pkg;
 
 epipebomb();
 
 // we only enable source maps while developing, since
 // they have a small performance hit. for this, we
 // look for `pkg`, which is only present in the final bin
-if (!process.pkg) {
+if (!insidePkg) {
   sourceMap.install();
 }
 
-// Send errors away
-Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
+// Configure the error reporting system
+Sentry.init({
+  dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
+  release: `now-cli@${pkg.version}`,
+  environment: insidePkg ? 'production' : 'development'
+});
 
 let debug = () => {};
+let apiUrl = 'https://api.zeit.co';
 
 const main = async argv_ => {
-  // $FlowFixMe
   const { isTTY } = process.stdout;
 
-  const argv = getArgs(
-    argv_,
-    {
-      '--version': Boolean,
-      '-v': '--version',
-      '--debug': Boolean,
-      '-d': '--debug'
-    },
-    { permissive: true }
-  );
+  let argv = null;
+
+  try {
+    argv = getArgs(
+      argv_,
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--debug': Boolean,
+        '-d': '--debug'
+      },
+      { permissive: true }
+    );
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   const isDebugging = argv['--debug'];
-  const output         = createOutput({ debug: isDebugging });
+  const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 
@@ -298,7 +312,7 @@ const main = async argv_ => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx         = {
+  const ctx = {
     config,
     authConfig,
     argv: argv_
@@ -343,13 +357,13 @@ const main = async argv_ => {
     ctx.argv.push('-h');
   }
 
-  ctx.apiUrl = 'https://api.zeit.co';
-
   if (argv['--api'] && typeof argv['--api'] === 'string') {
-    ctx.apiUrl = argv['--api'];
+    apiUrl = argv['--api'];
   } else if (ctx.config && ctx.config.api) {
-    ctx.apiUrl = ctx.config.api;
+    apiUrl = ctx.config.api;
   }
+
+  ctx.apiUrl = apiUrl;
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider
@@ -432,7 +446,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    const { apiUrl, authConfig: { token } } = ctx;
+    const { authConfig: { token } } = ctx;
 
     let user = null;
 
@@ -516,14 +530,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    Sentry.captureException(err);
-
-    const client = Sentry.getCurrentHub().getClient();
-
-    // Ensure all Sentry events are flushed
-    if (client) {
-      await client.close();
-    }
+    await reportError(Sentry, err, apiUrl, configFiles);
 
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
@@ -555,17 +562,10 @@ const handleRejection = async err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      Sentry.captureException(err);
+      await reportError(Sentry, err, apiUrl, configFiles);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
-  }
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
   }
 
   process.exit(1);
@@ -580,19 +580,12 @@ const handleUnexpected = async err => {
     return;
   }
 
-  Sentry.captureException(err);
+  await reportError(Sentry, err, apiUrl, configFiles);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
-  }
 
   process.exit(1);
 };

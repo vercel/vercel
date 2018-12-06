@@ -4,11 +4,8 @@ import { NowError } from './now-error';
 /**
  * General CLI errors
  */
-export class ConflictingOption extends NowError
-
-
-  {
-  constructor(name        ) {
+export class ConflictingOption extends NowError {
+  constructor(name) {
     super({
       code: 'CONFICTING_OPTION',
       meta: { name },
@@ -20,8 +17,8 @@ export class ConflictingOption extends NowError
 /**
  * Create Alias Errors
  */
-export class AliasInUse extends NowError                                    {
-  constructor(alias        ) {
+export class AliasInUse extends NowError {
+  constructor(alias) {
     super({
       code: 'ALIAS_IN_USE',
       meta: { alias },
@@ -30,8 +27,8 @@ export class AliasInUse extends NowError                                    {
   }
 }
 
-export class InvalidAlias extends NowError                                     {
-  constructor(alias        ) {
+export class InvalidAlias extends NowError {
+  constructor(alias) {
     super({
       code: 'INVALID_ALIAS',
       meta: { alias },
@@ -40,7 +37,7 @@ export class InvalidAlias extends NowError                                     {
   }
 }
 
-export class CDNNeedsUpgrade extends NowError                          {
+export class CDNNeedsUpgrade extends NowError {
   constructor() {
     super({
       code: 'CDN_NEEDS_UPGRADE',
@@ -112,11 +109,8 @@ export class DNSPermissionDenied extends NowError
   }
 }
 
-export class DomainVerificationFailed extends NowError
-
-
-  {
-  constructor(domain        , subdomain        , token        ) {
+export class DomainVerificationFailed extends NowError {
+  constructor(domain, subdomain, token) {
     super({
       code: 'DOMAIN_VERIFICATION_FAILED',
       meta: { domain, subdomain, token },
@@ -125,11 +119,8 @@ export class DomainVerificationFailed extends NowError
   }
 }
 
-export class SchemaValidationFailed extends NowError
-
-
-  {
-  constructor(message        , keyword        , dataPath        , params     ) {
+export class SchemaValidationFailed extends NowError {
+  constructor(message, keyword, dataPath, params) {
     super({
       code: 'SCHEMA_VALIDATION_FAILED',
       meta: { message, keyword, dataPath, params },
@@ -138,11 +129,8 @@ export class SchemaValidationFailed extends NowError
   }
 }
 
-export class DomainNotVerified extends NowError
-
-
-  {
-  constructor(domain        ) {
+export class DomainNotVerified extends NowError {
+  constructor(domain) {
     super({
       code: 'DOMAIN_NOT_VERIFIED',
       meta: { domain },
@@ -151,8 +139,11 @@ export class DomainNotVerified extends NowError
   }
 }
 
-export class DomainNotFound extends NowError {
-  constructor(domain) {
+export class DomainNotFound extends NowError
+
+
+  {
+  constructor(domain        ) {
     super({
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
@@ -174,11 +165,8 @@ export class UserAborted extends NowError                     {
 /**
  * Alias configuration errors
  */
-export class InvalidAliasInConfig extends NowError
-
-
-  {
-  constructor(value     ) {
+export class InvalidAliasInConfig extends NowError {
+  constructor(value) {
     super({
       code: 'INVALID_ALIAS_IN_CONFIG',
       meta: { value },

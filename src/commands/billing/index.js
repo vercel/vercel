@@ -75,17 +75,7 @@ export default async ctx => {
 
   const { authConfig: { token }, config } = ctx;
 
-  try {
-    return run({ token, config });
-  } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message));
-    } else {
-      console.error(error(`Unknown error: ${err.stack}`));
-    }
-
-    return 1;
-  }
+  return run({ token, config });
 };
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()

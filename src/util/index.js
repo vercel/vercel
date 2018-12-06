@@ -1,23 +1,15 @@
-// Native
 import { homedir } from 'os';
-
 import { resolve as resolvePath, join, basename } from 'path';
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
-
-// Packages
 import bytes from 'bytes';
-
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
-
-// Utilities
 import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
-
 import Agent from './agent';
 import ua from './ua';
 import hash from './hash';
@@ -99,7 +91,6 @@ export default class Now extends EventEmitter {
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
           );
-          err.userError = true;
           throw err;
         }
 
@@ -356,7 +347,6 @@ export default class Now extends EventEmitter {
           err.message = 'Not able to create deployment';
         }
 
-        err.userError = true;
         return bail(err);
       }
 
@@ -689,7 +679,6 @@ export default class Now extends EventEmitter {
 
     if (!last) {
       const e = Error(`No deployments found for "${app}"`);
-      e.userError = true;
       throw e;
     }
 
@@ -783,7 +772,6 @@ export default class Now extends EventEmitter {
             `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
           );
         }
-        err.userError = true;
         return bail(err);
       } if (res.status === 409) {
         // Domain already exists
@@ -832,12 +820,10 @@ export default class Now extends EventEmitter {
               'The certificate issuer failed to verify ownership of the domain. ' +
                 'This likely has to do with DNS propagation and caching issues. Please retry later!'
             );
-            err.userError = true;
             // Retry
             throw err;
           } else if (code === 'rate_limited') {
             const err = new Error(body.error.message);
-            err.userError = true;
             // Dont retry
             return bail(err);
           }
@@ -868,7 +854,6 @@ export default class Now extends EventEmitter {
 
         if (res.status !== 200) {
           const err = new Error(res.body.error.message);
-          err.userError = false;
 
           if (res.status === 400 || res.status === 404) {
             return bail(err);
