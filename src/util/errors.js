@@ -110,11 +110,11 @@ export class DNSPermissionDenied extends NowError
 }
 
 export class DomainVerificationFailed extends NowError {
-  constructor(domain, subdomain, token) {
+  constructor({ domain, nsVerification, txtVerification }) {
     super({
       code: 'DOMAIN_VERIFICATION_FAILED',
-      meta: { domain, subdomain, token },
-      message: `We can't verify the ownership of ${subdomain}.${domain}. The owner should configure the DNS records`
+      meta: { domain, nsVerification, txtVerification },
+      message: `We can't verify the domain ${domain}. Both Name Servers and DNS TXT verifications failed.`
     });
   }
 }

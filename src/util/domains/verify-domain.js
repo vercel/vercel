@@ -1,32 +1,39 @@
-//      
+import chalk from 'chalk';
+import retry from 'async-retry';
 import wait from '../output/wait';
+import { DomainVerificationFailed } from '../errors';
 
-
-import * as Errors from '../errors';
-import addDomain from './add-domain';
-
-                                             
-
-async function verifyDomain(
-  now     ,
-  domain        ,
-  contextName        ,
-  opts               
-) {
-  const cancelMessage = wait('Setting up and verifying the domain');
-  const result = await addDomain(now, domain, contextName, opts.isExternal);
-  cancelMessage();
-  if (
-    result instanceof Errors.CDNNeedsUpgrade ||
-    result instanceof Errors.DomainPermissionDenied ||
-    result instanceof Errors.DomainVerificationFailed
-  ) {
-    return result;
-  } if (result instanceof Errors.DomainAlreadyExists) {
-    return undefined;
-  } if (result.verified === false) {
-    return new Errors.DomainNotVerified(domain);
+export default async function verifyDomain(now, domain, contextName) {
+  const cancelWait = wait(`Verifying domain ${domain} under ${chalk.bold(contextName)}`);
+  try {
+    const verificationError = await performVerifyDomain(now, domain);
+    cancelWait();
+    return verificationError;
+  } catch (error) {
+    cancelWait();
+    throw error;
   }
 }
 
-export default verifyDomain;
+async function performVerifyDomain(now, domain) {
+  return retry(
+    async () => {
+      try {
+        return await now.fetch(`/v4/domains/${encodeURIComponent(domain)}/verify`, {
+          body: { domain },
+          method: 'POST'
+        })
+      } catch (error) {
+        if (error.code === 'verification_failed') {
+          return new DomainVerificationFailed({
+            domain: error.name,
+            nsVerification: error.nsVerification,
+            txtVerification: error.txtVerification
+          })
+        }
+        throw error;
+      }
+    },
+    { retries: 5, maxTimeout: 8000 }
+  );
+}

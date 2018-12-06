@@ -6,12 +6,12 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
 
-
 import add from './add';
-import inspect from './inspect';
 import buy from './buy';
+import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
+import verify from './verify';
 
 const help = () => {
   console.log(`
@@ -24,6 +24,7 @@ const help = () => {
     add     [name]   Add a new domain that you already own
     rm      [name]   Remove a domain
     buy     [name]   Buy a domain that you don't yet own
+    verify  [name]   Run a verification for a domain
 
   ${chalk.dim('Options:')}
 
@@ -62,14 +63,15 @@ const help = () => {
 
 const COMMAND_CONFIG = {
   add: ['add'],
-  inspect: ['inspect'],
   buy: ['buy'],
+  inspect: ['inspect'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove']
+  rm: ['rm', 'remove'],
+  verify: ['verify']
 };
 
-export default async function main(ctx     )                  {
-  let argv                   ;
+export default async function main(ctx) {
+  let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -88,7 +90,7 @@ export default async function main(ctx     )                  {
     return 2;
   }
 
-  const output         = createOutput({ debug: argv['--debug'] });
+  const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
@@ -99,6 +101,8 @@ export default async function main(ctx     )                  {
       return buy(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
+    case 'verify':
+      return verify(ctx, argv, args, output);
     default:
       return ls(ctx, argv, args, output);
   }
