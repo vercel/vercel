@@ -11,6 +11,7 @@ import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
 
 async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
@@ -43,8 +44,14 @@ async function rm(ctx, opts, args, output) {
   }
 
   const domain = await getDomainByName(output, now, contextName, domainName);
-  if (!domain) {
+  if (domain instanceof DomainNotFound) {
     output.error(`Domain not found by "${domainName}" under ${chalk.bold(contextName)}`);
+    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    return 1;
+  }
+
+  if (domain instanceof DomainPermissionDenied) {
+    output.error(`You don't have access to the domain ${domainName} under ${chalk.bold(contextName)}`)
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
