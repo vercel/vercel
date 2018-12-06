@@ -62,7 +62,6 @@ async function inspect(ctx, opts, args, output) {
 
   output.print('\n');
   output.print(chalk.bold('  Domain Info\n'));
-  output.print(`    ${chalk.dim('id')}\t\t\t${domain.id}\n`);
   output.print(`    ${chalk.dim('name')}\t\t${domain.name}\n`);
   output.print(`    ${chalk.dim('serviceType')}\t\t${domain.serviceType}\n`);
   output.print(`    ${chalk.dim('createdAt')}\t\t${formatDate(domain.createdAt)}\n`);
