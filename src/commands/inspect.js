@@ -78,12 +78,24 @@ export default async function main(ctx     )                  {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 

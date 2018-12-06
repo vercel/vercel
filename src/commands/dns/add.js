@@ -1,4 +1,3 @@
-//      
 import chalk from 'chalk';
 import Now from '../../util';
 import getScope from '../../util/get-scope';
@@ -6,25 +5,35 @@ import stamp from '../../util/output/stamp';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
 
-                                                      
-
 async function add(
-  ctx            ,
-  opts               ,
-  args          ,
-  output        
-)                  {
+  ctx,
+  opts,
+  args,
+  output
+) {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -56,7 +65,7 @@ async function add(
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } 
+  }
     console.log(
       `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
         domain
@@ -64,7 +73,7 @@ async function add(
         contextName
       )} ${chalk.gray(addStamp())}`
     );
-  
+
 
   return 0;
 }

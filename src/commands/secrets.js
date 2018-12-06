@@ -9,6 +9,7 @@ import NowSecrets from '../util/secrets';
 import exit from '../util/exit';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
+import createOutput from '../util/output';
 
 const help = () => {
   console.log(`
@@ -87,13 +88,25 @@ const main = async ctx => {
   }
 
   const { authConfig: { token }, config: { currentTeam }} = ctx;
+  const output = createOutput({ debug });
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   try {
     await run({ token, contextName, currentTeam });

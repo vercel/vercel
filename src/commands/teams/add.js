@@ -65,8 +65,10 @@ export default async function({ apiUrl, token, teams, config }) {
         console.log(info('Aborted'));
         return 0;
       }
+
       throw err;
     }
+
     elapsed = stamp();
     stopSpinner = wait(teamUrlPrefix + slug);
 
@@ -84,11 +86,13 @@ export default async function({ apiUrl, token, teams, config }) {
   } while (!team);
 
   process.stdout.write(eraseLines(2));
+
   console.log(success(`Team created ${elapsed()}`));
   console.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug  }\n`);
-
   console.log(info('Pick a display name for your team'));
+
   let name;
+
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
@@ -99,18 +103,23 @@ export default async function({ apiUrl, token, teams, config }) {
       console.log(info('No name specified'));
       return gracefulExit();
     }
-      throw err;
 
+    throw err;
   }
+
   elapsed = stamp();
   stopSpinner = wait(teamNamePrefix + name);
+
   const res = await teams.edit({ id: team.id, name });
+
   stopSpinner();
 
   process.stdout.write(eraseLines(2));
+
   if (res.error) {
     console.error(error(res.error.message));
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
+
     return 1;
     // TODO: maybe we want to ask the user to retry? not sure if
     // there's a scenario where that would be wanted

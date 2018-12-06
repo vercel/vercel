@@ -1,33 +1,41 @@
-//      
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-
 import Now from '../../util';
 import getScope from '../../util/get-scope';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import stamp from '../../util/output/stamp';
 
-                                                                 
-
 async function rm(
-  ctx            ,
-  opts               ,
-  args          ,
-  output        
-)                  {
+  ctx,
+  opts,
+  args,
+  output
+) {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -77,7 +85,7 @@ function readConfirmation(
   output        ,
   msg        ,
   domainName        ,
-  record           
+  record
 ) {
   return new Promise(resolve => {
     output.log(msg);
