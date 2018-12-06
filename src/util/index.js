@@ -1,23 +1,15 @@
-// Native
 import { homedir } from 'os';
-
 import { resolve as resolvePath, join, basename } from 'path';
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
-
-// Packages
 import bytes from 'bytes';
-
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
-
-// Utilities
 import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
-
 import Agent from './agent';
 import ua from './ua';
 import hash from './hash';

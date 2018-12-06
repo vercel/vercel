@@ -22,7 +22,8 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
-import { handleError, reportError } from './util/error';
+import { handleError } from './util/error';
+import reportError from './util/report-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -48,6 +49,7 @@ Sentry.init({
 });
 
 let debug = () => {};
+let apiUrl = 'https://api.zeit.co';
 
 const main = async argv_ => {
   const { isTTY } = process.stdout;
@@ -310,7 +312,7 @@ const main = async argv_ => {
   }
 
   // the context object to supply to the providers or the commands
-  const ctx         = {
+  const ctx = {
     config,
     authConfig,
     argv: argv_
@@ -355,13 +357,13 @@ const main = async argv_ => {
     ctx.argv.push('-h');
   }
 
-  ctx.apiUrl = 'https://api.zeit.co';
-
   if (argv['--api'] && typeof argv['--api'] === 'string') {
-    ctx.apiUrl = argv['--api'];
+    apiUrl = argv['--api'];
   } else if (ctx.config && ctx.config.api) {
-    ctx.apiUrl = ctx.config.api;
+    apiUrl = ctx.config.api;
   }
+
+  ctx.apiUrl = apiUrl;
 
   // If no credentials are set at all, prompt for
   // login to the .sh provider
@@ -444,7 +446,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    const { apiUrl, authConfig: { token } } = ctx;
+    const { authConfig: { token } } = ctx;
 
     let user = null;
 
@@ -528,7 +530,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    await reportError(Sentry, err);
+    await reportError(Sentry, err, apiUrl, configFiles);
 
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
@@ -560,7 +562,7 @@ const handleRejection = async err => {
       handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      await reportError(Sentry, err);
+      await reportError(Sentry, err, apiUrl, configFiles);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
@@ -578,7 +580,7 @@ const handleUnexpected = async err => {
     return;
   }
 
-  await reportError(Sentry, err);
+  await reportError(Sentry, err, apiUrl, configFiles);
   debug('handling unexpected error');
 
   console.error(
