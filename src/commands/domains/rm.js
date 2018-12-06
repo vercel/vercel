@@ -19,12 +19,23 @@ async function rm(ctx, opts, args, output) {
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const [domainName] = args;

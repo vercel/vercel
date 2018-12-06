@@ -1,8 +1,5 @@
-//
 import ms from 'ms';
 import chalk from 'chalk';
-
-
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/format-dns-table';
@@ -11,20 +8,13 @@ import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import zeitWorldTable from '../../util/zeit-world-table';
-
-
 import assignAlias from './assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';
 import getRulesFromFile from './get-rules-from-file';
 import getTargetsForAlias from './get-targets-for-alias';
 import upsertPathAlias from './upsert-path-alias';
 
-export default async function set(
-  ctx            ,
-  opts                 ,
-  args          ,
-  output
-)                  {
+export default async function set(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -36,13 +26,25 @@ export default async function set(
     '--rules': rulesPath
   } = opts;
 
-  const { contextName, user } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam,
-    required: new Set(['user'])
-  });
+  let contextName = null;
+  let user = null;
+
+  try {
+    ({ contextName, user } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam,
+      required: new Set(['user'])
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });

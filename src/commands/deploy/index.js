@@ -78,13 +78,22 @@ export default async (ctx            ) => {
   const isFile = Object.keys(stats).length === 1 && stats[paths[0]].isFile();
 
   if (authConfig && authConfig.token) {
-    ({ contextName, platformVersion } = await getScope({
-      apiUrl,
-      token: authConfig.token,
-      debug: false,
-      currentTeam,
-      includePlatformVersion: true
-    }));
+    try {
+      ({ contextName, platformVersion } = await getScope({
+        apiUrl,
+        token: authConfig.token,
+        debug: false,
+        currentTeam,
+        includePlatformVersion: true
+      }));
+    } catch (err) {
+      if (err.code === 'not_authorized') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
   }
 
   const file = highlight('now.json');

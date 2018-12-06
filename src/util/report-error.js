@@ -1,6 +1,11 @@
 import getScope from './get-scope';
 
 export default async (sentry, error, apiUrl, configFiles) => {
+  // Do not report errors in development
+  if (!process.pkg) {
+    return;
+  }
+
   let user = null;
   let team = null;
 
