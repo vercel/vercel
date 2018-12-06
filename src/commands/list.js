@@ -80,6 +80,7 @@ export default async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug'];
+
   const { print, log, error, note, debug } = createOutput({
     debug: debugEnabled
   });
@@ -102,12 +103,24 @@ export default async function main(ctx) {
   const meta = parseMeta(argv['--meta']);
   const { authConfig: { token }, config } = ctx;
   const { currentTeam, includeScheme } = config;
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug: debugEnabled,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`

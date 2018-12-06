@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import logo from '../util/output/logo';
 import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
+import createOutput from '../util/output';
 
 const help = () => {
   console.log(`
@@ -51,14 +52,26 @@ const main = async ctx => {
 
   const debug = argv['--debug'];
   const { authConfig: { token }, apiUrl } = ctx;
+  const output = createOutput({ debug });
 
-  const { contextName: username } = await getScope({
-    apiUrl,
-    token,
-    debug
-  });
+  let contextName = null;
 
-  await whoami(username);
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
+  await whoami(contextName);
 };
 
 export default async ctx => {

@@ -1,34 +1,42 @@
-//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-
 import Now from '../../util';
 import getScope from '../../util/get-scope';
 import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-
 import { DomainNotFound } from '../../util/errors';
-                                                                 
 
 async function ls(
-  ctx            ,
-  opts               ,
-  args          ,
-  output        
-)                  {
+  ctx,
+  opts,
+  args,
+  output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -76,7 +84,7 @@ async function ls(
 }
 
 function getDNSRecordsTable(
-  dnsRecords                                                     
+  dnsRecords
 )         {
   return formatTable(
     ['', 'id', 'name', 'type', 'value', 'created'],

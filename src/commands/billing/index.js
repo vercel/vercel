@@ -13,6 +13,7 @@ import logo from '../../util/output/logo';
 import addBilling from './add';
 import exit from '../../util/exit';
 import getScope from '../../util/get-scope';
+import createOutput from '../../util/output';
 
 const help = () => {
   console.log(`
@@ -103,12 +104,26 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  const output = createOutput({ debug });
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope({
+      apiUrl,
+      token,
+      debug,
+      currentTeam
+    }));
+  } catch (err) {
+    if (err.code === 'not_authorized') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
   const args = argv._.slice(1);
 
   switch (subcommand) {
