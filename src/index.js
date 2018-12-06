@@ -29,18 +29,23 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+const insidePkg = process.pkg;
 
 epipebomb();
 
 // we only enable source maps while developing, since
 // they have a small performance hit. for this, we
 // look for `pkg`, which is only present in the final bin
-if (!process.pkg) {
+if (!insidePkg) {
   sourceMap.install();
 }
 
-// Send errors away
-Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
+// Configure the error reporting system
+Sentry.init({
+  dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
+  release: `${pkg.name}@${pkg.version}`,
+  environment: insidePkg ? 'production' : 'development'
+});
 
 let debug = () => {};
 
