@@ -1,24 +1,16 @@
-//      
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 
-
-import getScope from '../../util/get-scope';
-import getDomains from '../../util/domains/get-domains';
-import isDomainExternal from '../../util/domains/is-domain-external';
 import Now from '../../util';
+import getDomains from '../../util/domains/get-domains';
+import getScope from '../../util/get-scope';
+import isDomainExternal from '../../util/domains/is-domain-external';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
-                                                                  
 
-async function ls(
-  ctx            ,
-  opts                   ,
-  args          ,
-  output        
-)                  {
+async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -31,7 +23,6 @@ async function ls(
     currentTeam
   });
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam });
   const lsStamp = stamp();
 
@@ -55,7 +46,7 @@ async function ls(
   return 0;
 }
 
-function formatDomainsTable(domains          ) {
+function formatDomainsTable(domains) {
   const current = new Date();
   return table(
     [
