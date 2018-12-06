@@ -37,18 +37,15 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			sb += "]"
 			context.Eval("$_GET['" + k + "']=" + sb + ";")
 		} else {
-			for _, s := range v {
-				context.Eval("$_GET['" + k + "']='" + s + "';") // TODO escape quotes
-			}
+			var s string = v[len(v) - 1]
+			context.Eval("$_GET['" + k + "']='" + s + "';") // TODO escape quotes
 		}
 	}
 
 	r.ParseForm()
 	postMap := make(map[string]string)
 	for k, v := range r.PostForm {
-		for _, s := range v {
-			postMap[k] = s
-		}
+		postMap[k] = v[len(v) - 1]
 	}
 	context.Bind("_POST", postMap)
 
