@@ -66,10 +66,11 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
   }
 
   bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
+  delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
   console.log('deploymentUrl', deploymentUrl);
 
-  for (const probe of nowJson.probes) {
+  for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
     const text = await fetchDeploymentUrl(probeUrl, {
@@ -89,6 +90,11 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
     } else {
       assert(false, 'probe must have a test condition');
     }
+  }
+
+  const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
+  if (await fs.exists(probeJsFullPath)) {
+    await require(probeJsFullPath)({ deploymentUrl, fetch });
   }
 
   return { deploymentId, deploymentUrl };
