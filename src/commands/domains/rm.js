@@ -36,7 +36,7 @@ async function rm(ctx, opts, args, output) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias rm <alias>`'
+        '`now domains rm <domain>`'
       )}`
     );
     return 1;
