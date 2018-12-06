@@ -162,19 +162,6 @@ test('try to remove a non-existing payment method', async t => {
   t.true(stderr.includes(`You have no credit cards to choose from to delete under ${email}`));
 });
 
-test('try to add a payment method', async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'billing',
-    'add',
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  t.is(code, 1);
-  t.true(stdout.startsWith(`> Enter your card details for ${email}`));
-});
-
 test('use `-V 1` to deploy a GitHub repository', async t => {
   const { stdout, code } = await execa(binaryPath, [
     '-V',
