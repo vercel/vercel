@@ -23,10 +23,20 @@ export default async (sentry, error, apiUrl, configFiles) => {
   if (user || team) {
     sentry.withScope(scope => {
       if (user) {
-        scope.setUser({
+        const spec = {
           email: user.email,
           id: user.uid
-        });
+        };
+
+        if (user.username) {
+          spec.username = user.username;
+        }
+
+        if (user.name) {
+          spec.name = user.name;
+        }
+
+        scope.setUser(spec);
       }
 
       if (team) {
