@@ -12,7 +12,10 @@ Server.prototype.listen = function listen(...args) {
 };
 
 try {
-  process.env.NODE_ENV = 'production';
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'production';
+  }
+
   // PLACEHOLDER
 } catch (error) {
   console.error(error);
