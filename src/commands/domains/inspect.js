@@ -53,13 +53,6 @@ async function inspect(ctx, opts, args, output) {
     return 1;
   }
 
-  if (!domain.verified) {
-    output.warn(`This domain is not verified. To verify it you should either:`);
-    output.print(`  ${chalk.gray('-')} Change your domain nameservers to the intended set shown below.\n`);
-    output.print(`  ${chalk.gray('-')} Add a DNS TXT record with the name and value detailed below.\n`);
-    output.print(`  Then run ${cmd('now domains verify <domain>')} or just wait for a confirmation email.\n`);
-  }
-
   output.print('\n');
   output.print(chalk.bold('  Domain Info\n'));
   output.print(`    ${chalk.dim('name')}\t\t${domain.name}\n`);
@@ -76,11 +69,22 @@ async function inspect(ctx, opts, args, output) {
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n'));
-  output.print(`${formatNSTable(domain.intendedNameServers, domain.nameServers, { extraSpace: '  ' })}\n`);
+  output.print(`${formatNSTable(domain.intendedNameServers, domain.nameServers, { extraSpace: '    ' })}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Verification Record\n'));
-  output.print(`${dnsTable([['_now', 'TXT', domain.verificationRecord]], {extraSpace: '  '})}\n`);
+  output.print(`${dnsTable([['_now', 'TXT', domain.verificationRecord]], {extraSpace: '    '})}\n`);
+  output.print('\n');
+
+  if (!domain.verified) {
+    output.warn(`This domain is not verified. To verify it you should either:`);
+    output.print(`  ${chalk.gray('a)')} Change your domain nameservers to the intended set detailed above. ${chalk.gray('[recommended]')}\n`);
+    output.print(`  ${chalk.gray('b)')} Add a DNS TXT record with the name and value shown above.\n\n`);
+    output.print(`  We will run a verification for you and you will receive an email upon completion.\n`);
+    output.print(`  If you want to force running a verification, you can run ${cmd('now domains verify <domain>')}\n`);
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+  }
+
   return null;
 }
 
