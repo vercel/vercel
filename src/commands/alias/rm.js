@@ -1,18 +1,13 @@
-//
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-
 import Now from '../../util';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
-
-
 import promptBool from '../../util/prompt-bool';
-
 import findAliasByAliasOrId from './find-alias-by-alias-or-id';
 
 export default async function rm(

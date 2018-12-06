@@ -1,24 +1,20 @@
-//
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-
 import Now from '../../util';
-
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
 
-
 export default async function ls(
-  ctx            ,
-  opts                 ,
-  args          ,
+  ctx,
+  opts,
+  args,
   output
-)                  {
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
