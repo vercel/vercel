@@ -16,13 +16,12 @@ module.exports = async ({ deploymentUrl, fetch }) => {
     '443',
     'on',
     'foo',
-    'NULL', // TODO fake news, must be:
-    //   array(2) {
-    //     [0]=>
-    //     string(3) "bar"
-    //     [1]=>
-    //     string(3) "baz"
-    //   }
+    'array(2) {',
+    '  [0]=>',
+    '  string(3) "bar"',
+    '  [1]=>',
+    '  string(3) "baz"',
+    '}',
     'bon',
   ]);
 };

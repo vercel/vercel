@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -21,13 +22,26 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context, _ := engine.NewContext()
 
 	var query = r.URL.Query()
-	getMap := make(map[string]string)
 	for k, v := range query {
-		for _, s := range v {
-			getMap[k] = s
+		if (strings.HasSuffix(k, "[]")) {
+			k = strings.TrimSuffix(k, "[]")
+			var i int = 0
+			var sb string = "["
+			for _, s := range v {
+				if i > 0 {
+					sb += ","
+				}
+				sb += strconv.Itoa(i) + "=>'" + s + "'"
+				i += 1
+			}
+			sb += "]"
+			context.Eval("$_GET['" + k + "']=" + sb + ";")
+		} else {
+			for _, s := range v {
+				context.Eval("$_GET['" + k + "']='" + s + "';") // TODO escape quotes
+			}
 		}
 	}
-	context.Bind("_GET", getMap)
 
 	r.ParseForm()
 	postMap := make(map[string]string)
