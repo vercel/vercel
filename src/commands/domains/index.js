@@ -1,4 +1,3 @@
-//
 import chalk from 'chalk';
 import { handleError } from '../../util/error';
 
@@ -30,7 +29,6 @@ const help = () => {
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
-    -e, --external                 Use external DNS server
     --cdn                          Enable CDN support for the specified domain
     --no-cdn                       Disable CDN support for the specified domain, if it was previously enabled
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
@@ -59,10 +57,6 @@ const help = () => {
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
       )}).
-
-  ${chalk.gray('–')} Add a domain using an external nameserver
-
-      ${chalk.cyan('$ now domain add -e my-app.com')}
 `);
 };
 
@@ -82,9 +76,7 @@ export default async function main(ctx     )                  {
       '--cdn': Boolean,
       '--no-cdn': Boolean,
       '--coupon': String,
-      '--external': Boolean,
       '-c': '--coupon',
-      '-e': '--external'
     });
   } catch (error) {
     handleError(error);

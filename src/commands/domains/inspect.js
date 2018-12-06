@@ -1,15 +1,13 @@
 import ms from 'ms';
 import chalk from 'chalk';
-import table from 'text-table';
 import format from 'date-fns/format';
-import dnsTable from '../../util/dns-table';
-import strlen from '../../util/strlen';
+import Now from '../../util';
+import dnsTable from '../../util/format-dns-table';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
-import Now from '../../util';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
-
+import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
 
 async function inspect(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
@@ -79,7 +77,7 @@ async function inspect(ctx, opts, args, output) {
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n'));
-  output.print(`${formatNSTable(domain.intendedNameServers, domain.nameServers)}\n`);
+  output.print(`${formatNSTable(domain.intendedNameServers, domain.nameServers, { extraSpace: '  ' })}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Verification Record\n'));
@@ -87,28 +85,6 @@ async function inspect(ctx, opts, args, output) {
   return null;
 }
 
-function formatNSTable(intendedNameServers, currentNameServers) {
-  const maxLength = Math.max(intendedNameServers.length, currentNameServers.length);
-  const rows = [];
-
-  for (let i = 0; i < maxLength; i++) {
-    rows.push([
-      intendedNameServers[i] || '',
-      currentNameServers[i] || '',
-    ])
-  }
-
-  return (
-    table([
-      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers')],
-      ...rows
-    ], {
-      align: ['l', 'l', 'l'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen
-    }).replace(/^(.*)/gm, `    $1`)
-  )
-}
 
 function formatDate(dateStr) {
   if (!dateStr) {

@@ -1,78 +1,43 @@
-//      
-import psl from 'psl';
 import chalk from 'chalk';
 import retry from 'async-retry';
 
-import * as Errors from '../errors';
-                                            
+import * as ERRORS from '../errors';
 import wait from '../output/wait';
 
-export default async function addDomain(
-  now     ,
-  domain        ,
-  contextName        ,
-  isExternal         ,
-  cdnEnabled          
-) {
-  const cancelWait = wait(
-    `Adding domain ${domain} under ${chalk.bold(contextName)}`
-  );
-  const { domain: rootDomain, subdomain } = psl.parse(domain);
+export default async function addDomain(now, domain, contextName, cdnEnabled) {
+  const cancelWait = wait(`Adding domain ${domain} under ${chalk.bold(contextName)}`);
   try {
-    const addedDomain = await performAddRequest(
-      now,
-      domain,
-      isExternal,
-      cdnEnabled
-    );
+    const addedDomain = await performAddRequest(now, domain, cdnEnabled);
     cancelWait();
     return addedDomain;
   } catch (error) {
     cancelWait();
-    if (error.status === 403) {
-      return error.code === 'domain_with_cdn_needs_upgrade'
-        ? new Errors.CDNNeedsUpgrade()
-        : new Errors.DomainPermissionDenied(rootDomain, contextName);
-    }
-
-    if (error.status === 401 && error.code === 'verification_failed') {
-      return new Errors.DomainVerificationFailed(
-        rootDomain,
-        subdomain,
-        error.verifyToken
-      );
-    }
-
-    if (error.status === 409) {
-      return new Errors.DomainAlreadyExists(error.uid, domain, contextName);
-    }
-
     throw error;
   }
 }
 
-async function performAddRequest(
-  now     ,
-  domain        ,
-  isExternal         ,
-  cdnEnabled          
-)                       {
-  const serviceType = isExternal ? 'external' : 'zeit.world';
+async function performAddRequest(now, domain, cdnEnabled) {
   return retry(
-    async bail => {
+    async () => {
       try {
-        const result              = await now.fetch('/v3/domains', {
-          body: { name: domain, serviceType, cdnEnabled },
+        return await now.fetch('/v4/domains', {
+          body: { name: domain, cdnEnabled },
           method: 'POST'
-        });
-        return result;
-      } catch (err) {
-        // retry in case the user has to setup a TXT record
-        if (err.code !== 'verification_failed') {
-          bail(err);
-        } else {
-          throw err;
+        })
+      } catch (error) {
+        if (error.code === 'invalid_name') {
+          return new ERRORS.InvalidDomain(domain);
         }
+
+        if (error.code === 'domain_with_cdn_needs_upgrade') {
+          return new ERRORS.CDNNeedsUpgrade();
+        }
+
+        if (error.code === 'domain_already_exists') {
+          return new ERRORS.DomainAlreadyExists(domain)
+        }
+
+        throw error;
       }
     },
     { retries: 5, maxTimeout: 8000 }

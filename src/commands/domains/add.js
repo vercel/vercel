@@ -3,23 +3,15 @@ import psl from 'psl';
 import * as Errors from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import isDomainExternal from '../../util/domains/is-domain-external';
-import updateDomain from '../../util/domains/update-domain';
-import cmd from '../../util/output/cmd';
-import dnsTable from '../../util/dns-table';
-import getScope from '../../util/get-scope';
 import getBooleanOptionValue from '../../util/get-boolean-option-value';
-import Now from '../../util';
-import promptBool from '../../util/input/prompt-bool';
+import formatNSTable from '../../util/format-ns-table';
+import formatDnsTable from '../../util/format-dns-table';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import zeitWorldTable from '../../util/zeit-world-table';
+import cmd from '../../util/output/cmd';
+import Now from '../../util';
 
-export default async function add(
-  ctx            ,
-  opts                   ,
-  args          ,
-  output
-)                  {
+export default async function add(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -31,30 +23,18 @@ export default async function add(
     currentTeam
   });
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
-
   if (cdnEnabled instanceof Errors.ConflictingOption) {
-    output.error(
-      `You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`
-    );
-    return 1;
-  }
-
-  if (opts['--external'] && opts['--cdn']) {
-    output.error(
-      `You can’t enable the Now CDN for domains that are not pointing to zeit.world`
-    );
+    output.error(`You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`);
     return 1;
   }
 
   if (args.length !== 1) {
-    output.error(`${cmd('now domains rm <domain>')} expects one argument`);
+    output.error(`${cmd('now domains add <domain>')} expects one argument`);
     return 1;
   }
 
-  // If the user is adding with subdomain, warn about what he's doing
   const domainName = String(args[0]);
   const { domain, subdomain } = psl.parse(domainName);
   if (!domain) {
@@ -62,170 +42,50 @@ export default async function add(
     return 1;
   }
 
-  // Do not allow to add domains with a subdomain
   if (subdomain) {
     output.error(
       `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
         `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-          `now domain add ${  opts['--external'] ? '-e ' : ''  }${domain}`
+          `now domain add ${opts['--external'] ? '-e ' : ''}${domain}`
         )}`
     );
     return 1;
   }
 
-  // Check if the domain exists and ask for confirmation if it doesn't
-  const domainInfo = await getDomainByName(output, now, contextName, domain);
-  if (
-    !domainInfo &&
-    opts['--external'] &&
-    !await promptBool(`Are you sure you want to add "${domainName}"?`)
-  ) {
-    return 0;
+  const addStamp = stamp();
+  const addedDomain = await addDomain(now, domainName, contextName, cdnEnabled);
+  if (addedDomain instanceof Errors.CDNNeedsUpgrade) {
+    output.error(`You can't add domains with CDN enabled from an OSS plan.`);
+    return 1;
   }
 
-  // Do not allow to switch from internal to external or viceversa if the domain is added
-  if (
-    domainInfo &&
-    isDomainExternal(domainInfo) !== Boolean(opts['--external'])
-  ) {
-    const youWant = isDomainExternal(domainInfo) ? 'non-external' : 'external';
-    const youHave = isDomainExternal(domainInfo) ? 'external' : 'non-external';
+  if (addedDomain instanceof Errors.InvalidDomain) {
+    output.error(`The provided domain name "${addedDomain.meta.domain}" is invalid`);
+    return 1;
+  }
+
+  if (addedDomain instanceof Errors.DomainAlreadyExists) {
     output.error(
-      `You already have the domain ${domainInfo.name} as as ${youHave} domain.\n` +
-        `  If you want to change the domain to be ${youWant}, please remove it and then add it back as an ${youWant} domain.`
+      `The domain ${chalk.underline(addedDomain.meta.domain)} is already registered by a different account.\n` +
+        `  If this seems like a mistake, please contact us at support@zeit.co`
     );
     return 1;
   }
 
-  const addStamp = stamp();
-  if (!domainInfo || !domainInfo.verified) {
-    const addedDomain = await addDomain(
-      now,
-      domainName,
-      contextName,
-      opts['--external'],
-      cdnEnabled
-    );
-    if (addedDomain instanceof Errors.CDNNeedsUpgrade) {
-      output.error(`You can't add domains with CDN enabled from an OSS plan.`);
-      return 1;
-    } if (addedDomain instanceof Errors.DomainPermissionDenied) {
-      if (domainInfo) {
-        output.error(
-          `You don't have permissions over domain ${chalk.underline(
-            addedDomain.meta.domain
-          )} under ${chalk.bold(addedDomain.meta.context)}.`
-        );
-        return 1;
-      }
-        output.error(
-          `The domain ${chalk.underline(
-            addedDomain.meta.domain
-          )} is already registered by a different account.\n` +
-            `  If this seems like a mistake, please contact us at support@zeit.co`
-        );
-        return 1;
+  const domainInfo = await getDomainByName(output, now, contextName, domain);
+  console.log(`${chalk.cyan('> Success!')} Domain ${chalk.bold(domainInfo.name)} added correctly. ${addStamp()}\n`);
 
-    } if (addedDomain instanceof Errors.DomainVerificationFailed) {
-      output.error(
-        `We couldn't verify the domain ${chalk.underline(
-          addedDomain.meta.domain
-        )}.\n`
-      );
-      output.print(
-        `  Please make sure that your nameservers point to ${chalk.underline(
-          'zeit.world'
-        )}.\n`
-      );
-      output.print(
-        `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
-      );
-      output.print(`${zeitWorldTable()  }\n`);
-      output.print(
-        `\n  As an alternative, you can add following records to your DNS settings:\n`
-      );
-      output.print(
-        `${dnsTable(
-          [
-            ['_now', 'TXT', addedDomain.meta.token],
-            addedDomain.meta.subdomain === null
-              ? ['', 'ALIAS', 'alias.zeit.co']
-              : [addedDomain.meta.subdomain, 'CNAME', 'alias.zeit.co']
-          ],
-          { extraSpace: '  ' }
-        )  }\n`
-      );
-      return 1;
-    } if (addedDomain instanceof Errors.DomainAlreadyExists) {
-      output.error(`The domain exists already`);
-      return 1;
-    }
-      const addedDomainInfo = await getDomainByName(
-        output,
-        now,
-        contextName,
-        domain
-      );
-      if (addedDomainInfo) {
-        maybeWarnAboutUnverified(output, domainName, addedDomain.verified);
-        if (addedDomainInfo.cdnEnabled) {
-          console.log(
-            `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-              chalk.underline(domainName)
-            )} was added and configured with CDN enabled. ${addStamp()}`
-          );
-          return 0;
-        }
-      }
-      console.log(
-        `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-          chalk.underline(domainName)
-        )} was added. ${addStamp()}`
-      );
-      return 0;
+  if (!domainInfo.verified) {
+    output.warn(`The domain was added but it is not verified. To verify it, you should either:`);
+    output.print(`  ${chalk.gray('a)')} Change your domain nameservers to the following intended set: ${chalk.gray('[recommended]')}\n`);
+    output.print(`\n${formatNSTable(domainInfo.intendedNameServers, domainInfo.nameServers, { extraSpace: '     ' })}\n\n`);
+    output.print(`  ${chalk.gray('b)')} Add a DNS TXT record with the name and value shown below.\n`);
+    output.print(`\n${formatDnsTable([['_now', 'TXT', domainInfo.verificationRecord]], {extraSpace: '     '})}\n\n`);
+    output.print(`  We will run a verification for you and you will receive an email upon completion.\n`);
+    output.print(`  If you want to force running a verification, you can run ${cmd('now domains verify <domain>')}\n`);
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+ }
 
-  } if (cdnEnabled !== undefined && domainInfo.cdnEnabled !== cdnEnabled) {
-    maybeWarnAboutUnverified(output, domainName, domainInfo.verified);
-    await updateDomain(now, domainName, cdnEnabled);
-    if (cdnEnabled) {
-      console.log(
-        `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-          chalk.underline(domainName)
-        )} was updated and configured with CDN enabled. ${addStamp()}`
-      );
-      return 0;
-    }
-      console.log(
-        `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-          chalk.underline(domainName)
-        )} was updated and configured with CDN disabled. ${addStamp()}`
-      );
-      return 0;
-
-  }
-    maybeWarnAboutUnverified(output, domainName, domainInfo.verified);
-    console.log(
-      `You requested to modify information for ${chalk.bold(
-        chalk.underline(domainName)
-      )} that is already as requested; nothing was changed.`
-    );
-    return 0;
-
+  return 0;
 }
 
-function maybeWarnAboutUnverified(
-  output        ,
-  domainName        ,
-  isVerified
-) {
-  if (!isVerified) {
-    output.warn(
-      `The domain was added but it could not be verified. If the domain doesn't point to ${chalk.bold(
-        'zeit.world'
-      )} nameservers\n` +
-        `  please, remove the domain and add it back using ${cmd(
-          `now domains add ${domainName} --external`
-        )}.`
-    );
-  }
-}

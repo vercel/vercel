@@ -89,15 +89,12 @@ export class DeploymentPermissionDenied extends NowError
   }
 }
 
-export class DomainAlreadyExists extends NowError
-
-
-  {
-  constructor(uid        , domain        , context        ) {
+export class DomainAlreadyExists extends NowError {
+  constructor(domain) {
     super({
       code: 'DOMAIN_ALREADY_EXISTS',
-      meta: { uid, domain, context },
-      message: `The domain ${domain} already exists with id ${uid} under ${context}.`
+      meta: { domain },
+      message: `The domain ${domain} already exists under a different context.`
     });
   }
 }
@@ -603,11 +600,8 @@ export class DomainNotAvailable extends NowError
   }
 }
 
-export class InvalidDomain extends NowError
-
-
-  {
-  constructor(domain        ) {
+export class InvalidDomain extends NowError {
+  constructor(domain) {
     super({
       code: 'INVALID_DOMAIN',
       meta: { domain },
