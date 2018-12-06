@@ -1,3 +1,2 @@
 <?php
-  print "yoda:RANDOMNESS_PLACEHOLDER";
-?>
+print('yoda:RANDOMNESS_PLACEHOLDER');

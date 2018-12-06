@@ -45,9 +45,12 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	context.Bind("_ENV", envMap)
 
-	context.Eval("$_SERVER[\"SERVER_NAME\"]=\"" + r.Host + "\";")
-	context.Eval("$_SERVER[\"SERVER_PORT\"]=\"443\";")
-	context.Eval("$_SERVER[\"HTTPS\"]=\"on\";")
+	context.Eval("$_SERVER['SCRIPT_FILENAME']='" + h.ScriptFull + "';")
+	context.Eval("$_SERVER['REQUEST_URI']='" + r.URL.RequestURI() + "';") // TODO must be unescaped to align with php
+	context.Eval("$_SERVER['HTTP_HOST']='" + r.Host + "';") // no port needed
+	context.Eval("$_SERVER['SERVER_NAME']='" + r.Host + "';")
+	context.Eval("$_SERVER['SERVER_PORT']='443';")
+	context.Eval("$_SERVER['HTTPS']='on';")
 	context.Eval("http_response_code(200);")
 
 	var stdout bytes.Buffer

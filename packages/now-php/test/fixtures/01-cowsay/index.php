@@ -1,3 +1,2 @@
 <?php
-  print "cow:RANDOMNESS_PLACEHOLDER";
-?>
+print('cow:RANDOMNESS_PLACEHOLDER');
