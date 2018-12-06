@@ -18,7 +18,7 @@ async function nowDeploy (bodies, randomness) {
 
   const nowDeployPayload = {
     version: 2,
-    env: { RANDOMNESS_ENV_VAR: randomness },
+    env: Object.assign({}, nowJson.env, { RANDOMNESS_ENV_VAR: randomness }),
     build: { env: { RANDOMNESS_BUILD_ENV_VAR: randomness } },
     name: 'test',
     files,
@@ -26,6 +26,8 @@ async function nowDeploy (bodies, randomness) {
     routes: nowJson.routes || [],
     meta: {}
   };
+
+  console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
     const json = await filePost(
@@ -44,6 +46,8 @@ async function nowDeploy (bodies, randomness) {
     deploymentId = json.id;
     deploymentUrl = json.url;
   }
+
+  console.log('id', deploymentId);
 
   for (let i = 0; i < 500; i += 1) {
     const { state } = await deploymentGet(deploymentId);
