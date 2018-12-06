@@ -44,7 +44,7 @@ if (!insidePkg) {
 // Configure the error reporting system
 Sentry.init({
   dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
-  release: `${pkg.name}@${pkg.version}`,
+  release: `now-cli@${pkg.version}`,
   environment: insidePkg ? 'production' : 'development'
 });
 
