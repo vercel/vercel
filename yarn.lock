@@ -243,10 +243,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"
   integrity sha512-tO000RCJxEbRBhQpWEaTF+aAIkMRSuQVnC1g7Y1l/duhxjp6CotepHcUerQBFa5lgjVesh/zlblq2t1GvfAEbQ==
 
-"@zeit/ncc@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.4.1.tgz#d275157024bc306ffd429918dc645a9368c62f68"
-  integrity sha512-8S71zRmnKpup8OjmIhVjN+McQmqCNI1tCjknXyZJriA7ULFr5vCiug5K7pHQlsDf2LgLLciEivJph0XbC0Fq7w==
+"@zeit/ncc@0.1.18":
+  version "0.1.18"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.1.18.tgz#5c8e5be91a9a0c7215f5ce0c983a9d52a42dc899"
+  integrity sha512-ymWv9m/E22loFWXV+7MY/fxREbD3J3ksxqJCkAQ1Po4tJTt/lx7zGRnVxvILWs7T/K2OEj7v7x704zBnOSDnUQ==
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
@@ -301,9 +301,9 @@ alpha-sort@2.0.1:
   integrity sha1-UNNTiUfPcOvMFaa0YfsE//O/Htk=
 
 already@1.x:
-  version "1.3.6"
-  resolved "https://registry.yarnpkg.com/already/-/already-1.3.6.tgz#5e76bcfafed09cd8fb6e41a1d0dbe6151420e65c"
-  integrity sha512-ifInpRE81behq4DU2osiTcZMVyXZeJPhRedsa2BNYSEKT3w+hkPhc8f8eQhzFUrO/aFepremgpj4SoFg5LVnIg==
+  version "1.3.9"
+  resolved "https://registry.yarnpkg.com/already/-/already-1.3.9.tgz#ed6020437dffd7b76083c79c9cdfe150d0fad0a1"
+  integrity sha512-LjXRUT4gFpt+lWj8/hTT3fRaTpu0+a9X58x/MxnI1+gkN11vT4EhARty9TzVllIXRRXf8xbeysBceJCb9yJjPw==
   dependencies:
     throat "4.x"
 
@@ -6094,9 +6094,9 @@ spawn-wrap@^1.4.2:
     which "^1.3.0"
 
 spdx-correct@^3.0.0:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/spdx-correct/-/spdx-correct-3.0.2.tgz#19bb409e91b47b1ad54159243f7312a858db3c2e"
-  integrity sha512-q9hedtzyXHr5S0A1vEPoK/7l8NpfkFYTq6iCY+Pno2ZbdZR6WexZFtqeVGkGxW3TEJMN914Z55EnAGMmenlIQQ==
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/spdx-correct/-/spdx-correct-3.1.0.tgz#fb83e504445268f154b074e218c87c003cd31df4"
+  integrity sha512-lr2EZCctC2BNR7j7WzJ2FpDznxky1sjfxvvYEyzxNyb6lZXHODmEoJeFu4JupYlkfha1KZpJyoqiJ7pgA1qq8Q==
   dependencies:
     spdx-expression-parse "^3.0.0"
     spdx-license-ids "^3.0.0"
