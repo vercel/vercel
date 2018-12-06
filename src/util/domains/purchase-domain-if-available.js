@@ -1,39 +1,29 @@
-//      
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-// Utils
-import eraseLines from '../../util/output/erase-lines';
-import promptBool from '../../util/input/prompt-bool';
-import stamp from '../../util/output/stamp';
-import wait from '../../util/output/wait';
-
-import { NowError } from '../../util/now-error';
-import * as Errors from '../../util/errors';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import getDomainStatus from '../../util/domains/get-domain-status';
+import * as Errors from '../errors';
+import eraseLines from '../output/erase-lines';
+import getDomainPrice from './get-domain-price';
+import getDomainStatus from './get-domain-status';
+import promptBool from '../input/prompt-bool';
 import purchaseDomain from './purchase-domain';
+import stamp from '../output/stamp';
+import wait from '../output/wait';
 
-// $FlowFixMe
 const isTTY = process.stdout.isTTY;
 
-async function purchaseDomainIfAvailable(
-  output        ,
-  now     ,
-  domain        ,
-  contextName        
-) {
+async function purchaseDomainIfAvailable(output, now, domain, contextName) {
   const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
   const { available } = await getDomainStatus(now, domain);
 
   if (available) {
-    // If we can't prompty and the domain is available, we should fail
     if (!isTTY) {
+      // If we can't prompty and the domain is available, we should fail
       return new Errors.DomainNotFound(domain);
     }
-    output.debug(`Domain is available to purchase`);
 
+    output.debug(`Domain is available to purchase`);
     const domainPrice = await getDomainPrice(now, domain);
     cancelWait();
     if (
@@ -51,6 +41,7 @@ async function purchaseDomainIfAvailable(
         contextName
       )}! ${buyDomainStamp()}`
     );
+
     if (
       !await promptBool(
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
@@ -64,16 +55,23 @@ async function purchaseDomainIfAvailable(
 
     output.print(eraseLines(1));
     const result = await purchaseDomain(output, now, domain);
-    if (result instanceof NowError) {
+    if (
+      result instanceof Errors.DomainNotAvailable ||
+      result instanceof Errors.DomainServiceNotAvailable ||
+      result instanceof Errors.InvalidDomain ||
+      result instanceof Errors.PaymentSourceNotFound ||
+      result instanceof Errors.PremiumDomainForbidden ||
+      result instanceof Errors.UnexpectedDomainPurchaseError
+    ) {
       return result;
     }
 
     return true;
-  } 
-    output.debug(`Domain can't be purchased`);
-    cancelWait();
-    return false;
-  
+  }
+
+  output.debug(`Domain can't be purchased`);
+  cancelWait();
+  return false;
 }
 
 export default purchaseDomainIfAvailable;

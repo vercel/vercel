@@ -1,14 +1,6 @@
-//      
 import * as Errors from '../errors';
 
-
-export default async function purchaseDomain(
-  output        ,
-  now     ,
-  name        ,
-  coupon        ,
-  expectedPrice        
-) {
+export default async function purchaseDomain(output, now, name, coupon, expectedPrice) {
   try {
     return await now.fetch(`/v3/domains/buy`, {
       body: JSON.stringify({ name, coupon, expectedPrice }),
@@ -25,8 +17,7 @@ export default async function purchaseDomain(
       return new Errors.UnexpectedDomainPurchaseError();
     } if (error.code === 'forbidden_premium') {
       return new Errors.PremiumDomainForbidden();
-    } 
+    }
       throw error;
-    
   }
 }

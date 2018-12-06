@@ -1,31 +1,31 @@
-//      
+//
 
 import generateCertForDeploy from './generate-cert-for-deploy';
 import * as Errors from '../errors';
 
-                               
-                                   
-                             
-                          
-                                   
-                                    
-                         
-                            
-                                 
-                                 
-                                  
-                                   
-                                
-                              
-                                 
-                           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default async function createDeploy(
   output        ,
   now     ,
   contextName        ,
   paths          ,
-  createArgs        
+  createArgs
 ) {
   try {
     return await now.create(paths, createArgs);
@@ -61,7 +61,6 @@ export default async function createDeploy(
         result instanceof Errors.CantSolveChallenge ||
         result instanceof Errors.CantGenerateWildcardCert ||
         result instanceof Errors.DomainConfigurationError ||
-        result instanceof Errors.DomainNameserversNotFound ||
         result instanceof Errors.DomainNotVerified ||
         result instanceof Errors.DomainPermissionDenied ||
         result instanceof Errors.DomainsShouldShareRoot ||
@@ -73,9 +72,9 @@ export default async function createDeploy(
         result instanceof Errors.TooManyRequests
       ) {
         return result;
-      } 
+      }
         return createDeploy(output, now, contextName, paths, createArgs);
-      
+
     }
 
     // If the error is unknown, we just throw

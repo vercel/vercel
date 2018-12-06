@@ -371,7 +371,6 @@ export const pipe = async function main(
       firstDeployCall instanceof Errors.CantSolveChallenge ||
       firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
       firstDeployCall instanceof Errors.DomainConfigurationError ||
-      firstDeployCall instanceof Errors.DomainNameserversNotFound ||
       firstDeployCall instanceof Errors.DomainNotFound ||
       firstDeployCall instanceof Errors.DomainNotVerified ||
       firstDeployCall instanceof Errors.DomainPermissionDenied ||
@@ -450,7 +449,6 @@ export const pipe = async function main(
           secondDeployCall instanceof Errors.CantSolveChallenge ||
           secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
           secondDeployCall instanceof Errors.DomainConfigurationError ||
-          secondDeployCall instanceof Errors.DomainNameserversNotFound ||
           secondDeployCall instanceof Errors.DomainNotFound ||
           secondDeployCall instanceof Errors.DomainNotVerified ||
           secondDeployCall instanceof Errors.DomainPermissionDenied ||
@@ -646,13 +644,6 @@ function handleCreateDeployError            (
       );
       output.print(`  Please try again later.\n`);
     }
-    return 1;
-  } if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(
-      `Couldn't find nameservers for the domain ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
     return 1;
   } if (error instanceof Errors.DomainNotVerified) {
     output.error(

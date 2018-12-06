@@ -747,50 +747,6 @@ export default class Now extends EventEmitter {
     return body;
   }
 
-  // _ensures_ the domain is setup (idempotent)
-  setupDomain(name, { isExternal } = {}) {
-    const { debug } = this._output;
-
-    return this.retry(async bail => {
-      const res = await this._fetch('/v3/domains', {
-        method: 'POST',
-        body: { name, isExternal: Boolean(isExternal) }
-      });
-
-      const body = await res.json();
-
-      if (res.status === 403) {
-        const code = body.error.code;
-        let err;
-        if (code === 'custom_domain_needs_upgrade') {
-          err = new Error(
-            `Custom domains are only enabled for premium accounts. ${
-              chalk`Please upgrade at {underline https://zeit.co/account}`}`
-          );
-        } else {
-          err = new Error(
-            `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
-          );
-        }
-        return bail(err);
-      } if (res.status === 409) {
-        // Domain already exists
-        debug('Domain already exists (noop)');
-        return { uid: body.error.uid, code: body.error.code };
-      } if (
-        res.status === 401 &&
-        body.error &&
-        body.error.code === 'verification_failed'
-      ) {
-        throw new Error(body.error.message);
-      } else if (res.status !== 200) {
-        throw new Error(body.error.message);
-      }
-
-      return body;
-    });
-  }
-
   createCert(domain, { renew, overwriteCustom } = {}) {
     const { log } = this._output;
 

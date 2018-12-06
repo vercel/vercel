@@ -1,10 +1,10 @@
-//      
+//
 import wait from '../../util/output/wait';
 
-                                                              
+
 import * as Errors from '../../util/errors';
+import setupDomain from '../../util/domains/setup-domain';
 import createCertForAlias from './create-cert-for-alias';
-import setupDomain from './setup-domain';
 
 const NOW_SH_REGEX = /\.now\.sh$/;
 
@@ -13,7 +13,7 @@ async function upsertPathAlias(
   now     ,
   rules            ,
   alias        ,
-  contextName        
+  contextName
 ) {
   let externalDomain = false;
 
@@ -21,7 +21,6 @@ async function upsertPathAlias(
     const domainInfo = await setupDomain(output, now, alias, contextName);
     if (
       domainInfo instanceof Errors.DNSPermissionDenied ||
-      domainInfo instanceof Errors.DomainNameserversNotFound ||
       domainInfo instanceof Errors.DomainNotFound ||
       domainInfo instanceof Errors.DomainNotVerified ||
       domainInfo instanceof Errors.DomainPermissionDenied ||
@@ -72,9 +71,9 @@ async function upsertPathAlias(
         cert instanceof Errors.TooManyRequests
       ) {
         return cert;
-      } 
+      }
         return upsertPathAlias(output, now, rules, alias, contextName);
-      
+
     }
 
     // The alias already exists so we fail in silence returning the id

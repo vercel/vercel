@@ -265,13 +265,6 @@ function handleSetupDomainErrorImpl       (
       )}. If it's an external domain, add it with --external.`
     );
     return 1;
-  } if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(
-      `Couldn't find nameservers for the domain ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
-    return 1;
   } if (error instanceof Errors.UserAborted) {
     output.error(`User aborted`);
     return 1;

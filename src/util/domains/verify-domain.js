@@ -11,29 +11,25 @@ export default async function verifyDomain(now, domain, contextName) {
     return verificationError;
   } catch (error) {
     cancelWait();
+    if (error.code === 'verification_failed') {
+      return new DomainVerificationFailed({
+        domain: error.name,
+        nsVerification: error.nsVerification,
+        txtVerification: error.txtVerification
+      })
+    }
     throw error;
   }
 }
 
 async function performVerifyDomain(now, domain) {
   return retry(
-    async () => {
-      try {
-        return await now.fetch(`/v4/domains/${encodeURIComponent(domain)}/verify`, {
-          body: { domain },
-          method: 'POST'
-        })
-      } catch (error) {
-        if (error.code === 'verification_failed') {
-          return new DomainVerificationFailed({
-            domain: error.name,
-            nsVerification: error.nsVerification,
-            txtVerification: error.txtVerification
-          })
-        }
-        throw error;
-      }
-    },
+    async () => (
+      now.fetch(`/v4/domains/${encodeURIComponent(domain)}/verify`, {
+        body: { domain },
+        method: 'POST'
+      })
+    ),
     { retries: 5, maxTimeout: 8000 }
   );
 }

@@ -1,10 +1,9 @@
-//      
-import stamp from '../../util/output/stamp';
-
-import setDeploymentScale from '../../util/scale/set-deployment-scale';
-import waitForScale from '../../util/scale/wait-verify-deployment-scale';
-                                                   
 import * as Errors from '../../util/errors';
+import isDomainExternal from '../../util/domains/is-domain-external';
+import setDeploymentScale from '../../util/scale/set-deployment-scale';
+import setupDomain from '../../util/domains/setup-domain';
+import stamp from '../../util/output/stamp';
+import waitForScale from '../../util/scale/wait-verify-deployment-scale';
 
 import createAlias from './create-alias';
 import deploymentShouldCopyScale from './deployment-should-copy-scale';
@@ -12,19 +11,10 @@ import deploymentShouldDownscale from './deployment-should-downscale';
 import fetchDeploymentFromAlias from './get-deployment-from-alias';
 import getDeploymentDownscalePresets from './get-deployment-downscale-presets';
 import getPreviousAlias from './get-previous-alias';
-import setupDomain from './setup-domain';
 
-// $FlowFixMe
 const NOW_SH_REGEX = /\.now\.sh$/;
 
-async function assignAlias(
-  output        ,
-  now     ,
-  deployment            ,
-  alias        ,
-  contextName        ,
-  noVerify         
-) {
+async function assignAlias(output, now, deployment, alias, contextName, noVerify) {
   const prevAlias = await getPreviousAlias(output, now, alias);
   let externalDomain = false;
 
@@ -43,9 +33,7 @@ async function assignAlias(
     prevDeployment = null;
   }
 
-  if (
-    prevDeployment instanceof Errors.DeploymentPermissionDenied
-  ) {
+  if (prevDeployment instanceof Errors.DeploymentPermissionDenied) {
     return prevDeployment;
   }
 
@@ -98,15 +86,18 @@ async function assignAlias(
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, now, alias, contextName);
     if (
-      result instanceof Errors.DomainNameserversNotFound ||
+      result instanceof Errors.DomainNotAvailable ||
       result instanceof Errors.DomainNotFound ||
       result instanceof Errors.DomainNotVerified ||
       result instanceof Errors.DomainPermissionDenied ||
+      result instanceof Errors.DomainServiceNotAvailable ||
       result instanceof Errors.DomainVerificationFailed ||
       result instanceof Errors.InvalidCoupon ||
+      result instanceof Errors.InvalidDomain ||
       result instanceof Errors.MissingCreditCard ||
-      result instanceof Errors.CDNNeedsUpgrade ||
       result instanceof Errors.PaymentSourceNotFound ||
+      result instanceof Errors.PremiumDomainForbidden ||
+      result instanceof Errors.UnexpectedDomainPurchaseError ||
       result instanceof Errors.UnsupportedTLD ||
       result instanceof Errors.UsedCoupon ||
       result instanceof Errors.UserAborted
@@ -115,7 +106,7 @@ async function assignAlias(
     }
 
     // Assign if the domain is external to request wildcard or normal certificate
-    externalDomain = result.isExternal;
+    externalDomain = isDomainExternal(result);
   }
 
   // Create the alias and the certificate if it's missing

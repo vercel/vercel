@@ -110,10 +110,10 @@ export class DNSPermissionDenied extends NowError
 }
 
 export class DomainVerificationFailed extends NowError {
-  constructor({ domain, nsVerification, txtVerification }) {
+  constructor({ domain, nsVerification, txtVerification, purchased = false }) {
     super({
       code: 'DOMAIN_VERIFICATION_FAILED',
-      meta: { domain, nsVerification, txtVerification },
+      meta: { domain, nsVerification, txtVerification, purchased },
       message: `We can't verify the domain ${domain}. Both Name Servers and DNS TXT verifications failed.`
     });
   }
@@ -204,19 +204,6 @@ export class CantFindConfig extends NowError
       code: 'CANT_FIND_CONFIG',
       meta: { paths },
       message: `Can't find a configuration file in the given locations.`
-    });
-  }
-}
-
-export class DomainNameserversNotFound extends NowError
-
-
-  {
-  constructor(domain        ) {
-    super({
-      code: 'NAMESERVERS_NOT_FOUND',
-      meta: { domain },
-      message: `Can't get nameservers from ${domain}.`
     });
   }
 }

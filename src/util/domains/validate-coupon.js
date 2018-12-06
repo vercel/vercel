@@ -1,5 +1,3 @@
-//      
-
 import { InvalidCoupon, UsedCoupon } from '../errors';
 import getCouponInfo from './get-coupon-info';
 
