@@ -1,11 +1,9 @@
-//      
 import path from 'path';
-import { NowError } from '../../util/now-error';
-
+import { NowError } from '../../util/now-error.ts';
 import getConfig from './get-config';
 import readPackage from './read-package';
 
-async function getAppName(output        , localConfig         ) {
+export default async function getAppName(output, localConfig) {
   const config = await getConfig(output, localConfig);
 
   // If the name is in the configuration, return it
@@ -27,5 +25,3 @@ async function getAppName(output        , localConfig         ) {
   // Finally fallback to directory
   return path.basename(path.resolve(process.cwd(), localConfig || ''));
 }
-
-export default getAppName;

@@ -1,5 +1,5 @@
 //
-import { NowError } from './now-error';
+import { NowError } from './now-error.ts';
 
 /**
  * General CLI errors
