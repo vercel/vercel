@@ -238,15 +238,20 @@
   dependencies:
     array-from "^2.1.1"
 
+"@types/json5@^0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/json5/-/json5-0.0.29.tgz#ee28707ae94e11d2b827bcbe5270bcea7f3e71ee"
+  integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
+
 "@zeit/dockerignore@0.0.3":
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"
   integrity sha512-tO000RCJxEbRBhQpWEaTF+aAIkMRSuQVnC1g7Y1l/duhxjp6CotepHcUerQBFa5lgjVesh/zlblq2t1GvfAEbQ==
 
-"@zeit/ncc@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.4.1.tgz#d275157024bc306ffd429918dc645a9368c62f68"
-  integrity sha512-8S71zRmnKpup8OjmIhVjN+McQmqCNI1tCjknXyZJriA7ULFr5vCiug5K7pHQlsDf2LgLLciEivJph0XbC0Fq7w==
+"@zeit/ncc@0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.5.0.tgz#4d4d1cf8a8aeb25983839fa5667855fbb992b1d2"
+  integrity sha512-WSUGhm6GZ7t8qaNIiz4cYEanxpLPXPwzfQy0gS1mJ9y5tJDsqqvFGt/3wsUda0VMB90B09TVNsrYsZxJ9wqFtw==
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
@@ -1830,7 +1835,7 @@ debug@^3.0.1, debug@^3.1.0:
   dependencies:
     ms "^2.1.1"
 
-debug@^4.1.0:
+debug@^4.0.1, debug@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.1.0.tgz#373687bffa678b38b1cd91f861b63850035ddc87"
   integrity sha512-heNPJUJIqC+xB6ayLAMHaIrmN9HKa7aQO8MGqKpvCA+uJYVcvR6l5kgdrhRuwPFHU7P5/A1w0BjByPHwpfTDKg==
@@ -1921,6 +1926,11 @@ deep-is@~0.1.3:
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/deep-is/-/deep-is-0.1.3.tgz#b369d6fb5dbc13eecf524f91b070feedc357cf34"
   integrity sha1-s2nW+128E+7PUk+RsHD+7cNXzzQ=
+
+deepmerge@^2.0.1:
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/deepmerge/-/deepmerge-2.2.1.tgz#5d3ff22a01c00f645405a2fbc17d0778a1801170"
+  integrity sha512-R9hc1Xa/NOBi9WRVUWg19rl1UB7Tt4kuPd+thNJgFZoxXsTz7ncaPaeIm+40oSGuP33DfMb4sZt1QIGiJzC4EA==
 
 default-require-extensions@^2.0.0:
   version "2.0.0"
@@ -2215,6 +2225,15 @@ eslint-import-resolver-node@^0.3.1:
   dependencies:
     debug "^2.6.9"
     resolve "^1.5.0"
+
+eslint-import-resolver-typescript@1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/eslint-import-resolver-typescript/-/eslint-import-resolver-typescript-1.1.1.tgz#e6d42172b95144ef16610fe104ef38340edea591"
+  integrity sha512-jqSfumQ+H5y3FUJ6NjRkbOQSUOlbBucGTN3ELymOtcDBbPjVdm/luvJuCfCaIXGh8sEF26ma1qVdtDgl9ndhUg==
+  dependencies:
+    debug "^4.0.1"
+    resolve "^1.4.0"
+    tsconfig-paths "^3.6.0"
 
 eslint-module-utils@^2.2.0:
   version "2.2.0"
@@ -3958,6 +3977,13 @@ json5@^0.5.1:
   resolved "https://registry.yarnpkg.com/json5/-/json5-0.5.1.tgz#1eade7acc012034ad84e2396767ead9fa5495821"
   integrity sha1-Hq3nrMASA0rYTiOWdn6tn6VJWCE=
 
+json5@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/json5/-/json5-1.0.1.tgz#779fb0018604fa854eacbf6252180d83543e3dbe"
+  integrity sha512-aKS4WQjPenRxiQsC93MNfjx+nbF4PAdYzmd/1JIj8HYzqfbu86beTuNgXDzPknWk0n0uARlyewZo4s++ES36Ow==
+  dependencies:
+    minimist "^1.2.0"
+
 jsonfile@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/jsonfile/-/jsonfile-3.0.1.tgz#a5ecc6f65f53f662c4415c7675a0331d0992ec66"
@@ -4239,6 +4265,11 @@ lodash.range@3.2.0:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/lodash.range/-/lodash.range-3.2.0.tgz#f461e588f66683f7eadeade513e38a69a565a15d"
   integrity sha1-9GHliPZmg/fq3q3lE+OKaaVloV0=
+
+lodash.unescape@4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/lodash.unescape/-/lodash.unescape-4.0.1.tgz#bf2249886ce514cda112fae9218cdc065211fc9c"
+  integrity sha1-vyJJiGzlFM2hEvrpIYzcBlIR/Jw=
 
 lodash@^4.17.10, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.3.0:
   version "4.17.11"
@@ -5763,7 +5794,7 @@ resolve@1.6.0:
   dependencies:
     path-parse "^1.0.5"
 
-resolve@^1.5.0, resolve@^1.6.0:
+resolve@^1.4.0, resolve@^1.5.0, resolve@^1.6.0:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.8.1.tgz#82f1ec19a423ac1fbd080b0bab06ba36e84a7a26"
   integrity sha512-AicPrAC7Qu1JxPCZ9ZgCZlY35QgFnNqc+0LtbRNxnVw4TXvjQ72wnuL9JQcEBgXkI9JM8MsT9kaQoHcpCRJOYA==
@@ -6619,6 +6650,17 @@ trim-right@^1.0.1:
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
   integrity sha1-yy4SAwZ+DI3h9hQJS5/kVwTqYAM=
 
+tsconfig-paths@^3.6.0:
+  version "3.7.0"
+  resolved "https://registry.yarnpkg.com/tsconfig-paths/-/tsconfig-paths-3.7.0.tgz#02ae978db447b22e09dafcd4198be95c4885ceb2"
+  integrity sha512-7iE+Q/2E1lgvxD+c0Ot+GFFmgmfIjt/zCayyruXkXQ84BLT85gHXy0WSoQSiuFX9+d+keE/jiON7notV74ZY+A==
+  dependencies:
+    "@types/json5" "^0.0.29"
+    deepmerge "^2.0.1"
+    json5 "^1.0.1"
+    minimist "^1.2.0"
+    strip-bom "^3.0.0"
+
 tunnel-agent@^0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/tunnel-agent/-/tunnel-agent-0.6.0.tgz#27a5dea06b36b04a0a9966774b290868f0fc40fd"
@@ -6647,6 +6689,28 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
+
+typescript-eslint-parser@21.0.2:
+  version "21.0.2"
+  resolved "https://registry.yarnpkg.com/typescript-eslint-parser/-/typescript-eslint-parser-21.0.2.tgz#270af10e4724528677fbcf34ea495284bec3a894"
+  integrity sha512-u+pj4RVJBr4eTzj0n5npoXD/oRthvfUCjSKndhNI714MG0mQq2DJw5WP7qmonRNIFgmZuvdDOH3BHm9iOjIAfg==
+  dependencies:
+    eslint-scope "^4.0.0"
+    eslint-visitor-keys "^1.0.0"
+    typescript-estree "5.3.0"
+
+typescript-estree@5.3.0:
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/typescript-estree/-/typescript-estree-5.3.0.tgz#fb6c977b5e21073eb16cbdc0338a7f752da99ff5"
+  integrity sha512-Vu0KmYdSCkpae+J48wsFC1ti19Hq3Wi/lODUaE+uesc3gzqhWbZ5itWbsjylLVbjNW4K41RqDzSfnaYNbmEiMQ==
+  dependencies:
+    lodash.unescape "4.0.1"
+    semver "5.5.0"
+
+typescript@3.1.1:
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.1.1.tgz#3362ba9dd1e482ebb2355b02dfe8bcd19a2c7c96"
+  integrity sha512-Veu0w4dTc/9wlWNf2jeRInNodKlcdLgemvPsrNpfu5Pq39sgfFjvIIgTsvUHCoLBnMhPoUA+tFxsXjU6VexVRQ==
 
 uglify-js@^3.1.4:
   version "3.4.9"

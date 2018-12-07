@@ -52,6 +52,7 @@
     ]
   },
   "eslintConfig": {
+    "parser": "typescript-eslint-parser",
     "extends": [
       "airbnb",
       "prettier"
@@ -101,7 +102,7 @@
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@zeit/dockerignore": "0.0.3",
-    "@zeit/ncc": "0.4.1",
+    "@zeit/ncc": "0.5.0",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
@@ -115,7 +116,6 @@
     "chalk": "2.3.1",
     "clipboardy": "1.1.4",
     "codecov": "3.1.0",
-    "convert-stream": "1.0.2",
     "credit-card": "3.0.1",
     "date-fns": "1.29.0",
     "death": "1.1.0",
@@ -130,10 +130,10 @@
     "eslint": "5.3.0",
     "eslint-config-airbnb": "17.1.0",
     "eslint-config-prettier": "3.3.0",
+    "eslint-import-resolver-typescript": "1.1.1",
     "eslint-plugin-import": "2.14.0",
     "eslint-plugin-jsx-a11y": "6.1.1",
     "eslint-plugin-react": "7.11.0",
-    "esm": "3.0.84",
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
     "glob": "7.1.2",
@@ -144,7 +144,6 @@
     "jsonlines": "0.1.1",
     "lint-staged": "4.2.3",
     "load-json-file": "3.0.0",
-    "lodash.range": "3.2.0",
     "micro": "9.1.2",
     "mkdirp-promise": "5.0.1",
     "mri": "1.1.0",
@@ -162,16 +161,16 @@
     "qr-image": "3.2.0",
     "read-pkg": "2.0.0",
     "semver": "5.5.0",
-    "single-line-log": "1.1.2",
     "sinon": "4.4.2",
     "strip-ansi": "4.0.0",
     "stripe": "5.1.0",
-    "supports-color": "5.2.0",
     "test-listen": "1.1.0",
     "text-table": "0.2.0",
     "through2": "2.0.3",
     "title": "3.4.0",
     "tmp-promise": "1.0.3",
+    "typescript": "3.1.1",
+    "typescript-eslint-parser": "21.0.2",
     "update-check": "1.5.0",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0"
