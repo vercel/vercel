@@ -8,7 +8,7 @@ import info from '../../util/output/info';
 import error from '../../util/output/error';
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
 
 export default async function({ teams, config, apiUrl, token }) {
   const stopSpinner = wait('Fetching teams');

@@ -1,5 +1,5 @@
 import param from './output/param.ts';
-import getUser from './get-user';
+import getUser from './get-user.ts';
 import NowTeams from './teams';
 
 const loginCommand = param('now login');

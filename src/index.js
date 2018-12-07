@@ -19,7 +19,7 @@ import * as configFiles from './util/config/files';
 import pkg from './util/pkg';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
-import getUser from './util/get-user';
+import getUser from './util/get-user.ts';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
 import { handleError } from './util/error';

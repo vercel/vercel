@@ -12,7 +12,7 @@ import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
 import error from '../../util/output/error';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 

@@ -1,21 +1,18 @@
 import fetch from 'node-fetch';
 import debugFactory from 'debug';
+import { User } from '../types';
+import { InvalidToken, MissingUser } from './errors-ts';
 
 const debug = debugFactory('now:sh:get-user');
 
-const getUser = async ({ apiUrl, token }) => {
-  debug('start');
-  const url = `${apiUrl  }/www/user`;
-
-  const headers = {
-    Authorization: `Bearer ${token}`
-  };
-
+export default async function getUser({ apiUrl, token }: { apiUrl: string, token: string }) {
   debug('GET /www/user');
   let res;
 
   try {
-    res = await fetch(url, { headers });
+    res = await fetch(`${apiUrl  }/www/user`, { headers: {
+      Authorization: `Bearer ${token}`
+    } });
   } catch (err) {
     debug(`error fetching /www/user: $O`, err.stack);
     throw new Error(
@@ -39,23 +36,15 @@ const getUser = async ({ apiUrl, token }) => {
   }
 
   if (body.error && body.error.code === 'forbidden') {
-    const error = new Error('The specified token is not valid');
-    error.code = 'not_authorized';
-    throw error;
+    throw new InvalidToken();
   }
 
-  const { user } = body;
-
+  const { user }: { user?: User } = body;
   if (!user) {
-    const error = new Error('Not able to load user, missing from response');
-    error.code = 'missing_user';
-    throw error;
+    throw new MissingUser();
   }
 
   // this is pretty much useless
   delete user.billingChecked;
-
   return user;
 };
-
-export default getUser;

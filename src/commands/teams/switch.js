@@ -10,7 +10,7 @@ import info from '../../util/output/info';
 import error from '../../util/output/error';
 import param from '../../util/output/param.ts';
 import { writeToConfigFile } from '../../util/config/files';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
 import NowTeams from '../../util/teams';
 
 const updateCurrentTeam = (config, newTeam) => {

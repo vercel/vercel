@@ -3,12 +3,12 @@ import psl from 'psl';
 import * as Errors from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import getBooleanOptionValue from '../../util/get-boolean-option-value';
-import formatNSTable from '../../util/format-ns-table';
-import formatDnsTable from '../../util/format-dns-table';
+import getBooleanOptionValue from '../../util/get-boolean-option-value.ts';
+import formatNSTable from '../../util/format-ns-table.ts';
+import formatDnsTable from '../../util/format-dns-table.ts';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp.ts';
+import cmd from '../../util/output/cmd.ts';
 import Now from '../../util';
 
 export default async function add(ctx, opts, args, output) {
