@@ -46,6 +46,12 @@ const getUser = async ({ apiUrl, token }) => {
 
   const { user } = body;
 
+  if (!user) {
+    const error = new Error('Not able to load user, missing from response');
+    error.code = 'missing_user';
+    throw error;
+  }
+
   // this is pretty much useless
   delete user.billingChecked;
 

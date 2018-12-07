@@ -39,7 +39,7 @@ const retrieveTeam = async (apiUrl, token, debug, currentTeam) => {
     throw err;
   }
 
-  const related = list.find(team => team.id === currentTeam);
+  const related = list && list.find(team => team.id === currentTeam);
 
   if (!related) {
     const cmd = param('now switch');

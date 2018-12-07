@@ -46,6 +46,7 @@ async function readMetaData(
           'but configuration is also present in `now.json`! ' +
           "Please ensure there's a single source of configuration by removing one."
       );
+      err.code = 'config_prop_and_file';
       throw err;
     } else {
       nowConfig = pkg.now;
@@ -100,6 +101,11 @@ async function readMetaData(
       description = pkg.description;
     }
   } else if (type === 'docker') {
+    if (!dockerfile) {
+      const err = new Error('`Dockerfile` missing');
+      throw err;
+    }
+
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
       throw err;
