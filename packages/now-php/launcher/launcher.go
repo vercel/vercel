@@ -43,11 +43,25 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.ParseForm()
-	postMap := make(map[string]string)
 	for k, v := range r.PostForm {
-		postMap[k] = v[len(v) - 1]
+		if (strings.HasSuffix(k, "[]")) {
+			k = strings.TrimSuffix(k, "[]")
+			var i int = 0
+			var sb string = "["
+			for _, s := range v {
+				if i > 0 {
+					sb += ","
+				}
+				sb += strconv.Itoa(i) + "=>'" + s + "'"
+				i += 1
+			}
+			sb += "]"
+			context.Eval("$_POST['" + k + "']=" + sb + ";")
+		} else {
+			var s string = v[len(v) - 1]
+			context.Eval("$_POST['" + k + "']='" + s + "';") // TODO escape quotes
+		}
 	}
-	context.Bind("_POST", postMap)
 
 	envMap := make(map[string]string)
 	for _, e := range os.Environ() {

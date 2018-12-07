@@ -1,8 +1,8 @@
 const assert = require('assert');
 
-module.exports = async ({ deploymentUrl, fetch }) => {
+async function test1 ({ deploymentUrl, fetch }) {
   const resp = await fetch(
-    `https://${deploymentUrl}/index.php?paramA=foo&paramB[]=bar&paramB[]=baz&paramC=bin&paramC=bon`,
+    `https://${deploymentUrl}/index.php?paramA=foo&paramA=bar&paramB[]=bim&paramB[]=bom`,
   );
   assert(resp.status === 200);
   const text = await resp.text();
@@ -10,18 +10,59 @@ module.exports = async ({ deploymentUrl, fetch }) => {
 
   assert.deepEqual(lines, [
     '/var/task/user/index.php',
-    '/index.php?paramB%5B%5D=bar&paramB%5B%5D=baz&paramC=bin&paramC=bon&paramA=foo', // TODO fake news, must be unescaped, also TODO why paramA is last?
+    '/index.php?paramB%5B%5D=bim&paramB%5B%5D=bom&paramA=foo&paramA=bar', // TODO fake news, must be unescaped, also TODO why paramA is last?
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
     'on',
-    'foo',
+    'bar',
     'array(2) {',
     '  [0]=>',
-    '  string(3) "bar"',
+    '  string(3) "bim"',
     '  [1]=>',
-    '  string(3) "baz"',
+    '  string(3) "bom"',
     '}',
-    'bon',
+    '',
+    'NULL',
+    'end',
   ]);
+}
+
+async function test2 ({ deploymentUrl, fetch }) {
+  const resp = await fetch(
+    `https://${deploymentUrl}/index.php`, {
+      method: 'POST',
+      body: 'paramC=foo&paramC=bar&paramD[]=bim&paramD[]=bom',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    }
+  );
+  assert(resp.status === 200);
+  const text = await resp.text();
+  const lines = text.trim().split('\n');
+
+  assert.deepEqual(lines, [
+    '/var/task/user/index.php',
+    '/index.php',
+    deploymentUrl, // example 'test-19phw91ph.now.sh'
+    deploymentUrl, // example 'test-19phw91ph.now.sh'
+    '443',
+    'on',
+    '',
+    'NULL',
+    'bar',
+    'array(2) {',
+    '  [0]=>',
+    '  string(3) "bim"',
+    '  [1]=>',
+    '  string(3) "bom"',
+    '}',
+    'end',
+  ]);
+}
+
+module.exports = async (opts) => {
+  await test1(opts);
+  await test2(opts);
 };
