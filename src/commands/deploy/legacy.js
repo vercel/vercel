@@ -25,7 +25,7 @@ import toHumanPath from '../../util/humanize-path';
 import * as Errors from '../../util/errors';
 import combineAsyncGenerators from '../../util/combine-async-generators';
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/format-dns-table';
+import dnsTable from '../../util/format-dns-table.ts';
 import eventListenerToGenerator from '../../util/event-listener-to-generator';
 import formatLogCmd from '../../util/output/format-log-cmd';
 import formatLogOutput from '../../util/output/format-log-output';

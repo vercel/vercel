@@ -2,8 +2,8 @@ import chalk from 'chalk';
 
 import Now from '../../util';
 import cmd from '../../util/output/cmd.ts';
-import formatDnsTable from '../../util/format-dns-table';
-import formatNSTable from '../../util/format-ns-table';
+import formatDnsTable from '../../util/format-dns-table.ts';
+import formatNSTable from '../../util/format-ns-table.ts';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp.ts';

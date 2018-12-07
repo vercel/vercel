@@ -248,6 +248,11 @@
   resolved "https://registry.yarnpkg.com/@types/ms/-/ms-0.7.30.tgz#f6c38b7ecbbf698b0bbd138315a0f0f18954f85f"
   integrity sha512-OftRLCgAzJP7vmKn9by/GVjnf4hloz/pXNOwPo0vKGAfXI7GqWXJi9N2kRar4cP5s1dGwuwcagWqO6iHBTq1Mg==
 
+"@types/text-table@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@types/text-table/-/text-table-0.2.0.tgz#cec067b522598bbb37186375b834ac30411c9af6"
+  integrity sha512-om4hNWnI01IKUFCjGQG33JqFcnmt0W5C3WX0G1FVBaucr7oRnL29aAz2hnxpbZnE2t9f8/BR5VOtgcOtsonpLA==
+
 "@zeit/dockerignore@0.0.3":
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"

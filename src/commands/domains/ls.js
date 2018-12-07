@@ -8,7 +8,7 @@ import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import stamp from '../../util/output/stamp.ts';
-import strlen from '../../util/strlen';
+import strlen from '../../util/strlen.ts';
 
 async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;

@@ -12,7 +12,7 @@ import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
-import strlen from '../util/strlen';
+import strlen from '../util/strlen.ts';
 import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';

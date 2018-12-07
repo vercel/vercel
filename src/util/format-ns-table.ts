@@ -2,7 +2,11 @@ import chalk from 'chalk';
 import table from 'text-table';
 import strlen from './strlen';
 
-export default function formatNSTable(intendedNameServers, currentNameServers, { extraSpace = '' } = {}) {
+export default function formatNSTable(
+  intendedNameServers: string[],
+  currentNameServers: string[],
+  { extraSpace = '' } = {}
+) {
   const sortedIntended = intendedNameServers.sort();
   const sortedCurrent = currentNameServers.sort();
   const maxLength = Math.max(intendedNameServers.length, currentNameServers.length);
@@ -29,4 +33,3 @@ export default function formatNSTable(intendedNameServers, currentNameServers, {
     }).replace(/^(.*)/gm, `${extraSpace}$1`)
   )
 }
-

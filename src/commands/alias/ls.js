@@ -6,7 +6,7 @@ import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp.ts';
-import strlen from '../../util/strlen';
+import strlen from '../../util/strlen.ts';
 import wait from '../../util/output/wait';
 
 export default async function ls(

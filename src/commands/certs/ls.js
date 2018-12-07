@@ -7,7 +7,7 @@ import Now from '../../util';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp.ts';
 import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
+import strlen from '../../util/strlen.ts';
 
 async function ls(
   ctx,

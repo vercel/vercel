@@ -33,7 +33,7 @@ declare module "psl" {
     domain: string|null,
     subdomain: string|null,
     listed: boolean
-  } | ErrorResult<keyof errorCodes>;
+  }
 
   /**
    * Get the base domain for full domain name

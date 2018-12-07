@@ -102,6 +102,7 @@
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@types/ms": "0.7.30",
+    "@types/text-table": "0.2.0",
     "@zeit/dockerignore": "0.0.3",
     "@zeit/ncc": "0.5.0",
     "@zeit/source-map-support": "0.6.2",

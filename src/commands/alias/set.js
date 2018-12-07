@@ -2,7 +2,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 import * as Errors from '../../util/errors';
 import cmd from '../../util/output/cmd.ts';
-import dnsTable from '../../util/format-dns-table';
+import dnsTable from '../../util/format-dns-table.ts';
 import getScope from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';
 import Now from '../../util';

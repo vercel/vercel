@@ -1,5 +1,3 @@
-function strlen(str) {
+export default function strlen(str: string) {
   return str.replace(/\u001b[^m]*m/g, '').length;
 }
-
-export default strlen;
