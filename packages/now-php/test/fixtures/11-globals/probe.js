@@ -10,6 +10,7 @@ async function test1 ({ deploymentUrl, fetch }) {
 
   assert.deepEqual(lines, [
     '/var/task/user/index.php',
+    'GET',
     '/index.php?paramB%5B%5D=bim&paramB%5B%5D=bom&paramA=foo&paramA=bar', // TODO fake news, must be unescaped, also TODO why paramA is last?
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     deploymentUrl, // example 'test-19phw91ph.now.sh'
@@ -44,6 +45,7 @@ async function test2 ({ deploymentUrl, fetch }) {
 
   assert.deepEqual(lines, [
     '/var/task/user/index.php',
+    'POST',
     '/index.php',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     deploymentUrl, // example 'test-19phw91ph.now.sh'
