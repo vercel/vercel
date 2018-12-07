@@ -6,8 +6,6 @@ const glob = require('@now/build-utils/fs/glob.js');
 const path = require('path');
 const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js');
 
-exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
-
 const writeFile = promisify(fs.writeFile);
 
 exports.build = async ({ files, entrypoint, workPath }) => {
