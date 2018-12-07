@@ -5,10 +5,10 @@ import (
 	"bytes"
 	php "github.com/deuill/go-php"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -21,45 +21,64 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	engine, _ := php.New()
 	context, _ := engine.NewContext()
 
-	var query = r.URL.Query()
-	for k, v := range query {
-		if (strings.HasSuffix(k, "[]")) {
-			k = strings.TrimSuffix(k, "[]")
-			var i int = 0
-			var sb string = "["
+	for k, v := range r.URL.Query() {
+		if strings.HasSuffix(k, "[]") {
+			sb := ""
 			for _, s := range v {
-				if i > 0 {
+				if sb != "" {
 					sb += ","
 				}
-				sb += strconv.Itoa(i) + "=>'" + s + "'"
-				i += 1
+				sb += "'" + s + "'"
 			}
-			sb += "]"
-			context.Eval("$_GET['" + k + "']=" + sb + ";")
+			k = strings.TrimSuffix(k, "[]")
+			context.Eval("$_GET['" + k + "']=Array(" + sb + ");")
 		} else {
-			var s string = v[len(v) - 1]
+			s := v[len(v) - 1]
 			context.Eval("$_GET['" + k + "']='" + s + "';") // TODO escape quotes
 		}
 	}
 
 	r.ParseForm()
 	for k, v := range r.PostForm {
-		if (strings.HasSuffix(k, "[]")) {
-			k = strings.TrimSuffix(k, "[]")
-			var i int = 0
-			var sb string = "["
+		if strings.HasSuffix(k, "[]") {
+			sb := ""
 			for _, s := range v {
-				if i > 0 {
+				if sb != "" {
 					sb += ","
 				}
-				sb += strconv.Itoa(i) + "=>'" + s + "'"
-				i += 1
+				sb += "'" + s + "'"
 			}
-			sb += "]"
-			context.Eval("$_POST['" + k + "']=" + sb + ";")
+			k = strings.TrimSuffix(k, "[]")
+			context.Eval("$_POST['" + k + "']=Array(" + sb + ");")
 		} else {
-			var s string = v[len(v) - 1]
+			s := v[len(v) - 1]
 			context.Eval("$_POST['" + k + "']='" + s + "';") // TODO escape quotes
+		}
+	}
+
+	cookies := r.Cookies()
+	cookieMap := make(map[string]string)
+	for _, c := range cookies {
+		k, _ := url.QueryUnescape(c.Name)
+		s := "'" + c.Value + "'" // TODO escape quotes
+		if strings.HasSuffix(k, "[]") {
+			if value, exists := cookieMap[k]; exists {
+				cookieMap[k] = value + "," + s
+			} else {
+				cookieMap[k] = s
+			}
+		} else {
+			if _, exists := cookieMap[k]; !exists {
+				cookieMap[k] = s
+			}
+		}
+	}
+	for k, v := range cookieMap {
+		if strings.HasSuffix(k, "[]") {
+			k = strings.TrimSuffix(k, "[]")
+			context.Eval("$_COOKIE['" + k + "']=Array(" + v + ");")
+		} else {
+			context.Eval("$_COOKIE['" + k + "']=" + v + ";")
 		}
 	}
 
