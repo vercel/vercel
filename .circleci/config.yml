@@ -64,7 +64,7 @@ jobs:
           at: .
       - run:
           name: Running Unit Tests
-          command: yarn test-unit && yarn coverage
+          command: yarn test-unit && yarn coverage && echo `git describe --tags`
 
   test-integration:
     macos:
