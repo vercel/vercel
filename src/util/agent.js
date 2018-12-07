@@ -4,6 +4,7 @@ import { parse } from 'url';
 import http from 'http';
 import https from 'https';
 import { JsonBody, StreamBody, context } from 'fetch-h2';
+import nodeFetch from 'node-fetch';
 
 // Packages
 import Sema from 'async-sema';
@@ -68,6 +69,13 @@ export default class Agent {
   }
 
   async fetch(path, opts = {}) {
+    if (path.includes('/deployments')) {
+      opts.body = JSON.stringify(opts.body)
+      const url = `http://localhost:3000${path}`
+      console.log('xxxx', url)
+      return nodeFetch(url, opts)
+    }
+
     const { debug } = this._output;
     await this._sema.v();
 
