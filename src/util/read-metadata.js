@@ -100,6 +100,11 @@ async function readMetaData(
       description = pkg.description;
     }
   } else if (type === 'docker') {
+    if (!dockerfile) {
+      const err = new Error('`Dockerfile` missing');
+      throw err;
+    }
+
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
       throw err;
