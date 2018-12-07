@@ -101,7 +101,7 @@
   "devDependencies": {
     "@sentry/node": "4.3.0",
     "@zeit/dockerignore": "0.0.3",
-    "@zeit/ncc": "0.1.18",
+    "@zeit/ncc": "0.5.0",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
