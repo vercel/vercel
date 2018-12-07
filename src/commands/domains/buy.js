@@ -3,7 +3,7 @@ import psl from 'psl';
 
 import * as Errors from '../../util/errors';
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';

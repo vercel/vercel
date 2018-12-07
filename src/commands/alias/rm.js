@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp.ts';

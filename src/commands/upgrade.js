@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import createOutput from '../util/output';
-import cmd from '../util/output/cmd';
+import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
 import { handleError } from '../util/error';
 import getScope from '../util/get-scope';

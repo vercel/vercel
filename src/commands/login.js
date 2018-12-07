@@ -14,7 +14,7 @@ import wait from '../util/output/wait';
 import highlight from '../util/output/highlight';
 import info from '../util/output/info';
 import ok from '../util/output/ok';
-import cmd from '../util/output/cmd';
+import cmd from '../util/output/cmd.ts';
 import ready from '../util/output/ready';
 import param from '../util/output/param';
 import eraseLines from '../util/output/erase-lines';

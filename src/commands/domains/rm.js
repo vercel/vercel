@@ -4,7 +4,7 @@ import plural from 'pluralize';
 import table from 'text-table';
 
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp.ts';
 import deleteCertById from '../../util/certs/delete-cert-by-id';

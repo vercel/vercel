@@ -13,7 +13,7 @@ import Progress from 'progress';
 import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
 import checkPath from '../../util/check-path';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import exit from '../../util/exit';
 import logo from '../../util/output/logo';
 import Now from '../../util';

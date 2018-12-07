@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';

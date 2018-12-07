@@ -1,7 +1,7 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import * as Errors from '../../util/errors';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import dnsTable from '../../util/format-dns-table';
 import getScope from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';

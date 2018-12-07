@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
 import wait from '../../util/output/wait';
 import fatalError from '../../util/fatal-error';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
 import param from '../../util/output/param';

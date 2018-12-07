@@ -13,7 +13,7 @@ import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles }
 import Agent from './agent';
 import ua from './ua';
 import hash from './hash';
-import cmd from './output/cmd';
+import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
 import { responseError } from './error';
