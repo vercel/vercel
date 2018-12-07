@@ -549,6 +549,7 @@ async function sync({
     }
 
     if (!meta) {
+      try {
       ({
         meta,
         deploymentName,
@@ -560,10 +561,19 @@ async function sync({
         deploymentType,
         sessionAffinity
       ));
+      } catch (err) {
+        if (err.code === 'config_prop_and_file') {
+          error(err.message);
+          return 1;
+        }
+
+        throw err;
+      }
     }
 
     const nowConfig = meta.nowConfig || {};
     const scaleFromConfig = getScaleFromConfig(nowConfig);
+
     let scale = {};
     let dcIds;
 

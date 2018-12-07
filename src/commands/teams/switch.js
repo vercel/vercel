@@ -48,6 +48,13 @@ export default async function({ apiUrl, token, debug, args, config }) {
     };
   } else {
     currentTeam = list.find(team => team.id === currentTeam);
+
+    if (!currentTeam) {
+      console.error(
+        error(`You are not a part of the current team anymore`)
+      );
+      return 1;
+    }
   }
 
   if (args.length !== 0) {
