@@ -46,6 +46,7 @@ async function readMetaData(
           'but configuration is also present in `now.json`! ' +
           "Please ensure there's a single source of configuration by removing one."
       );
+      err.code = 'config_prop_and_file';
       throw err;
     } else {
       nowConfig = pkg.now;
