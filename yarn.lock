@@ -243,10 +243,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"
   integrity sha512-tO000RCJxEbRBhQpWEaTF+aAIkMRSuQVnC1g7Y1l/duhxjp6CotepHcUerQBFa5lgjVesh/zlblq2t1GvfAEbQ==
 
-"@zeit/ncc@0.1.18":
-  version "0.1.18"
-  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.1.18.tgz#5c8e5be91a9a0c7215f5ce0c983a9d52a42dc899"
-  integrity sha512-ymWv9m/E22loFWXV+7MY/fxREbD3J3ksxqJCkAQ1Po4tJTt/lx7zGRnVxvILWs7T/K2OEj7v7x704zBnOSDnUQ==
+"@zeit/ncc@0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.5.0.tgz#4d4d1cf8a8aeb25983839fa5667855fbb992b1d2"
+  integrity sha512-WSUGhm6GZ7t8qaNIiz4cYEanxpLPXPwzfQy0gS1mJ9y5tJDsqqvFGt/3wsUda0VMB90B09TVNsrYsZxJ9wqFtw==
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
@@ -4505,9 +4505,9 @@ minipass@^2.2.1, minipass@^2.3.4:
     yallist "^3.0.0"
 
 minizlib@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/minizlib/-/minizlib-1.1.1.tgz#6734acc045a46e61d596a43bb9d9cd326e19cc42"
-  integrity sha512-TrfjCjk4jLhcJyGMYymBH6oTXcWjYbUAXTHDbtnWHjZC25h0cdajHuPE1zxb4DVmu8crfh+HwH/WMuyLG0nHBg==
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/minizlib/-/minizlib-1.2.1.tgz#dd27ea6136243c7c880684e8672bb3a45fd9b614"
+  integrity sha512-7+4oTUOWKg7AuL3vloEWekXY2/D20cevzsrNT2kGWm+39J9hGTCBv8VI5Pm5lXZ/o3/mdR4f8rflAPhnQb8mPA==
   dependencies:
     minipass "^2.2.1"
 
