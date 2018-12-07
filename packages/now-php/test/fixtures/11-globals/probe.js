@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-async function test1 ({ deploymentUrl, fetch }) {
+async function test1({ deploymentUrl, fetch }) {
   const resp = await fetch(
     `https://${deploymentUrl}/index.php?paramA=foo&paramA=bar&paramB[]=bim&paramB[]=bom`,
   );
@@ -29,15 +29,15 @@ async function test1 ({ deploymentUrl, fetch }) {
   ]);
 }
 
-async function test2 ({ deploymentUrl, fetch }) {
+async function test2({ deploymentUrl, fetch }) {
   const resp = await fetch(
     `https://${deploymentUrl}/index.php`, {
       method: 'POST',
       body: 'paramC=foo&paramC=bar&paramD[]=bim&paramD[]=bom',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    }
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    },
   );
   assert(resp.status === 200);
   const text = await resp.text();
