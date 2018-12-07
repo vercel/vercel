@@ -40,6 +40,7 @@ import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
 import parseMeta from '../../util/parse-meta';
+import getProjectName from '../../util/get-project-name';
 
 const mriOpts = {
   string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
@@ -789,6 +790,7 @@ async function sync({
     let syncCount;
 
     try {
+      meta.project = getProjectName({argv, nowConfig, isFile, paths});
       // $FlowFixMe
       const createArgs = Object.assign(
         {

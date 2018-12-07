@@ -24,6 +24,7 @@ import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
+import getProjectName from '../../util/get-project-name';
 
 export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
@@ -357,7 +358,7 @@ export const pipe = async function main(
       },
       {
         name: argv['--name'] || localConfig.name || filesName,
-        project: argv['--project'] || localConfig.project || filesName
+        project: getProjectName({argv, nowConfig: localConfig, isFile, paths})
       }
     );
 
