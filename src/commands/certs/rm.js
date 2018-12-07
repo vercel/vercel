@@ -39,7 +39,6 @@ async function rm(
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
 
   if (args.length !== 1) {
@@ -54,6 +53,7 @@ async function rm(
 
   const idOrCn = args[0];
   const certs = await getCertsToDelete(output, now, idOrCn);
+
   if (certs.length === 0) {
     output.error(
       `No certificates found by id or cn "${idOrCn}" under ${chalk.bold(
@@ -69,6 +69,7 @@ async function rm(
     'The following certificates will be removed permanently',
     certs
   );
+
   if (!yes) {
     now.close();
     return 0;
@@ -117,7 +118,7 @@ function readConfirmation(output, msg, certs) {
 function formatCertRow(cert) {
   return [
     cert.uid,
-    chalk.bold(cert.cns.join(', ')),
+    chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
     chalk.gray(`${ms(new Date() - new Date(cert.created))  } ago`)
   ];
 }

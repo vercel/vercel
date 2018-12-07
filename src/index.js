@@ -500,7 +500,7 @@ const main = async argv_ => {
         return 1;
       }
 
-      const related = list.find(item => item.id === team || item.slug === team);
+      const related = list && list.find(item => item.id === team || item.slug === team);
 
       if (!related) {
         console.error(
