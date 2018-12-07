@@ -16,7 +16,7 @@ COPY ./utils/bridge.go /root/go/app/utils/bridge.go
 COPY ./launcher.go /root/go/app/launcher.go
 COPY ./php.ini /root/go/app/php.ini
 COPY ./test.go /root/go/app/test.go
-COPY ./test.php /root/go/app/public/test.php
+COPY ./test.php /root/go/app/test.php
 COPY ./test.sh /root/go/app/test.sh
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -o launcher launcher.go
