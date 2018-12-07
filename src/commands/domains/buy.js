@@ -7,7 +7,7 @@ import cmd from '../../util/output/cmd.ts';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
+import param from '../../util/output/param.ts';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp.ts';

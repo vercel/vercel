@@ -9,7 +9,7 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
-import param from './util/output/param';
+import param from './util/output/param.ts';
 import info from './util/output/info';
 import getNowDir from './util/config/global-path';
 import { getDefaultConfig, getDefaultAuthConfig } from './util/config/get-default';

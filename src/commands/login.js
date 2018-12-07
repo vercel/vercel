@@ -16,7 +16,7 @@ import info from '../util/output/info';
 import ok from '../util/output/ok';
 import cmd from '../util/output/cmd.ts';
 import ready from '../util/output/ready';
-import param from '../util/output/param';
+import param from '../util/output/param.ts';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';

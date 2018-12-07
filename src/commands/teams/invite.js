@@ -5,7 +5,7 @@ import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
-import param from '../../util/output/param';
+import param from '../../util/output/param.ts';
 import chars from '../../util/output/chars';
 import rightPad from '../../util/output/right-pad';
 import textInput from '../../util/input/text';

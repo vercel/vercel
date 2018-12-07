@@ -8,7 +8,7 @@ import listInput from '../../util/input/list';
 import success from '../../util/output/success';
 import info from '../../util/output/info';
 import error from '../../util/output/error';
-import param from '../../util/output/param';
+import param from '../../util/output/param.ts';
 import { writeToConfigFile } from '../../util/config/files';
 import getUser from '../../util/get-user';
 import NowTeams from '../../util/teams';

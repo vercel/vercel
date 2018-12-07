@@ -1,6 +1,6 @@
+import param from './output/param.ts';
 import getUser from './get-user';
 import NowTeams from './teams';
-import param from './output/param';
 
 const loginCommand = param('now login');
 const TokenError = new Error(

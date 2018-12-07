@@ -6,7 +6,7 @@ import getScope from '../../util/get-scope';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
-import param from '../../util/output/param';
+import param from '../../util/output/param.ts';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
