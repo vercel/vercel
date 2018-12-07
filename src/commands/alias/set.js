@@ -6,7 +6,7 @@ import dnsTable from '../../util/format-dns-table';
 import getScope from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import zeitWorldTable from '../../util/zeit-world-table';
 import assignAlias from './assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';

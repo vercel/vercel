@@ -10,7 +10,7 @@ import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import wait from '../../util/output/wait';
 
 export default async function buy(ctx, opts, args, output) {

@@ -6,7 +6,7 @@ import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import verifyDomain from '../../util/domains/verify-domain';
 import { DomainVerificationFailed, DomainNotFound, DomainPermissionDenied } from '../../util/errors';
 

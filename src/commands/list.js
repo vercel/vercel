@@ -10,7 +10,7 @@ import createOutput from '../util/output';
 import { handleError } from '../util/error';
 import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
 import strlen from '../util/strlen';
 import getScope from '../util/get-scope';

@@ -7,7 +7,7 @@ import Now from '../../util';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import isDomainExternal from '../../util/domains/is-domain-external';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen';
 
 async function ls(ctx, opts, args, output) {

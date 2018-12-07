@@ -1,6 +1,6 @@
 //      
 import joinWords from '../../util/output/join-words';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import wait from '../../util/output/wait';
 import * as Errors from '../../util/errors';
 

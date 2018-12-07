@@ -36,7 +36,7 @@ import joinWords from '../../util/output/join-words';
 import normalizeRegionsList from '../../util/scale/normalize-regions-list';
 import raceAsyncGenerators from '../../util/race-async-generators';
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import zeitWorldTable from '../../util/zeit-world-table';
 import parseMeta from '../../util/parse-meta';

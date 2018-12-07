@@ -3,7 +3,7 @@ import plural from 'pluralize';
 import chars from '../output/chars';
 import { VerifyScaleTimeout } from "../errors";
 import joinWords from '../output/join-words';
-import stamp from '../output/stamp';
+import stamp from '../output/stamp.ts';
 import wait from '../output/wait';
 import verifyDeploymentScale from './verify-deployment-scale';
 

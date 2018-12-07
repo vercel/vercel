@@ -6,7 +6,7 @@ import table from 'text-table';
 import Now from '../../util';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';

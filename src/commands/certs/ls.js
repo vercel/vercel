@@ -5,7 +5,7 @@ import psl from 'psl';
 import table from 'text-table';
 import Now from '../../util';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
 

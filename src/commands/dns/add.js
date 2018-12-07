@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import Now from '../../util';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
 

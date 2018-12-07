@@ -4,7 +4,7 @@ import wait from '../../util/output/wait';
 import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd';
 import info from '../../util/output/info';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import param from '../../util/output/param';
 import chars from '../../util/output/chars';
 import rightPad from '../../util/output/right-pad';

@@ -9,7 +9,7 @@ import createOutput from '../util/output';
 import wait from '../util/output/wait';
 import logo from '../util/output/logo';
 import cmd from '../util/output/cmd';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
 import getScope from '../util/get-scope';
 

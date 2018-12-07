@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import Now from '../util';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import { maybeURL, normalizeURL, parseInstanceURL } from '../util/url';
 import printEvents from '../util/events';
 import wait from '../util/output/wait';

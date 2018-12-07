@@ -5,7 +5,7 @@ import table from 'text-table';
 import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen';
 import wait from '../../util/output/wait';
 

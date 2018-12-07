@@ -7,7 +7,7 @@ import getDomainPrice from './get-domain-price';
 import getDomainStatus from './get-domain-status';
 import promptBool from '../input/prompt-bool';
 import purchaseDomain from './purchase-domain';
-import stamp from '../output/stamp';
+import stamp from '../output/stamp.ts';
 import wait from '../output/wait';
 
 const isTTY = process.stdout.isTTY;

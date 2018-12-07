@@ -243,6 +243,11 @@
   resolved "https://registry.yarnpkg.com/@types/json5/-/json5-0.0.29.tgz#ee28707ae94e11d2b827bcbe5270bcea7f3e71ee"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
 
+"@types/ms@0.7.30":
+  version "0.7.30"
+  resolved "https://registry.yarnpkg.com/@types/ms/-/ms-0.7.30.tgz#f6c38b7ecbbf698b0bbd138315a0f0f18954f85f"
+  integrity sha512-OftRLCgAzJP7vmKn9by/GVjnf4hloz/pXNOwPo0vKGAfXI7GqWXJi9N2kRar4cP5s1dGwuwcagWqO6iHBTq1Mg==
+
 "@zeit/dockerignore@0.0.3":
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"

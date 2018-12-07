@@ -7,7 +7,7 @@ import dnsTable from '../../util/format-dns-table';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import finishCertOrder from '../../util/certs/finish-cert-order';

@@ -12,7 +12,7 @@ import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';

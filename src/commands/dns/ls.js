@@ -5,7 +5,7 @@ import Now from '../../util';
 import getScope from '../../util/get-scope';
 import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import formatTable from '../../util/format-table';
 import { DomainNotFound } from '../../util/errors';
 

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import info from '../../util/output/info';
 import error from '../../util/output/error';
 import wait from '../../util/output/wait';

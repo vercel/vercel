@@ -7,7 +7,7 @@ import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';
 import getScope from '../../util/get-scope';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 
 async function rm(
   ctx,

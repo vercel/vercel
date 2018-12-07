@@ -6,7 +6,7 @@ import cmd from '../util/output/cmd';
 import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
 import { handleError } from '../util/error';
 import strlen from '../util/strlen';

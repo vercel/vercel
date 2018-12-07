@@ -2,7 +2,7 @@ import * as Errors from '../../util/errors';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import setDeploymentScale from '../../util/scale/set-deployment-scale';
 import setupDomain from '../../util/domains/setup-domain';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import waitForScale from '../../util/scale/wait-verify-deployment-scale';
 
 import createAlias from './create-alias';
