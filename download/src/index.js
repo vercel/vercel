@@ -1,35 +1,22 @@
 /* eslint-disable unicorn/no-process-exit */
 
-// Native
 import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import zlib from 'zlib'
-
-// Packages
 import onDeath from 'death'
 import fetch from 'node-fetch'
 import retry from 'async-retry'
 import which from 'which-promise'
 import readPkg from 'read-pkg'
-
-// Utilities
 import plusxSync from './chmod'
-import {
-  disableProgress,
-  enableProgress,
-  info,
-  showProgress,
-  warn
-} from './log'
+import {disableProgress, enableProgress, info, showProgress, warn}  from './log'
+import packageJSON from '../../package'
 
 fetch.Promise = Promise
 global.Promise = Promise
 let { platform } = process
 if (detectAlpine()) platform = 'alpine'
-
-const packageDir = path.join(__dirname, '..', '..')
-const packageJSON = readPkg.sync(packageDir)
 
 const now = path.join(__dirname, 'now')
 const targetWin32 = path.join(__dirname, 'now.exe')
