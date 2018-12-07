@@ -3,6 +3,10 @@
     "strict": true,
     "moduleResolution": "node",
     "module": "CommonJS",
-     "target": "ES2017"
+    "target": "ES2017",
+    "esModuleInterop": true,
+    "typeRoots": [
+      "./@types"
+    ]
   }
 }
