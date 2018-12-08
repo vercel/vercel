@@ -1,30 +1,40 @@
-// Native
-import { parse } from 'url';
-
-import http from 'http';
-import https from 'https';
+import { Agent as HttpAgent } from 'http';
+import { Agent as HttpsAgent } from 'https';
 import { JsonBody, StreamBody, context } from 'fetch-h2';
-
-// Packages
+import { parse } from 'url';
 import Sema from 'async-sema';
-
-import createOutput from './output';
+import createOutput, { Output } from './output/create-output';
 
 const MAX_REQUESTS_PER_CONNECTION = 1000;
 
+type CurrentContext = ReturnType<typeof context> & {
+  fetchesMade: number,
+  ongoingFetches: number
+}
+
+export interface AgentFetchOptions {
+  agent?: HttpsAgent | HttpAgent,
+  body?: NodeJS.ReadableStream | JsonBody | StreamBody
+  headers: {[key: string]: string},
+}
+
 /**
- * Returns a `fetch` version with a similar
- * API to the browser's configured with a
- * HTTP2 agent.
- *
- * It encodes `body` automatically as JSON.
+ * Returns a `fetch` version with a similar API to the browser's configured with a
+ * HTTP2 agent. It encodes `body` automatically as JSON.
  *
  * @param {String} host
  * @return {Function} fetch
  */
+export default class NowAgent {
+  _agent: HttpAgent | HttpsAgent | null = null;
+  _contexts: ReturnType<typeof context>[];
+  _currContext: CurrentContext;
+  _output: Output;
+  _protocol?: string;
+  _sema: Sema;
+  _url: string;
 
-export default class Agent {
-  constructor(url, { tls = true, debug } = {}) {
+  constructor(url: string, { tls = true, debug = false } = {}) {
     // We use multiple contexts because each context represent one connection
     // With nginx, we're limited to 1000 requests before a connection is closed
     // http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests
@@ -32,12 +42,14 @@ export default class Agent {
     // we start up a new connection, and re-route all future traffic through the new connection
     // and when the final request from the old connection resolves, we auto-close the old connection
     this._contexts = [context()];
-    this._currContext = this._contexts[0];
-    this._currContext.fetchesMade = 0;
-    this._currContext.ongoingFetches = 0;
+    this._currContext = {
+      ...this._contexts[0],
+      fetchesMade: 0,
+      ongoingFetches: 0
+    }
 
-    this._url = url;
     const parsed = parse(url);
+    this._url = url;
     this._protocol = parsed.protocol;
     this._sema = new Sema(20);
     this._output = createOutput({ debug });
@@ -47,37 +59,39 @@ export default class Agent {
   }
 
   _initAgent() {
-    const module = this._protocol === 'https:' ? https : http;
-    this._agent = new module.Agent({
+    const _Agent = this._protocol === 'https:' ? HttpsAgent : HttpAgent;
+    this._agent = new _Agent({
       keepAlive: true,
       keepAliveMsecs: 10000,
       maxSockets: 8
-    }).on('error', err => this._onError(err, this._agent));
+    })
+
+    // We are ignoring this error because agent implements an EventEmitter
+    // but it doesn't appear in hte definition
+    // @ts-ignore
+    this._agent.on('error', error => this._onError(error, this._agent));
   }
 
-  _onError(err, agent) {
+  _onError(error: Error, agent: HttpAgent | HttpsAgent) {
     const { debug } = this._output;
-    debug(`Agent connection error ${err}\n${err.stack}`);
+    debug(`Agent connection error ${error}\n${error.stack}`);
     if (this._agent === agent) {
       this._agent = null;
     }
   }
 
-  setConcurrency({ maxStreams, capacity }) {
+  setConcurrency({ maxStreams, capacity }: { maxStreams: number, capacity: number }) {
     this._sema = new Sema(maxStreams || 20, { capacity });
   }
 
-  async fetch(path, opts = {}) {
+  async fetch(path: string, opts: AgentFetchOptions) {
+    console.log(opts)
     const { debug } = this._output;
-    await this._sema.v();
-
-    let currentContext;
-
+    await this._sema.acquire();
+    let currentContext: CurrentContext;
     this._currContext.fetchesMade++;
     if (this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
-      const ctx = context();
-      ctx.fetchesMade = 1;
-      ctx.ongoingFetches = 0;
+      const ctx = { ...context(), fetchesMade: 1, ongoingFetches: 0 }
       this._contexts.push(ctx);
       this._currContext = ctx;
     }
@@ -106,20 +120,16 @@ export default class Agent {
       opts.agent = this._agent;
     }
 
-    if (body && typeof body === 'object' && typeof body.pipe !== 'function') {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = new JsonBody(body);
+    if (body && typeof body === 'object') {
+      if (typeof (<NodeJS.ReadableStream>body).pipe === 'function') {
+        opts.body = new StreamBody(<NodeJS.ReadableStream>body);
+      } else {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = new JsonBody(body);
+      }
     }
 
-    if (
-      body &&
-      typeof body === 'object' &&
-      typeof body.pipe === 'function'
-    ) {
-      opts.body = new StreamBody(body);
-    }
-
-    const handleCompleted = async res => {
+    const handleCompleted = async <T>(res: T) => {
       currentContext.ongoingFetches--;
       if (
         currentContext !== this._currContext &&
@@ -136,7 +146,7 @@ export default class Agent {
         currentContext.disconnect(this._url);
       }
 
-      this._sema.p();
+      this._sema.release();
       return res;
     };
 
@@ -144,9 +154,9 @@ export default class Agent {
     opts.headers.host = this._url.replace(/^https?:\/\//, '');
     return currentContext
       .fetch(this._url + path, opts)
-      .then(res => handleCompleted(res) || res)
-      .catch(err => {
-        handleCompleted();
+      .then((res) => handleCompleted(res))
+      .catch((err: Error) => {
+        handleCompleted(null);
         throw err;
       });
   }

@@ -10,7 +10,7 @@ import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
 import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
-import Agent from './agent';
+import Agent from './agent.ts';
 import ua from './ua';
 import hash from './hash';
 import cmd from './output/cmd.ts';
