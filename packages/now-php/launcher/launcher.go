@@ -60,7 +60,8 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cookieMap := make(map[string]string)
 	for _, c := range cookies {
 		k, _ := url.QueryUnescape(c.Name)
-		s := "'" + c.Value + "'" // TODO escape quotes
+		v, _ := url.QueryUnescape(c.Value)
+		s := "'" + v + "'" // TODO escape quotes
 		if strings.HasSuffix(k, "[]") {
 			if value, exists := cookieMap[k]; exists {
 				cookieMap[k] = value + "," + s

@@ -73,7 +73,7 @@ async function test3({ deploymentUrl, fetch }) {
     `https://${deploymentUrl}/index.php`, {
       method: 'GET',
       headers: {
-        Cookie: 'cookie1=foo; cookie1=bar; ' + escape('cookie2[]') + '=dim; ' + escape('cookie2[]') + '=dom',
+        Cookie: `cookie1=foo; cookie1=${escape('bar|bar')}; ${escape('cookie2[]')}=dim; ${escape('cookie2[]')}=${escape('dom|dom')}`,
       },
     },
   );
@@ -98,7 +98,7 @@ async function test3({ deploymentUrl, fetch }) {
     '  [0]=>',
     '  string(3) "dim"',
     '  [1]=>',
-    '  string(3) "dom"',
+    '  string(7) "dom|dom"',
     '}',
     'end',
   ]);
