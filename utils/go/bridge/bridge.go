@@ -96,7 +96,15 @@ func Serve(handler http.Handler, req *Request) (res Response, err error) {
 	headers := make(map[string]string)
 	for k, v := range w.headers {
 		for _, s := range v {
-			headers[k] = s
+			if value, exists := headers[k]; exists {
+				if strings.ToLower(k) == "set-cookie" {
+					headers[k] = value + ", " + s
+				} else {
+					headers[k] = s
+				}
+			} else {
+				headers[k] = s
+			}
 		}
 	}
 
