@@ -32,9 +32,11 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			k = strings.TrimSuffix(k, "[]")
 			context.Eval("$_GET['" + k + "']=Array(" + sb + ");")
+			context.Eval("$_REQUEST['" + k + "']=Array(" + sb + ");")
 		} else {
 			s := v[len(v) - 1]
 			context.Eval("$_GET['" + k + "']='" + s + "';") // TODO escape quotes
+			context.Eval("$_REQUEST['" + k + "']='" + s + "';") // TODO escape quotes
 		}
 	}
 
@@ -50,9 +52,11 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			k = strings.TrimSuffix(k, "[]")
 			context.Eval("$_POST['" + k + "']=Array(" + sb + ");")
+			context.Eval("$_REQUEST['" + k + "']=Array(" + sb + ");")
 		} else {
 			s := v[len(v) - 1]
 			context.Eval("$_POST['" + k + "']='" + s + "';") // TODO escape quotes
+			context.Eval("$_REQUEST['" + k + "']='" + s + "';") // TODO escape quotes
 		}
 	}
 
