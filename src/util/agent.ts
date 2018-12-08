@@ -13,10 +13,9 @@ type CurrentContext = ReturnType<typeof context> & {
 }
 
 export interface AgentFetchOptions {
-  agent?: HttpsAgent | HttpAgent,
-  body?: NodeJS.ReadableStream | JsonBody | StreamBody | string,
-  headers: {[key: string]: string},
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+  body?: NodeJS.ReadableStream | string,
+  headers: {[key: string]: string},
 }
 
 /**
@@ -115,17 +114,13 @@ export default class NowAgent {
       this._initAgent();
     }
 
-    const { body } = opts;
-    if (this._agent) {
-      opts.agent = this._agent;
-    }
-
-    if (body && typeof body === 'object') {
-      if (typeof (<NodeJS.ReadableStream>body).pipe === 'function') {
-        opts.body = new StreamBody(<NodeJS.ReadableStream>body);
+    let body: JsonBody | StreamBody | string | undefined;
+    if (opts.body && typeof opts.body === 'object') {
+      if (typeof (<NodeJS.ReadableStream>opts.body).pipe === 'function') {
+        body = new StreamBody(<NodeJS.ReadableStream>opts.body);
       } else {
         opts.headers['Content-Type'] = 'application/json';
-        opts.body = new JsonBody(body);
+        body = new JsonBody(opts.body);
       }
     }
 
@@ -153,7 +148,7 @@ export default class NowAgent {
     // We have to set the `host` manually when using http2
     opts.headers.host = this._url.replace(/^https?:\/\//, '');
     return currentContext
-      .fetch(this._url + path, opts)
+      .fetch(this._url + path, {...opts, body})
       .then((res) => handleCompleted(res))
       .catch((err: Error) => {
         handleCompleted(null);
