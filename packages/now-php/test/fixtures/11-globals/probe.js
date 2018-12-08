@@ -13,6 +13,7 @@ async function test1({ deploymentUrl, fetch }) {
     'GET',
     '/index.php?get1=foo&get1=bar&get2%5B%5D=bim&get2%5B%5D=bom', // TODO fake news, must be unescaped
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
     'on',
@@ -50,6 +51,7 @@ async function test2({ deploymentUrl, fetch }) {
     'POST',
     '/index.php',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
     'on',
@@ -86,6 +88,7 @@ async function test3({ deploymentUrl, fetch }) {
     'GET',
     '/index.php',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
     'on',
