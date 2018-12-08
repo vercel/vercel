@@ -16,7 +16,7 @@ import { getDefaultConfig, getDefaultAuthConfig } from './util/config/get-defaul
 import hp from './util/humanize-path';
 import commands from './commands';
 import * as configFiles from './util/config/files';
-import pkg from './util/pkg';
+import pkg from './util/pkg.ts';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
 import getUser from './util/get-user.ts';

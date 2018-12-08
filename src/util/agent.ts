@@ -14,8 +14,9 @@ type CurrentContext = ReturnType<typeof context> & {
 
 export interface AgentFetchOptions {
   agent?: HttpsAgent | HttpAgent,
-  body?: NodeJS.ReadableStream | JsonBody | StreamBody
+  body?: NodeJS.ReadableStream | JsonBody | StreamBody | string,
   headers: {[key: string]: string},
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
 }
 
 /**
@@ -85,7 +86,6 @@ export default class NowAgent {
   }
 
   async fetch(path: string, opts: AgentFetchOptions) {
-    console.log(opts)
     const { debug } = this._output;
     await this._sema.acquire();
     let currentContext: CurrentContext;

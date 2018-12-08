@@ -1,4 +1,39 @@
 import { NowError } from './now-error';
+import { Response } from 'fetch-h2';
+
+/**
+ * This error is thrown when there is an API error with a payload. The error
+ * body includes the data that came in the payload plus status and a server
+ * message. When it's a rate limit error in includes `retryAfter`
+ */
+export class APIError extends Error {
+  status: number;
+  serverMessage: string;
+  retryAfter?: number;
+
+  constructor(message: string, response: Response, body?: object) {
+    super();
+    this.message = `${message} (${response.status})`;
+    this.status = response.status;
+    this.serverMessage = message;
+
+    if (body) {
+      for (const field of Object.keys(body)) {
+        if (field !== 'message') {
+          // @ts-ignore
+          this[field] = body[field];
+        }
+      }
+    }
+
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter) {
+        this.retryAfter = parseInt(retryAfter, 10);
+      }
+    }
+  }
+}
 
 /**
  * When you're passing two different options in the cli that exclude each

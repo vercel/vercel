@@ -7,7 +7,7 @@ import ms from 'ms';
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import mri from 'mri';
-import ua from '../util/ua';
+import ua from '../util/ua.ts';
 import error from '../util/output/error';
 import aborted from '../util/output/aborted';
 import wait from '../util/output/wait';

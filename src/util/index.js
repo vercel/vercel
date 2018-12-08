@@ -11,7 +11,7 @@ import { createReadStream, promises } from 'fs';
 import ms from 'ms';
 import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
 import Agent from './agent.ts';
-import ua from './ua';
+import ua from './ua.ts';
 import hash from './hash';
 import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
