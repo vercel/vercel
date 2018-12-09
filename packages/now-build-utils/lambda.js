@@ -1,4 +1,5 @@
 const assert = require('assert');
+const Sema = require('async-sema');
 const { ZipFile } = require('yazl');
 const streamToBuffer = require('./fs/stream-to-buffer.js');
 
@@ -14,6 +15,7 @@ class Lambda {
   }
 }
 
+const sema = new Sema(10);
 const mtime = new Date(1540000000000);
 
 async function createLambda({
@@ -23,24 +25,30 @@ async function createLambda({
   assert(typeof handler === 'string', '"handler" is not a string');
   assert(typeof runtime === 'string', '"runtime" is not a string');
   assert(typeof environment === 'object', '"environment" is not an object');
-  const zipFile = new ZipFile();
 
-  Object.keys(files)
-    .sort()
-    .forEach((name) => {
-      const file = files[name];
-      const stream = file.toStream();
-      zipFile.addReadStream(stream, name, { mode: file.mode, mtime });
+  await sema.acquire();
+  try {
+    const zipFile = new ZipFile();
+
+    Object.keys(files)
+      .sort()
+      .forEach((name) => {
+        const file = files[name];
+        const stream = file.toStream();
+        zipFile.addReadStream(stream, name, { mode: file.mode, mtime });
+      });
+
+    zipFile.end();
+    const zipBuffer = await streamToBuffer(zipFile.outputStream);
+    return new Lambda({
+      zipBuffer,
+      handler,
+      runtime,
+      environment,
     });
-
-  zipFile.end();
-  const zipBuffer = await streamToBuffer(zipFile.outputStream);
-  return new Lambda({
-    zipBuffer,
-    handler,
-    runtime,
-    environment,
-  });
+  } finally {
+    sema.release();
+  }
 }
 
 module.exports = {

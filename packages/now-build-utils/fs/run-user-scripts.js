@@ -35,7 +35,7 @@ async function scanParentDirs(destPath, scriptName) {
       // eslint-disable-next-line no-await-in-loop
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath));
       hasScript = Boolean(
-        packageJson.scripts && packageJson.scripts[scriptName],
+        packageJson.scripts && scriptName && packageJson.scripts[scriptName],
       );
       // eslint-disable-next-line no-await-in-loop
       hasPackageLockJson = await fs.exists(
