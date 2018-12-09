@@ -26,6 +26,11 @@
       "src/*"
     ]
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
   "lint-staged": {
     "*.js": [
       "yarn test-lint",
@@ -136,12 +141,13 @@
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
     "glob": "7.1.2",
+    "husky": "^1.2.0",
     "ignore": "3.3.5",
     "ini": "1.3.4",
     "inquirer": "3.3.0",
     "is-url": "1.2.2",
     "jsonlines": "0.1.1",
-    "lint-staged": "4.2.3",
+    "lint-staged": "^4.2.3",
     "load-json-file": "3.0.0",
     "lodash.range": "3.2.0",
     "micro": "9.1.2",
