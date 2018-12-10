@@ -80,6 +80,7 @@ export default class Dev {
         // Track targets (string) to artifacts (lambda/fileref) from their builders
         for (const [target, artifact] of Object.entries(builderArtifacts)) {
           this.artifacts.set(target, artifact);
+          this.output.log(`Built ${chalk.dim(target)}`);
         }
       }
     }
