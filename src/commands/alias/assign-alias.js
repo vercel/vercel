@@ -92,14 +92,11 @@ async function assignAlias(output, now, deployment, alias, contextName, noVerify
       result instanceof Errors.DomainPermissionDenied ||
       result instanceof Errors.DomainServiceNotAvailable ||
       result instanceof Errors.DomainVerificationFailed ||
-      result instanceof Errors.InvalidCoupon ||
       result instanceof Errors.InvalidDomain ||
       result instanceof Errors.MissingCreditCard ||
       result instanceof Errors.PaymentSourceNotFound ||
-      result instanceof Errors.PremiumDomainForbidden ||
       result instanceof Errors.UnexpectedDomainPurchaseError ||
       result instanceof Errors.UnsupportedTLD ||
-      result instanceof Errors.UsedCoupon ||
       result instanceof Errors.UserAborted
     ) {
       return result;

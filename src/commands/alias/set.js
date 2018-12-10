@@ -271,10 +271,6 @@ function handleSetupDomainErrorImpl(output, error) {
     output.error(`You should buy the domain before aliasing.`);
     return 1;
   }
-  if (error instanceof Errors.InvalidCoupon) {
-    output.error(`The provided coupon ${error.meta.coupon} is invalid.`);
-    return 1;
-  }
   if (error instanceof Errors.MissingCreditCard) {
     output.print(
       'You have no credit cards on file. Please add one to purchase the domain.'
@@ -285,10 +281,6 @@ function handleSetupDomainErrorImpl(output, error) {
     output.error(
       `The TLD for domain name ${error.meta.name} is not supported.`
     );
-    return 1;
-  }
-  if (error instanceof Errors.UsedCoupon) {
-    output.error(`The provided coupon ${error.meta.coupon} can't be used.`);
     return 1;
   }
   return error;

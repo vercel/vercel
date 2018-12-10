@@ -1,20 +1,25 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import * as Errors from '../../util/errors';
-import Now from '../../util';
-import cmd from '../../util/output/cmd.ts';
+import { NowContext } from '../../types';
+import { Output } from '../../util/output';
+import * as ERRORS from '../../util/errors-ts';
+import Client from '../../util/client';
+import cmd from '../../util/output/cmd';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import param from '../../util/output/param.ts';
+import getScope from '../../util/get-scope';
+import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
-import stamp from '../../util/output/stamp.ts';
+import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
 
-export default async function buy(ctx, opts, args, output) {
+type Options = {
+  '--debug': boolean,
+}
+
+export default async function buy(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -33,10 +38,7 @@ export default async function buy(ctx, opts, args, output) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug, currentTeam });
-  const coupon = opts['--coupon'];
-  const domainName = args[0];
-
+  const [domainName] = args;
   if (!domainName) {
     output.error(`Missing domain name. Run ${cmd('now domains --help')}`);
     return 1;
@@ -51,31 +53,13 @@ export default async function buy(ctx, opts, args, output) {
   }
 
   const availableStamp = stamp();
-  const domainPrice = await getDomainPrice(now, domainName, coupon);
-  if (domainPrice instanceof Errors.InvalidCoupon) {
-    output.error(`The coupon ${param(coupon)} is not valid.`);
-    return 1;
-  }
-
-  if (domainPrice instanceof Errors.UsedCoupon) {
-    output.error(`The coupon ${param(coupon)} has already been used.`);
-    return 1;
-  }
-
-  if (domainPrice instanceof Errors.UnsupportedTLD) {
+  const domainPrice = await getDomainPrice(client, domainName);
+  if (domainPrice instanceof ERRORS.UnsupportedTLD) {
     output.error(`The TLD for ${param(domainName)} is not supported.`);
     return 1;
   }
 
-  if (domainPrice instanceof Errors.MissingCreditCard) {
-    output.print(
-      'You have no credit cards on file. Please add one in order to claim your free domain'
-    );
-    output.print(`Your card will ${chalk.bold('not')} be charged`);
-    return 1;
-  }
-
-  if (!(await getDomainStatus(now, domainName)).available) {
+  if (!(await getDomainStatus(client, domainName)).available) {
     output.error(
       `The domain ${param(domainName)} is ${chalk.underline(
         'unavailable'
@@ -102,51 +86,41 @@ export default async function buy(ctx, opts, args, output) {
 
   const purchaseStamp = stamp();
   const stopPurchaseSpinner = wait('Purchasing');
-  const buyResult = await purchaseDomain(
-    output,
-    now,
-    domainName,
-    coupon,
-    price
-  );
+  const buyResult = await purchaseDomain(client, domainName, price);
   stopPurchaseSpinner();
 
-  if (buyResult instanceof Errors.InvalidDomain) {
+  if (buyResult instanceof ERRORS.InvalidDomain) {
     output.error(`The domain ${buyResult.meta.domain} is not valid.`);
     return 1;
   }
 
-  if (buyResult instanceof Errors.DomainNotAvailable) {
+  if (buyResult instanceof ERRORS.DomainNotAvailable) {
     output.error(`The domain ${buyResult.meta.domain} is not available.`);
     return 1;
   }
 
-  if (buyResult instanceof Errors.DomainServiceNotAvailable) {
+  if (buyResult instanceof ERRORS.DomainServiceNotAvailable) {
     output.error(
       `The domain purchase service is not available. Please try again later.`
     );
     return 1;
   }
 
-  if (buyResult instanceof Errors.UnexpectedDomainPurchaseError) {
+  if (buyResult instanceof ERRORS.UnexpectedDomainPurchaseError) {
     output.error(`An unexpected error happened while performing the purchase.`);
     return 1;
   }
 
-  if (buyResult instanceof Errors.PremiumDomainForbidden) {
-    output.error(`A coupon cannot be used to register a premium domain.`);
-    return 1;
+  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} purchased ${purchaseStamp()}`);
+  if (!buyResult.verified) {
+    output.note(`Your domain is not fully configured yet so it may appear as not verified.`);
+    output.print(`  It might take a few minutes, but you will get an email as soon as it is ready.\n`)
+  } else {
+    output.note(
+      `You may now use your domain as an alias to your deployments. Run ${cmd(
+        'now alias --help'
+      )}`
+    );
   }
-
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} purchased ${purchaseStamp()}`
-  );
-  output.note(
-    `You may now use your domain as an alias to your deployments. Run ${cmd(
-      'now alias --help'
-    )}`
-  );
   return 0;
 }

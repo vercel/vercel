@@ -516,28 +516,6 @@ export class NotSupportedMinScaleSlots extends NowError
   }
 }
 
-export class InvalidCoupon extends NowError
-
-
-  {
-  constructor(coupon        ) {
-    super({
-      code: 'INVALID_COUPON',
-      meta: { coupon },
-      message: `The coupon ${coupon} is invalid.`
-    });
-  }
-}
-
-export class UsedCoupon extends NowError                                    {
-  constructor(coupon        ) {
-    super({
-      code: 'USED_COUPON',
-      meta: { coupon },
-      message: `The coupon ${coupon} is already used.`
-    });
-  }
-}
 
 export class UnsupportedTLD extends NowError
 
@@ -607,19 +585,6 @@ export class UnexpectedDomainPurchaseError extends NowError
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: {},
       message: `An unexpected error happened while purchasing.`
-    });
-  }
-}
-
-export class PremiumDomainForbidden extends NowError
-
-
-  {
-  constructor() {
-    super({
-      code: 'PREMIUM_DOMAIN_FORBIDDEN',
-      meta: {},
-      message: `A coupon cannot be used to register a premium domain.`
     });
   }
 }

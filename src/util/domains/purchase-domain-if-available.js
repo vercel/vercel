@@ -27,8 +27,6 @@ async function purchaseDomainIfAvailable(output, now, domain, contextName) {
     const domainPrice = await getDomainPrice(now, domain);
     cancelWait();
     if (
-      domainPrice instanceof Errors.InvalidCoupon ||
-      domainPrice instanceof Errors.UsedCoupon ||
       domainPrice instanceof Errors.UnsupportedTLD ||
       domainPrice instanceof Errors.MissingCreditCard
     ) {
@@ -60,7 +58,6 @@ async function purchaseDomainIfAvailable(output, now, domain, contextName) {
       result instanceof Errors.DomainServiceNotAvailable ||
       result instanceof Errors.InvalidDomain ||
       result instanceof Errors.PaymentSourceNotFound ||
-      result instanceof Errors.PremiumDomainForbidden ||
       result instanceof Errors.UnexpectedDomainPurchaseError
     ) {
       return result;

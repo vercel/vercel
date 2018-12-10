@@ -25,12 +25,10 @@ async function upsertPathAlias(
       domainInfo instanceof Errors.DomainNotVerified ||
       domainInfo instanceof Errors.DomainPermissionDenied ||
       domainInfo instanceof Errors.DomainVerificationFailed ||
-      domainInfo instanceof Errors.InvalidCoupon ||
       domainInfo instanceof Errors.MissingCreditCard ||
       domainInfo instanceof Errors.CDNNeedsUpgrade ||
       domainInfo instanceof Errors.PaymentSourceNotFound ||
       domainInfo instanceof Errors.UnsupportedTLD ||
-      domainInfo instanceof Errors.UsedCoupon ||
       domainInfo instanceof Errors.UserAborted
     ) {
       return domainInfo;

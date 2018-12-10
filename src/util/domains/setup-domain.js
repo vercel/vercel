@@ -37,14 +37,11 @@ export default async function setupDomain(output, now, alias, contextName) {
     purchased instanceof Errors.DomainNotAvailable ||
     purchased instanceof Errors.DomainNotFound ||
     purchased instanceof Errors.DomainServiceNotAvailable ||
-    purchased instanceof Errors.InvalidCoupon ||
     purchased instanceof Errors.InvalidDomain ||
     purchased instanceof Errors.MissingCreditCard ||
     purchased instanceof Errors.PaymentSourceNotFound ||
-    purchased instanceof Errors.PremiumDomainForbidden ||
     purchased instanceof Errors.UnexpectedDomainPurchaseError ||
     purchased instanceof Errors.UnsupportedTLD ||
-    purchased instanceof Errors.UsedCoupon ||
     purchased instanceof Errors.UserAborted
   ) {
     output.debug(`The domain wasn't purchased`);

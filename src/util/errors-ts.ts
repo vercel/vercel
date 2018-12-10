@@ -199,3 +199,58 @@ export class InvalidDomain extends NowError<{ domain: string }> {
     });
   }
 }
+
+/**
+ * Returned when the user checks the price of a domain but the TLD
+ * of the given name is not supported.
+ */
+export class UnsupportedTLD extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'UNSUPPORTED_TLD',
+      meta: { domain },
+      message: `The TLD for domain name ${domain} is not supported.`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to purchase a domain but the API returns
+ * an error telling that it is not available.
+ */
+export class DomainNotAvailable extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_AVAILABLE',
+      meta: { domain },
+      message: `The domain ${domain} is not available to be purchased.`
+    });
+  }
+}
+
+/**
+ * Returned when the domain purchase service is not available for reasons
+ * that are out of our control.
+ */
+export class DomainServiceNotAvailable extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
+      meta: { domain },
+      message: `The domain purchase is unavailable, try again later.`
+    });
+  }
+}
+
+/**
+ * Returned when there is an expected error during the domain purchase.
+ */
+export class UnexpectedDomainPurchaseError extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
+      meta: { domain },
+      message: `An unexpected error happened while purchasing.`
+    });
+  }
+}

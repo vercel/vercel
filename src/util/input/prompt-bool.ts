@@ -1,8 +1,18 @@
 import chalk from 'chalk';
 
-export default (
-  label,
-  {
+type Options = {
+  abortSequences?: Set<string>,
+  defaultValue?: boolean,
+  noChar?: string,
+  resolveChars?: Set<string>,
+  stdin?: NodeJS.ReadStream,
+  stdout?: NodeJS.WriteStream,
+  trailing?: string,
+  yesChar?: string,
+}
+
+export default async function promptBool(label: string, options: Options = {}) {
+  const {
     defaultValue = false,
     abortSequences = new Set(['\u0003']),
     resolveChars = new Set(['\r']),
@@ -11,9 +21,10 @@ export default (
     stdin = process.stdin,
     stdout = process.stdout,
     trailing = ''
-  } = {}
-) => new Promise(resolve => {
-    const isRaw = stdin.isRaw;
+  } = options;
+
+  return new Promise(resolve => {
+    const isRaw = Boolean(stdin.isRaw);
 
     if (stdin.setRawMode) {
       stdin.setRawMode(true);
@@ -32,9 +43,8 @@ export default (
       stdin.removeListener('data', onData);
     }
 
-    function onData(buffer) {
+    function onData(buffer: Buffer) {
       const data = buffer.toString();
-
       if (data[0].toLowerCase() === yesChar) {
         restore();
         stdout.write(`\n`);
@@ -62,3 +72,4 @@ export default (
     stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `);
     stdin.on('data', onData);
   });
+}

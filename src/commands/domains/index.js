@@ -76,9 +76,7 @@ export default async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--cdn': Boolean,
-      '--no-cdn': Boolean,
-      '--coupon': String,
-      '-c': '--coupon',
+      '--no-cdn': Boolean
     });
   } catch (error) {
     handleError(error);
