@@ -47,6 +47,14 @@ export default class Client extends EventEmitter {
     this._agent = new Agent(apiUrl, { debug });
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;
+
+    const closeAgent = () => {
+      this._agent.close();
+      process.removeListener('nowExit', closeAgent);
+    };
+
+    // @ts-ignore
+    process.on('nowExit', closeAgent);
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -87,7 +95,7 @@ export default class Client extends EventEmitter {
     );
   }
 
-  async fetch<T>(url: string, opts: FetchOptions = {}) {
+  async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
       if (res.ok) {
@@ -114,5 +122,9 @@ export default class Client extends EventEmitter {
 
   _onRetry(error: Error) {
     this._output.debug(`Retrying: ${error}\n${error.stack}`);
+  }
+
+  close() {
+    this._agent.close();
   }
 }
