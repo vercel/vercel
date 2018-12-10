@@ -49,7 +49,7 @@ _lambda_runtime_next() {
 	local exit_code=0
 	REQUEST="$event"
 
-	# Stdin of the `serve` function is the HTTP request body.
+	# Stdin of the `handler` function is the HTTP request body.
 	# Need to use a fifo here instead of bash <() because Lambda
 	# errors with "/dev/fd/63 not found" for some reason :/
 	local stdin
@@ -57,7 +57,7 @@ _lambda_runtime_next() {
 	mkfifo "$stdin"
 	_lambda_runtime_body "$event" > "$stdin" &
 
-	serve "$event" < "$stdin" > "$body" || exit_code="$?"
+	handler "$event" < "$stdin" > "$body" || exit_code="$?"
 	rm -f "$event" "$stdin"
 
 	if [ "$exit_code" -eq 0 ]; then
