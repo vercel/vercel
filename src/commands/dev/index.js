@@ -27,7 +27,6 @@ module.exports = async function main(ctx) {
 
   await dev.createWorkspace();
   await dev.installBuilders();
-  await dev.build();
   await dev.listen(process.env.PORT || 3000);
 };
 

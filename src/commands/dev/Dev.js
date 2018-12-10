@@ -120,6 +120,9 @@ export default class Dev {
   }
 
   async handle(req, res) {
+    // This will be painfully slow until builders optimize
+    await this.build();
+
     const FileBlob = this.require('@now/build-utils/file-blob');
 
     // When no routes are defined, we default to 1-to-1 mappings
@@ -292,23 +295,18 @@ export default class Dev {
       }
 
       return async event => {
-        // Store it so we can disconnect when replaced
-        if (!childProcesses.has(handler)) {
-          childProcesses.set(
-            handler,
-            fork(launcherFile, [], {
-              cwd: this.workspace.path,
-              env: {
-                ...environment,
-                NODE_ENV: 'development',
-                PORT: await this.findNewPort(),
-              },
-              execArgv: [],
-            })
-          );
-        }
+        const child = fork(launcherFile, [], {
+          cwd: this.workspace.path,
+          env: {
+            ...environment,
+            NODE_ENV: 'development',
+            PORT: await this.findNewPort(),
+          },
+          execArgv: [],
+        });
 
-        const child = childProcesses.get(handler);
+        // Store it so we can disconnect when replaced
+        childProcesses.set(handler, child);
 
         return new Promise(resolve => {
           child.send(event);
