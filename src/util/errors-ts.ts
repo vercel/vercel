@@ -1,5 +1,6 @@
 import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
+import param from './output/param';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -32,6 +33,23 @@ export class APIError extends Error {
         this.retryAfter = parseInt(retryAfter, 10);
       }
     }
+  }
+}
+
+/**
+ * When you're fetching information for the current team but the client can't
+ * retrieve information. This means that the team was probably deleted or the
+ * member removed.
+ */
+export class TeamDeleted extends NowError<{}> {
+  constructor() {
+    super({
+      code: 'team_deleted',
+      message: `Your team was deleted. You can switch to a different one using ${param(
+        'now switch'
+      )}.`,
+      meta: {}
+    });
   }
 }
 
