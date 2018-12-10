@@ -30,11 +30,10 @@ async function nowDeploy (bodies, randomness) {
   console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
-    const json = await filePost(
+    await filePost(
       bodies[filename],
       digestOfFile(bodies[filename])
     );
-    if (json.error) throw new Error(json.error.message);
   }
 
   let deploymentId;
@@ -80,9 +79,12 @@ async function filePost (body, digest) {
     headers,
     body
   });
-
   const json = await resp.json();
-  if (json.error) console.log('headers', resp.headers);
+
+  if (json.error) {
+    console.log('headers', resp.headers);
+    throw new Error(json.error.message);
+  }
   return json;
 }
 
@@ -92,7 +94,11 @@ async function deploymentPost (payload) {
     body: JSON.stringify(payload)
   });
   const json = await resp.json();
-  if (json.error) throw new Error(json.error.message);
+
+  if (json.error) {
+    console.log('headers', resp.headers);
+    throw new Error(json.error.message);
+  }
   return json;
 }
 
