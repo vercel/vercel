@@ -6,7 +6,8 @@ import Now from '../../util';
 import cmd from '../../util/output/cmd.ts';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import param from '../../util/output/param.ts';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
@@ -18,16 +19,11 @@ export default async function buy(ctx, opts, args, output) {
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -48,7 +44,9 @@ export default async function buy(ctx, opts, args, output) {
 
   const { domain: rootDomain, subdomain } = psl.parse(domainName);
   if (subdomain || !rootDomain) {
-    output.error(`Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`);
+    output.error(
+      `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
+    );
     return 1;
   }
 
@@ -70,7 +68,9 @@ export default async function buy(ctx, opts, args, output) {
   }
 
   if (domainPrice instanceof Errors.MissingCreditCard) {
-    output.print('You have no credit cards on file. Please add one in order to claim your free domain');
+    output.print(
+      'You have no credit cards on file. Please add one in order to claim your free domain'
+    );
     output.print(`Your card will ${chalk.bold('not')} be charged`);
     return 1;
   }
@@ -102,7 +102,13 @@ export default async function buy(ctx, opts, args, output) {
 
   const purchaseStamp = stamp();
   const stopPurchaseSpinner = wait('Purchasing');
-  const buyResult = await purchaseDomain(output, now, domainName, coupon, price);
+  const buyResult = await purchaseDomain(
+    output,
+    now,
+    domainName,
+    coupon,
+    price
+  );
   stopPurchaseSpinner();
 
   if (buyResult instanceof Errors.InvalidDomain) {
@@ -116,7 +122,9 @@ export default async function buy(ctx, opts, args, output) {
   }
 
   if (buyResult instanceof Errors.DomainServiceNotAvailable) {
-    output.error(`The domain purchase service is not available. Please try again later.`);
+    output.error(
+      `The domain purchase service is not available. Please try again later.`
+    );
     return 1;
   }
 
@@ -130,7 +138,15 @@ export default async function buy(ctx, opts, args, output) {
     return 1;
   }
 
-  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} purchased ${purchaseStamp()}`);
-  output.note(`You may now use your domain as an alias to your deployments. Run ${cmd('now alias --help')}`);
+  console.log(
+    `${chalk.cyan('> Success!')} Domain ${param(
+      domainName
+    )} purchased ${purchaseStamp()}`
+  );
+  output.note(
+    `You may now use your domain as an alias to your deployments. Run ${cmd(
+      'now alias --help'
+    )}`
+  );
   return 0;
 }

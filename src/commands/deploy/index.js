@@ -2,7 +2,8 @@ import { resolve, basename, parse } from 'path';
 import { promises as fs } from 'fs';
 import * as latest from './latest';
 import * as legacy from './legacy';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -11,7 +12,7 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 
-export default async (ctx            ) => {
+export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
   const combinedArgs = Object.assign({}, legacy.args, latest.args);
 
@@ -78,14 +79,14 @@ export default async (ctx            ) => {
   const isFile = Object.keys(stats).length === 1 && stats[paths[0]].isFile();
 
   if (authConfig && authConfig.token) {
+    const client = new Client({
+      apiUrl,
+      token: authConfig.token,
+      currentTeam,
+      debug: false
+    });
     try {
-      ({ contextName, platformVersion } = await getScope({
-        apiUrl,
-        token: authConfig.token,
-        debug: false,
-        currentTeam,
-        includePlatformVersion: true
-      }));
+      ({ contextName, platformVersion } = await getScope(client));
     } catch (err) {
       if (err.code === 'not_authorized') {
         output.error(err.message);
@@ -136,10 +137,12 @@ export default async (ctx            ) => {
 
   if (versionFlag) {
     if (versionFlag !== 1 && versionFlag !== 2) {
-        output.error(
-          `The ${param('--platform-version')} option must be either ${code('1')} or ${code('2')}.`
-        );
-        return 1;
+      output.error(
+        `The ${param('--platform-version')} option must be either ${code(
+          '1'
+        )} or ${code('2')}.`
+      );
+      return 1;
     }
 
     platformVersion = versionFlag;

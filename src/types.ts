@@ -1,3 +1,12 @@
+type Billing = {
+  addons: string[];
+  cancelation?: number;
+  period: { start: number; end: number };
+  plan: string;
+  platform: string;
+  trial: { start: number; end: number };
+};
+
 export type User = {
   uid: string;
   avatar: string;
@@ -8,14 +17,7 @@ export type User = {
   username: string;
   website?: string;
   billingChecked: boolean;
-  billing: {
-    addons: string[];
-    cancelation?: number;
-    period: { start: number; end: number };
-    plan: string;
-    platform: string;
-    trial: { start: number; end: number };
-  };
+  billing: Billing;
   github?: {
     email: string;
     installation: {
@@ -26,4 +28,16 @@ export type User = {
     login: string;
     updatedAt: number;
   };
+};
+
+export type Team = {
+  id: string;
+  avatar?: string;
+  billing: Billing;
+  created: string;
+  creatorId: string;
+  membership: { uid: string; role: 'MEMBER' | 'OWNER'; created: number };
+  name: string;
+  platformVersion: number;
+  slug: string;
 };

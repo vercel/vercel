@@ -8,9 +8,10 @@ import logo from '../util/output/logo';
 import stamp from '../util/output/stamp.ts';
 
 import * as Errors from '../util/errors';
-import Now from "../util";
+import Now from '../util';
 import getArgs from '../util/get-args';
-import getScope from '../util/get-scope';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 import getDCsFromArgs from '../util/scale/get-dcs-from-args';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 import getDeploymentByIdOrThrow from '../util/deploy/get-deployment-by-id-or-throw';
@@ -18,7 +19,6 @@ import getMaxFromArgs from '../util/scale/get-max-from-args';
 import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
-
 
 import { handleError } from '../util/error';
 import { VerifyScaleTimeout } from '../util/errors';
@@ -70,8 +70,8 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx            )                  {
-  let argv                 ;
+export default async function main(ctx) {
+  let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -98,16 +98,11 @@ export default async function main(ctx            )                  {
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const output = createOutput({ debug });
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -147,7 +142,8 @@ export default async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
+  }
+  if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
     output.error(
       `The value "${dcs.meta
         .regionOrDC}" is not a valid region or DC identifier`
@@ -174,14 +170,16 @@ export default async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } if (max instanceof Errors.InvalidArgsForMinMaxScale) {
+  }
+  if (max instanceof Errors.InvalidArgsForMinMaxScale) {
     output.error(
       `Invalid number of arguments: expected <min> ("${max.meta
         .min}") and [max]`
     );
     now.close();
     return 1;
-  } if (max instanceof Errors.InvalidMaxForScale) {
+  }
+  if (max instanceof Errors.InvalidMaxForScale) {
     output.error(
       `Invalid <max> parameter "${max.meta
         .value}". A number or "auto" were expected`
@@ -201,7 +199,8 @@ export default async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } if (deployment instanceof Errors.DeploymentNotFound) {
+  }
+  if (deployment instanceof Errors.DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${argv._[1]}" in ${chalk.bold(contextName)}`
     );
@@ -216,17 +215,19 @@ export default async function main(ctx            )                  {
     output.error('Scaling rules cannot be set on static deployments');
     now.close();
     return 1;
-  } if (deployment.state === 'ERROR') {
+  }
+  if (deployment.state === 'ERROR') {
     output.error('Cannot scale a deployment in the ERROR state');
     now.close();
     return 1;
-  } if (deployment.version === 2) {
+  }
+  if (deployment.version === 2) {
     output.error('Cannot scale a deployment containing builds');
     now.close();
     return 1;
   }
 
-  const scaleArgs                      = dcs.reduce(
+  const scaleArgs = dcs.reduce(
     (result, dc) => ({ ...result, [dc]: { min, max } }),
     {}
   );
@@ -250,18 +251,21 @@ export default async function main(ctx            )                  {
     );
     now.close();
     return 1;
-  } if (result instanceof Errors.ForbiddenScaleMaxInstances) {
+  }
+  if (result instanceof Errors.ForbiddenScaleMaxInstances) {
     output.error(
       `You can't scale to more than ${result.meta
         .max} max instances with your current plan.`
     );
     now.close();
     return 1;
-  } if (result instanceof Errors.InvalidScaleMinMaxRelation) {
+  }
+  if (result instanceof Errors.InvalidScaleMinMaxRelation) {
     output.error(`Min number of instances can't be higher than max.`);
     now.close();
     return 1;
-  } if (result instanceof Errors.NotSupportedMinScaleSlots) {
+  }
+  if (result instanceof Errors.NotSupportedMinScaleSlots) {
     output.error(
       `Cloud v2 does not yet support setting a non-zero min number of instances.`
     );
@@ -310,4 +314,4 @@ export default async function main(ctx            )                  {
 
   now.close();
   return 0;
-};
+}

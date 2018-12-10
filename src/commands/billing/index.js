@@ -12,7 +12,8 @@ import info from '../../util/output/info';
 import logo from '../../util/output/logo';
 import addBilling from './add';
 import exit from '../../util/exit';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
 
 const help = () => {
@@ -83,7 +84,7 @@ export default async ctx => {
 function buildInquirerChoices(cards) {
   return cards.sources.map(source => {
     const _default =
-      source.id === cards.defaultSource ? ` ${  chalk.bold('(default)')}` : '';
+      source.id === cards.defaultSource ? ` ${chalk.bold('(default)')}` : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
     const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
       source.card.last4}`;
@@ -105,16 +106,11 @@ async function run({ token, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
   const output = createOutput({ debug });
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -142,7 +138,7 @@ async function run({ token, config: { currentTeam } }) {
         .map(source => {
           const _default =
             source.id === cards.defaultSource
-              ? ` ${  chalk.bold('(default)')}`
+              ? ` ${chalk.bold('(default)')}`
               : '';
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`

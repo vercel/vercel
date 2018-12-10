@@ -5,7 +5,8 @@ import { handleDomainConfigurationError } from '../../util/error-handlers';
 import * as Errors from '../../util/errors';
 import dnsTable from '../../util/format-dns-table.ts';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
@@ -13,12 +14,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import startCertOrder from '../../util/certs/start-cert-order';
 
-export default async function issue(
-  ctx,
-  opts,
-  args,
-  output
-) {
+export default async function issue(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -34,16 +30,16 @@ export default async function issue(
     '--key': keyPath,
     '--ca': caPath
   } = opts;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -83,7 +79,8 @@ export default async function issue(
         `The provided certificate is not valid and cannot be added.`
       );
       return 1;
-    } if (cert instanceof Errors.DomainPermissionDenied) {
+    }
+    if (cert instanceof Errors.DomainPermissionDenied) {
       output.error(
         `You do not have permissions over domain ${chalk.underline(
           cert.meta.domain
@@ -145,7 +142,7 @@ export default async function issue(
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n\n`);
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
       output.log(
         `Alternatively, you can solve DNS challenges manually after running:\n`
       );
@@ -157,7 +154,8 @@ export default async function issue(
       );
     }
     return 1;
-  } if (cert instanceof Errors.TooManyRequests) {
+  }
+  if (cert instanceof Errors.TooManyRequests) {
     output.error(
       `Too many requests detected for ${cert.meta
         .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
@@ -165,38 +163,45 @@ export default async function issue(
       })}.`
     );
     return 1;
-  } if (cert instanceof Errors.TooManyCertificates) {
+  }
+  if (cert instanceof Errors.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } if (cert instanceof Errors.DomainValidationRunning) {
+  }
+  if (cert instanceof Errors.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         cert.meta.domain
       )}. Please wait for it to complete.`
     );
     return 1;
-  } if (cert instanceof Errors.DomainConfigurationError) {
+  }
+  if (cert instanceof Errors.DomainConfigurationError) {
     handleDomainConfigurationError(output, cert);
     return 1;
-  } if (cert instanceof Errors.CantGenerateWildcardCert) {
+  }
+  if (cert instanceof Errors.CantGenerateWildcardCert) {
     return runStartOrder(output, now, cns, contextName, addStamp, {
       fallingBack: true
     });
-  } if (cert instanceof Errors.DomainsShouldShareRoot) {
+  }
+  if (cert instanceof Errors.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
-  } if (cert instanceof Errors.InvalidWildcardDomain) {
+  }
+  if (cert instanceof Errors.InvalidWildcardDomain) {
     output.error(
       `Invalid domain ${chalk.underline(
         cert.meta.domain
       )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
-  } if (cert instanceof Errors.DomainPermissionDenied) {
+  }
+  if (cert instanceof Errors.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
         cert.meta.domain
@@ -214,12 +219,12 @@ export default async function issue(
 }
 
 async function runStartOrder(
-  output        ,
-  now     ,
-  cns          ,
-  contextName        ,
-  stamp              ,
-  { fallingBack = false }                           = {}
+  output,
+  now,
+  cns,
+  contextName,
+  stamp,
+  { fallingBack = false } = {}
 ) {
   const { challengesToResolve } = await startCertOrder(now, cns, contextName);
   const pendingChallenges = challengesToResolve.filter(
@@ -263,8 +268,8 @@ async function runStartOrder(
     ])
   ).split('\n');
 
-  output.print(`${header  }\n`);
-  process.stdout.write(`${rows.join('\n')  }\n\n`);
+  output.print(`${header}\n`);
+  process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
   output.print(

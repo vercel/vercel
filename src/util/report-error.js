@@ -1,4 +1,5 @@
-import getScope from './get-scope';
+import Client from './client';
+import getScope from './get-scope.ts';
 
 export default async (sentry, error, apiUrl, configFiles) => {
   // Do not report errors in development
@@ -10,16 +11,10 @@ export default async (sentry, error, apiUrl, configFiles) => {
   let team = null;
 
   try {
-    const {token} = configFiles.readAuthConfigFile();
-    const {currentTeam} = configFiles.readConfigFile();
-
-    ({user, team} = await getScope({
-      apiUrl,
-      token,
-      debug: false,
-      required: new Set(['user', 'team']),
-      currentTeam
-    }));
+    const { token } = configFiles.readAuthConfigFile();
+    const { currentTeam } = configFiles.readConfigFile();
+    const client = new Client({ apiUrl, token, currentTeam, debug: false });
+    ({ user, team } = await getScope(client));
   } catch (err) {
     // We can safely ignore this, as the error
     // reporting works even without this metadata attached.

@@ -5,7 +5,8 @@ import table from 'text-table';
 
 import Now from '../../util';
 import getDomains from '../../util/domains/get-domains';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
@@ -15,16 +16,11 @@ async function ls(ctx, opts, args, output) {
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);

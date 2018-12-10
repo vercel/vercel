@@ -3,7 +3,8 @@ import ms from 'ms';
 import chalk from 'chalk';
 
 import Now from '../../util';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import wait from '../../util/output/wait';
 import dnsTable from '../../util/format-dns-table.ts';
@@ -11,16 +12,10 @@ import dnsTable from '../../util/format-dns-table.ts';
 import * as Errors from '../../util/errors';
 import { handleDomainConfigurationError } from '../../util/error-handlers';
 
-
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 
-async function add(
-  ctx            ,
-  opts                 ,
-  args          ,
-  output
-)                  {
+async function add(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -37,14 +32,15 @@ async function add(
   } = opts;
 
   let contextName = null;
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -82,7 +78,8 @@ async function add(
     if (cert instanceof Errors.InvalidCert) {
       output.error(`The provided certificate is not valid and can't be added.`);
       return 1;
-    } if (cert instanceof Errors.DomainPermissionDenied) {
+    }
+    if (cert instanceof Errors.DomainPermissionDenied) {
       output.error(
         `You don't have permissions over domain ${chalk.underline(
           cert.meta.domain
@@ -135,10 +132,11 @@ async function add(
         output.print(
           `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
         );
-        output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
+        output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
       }
       return 1;
-    } if (cert instanceof Errors.TooManyRequests) {
+    }
+    if (cert instanceof Errors.TooManyRequests) {
       output.error(
         `Too many requests detected for ${cert.meta
           .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
@@ -146,41 +144,48 @@ async function add(
         })}.`
       );
       return 1;
-    } if (cert instanceof Errors.TooManyCertificates) {
+    }
+    if (cert instanceof Errors.TooManyCertificates) {
       output.error(
         `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
           ', '
         )}`
       );
       return 1;
-    } if (cert instanceof Errors.DomainValidationRunning) {
+    }
+    if (cert instanceof Errors.DomainValidationRunning) {
       output.error(
         `There is a validation in course for ${chalk.underline(
           cert.meta.domain
         )}. Wait until it finishes.`
       );
       return 1;
-    } if (cert instanceof Errors.DomainConfigurationError) {
+    }
+    if (cert instanceof Errors.DomainConfigurationError) {
       handleDomainConfigurationError(output, cert);
       return 1;
-    } if (cert instanceof Errors.CantGenerateWildcardCert) {
+    }
+    if (cert instanceof Errors.CantGenerateWildcardCert) {
       output.error(
         `Wildcard certificates are allowed only for domains in ${chalk.underline(
           'zeit.world'
         )}`
       );
       return 1;
-    } if (cert instanceof Errors.DomainsShouldShareRoot) {
+    }
+    if (cert instanceof Errors.DomainsShouldShareRoot) {
       output.error(`All given common names should share the same root domain.`);
       return 1;
-    } if (cert instanceof Errors.InvalidWildcardDomain) {
+    }
+    if (cert instanceof Errors.InvalidWildcardDomain) {
       output.error(
         `Invalid domain ${chalk.underline(
           cert.meta.domain
         )}. Wildcard domains can only be followed by a root domain.`
       );
       return 1;
-    } if (cert instanceof Errors.DomainPermissionDenied) {
+    }
+    if (cert instanceof Errors.DomainPermissionDenied) {
       output.error(
         `You don't have permissions over domain ${chalk.underline(
           cert.meta.domain
