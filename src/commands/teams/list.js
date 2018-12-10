@@ -48,15 +48,6 @@ export default async function({ teams, config, apiUrl, token }) {
     );
     const choice = teamList.splice(index, 1)[0];
     teamList.unshift(choice);
-  } else {
-    currentTeam = list.find(team => team.id === currentTeam);
-
-    if (!currentTeam) {
-      console.error(
-        error(`You are not a part of the current team anymore`)
-      );
-      return 1;
-    }
   }
 
   // Printing
