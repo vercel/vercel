@@ -1,20 +1,12 @@
-// Native
 import path from 'path';
-
 import { URL } from 'url';
-
-// Packages
 import test from 'ava';
-
 import semVer from 'semver';
 import fs from 'fs';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
-
-// Utilities
 import logo from '../src/util/output/logo';
-
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import parseList from './helpers/parse-list';
@@ -120,6 +112,19 @@ test('log in', async t => {
 
   t.is(code, 0);
   t.is(last, goal);
+});
+
+test('list the scopes', async t => {
+  const { stdout, code } = await execa(binaryPath, [
+    'teams',
+    'ls',
+    ...defaultArgs
+  ], {
+    reject: false
+  });
+
+  t.is(code, 0);
+  t.true(stdout.includes(`✔ ${email}     ${email}`));
 });
 
 test('list the payment methods', async t => {
