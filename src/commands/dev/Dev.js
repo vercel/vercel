@@ -166,6 +166,8 @@ export default class Dev {
         continue;
       }
 
+      this.output.log(`Serving ${chalk.bold(target)}...`);
+
       res.writeHead(200, {
         'Content-Type': mime.contentType(target) || 'text/html; charset=utf-8',
         'Transfer-Encoding': 'chunked',
@@ -207,9 +209,7 @@ export default class Dev {
       return res.end();
     }
 
-    // TODO Rebuild all builders?
-
-    this.output.debug(`No artifact built for ${chalk.bold(req.url)}`);
+    this.output.warn(`No artifact built for ${chalk.bold(req.url)}`);
 
     res.writeHead(404, {
       'Content-Type': 'text/html; charset=utf-8',
@@ -217,7 +217,7 @@ export default class Dev {
       'X-Content-Type-Options': 'nosniff',
     });
 
-    res.write(`No routes match ${req.url}`);
+    res.write(`No routes match ${req.url}. Try refreshing.`);
     res.end();
 
     // Hopefully the 404 is caused unbuilt artifacts
