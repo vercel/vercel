@@ -88,7 +88,6 @@ export default async ctx => {
 };
 
 async function run({ token, contextName, currentTeam }) {
-  const secrets = {};
   const agent = new ZeitAgent('https://api-projects.zeit.sh', {token, teamId: currentTeam});
   const args = argv._.slice(1);
   const start = Date.now();
@@ -140,66 +139,60 @@ async function run({ token, contextName, currentTeam }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret rm <name>`'
+            '`now project  rm <name>`'
           )}`
         )
       );
       return exit(1);
     }
-    const list = await secrets.ls();
-    const theSecret = list.find(secret => secret.name === args[0]);
 
-    if (theSecret) {
-      const yes = await readConfirmation(theSecret);
-      if (!yes) {
-        console.error(error('User abort'));
-        return exit(0);
-      }
-    } else {
-      console.error(error(`No secret found by name "${args[0]}"`));
-      return exit(1);
+    const name = args[0];
+    const yes = await readConfirmation(name);
+    if (!yes) {
+      console.error(error('User abort'));
+      return exit(0);
     }
 
-    const secret = await secrets.rm(args[0]);
+    await agent.fetchAndThrow('/remove', {method: 'DELETE', body: {name}});
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
-        secret.name
+      `${chalk.cyan('> Success!')} Project ${chalk.bold(
+        name
       )} removed ${chalk.gray(`[${elapsed}]`)}`
     );
-    return secrets.close();
+    return agent.close();
   }
 
-  if (subcommand === 'add' || subcommand === 'set') {
-    if (args.length !== 2) {
+  if (subcommand === 'add') {
+    if (args.length !== 1) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret add <name> <value>`'
+            '`now projects add <name>`'
           )}`
         )
       );
 
-      if (args.length > 2) {
-        const example = chalk.cyan(`$ now secret add ${args[0]}`);
+      if (args.length > 1) {
+        const example = chalk.cyan(`$ now projects add "${args.join(' ')}"`);
         console.log(
-          `> If your secret has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
+          `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
         );
       }
 
       return exit(1);
     }
 
-    const [name, value] = args;
-    await secrets.add(name, value);
+    const [name] = args;
+    await agent.fetchAndThrow('/ensure-project', {method: 'POST', body: {name}});
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('> Success!')} Project ${chalk.bold(
         name.toLowerCase()
       )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
     );
-    return secrets.close();
+    return agent.close();
   }
 
   console.error(
@@ -214,18 +207,12 @@ process.on('uncaughtException', err => {
   exit(1);
 });
 
-function readConfirmation(secret) {
+function readConfirmation(projectName) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))  } ago`);
-    const tbl = table([[chalk.bold(secret.name), time]], {
-      align: ['r', 'l'],
-      hsep: ' '.repeat(6)
-    });
-
     process.stdout.write(
-      '> The following secret will be removed permanently\n'
+      ` The project: ${chalk.bold(projectName)} will be removed permanently\n` +
+      ` It will also delete everything under the project including deployments\n.`
     );
-    process.stdout.write(`  ${  tbl  }\n`);
 
     process.stdout.write(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
