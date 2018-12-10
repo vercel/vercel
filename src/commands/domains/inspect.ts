@@ -1,24 +1,26 @@
-import ms from 'ms';
 import chalk from 'chalk';
-import format from 'date-fns/format';
-import Now from '../../util';
-import dnsTable from '../../util/format-dns-table.ts';
-import cmd from '../../util/output/cmd.ts';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import formatNSTable from '../../util/format-ns-table.ts';
+import Client from '../../util/client';
+import cmd from '../../util/output/cmd';
+import dnsTable from '../../util/format-dns-table';
+import formatDate from '../../util/format-date';
+import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
+import getScope from '../../util/get-scope';
+import { Output } from '../../util/output';
+import { NowContext } from '../../types';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 
-async function inspect(ctx, opts, args, output) {
+interface Options {
+  '--debug': boolean,
+}
+
+export default async function inspect(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   const { contextName } = await getScope(client);
-
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const [domainName] = args;
 
   if (!domainName) {
@@ -36,7 +38,7 @@ async function inspect(ctx, opts, args, output) {
   }
 
   output.debug(`Fetching domain info`);
-  const domain = await getDomainByName(output, now, contextName, domainName);
+  const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
@@ -123,22 +125,3 @@ async function inspect(ctx, opts, args, output) {
 
   return null;
 }
-
-function formatDate(dateStr) {
-  if (!dateStr) {
-    return chalk.gray('-');
-  }
-
-  const date = new Date(dateStr);
-  const diff = date - Date.now();
-
-  return diff < 0
-    ? `${format(date, 'DD MMMM YYYY HH:mm:ss')} ${chalk.gray(
-        `[${ms(-diff)} ago]`
-      )}`
-    : `${format(date, 'DD MMMM YYYY HH:mm:ss')} ${chalk.gray(
-        `[in ${ms(diff)}]`
-      )}`;
-}
-
-export default inspect;

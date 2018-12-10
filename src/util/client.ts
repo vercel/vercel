@@ -35,8 +35,8 @@ export default class Client extends EventEmitter {
     apiUrl: string;
     token: string;
     currentTeam?: string;
-    forceNew: boolean;
-    debug: boolean;
+    forceNew?: boolean;
+    debug?: boolean;
   }) {
     super();
     this._token = token;

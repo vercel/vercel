@@ -1,11 +1,13 @@
 import chalk from 'chalk';
+import Client from '../client';
 import wait from '../output/wait';
-import { DomainPermissionDenied, DomainNotFound } from '../errors';
+import { Domain, DomainExtra } from '../../types';
+import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
-async function getDomainByName(output, now, contextName, domainName) {
+async function getDomainByName(client: Client, contextName: string, domainName: string) {
   const cancelWait = wait(`Fetching domains ${domainName} under ${chalk.bold(contextName)}`);
   try {
-    const payload = await now.fetch(`/v4/domains/${domainName}`);
+    const payload = await client.fetch<Domain & DomainExtra>(`/v4/domains/${domainName}`);
     cancelWait();
     return payload;
   } catch (error) {

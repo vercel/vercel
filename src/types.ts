@@ -1,3 +1,13 @@
+export interface NowContext {
+  apiUrl: string,
+  authConfig: {
+    token: string,
+  },
+  config: {
+    currentTeam: string,
+  }
+}
+
 type Billing = {
   addons: string[];
   cancelation?: number;
@@ -41,3 +51,34 @@ export type Team = {
   platformVersion: number;
   slug: string;
 };
+
+export type Domain = {
+  id: string,
+  name: string,
+  userId: string,
+  teamId: string | null,
+  boughtAt: number,
+  createdAt:  number,
+  expiresAt:  number,
+  serviceType: 'zeit.world' | 'external' | 'na',
+  cdnEnabled: boolean,
+  verified: boolean,
+  nsVerifiedAt: number | null,
+  txtVerifiedAt: number | null,
+  suffix: boolean,
+  verificationRecord: string,
+  nameServers: string[],
+  intendedNameServers: string[],
+}
+
+export type DomainExtra = {
+  aliases: Array<{
+    id: string,
+    alias: string,
+    created: number,
+  }>,
+  certs: Array<{
+    id: string,
+    cns: string[]
+  }>
+}

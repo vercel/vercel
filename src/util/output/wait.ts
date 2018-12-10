@@ -1,21 +1,22 @@
-import ora2 from 'ora';
+import ora from 'ora';
 import chalk from 'chalk';
 import eraseLines from './erase-lines';
 
-const wait = (msg, timeOut = 300, ora = ora2) => {
+export default function wait(msg: string, timeout: number = 300, _ora = ora) {
+  let spinner: ReturnType<typeof ora>
   let running = false;
-  let spinner;
   let stopped = false;
 
   setTimeout(() => {
-    if (stopped) return;
+    if (stopped) {
+      return null;
+    }
 
-    spinner = ora(chalk.gray(msg));
+    spinner = _ora(chalk.gray(msg));
     spinner.color = 'gray';
     spinner.start();
-
     running = true;
-  }, timeOut);
+  }, timeout);
 
   const cancel = () => {
     stopped = true;
@@ -27,8 +28,7 @@ const wait = (msg, timeOut = 300, ora = ora2) => {
     process.removeListener('nowExit', cancel);
   };
 
+  // @ts-ignore
   process.on('nowExit', cancel);
   return cancel;
-};
-
-export default wait;
+}

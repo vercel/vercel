@@ -54,20 +54,6 @@ export class TeamDeleted extends NowError<{}> {
 }
 
 /**
- * When you're passing two different options in the cli that exclude each
- * other, this error is thrown with the name of the conflicting property.
- */
-export class ConflictingOption extends NowError<{ name: string }> {
-  constructor(name: string) {
-    super({
-      code: 'conflicting_option',
-      message: `You can't use at the same time a positive and negative value for option ${name}`,
-      meta: { name }
-    });
-  }
-}
-
-/**
  * Thrown when a user is requested to the backend but we get unauthorized
  * because the token is not valid anymore.
  */
@@ -91,6 +77,47 @@ export class MissingUser extends NowError<{}> {
       code: `missing_user`,
       message: `Not able to load user, missing from response`,
       meta: {}
+    });
+  }
+}
+
+/**
+ * When you're passing two different options in the cli that exclude each
+ * other, this error is thrown with the name of the conflicting property.
+ */
+export class ConflictingOption extends NowError<{ name: string }> {
+  constructor(name: string) {
+    super({
+      code: 'conflicting_option',
+      message: `You can't use at the same time a positive and negative value for option ${name}`,
+      meta: { name }
+    });
+  }
+}
+
+/**
+ * When information about a domain is requested but the current user / team has no
+ * permissions to get that information.
+ */
+export class DomainPermissionDenied extends NowError<{ domain: string, context: string }> {
+  constructor(domain: string, context: string) {
+    super({
+      code: 'DOMAIN_PERMISSION_DENIED',
+      meta: { domain, context },
+      message: `You don't have access to the domain ${domain} under ${context}.`
+    });
+  }
+}
+
+/**
+ * When information about a domain is requested but the domain doesn't exist
+ */
+export class DomainNotFound extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_FOUND',
+      meta: { domain },
+      message: `The domain ${domain} can't be found.`
     });
   }
 }
