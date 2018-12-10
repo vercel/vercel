@@ -120,9 +120,6 @@ export default class Dev {
   }
 
   async handle(req, res) {
-    // This will be painfully slow until builders optimize
-    await this.build();
-
     const FileBlob = this.require('@now/build-utils/file-blob');
 
     // When no routes are defined, we default to 1-to-1 mappings
@@ -222,6 +219,9 @@ export default class Dev {
 
     res.write(`No routes match ${req.url}`);
     res.end();
+
+    // Hopefully the 404 is caused unbuilt artifacts
+    this.build();
   }
 
   async installBuilders() {
