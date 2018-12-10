@@ -10,13 +10,15 @@ import param from './output/param';
 export class APIError extends Error {
   status: number;
   serverMessage: string;
-  retryAfter?: number;
+  retryAfter: number | null | 'never';
+  [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
     super();
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
+    this.retryAfter = null;
 
     if (body) {
       for (const field of Object.keys(body)) {

@@ -1,9 +1,9 @@
 import chalk from 'chalk';
-import { handleError } from '../../util/error';
 
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
+import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
 import add from './add';
@@ -70,13 +70,15 @@ const COMMAND_CONFIG = {
   verify: ['verify']
 };
 
-export default async function main(ctx) {
+export default async function main(ctx: any) {
+  console.log(ctx);
   let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--cdn': Boolean,
-      '--no-cdn': Boolean
+      '--no-cdn': Boolean,
+      '--yes': Boolean
     });
   } catch (error) {
     handleError(error);

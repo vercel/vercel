@@ -20,7 +20,7 @@ type Options = {
   '--no-cdn': boolean,
 }
 
-export default async function add(ctx: NowContext, opts: Options, args: string, output: Output) {
+export default async function add(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

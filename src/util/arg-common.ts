@@ -1,5 +1,3 @@
-//      
-
 const ARG_COMMON = {
   '--help': Boolean,
   '-h': '--help',
