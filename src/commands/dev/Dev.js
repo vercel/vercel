@@ -101,7 +101,7 @@ export default class Dev {
     return this.workspace;
   }
 
-  async findNewPort(port = 3000) {
+  async findNewPort(port = 4000) {
     return new Promise((resolve, reject) => {
       const server = new Server();
 
