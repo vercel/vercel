@@ -96,6 +96,34 @@ export class ConflictingOption extends NowError<{ name: string }> {
 }
 
 /**
+ * Thrown when the user tries to add a domain forcing the CDN enabled but he's
+ * on the OSS plan and we don't allow it.
+ */
+export class CDNNeedsUpgrade extends NowError<{}> {
+  constructor() {
+    super({
+      code: 'CDN_NEEDS_UPGRADE',
+      meta: {},
+      message: `You can't add domains with CDN enabled from an OSS plan.`
+    });
+  }
+}
+
+/**
+ * Thrown when a user tries to add a domain that exists already for a different
+ * user under a different context.
+ */
+export class DomainAlreadyExists extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_ALREADY_EXISTS',
+      meta: { domain },
+      message: `The domain ${domain} already exists under a different context.`
+    });
+  }
+}
+
+/**
  * When information about a domain is requested but the current user / team has no
  * permissions to get that information.
  */
@@ -118,6 +146,20 @@ export class DomainNotFound extends NowError<{ domain: string }> {
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
       message: `The domain ${domain} can't be found.`
+    });
+  }
+}
+
+/**
+ * Used when a domain is validated because we tried to add it to an account
+ * via API or for any other reason.
+ */
+export class InvalidDomain extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'INVALID_DOMAIN',
+      meta: { domain },
+      message: `The domain ${domain} is not valid.`
     });
   }
 }

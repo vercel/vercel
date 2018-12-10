@@ -1,7 +1,7 @@
 import { ConflictingOption } from './errors-ts';
 
 export default function getBooleanOptionValue(
-  opts: { [key: string]: string },
+  opts: { [key: string]: boolean | string },
   name: string
 ) {
   const positiveValue = typeof opts[`--${name}`] !== 'undefined';

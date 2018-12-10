@@ -1,18 +1,26 @@
 import chalk from 'chalk';
 import psl from 'psl';
-import * as Errors from '../../util/errors';
-import addDomain from '../../util/domains/add-domain';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getBooleanOptionValue from '../../util/get-boolean-option-value.ts';
-import formatNSTable from '../../util/format-ns-table.ts';
-import formatDnsTable from '../../util/format-dns-table.ts';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
-import cmd from '../../util/output/cmd.ts';
-import Now from '../../util';
 
-export default async function add(ctx, opts, args, output) {
+import { NowContext, Domain } from '../../types';
+import { Output } from '../../util/output';
+import * as ERRORS from '../../util/errors-ts';
+import addDomain from '../../util/domains/add-domain';
+import Client from '../../util/client';
+import cmd from '../../util/output/cmd';
+import formatDnsTable from '../../util/format-dns-table';
+import formatNSTable from '../../util/format-ns-table';
+import getBooleanOptionValue from '../../util/get-boolean-option-value';
+import getDomainByName from '../../util/domains/get-domain-by-name';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+
+type Options = {
+  '--cdn': boolean,
+  '--debug': boolean,
+  '--no-cdn': boolean,
+}
+
+export default async function add(ctx: NowContext, opts: Options, args: string, output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -31,9 +39,8 @@ export default async function add(ctx, opts, args, output) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
-  if (cdnEnabled instanceof Errors.ConflictingOption) {
+  if (cdnEnabled instanceof ERRORS.ConflictingOption) {
     output.error(
       `You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`
     );
@@ -56,27 +63,27 @@ export default async function add(ctx, opts, args, output) {
     output.error(
       `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
         `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-          `now domain add ${opts['--external'] ? '-e ' : ''}${domain}`
+          `now domain add ${domain}`
         )}`
     );
     return 1;
   }
 
   const addStamp = stamp();
-  const addedDomain = await addDomain(now, domainName, contextName, cdnEnabled);
-  if (addedDomain instanceof Errors.CDNNeedsUpgrade) {
+  const addedDomain = await addDomain(client, domainName, contextName, cdnEnabled);
+  if (addedDomain instanceof ERRORS.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan.`);
     return 1;
   }
 
-  if (addedDomain instanceof Errors.InvalidDomain) {
+  if (addedDomain instanceof ERRORS.InvalidDomain) {
     output.error(
       `The provided domain name "${addedDomain.meta.domain}" is invalid`
     );
     return 1;
   }
 
-  if (addedDomain instanceof Errors.DomainAlreadyExists) {
+  if (addedDomain instanceof ERRORS.DomainAlreadyExists) {
     output.error(
       `The domain ${chalk.underline(
         addedDomain.meta.domain
@@ -86,7 +93,8 @@ export default async function add(ctx, opts, args, output) {
     return 1;
   }
 
-  const domainInfo = await getDomainByName(output, now, contextName, domain);
+  // We can cast the information because we've just added the domain and it should be there
+  const domainInfo = (await getDomainByName(client, contextName, domain) as Domain);
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domainInfo.name
