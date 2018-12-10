@@ -1,14 +1,19 @@
 import { ConflictingOption } from './errors-ts';
 
-export default function getBooleanOptionValue(opts: {[key: string]: string}, name: string) {
+export default function getBooleanOptionValue(
+  opts: { [key: string]: string },
+  name: string
+) {
   const positiveValue = typeof opts[`--${name}`] !== 'undefined';
   const negativeValue = typeof opts[`--no-${name}`] !== 'undefined';
 
   if (positiveValue && negativeValue) {
     return new ConflictingOption(name);
-  } if (positiveValue) {
+  }
+  if (positiveValue) {
     return true;
-  } if (negativeValue) {
+  }
+  if (negativeValue) {
     return false;
   }
 

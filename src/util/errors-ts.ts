@@ -1,5 +1,5 @@
-import { NowError } from './now-error';
 import { Response } from 'fetch-h2';
+import { NowError } from './now-error';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -45,7 +45,7 @@ export class ConflictingOption extends NowError<{ name: string }> {
       code: 'conflicting_option',
       message: `You can't use at the same time a positive and negative value for option ${name}`,
       meta: { name }
-    })
+    });
   }
 }
 
@@ -58,8 +58,8 @@ export class InvalidToken extends NowError<{}> {
     super({
       code: `not_authorized`,
       message: `The specified token is not valid`,
-      meta: {},
-    })
+      meta: {}
+    });
   }
 }
 
@@ -72,7 +72,7 @@ export class MissingUser extends NowError<{}> {
     super({
       code: `missing_user`,
       message: `Not able to load user, missing from response`,
-      meta: {},
-    })
+      meta: {}
+    });
   }
 }

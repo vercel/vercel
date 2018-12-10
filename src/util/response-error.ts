@@ -1,7 +1,11 @@
 import { Response } from 'fetch-h2';
 import { APIError } from './errors-ts';
 
-export default async function responseError(res: Response, fallbackMessage = null, parsedBody = {}) {
+export default async function responseError(
+  res: Response,
+  fallbackMessage = null,
+  parsedBody = {}
+) {
   let message;
   let bodyError;
 

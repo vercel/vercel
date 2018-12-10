@@ -9,27 +9,25 @@ export default function formatNSTable(
 ) {
   const sortedIntended = intendedNameServers.sort();
   const sortedCurrent = currentNameServers.sort();
-  const maxLength = Math.max(intendedNameServers.length, currentNameServers.length);
+  const maxLength = Math.max(
+    intendedNameServers.length,
+    currentNameServers.length
+  );
   const rows = [];
 
   for (let i = 0; i < maxLength; i++) {
-    rows.push([
-      sortedIntended[i] || '',
-      sortedCurrent[i] || '',
-    ])
+    rows.push([sortedIntended[i] || '', sortedCurrent[i] || '']);
   }
 
-  return (
-    table([
-      [
-        chalk.gray('Intended Nameservers'),
-        chalk.gray('Current Nameservers')
-      ],
+  return table(
+    [
+      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers')],
       ...rows
-    ], {
+    ],
+    {
       align: ['l', 'l', 'l'],
       hsep: ' '.repeat(4),
       stringLength: strlen
-    }).replace(/^(.*)/gm, `${extraSpace}$1`)
-  )
+    }
+  ).replace(/^(.*)/gm, `${extraSpace}$1`);
 }

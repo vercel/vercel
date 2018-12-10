@@ -5,14 +5,22 @@ import { InvalidToken, MissingUser } from './errors-ts';
 
 const debug = debugFactory('now:sh:get-user');
 
-export default async function getUser({ apiUrl, token }: { apiUrl: string, token: string }) {
+export default async function getUser({
+  apiUrl,
+  token
+}: {
+  apiUrl: string;
+  token: string;
+}) {
   debug('GET /www/user');
   let res;
 
   try {
-    res = await fetch(`${apiUrl  }/www/user`, { headers: {
-      Authorization: `Bearer ${token}`
-    } });
+    res = await fetch(`${apiUrl}/www/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
   } catch (err) {
     debug(`error fetching /www/user: $O`, err.stack);
     throw new Error(
@@ -47,4 +55,4 @@ export default async function getUser({ apiUrl, token }: { apiUrl: string, token
   // this is pretty much useless
   delete user.billingChecked;
   return user;
-};
+}

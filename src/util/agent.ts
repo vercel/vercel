@@ -8,14 +8,14 @@ import createOutput, { Output } from './output/create-output';
 const MAX_REQUESTS_PER_CONNECTION = 1000;
 
 type CurrentContext = ReturnType<typeof context> & {
-  fetchesMade: number,
-  ongoingFetches: number
-}
+  fetchesMade: number;
+  ongoingFetches: number;
+};
 
 export interface AgentFetchOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
-  body?: NodeJS.ReadableStream | string,
-  headers: {[key: string]: string},
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  body?: NodeJS.ReadableStream | string;
+  headers: { [key: string]: string };
 }
 
 /**
@@ -46,7 +46,7 @@ export default class NowAgent {
       ...this._contexts[0],
       fetchesMade: 0,
       ongoingFetches: 0
-    }
+    };
 
     const parsed = parse(url);
     this._url = url;
@@ -64,7 +64,7 @@ export default class NowAgent {
       keepAlive: true,
       keepAliveMsecs: 10000,
       maxSockets: 8
-    })
+    });
 
     // We are ignoring this error because agent implements an EventEmitter
     // but it doesn't appear in hte definition
@@ -80,7 +80,13 @@ export default class NowAgent {
     }
   }
 
-  setConcurrency({ maxStreams, capacity }: { maxStreams: number, capacity: number }) {
+  setConcurrency({
+    maxStreams,
+    capacity
+  }: {
+    maxStreams: number;
+    capacity: number;
+  }) {
     this._sema = new Sema(maxStreams || 20, { capacity });
   }
 
@@ -90,7 +96,7 @@ export default class NowAgent {
     let currentContext: CurrentContext;
     this._currContext.fetchesMade++;
     if (this._currContext.fetchesMade >= MAX_REQUESTS_PER_CONNECTION) {
-      const ctx = { ...context(), fetchesMade: 1, ongoingFetches: 0 }
+      const ctx = { ...context(), fetchesMade: 1, ongoingFetches: 0 };
       this._contexts.push(ctx);
       this._currContext = ctx;
     }
@@ -148,8 +154,8 @@ export default class NowAgent {
     // We have to set the `host` manually when using http2
     opts.headers.host = this._url.replace(/^https?:\/\//, '');
     return currentContext
-      .fetch(this._url + path, {...opts, body})
-      .then((res) => handleCompleted(res))
+      .fetch(this._url + path, { ...opts, body })
+      .then(res => handleCompleted(res))
       .catch((err: Error) => {
         handleCompleted(null);
         throw err;
@@ -166,4 +172,4 @@ export default class NowAgent {
 
     this._currContext.disconnect(this._url);
   }
-};
+}

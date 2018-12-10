@@ -3,17 +3,22 @@ import { format } from 'util';
 import { Console } from 'console';
 
 export interface Output {
-    debug: (str: string) => void;
-    error: (str: string, slug: string | null) => void;
-    log: (str: string, color?: Chalk & { supportsColor: ColorSupport; }) => void;
-    note: (str: string) => void;
-    print: (str: string) => void;
-    success: (str: string) => void;
-    time: (label: string, fn: Promise<any> | (() => Promise<any>)) => Promise<any>;
-    warn: (str: string, slug?: string | null) => void;
+  debug: (str: string) => void;
+  error: (str: string, slug: string | null) => void;
+  log: (str: string, color?: Chalk & { supportsColor: ColorSupport }) => void;
+  note: (str: string) => void;
+  print: (str: string) => void;
+  success: (str: string) => void;
+  time: (
+    label: string,
+    fn: Promise<any> | (() => Promise<any>)
+  ) => Promise<any>;
+  warn: (str: string, slug?: string | null) => void;
 }
 
-export default function createOutput({ debug: debugEnabled = false } = {}): Output {
+export default function createOutput(
+  { debug: debugEnabled = false } = {}
+): Output {
   function print(str: string) {
     process.stderr.write(str);
   }

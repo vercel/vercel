@@ -8,5 +8,7 @@ import chalk from 'chalk';
  * @param ago  Boolean to indicate if we should append `ago`
  */
 export default function elapsed(time: number, ago: boolean = false) {
-  return chalk.gray(`[${time < 1000 ? `${time}ms` : ms(time)}${ago ? ' ago' : ''}]`);
-};
+  return chalk.gray(
+    `[${time < 1000 ? `${time}ms` : ms(time)}${ago ? ' ago' : ''}]`
+  );
+}

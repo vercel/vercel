@@ -32,7 +32,7 @@
     }
   },
   "lint-staged": {
-    "*.js": [
+    "*.{ts,js}": [
       "yarn test-lint",
       "prettier --write --single-quote",
       "git add"
@@ -57,42 +57,53 @@
     ]
   },
   "eslintConfig": {
-    "parser": "typescript-eslint-parser",
     "extends": [
       "airbnb",
       "prettier"
     ],
+    "parser": "typescript-eslint-parser",
+    "plugins": [
+      "typescript"
+    ],
+    "settings": {
+      "import/resolver": {
+        "typescript": {}
+      }
+    },
     "rules": {
-      "import/no-dynamic-require": 0,
-      "global-require": 0,
-      "import/no-duplicates": 0,
-      "guard-for-in": 0,
-      "no-restricted-globals": 0,
-      "import/prefer-default-export": 0,
-      "no-loop-func": 0,
-      "prefer-const": 0,
-      "no-nested-ternary": 0,
+      "camelcase": 0,
       "class-methods-use-this": 0,
+      "consistent-return": 0,
+      "func-names": 0,
+      "global-require": 0,
+      "guard-for-in": 0,
+      "import/no-duplicates": 0,
+      "import/no-dynamic-require": 0,
+      "import/no-extraneous-dependencies": 0,
+      "import/prefer-default-export": 0,
+      "lines-between-class-members": 0,
+      "no-await-in-loop": 0,
+      "no-bitwise": 0,
+      "no-console": 0,
       "no-continue": 0,
       "no-control-regex": 0,
       "no-empty": 0,
-      "camelcase": 0,
-      "func-names": 0,
-      "no-shadow": 0,
-      "no-plusplus": 0,
+      "no-loop-func": 0,
+      "no-nested-ternary": 0,
       "no-param-reassign": 0,
-      "consistent-return": 0,
-      "prefer-destructuring": 0,
-      "no-bitwise": 0,
-      "no-console": 0,
-      "no-use-before-define": 0,
+      "no-plusplus": 0,
+      "no-restricted-globals": 0,
       "no-restricted-syntax": 0,
-      "no-await-in-loop": 0,
+      "no-shadow": 0,
       "no-underscore-dangle": 0,
-      "import/no-extraneous-dependencies": 0
+      "no-use-before-define": 0,
+      "prefer-const": 0,
+      "prefer-destructuring": 0,
+      "typescript/no-unused-vars": "error"
     }
   },
   "eslintIgnore": [
+    "@types",
     "download",
     "dist",
     "test/fixtures",
@@ -144,6 +155,7 @@
     "eslint-plugin-import": "2.14.0",
     "eslint-plugin-jsx-a11y": "6.1.1",
     "eslint-plugin-react": "7.11.0",
+    "eslint-plugin-typescript": "0.14.0",
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
     "glob": "7.1.2",
@@ -180,7 +192,7 @@
     "through2": "2.0.3",
     "title": "3.4.0",
     "tmp-promise": "1.0.3",
-    "typescript": "3.1.1",
+    "typescript": "3.2.2",
     "typescript-eslint-parser": "21.0.2",
     "update-check": "1.5.0",
     "which-promise": "1.0.0",

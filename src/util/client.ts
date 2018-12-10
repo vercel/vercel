@@ -1,20 +1,20 @@
 import qs from 'querystring';
 import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
-import retry, { RetryFunction, Options as RetryOptions} from 'async-retry';
+import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import createOutput, { Output } from './output/create-output';
 import Agent, { AgentFetchOptions } from './agent';
 import responseError from './response-error';
 import ua from './ua';
 
 export type FetchOptions = {
-  body?: NodeJS.ReadableStream | object,
-  headers?: {[key: string]: string},
-  json?: boolean,
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
-  retry?: RetryOptions,
-  useCurrentTeam?: boolean,
-}
+  body?: NodeJS.ReadableStream | object;
+  headers?: { [key: string]: string };
+  json?: boolean;
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  retry?: RetryOptions;
+  useCurrentTeam?: boolean;
+};
 
 export default class Client extends EventEmitter {
   _agent: Agent;
@@ -25,7 +25,19 @@ export default class Client extends EventEmitter {
   _token: string;
   currentTeam?: string;
 
-  constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }: { apiUrl: string, token: string, currentTeam?: string, forceNew: boolean, debug: boolean }) {
+  constructor({
+    apiUrl,
+    token,
+    currentTeam,
+    forceNew = false,
+    debug = false
+  }: {
+    apiUrl: string;
+    token: string;
+    currentTeam?: string;
+    forceNew: boolean;
+    debug: boolean;
+  }) {
     super();
     this._token = token;
     this._debug = debug;
@@ -68,7 +80,9 @@ export default class Client extends EventEmitter {
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(opts.body) || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
+        opts.body
+      ) || ''}`,
       this._agent.fetch(_url, opts as AgentFetchOptions)
     );
   }
@@ -89,12 +103,12 @@ export default class Client extends EventEmitter {
           ? res.json()
           : res;
       }
-        const error = await responseError(res);
-        if (res.status >= 400 && res.status < 500) {
-          return bail(error);
-        }
+      const error = await responseError(res);
+      if (res.status >= 400 && res.status < 500) {
+        return bail(error);
+      }
 
-        throw error;
+      throw error;
     }, opts.retry);
   }
 
