@@ -102,8 +102,6 @@ async function deploymentGet (deploymentId) {
 }
 
 async function fetchWithAuth (url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.zeit.co';
-  const urlWithHost = `https://${apiHost}${url}`;
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
@@ -123,10 +121,12 @@ async function fetchWithAuth (url, opts = {}) {
     opts.headers.Authorization = `Bearer ${token}`;
   }
 
-  return await fetchApi(urlWithHost, opts);
+  return await fetchApi(url, opts);
 }
 
 async function fetchApi (url, opts = {}) {
+  const apiHost = process.env.API_HOST || 'api.zeit.co';
+  const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
 
   if (process.env.VERBOSE) {
@@ -134,7 +134,7 @@ async function fetchApi (url, opts = {}) {
     if (body) console.log(encodeURIComponent(body).slice(0, 80));
   }
 
-  return await fetch(url, opts);
+  return await fetch(urlWithHost, opts);
 }
 
 module.exports = {
