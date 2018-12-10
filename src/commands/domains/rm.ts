@@ -3,23 +3,30 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 import table from 'text-table';
 
-import Now from '../../util';
-import cmd from '../../util/output/cmd.ts';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
+import { NowContext, Domain, DomainExtra } from '../../types';
+import { Output } from '../../util/output';
+import Client from '../../util/client';
+import cmd from '../../util/output/cmd';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
+import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
+import stamp from '../../util/output/stamp';
 
-async function rm(ctx, opts, args, output) {
+type Options = {
+  '--debug': boolean,
+  '--yes': boolean,
+}
+
+export default async function rm(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
+  const [domainName] = args;
   let contextName = null;
 
   try {
@@ -32,9 +39,6 @@ async function rm(ctx, opts, args, output) {
 
     throw err;
   }
-
-  const now = new Now({ apiUrl, token, debug, currentTeam });
-  const [domainName] = args;
 
   if (!domainName) {
     output.error(`${cmd('now domains rm <domain>')} expects one argument`);
@@ -50,7 +54,7 @@ async function rm(ctx, opts, args, output) {
     return 1;
   }
 
-  const domain = await getDomainByName(output, now, contextName, domainName);
+  const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
@@ -77,16 +81,16 @@ async function rm(ctx, opts, args, output) {
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
   for (const alias of domain.aliases) {
-    await removeAliasById(now, alias.id);
+    await removeAliasById(client, alias.id);
   }
 
   output.debug(`Removing certs`);
   for (const cert of domain.certs) {
-    await deleteCertById(output, now, cert.id);
+    await deleteCertById(output, client, cert.id);
   }
 
   output.debug(`Removing domain`);
-  await removeDomainByName(output, now, domain.name);
+  await removeDomainByName(client, domain.name);
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domain.name
@@ -95,11 +99,9 @@ async function rm(ctx, opts, args, output) {
   return 0;
 }
 
-async function confirmDomainRemove(output, domain) {
+async function confirmDomainRemove(output: Output, domain: Domain & DomainExtra) {
   return new Promise(resolve => {
-    const time = chalk.gray(
-      `${ms(new Date() - new Date(domain.createdAt))} ago`
-    );
+    const time = chalk.gray(`${ms(Date.now() - domain.createdAt)} ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -140,5 +142,3 @@ async function confirmDomainRemove(output, domain) {
       .resume();
   });
 }
-
-export default rm;
