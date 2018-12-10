@@ -176,7 +176,7 @@ export default class Dev {
         return artifact.toStream().pipe(res);
       }
 
-      // ! of executing lambdas.
+      // ! Temporary requirement of executing lambdas.
       if (typeof artifact !== 'function') {
         throw new Error(`Only functional lambdas are supported in dev.`);
       }
@@ -273,13 +273,8 @@ export default class Dev {
   mockCreateLambda() {
     const download = this.require('@now/build-utils/fs/download');
     const lambdaExports = this.require('@now/build-utils/lambda');
-
     const childProcesses = new Map();
 
-    // ! By overriding the lambda creation, we can choose to
-    // ! write the files to the `workPath`, & handle requests this way.
-    // ! Otherwise, we don't have access to the launcher at all.
-    // ! Note, this still fails because the launchers **aren't closing**.
     lambdaExports.createLambda = async ({
       files,
       handler,
