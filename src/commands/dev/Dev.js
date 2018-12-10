@@ -149,18 +149,18 @@ export default class Dev {
         continue;
       }
 
-      let target = req.url.replace(route.src, route.dest);
-
-      // Remove "/" prefix from destination targets
-      if (target.charAt(0) === '/') {
-        target = target.slice(1);
-      }
-
-      let artifact = this.artifacts.get(target);
+      let target = req.url.replace(new RegExp(route.src), route.dest);
 
       this.output.debug(
         `Routing ${chalk.cyan(req.url)} to ${chalk.bold(target)}`
       );
+
+      let artifact = this.artifacts.get(target);
+
+      // Try target without a "/" prefix
+      if (!artifact && target.charAt(0) === '/') {
+        artifact = this.artifacts.get(target.slice(1));
+      }
 
       // Skip this route
       if (!artifact) {
