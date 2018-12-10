@@ -1,3 +1,4 @@
+import Client from './client.ts';
 import param from './output/param.ts';
 import getUser from './get-user.ts';
 import NowTeams from './teams';
@@ -11,9 +12,10 @@ TokenError.code = 'not_authorized';
 
 const retrieveUser = async (apiUrl, token) => {
   let user = null;
+  const client = new Client({ apiUrl, token });
 
   try {
-    user = await getUser({ apiUrl, token });
+    user = await getUser(client);
   } catch (err) {
     if (err.code === 'not_authorized') {
       throw TokenError;
@@ -54,10 +56,7 @@ const retrieveTeam = async (apiUrl, token, debug, currentTeam) => {
   return related;
 };
 
-const allowed = new Set([
-  'user',
-  'team'
-]);
+const allowed = new Set(['user', 'team']);
 
 export default async function getScope({
   apiUrl,
@@ -91,9 +90,9 @@ export default async function getScope({
   // we only want to prefer the team if the config file has current team set
   // and not if the function was asked to include it in the output.
   return {
-    contextName: currentTeam ? team.slug : (user.username || user.email),
+    contextName: currentTeam ? team.slug : user.username || user.email,
     platformVersion: currentTeam ? team.platformVersion : user.platformVersion,
     user,
     team
   };
-};
+}

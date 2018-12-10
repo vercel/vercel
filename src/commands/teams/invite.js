@@ -13,6 +13,7 @@ import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
 import error from '../../util/output/error';
 import getUser from '../../util/get-user.ts';
+import Client from '../../util/client.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -76,7 +77,8 @@ export default async function(
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const user = await getUser({ apiUrl, token });
+  const client = new Client({ apiUrl, token });
+  const user = await getUser(client);
 
   stopUserSpinner();
 
@@ -150,7 +152,9 @@ export default async function(
             )
           );
           for (const email of emails) {
-            console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+            console.log(
+              `${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`
+            );
           }
         }
       } catch (err) {
@@ -176,4 +180,4 @@ export default async function(
       console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
-};
+}
