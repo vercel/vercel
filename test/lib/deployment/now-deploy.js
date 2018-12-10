@@ -1,8 +1,8 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
-const fetch = require('node-fetch');
 const { homedir } = require('os');
 const path = require('path');
+const fetch = require('./fetch-retry.js');
 
 async function nowDeploy (bodies, randomness) {
   const files = Object.keys(bodies)
