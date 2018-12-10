@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 
+import { NowContext } from '../../types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -70,8 +71,7 @@ const COMMAND_CONFIG = {
   verify: ['verify']
 };
 
-export default async function main(ctx: any) {
-  console.log(ctx);
+export default async function main(ctx: NowContext) {
   let argv;
 
   try {

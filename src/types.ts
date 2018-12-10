@@ -1,10 +1,12 @@
 export interface NowContext {
+  argv: string[],
   apiUrl: string,
   authConfig: {
     token: string,
   },
   config: {
     currentTeam: string,
+    updateChannel: string
   }
 }
 
