@@ -81,7 +81,9 @@ async function filePost (body, digest) {
     body
   });
 
-  return await resp.json();
+  const json = await resp.json();
+  if (json.error) console.log('headers', resp.headers);
+  return json;
 }
 
 async function deploymentPost (payload) {
