@@ -1,17 +1,22 @@
-import chalk from 'chalk';
 import ms from 'ms';
+import chalk from 'chalk';
 import plural from 'pluralize';
 import table from 'text-table';
 
-import Now from '../../util';
+import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
+import getScope from '../../util/get-scope';
 import isDomainExternal from '../../util/domains/is-domain-external';
-import stamp from '../../util/output/stamp.ts';
-import strlen from '../../util/strlen.ts';
+import stamp from '../../util/output/stamp';
+import strlen from '../../util/strlen';
+import { Output } from '../../util/output';
+import { Domain, NowContext } from '../../types';
 
-async function ls(ctx, opts, args, output) {
+type Options = {
+  '--debug': boolean,
+}
+
+export default async function ls(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -30,7 +35,6 @@ async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: opts['--debug'], currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -40,7 +44,7 @@ async function ls(ctx, opts, args, output) {
     return 1;
   }
 
-  const domains = await getDomains(output, now, contextName);
+  const domains = await getDomains(client, contextName);
   output.log(
     `${plural('domain', domains.length, true)} found under ${chalk.bold(
       contextName
@@ -53,7 +57,7 @@ async function ls(ctx, opts, args, output) {
   return 0;
 }
 
-function formatDomainsTable(domains) {
+function formatDomainsTable(domains: Domain[]) {
   const current = new Date();
   return table(
     [
@@ -62,7 +66,7 @@ function formatDomainsTable(domains) {
         const cdnEnabled = domain.cdnEnabled || false;
         const ns = isDomainExternal(domain) ? 'external' : 'zeit.world';
         const url = chalk.bold(domain.name);
-        const time = chalk.gray(ms(current - new Date(domain.created)));
+        const time = chalk.gray(ms(current.getTime() - domain.createdAt));
         return ['', url, ns, domain.verified, cdnEnabled, time];
       })
     ],
@@ -73,5 +77,3 @@ function formatDomainsTable(domains) {
     }
   );
 }
-
-export default ls;

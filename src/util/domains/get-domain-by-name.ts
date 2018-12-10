@@ -4,12 +4,16 @@ import wait from '../output/wait';
 import { Domain, DomainExtra } from '../../types';
 import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
+type Response = {
+  domain: Domain & DomainExtra
+}
+
 async function getDomainByName(client: Client, contextName: string, domainName: string) {
   const cancelWait = wait(`Fetching domains ${domainName} under ${chalk.bold(contextName)}`);
   try {
-    const payload = await client.fetch<Domain & DomainExtra>(`/v4/domains/${domainName}`);
+    const { domain } = await client.fetch<Response>(`/v4/domains/${domainName}`);
     cancelWait();
-    return payload;
+    return domain;
   } catch (error) {
     cancelWait();
     if (error.status === 404) {

@@ -1,4 +1,7 @@
 import chalk from 'chalk';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
+import { NowContext } from '../../types';
+import { Output } from '../../util/output';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/format-dns-table';
@@ -6,11 +9,8 @@ import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
-import { Output } from '../../util/output';
-import { NowContext } from '../../types';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 
-interface Options {
+type Options = {
   '--debug': boolean,
 }
 

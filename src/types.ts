@@ -55,8 +55,6 @@ export type Team = {
 export type Domain = {
   id: string,
   name: string,
-  userId: string,
-  teamId: string | null,
   boughtAt: number,
   createdAt:  number,
   expiresAt:  number,
@@ -65,13 +63,18 @@ export type Domain = {
   verified: boolean,
   nsVerifiedAt: number | null,
   txtVerifiedAt: number | null,
-  suffix: boolean,
-  verificationRecord: string,
-  nameServers: string[],
-  intendedNameServers: string[],
+  creator: {
+    id: string,
+    username: string,
+    email: string
+  }
 }
 
 export type DomainExtra = {
+  suffix: boolean,
+  nameServers: string[],
+  verificationRecord: string,
+  intendedNameServers: string[],
   aliases: Array<{
     id: string,
     alias: string,

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { NowContext, Domain } from '../../types';
+import { NowContext, Domain, DomainExtra } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import addDomain from '../../util/domains/add-domain';
@@ -94,7 +94,7 @@ export default async function add(ctx: NowContext, opts: Options, args: string, 
   }
 
   // We can cast the information because we've just added the domain and it should be there
-  const domainInfo = (await getDomainByName(client, contextName, domain) as Domain);
+  const domainInfo = (await getDomainByName(client, contextName, domain) as (Domain & DomainExtra));
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domainInfo.name

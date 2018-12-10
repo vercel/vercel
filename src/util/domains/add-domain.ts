@@ -6,6 +6,10 @@ import { Domain } from '../../types';
 import Client from '../client';
 import wait from '../output/wait';
 
+type Response = {
+  domain: Domain
+}
+
 export default async function addDomain(client: Client, domain: string, contextName: string, cdnEnabled?: boolean) {
   const cancelWait = wait(`Adding domain ${domain} under ${chalk.bold(contextName)}`);
   try {
@@ -18,17 +22,18 @@ export default async function addDomain(client: Client, domain: string, contextN
   }
 }
 
-async function performAddRequest(client: Client, domain: string, cdnEnabled?: boolean) {
+async function performAddRequest(client: Client, domainName: string, cdnEnabled?: boolean) {
   return retry(
     async () => {
       try {
-        return await client.fetch<Domain>('/v4/domains', {
-          body: { name: domain, cdnEnabled },
+        const { domain } = await client.fetch<Response>('/v4/domains', {
+          body: { name: domainName, cdnEnabled },
           method: 'POST'
         })
+        return domain;
       } catch (error) {
         if (error.code === 'invalid_name') {
-          return new InvalidDomain(domain);
+          return new InvalidDomain(domainName);
         }
 
         if (error.code === 'domain_with_cdn_needs_upgrade') {
@@ -36,7 +41,7 @@ async function performAddRequest(client: Client, domain: string, cdnEnabled?: bo
         }
 
         if (error.code === 'domain_already_exists') {
-          return new DomainAlreadyExists(domain)
+          return new DomainAlreadyExists(domainName)
         }
 
         throw error;

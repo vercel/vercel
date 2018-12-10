@@ -1,29 +1,27 @@
 import chalk from 'chalk';
-
-import Now from '../../util';
-import cmd from '../../util/output/cmd.ts';
-import formatDnsTable from '../../util/format-dns-table.ts';
-import formatNSTable from '../../util/format-ns-table.ts';
+import { NowContext } from '../../types';
+import { Output } from '../../util/output';
+import * as ERRORS from '../../util/errors-ts';
+import Client from '../../util/client';
+import cmd from '../../util/output/cmd';
+import formatDnsTable from '../../util/format-dns-table';
+import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 import verifyDomain from '../../util/domains/verify-domain';
-import {
-  DomainVerificationFailed,
-  DomainNotFound,
-  DomainPermissionDenied
-} from '../../util/errors';
 
-async function verify(ctx, opts, args, output) {
+type Options = {
+  '--debug': boolean,
+}
+
+export default async function verify(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   const { contextName } = await getScope(client);
-
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const [domainName] = args;
 
   if (!domainName) {
@@ -40,8 +38,8 @@ async function verify(ctx, opts, args, output) {
     return 1;
   }
 
-  const domain = await getDomainByName(output, now, contextName, domainName);
-  if (domain instanceof DomainNotFound) {
+  const domain = await getDomainByName(client, contextName, domainName);
+  if (domain instanceof ERRORS.DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
@@ -49,7 +47,7 @@ async function verify(ctx, opts, args, output) {
     return 1;
   }
 
-  if (domain instanceof DomainPermissionDenied) {
+  if (domain instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have access to the domain ${domainName} under ${chalk.bold(
         contextName
@@ -60,8 +58,8 @@ async function verify(ctx, opts, args, output) {
   }
 
   const verifyStamp = stamp();
-  const result = await verifyDomain(now, domain.name, contextName);
-  if (result instanceof DomainVerificationFailed) {
+  const result = await verifyDomain(client, domain.name, contextName);
+  if (result instanceof ERRORS.DomainVerificationFailed) {
     const { nsVerification, txtVerification } = result.meta;
     output.error(
       `The domain ${domain.name} could not be verified due to the following reasons: ${verifyStamp()}\n`
@@ -122,5 +120,3 @@ async function verify(ctx, opts, args, output) {
   );
   return 0;
 }
-
-export default verify;

@@ -151,6 +151,42 @@ export class DomainNotFound extends NowError<{ domain: string }> {
 }
 
 /**
+ * This error is returned when we perform a verification against the server and it
+ * fails for both methods. It includes in the payload the domain name and metadata
+ * to tell the reason why the verification failed
+ */
+export class DomainVerificationFailed extends NowError<{
+  domain: string,
+  purchased: boolean,
+  txtVerification: TXTVerificationError,
+  nsVerification: NSVerificationError
+}> {
+  constructor({ domain, nsVerification, txtVerification, purchased = false }: { domain: string, nsVerification: NSVerificationError, txtVerification: TXTVerificationError, purchased: boolean }) {
+    super({
+      code: 'DOMAIN_VERIFICATION_FAILED',
+      meta: { domain, nsVerification, txtVerification, purchased },
+      message: `We can't verify the domain ${domain}. Both Name Servers and DNS TXT verifications failed.`
+    });
+  }
+}
+
+/**
+ * Helper type for DomainVerificationFailed
+ */
+export type NSVerificationError = {
+  intendedNameservers: string[]
+  nameservers: string[]
+}
+
+/**
+ * Helper type for DomainVerificationFailed
+ */
+export type TXTVerificationError = {
+  verificationRecord: string,
+  values: string[]
+}
+
+/**
  * Used when a domain is validated because we tried to add it to an account
  * via API or for any other reason.
  */
