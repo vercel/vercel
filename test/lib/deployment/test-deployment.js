@@ -5,7 +5,7 @@ const glob = require('util').promisify(require('glob'));
 const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
-const nowDeploy = require('./now-deploy.js');
+const { nowDeploy } = require('./now-deploy.js');
 
 async function packAndDeploy (builderPath) {
   const tgzName = (await spawnAsync('npm', [ '--loglevel', 'warn', 'pack' ], {

@@ -105,30 +105,40 @@ async function fetchWithAuth (url, opts = {}) {
   const apiHost = process.env.API_HOST || 'api.zeit.co';
   const urlWithHost = `https://${apiHost}${url}`;
   if (!opts.headers) opts.headers = {};
-  let token;
 
-  if (process.env.NOW_AUTH_TOKENS) {
-    const tokens = process.env.NOW_AUTH_TOKENS.split(',');
-    if (process.env.CIRCLE_BUILD_NUM) {
-      token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+  if (!opts.headers.Authorization) {
+    let token;
+    if (process.env.NOW_AUTH_TOKENS) {
+      const tokens = process.env.NOW_AUTH_TOKENS.split(',');
+      if (process.env.CIRCLE_BUILD_NUM) {
+        token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+      } else {
+        token = tokens[Math.floor(Math.random() * tokens.length)];
+      }
     } else {
-      token = tokens[Math.floor(Math.random() * tokens.length)];
+      const authJsonPath = path.join(homedir(), '.now/auth.json');
+      token = require(authJsonPath).token;
     }
-  } else {
-    const authJsonPath = path.join(homedir(), '.now/auth.json');
-    token = require(authJsonPath).token;
+
+    opts.headers.Authorization = `Bearer ${token}`;
   }
 
-  opts.headers.Authorization = `Bearer ${token}`;
-  return await fetchApiWithChecks(urlWithHost, opts);
+  return await fetchApi(urlWithHost, opts);
 }
 
-async function fetchApiWithChecks (url, opts = {}) {
-  // const { method = 'GET', body } = opts;
-  // console.log('fetch', method, url);
-  // if (body) console.log(encodeURIComponent(body).slice(0, 80));
-  const resp = await fetch(url, opts);
-  return resp;
+async function fetchApi (url, opts = {}) {
+  const { method = 'GET', body } = opts;
+
+  if (process.env.VERBOSE) {
+    console.log('fetch', method, url);
+    if (body) console.log(encodeURIComponent(body).slice(0, 80));
+  }
+
+  return await fetch(url, opts);
 }
 
-module.exports = nowDeploy;
+module.exports = {
+  fetchApi,
+  fetchWithAuth,
+  nowDeploy
+};
