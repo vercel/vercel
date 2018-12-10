@@ -220,9 +220,6 @@ export default class Dev {
 
     res.write(`No routes match ${req.url}. Try refreshing.`);
     res.end();
-
-    // Hopefully the 404 is caused unbuilt artifacts
-    this.build();
   }
 
   async installBuilders() {

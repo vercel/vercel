@@ -27,11 +27,9 @@ module.exports = async function main(ctx) {
 
   await dev.createWorkspace();
   await dev.installBuilders();
+  await dev.build();
 
   dev.listen(process.env.PORT || 3000);
-
-  // Eagerly build while the server's starting
-  await dev.build();
 };
 
 // If we're running this file directly, pretend we went through `now`
