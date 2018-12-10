@@ -47,7 +47,7 @@ async function downloadInstallAndBundle(
       'package.json': new FileBlob({
         data: JSON.stringify({
           dependencies: {
-            '@zeit/ncc': '0.4.1',
+            '@zeit/ncc': '0.5.3',
           },
         }),
       }),
