@@ -1,5 +1,6 @@
 export default {
   deploy: 'deploy',
+  dev: 'dev',
   help: 'help',
   list: 'list',
   remove: 'remove',
