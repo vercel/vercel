@@ -160,6 +160,7 @@ export default class Dev {
 
   async handle(req, res) {
     const FileBlob = this.require('@now/build-utils/file-blob');
+    const FileFsRef = this.require('@now/build-utils/file-fs-ref');
 
     // When no routes are defined, we default to 1-to-1 mappings
     const defaultRoutes = [
@@ -213,7 +214,7 @@ export default class Dev {
         'X-Content-Type-Options': 'nosniff',
       });
 
-      if (artifact instanceof FileBlob) {
+      if (artifact instanceof FileBlob || artifact instanceof FileFsRef) {
         return artifact.toStream().pipe(res);
       }
 
