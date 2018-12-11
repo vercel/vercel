@@ -6,7 +6,9 @@ export default async function getUser(client: Client) {
   let user;
 
   try {
-    ({ user } = await client.fetch<{ user: User }>('/www/user'));
+    ({ user } = await client.fetch<{ user: User }>('/www/user', {
+      useCurrentTeam: false
+    }));
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
       throw new InvalidToken();

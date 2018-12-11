@@ -66,6 +66,14 @@ export default class Client extends EventEmitter {
   }
 
   _fetch(_url: string, opts: FetchOptions = {}) {
+    if (opts.useCurrentTeam !== false && this.currentTeam) {
+      const parsedUrl = parseUrl(_url, true);
+      const query = parsedUrl.query;
+      query.teamId = this.currentTeam;
+      _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;
+      delete opts.useCurrentTeam;
+    }
+
     if (opts.json !== false && opts.body && typeof opts.body === 'object') {
       Object.assign(opts, {
         body: JSON.stringify(opts.body),
@@ -73,14 +81,6 @@ export default class Client extends EventEmitter {
           'Content-Type': 'application/json'
         })
       });
-    }
-
-    if (opts.useCurrentTeam && this.currentTeam) {
-      const parsedUrl = parseUrl(_url, true);
-      const query = parsedUrl.query;
-      query.teamId = this.currentTeam;
-      _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;
-      delete opts.useCurrentTeam;
     }
 
     opts.headers = opts.headers || {};

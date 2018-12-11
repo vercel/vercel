@@ -128,6 +128,8 @@ export default class NowAgent {
         opts.headers['Content-Type'] = 'application/json';
         body = new JsonBody(opts.body);
       }
+    } else {
+      body = opts.body
     }
 
     const handleCompleted = async <T>(res: T) => {
