@@ -1,10 +1,10 @@
 /** Generates UUID v4 */
 
 export default function uuid() {
-  function s(n) {
+  function s(n: number) {
     return h((Math.random() * (1 << (n << 2))) ^ Date.now()).slice(-n);
   }
-  function h(n) {
+  function h(n: number) {
     return (n | 0).toString(16);
   }
   return [

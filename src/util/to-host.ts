@@ -7,7 +7,7 @@ import { parse } from 'url';
  * google.com => google.com
  */
 
-function toHost(url) {
+function toHost(url: string) {
   if (/^https?:\/\//.test(url)) {
     return parse(url).host;
   }

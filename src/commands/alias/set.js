@@ -9,7 +9,7 @@ import humanizePath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
 import zeitWorldTable from '../../util/zeit-world-table';
-import assignAlias from './assign-alias';
+import assignAlias from '../../util/alias/assign-alias';
 import getDeploymentForAlias from './get-deployment-for-alias';
 import getRulesFromFile from './get-rules-from-file';
 import getTargetsForAlias from './get-targets-for-alias';

@@ -1,17 +1,21 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-import chars from '../output/chars';
-import { VerifyScaleTimeout } from "../errors";
-import joinWords from '../output/join-words';
-import stamp from '../output/stamp.ts';
-import wait from '../output/wait';
-import verifyDeploymentScale from './verify-deployment-scale';
 
-async function waitForScale(
-  output        ,
-  now     ,
-  deploymentId        ,
-  scale
+import { DeploymentScale } from '../../types';
+import { Output } from '../output';
+import { VerifyScaleTimeout } from '../errors-ts';
+import chars from '../output/chars';
+import Client from '../client';
+import joinWords from '../output/join-words';
+import stamp from '../output/stamp';
+import verifyDeploymentScale from './verify-deployment-scale';
+import wait from '../output/wait';
+
+export default async function waitForScale(
+  output: Output,
+  now: Client,
+  deploymentId: string,
+  scale: DeploymentScale
 ) {
   const remainingDCs = new Set(Object.keys(scale));
   const scaleStamp = stamp();
@@ -44,12 +48,10 @@ async function waitForScale(
   }
 }
 
-function renderWaitDcs(dcs          ) {
+function renderWaitDcs(dcs: string[]) {
   return wait(
     `Waiting for instances in ${joinWords(
       dcs.map(dc => chalk.bold(dc))
     )} to be ready`
   );
 }
-
-export default waitForScale;

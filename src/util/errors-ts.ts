@@ -270,3 +270,210 @@ export class UserAborted extends NowError<{}> {
     });
   }
 }
+
+/**
+ * This error is returned when we try to create a certificate and the API responds
+ * with a configuration error that means that the HTTP challenge couldn't be solved
+ * for the domain so it is misconfigured.
+ */
+export class DomainConfigurationError extends NowError<{ domain: string, subdomain: string, external: boolean }> {
+  constructor(domain: string, subdomain: string, external: boolean) {
+    super({
+      code: 'DOMAIN_CONFIGURATION_ERROR',
+      meta: { domain, subdomain, external },
+      message: `The domain is unreachable to solve the HTTP challenge needed for the certificate.`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to create a wildcard certificate but LE API returns
+ * a rate limit error because there were too many certificates created already.
+ */
+export class TooManyCertificates extends NowError<{ domains: string[] }> {
+  constructor(domains: string[]) {
+    super({
+      code: 'TOO_MANY_CERTIFICATES',
+      meta: { domains },
+      message: `Too many certificates already issued for exact set of domains: ${domains.join(', ')}`
+    });
+  }
+}
+
+/**
+ * This error is returned when consuming an API that got rate limited because too
+ * many requests where performed already. It gives a retryAfter parameter with the
+ * time the user needs to wait.
+ */
+export class TooManyRequests extends NowError<{ api: string, retryAfter: number }> {
+  constructor(api: string, retryAfter: number) {
+    super({
+      code: 'TOO_MANY_REQUESTS',
+      meta: { api, retryAfter },
+      message: `Rate limited. Too many requests to the same endpoint.`
+    });
+  }
+}
+
+/**
+ * This error is returned when the user requests a certificate but there is a pending
+ * certificate order being processed in the server.
+ */
+export class DomainValidationRunning extends NowError<{ domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_VALIDATION_RUNNING',
+      meta: { domain },
+      message: `A domain verification is already in course for ${domain}`
+    });
+  }
+}
+
+/**
+ * Returned when there was a attempt to create a certiicate for a set of
+ * common names where the root domain is not shared between them.
+ */
+export class DomainsShouldShareRoot extends NowError<{ domains: string[] }> {
+  constructor(domains: string[]) {
+    super({
+      code: 'CNS_SHOULD_SHARE_ROOT',
+      meta: { domains },
+      message: `All domains for a certificate should share the same root domain`
+    });
+  }
+}
+
+/**
+ * Returned when in an attempt to create a certificate, the challenge could not
+ * be solved by LE. It could be the dns or the http challenge.
+ */
+export class CantSolveChallenge extends NowError<{ domain: string, type: string }> {
+  constructor(domain: string, type: string) {
+    super({
+      code: 'CANT_SOLVE_CHALLENGE',
+      meta: { domain, type },
+      message: `Can't solve ${type} challenge for domain ${domain}`
+    });
+  }
+}
+
+/**
+ * This error is returned whenever an API call tries to fetch a deployment but
+ * the deployment doesn't exist.
+ */
+export class DeploymentNotFound extends NowError<{ id: string, context: string }> {
+  constructor(id: string, context: string) {
+    super({
+      code: 'DEPLOYMENT_NOT_FOUND',
+      meta: { id, context },
+      message: `Can't find the deployment ${id} under the context ${context}`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to fetch explicitly a deployment but she
+ * has no permissions under the given context.
+ */
+export class DeploymentPermissionDenied extends NowError<{ id: string, context: string }> {
+  constructor(id: string, context: string) {
+    super({
+      code: 'DEPLOYMENT_PERMISSION_DENIED',
+      meta: { id, context },
+      message: `You don't have access to the deployment ${id} under ${context}.`
+    });
+  }
+}
+
+/**
+ * Returned when we try to create an alias but the API returns an error telling
+ * that the given alias is not valid.
+ */
+export class InvalidAlias extends NowError<{ alias: string }> {
+  constructor(alias: string) {
+    super({
+      code: 'INVALID_ALIAS',
+      meta: { alias },
+      message: `The given alias ${alias} is not valid`
+    });
+  }
+}
+
+/**
+ * Returned when we try to create an alias but the API failes with an error
+ * telling that the alias is already in use by somebody else.
+ */
+export class AliasInUse extends NowError<{ alias: string }> {
+  constructor(alias: string) {
+    super({
+      code: 'ALIAS_IN_USE',
+      meta: { alias },
+      message: `The alias is already in use`
+    });
+  }
+}
+
+/**
+ * Returned when an action is performed against an API endpoint that requires
+ * a certificate for a domain but the domain is missing. An example would
+ * be alias.
+ */
+export class CertMissing extends NowError<{ domain: string}> {
+  constructor(domain: string) {
+    super({
+      code: 'ALIAS_IN_USE',
+      meta: { domain },
+      message: `The alias is already in use`
+    });
+  }
+}
+
+export class ForbiddenScaleMinInstances extends NowError<{ url: string, min: number }> {
+  constructor(url: string, min: number) {
+    super({
+      code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
+      meta: { url, min },
+      message: `You can't scale to more than ${min} min instances with your current plan.`
+    });
+  }
+}
+
+export class ForbiddenScaleMaxInstances extends NowError<{ url: string, max: number }> {
+  constructor(url: string, max: number) {
+    super({
+      code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
+      meta: { url, max },
+      message: `You can't scale to more than ${max} max instances with your current plan.`
+    });
+  }
+}
+
+export class InvalidScaleMinMaxRelation extends NowError<{ url: string }> {
+  constructor(url: string) {
+    super({
+      code: 'INVALID_SCALE_MIN_MAX_RELATION',
+      meta: { url },
+      message: `Min number of instances can't be higher than max.`
+    });
+  }
+}
+
+export class NotSupportedMinScaleSlots extends NowError<{ url: string }> {
+  constructor(url: string) {
+    super({
+      code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
+      meta: { url },
+      message: `Cloud v2 does not yet support setting a non-zero min scale setting.`
+    });
+  }
+}
+
+export class VerifyScaleTimeout extends NowError<{ timeout: number }> {
+  constructor(timeout: number) {
+    super({
+      code: 'VERIFY_SCALE_TIMEOUT',
+      meta: { timeout },
+      message: `Instance verification timed out (${timeout}ms)`
+    });
+  }
+}

@@ -4,7 +4,7 @@ import wait from '../../util/output/wait';
 
 import * as Errors from '../../util/errors';
 import setupDomain from '../../util/domains/setup-domain';
-import createCertForAlias from './create-cert-for-alias';
+import createCertForAlias from '../../util/certs/create-cert-for-alias';
 
 const NOW_SH_REGEX = /\.now\.sh$/;
 

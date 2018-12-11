@@ -5,6 +5,7 @@
     "module": "CommonJS",
     "target": "ES2017",
     "esModuleInterop": true,
+    "lib": ["esnext"],
     "resolveJsonModule": true,
     "typeRoots": [
       "./@types"

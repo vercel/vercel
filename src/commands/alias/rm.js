@@ -9,7 +9,7 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
-import findAliasByAliasOrId from './find-alias-by-alias-or-id';
+import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 export default async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;

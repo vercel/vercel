@@ -87,3 +87,88 @@ export type DomainExtra = {
     cns: string[]
   }>
 }
+
+export type Cert = {
+  uid: string,
+  autoRenew: boolean,
+  cns: string[],
+  created: string,
+  creator: string,
+  expiration: string,
+}
+
+export type DeploymentScale = {
+  [dc: string]: {
+    min: number,
+    max: number
+  }
+};
+
+export type NpmDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'NPM',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
+  version?: number,
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale
+};
+
+export type StaticDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'STATIC',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
+  version?: number,
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string
+};
+
+export type DockerDeployment = {
+  uid: string,
+  url: string,
+  name: string,
+  type: 'DOCKER',
+  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR',
+  version?: number,
+  created: number,
+  creator: { uid: string },
+  sessionAffinity: string,
+  scale: DeploymentScale,
+  limits?: {
+    maxConcurrentReqs: number,
+    timeout: number,
+    duration: number
+  },
+  slot?: string
+};
+
+export type Deployment = NpmDeployment | StaticDeployment | DockerDeployment;
+
+type PathAliasRule = {
+  pathname: string,
+  method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>,
+  dest: string
+};
+
+export type Alias = {
+  uid: string,
+  alias: string,
+  created: string,
+  deployment: {
+    id: string,
+    url: string
+  },
+  creator: {
+    uid: string,
+    username: string,
+    email: string
+  },
+  deploymentId: string,
+  rules?: PathAliasRule[]
+};

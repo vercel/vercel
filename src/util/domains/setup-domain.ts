@@ -27,7 +27,7 @@ export default async function setupDomain(output: Output, client: Client, alias:
       }
 
       output.debug(`Domain ${domain}  successfuly verified`);
-      return maybeGetDomainByName(client, contextName, domain);
+      return maybeGetDomainByName(client, contextName, domain) as Promise<Domain>;
     }
 
     output.debug(`Domain ${domain} is already verified`);
@@ -89,9 +89,9 @@ export default async function setupDomain(output: Output, client: Client, alias:
     }
 
     output.debug(`Domain ${domain} was purchased and it was manually verified`);
-    return maybeGetDomainByName(client, contextName, domain);
+    return maybeGetDomainByName(client, contextName, domain) as Promise<Domain>;
   }
 
   output.debug(`Domain ${domain} was purchased and it is automatically verified`);
-  return maybeGetDomainByName(client, contextName, domain);
+  return maybeGetDomainByName(client, contextName, domain) as Promise<Domain>;
 }

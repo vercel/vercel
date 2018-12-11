@@ -1,18 +1,14 @@
-//      
-                                                                        
-import getScaleForDC from './get-scale-for-dc';
+import { Deployment } from '../../types';
+import getScaleForDC from '../scale/get-scale-for-dc';
 
-function shouldCopyScalingAttributes(
-  origin                                  ,
-  dest                                  
-) {
+export default function shouldCopyScalingAttributes(origin: Deployment, dest: Deployment) {
   if (origin.version === 2 || dest.version === 2) {
     return false;
   }
 
   return (
-    (Boolean(origin.scale) &&
-      getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min) ||
+    origin.type !== 'STATIC' &&
+    getScaleForDC('bru1', origin).min !== getScaleForDC('bru1', dest).min ||
     getScaleForDC('bru1', origin).max !== getScaleForDC('bru1', dest).max ||
     getScaleForDC('gru1', origin).min !== getScaleForDC('gru1', dest).min ||
     getScaleForDC('gru1', origin).max !== getScaleForDC('gru1', dest).max ||
@@ -22,5 +18,3 @@ function shouldCopyScalingAttributes(
     getScaleForDC('iad1', origin).max !== getScaleForDC('iad1', dest).max
   );
 }
-
-export default shouldCopyScalingAttributes;
