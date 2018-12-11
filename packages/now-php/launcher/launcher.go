@@ -18,8 +18,9 @@ type PhpHandler struct {
 	ScriptFull string
 }
 
+var engine *php.Engine
+
 func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	engine, _ := php.New()
 	context, _ := engine.NewContext()
 
 	for k, v := range r.URL.Query() {
@@ -130,11 +131,10 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(stdout.Bytes())
-
-	engine.Destroy()
 }
 
 func main() {
+	engine, _ = php.New()
 	ex, _ := os.Executable()
 	handler := &PhpHandler{
 		nil,
