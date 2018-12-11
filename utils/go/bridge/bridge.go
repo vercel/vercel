@@ -21,10 +21,10 @@ type Request struct {
 }
 
 type Response struct {
-	StatusCode int               `json:"statusCode"`
-	Headers    map[string]string `json:"headers"`
-	Encoding   string            `json:"encoding,omitemtpy"`
-	Body       string            `json:"body"`
+	StatusCode int                 `json:"statusCode"`
+	Headers    map[string][]string `json:"headers"`
+	Encoding   string              `json:"encoding,omitemtpy"`
+	Body       string              `json:"body"`
 }
 
 type ResponseWriter struct {
@@ -93,10 +93,10 @@ func Serve(handler http.Handler, req *Request) (res Response, err error) {
 	handler.ServeHTTP(w, r)
 	defer r.Body.Close()
 
-	headers := make(map[string]string)
+	headers := make(map[string][]string)
 	for k, v := range w.headers {
 		for _, s := range v {
-			headers[k] = s
+			headers[k] = append(headers[k], s)
 		}
 	}
 
