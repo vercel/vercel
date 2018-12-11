@@ -256,3 +256,17 @@ export class UnexpectedDomainPurchaseError extends NowError<{ domain: string }> 
     });
   }
 }
+
+/**
+ * Returned any time we prompt the user to make sure an action should be performed
+ * and the user decides not to continue with the operation
+ */
+export class UserAborted extends NowError<{}> {
+  constructor() {
+    super({
+      code: 'USER_ABORTED',
+      meta: {},
+      message: `The user aborted the operation.`
+    });
+  }
+}
