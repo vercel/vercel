@@ -8,6 +8,7 @@ import { dir } from 'tmp-promise';
 import path from 'path';
 import rawBody from 'raw-body';
 
+import { npm as getNpmFiles } from '../../util/get-files';
 import { readLocalConfig } from '../../util/config/files';
 import createOutput from '../../util/output';
 
@@ -39,8 +40,7 @@ export default class Dev {
   }
 
   async build() {
-    // This version of `glob` returns `FileFsRef`s
-    const glob = this.require('@now/build-utils/fs/glob');
+    const files = await this.getFiles();
 
     for (const build of this.config.builds) {
       const { src, use } = build;
@@ -64,8 +64,7 @@ export default class Dev {
         // builder = this.require(use);
       }
 
-      const entrypoints = await glob(src, process.cwd());
-      const files = await glob('**', process.cwd());
+      const entrypoints = await this.glob(src, process.cwd());
 
       for (const [entrypoint] of Object.entries(entrypoints)) {
         this.output.log(
@@ -119,6 +118,44 @@ export default class Dev {
 
       server.listen(port);
     });
+  }
+
+  async getFiles() {
+    const pkg = {}; // TODO Use package.json
+
+    // When should this use `getStaticFiles`?
+    const filePaths = await getNpmFiles(process.cwd(), pkg, this.config, {
+      output: this.output,
+    });
+
+    // glob only works against relative paths
+    const fileGlobs = filePaths.map(filePath =>
+      filePath.replace(`${process.cwd()}/`, '')
+    );
+
+    // Map strings to the FileFsRef version of glob
+    const fileEntries = await Promise.all(
+      fileGlobs.map(fileGlob => this.glob(fileGlob, process.cwd()))
+    );
+
+    // Reduce all [{ entry: FileFsRef }] objects to a single Object.
+    const files = fileEntries.reduce(
+      (acc, entry) => ({
+        ...acc,
+        ...entry,
+      }),
+      {}
+    );
+
+    return files;
+  }
+
+  async glob(...args) {
+    // This version of `glob` depends on these utils being installed,
+    // and returns `FileFsRef`s.
+    const glob = this.require('@now/build-utils/fs/glob');
+
+    return glob(...args);
   }
 
   async handle(req, res) {
