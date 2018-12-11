@@ -220,6 +220,7 @@ export default class Dev {
 
       // ! Temporary requirement of executing lambdas.
       if (typeof artifact !== 'function') {
+        console.error(artifact);
         throw new Error(`Only functional lambdas are supported in dev.`);
       }
 
