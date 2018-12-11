@@ -187,7 +187,7 @@ export default class Dev {
       const event = {
         host: req.headers.host,
         path: req.url,
-        method: req.method,
+        httpMethod: req.method,
         headers: req.headers,
         body: req.body,
       };
