@@ -209,7 +209,8 @@ export default class Dev {
       this.output.log(`Serving ${chalk.bold(target)}...`);
 
       res.writeHead(200, {
-        'Content-Type': mime.contentType(target) || 'text/html; charset=utf-8',
+        'Content-Type':
+          mime.contentType(path.basename(target)) || 'text/html; charset=utf-8',
         'Transfer-Encoding': 'chunked',
         'X-Content-Type-Options': 'nosniff',
       });
