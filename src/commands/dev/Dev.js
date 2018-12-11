@@ -292,25 +292,24 @@ export default class Dev {
         childProcesses.delete(handler);
       }
 
-      return async event => {
-        const child = fork(launcherFile, [], {
-          cwd: this.workspace.path,
-          env: {
-            ...environment,
-            NODE_ENV: 'development',
-            PORT: await this.findNewPort(),
-          },
-          execArgv: [],
-        });
+      const child = fork(launcherFile, [], {
+        cwd: this.workspace.path,
+        env: {
+          ...environment,
+          NODE_ENV: 'development',
+          PORT: await this.findNewPort(),
+        },
+        execArgv: [],
+      });
 
-        // Store it so we can disconnect when replaced
-        childProcesses.set(handler, child);
+      // Store it so we can disconnect when replaced
+      childProcesses.set(handler, child);
 
-        return new Promise(resolve => {
+      return event =>
+        new Promise(resolve => {
           child.send(event);
           child.on('message', resolve);
         });
-      };
     };
   }
 
