@@ -2,7 +2,11 @@ const assert = require('assert');
 
 async function test1({ deploymentUrl, fetch }) {
   const resp = await fetch(
-    `https://${deploymentUrl}/index.php?get1=foo&get1=bar&get2[]=bim&get2[]=bom`,
+    `https://${deploymentUrl}/index.php?get1=foo&get1=bar&get2[]=bim&get2[]=bom`, {
+      headers: {
+        'X-Some-Header': 'x-some-header-value',
+      }
+    }
   );
   assert(resp.status === 200);
   const text = await resp.text();
@@ -13,6 +17,7 @@ async function test1({ deploymentUrl, fetch }) {
     'GET',
     '/index.php?get1=foo&get1=bar&get2%5B%5D=bim&get2%5B%5D=bom', // TODO fake news, must be unescaped
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    'x-some-header-value',
     'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
@@ -62,6 +67,7 @@ async function test2({ deploymentUrl, fetch }) {
     'POST',
     '/index.php',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    '',
     'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
@@ -110,6 +116,7 @@ async function test3({ deploymentUrl, fetch }) {
     'GET',
     '/index.php',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
+    '',
     'HTTP/1.1',
     deploymentUrl, // example 'test-19phw91ph.now.sh'
     '443',
