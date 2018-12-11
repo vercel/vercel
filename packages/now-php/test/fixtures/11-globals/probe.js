@@ -5,8 +5,8 @@ async function test1({ deploymentUrl, fetch }) {
     `https://${deploymentUrl}/index.php?get1=foo&get1=bar&get2[]=bim&get2[]=bom`, {
       headers: {
         'X-Some-Header': 'x-some-header-value',
-      }
-    }
+      },
+    },
   );
   assert(resp.status === 200);
   const text = await resp.text();
@@ -44,6 +44,7 @@ async function test1({ deploymentUrl, fetch }) {
     'NULL',
     '',
     'NULL',
+    '',
     'end',
   ]);
 }
@@ -94,6 +95,7 @@ async function test2({ deploymentUrl, fetch }) {
     '}',
     '',
     'NULL',
+    'post1=baz&post1=bat&post2[]=pim&post2[]=pom',
     'end',
   ]);
 }
@@ -138,6 +140,7 @@ async function test3({ deploymentUrl, fetch }) {
     'NULL',
     '',
     'NULL',
+    '',
     'end',
   ]);
 }

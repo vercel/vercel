@@ -4,6 +4,7 @@ import (
 	now "./utils"
 	"bytes"
 	php "github.com/deuill/go-php"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -40,6 +41,9 @@ func (h *PhpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	body, _ := ioutil.ReadAll(r.Body)
+	context.Eval("$HTTP_RAW_POST_DATA='" + string(body) + "';") // TODO escape-unescape
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	r.ParseForm()
 	for k, v := range r.PostForm {
 		if strings.HasSuffix(k, "[]") {
