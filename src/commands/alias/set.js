@@ -167,7 +167,7 @@ export default async function set(
       return 1;
     } if (deployment === null) {
       output.error(
-        `Couldn't find a deployment to alias. Please provide one as an argument.`
+        `Couldn't find a deployment to alias. Either configure a "name" or please provide a deployment as an argument.`
       );
       return 1;
     }
