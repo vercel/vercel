@@ -6,6 +6,7 @@ import { Server } from 'http';
 import mime from 'mime-types';
 import { dir } from 'tmp-promise';
 import path from 'path';
+import rawBody from 'raw-body';
 
 import { readLocalConfig } from '../../util/config/files';
 import createOutput from '../../util/output';
@@ -189,7 +190,7 @@ export default class Dev {
         path: req.url,
         httpMethod: req.method,
         headers: req.headers,
-        body: req.body,
+        body: (await rawBody(req)).toString('utf8'),
       };
 
       const { body, encoding, headers, statusCode } = await artifact(event);

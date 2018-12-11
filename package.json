@@ -175,6 +175,7 @@
     "write-json-file": "2.2.0"
   },
   "dependencies": {
-    "auto-bind": "^1.2.1"
+    "auto-bind": "^1.2.1",
+    "raw-body": "2.3.3"
   }
 }
