@@ -4,31 +4,22 @@ import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
 import Now from '../../util';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
+import stamp from '../../util/output/stamp.ts';
 import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
+import strlen from '../../util/strlen.ts';
 
-async function ls(
-  ctx,
-  opts,
-  args,
-  output
-) {
+async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -64,13 +55,14 @@ async function ls(
 }
 
 function formatCertsTable(certsList) {
-  return (
-    `${table([formatCertsTableHead(), ...formatCertsTableBody(certsList)], {
+  return `${table(
+    [formatCertsTableHead(), ...formatCertsTableBody(certsList)],
+    {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
       stringLength: strlen
-    }).replace(/^(.*)/gm, '  $1')  }\n`
-  );
+    }
+  ).replace(/^(.*)/gm, '  $1')}\n`;
 }
 
 function formatCertsTableHead() {
@@ -121,8 +113,8 @@ function formatCertFirstCn(time, cert, cn, multiple) {
 function formatExpirationDate(date) {
   const diff = date - Date.now();
   return diff < 0
-    ? chalk.gray(`${ms(-diff)  } ago`)
-    : chalk.gray(`in ${  ms(diff)}`);
+    ? chalk.gray(`${ms(-diff)} ago`)
+    : chalk.gray(`in ${ms(diff)}`);
 }
 
 /**

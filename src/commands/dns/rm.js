@@ -2,32 +2,24 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 
-async function rm(
-  ctx,
-  opts,
-  args,
-  output
-) {
+async function rm(ctx, opts, args, output) {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
+  const client = new Client({ apiUrl, token, currentTeam, debug });
 
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -81,19 +73,14 @@ async function rm(
   return 0;
 }
 
-function readConfirmation(
-  output        ,
-  msg        ,
-  domainName        ,
-  record
-) {
+function readConfirmation(output, msg, domainName, record) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1')  }\n`
+      }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -112,16 +99,16 @@ function readConfirmation(
   });
 }
 
-function getDeleteTableRow(domainName        , record           ) {
+function getDeleteTableRow(domainName, record) {
   const recordName = `${record.name.length > 0
-    ? `${record.name  }.`
+    ? `${record.name}.`
     : ''}${domainName}`;
   return [
     record.id,
     chalk.bold(
       `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
     ),
-    chalk.gray(`${ms(new Date() - new Date(Number(record.created)))  } ago`)
+    chalk.gray(`${ms(new Date() - new Date(Number(record.created)))} ago`)
   ];
 }
 

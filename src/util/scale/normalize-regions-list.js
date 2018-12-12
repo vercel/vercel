@@ -1,10 +1,10 @@
-//      
+//
 import { InvalidRegionOrDCForScale, InvalidAllForScale } from '../errors';
 import regionOrDCToDC from './region-or-dc-to-dc';
-                                      
+
 
 export default function normalizeRegionsList(
-  regionsOrDCs          
+  regionsOrDCs
 )                                                                      {
   if (regionsOrDCs.includes('all')) {
     if (regionsOrDCs.length > 1) {

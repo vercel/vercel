@@ -8,10 +8,11 @@ import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
 import wait from '../util/output/wait';
 import logo from '../util/output/logo';
-import cmd from '../util/output/cmd';
-import elapsed from '../util/output/elapsed';
+import cmd from '../util/output/cmd.ts';
+import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
-import getScope from '../util/get-scope';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const help = () => {
   console.log(`
@@ -56,7 +57,7 @@ const help = () => {
 
 // Options
 
-export default async function main(ctx     )                  {
+export default async function main(ctx) {
   let argv;
 
   argv = mri(ctx.argv.slice(2), {
@@ -92,16 +93,16 @@ export default async function main(ctx     )                  {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -129,7 +130,9 @@ export default async function main(ctx     )                  {
     throw err;
   }
 
-  let matches = deployments.filter(d => ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id)));
+  let matches = deployments.filter(d =>
+    ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id))
+  );
 
   let aliases;
 
@@ -206,7 +209,7 @@ export default async function main(ctx     )                  {
   // now.close()
   process.exit(0);
   return 0;
-};
+}
 
 function readConfirmation(matches, output) {
   return new Promise(resolve => {
@@ -220,13 +223,13 @@ function readConfirmation(matches, output) {
 
     const tbl = table(
       matches.map(depl => {
-        const time = chalk.gray(`${ms(new Date() - depl.created)  } ago`);
+        const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
         const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return [`  ${  depl.uid}`, url, time];
+        return [`  ${depl.uid}`, url, time];
       }),
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
-    output.print(`${tbl  }\n`);
+    output.print(`${tbl}\n`);
 
     for (const depl of matches) {
       for (const alias of depl.aliases) {

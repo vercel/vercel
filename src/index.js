@@ -9,17 +9,21 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
-import param from './util/output/param';
+import param from './util/output/param.ts';
 import info from './util/output/info';
 import getNowDir from './util/config/global-path';
-import { getDefaultConfig, getDefaultAuthConfig } from './util/config/get-default';
+import {
+  getDefaultConfig,
+  getDefaultAuthConfig
+} from './util/config/get-default';
 import hp from './util/humanize-path';
 import commands from './commands';
 import * as configFiles from './util/config/files';
-import pkg from './util/pkg';
+import pkg from './util/pkg.ts';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
-import getUser from './util/get-user';
+import getUser from './util/get-user.ts';
+import Client from './util/client.ts';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
 import { handleError } from './util/error';
@@ -123,9 +127,8 @@ const main = async argv_ => {
   if (!targetOrSubcommand) {
     if (argv['--version']) {
       console.log(
-        `${require('../package').version
-          }${// $FlowFixMe
-          process.pkg ? '' : chalk.magenta(' (dev)')}`
+        `${require('../package').version}${// $FlowFixMe
+        process.pkg ? '' : chalk.magenta(' (dev)')}`
       );
       return 0;
     }
@@ -139,8 +142,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          'now global directory: '}${
-          err.message}`
+          'now global directory: '}${err.message}`
       )
     );
 
@@ -154,8 +156,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" `}${
-            err.message}`
+            `now global directory "${hp(NOW_DIR)}" `}${err.message}`
         )
       );
     }
@@ -170,8 +171,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" `}${
-          err.message}`
+          `now config file "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -187,8 +187,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" `}${
-            err.message}`
+            `now config in "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -220,8 +219,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${
-            err.message}`
+            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -237,8 +235,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-          err.message}`
+          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -254,8 +251,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-            err.message}`
+            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -297,8 +293,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-            err.message}`
+            `default now config to "${hp(
+              NOW_AUTH_CONFIG_PATH
+            )}" `}${err.message}`
         )
       );
       return 1;
@@ -308,7 +305,9 @@ const main = async argv_ => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR));
-    debug(`The credentials and configuration within the ${directory} directory were upgraded`);
+    debug(
+      `The credentials and configuration within the ${directory} directory were upgraded`
+    );
   }
 
   // the context object to supply to the providers or the commands
@@ -325,8 +324,7 @@ const main = async argv_ => {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
-      commands[targetOrSubcommand];
+      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands[targetOrSubcommand];
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -369,7 +367,9 @@ const main = async argv_ => {
     // eslint-disable-next-line no-new
     new URL(ctx.apiUrl);
   } catch (err) {
-    console.error(error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`));
+    console.error(
+      error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
+    );
     return 1;
   }
 
@@ -455,11 +455,12 @@ const main = async argv_ => {
     }
 
     const { authConfig: { token } } = ctx;
+    const client = new Client({ apiUrl, token });
 
     let user = null;
 
     try {
-      user = await getUser({ apiUrl, token });
+      user = await getUser(client);
     } catch (err) {
       if (err.code === 'not_authorized') {
         console.error(
@@ -500,12 +501,13 @@ const main = async argv_ => {
         return 1;
       }
 
-      const related = list && list.find(item => item.id === team || item.slug === team);
+      const related =
+        list && list.find(item => item.id === team || item.slug === team);
 
       if (!related) {
         console.error(
           error({
-            message: "The specified team does not exist",
+            message: 'The specified team does not exist',
             slug: 'team-not-existent'
           })
         );
@@ -532,7 +534,11 @@ const main = async argv_ => {
     exitCode = await full(ctx);
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
-      output.error(`The hostname ${highlight('api.zeit.co')} could not be resolved. Please verify your internet connectivity and DNS configuration.`);
+      output.error(
+        `The hostname ${highlight(
+          'api.zeit.co'
+        )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+      );
       output.debug(err.stack);
 
       return 1;

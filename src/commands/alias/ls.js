@@ -3,32 +3,28 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import Now from '../../util';
+import Client from '../../util/client.ts';
 import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
+import getScope from '../../util/get-scope.ts';
+import stamp from '../../util/output/stamp.ts';
+import strlen from '../../util/strlen.ts';
 import wait from '../../util/output/wait';
 
-export default async function ls(
-  ctx,
-  opts,
-  args,
-  output
-) {
+export default async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -62,7 +58,7 @@ export default async function ls(
     );
   }
 
-  const aliases          = await getAliases(now);
+  const aliases = await getAliases(now);
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -78,7 +74,7 @@ export default async function ls(
     if (opts['--json']) {
       output.print(JSON.stringify({ rules: alias.rules }, null, 2));
     } else {
-      const rules                  = alias.rules || [];
+      const rules = alias.rules || [];
       output.log(
         `${rules.length} path alias ${plural(
           'rule',
@@ -101,49 +97,45 @@ export default async function ls(
   return 0;
 }
 
-function printAliasTable(aliases         )         {
-  return (
-    `${table(
-      [
-        ['source', 'url', 'age'].map(h => chalk.gray(h)),
-        ...aliases.map(a => [
-          a.rules && a.rules.length
-            ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
-            : // for legacy reasons, we might have situations
-              // where the deployment was deleted and the alias
-              // not collected appropriately, and we need to handle it
-              a.deployment && a.deployment.url
-              ? a.deployment.url
-              : chalk.gray('–'),
-          a.alias,
-          ms(Date.now() - new Date(a.created))
-        ])
-      ],
-      {
-        align: ['l', 'l', 'r'],
-        hsep: ' '.repeat(4),
-        stringLength: strlen
-      }
-    ).replace(/^/gm, '  ')  }\n\n`
-  );
+function printAliasTable(aliases) {
+  return `${table(
+    [
+      ['source', 'url', 'age'].map(h => chalk.gray(h)),
+      ...aliases.map(a => [
+        a.rules && a.rules.length
+          ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
+          : // for legacy reasons, we might have situations
+            // where the deployment was deleted and the alias
+            // not collected appropriately, and we need to handle it
+            a.deployment && a.deployment.url
+            ? a.deployment.url
+            : chalk.gray('–'),
+        a.alias,
+        ms(Date.now() - new Date(a.created))
+      ])
+    ],
+    {
+      align: ['l', 'l', 'r'],
+      hsep: ' '.repeat(4),
+      stringLength: strlen
+    }
+  ).replace(/^/gm, '  ')}\n\n`;
 }
 
-function printPathAliasTable(rules                 )         {
+function printPathAliasTable(rules) {
   const header = [['pathname', 'method', 'dest'].map(s => chalk.gray(s))];
-  return (
-    `${table(
-      header.concat(
-        rules.map(rule => [
-            rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
-            rule.method ? rule.method : '*',
-            rule.dest
-          ])
-      ),
-      {
-        align: ['l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(6),
-        stringLength: strlen
-      }
-    ).replace(/^(.*)/gm, '  $1')  }\n`
-  );
+  return `${table(
+    header.concat(
+      rules.map(rule => [
+        rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
+        rule.method ? rule.method : '*',
+        rule.dest
+      ])
+    ),
+    {
+      align: ['l', 'l', 'l', 'l'],
+      hsep: ' '.repeat(6),
+      stringLength: strlen
+    }
+  ).replace(/^(.*)/gm, '  $1')}\n`;
 }

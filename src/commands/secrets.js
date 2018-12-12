@@ -3,12 +3,13 @@ import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
 import plural from 'pluralize';
-import strlen from '../util/strlen';
+import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
 import exit from '../util/exit';
 import logo from '../util/output/logo';
-import getScope from '../util/get-scope';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
 
 const help = () => {
@@ -87,18 +88,13 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config: { currentTeam }} = ctx;
+  const { authConfig: { token }, config: { currentTeam } } = ctx;
   const output = createOutput({ debug });
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -144,7 +140,9 @@ async function run({ token, contextName, currentTeam }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('secret', list.length, true)} found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -153,10 +151,10 @@ async function run({ token, contextName, currentTeam }) {
       const out = table(
         header.concat(
           list.map(secret => [
-              '',
-              chalk.bold(secret.name),
-              chalk.gray(`${ms(cur - new Date(secret.created))  } ago`)
-            ])
+            '',
+            chalk.bold(secret.name),
+            chalk.gray(`${ms(cur - new Date(secret.created))} ago`)
+          ])
         ),
         {
           align: ['l', 'l', 'l'],
@@ -166,7 +164,7 @@ async function run({ token, contextName, currentTeam }) {
       );
 
       if (out) {
-        console.log(`\n${  out  }\n`);
+        console.log(`\n${out}\n`);
       }
     }
     return secrets.close();
@@ -274,7 +272,7 @@ process.on('uncaughtException', err => {
 
 function readConfirmation(secret) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))  } ago`);
+    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
     const tbl = table([[chalk.bold(secret.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -283,7 +281,7 @@ function readConfirmation(secret) {
     process.stdout.write(
       '> The following secret will be removed permanently\n'
     );
-    process.stdout.write(`  ${  tbl  }\n`);
+    process.stdout.write(`  ${tbl}\n`);
 
     process.stdout.write(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`

@@ -2,15 +2,16 @@ import chalk from 'chalk';
 import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
-import cmd from '../util/output/cmd';
+import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
 import { handleError } from '../util/error';
-import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
+import strlen from '../util/strlen.ts';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const STATIC = 'STATIC';
 
@@ -45,7 +46,7 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx     )                  {
+export default async function main(ctx) {
   let id;
   let deployment;
   let argv;
@@ -78,16 +79,16 @@ export default async function main(ctx     )                  {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -112,7 +113,8 @@ export default async function main(ctx     )                  {
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
       return 1;
-    } if (err.status === 403) {
+    }
+    if (err.status === 403) {
       error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
@@ -120,9 +122,8 @@ export default async function main(ctx     )                  {
       );
       return 1;
     }
-      // unexpected
-      throw err;
-
+    // unexpected
+    throw err;
   }
 
   const {
@@ -141,7 +142,7 @@ export default async function main(ctx     )                  {
   const isBuilds = version === 2;
   const buildsUrl = `/v1/now/deployments/${finalId}/builds`;
 
-  const [scale, events, {builds}] = await Promise.all([
+  const [scale, events, { builds }] = await Promise.all([
     caught(
       now.fetch(`/v3/now/deployments/${encodeURIComponent(finalId)}/instances`)
     ),
@@ -149,10 +150,12 @@ export default async function main(ctx     )                  {
       ? null
       : caught(
           now.fetch(
-            `/v1/now/deployments/${encodeURIComponent(finalId)}/events?types=event`
+            `/v1/now/deployments/${encodeURIComponent(
+              finalId
+            )}/events?types=event`
           )
-      ),
-    isBuilds ? now.fetch(buildsUrl): { builds: [] }
+        ),
+    isBuilds ? now.fetch(buildsUrl) : { builds: [] }
   ]);
 
   cancelWait();
@@ -180,7 +183,9 @@ export default async function main(ctx     )                  {
   print(`    ${chalk.dim('url')}\t\t${url}\n`);
   print(
     `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created, true)}\n`
+      Date.now() - created,
+      true
+    )}\n`
   );
   print('\n');
 
@@ -188,7 +193,7 @@ export default async function main(ctx     )                  {
     const times = {};
 
     for (const build of builds) {
-      const {id, createdAt, readyStateAt} = build;
+      const { id, createdAt, readyStateAt } = build;
       times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
@@ -239,7 +244,7 @@ export default async function main(ctx     )                  {
         align: ['l', 'c', 'c', 'c'],
         hsep: ' '.repeat(8),
         stringLength: strlen
-      }).replace(/^(.*)/gm, '    $1')  }\n`
+      }).replace(/^(.*)/gm, '    $1')}\n`
     );
     print('\n');
   }
@@ -261,18 +266,12 @@ export default async function main(ctx     )                  {
   }
 
   return exitCode;
-};
+}
 
 // gets the metadata that should be printed next to
 // each event
 
-
-
-
-
-
-
-function getEventMetadata({ event, payload }       )         {
+function getEventMetadata({ event, payload }) {
   if (event === 'state') {
     return chalk.bold(payload.value);
   }
@@ -288,14 +287,14 @@ function getEventMetadata({ event, payload }       )         {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught(p)               {
+function caught(p) {
   return new Promise(r => {
     p.then(r).catch(r);
   });
 }
 
 // renders the state string
-function stateString(s        )         {
+function stateString(s) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

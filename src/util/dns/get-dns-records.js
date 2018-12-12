@@ -1,10 +1,7 @@
-//      
-
 import getDomainDNSRecords from './get-domain-dns-records';
 import isDomainExternal from '../domains/is-domain-external';
 import getDomains from '../domains/get-domains';
-import { DomainNotFound } from '../errors';
-                                       
+import { DomainNotFound } from '../errors-ts';
 
 async function getDNSRecords(output        , now     , contextName        ) {
   const domains           = await getDomains(output, now, contextName);

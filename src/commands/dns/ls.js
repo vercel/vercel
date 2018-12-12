@@ -2,33 +2,24 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import Now from '../../util';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import formatTable from '../../util/format-table';
-import { DomainNotFound } from '../../util/errors';
+import { DomainNotFound } from '../../util/errors-ts';
 
-async function ls(
-  ctx,
-  opts,
-  args,
-  output
-) {
+async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-
+  const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -83,9 +74,7 @@ async function ls(
   return 0;
 }
 
-function getDNSRecordsTable(
-  dnsRecords
-)         {
+function getDNSRecordsTable(dnsRecords) {
   return formatTable(
     ['', 'id', 'name', 'type', 'value', 'created'],
     ['l', 'r', 'l', 'l', 'l', 'l'],
@@ -96,9 +85,9 @@ function getDNSRecordsTable(
   );
 }
 
-function getDNSRecordRow(domainName        , record           ) {
+function getDNSRecordRow(domainName, record) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = `${ms(Date.now() - new Date(Number(record.created)))  } ago`;
+  const createdAt = `${ms(Date.now() - new Date(Number(record.created)))} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',
