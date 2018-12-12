@@ -13,8 +13,6 @@ export default async function getAppLastDeployment(
 ) {
   output.debug(`Looking for deployments matching app ${appName}`);
   const deployments = await getDeploymentsByAppName(client, appName);
-  console.log('APP DEPLOYMENTS')
-  console.log(deployments);
   const deploymentItem = deployments
     .sort((a, b) => b.created - a.created)
     .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0];
