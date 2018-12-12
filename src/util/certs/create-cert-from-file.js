@@ -1,18 +1,15 @@
-//      
-import { readFileSync } from 'fs';
+      import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import wait from '../output/wait';
-
-
-import { InvalidCert, DomainPermissionDenied } from '../errors';
-                                            
+import { InvalidCert } from '../errors';
+import { DomainPermissionDenied } from '../errors-ts';
 
 async function createCertFromFile(
   now     ,
   keyPath        ,
   certPath        ,
   caPath        ,
-  context        
+  context
 ) {
   const cancelWait = wait('Adding your custom certificate');
   const cert = readFileSync(resolve(certPath), 'utf8');
@@ -36,9 +33,9 @@ async function createCertFromFile(
       return new InvalidCert();
     } if (error.code === 'forbidden') {
       return new DomainPermissionDenied(error.domain, context);
-    } 
+    }
       throw error;
-    
+
   }
 }
 

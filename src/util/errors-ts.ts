@@ -286,6 +286,16 @@ export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERR
   }
 }
 
+export class CertOrderNotFound extends NowError<'CERT_ORDER_NOT_FOUND', { cns: string[] }> {
+  constructor(cns: string[]) {
+    super({
+      code: 'CERT_ORDER_NOT_FOUND',
+      meta: { cns },
+      message: `No cert order could be found for cns ${cns.join(' ,')}`
+    });
+  }
+}
+
 /**
  * Returned when the user tries to create a wildcard certificate but LE API returns
  * a rate limit error because there were too many certificates created already.
@@ -544,6 +554,36 @@ export class RuleValidationFailed extends NowError<'RULE_VALIDATION_FAILED', { m
       code: 'RULE_VALIDATION_FAILED',
       meta: { message },
       message: `The server validation for rules failed`
+    });
+  }
+}
+
+export class InvalidMinForScale extends NowError<'INVALID_MIN_FOR_SCALE', {value: string}> {
+  constructor(value: string) {
+    super({
+      code: 'INVALID_MIN_FOR_SCALE',
+      meta: { value },
+      message: `Invalid <min> parameter "${value}". A number or "auto" were expected`
+    });
+  }
+}
+
+export class InvalidArgsForMinMaxScale extends NowError<'INVALID_ARGS_FOR_MIN_MAX_SCALE', { min: string }> {
+  constructor(min: string) {
+    super({
+      code: 'INVALID_ARGS_FOR_MIN_MAX_SCALE',
+      meta: { min },
+      message: `Invalid number of arguments: expected <min> ("${min}") and [max]`
+    });
+  }
+}
+
+export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { value: string }> {
+  constructor(value: string) {
+    super({
+      code: 'INVALID_MAX_FOR_SCALE',
+      meta: { value },
+      message: `Invalid <max> parameter "${value}". A number or "auto" were expected`
     });
   }
 }

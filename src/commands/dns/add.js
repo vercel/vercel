@@ -4,7 +4,8 @@ import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
-import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
+import { DNSPermissionDenied } from '../../util/errors';
+import { DomainNotFound } from '../../util/errors-ts'
 
 async function add(ctx, opts, args, output) {
   // eslint-disable-line

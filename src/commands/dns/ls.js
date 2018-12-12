@@ -8,7 +8,7 @@ import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import stamp from '../../util/output/stamp.ts';
 import formatTable from '../../util/format-table';
-import { DomainNotFound } from '../../util/errors';
+import { DomainNotFound } from '../../util/errors-ts';
 
 async function ls(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;

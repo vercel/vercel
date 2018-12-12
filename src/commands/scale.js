@@ -1,4 +1,3 @@
-//
 import ms from 'ms';
 import chalk from 'chalk';
 
@@ -21,7 +20,7 @@ import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
 
 import { handleError } from '../util/error';
-import { VerifyScaleTimeout } from '../util/errors';
+import { VerifyScaleTimeout } from '../util/errors-ts';
 
 const help = () => {
   console.log(`

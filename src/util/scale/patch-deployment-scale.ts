@@ -1,17 +1,21 @@
-//      
 import chalk from 'chalk';
 import wait from '../output/wait';
 import joinWords from '../output/join-words';
+import * as Errors from '../errors-ts';
+import { Output } from '../output';
+import Client from '../client';
 
-                                                                             
-import * as Errors from '../errors';
+type ScaleArgs = {
+  min: number,
+  max: number | 'auto'
+};
 
-async function patchDeploymentScale(
-  output        ,
-  now     ,
-  deploymentId        ,
-  scaleArgs                                       ,
-  url        
+export default async function patchDeploymentScale(
+  output: Output,
+  client: Client,
+  deploymentId: string,
+  scaleArgs: ScaleArgs,
+  url: string
 ) {
   const cancelWait = wait(
     `Setting scale rules for ${joinWords(
@@ -20,13 +24,10 @@ async function patchDeploymentScale(
   );
 
   try {
-    await now.fetch(
-      `/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`,
-      {
-        method: 'PATCH',
-        body: scaleArgs
-      }
-    );
+    await client.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`, {
+      method: 'PATCH',
+      body: scaleArgs
+    });
     cancelWait();
   } catch (error) {
     cancelWait();
@@ -38,10 +39,8 @@ async function patchDeploymentScale(
       return new Errors.InvalidScaleMinMaxRelation(url);
     } if (error.code === 'not_supported_min_scale_slots') {
       return new Errors.NotSupportedMinScaleSlots(url);
-    } 
-      throw error;
-    
+    }
+
+    throw error;
   }
 }
-
-export default patchDeploymentScale;
