@@ -106,7 +106,12 @@
     "link"
   ],
   "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
     "require": [
+      "ts-node/register/transpile-only",
       "esm"
     ]
   },
@@ -190,6 +195,7 @@
     "through2": "2.0.3",
     "title": "3.4.0",
     "tmp-promise": "1.0.3",
+    "ts-node": "7.0.1",
     "typescript": "3.2.2",
     "typescript-eslint-parser": "21.0.2",
     "update-check": "1.5.0",
