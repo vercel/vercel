@@ -17,7 +17,6 @@ import buildsList from '../../util/output/builds';
 import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/format-dns-table.ts';
-import zeitWorldTable from '../../util/zeit-world-table';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
@@ -390,7 +389,7 @@ export const pipe = async function main(
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
       firstDeployCall instanceof DomainVerificationFailed ||
-      firstDeployCall instanceof SchemaValidationFailed||
+      firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests
     ) {
@@ -466,6 +465,7 @@ export const pipe = async function main(
           secondDeployCall instanceof DomainsShouldShareRoot ||
           secondDeployCall instanceof DomainValidationRunning ||
           secondDeployCall instanceof DomainVerificationFailed ||
+          secondDeployCall instanceof SchemaValidationFailed ||
           secondDeployCall instanceof TooManyCertificates ||
           secondDeployCall instanceof TooManyRequests
         ) {
@@ -599,47 +599,24 @@ export const pipe = async function main(
   return printDeploymentStatus(output, deployment, deployStamp, builds);
 };
 
-function handleCreateDeployError            (
-  output        ,
-  error
-)                 {
+function handleCreateDeployError(output, error) {
   if (error instanceof CantGenerateWildcardCert) {
-    output.error(
-      `Custom suffixes are only allowed for domains in ${chalk.underline(
-        'zeit.world'
-      )}`
-    );
+    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
     return 1;
   } if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
-      );
+      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
     } else {
-      output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
+      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
       output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
   } if (error instanceof DomainConfigurationError) {
-    output.error(
-      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
+    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
     if (error.meta.external) {
-      output.print(
-        `  The propagation may take a few minutes, but please verify your settings:\n\n`
-      );
+      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
       output.print(
         `${dnsTable([
           error.meta.subdomain === null
@@ -648,18 +625,12 @@ function handleCreateDeployError            (
         ])  }\n`
       );
     } else {
-      output.print(
-        `  We configured them for you, but the propagation may take a few minutes.\n`
-      );
+      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
       output.print(`  Please try again later.\n`);
     }
     return 1;
   } if (error instanceof DomainVerificationFailed) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} is not verified and can't be used as custom suffix.`
-    );
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
     return 1;
   } if (error instanceof DomainPermissionDenied) {
     output.error(
@@ -669,7 +640,7 @@ function handleCreateDeployError            (
     );
     return 1;
   } if (error instanceof DomainsShouldShareRoot) {
-    // this is not going to happen
+    output.error(`All given common names should share the same root domain.`);
     return 1;
   } if (error instanceof DomainValidationRunning) {
     output.error(
@@ -680,78 +651,32 @@ function handleCreateDeployError            (
     return 1;
   } if (error instanceof SchemaValidationFailed) {
     const { params, keyword, dataPath } = error.meta;
-
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
       output.error(`The property ${code(prop)} is not allowed in ${highlight('now.json')} when using Now 2.0 – please remove it.`);
-
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(`Do you mean ${code('build')} (object) with a property ${code('env')} (object) instead of ${code(prop)}?`);
       }
-
       return 1;
     } if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
       output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
       return 1;
     }
-
     const link = 'https://zeit.co/docs/v2/deployments/configuration/';
     output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
-
-    return 1;
-  } if (error instanceof DomainVerificationFailed) {
-    output.error(
-      `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
-    );
-    output.print(
-      `  Please make sure that your nameservers point to ${chalk.underline(
-        'zeit.world'
-      )}.\n`
-    );
-    output.print(
-      `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
-    );
-    output.print(`${zeitWorldTable()  }\n`);
-    output.print(
-      `\n  As an alternative, you can add following records to your DNS settings:\n`
-    );
-    output.print(
-      `${dnsTable(
-        [
-          ['_now', 'TXT', error.meta.token],
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ],
-        { extraSpace: '  ' }
-      )  }\n`
-    );
     return 1;
   } if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
   } if (error instanceof TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
-        ', '
-      )}`
-    );
+    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
     return 1;
   } if (error instanceof TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
-    );
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
     return 1;
   } if (error instanceof DomainNotFound) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
-    );
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
     return 1;
   }
 

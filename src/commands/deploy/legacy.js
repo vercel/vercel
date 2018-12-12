@@ -37,7 +37,7 @@ import raceAsyncGenerators from '../../util/race-async-generators';
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp.ts';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
-import zeitWorldTable from '../../util/zeit-world-table';
+import note from '../../util/output/note';
 import parseMeta from '../../util/parse-meta';
 import {
   CantGenerateWildcardCert,
@@ -57,6 +57,7 @@ import {
   InvalidAllForScale,
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
+import { SchemaValidationFailed, } from '../../util/errors';
 
 const mriOpts = {
   string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
@@ -842,16 +843,16 @@ async function sync({
         createArgs
       );
       if (
-        firstDeployCall instanceof CantSolveChallenge ||
         firstDeployCall instanceof CantGenerateWildcardCert ||
+        firstDeployCall instanceof CantSolveChallenge ||
+        firstDeployCall instanceof CDNNeedsUpgrade ||
         firstDeployCall instanceof DomainConfigurationError ||
         firstDeployCall instanceof DomainNotFound ||
-        firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof DomainPermissionDenied ||
         firstDeployCall instanceof DomainsShouldShareRoot ||
         firstDeployCall instanceof DomainValidationRunning ||
         firstDeployCall instanceof DomainVerificationFailed ||
-        firstDeployCall instanceof CDNNeedsUpgrade ||
+        firstDeployCall instanceof SchemaValidationFailed ||
         firstDeployCall instanceof TooManyCertificates ||
         firstDeployCall instanceof TooManyRequests
       ) {
@@ -920,16 +921,16 @@ async function sync({
             createArgs
           );
           if (
-            secondDeployCall instanceof CantSolveChallenge ||
             secondDeployCall instanceof CantGenerateWildcardCert ||
+            secondDeployCall instanceof CantSolveChallenge ||
+            secondDeployCall instanceof CDNNeedsUpgrade ||
             secondDeployCall instanceof DomainConfigurationError ||
             secondDeployCall instanceof DomainNotFound ||
-            secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof DomainPermissionDenied ||
             secondDeployCall instanceof DomainsShouldShareRoot ||
             secondDeployCall instanceof DomainValidationRunning ||
             secondDeployCall instanceof DomainVerificationFailed ||
-            secondDeployCall instanceof CDNNeedsUpgrade ||
+            secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyCertificates ||
             secondDeployCall instanceof TooManyRequests
           ) {
@@ -1281,47 +1282,24 @@ function getVerifyDCsGenerator(
     : verifyDeployment;
 }
 
-function handleCreateDeployError            (
-  output        ,
-  error
-)                 {
+function handleCreateDeployError(output, error) {
   if (error instanceof CantGenerateWildcardCert) {
-    output.error(
-      `Custom suffixes are only allowed for domains in ${chalk.underline(
-        'zeit.world'
-      )}`
-    );
+    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
     return 1;
   } if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
-      );
+      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
     } else {
-      output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
+      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
       output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
   } if (error instanceof DomainConfigurationError) {
-    output.error(
-      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
+    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
     if (error.meta.external) {
-      output.print(
-        `  The propagation may take a few minutes, but please verify your settings:\n\n`
-      );
+      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
       output.print(
         `${dnsTable([
           error.meta.subdomain === null
@@ -1330,18 +1308,12 @@ function handleCreateDeployError            (
         ])  }\n`
       );
     } else {
-      output.print(
-        `  We configured them for you, but the propagation may take a few minutes.\n`
-      );
+      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
       output.print(`  Please try again later.\n`);
     }
     return 1;
   } if (error instanceof DomainVerificationFailed) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} is not verified and can't be used as custom suffix.`
-    );
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
     return 1;
   } if (error instanceof DomainPermissionDenied) {
     output.error(
@@ -1351,7 +1323,7 @@ function handleCreateDeployError            (
     );
     return 1;
   } if (error instanceof DomainsShouldShareRoot) {
-    // this is not going to happen
+    output.error(`All given common names should share the same root domain.`);
     return 1;
   } if (error instanceof DomainValidationRunning) {
     output.error(
@@ -1360,58 +1332,17 @@ function handleCreateDeployError            (
       )}. Wait until it finishes.`
     );
     return 1;
-  } if (error instanceof DomainVerificationFailed) {
-    output.error(
-      `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
-    );
-    output.print(
-      `  Please make sure that your nameservers point to ${chalk.underline(
-        'zeit.world'
-      )}.\n`
-    );
-    output.print(
-      `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
-    );
-    output.print(`${zeitWorldTable()  }\n`);
-    output.print(
-      `\n  As an alternative, you can add following records to your DNS settings:\n`
-    );
-    output.print(
-      `${dnsTable(
-        [
-          ['_now', 'TXT', error.meta.token],
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ],
-        { extraSpace: '  ' }
-      )  }\n`
-    );
-    return 1;
   } if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
   } if (error instanceof TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
-        ', '
-      )}`
-    );
+    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
     return 1;
   } if (error instanceof TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
-    );
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
     return 1;
   } if (error instanceof DomainNotFound) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
-    );
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
     return 1;
   }
 

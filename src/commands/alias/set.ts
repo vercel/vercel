@@ -251,14 +251,6 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
     );
     return 1;
   }
-  if (error instanceof ERRORS.DomainPermissionDenied) {
-    output.error(
-      `No permission to access domain ${chalk.underline(
-        error.meta.domain
-      )} under ${chalk.bold(error.meta.context)}`
-    );
-    return 1;
-  }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
       `No permission to access deployment ${chalk.dim(

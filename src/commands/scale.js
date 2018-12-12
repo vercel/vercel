@@ -24,14 +24,16 @@ import {
   DeploymentPermissionDenied,
   ForbiddenScaleMaxInstances,
   ForbiddenScaleMinInstances,
-  InvalidAllForScale,
   InvalidArgsForMinMaxScale,
   InvalidMaxForScale,
   InvalidMinForScale,
-  InvalidRegionOrDCForScale,
   InvalidScaleMinMaxRelation,
   NotSupportedMinScaleSlots,
 } from '../util/errors-ts';
+import {
+  InvalidAllForScale,
+  InvalidRegionOrDCForScale,
+} from '../util/errors'
 
 const help = () => {
   console.log(`
