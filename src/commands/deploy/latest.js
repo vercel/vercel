@@ -33,7 +33,6 @@ import {
   DomainsShouldShareRoot,
   DomainValidationRunning,
   DomainVerificationFailed,
-  InvalidWildcardDomain,
   TooManyCertificates,
   TooManyRequests,
 } from '../../util/errors-ts';
@@ -391,7 +390,6 @@ export const pipe = async function main(
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
       firstDeployCall instanceof DomainVerificationFailed ||
-      firstDeployCall instanceof InvalidWildcardDomain ||
       firstDeployCall instanceof SchemaValidationFailed||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests
@@ -468,7 +466,6 @@ export const pipe = async function main(
           secondDeployCall instanceof DomainsShouldShareRoot ||
           secondDeployCall instanceof DomainValidationRunning ||
           secondDeployCall instanceof DomainVerificationFailed ||
-          secondDeployCall instanceof InvalidWildcardDomain ||
           secondDeployCall instanceof TooManyCertificates ||
           secondDeployCall instanceof TooManyRequests
         ) {
@@ -729,14 +726,6 @@ function handleCreateDeployError            (
         ],
         { extraSpace: '  ' }
       )  }\n`
-    );
-    return 1;
-  } if (error instanceof InvalidWildcardDomain) {
-    // this should never happen
-    output.error(
-      `Invalid domain ${chalk.underline(
-        error.meta.domain
-      )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
   } if (error instanceof CDNNeedsUpgrade) {

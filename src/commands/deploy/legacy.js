@@ -49,13 +49,14 @@ import {
   DomainsShouldShareRoot,
   DomainValidationRunning,
   DomainVerificationFailed,
-  InvalidAllForScale,
-  InvalidRegionOrDCForScale,
-  InvalidWildcardDomain,
   TooManyCertificates,
   TooManyRequests,
   VerifyScaleTimeout
 } from '../../util/errors-ts';
+import {
+  InvalidAllForScale,
+  InvalidRegionOrDCForScale,
+} from '../../util/errors';
 
 const mriOpts = {
   string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
@@ -850,7 +851,6 @@ async function sync({
         firstDeployCall instanceof DomainsShouldShareRoot ||
         firstDeployCall instanceof DomainValidationRunning ||
         firstDeployCall instanceof DomainVerificationFailed ||
-        firstDeployCall instanceof InvalidWildcardDomain ||
         firstDeployCall instanceof CDNNeedsUpgrade ||
         firstDeployCall instanceof TooManyCertificates ||
         firstDeployCall instanceof TooManyRequests
@@ -929,7 +929,6 @@ async function sync({
             secondDeployCall instanceof DomainsShouldShareRoot ||
             secondDeployCall instanceof DomainValidationRunning ||
             secondDeployCall instanceof DomainVerificationFailed ||
-            secondDeployCall instanceof InvalidWildcardDomain ||
             secondDeployCall instanceof CDNNeedsUpgrade ||
             secondDeployCall instanceof TooManyCertificates ||
             secondDeployCall instanceof TooManyRequests
@@ -1387,14 +1386,6 @@ function handleCreateDeployError            (
         ],
         { extraSpace: '  ' }
       )  }\n`
-    );
-    return 1;
-  } if (error instanceof InvalidWildcardDomain) {
-    // this should never happen
-    output.error(
-      `Invalid domain ${chalk.underline(
-        error.meta.domain
-      )}. Wildcard domains can only be followed by a root domain.`
     );
     return 1;
   } if (error instanceof CDNNeedsUpgrade) {

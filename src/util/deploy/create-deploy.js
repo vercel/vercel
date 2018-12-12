@@ -37,7 +37,6 @@ export default async function createDeploy(output, now, contextName, paths, crea
         result instanceof ERRORS_TS.DomainsShouldShareRoot ||
         result instanceof ERRORS_TS.DomainValidationRunning ||
         result instanceof ERRORS_TS.DomainVerificationFailed ||
-        result instanceof ERRORS_TS.InvalidWildcardDomain ||
         result instanceof ERRORS_TS.TooManyCertificates ||
         result instanceof ERRORS_TS.TooManyRequests
       ) {

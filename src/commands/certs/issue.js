@@ -20,7 +20,6 @@ import {
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
-  InvalidWildcardDomain,
   TooManyCertificates,
   TooManyRequests
 } from '../../util/errors-ts';
@@ -205,14 +204,6 @@ export default async function issue(ctx, opts, args, output) {
   }
   if (cert instanceof DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
-    return 1;
-  }
-  if (cert instanceof InvalidWildcardDomain) {
-    output.error(
-      `Invalid domain ${chalk.underline(
-        cert.meta.domain
-      )}. Wildcard domains can only be followed by a root domain.`
-    );
     return 1;
   }
   if (cert instanceof DomainPermissionDenied) {
