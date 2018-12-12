@@ -45,7 +45,6 @@ import {
   CDNNeedsUpgrade,
   DomainConfigurationError,
   DomainNotFound,
-  DomainVerificationFailed,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
