@@ -11,7 +11,7 @@ export default async function getTargetsForAlias(output: Output, args: string[],
 }
 
 function targetsToHosts(targets: string[]) {
-  return targets.map(targetToHost).filter(item => !item) as string[]
+  return targets.map(targetToHost).filter(item => item) as string[]
 }
 
 function targetToHost(target: string) {
