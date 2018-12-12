@@ -1,7 +1,7 @@
-//      
-import { RulesFileValidationError } from '../../util/errors';
+import { RulesFileValidationError } from '../../util/errors-ts';
+import { PathRule } from '../../types';
 
-function validatePathAliasRules(location        , rules     ) {
+export default function validatePathAliasRules(location: string, rules: PathRule[]) {
   if (!Array.isArray(rules)) {
     return new RulesFileValidationError(location, 'rules must be an array');
   } if (rules.length === 0) {
@@ -22,5 +22,3 @@ function validatePathAliasRules(location        , rules     ) {
     }
   }
 }
-
-export default validatePathAliasRules;

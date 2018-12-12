@@ -1,15 +1,14 @@
-//      
 import path from 'path';
-import { CantParseJSONFile } from '../../util/errors';
+import { CantParseJSONFile } from './errors-ts';
 import readJSONFile from './read-json-file';
-                                               
+import { Config } from '../types';
 
-                       
-               
-              
-  
+type Package = {
+  name: string,
+  now?: Config
+};
 
-async function readPackage(file         ) {
+export default async function readPackage(file?: string) {
   const pkgFilePath = file || path.resolve(process.cwd(), 'package.json');
   const result = await readJSONFile(pkgFilePath);
   if (result instanceof CantParseJSONFile) {
@@ -17,11 +16,9 @@ async function readPackage(file         ) {
   }
 
   if (result !== null) {
-    const pkg          = result;
+    const pkg = result as Package;
     return pkg;
   }
 
   return result;
 }
-
-export default readPackage;

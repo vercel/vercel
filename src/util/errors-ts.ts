@@ -477,3 +477,73 @@ export class VerifyScaleTimeout extends NowError<{ timeout: number }> {
     });
   }
 }
+
+export class CantParseJSONFile extends NowError<{ file: string }> {
+  constructor(file: string) {
+    super({
+      code: 'CANT_PARSE_JSON_FILE',
+      meta: { file },
+      message: `Can't parse json file`
+    });
+  }
+}
+
+export class CantFindConfig extends NowError<{ paths: string[] }> {
+  constructor(paths: string[]) {
+    super({
+      code: 'CANT_FIND_CONFIG',
+      meta: { paths },
+      message: `Can't find a configuration file in the given locations.`
+    });
+  }
+}
+
+export class FileNotFound extends NowError<{ file: string }> {
+  constructor(file: string) {
+    super({
+      code: 'FILE_NOT_FOUND',
+      meta: { file },
+      message: `Can't find a file in provided location '${file}'.`
+    });
+  }
+}
+
+export class RulesFileValidationError extends NowError<{ location: string, message: string }> {
+  constructor(location: string, message: string) {
+    super({
+      code: 'PATH_ALIAS_VALIDATION_ERROR',
+      meta: { location, message },
+      message: `The provided rules format in file for path alias are invalid`
+    });
+  }
+}
+
+export class NoAliasInConfig extends NowError <{}> {
+  constructor() {
+    super({
+      code: 'NO_ALIAS_IN_CONFIG',
+      meta: {},
+      message: `There is no alias set up in config file.`
+    });
+  }
+}
+
+export class InvalidAliasInConfig extends NowError<{ value: any }> {
+  constructor(value: any) {
+    super({
+      code: 'INVALID_ALIAS_IN_CONFIG',
+      meta: { value },
+      message: `Invalid alias option in configuration.`
+    });
+  }
+}
+
+export class RuleValidationFailed extends NowError<{ message: string }> {
+  constructor(message: string) {
+    super({
+      code: 'RULE_VALIDATION_FAILED',
+      meta: { message },
+      message: `The server validation for rules failed`
+    });
+  }
+}

@@ -1,17 +1,14 @@
-//      
 import path from 'path';
-
-import humanizePath from '../../util/humanize-path';
-                                               
-
-// Local modules
-import { CantParseJSONFile, CantFindConfig } from '../../util/errors';
+import { CantParseJSONFile, CantFindConfig } from './errors-ts';
+import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';
+import { Config } from '../types';
+import { Output } from './output';
 
-let config               ;
+let config: Config;
 
-async function getConfig(output        , configFile         ) {
+export default async function getConfig(output: Output, configFile?: string) {
   const localPath = process.cwd();
 
   // If config was already read, just return it
@@ -63,7 +60,7 @@ async function getConfig(output        , configFile         ) {
   return new CantFindConfig([nowFilePath, pkgFilePath].map(humanizePath));
 }
 
-async function readConfigFromPackage(file        ) {
+async function readConfigFromPackage(file: string) {
   const result = await readPackage(file);
   if (result instanceof CantParseJSONFile) {
     return result;
@@ -71,5 +68,3 @@ async function readConfigFromPackage(file        ) {
 
   return result !== null ? result.now : null;
 }
-
-export default getConfig;

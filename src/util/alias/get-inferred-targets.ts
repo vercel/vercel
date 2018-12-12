@@ -1,20 +1,14 @@
-//      
-import getConfig from './get-config';
+import { Output } from '../output';
+import * as ERRORS from '../../util/errors-ts';
+import getConfig from '../../util/get-config';
 
-import {
-  NoAliasInConfig,
-  InvalidAliasInConfig,
-  CantParseJSONFile,
-  CantFindConfig
-} from '../../util/errors';
-
-async function getInferredTargets(
-  output        ,
-  localConfigPath               
-) {
+export default async function getInferredTargets(output: Output, localConfigPath: string) {
   // Read the configuration file from the best guessed location
   const config = await getConfig(output, localConfigPath);
-  if (config instanceof CantParseJSONFile || config instanceof CantFindConfig) {
+  if (
+    config instanceof ERRORS.CantParseJSONFile ||
+    config instanceof ERRORS.CantFindConfig
+  ) {
     return config;
   }
 
@@ -26,16 +20,14 @@ async function getInferredTargets(
   // The aliases can be stored in both aliases or alias
   const aliases = config.aliases || config.alias;
   if (!aliases) {
-    return new NoAliasInConfig();
+    return new ERRORS.NoAliasInConfig();
   }
 
   // Check the type for the option aliases
   if (typeof aliases !== 'string' && !Array.isArray(aliases)) {
-    return new InvalidAliasInConfig(aliases);
+    return new ERRORS.InvalidAliasInConfig(aliases);
   }
 
   // Always resolve with an array
   return typeof aliases === 'string' ? [aliases] : aliases;
 }
-
-export default getInferredTargets;

@@ -1,30 +1,29 @@
-//      
 import chalk from 'chalk';
 
-                                             
-import getAppLastDeployment from './get-app-last-deployment';
-import getAppName from './get-app-name';
+import getAppLastDeployment from '../deploy/get-app-last-deployment';
+import getAppName from '../deploy/get-app-name';
 import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import wait from '../../util/output/wait';
+import Client from '../client';
+import { Output } from '../output';
+import { User } from '../../types';
 
-async function getDeploymentForAlias(
-  now     ,
-  output        ,
-  args               ,
-  localConfig               ,
-  user      ,
-  contextName        
+export default async function getDeploymentForAlias(
+  client: Client,
+  output: Output,
+  args: string[],
+  localConfig: string | undefined,
+  user: User,
+  contextName: string
 ) {
-  const cancelWait = wait(
-    `Fetching deployment to alias in ${chalk.bold(contextName)}`
-  );
+  const cancelWait = wait(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
   let deployment;
 
   // When there are no args at all we try to get the targets from the config
   if (args.length === 2) {
     const [deploymentId] = args;
     deployment = await fetchDeploymentByIdOrHost(
-      now,
+      client,
       contextName,
       deploymentId
     );
@@ -32,7 +31,7 @@ async function getDeploymentForAlias(
     const appName = await getAppName(output, localConfig);
     deployment = await getAppLastDeployment(
       output,
-      now,
+      client,
       appName,
       user,
       contextName
@@ -42,5 +41,3 @@ async function getDeploymentForAlias(
   cancelWait();
   return deployment;
 }
-
-export default getDeploymentForAlias;

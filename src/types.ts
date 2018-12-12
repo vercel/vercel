@@ -10,6 +10,13 @@ export interface NowContext {
   }
 }
 
+export interface Config {
+  alias?: string[] | string,
+  aliases?: string[] | string,
+  name?: string,
+  type?: string
+};
+
 type Billing = {
   addons: string[];
   cancelation?: number;
@@ -171,4 +178,10 @@ export type Alias = {
   },
   deploymentId: string,
   rules?: PathAliasRule[]
+};
+
+export type PathRule = {
+  dest: string,
+  pathname?: string,
+  method?: Array<string>
 };

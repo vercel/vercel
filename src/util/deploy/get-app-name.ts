@@ -1,9 +1,10 @@
 import path from 'path';
-import { NowError } from '../../util/now-error.ts';
-import getConfig from './get-config';
-import readPackage from './read-package';
+import { NowError } from '../../util/now-error';
+import { Output } from '../output';
+import getConfig from '../get-config';
+import readPackage from '../read-package';
 
-export default async function getAppName(output, localConfig) {
+export default async function getAppName(output: Output, localConfig?: string) {
   const config = await getConfig(output, localConfig);
 
   // If the name is in the configuration, return it

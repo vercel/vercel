@@ -5,7 +5,7 @@ import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import wait from '../output/wait';
 
-type AliasRecord = {
+export type AliasRecord = {
   uid: string,
   alias: string,
   created?: string,

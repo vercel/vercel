@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import strlen from './strlen.ts';
+import strlen from './strlen';
 
 export default function zeitWorldTable() {
   return table(
