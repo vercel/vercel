@@ -18,8 +18,8 @@ import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
 async function rm(
   ctx            ,
-  opts                   ,
-  args          ,
+  opts           ,
+  args           ,
   output
 )                  {
   const { authConfig: { token }, config } = ctx;
@@ -84,13 +84,13 @@ async function rm(
 
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
-  for (const aliasId of domain.aliases) {
-    await removeAliasById(now, aliasId);
+  for (const alias of domain.aliases) {
+    await removeAliasById(now, alias.id);
   }
 
   output.debug(`Removing certs`);
   for (const cert of domain.certs) {
-    await deleteCertById(output, now, cert.uid);
+    await deleteCertById(output, now, cert.id);
   }
 
   output.debug(`Removing domain`);
@@ -108,7 +108,7 @@ async function confirmDomainRemove(
   domain
 ) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);
+    const time = chalk.gray(`${ms(new Date() - new Date(domain.createdAt))  } ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
