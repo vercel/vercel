@@ -4,10 +4,6 @@ import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
 
-function isAPIError(error: Error): error is APIError {
-  return Boolean((<APIError>error).status);
-}
-
 export default function handleError(error: string | Error | APIError, { debug = false } = {}) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
@@ -18,33 +14,30 @@ export default function handleError(error: string | Error | APIError, { debug = 
     console.log(`> [debug] handling error: ${error.stack}`);
   }
 
-  if (isAPIError(error)) {
-    const err = error as APIError;
-    if (err.status === 403) {
-      console.error(errorOutput('Authentication err. Run `now login` to log-in again.'));
-    } else if (err.status === 429) {
-      if (err.retryAfter === 'never') {
-        console.error(errorOutput(err.message));
-      } else if (err.retryAfter === null) {
-        console.error(errorOutput('Rate limit exceeded err. Please try later.'));
-      } else {
-        console.error(
-          errorOutput(
-            `Rate limit exceeded err. Try again in ${
-              ms(err.retryAfter * 1000, { long: true })
-              }, or upgrade your account by running ` +
-              `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
-          )
-        );
-      }
-    } else if (err.message) {
-      console.error(errorOutput(err.message));
-    } else if (err.status === 500) {
-      console.error(errorOutput('Unexpected server err. Please retry.'));
-    } else if (err.code === 'USER_ABORT') {
-      info('Aborted');
+  if ((<APIError>error).status === 403) {
+      console.error(errorOutput('Authentication error. Run `now login` to log-in again.'));
+  } else if ((<APIError>error).status === 429) {
+    if ((<APIError>error).retryAfter === 'never') {
+      console.error(errorOutput(error.message));
+    } else if (!(<APIError>error).retryAfter) {
+      console.error(errorOutput('Rate limit exceeded error. Please try later.'));
+    } else {
+      console.error(
+        errorOutput(
+          `Rate limit exceeded error. Try again in ${
+            ms((<APIError>error).retryAfter as number * 1000, { long: true })
+            }, or upgrade your account by running ` +
+            `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
+        )
+      );
     }
-  }  else {
+  } else if (error.message) {
+    console.error(errorOutput(error.message));
+  } else if ((<APIError>error).status === 500) {
+    console.error(errorOutput('Unexpected server error. Please retry.'));
+  } else if ((<APIError>error).code === 'USER_ABORT') {
+    info('Aborted');
+  } else {
     console.error(
       errorOutput(`Unexpected error. Please try again later. (${error.message})`)
     );
