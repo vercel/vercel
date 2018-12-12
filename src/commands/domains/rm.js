@@ -12,15 +12,14 @@ import stamp from '../../util/output/stamp';
 
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
 async function rm(
   ctx            ,
-  opts                   ,
-  args          ,
+  opts           ,
+  args           ,
   output
 )                  {
   const { authConfig: { token }, config } = ctx;
@@ -48,9 +47,9 @@ async function rm(
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
-  const [domainIdOrName] = args;
+  const [domainName] = args;
 
-  if (!domainIdOrName) {
+  if (!domainName) {
     output.error(`${cmd('now domains rm <domain>')} expects one argument`);
     return 1;
   }
@@ -58,7 +57,7 @@ async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias rm <alias>`'
+        '`now domains rm <domain>`'
       )}`
     );
     return 1;
@@ -68,31 +67,30 @@ async function rm(
     output,
     now,
     contextName,
-    domainIdOrName
+    domainName
   );
   if (!domain) {
     output.error(
-      `Domain not found by "${domainIdOrName}" under ${chalk.bold(contextName)}`
+      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
 
-  const certs = await getCertsForDomain(output, now, domain.name);
-  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, certs)) {
+  if (!opts['--yes'] && !await confirmDomainRemove(output, domain)) {
     output.log('Aborted');
     return 0;
   }
 
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
-  for (const aliasId of domain.aliases) {
-    await removeAliasById(now, aliasId);
+  for (const alias of domain.aliases) {
+    await removeAliasById(now, alias.id);
   }
 
   output.debug(`Removing certs`);
-  for (const cert of certs) {
-    await deleteCertById(output, now, cert.uid);
+  for (const cert of domain.certs) {
+    await deleteCertById(output, now, cert.id);
   }
 
   output.debug(`Removing domain`);
@@ -107,11 +105,10 @@ async function rm(
 
 async function confirmDomainRemove(
   output        ,
-  domain        ,
-  certs
+  domain
 ) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);
+    const time = chalk.gray(`${ms(new Date() - new Date(domain.createdAt))  } ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -128,10 +125,10 @@ async function confirmDomainRemove(
       );
     }
 
-    if (certs.length > 0) {
+    if (domain.certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('certificate', certs.length, true)
+          plural('certificate', domain.certs.length, true)
         )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
