@@ -8,12 +8,24 @@ import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import wait from '../../util/output/wait';
 import dnsTable from '../../util/format-dns-table.ts';
-
-import * as Errors from '../../util/errors';
 import { handleDomainConfigurationError } from '../../util/error-handlers';
-
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
+
+import {
+  CantSolveChallenge,
+  DomainConfigurationError,
+  DomainPermissionDenied,
+  DomainsShouldShareRoot,
+  DomainValidationRunning,
+  InvalidWildcardDomain,
+  TooManyCertificates,
+  TooManyRequests
+} from '../../util/errors-ts';
+
+import {
+  InvalidCert
+} from '../../util/errors'
 
 async function add(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
@@ -75,11 +87,11 @@ async function add(ctx, opts, args, output) {
 
     // Create a custom certificate from the given file paths
     cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName);
-    if (cert instanceof Errors.InvalidCert) {
+    if (cert instanceof InvalidCert) {
       output.error(`The provided certificate is not valid and can't be added.`);
       return 1;
     }
-    if (cert instanceof Errors.DomainPermissionDenied) {
+    if (cert instanceof DomainPermissionDenied) {
       output.error(
         `You don't have permissions over domain ${chalk.underline(
           cert.meta.domain
@@ -111,7 +123,7 @@ async function add(ctx, opts, args, output) {
     );
     cert = await createCertForCns(now, cns, contextName);
     cancelWait();
-    if (cert instanceof Errors.CantSolveChallenge) {
+    if (cert instanceof CantSolveChallenge) {
       output.error(
         `We can't solve the ${cert.meta.type} challenge for domain ${cert.meta
           .domain}.`
@@ -136,7 +148,7 @@ async function add(ctx, opts, args, output) {
       }
       return 1;
     }
-    if (cert instanceof Errors.TooManyRequests) {
+    if (cert instanceof TooManyRequests) {
       output.error(
         `Too many requests detected for ${cert.meta
           .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
@@ -145,7 +157,7 @@ async function add(ctx, opts, args, output) {
       );
       return 1;
     }
-    if (cert instanceof Errors.TooManyCertificates) {
+    if (cert instanceof TooManyCertificates) {
       output.error(
         `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
           ', '
@@ -153,7 +165,7 @@ async function add(ctx, opts, args, output) {
       );
       return 1;
     }
-    if (cert instanceof Errors.DomainValidationRunning) {
+    if (cert instanceof DomainValidationRunning) {
       output.error(
         `There is a validation in course for ${chalk.underline(
           cert.meta.domain
@@ -161,23 +173,15 @@ async function add(ctx, opts, args, output) {
       );
       return 1;
     }
-    if (cert instanceof Errors.DomainConfigurationError) {
+    if (cert instanceof DomainConfigurationError) {
       handleDomainConfigurationError(output, cert);
       return 1;
     }
-    if (cert instanceof Errors.CantGenerateWildcardCert) {
-      output.error(
-        `Wildcard certificates are allowed only for domains in ${chalk.underline(
-          'zeit.world'
-        )}`
-      );
-      return 1;
-    }
-    if (cert instanceof Errors.DomainsShouldShareRoot) {
+    if (cert instanceof DomainsShouldShareRoot) {
       output.error(`All given common names should share the same root domain.`);
       return 1;
     }
-    if (cert instanceof Errors.InvalidWildcardDomain) {
+    if (cert instanceof InvalidWildcardDomain) {
       output.error(
         `Invalid domain ${chalk.underline(
           cert.meta.domain
@@ -185,7 +189,7 @@ async function add(ctx, opts, args, output) {
       );
       return 1;
     }
-    if (cert instanceof Errors.DomainPermissionDenied) {
+    if (cert instanceof DomainPermissionDenied) {
       output.error(
         `You don't have permissions over domain ${chalk.underline(
           cert.meta.domain

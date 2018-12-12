@@ -6,7 +6,6 @@ import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import stamp from '../util/output/stamp.ts';
 
-import * as Errors from '../util/errors';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import Client from '../util/client.ts';
@@ -18,9 +17,21 @@ import getMaxFromArgs from '../util/scale/get-max-from-args';
 import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
-
 import { handleError } from '../util/error';
 import { VerifyScaleTimeout } from '../util/errors-ts';
+import {
+  DeploymentNotFound,
+  DeploymentPermissionDenied,
+  ForbiddenScaleMaxInstances,
+  ForbiddenScaleMinInstances,
+  InvalidAllForScale,
+  InvalidArgsForMinMaxScale,
+  InvalidMaxForScale,
+  InvalidMinForScale,
+  InvalidRegionOrDCForScale,
+  InvalidScaleMinMaxRelation,
+  NotSupportedMinScaleSlots,
+} from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -135,14 +146,14 @@ export default async function main(ctx) {
   }
 
   const dcs = getDCsFromArgs(argv._);
-  if (dcs instanceof Errors.InvalidAllForScale) {
+  if (dcs instanceof InvalidAllForScale) {
     output.error(
       'The region value "all" was used, but it cannot be used alongside other region or dc identifiers'
     );
     now.close();
     return 1;
   }
-  if (dcs instanceof Errors.InvalidRegionOrDCForScale) {
+  if (dcs instanceof InvalidRegionOrDCForScale) {
     output.error(
       `The value "${dcs.meta
         .regionOrDC}" is not a valid region or DC identifier`
@@ -152,7 +163,7 @@ export default async function main(ctx) {
   }
 
   const min = getMinFromArgs(argv._);
-  if (min instanceof Errors.InvalidMinForScale) {
+  if (min instanceof InvalidMinForScale) {
     output.error(
       `Invalid <min> parameter "${min.meta
         .value}". A number or "auto" were expected`
@@ -162,7 +173,7 @@ export default async function main(ctx) {
   }
 
   const max = getMaxFromArgs(argv._);
-  if (max instanceof Errors.InvalidMinForScale) {
+  if (max instanceof InvalidMinForScale) {
     output.error(
       `Invalid <min> parameter "${max.meta
         .value}". A number or "auto" were expected`
@@ -170,7 +181,7 @@ export default async function main(ctx) {
     now.close();
     return 1;
   }
-  if (max instanceof Errors.InvalidArgsForMinMaxScale) {
+  if (max instanceof InvalidArgsForMinMaxScale) {
     output.error(
       `Invalid number of arguments: expected <min> ("${max.meta
         .min}") and [max]`
@@ -178,7 +189,7 @@ export default async function main(ctx) {
     now.close();
     return 1;
   }
-  if (max instanceof Errors.InvalidMaxForScale) {
+  if (max instanceof InvalidMaxForScale) {
     output.error(
       `Invalid <max> parameter "${max.meta
         .value}". A number or "auto" were expected`
@@ -190,7 +201,7 @@ export default async function main(ctx) {
   // Fetch the deployment
   const deploymentStamp = stamp();
   const deployment = await getDeploymentByIdOrHost(now, contextName, argv._[1]);
-  if (deployment instanceof Errors.DeploymentPermissionDenied) {
+  if (deployment instanceof DeploymentPermissionDenied) {
     output.error(
       `No permission to access deployment ${chalk.dim(
         deployment.meta.id
@@ -199,7 +210,7 @@ export default async function main(ctx) {
     now.close();
     return 1;
   }
-  if (deployment instanceof Errors.DeploymentNotFound) {
+  if (deployment instanceof DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${argv._[1]}" in ${chalk.bold(contextName)}`
     );
@@ -243,7 +254,7 @@ export default async function main(ctx) {
     scaleArgs,
     deployment.url
   );
-  if (result instanceof Errors.ForbiddenScaleMinInstances) {
+  if (result instanceof ForbiddenScaleMinInstances) {
     output.error(
       `You can't scale to more than ${result.meta
         .min} min instances with your current plan.`
@@ -251,7 +262,7 @@ export default async function main(ctx) {
     now.close();
     return 1;
   }
-  if (result instanceof Errors.ForbiddenScaleMaxInstances) {
+  if (result instanceof ForbiddenScaleMaxInstances) {
     output.error(
       `You can't scale to more than ${result.meta
         .max} max instances with your current plan.`
@@ -259,12 +270,12 @@ export default async function main(ctx) {
     now.close();
     return 1;
   }
-  if (result instanceof Errors.InvalidScaleMinMaxRelation) {
+  if (result instanceof InvalidScaleMinMaxRelation) {
     output.error(`Min number of instances can't be higher than max.`);
     now.close();
     return 1;
   }
-  if (result instanceof Errors.NotSupportedMinScaleSlots) {
+  if (result instanceof NotSupportedMinScaleSlots) {
     output.error(
       `Cloud v2 does not yet support setting a non-zero min number of instances.`
     );
