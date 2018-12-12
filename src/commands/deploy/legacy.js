@@ -37,7 +37,6 @@ import raceAsyncGenerators from '../../util/race-async-generators';
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp.ts';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
-import note from '../../util/output/note';
 import parseMeta from '../../util/parse-meta';
 import {
   CantGenerateWildcardCert,
