@@ -43,10 +43,10 @@ export class APIError extends Error {
  * retrieve information. This means that the team was probably deleted or the
  * member removed.
  */
-export class TeamDeleted extends NowError<{}> {
+export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
   constructor() {
     super({
-      code: 'team_deleted',
+      code: 'TEAM_DELETED',
       message: `Your team was deleted. You can switch to a different one using ${param(
         'now switch'
       )}.`,
@@ -59,10 +59,10 @@ export class TeamDeleted extends NowError<{}> {
  * Thrown when a user is requested to the backend but we get unauthorized
  * because the token is not valid anymore.
  */
-export class InvalidToken extends NowError<{}> {
+export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
   constructor() {
     super({
-      code: `not_authorized`,
+      code: `NOT_AUTHORIZED`,
       message: `The specified token is not valid`,
       meta: {}
     });
@@ -73,10 +73,10 @@ export class InvalidToken extends NowError<{}> {
  * Thrown when we request a user using a token but the user no longer exists,
  * usually because it was deleted at some point.
  */
-export class MissingUser extends NowError<{}> {
+export class MissingUser extends NowError<'MISSING_USER', {}> {
   constructor() {
     super({
-      code: `missing_user`,
+      code: 'MISSING_USER',
       message: `Not able to load user, missing from response`,
       meta: {}
     });
@@ -87,10 +87,10 @@ export class MissingUser extends NowError<{}> {
  * When you're passing two different options in the cli that exclude each
  * other, this error is thrown with the name of the conflicting property.
  */
-export class ConflictingOption extends NowError<{ name: string }> {
+export class ConflictingOption extends NowError<'CONFLICTING_OPTION', { name: string }> {
   constructor(name: string) {
     super({
-      code: 'conflicting_option',
+      code: 'CONFLICTING_OPTION',
       message: `You can't use at the same time a positive and negative value for option ${name}`,
       meta: { name }
     });
@@ -101,7 +101,7 @@ export class ConflictingOption extends NowError<{ name: string }> {
  * Thrown when the user tries to add a domain forcing the CDN enabled but he's
  * on the OSS plan and we don't allow it.
  */
-export class CDNNeedsUpgrade extends NowError<{}> {
+export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
   constructor() {
     super({
       code: 'CDN_NEEDS_UPGRADE',
@@ -115,7 +115,7 @@ export class CDNNeedsUpgrade extends NowError<{}> {
  * Thrown when a user tries to add a domain that exists already for a different
  * user under a different context.
  */
-export class DomainAlreadyExists extends NowError<{ domain: string }> {
+export class DomainAlreadyExists extends NowError<'DOMAIN_ALREADY_EXISTS', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_ALREADY_EXISTS',
@@ -129,7 +129,7 @@ export class DomainAlreadyExists extends NowError<{ domain: string }> {
  * When information about a domain is requested but the current user / team has no
  * permissions to get that information.
  */
-export class DomainPermissionDenied extends NowError<{ domain: string, context: string }> {
+export class DomainPermissionDenied extends NowError<'DOMAIN_PERMISSION_DENIED', { domain: string, context: string }> {
   constructor(domain: string, context: string) {
     super({
       code: 'DOMAIN_PERMISSION_DENIED',
@@ -142,7 +142,7 @@ export class DomainPermissionDenied extends NowError<{ domain: string, context: 
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
-export class DomainNotFound extends NowError<{ domain: string }> {
+export class DomainNotFound extends NowError<'DOMAIN_NOT_FOUND', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_NOT_FOUND',
@@ -157,7 +157,7 @@ export class DomainNotFound extends NowError<{ domain: string }> {
  * fails for both methods. It includes in the payload the domain name and metadata
  * to tell the reason why the verification failed
  */
-export class DomainVerificationFailed extends NowError<{
+export class DomainVerificationFailed extends NowError<'DOMAIN_VERIFICATION_FAILED', {
   domain: string,
   purchased: boolean,
   txtVerification: TXTVerificationError,
@@ -192,7 +192,7 @@ export type TXTVerificationError = {
  * Used when a domain is validated because we tried to add it to an account
  * via API or for any other reason.
  */
-export class InvalidDomain extends NowError<{ domain: string }> {
+export class InvalidDomain extends NowError<'INVALID_DOMAIN', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'INVALID_DOMAIN',
@@ -206,7 +206,7 @@ export class InvalidDomain extends NowError<{ domain: string }> {
  * Returned when the user checks the price of a domain but the TLD
  * of the given name is not supported.
  */
-export class UnsupportedTLD extends NowError<{ domain: string }> {
+export class UnsupportedTLD extends NowError<'UNSUPPORTED_TLD', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'UNSUPPORTED_TLD',
@@ -220,7 +220,7 @@ export class UnsupportedTLD extends NowError<{ domain: string }> {
  * Returned when the user tries to purchase a domain but the API returns
  * an error telling that it is not available.
  */
-export class DomainNotAvailable extends NowError<{ domain: string }> {
+export class DomainNotAvailable extends NowError<'DOMAIN_NOT_AVAILABLE', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_NOT_AVAILABLE',
@@ -234,7 +234,7 @@ export class DomainNotAvailable extends NowError<{ domain: string }> {
  * Returned when the domain purchase service is not available for reasons
  * that are out of our control.
  */
-export class DomainServiceNotAvailable extends NowError<{ domain: string }> {
+export class DomainServiceNotAvailable extends NowError<'DOMAIN_SERVICE_NOT_AVAILABLE', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
@@ -247,7 +247,7 @@ export class DomainServiceNotAvailable extends NowError<{ domain: string }> {
 /**
  * Returned when there is an expected error during the domain purchase.
  */
-export class UnexpectedDomainPurchaseError extends NowError<{ domain: string }> {
+export class UnexpectedDomainPurchaseError extends NowError<'UNEXPECTED_DOMAIN_PURCHASE_ERROR', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
@@ -261,7 +261,7 @@ export class UnexpectedDomainPurchaseError extends NowError<{ domain: string }> 
  * Returned any time we prompt the user to make sure an action should be performed
  * and the user decides not to continue with the operation
  */
-export class UserAborted extends NowError<{}> {
+export class UserAborted extends NowError<'USER_ABORTED', {}> {
   constructor() {
     super({
       code: 'USER_ABORTED',
@@ -276,7 +276,7 @@ export class UserAborted extends NowError<{}> {
  * with a configuration error that means that the HTTP challenge couldn't be solved
  * for the domain so it is misconfigured.
  */
-export class DomainConfigurationError extends NowError<{ domain: string, subdomain: string, external: boolean }> {
+export class DomainConfigurationError extends NowError<'DOMAIN_CONFIGURATION_ERROR', { domain: string, subdomain: string, external: boolean }> {
   constructor(domain: string, subdomain: string, external: boolean) {
     super({
       code: 'DOMAIN_CONFIGURATION_ERROR',
@@ -290,7 +290,7 @@ export class DomainConfigurationError extends NowError<{ domain: string, subdoma
  * Returned when the user tries to create a wildcard certificate but LE API returns
  * a rate limit error because there were too many certificates created already.
  */
-export class TooManyCertificates extends NowError<{ domains: string[] }> {
+export class TooManyCertificates extends NowError<'TOO_MANY_CERTIFICATES', { domains: string[] }> {
   constructor(domains: string[]) {
     super({
       code: 'TOO_MANY_CERTIFICATES',
@@ -305,7 +305,7 @@ export class TooManyCertificates extends NowError<{ domains: string[] }> {
  * many requests where performed already. It gives a retryAfter parameter with the
  * time the user needs to wait.
  */
-export class TooManyRequests extends NowError<{ api: string, retryAfter: number }> {
+export class TooManyRequests extends NowError<'TOO_MANY_REQUESTS', { api: string, retryAfter: number }> {
   constructor(api: string, retryAfter: number) {
     super({
       code: 'TOO_MANY_REQUESTS',
@@ -319,7 +319,7 @@ export class TooManyRequests extends NowError<{ api: string, retryAfter: number 
  * This error is returned when the user requests a certificate but there is a pending
  * certificate order being processed in the server.
  */
-export class DomainValidationRunning extends NowError<{ domain: string }> {
+export class DomainValidationRunning extends NowError<'DOMAIN_VALIDATION_RUNNING', { domain: string }> {
   constructor(domain: string) {
     super({
       code: 'DOMAIN_VALIDATION_RUNNING',
@@ -333,7 +333,7 @@ export class DomainValidationRunning extends NowError<{ domain: string }> {
  * Returned when there was a attempt to create a certiicate for a set of
  * common names where the root domain is not shared between them.
  */
-export class DomainsShouldShareRoot extends NowError<{ domains: string[] }> {
+export class DomainsShouldShareRoot extends NowError<'CNS_SHOULD_SHARE_ROOT', { domains: string[] }> {
   constructor(domains: string[]) {
     super({
       code: 'CNS_SHOULD_SHARE_ROOT',
@@ -347,7 +347,7 @@ export class DomainsShouldShareRoot extends NowError<{ domains: string[] }> {
  * Returned when in an attempt to create a certificate, the challenge could not
  * be solved by LE. It could be the dns or the http challenge.
  */
-export class CantSolveChallenge extends NowError<{ domain: string, type: string }> {
+export class CantSolveChallenge extends NowError<'CANT_SOLVE_CHALLENGE', { domain: string, type: string }> {
   constructor(domain: string, type: string) {
     super({
       code: 'CANT_SOLVE_CHALLENGE',
@@ -361,7 +361,7 @@ export class CantSolveChallenge extends NowError<{ domain: string, type: string 
  * This error is returned whenever an API call tries to fetch a deployment but
  * the deployment doesn't exist.
  */
-export class DeploymentNotFound extends NowError<{ id: string, context: string }> {
+export class DeploymentNotFound extends NowError<'DEPLOYMENT_NOT_FOUND', { id: string, context: string }> {
   constructor(id: string, context: string) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
@@ -375,7 +375,7 @@ export class DeploymentNotFound extends NowError<{ id: string, context: string }
  * Returned when the user tries to fetch explicitly a deployment but she
  * has no permissions under the given context.
  */
-export class DeploymentPermissionDenied extends NowError<{ id: string, context: string }> {
+export class DeploymentPermissionDenied extends NowError<'DEPLOYMENT_PERMISSION_DENIED', { id: string, context: string }> {
   constructor(id: string, context: string) {
     super({
       code: 'DEPLOYMENT_PERMISSION_DENIED',
@@ -389,7 +389,7 @@ export class DeploymentPermissionDenied extends NowError<{ id: string, context: 
  * Returned when we try to create an alias but the API returns an error telling
  * that the given alias is not valid.
  */
-export class InvalidAlias extends NowError<{ alias: string }> {
+export class InvalidAlias extends NowError<'INVALID_ALIAS', { alias: string }> {
   constructor(alias: string) {
     super({
       code: 'INVALID_ALIAS',
@@ -403,7 +403,7 @@ export class InvalidAlias extends NowError<{ alias: string }> {
  * Returned when we try to create an alias but the API failes with an error
  * telling that the alias is already in use by somebody else.
  */
-export class AliasInUse extends NowError<{ alias: string }> {
+export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
   constructor(alias: string) {
     super({
       code: 'ALIAS_IN_USE',
@@ -418,7 +418,7 @@ export class AliasInUse extends NowError<{ alias: string }> {
  * a certificate for a domain but the domain is missing. An example would
  * be alias.
  */
-export class CertMissing extends NowError<{ domain: string}> {
+export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string}> {
   constructor(domain: string) {
     super({
       code: 'ALIAS_IN_USE',
@@ -428,7 +428,7 @@ export class CertMissing extends NowError<{ domain: string}> {
   }
 }
 
-export class ForbiddenScaleMinInstances extends NowError<{ url: string, min: number }> {
+export class ForbiddenScaleMinInstances extends NowError<'FORBIDDEN_SCALE_MIN_INSTANCES', { url: string, min: number }> {
   constructor(url: string, min: number) {
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
@@ -438,7 +438,7 @@ export class ForbiddenScaleMinInstances extends NowError<{ url: string, min: num
   }
 }
 
-export class ForbiddenScaleMaxInstances extends NowError<{ url: string, max: number }> {
+export class ForbiddenScaleMaxInstances extends NowError<'FORBIDDEN_SCALE_MAX_INSTANCES', { url: string, max: number }> {
   constructor(url: string, max: number) {
     super({
       code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
@@ -448,7 +448,7 @@ export class ForbiddenScaleMaxInstances extends NowError<{ url: string, max: num
   }
 }
 
-export class InvalidScaleMinMaxRelation extends NowError<{ url: string }> {
+export class InvalidScaleMinMaxRelation extends NowError<'INVALID_SCALE_MIN_MAX_RELATION', { url: string }> {
   constructor(url: string) {
     super({
       code: 'INVALID_SCALE_MIN_MAX_RELATION',
@@ -458,7 +458,7 @@ export class InvalidScaleMinMaxRelation extends NowError<{ url: string }> {
   }
 }
 
-export class NotSupportedMinScaleSlots extends NowError<{ url: string }> {
+export class NotSupportedMinScaleSlots extends NowError<'NOT_SUPPORTED_MIN_SCALE_SLOTS', { url: string }> {
   constructor(url: string) {
     super({
       code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
@@ -468,7 +468,7 @@ export class NotSupportedMinScaleSlots extends NowError<{ url: string }> {
   }
 }
 
-export class VerifyScaleTimeout extends NowError<{ timeout: number }> {
+export class VerifyScaleTimeout extends NowError<'VERIFY_SCALE_TIMEOUT', { timeout: number }> {
   constructor(timeout: number) {
     super({
       code: 'VERIFY_SCALE_TIMEOUT',
@@ -478,7 +478,7 @@ export class VerifyScaleTimeout extends NowError<{ timeout: number }> {
   }
 }
 
-export class CantParseJSONFile extends NowError<{ file: string }> {
+export class CantParseJSONFile extends NowError<'CANT_PARSE_JSON_FILE', { file: string }> {
   constructor(file: string) {
     super({
       code: 'CANT_PARSE_JSON_FILE',
@@ -488,7 +488,7 @@ export class CantParseJSONFile extends NowError<{ file: string }> {
   }
 }
 
-export class CantFindConfig extends NowError<{ paths: string[] }> {
+export class CantFindConfig extends NowError<'CANT_FIND_CONFIG', { paths: string[] }> {
   constructor(paths: string[]) {
     super({
       code: 'CANT_FIND_CONFIG',
@@ -498,7 +498,7 @@ export class CantFindConfig extends NowError<{ paths: string[] }> {
   }
 }
 
-export class FileNotFound extends NowError<{ file: string }> {
+export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   constructor(file: string) {
     super({
       code: 'FILE_NOT_FOUND',
@@ -508,7 +508,7 @@ export class FileNotFound extends NowError<{ file: string }> {
   }
 }
 
-export class RulesFileValidationError extends NowError<{ location: string, message: string }> {
+export class RulesFileValidationError extends NowError<'PATH_ALIAS_VALIDATION_ERROR', { location: string, message: string }> {
   constructor(location: string, message: string) {
     super({
       code: 'PATH_ALIAS_VALIDATION_ERROR',
@@ -518,7 +518,7 @@ export class RulesFileValidationError extends NowError<{ location: string, messa
   }
 }
 
-export class NoAliasInConfig extends NowError <{}> {
+export class NoAliasInConfig extends NowError<'NO_ALIAS_IN_CONFIG', {}> {
   constructor() {
     super({
       code: 'NO_ALIAS_IN_CONFIG',
@@ -528,7 +528,7 @@ export class NoAliasInConfig extends NowError <{}> {
   }
 }
 
-export class InvalidAliasInConfig extends NowError<{ value: any }> {
+export class InvalidAliasInConfig extends NowError<'INVALID_ALIAS_IN_CONFIG', { value: any }> {
   constructor(value: any) {
     super({
       code: 'INVALID_ALIAS_IN_CONFIG',
@@ -538,7 +538,7 @@ export class InvalidAliasInConfig extends NowError<{ value: any }> {
   }
 }
 
-export class RuleValidationFailed extends NowError<{ message: string }> {
+export class RuleValidationFailed extends NowError<'RULE_VALIDATION_FAILED', { message: string }> {
   constructor(message: string) {
     super({
       code: 'RULE_VALIDATION_FAILED',

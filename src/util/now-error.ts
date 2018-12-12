@@ -1,5 +1,5 @@
-export class NowError<Meta> extends Error {
-  code: string;
+export class NowError<C, Meta> extends Error {
+  code: C;
   meta: Meta;
 
   constructor({
@@ -7,7 +7,7 @@ export class NowError<Meta> extends Error {
     message,
     meta
   }: {
-    code: string;
+    code: C;
     message: string;
     meta: Meta;
   }) {

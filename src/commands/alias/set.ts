@@ -1,6 +1,8 @@
 import ms from 'ms';
 import chalk from 'chalk';
+import { SetDifference } from 'utility-types';
 
+import { AliasRecord } from '../../util/alias/create-alias';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
@@ -8,8 +10,8 @@ import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import dnsTable from '../../util/format-dns-table';
-import formatNSTable from '../../util/format-ns-table';
 import formatDnsTable from '../../util/format-dns-table';
+import formatNSTable from '../../util/format-ns-table';
 import getDeploymentForAlias from '../../util/alias/get-deployment-for-alias';
 import getRulesFromFile from '../../util/alias/get-rules-from-file';
 import getScope from '../../util/get-scope';
@@ -18,7 +20,6 @@ import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
-import { AliasRecord } from '../../util/alias/create-alias';
 
 type Options = {
   '--debug': boolean,
@@ -146,7 +147,10 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
     const handleResult = handleSetupDomainError(output, restOfErrors);
     if (handleResult !== 1) {
       console.log(`${chalk.cyan('> Success!')} ${handleResult.alias} now points to ${chalk.bold(deployment.url)} ${setStamp()}`);
+      return 0;
     }
+
+    return 1;
   }
 
   return 0;
@@ -155,7 +159,6 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
 type ThenArg<T> = T extends Promise<infer U> ? U : T
 type SetupDomainResolve = ThenArg<ReturnType<typeof setupDomain>>;
 type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
-type AssignAliasError = Exclude<ThenArg<ReturnType<typeof assignAlias>>, AliasRecord>;
 
 function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T): T | 1 {
   if (error instanceof ERRORS.DomainVerificationFailed) {
@@ -224,7 +227,11 @@ function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T):
   return error;
 }
 
-function handleCreateAliasError<T>(output: Output, error: AssignAliasError | T) {
+type AliasResolved = ThenArg<ReturnType<typeof assignAlias>>;
+type AssignAliasError = Exclude<AliasResolved, AliasRecord>;
+type RemainingAssignAliasErrors = SetDifference<AssignAliasError, SetupDomainError>
+
+function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasErrors | T): 1 | T {
   if (error instanceof ERRORS.AliasInUse) {
     output.error(`The alias ${chalk.dim(error.meta.alias)} is a deployment URL or it's in use by a different team.`);
     return 1;
@@ -403,6 +410,12 @@ function handleCreateAliasError<T>(output: Output, error: AssignAliasError | T) 
         error.meta.url
       )} with \`now scale\` and try again`
     );
+    return 1;
+  }
+
+  if (error instanceof ERRORS.CertMissing) {
+    output.error(`There is no certificate for the domain ${error.meta.domain} and it could not be created.`);
+    output.log(`Please generate a new certificate manually with ${cmd(`now certs issue ${error.meta.domain}`)}`);
     return 1;
   }
 
