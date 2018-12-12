@@ -1,16 +1,20 @@
-//      
-import getDomains from './get-domains';
+//
+import chalk from 'chalk';
 
+import wait from '../output/wait';
 import toHost from '../to-host';
 
-async function getDomainByIdOrName(
+async function getDomainByName(
   output        ,
   now     ,
   contextName        ,
-  domainIdOrName        
+  domainName
 ) {
-  const domains = await getDomains(output, now, contextName);
-  return domains.find(domain => domain.name === toHost(domainIdOrName));
+  const cancelWait = wait(`Fetching domain under ${chalk.bold(contextName)}`);
+  const domain = await now.fetch(`/v3/domains/${toHost(domainName)}`);
+  cancelWait();
+
+  return domain;
 }
 
-export default getDomainByIdOrName;
+export default getDomainByName;
