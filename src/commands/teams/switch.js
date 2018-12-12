@@ -8,9 +8,10 @@ import listInput from '../../util/input/list';
 import success from '../../util/output/success';
 import info from '../../util/output/info';
 import error from '../../util/output/error';
-import param from '../../util/output/param';
+import param from '../../util/output/param.ts';
 import { writeToConfigFile } from '../../util/config/files';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
+import Client from '../../util/client.ts';
 import NowTeams from '../../util/teams';
 
 const updateCurrentTeam = (config, newTeam) => {
@@ -38,7 +39,8 @@ export default async function({ apiUrl, token, debug, args, config }) {
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const user = await getUser({ apiUrl, token });
+  const client = new Client({ apiUrl, token });
+  const user = await getUser(client);
 
   stopUserSpinner();
 
@@ -50,9 +52,7 @@ export default async function({ apiUrl, token, debug, args, config }) {
     currentTeam = list.find(team => team.id === currentTeam);
 
     if (!currentTeam) {
-      console.error(
-        error(`You are not a part of the current team anymore`)
-      );
+      console.error(error(`You are not a part of the current team anymore`));
       return 1;
     }
   }
@@ -176,4 +176,4 @@ export default async function({ apiUrl, token, debug, args, config }) {
     )
   );
   return 0;
-};
+}

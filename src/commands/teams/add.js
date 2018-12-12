@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import info from '../../util/output/info';
 import error from '../../util/output/error';
 import wait from '../../util/output/wait';
@@ -7,7 +7,7 @@ import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import success from '../../util/output/success';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';

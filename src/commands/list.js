@@ -8,12 +8,13 @@ import getArgs from '../util/get-args';
 import getDeploymentInstances from '../util/deploy/get-deployment-instances';
 import createOutput from '../util/output';
 import { handleError } from '../util/error';
-import cmd from '../util/output/cmd';
+import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
-import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
+import strlen from '../util/strlen.ts';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 
@@ -103,16 +104,16 @@ export default async function main(ctx) {
   const meta = parseMeta(argv['--meta']);
   const { authConfig: { token }, config } = ctx;
   const { currentTeam, includeScheme } = config;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       error(err.message);
@@ -260,7 +261,9 @@ export default async function main(ctx) {
             [
               dep.name,
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-              (dep.instanceCount == null || dep.type === 'LAMBDAS') ? chalk.gray('-') : dep.instanceCount,
+              dep.instanceCount == null || dep.type === 'LAMBDAS'
+                ? chalk.gray('-')
+                : dep.instanceCount,
               dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
               chalk.gray(ms(Date.now() - new Date(dep.created)))
@@ -291,12 +294,12 @@ export default async function main(ctx) {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ')  }\n\n`
+    ).replace(/^/gm, '  ')}\n\n`
   );
-};
+}
 
 // renders the state string
-function stateString(s        ) {
+function stateString(s) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);
@@ -328,8 +331,7 @@ function filterUniqueApps() {
     if (uniqueApps.has(appName)) {
       return false;
     }
-      uniqueApps.add(appName);
-      return true;
-
+    uniqueApps.add(appName);
+    return true;
   };
 }

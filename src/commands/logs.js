@@ -3,11 +3,12 @@ import chalk from 'chalk';
 import Now from '../util';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import { maybeURL, normalizeURL, parseInstanceURL } from '../util/url';
 import printEvents from '../util/events';
 import wait from '../util/output/wait';
-import getScope from '../util/get-scope';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const help = () => {
   console.log(`
@@ -57,7 +58,7 @@ const help = () => {
 `);
 };
 
-export default async function main(ctx     ) {
+export default async function main(ctx) {
   let argv;
   let deploymentIdOrURL;
 
@@ -138,16 +139,16 @@ export default async function main(ctx     ) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -176,7 +177,8 @@ export default async function main(ctx     ) {
         `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
       );
       return 1;
-    } if (err.status === 403) {
+    }
+    if (err.status === 403) {
       output.error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
@@ -184,9 +186,8 @@ export default async function main(ctx     ) {
       );
       return 1;
     }
-      // unexpected
-      throw err;
-
+    // unexpected
+    throw err;
   }
 
   cancelWait();
@@ -250,7 +251,7 @@ export default async function main(ctx     ) {
 
   now.close();
   return 0;
-};
+}
 
 function compareEvents(d1, d2) {
   const c1 = d1.date || d1.created;

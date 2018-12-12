@@ -1,16 +1,17 @@
 import chalk from 'chalk';
 import createOutput from '../util/output';
-import cmd from '../util/output/cmd';
+import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
 import { handleError } from '../util/error';
-import getScope from '../util/get-scope';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 import getArgs from '../util/get-args';
 import promptBool from '../util/prompt-bool';
-import Now from "../util";
+import Now from '../util';
 import wait from '../util/output/wait';
 import plans from '../util/plans';
 
-const help = (type) => {
+const help = type => {
   console.log(`
   ${chalk.bold(`${logo} now ${type}`)} [options]
 
@@ -32,17 +33,23 @@ const help = (type) => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} ${type === 'upgrade' ? 'Upgrade to the Unlimited plan' : 'Downgrade to the Free plan'}
+  ${chalk.gray('–')} ${type === 'upgrade'
+    ? 'Upgrade to the Unlimited plan'
+    : 'Downgrade to the Free plan'}
 
       ${chalk.cyan(`$ now ${type}`)}
-      ${type === 'upgrade' ? `
+      ${type === 'upgrade'
+        ? `
       ${chalk.yellow('NOTE:')} ${chalk.gray(
-    'Make sure you have a payment method, or add one:'
-  )}
+            'Make sure you have a payment method, or add one:'
+          )}
 
       ${chalk.cyan(`$ now billing add`)}
-      ` : ''}
-  ${chalk.gray('–')} ${type === 'upgrade' ? 'Upgrade to the Unlimited plan without confirming' : 'Downgrade to the Free plan without confirming'}
+      `
+        : ''}
+  ${chalk.gray('–')} ${type === 'upgrade'
+    ? 'Upgrade to the Unlimited plan without confirming'
+    : 'Downgrade to the Free plan without confirming'}
 
       ${chalk.cyan(`$ now ${type} --yes`)}
   `);
@@ -63,12 +70,18 @@ const upgradeToUnlimited = async ({ error }, now, reactivation = false) => {
     cancelWait();
 
     if (err.code === 'no_team_owner') {
-      error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
+      error(
+        `You are not an owner of this team. Please ask an owner to upgrade your membership.`
+      );
       return 1;
     }
 
     if (err.code === 'customer_not_found') {
-      error(`No payment method available. Please add one using ${cmd('now billing add')} before upgrading.`);
+      error(
+        `No payment method available. Please add one using ${cmd(
+          'now billing add'
+        )} before upgrading.`
+      );
       return 1;
     }
 
@@ -93,7 +106,9 @@ const downgradeToFree = async ({ error }, now) => {
     cancelWait();
 
     if (err.code === 'no_team_owner') {
-      error(`You are not an owner of this team. Please ask an owner to upgrade your membership.`);
+      error(
+        `You are not an owner of this team. Please ask an owner to upgrade your membership.`
+      );
       return 1;
     }
 
@@ -132,17 +147,17 @@ export default async function main(ctx) {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let user = null;
   let team = null;
 
   try {
-    ({ user, team } = await getScope({
-      apiUrl,
-      token,
-      debug: debugEnabled,
-      currentTeam
-    }));
+    ({ user, team } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -152,7 +167,9 @@ export default async function main(ctx) {
     throw err;
   }
 
-  const prefix = currentTeam ? `Your team ${chalk.bold(team.name)} is` : 'You are';
+  const prefix = currentTeam
+    ? `Your team ${chalk.bold(team.name)} is`
+    : 'You are';
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const billing = currentTeam ? team.billing : user.billing;
   const plan = (billing && billing.plan) || 'free';
@@ -160,8 +177,17 @@ export default async function main(ctx) {
   if (billing && billing.cancelation) {
     const date = new Date(billing.cancelation).toLocaleString();
 
-    log(`Your subscription is set to ${chalk.bold('downgrade')} on ${chalk.bold(date)}.`);
-    const confirmed = skipConfirmation || await promptBool(output, `Would you like to prevent this from happening?`);
+    log(
+      `Your subscription is set to ${chalk.bold('downgrade')} on ${chalk.bold(
+        date
+      )}.`
+    );
+    const confirmed =
+      skipConfirmation ||
+      (await promptBool(
+        output,
+        `Would you like to prevent this from happening?`
+      ));
 
     if (!confirmed) {
       log(`No action taken`);
@@ -176,13 +202,27 @@ export default async function main(ctx) {
 
   if (plan === 'unlimited') {
     if (type === 'upgrade') {
-      log(`${prefix} already on the ${chalk.bold('Unlimited')} plan. This is the highest plan.`);
-      log(`If you want to upgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
+      log(
+        `${prefix} already on the ${chalk.bold(
+          'Unlimited'
+        )} plan. This is the highest plan.`
+      );
+      log(
+        `If you want to upgrade a different scope, switch to it by using ${cmd(
+          'now switch'
+        )} first.`
+      );
 
       return 0;
-    } if (type === 'downgrade') {
+    }
+    if (type === 'downgrade') {
       log(`${prefix} on the ${chalk.bold('Unlimited')} plan.`);
-      const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the ${chalk.bold('Free')} plan?`);
+      const confirmed =
+        skipConfirmation ||
+        (await promptBool(
+          output,
+          `Would you like to downgrade to the ${chalk.bold('Free')} plan?`
+        ));
 
       if (!confirmed) {
         log(`Aborted`);
@@ -190,19 +230,39 @@ export default async function main(ctx) {
       }
 
       await downgradeToFree(output, now);
-      success(`${prefix} now on the ${chalk.bold('Free')} plan. We are sad to see you go!`);
+      success(
+        `${prefix} now on the ${chalk.bold(
+          'Free'
+        )} plan. We are sad to see you go!`
+      );
     }
   }
 
-  if ((plan === 'free' || plan === 'oss')) {
+  if (plan === 'free' || plan === 'oss') {
     if (type === 'downgrade') {
-      log(`${prefix} already on the ${chalk.bold('Free')} plan. This is the lowest plan.`);
-      log(`If you want to downgrade a different scope, switch to it by using ${cmd('now switch')} first.`);
+      log(
+        `${prefix} already on the ${chalk.bold(
+          'Free'
+        )} plan. This is the lowest plan.`
+      );
+      log(
+        `If you want to downgrade a different scope, switch to it by using ${cmd(
+          'now switch'
+        )} first.`
+      );
 
       return 0;
-    } if (type === 'upgrade') {
+    }
+    if (type === 'upgrade') {
       log(`${prefix} on the ${chalk.bold('Free')} plan.`);
-      const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
+      const confirmed =
+        skipConfirmation ||
+        (await promptBool(
+          output,
+          `Would you like to upgrade to the ${chalk.bold(
+            'Unlimited'
+          )} plan (starting at ${chalk.bold('$0.99/month')})?`
+        ));
 
       if (!confirmed) {
         log(`Aborted`);
@@ -217,7 +277,14 @@ export default async function main(ctx) {
   log(`${prefix} on the old ${chalk.bold(plans[plan])} plan (Now 1.0).`);
 
   if (type === 'upgrade') {
-    const confirmed = skipConfirmation || await promptBool(output, `Would you like to upgrade to the new ${chalk.bold('Unlimited')} plan (starting at ${chalk.bold('$0.99/month')})?`);
+    const confirmed =
+      skipConfirmation ||
+      (await promptBool(
+        output,
+        `Would you like to upgrade to the new ${chalk.bold(
+          'Unlimited'
+        )} plan (starting at ${chalk.bold('$0.99/month')})?`
+      ));
 
     if (!confirmed) {
       log(`Aborted`);
@@ -230,7 +297,12 @@ export default async function main(ctx) {
     return 0;
   }
 
-  const confirmed = skipConfirmation || await promptBool(output, `Would you like to downgrade to the new ${chalk.bold('Free')} plan?`);
+  const confirmed =
+    skipConfirmation ||
+    (await promptBool(
+      output,
+      `Would you like to downgrade to the new ${chalk.bold('Free')} plan?`
+    ));
 
   if (!confirmed) {
     log(`Aborted`);
@@ -238,5 +310,9 @@ export default async function main(ctx) {
   }
 
   await downgradeToFree(output, now);
-  success(`${prefix} now on the new ${chalk.bold('Free')} plan. We are sad to see you go!`);
-};
+  success(
+    `${prefix} now on the new ${chalk.bold(
+      'Free'
+    )} plan. We are sad to see you go!`
+  );
+}

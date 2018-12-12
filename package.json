@@ -27,7 +27,7 @@
     ]
   },
   "lint-staged": {
-    "*.js": [
+    "*.{ts,js}": [
       "yarn test-lint",
       "prettier --write --single-quote",
       "git add"
@@ -56,37 +56,49 @@
       "airbnb",
       "prettier"
     ],
+    "parser": "typescript-eslint-parser",
+    "plugins": [
+      "typescript"
+    ],
+    "settings": {
+      "import/resolver": {
+        "typescript": {}
+      }
+    },
     "rules": {
-      "import/no-dynamic-require": 0,
-      "global-require": 0,
-      "import/no-duplicates": 0,
-      "guard-for-in": 0,
-      "no-restricted-globals": 0,
-      "import/prefer-default-export": 0,
-      "no-loop-func": 0,
-      "prefer-const": 0,
-      "no-nested-ternary": 0,
+      "camelcase": 0,
       "class-methods-use-this": 0,
+      "consistent-return": 0,
+      "func-names": 0,
+      "global-require": 0,
+      "guard-for-in": 0,
+      "import/no-duplicates": 0,
+      "import/no-dynamic-require": 0,
+      "import/no-extraneous-dependencies": 0,
+      "import/prefer-default-export": 0,
+      "lines-between-class-members": 0,
+      "no-await-in-loop": 0,
+      "no-bitwise": 0,
+      "no-console": 0,
       "no-continue": 0,
       "no-control-regex": 0,
       "no-empty": 0,
-      "camelcase": 0,
-      "func-names": 0,
-      "no-shadow": 0,
-      "no-plusplus": 0,
+      "no-loop-func": 0,
+      "no-nested-ternary": 0,
       "no-param-reassign": 0,
-      "consistent-return": 0,
-      "prefer-destructuring": 0,
-      "no-bitwise": 0,
-      "no-console": 0,
-      "no-use-before-define": 0,
+      "no-plusplus": 0,
+      "no-restricted-globals": 0,
       "no-restricted-syntax": 0,
-      "no-await-in-loop": 0,
+      "no-shadow": 0,
       "no-underscore-dangle": 0,
-      "import/no-extraneous-dependencies": 0
+      "no-use-before-define": 0,
+      "prefer-const": 0,
+      "prefer-destructuring": 0,
+      "typescript/no-unused-vars": "error"
     }
   },
   "eslintIgnore": [
+    "@types",
     "download",
     "dist",
     "test/fixtures",
@@ -94,12 +106,25 @@
     "link"
   ],
   "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
     "require": [
+      "ts-node/register/transpile-only",
       "esm"
     ]
   },
   "devDependencies": {
     "@sentry/node": "4.3.0",
+    "@types/ansi-escapes": "3.0.0",
+    "@types/async-retry": "1.2.1",
+    "@types/debug": "0.0.31",
+    "@types/ms": "0.7.30",
+    "@types/node-fetch": "2.1.4",
+    "@types/ora": "1.3.4",
+    "@types/pluralize": "0.0.29",
+    "@types/text-table": "0.2.0",
     "@zeit/dockerignore": "0.0.3",
     "@zeit/ncc": "0.5.0",
     "@zeit/source-map-support": "0.6.2",
@@ -109,14 +134,14 @@
     "arg": "2.0.0",
     "arr-flatten": "1.1.0",
     "async-retry": "1.1.3",
-    "async-sema": "1.2.0",
+    "async-sema": "2.1.4",
     "ava": "0.25.0",
     "bytes": "3.0.0",
     "chalk": "2.3.1",
     "clipboardy": "1.1.4",
     "codecov": "3.1.0",
-    "convert-stream": "1.0.2",
     "credit-card": "3.0.1",
+    "date-fns": "1.29.0",
     "death": "1.1.0",
     "debug": "3.1.0",
     "deployment-type": "1.0.1",
@@ -129,9 +154,11 @@
     "eslint": "5.3.0",
     "eslint-config-airbnb": "17.1.0",
     "eslint-config-prettier": "3.3.0",
+    "eslint-import-resolver-typescript": "1.1.1",
     "eslint-plugin-import": "2.14.0",
     "eslint-plugin-jsx-a11y": "6.1.1",
     "eslint-plugin-react": "7.11.0",
+    "eslint-plugin-typescript": "0.14.0",
     "esm": "3.0.84",
     "execa": "0.9.0",
     "fetch-h2": "1.0.2",
@@ -143,7 +170,6 @@
     "jsonlines": "0.1.1",
     "lint-staged": "4.2.3",
     "load-json-file": "3.0.0",
-    "lodash.range": "3.2.0",
     "micro": "9.1.2",
     "mkdirp-promise": "5.0.1",
     "mri": "1.1.0",
@@ -157,21 +183,23 @@
     "prettier": "1.7.2",
     "printf": "0.2.5",
     "progress": "2.0.0",
-    "psl": "1.1.20",
+    "psl": "1.1.29",
     "qr-image": "3.2.0",
     "read-pkg": "2.0.0",
     "semver": "5.5.0",
-    "single-line-log": "1.1.2",
     "sinon": "4.4.2",
     "strip-ansi": "4.0.0",
     "stripe": "5.1.0",
-    "supports-color": "5.2.0",
     "test-listen": "1.1.0",
     "text-table": "0.2.0",
     "through2": "2.0.3",
     "title": "3.4.0",
     "tmp-promise": "1.0.3",
+    "ts-node": "7.0.1",
+    "typescript": "3.2.2",
+    "typescript-eslint-parser": "21.0.2",
     "update-check": "1.5.0",
+    "utility-types": "2.1.0",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0"
   }

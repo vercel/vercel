@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import table from 'text-table';
 
 // Utilities
-import strlen from './strlen';
+import strlen from './strlen.ts';
 
 // header:
 // [ 'a', 'b', 'c', ... ]

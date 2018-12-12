@@ -2,17 +2,18 @@ import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
 import wait from '../../util/output/wait';
 import fatalError from '../../util/fatal-error';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
+import stamp from '../../util/output/stamp.ts';
+import param from '../../util/output/param.ts';
 import chars from '../../util/output/chars';
 import rightPad from '../../util/output/right-pad';
 import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
 import error from '../../util/output/error';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
+import Client from '../../util/client.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -76,7 +77,8 @@ export default async function(
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const user = await getUser({ apiUrl, token });
+  const client = new Client({ apiUrl, token });
+  const user = await getUser(client);
 
   stopUserSpinner();
 
@@ -150,7 +152,9 @@ export default async function(
             )
           );
           for (const email of emails) {
-            console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+            console.log(
+              `${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`
+            );
           }
         }
       } catch (err) {
@@ -176,4 +180,4 @@ export default async function(
       console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
-};
+}

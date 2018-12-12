@@ -1,7 +1,4 @@
-//      
-
-import { DomainNotFound } from "../errors";
-                                                  
+import { DomainNotFound } from "../errors-ts";
 
 async function getDomainDNSRecords(output        , now     , domain        ) {
   output.debug(`Fetching for DNS records of domain ${domain}`);

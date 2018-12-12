@@ -1,35 +1,16 @@
-//      
-
-import { DomainNotFound, DNSPermissionDenied } from '../errors';
-
-                          
-     
-                          
-                   
-                   
-                   
-     
-     
-                   
-                   
-            
-                     
-                         
-                       
-                      
-       
-      
+import { DNSPermissionDenied } from '../errors';
+import { DomainNotFound } from '../errors-ts';
 
 async function addDNSRecord(
   output        ,
   now     ,
   domain        ,
-  recordParams              
+  recordParams
 ) {
   try {
-    const record   
-                  
-                     
+    const record
+
+
       = await now.fetch(`/v3/domains/${domain}/records`, {
       body: recordParams,
       method: 'POST'

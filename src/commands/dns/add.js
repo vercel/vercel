@@ -1,31 +1,24 @@
 import chalk from 'chalk';
 import Now from '../../util';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
+import stamp from '../../util/output/stamp.ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
-import { DomainNotFound, DNSPermissionDenied } from '../../util/errors';
+import { DNSPermissionDenied } from '../../util/errors';
+import { DomainNotFound } from '../../util/errors-ts'
 
-async function add(
-  ctx,
-  opts,
-  args,
-  output
-) {
+async function add(ctx, opts, args, output) {
   // eslint-disable-line
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
+  const client = new Client({ apiUrl, token, currentTeam, debug });
 
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope({
-      apiUrl,
-      token,
-      debug,
-      currentTeam
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'not_authorized') {
       output.error(err.message);
@@ -58,7 +51,8 @@ async function add(
       )} ${chalk.gray(addStamp())}`
     );
     return 1;
-  } if (record instanceof DNSPermissionDenied) {
+  }
+  if (record instanceof DNSPermissionDenied) {
     output.error(
       `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
         contextName
@@ -66,19 +60,18 @@ async function add(
     );
     return 1;
   }
-    console.log(
-      `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
-        domain
-      )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
-    );
-
+  console.log(
+    `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
+      domain
+    )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
+      contextName
+    )} ${chalk.gray(addStamp())}`
+  );
 
   return 0;
 }
 
-function parseAddArgs(args          ) {
+function parseAddArgs(args) {
   if (!args || args.length < 4) {
     return null;
   }
@@ -90,12 +83,14 @@ function parseAddArgs(args          ) {
 
   if (!(domain && typeof name === 'string' && type)) {
     return null;
-  } if (type === 'MX' && args.length === 5) {
+  }
+  if (type === 'MX' && args.length === 5) {
     return {
       domain,
       data: { name, type, value, mxPriority: Number(args[4]) }
     };
-  } if (type === 'SRV' && args.length === 7) {
+  }
+  if (type === 'SRV' && args.length === 7) {
     return {
       domain,
       data: {
@@ -109,7 +104,8 @@ function parseAddArgs(args          ) {
         }
       }
     };
-  } if (args.length === 4) {
+  }
+  if (args.length === 4) {
     return {
       domain,
       data: {

@@ -12,18 +12,30 @@ import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import {isReady, isDone, isFailed} from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/dns-table';
-import zeitWorldTable from '../../util/zeit-world-table';
-import * as Errors from '../../util/errors';
+import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
+import {
+  CantGenerateWildcardCert,
+  CantSolveChallenge,
+  CDNNeedsUpgrade,
+  DomainConfigurationError,
+  DomainNotFound,
+  DomainPermissionDenied,
+  DomainsShouldShareRoot,
+  DomainValidationRunning,
+  DomainVerificationFailed,
+  TooManyCertificates,
+  TooManyRequests,
+} from '../../util/errors-ts';
+import { SchemaValidationFailed, } from '../../util/errors';
 
 export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
@@ -368,21 +380,18 @@ export const pipe = async function main(
     );
 
     if (
-      firstDeployCall instanceof Errors.CantSolveChallenge ||
-      firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
-      firstDeployCall instanceof Errors.DomainConfigurationError ||
-      firstDeployCall instanceof Errors.DomainNameserversNotFound ||
-      firstDeployCall instanceof Errors.DomainNotFound ||
-      firstDeployCall instanceof Errors.DomainNotVerified ||
-      firstDeployCall instanceof Errors.DomainPermissionDenied ||
-      firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
-      firstDeployCall instanceof Errors.DomainValidationRunning ||
-      firstDeployCall instanceof Errors.DomainVerificationFailed ||
-      firstDeployCall instanceof Errors.SchemaValidationFailed||
-      firstDeployCall instanceof Errors.InvalidWildcardDomain ||
-      firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
-      firstDeployCall instanceof Errors.TooManyCertificates ||
-      firstDeployCall instanceof Errors.TooManyRequests
+      firstDeployCall instanceof CantGenerateWildcardCert ||
+      firstDeployCall instanceof CantSolveChallenge ||
+      firstDeployCall instanceof CDNNeedsUpgrade ||
+      firstDeployCall instanceof DomainConfigurationError ||
+      firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainPermissionDenied ||
+      firstDeployCall instanceof DomainsShouldShareRoot ||
+      firstDeployCall instanceof DomainValidationRunning ||
+      firstDeployCall instanceof DomainVerificationFailed ||
+      firstDeployCall instanceof SchemaValidationFailed ||
+      firstDeployCall instanceof TooManyCertificates ||
+      firstDeployCall instanceof TooManyRequests
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -447,20 +456,18 @@ export const pipe = async function main(
           createArgs
         );
         if (
-          secondDeployCall instanceof Errors.CantSolveChallenge ||
-          secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
-          secondDeployCall instanceof Errors.DomainConfigurationError ||
-          secondDeployCall instanceof Errors.DomainNameserversNotFound ||
-          secondDeployCall instanceof Errors.DomainNotFound ||
-          secondDeployCall instanceof Errors.DomainNotVerified ||
-          secondDeployCall instanceof Errors.DomainPermissionDenied ||
-          secondDeployCall instanceof Errors.DomainsShouldShareRoot ||
-          secondDeployCall instanceof Errors.DomainValidationRunning ||
-          secondDeployCall instanceof Errors.DomainVerificationFailed ||
-          secondDeployCall instanceof Errors.InvalidWildcardDomain ||
-          secondDeployCall instanceof Errors.CDNNeedsUpgrade ||
-          secondDeployCall instanceof Errors.TooManyCertificates ||
-          secondDeployCall instanceof Errors.TooManyRequests
+          secondDeployCall instanceof CantGenerateWildcardCert ||
+          secondDeployCall instanceof CantSolveChallenge ||
+          secondDeployCall instanceof CDNNeedsUpgrade ||
+          secondDeployCall instanceof DomainConfigurationError ||
+          secondDeployCall instanceof DomainNotFound ||
+          secondDeployCall instanceof DomainPermissionDenied ||
+          secondDeployCall instanceof DomainsShouldShareRoot ||
+          secondDeployCall instanceof DomainValidationRunning ||
+          secondDeployCall instanceof DomainVerificationFailed ||
+          secondDeployCall instanceof SchemaValidationFailed ||
+          secondDeployCall instanceof TooManyCertificates ||
+          secondDeployCall instanceof TooManyRequests
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -592,47 +599,24 @@ export const pipe = async function main(
   return printDeploymentStatus(output, deployment, deployStamp, builds);
 };
 
-function handleCreateDeployError            (
-  output        ,
-  error
-)                 {
-  if (error instanceof Errors.CantGenerateWildcardCert) {
-    output.error(
-      `Custom suffixes are only allowed for domains in ${chalk.underline(
-        'zeit.world'
-      )}`
-    );
+function handleCreateDeployError(output, error) {
+  if (error instanceof CantGenerateWildcardCert) {
+    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
     return 1;
-  } if (error instanceof Errors.CantSolveChallenge) {
+  } if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
-      );
+      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
+      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
     } else {
-      output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
+      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
+      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
       output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
     }
     return 1;
-  } if (error instanceof Errors.DomainConfigurationError) {
-    output.error(
-      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
+  } if (error instanceof DomainConfigurationError) {
+    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
     if (error.meta.external) {
-      output.print(
-        `  The propagation may take a few minutes, but please verify your settings:\n\n`
-      );
+      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
       output.print(
         `${dnsTable([
           error.meta.subdomain === null
@@ -641,125 +625,58 @@ function handleCreateDeployError            (
         ])  }\n`
       );
     } else {
-      output.print(
-        `  We configured them for you, but the propagation may take a few minutes.\n`
-      );
+      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(
-      `Couldn't find nameservers for the domain ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
+  } if (error instanceof DomainVerificationFailed) {
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
     return 1;
-  } if (error instanceof Errors.DomainNotVerified) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} is not verified and can't be used as custom suffix.`
-    );
-    return 1;
-  } if (error instanceof Errors.DomainPermissionDenied) {
+  } if (error instanceof DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } if (error instanceof Errors.DomainsShouldShareRoot) {
-    // this is not going to happen
+  } if (error instanceof DomainsShouldShareRoot) {
+    output.error(`All given common names should share the same root domain.`);
     return 1;
-  } if (error instanceof Errors.DomainValidationRunning) {
+  } if (error instanceof DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } if (error instanceof Errors.SchemaValidationFailed) {
+  } if (error instanceof SchemaValidationFailed) {
     const { params, keyword, dataPath } = error.meta;
-
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
       output.error(`The property ${code(prop)} is not allowed in ${highlight('now.json')} when using Now 2.0 – please remove it.`);
-
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(`Do you mean ${code('build')} (object) with a property ${code('env')} (object) instead of ${code(prop)}?`);
       }
-
       return 1;
     } if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
       output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
       return 1;
     }
-
     const link = 'https://zeit.co/docs/v2/deployments/configuration/';
     output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
-
     return 1;
-  } if (error instanceof Errors.DomainVerificationFailed) {
-    output.error(
-      `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
-    );
-    output.print(
-      `  Please make sure that your nameservers point to ${chalk.underline(
-        'zeit.world'
-      )}.\n`
-    );
-    output.print(
-      `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
-    );
-    output.print(`${zeitWorldTable()  }\n`);
-    output.print(
-      `\n  As an alternative, you can add following records to your DNS settings:\n`
-    );
-    output.print(
-      `${dnsTable(
-        [
-          ['_now', 'TXT', error.meta.token],
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ],
-        { extraSpace: '  ' }
-      )  }\n`
-    );
-    return 1;
-  } if (error instanceof Errors.InvalidWildcardDomain) {
-    // this should never happen
-    output.error(
-      `Invalid domain ${chalk.underline(
-        error.meta.domain
-      )}. Wildcard domains can only be followed by a root domain.`
-    );
-    return 1;
-  } if (error instanceof Errors.CDNNeedsUpgrade) {
+  } if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } if (error instanceof Errors.TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
-        ', '
-      )}`
-    );
+  } if (error instanceof TooManyCertificates) {
+    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
     return 1;
-  } if (error instanceof Errors.TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
-    );
+  } if (error instanceof TooManyRequests) {
+    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
     return 1;
-  } if (error instanceof Errors.DomainNotFound) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
-    );
+  } if (error instanceof DomainNotFound) {
+    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
     return 1;
   }
 
