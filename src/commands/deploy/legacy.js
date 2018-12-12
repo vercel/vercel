@@ -45,7 +45,7 @@ import {
   CDNNeedsUpgrade,
   DomainConfigurationError,
   DomainNotFound,
-  DomainNotVerified,
+  DomainVerificationFailed,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
@@ -846,7 +846,7 @@ async function sync({
         firstDeployCall instanceof CantGenerateWildcardCert ||
         firstDeployCall instanceof DomainConfigurationError ||
         firstDeployCall instanceof DomainNotFound ||
-        firstDeployCall instanceof DomainNotVerified ||
+        firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof DomainPermissionDenied ||
         firstDeployCall instanceof DomainsShouldShareRoot ||
         firstDeployCall instanceof DomainValidationRunning ||
@@ -925,7 +925,7 @@ async function sync({
             secondDeployCall instanceof CantGenerateWildcardCert ||
             secondDeployCall instanceof DomainConfigurationError ||
             secondDeployCall instanceof DomainNotFound ||
-            secondDeployCall instanceof DomainNotVerified ||
+            secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof DomainPermissionDenied ||
             secondDeployCall instanceof DomainsShouldShareRoot ||
             secondDeployCall instanceof DomainValidationRunning ||
@@ -1338,7 +1338,7 @@ function handleCreateDeployError            (
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof DomainNotVerified) {
+  } if (error instanceof DomainVerificationFailed) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain

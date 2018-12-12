@@ -587,3 +587,13 @@ export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { valu
     });
   }
 }
+
+export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_CERT', {}> {
+  constructor() {
+    super({
+      code: 'CANT_GENERATE_WILDCARD_CERT',
+      meta: {},
+      message: `We can't generate a certificate for an external domain`
+    });
+  }
+}

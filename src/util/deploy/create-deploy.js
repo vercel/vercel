@@ -13,7 +13,7 @@ export default async function createDeploy(output, now, contextName, paths, crea
 
     // If the domain used as a suffix is not verified, we fail
     if (error.code === 'domain_not_verified') {
-      return new ERRORS_TS.DomainNotVerified(error.value);
+      return new ERRORS_TS.DomainVerificationFailed(error.value);
     }
 
     // If the user doesn't have permissions over the domain used as a suffix we fail
@@ -29,16 +29,15 @@ export default async function createDeploy(output, now, contextName, paths, crea
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(output, now, contextName, error.value);
       if (
-        result instanceof ERRORS_TS.CantSolveChallenge ||
         result instanceof ERRORS_TS.CantGenerateWildcardCert ||
+        result instanceof ERRORS_TS.CantSolveChallenge ||
+        result instanceof ERRORS_TS.CDNNeedsUpgrade ||
         result instanceof ERRORS_TS.DomainConfigurationError ||
-        result instanceof ERRORS_TS.DomainNotVerified ||
         result instanceof ERRORS_TS.DomainPermissionDenied ||
         result instanceof ERRORS_TS.DomainsShouldShareRoot ||
         result instanceof ERRORS_TS.DomainValidationRunning ||
         result instanceof ERRORS_TS.DomainVerificationFailed ||
         result instanceof ERRORS_TS.InvalidWildcardDomain ||
-        result instanceof ERRORS_TS.CDNNeedsUpgrade ||
         result instanceof ERRORS_TS.TooManyCertificates ||
         result instanceof ERRORS_TS.TooManyRequests
       ) {

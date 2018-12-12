@@ -29,7 +29,6 @@ import {
   CDNNeedsUpgrade,
   DomainConfigurationError,
   DomainNotFound,
-  DomainNotVerified,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
@@ -383,18 +382,17 @@ export const pipe = async function main(
     );
 
     if (
-      firstDeployCall instanceof CantSolveChallenge ||
       firstDeployCall instanceof CantGenerateWildcardCert ||
+      firstDeployCall instanceof CantSolveChallenge ||
+      firstDeployCall instanceof CDNNeedsUpgrade ||
       firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
-      firstDeployCall instanceof DomainNotVerified ||
       firstDeployCall instanceof DomainPermissionDenied ||
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
       firstDeployCall instanceof DomainVerificationFailed ||
-      firstDeployCall instanceof SchemaValidationFailed||
       firstDeployCall instanceof InvalidWildcardDomain ||
-      firstDeployCall instanceof CDNNeedsUpgrade ||
+      firstDeployCall instanceof SchemaValidationFailed||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests
     ) {
@@ -461,17 +459,16 @@ export const pipe = async function main(
           createArgs
         );
         if (
-          secondDeployCall instanceof CantSolveChallenge ||
           secondDeployCall instanceof CantGenerateWildcardCert ||
+          secondDeployCall instanceof CantSolveChallenge ||
+          secondDeployCall instanceof CDNNeedsUpgrade ||
           secondDeployCall instanceof DomainConfigurationError ||
           secondDeployCall instanceof DomainNotFound ||
-          secondDeployCall instanceof DomainNotVerified ||
           secondDeployCall instanceof DomainPermissionDenied ||
           secondDeployCall instanceof DomainsShouldShareRoot ||
           secondDeployCall instanceof DomainValidationRunning ||
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof InvalidWildcardDomain ||
-          secondDeployCall instanceof CDNNeedsUpgrade ||
           secondDeployCall instanceof TooManyCertificates ||
           secondDeployCall instanceof TooManyRequests
         ) {
@@ -660,7 +657,7 @@ function handleCreateDeployError            (
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof DomainNotVerified) {
+  } if (error instanceof DomainVerificationFailed) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
