@@ -4,6 +4,10 @@ import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
 
+function isAPIError(error: Error): error is APIError {
+  return Boolean((<APIError>error).status);
+}
+
 export default function handleError(error: string | Error | APIError, { debug = false } = {}) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
@@ -14,7 +18,7 @@ export default function handleError(error: string | Error | APIError, { debug = 
     console.log(`> [debug] handling error: ${error.stack}`);
   }
 
-  if (error instanceof APIError || (error as APIError).status) {
+  if (isAPIError(error)) {
     const err = error as APIError;
     if (err.status === 403) {
       console.error(errorOutput('Authentication err. Run `now login` to log-in again.'));
