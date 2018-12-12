@@ -62,7 +62,7 @@ export default async function add(
   }
 
   if (args.length !== 1) {
-    output.error(`${cmd('now domains rm <domain>')} expects one argument`);
+    output.error(`${cmd('now domains add <domain>')} expects one argument`);
     return 1;
   }
 

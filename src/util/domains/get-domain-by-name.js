@@ -1,16 +1,41 @@
-//      
-import getDomains from './get-domains';
+//
+import chalk from 'chalk';
 
+import wait from '../output/wait';
 import toHost from '../to-host';
+import * as Errors from '../errors';
 
-async function getDomainByIdOrName(
+async function getDomainByName(
   output        ,
-  now     ,
-  contextName        ,
-  domainIdOrName        
+  now           ,
+  contextName   ,
+  domainName
 ) {
-  const domains = await getDomains(output, now, contextName);
-  return domains.find(domain => domain.name === toHost(domainIdOrName));
+  const cancelWait = wait(`Fetching domain under ${chalk.bold(contextName)}`);
+  const result = await getDomain(now, domainName);
+  cancelWait();
+
+  if (!result || result instanceof Errors.DomainNotFound) {
+    return undefined;
+  }
+
+  return result;
 }
 
-export default getDomainByIdOrName;
+async function getDomain(now, domainName) {
+  try {
+    const { domain } = await now.fetch(
+      `/v4/domains/${toHost(domainName)}`
+    );
+
+    return domain;
+  } catch (error) {
+    if (error.status === 404) {
+      return new Errors.DomainNotFound(domainName);
+    }
+
+    throw error;
+  }
+}
+
+export default getDomainByName;
