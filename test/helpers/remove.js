@@ -4,7 +4,7 @@ const execa = require('execa');
 module.exports = async (t, binaryPath, defaultArgs, deployment) => {
   const host = deployment.replace('https://', '');
 
-  const { stdout, code } = await execa(binaryPath, [
+  const { stdout, stderr, code } = await execa(binaryPath, [
     'rm',
     host,
     '--yes',
@@ -12,6 +12,11 @@ module.exports = async (t, binaryPath, defaultArgs, deployment) => {
   ], {
     reject: false
   });
+
+  console.log('stdout')
+  console.log(stdout)
+  console.log('stderr')
+  console.log(stderr)
 
   t.truthy(stdout);
   t.is(code, 0);
