@@ -82,4 +82,4 @@ export default class CreditCards extends Now {
       }
     });
   }
-};
+}

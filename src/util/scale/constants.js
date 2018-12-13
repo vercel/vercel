@@ -1,11 +1,4 @@
-//      
-                  
-             
-              
-              
-              
-             
-  
+//
 
 export const REGION_TO_DC = {
   all: 'all',

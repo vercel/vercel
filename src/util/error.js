@@ -3,7 +3,11 @@ import errorOutput from './output/error';
 export { default as handleError } from './handle-error';
 export const error = errorOutput;
 
-export async function responseError(res, fallbackMessage = null, parsedBody = {}) {
+export async function responseError(
+  res,
+  fallbackMessage = null,
+  parsedBody = {}
+) {
   let message;
   let bodyError;
 

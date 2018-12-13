@@ -1,6 +1,6 @@
-export const maybeURL = id => 
+export const maybeURL = id =>
   // E.g, "appname-asdf"
-   id.includes('-');
+  id.includes('-');
 
 export const normalizeURL = u => {
   // Normalize URL by removing slash from the end

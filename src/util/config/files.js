@@ -20,13 +20,19 @@ export const writeToConfigFile = stuff => {
     return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err) {
     if (err.code === 'EPERM') {
-      console.error(error(`Not able to create ${highlight(CONFIG_FILE_PATH)} (operation not permitted).`));
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            CONFIG_FILE_PATH
+          )} (operation not permitted).`
+        )
+      );
       process.exit(1);
     }
 
     throw err;
   }
-}
+};
 
 // reads `AUTH_CONFIG_FILE_PATH` atomically
 export const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
@@ -34,16 +40,25 @@ export const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
 // writes whatever's in `stuff` to `AUTH_CONFIG_FILE_PATH`, atomically
 export const writeToAuthConfigFile = stuff => {
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, { indent: 2, mode: 0o600 });
+    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
+      indent: 2,
+      mode: 0o600
+    });
   } catch (err) {
     if (err.code === 'EPERM') {
-      console.error(error(`Not able to create ${highlight(AUTH_CONFIG_FILE_PATH)} (operation not permitted).`));
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            AUTH_CONFIG_FILE_PATH
+          )} (operation not permitted).`
+        )
+      );
       process.exit(1);
     }
 
     throw err;
   }
-}
+};
 
 export function getConfigFilePath() {
   return CONFIG_FILE_PATH;

@@ -24,11 +24,16 @@ export default async function assignAlias(
   contextName: string,
   noVerify: boolean
 ) {
-  const prevAlias = await findAliasByAliasOrId(output, client, alias)
+  const prevAlias = await findAliasByAliasOrId(output, client, alias);
   let externalDomain = false;
 
   // If there was a previous deployment, we should fetch it to scale and downscale later
-  let prevDeployment = await getDeploymentFromAlias(client, contextName, prevAlias, deployment);
+  let prevDeployment = await getDeploymentFromAlias(
+    client,
+    contextName,
+    prevAlias,
+    deployment
+  );
 
   // If there is an alias laying around that points to a deleted
   // deployment, we need to account for it here.

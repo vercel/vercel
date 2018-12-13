@@ -4,9 +4,7 @@ import { Console } from 'console';
 
 export type Output = ReturnType<typeof createOutput>;
 
-export default function createOutput(
-  { debug: debugEnabled = false } = {}
-) {
+export default function createOutput({ debug: debugEnabled = false } = {}) {
   function print(str: string) {
     process.stderr.write(str);
   }

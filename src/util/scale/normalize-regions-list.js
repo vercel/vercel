@@ -2,10 +2,7 @@
 import { InvalidRegionOrDCForScale, InvalidAllForScale } from '../errors';
 import regionOrDCToDC from './region-or-dc-to-dc';
 
-
-export default function normalizeRegionsList(
-  regionsOrDCs
-)                                                                      {
+export default function normalizeRegionsList(regionsOrDCs) {
   if (regionsOrDCs.includes('all')) {
     if (regionsOrDCs.length > 1) {
       return new InvalidAllForScale();
@@ -14,7 +11,7 @@ export default function normalizeRegionsList(
     return ['all'];
   }
 
-  const dcs                   = new Set();
+  const dcs = new Set();
   for (const regionOrDC of regionsOrDCs) {
     const dc = regionOrDCToDC(regionOrDC);
     if (dc === undefined) {

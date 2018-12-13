@@ -2,7 +2,10 @@ import { Output } from '../output';
 import * as ERRORS from '../../util/errors-ts';
 import getConfig from '../../util/get-config';
 
-export default async function getInferredTargets(output: Output, localConfigPath: string) {
+export default async function getInferredTargets(
+  output: Output,
+  localConfigPath: string
+) {
   // Read the configuration file from the best guessed location
   const config = await getConfig(output, localConfigPath);
   if (

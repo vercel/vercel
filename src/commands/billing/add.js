@@ -74,7 +74,7 @@ export default async function({ creditCards, clear = false, contextName }) {
         try {
           /* eslint-disable no-await-in-loop */
           result = await textInput({
-            label: `- ${  piece.label}`,
+            label: `- ${piece.label}`,
             initialValue: piece.initialValue || piece.value,
             placeholder: piece.placeholder,
             mask: piece.mask,
@@ -102,12 +102,16 @@ export default async function({ creditCards, clear = false, contextName }) {
             );
           } else if (key === 'ccv') {
             process.stdout.write(
-              `${chalk.cyan(chars.tick)} ${piece.label}${'*'.repeat(result.length)}\n`
+              `${chalk.cyan(chars.tick)} ${piece.label}${'*'.repeat(
+                result.length
+              )}\n`
             );
           } else if (key === 'expDate') {
             let text = result.split(' / ');
             text = text[0] + chalk.gray(' / ') + text[1];
-            process.stdout.write(`${chalk.cyan(chars.tick)} ${piece.label}${text}\n`);
+            process.stdout.write(
+              `${chalk.cyan(chars.tick)} ${piece.label}${text}\n`
+            );
           } else {
             process.stdout.write(
               `${chalk.cyan(chars.tick)} ${piece.label}${result}\n`
@@ -164,4 +168,4 @@ export default async function({ creditCards, clear = false, contextName }) {
   } catch (err) {
     console.erorr(err);
   }
-};
+}

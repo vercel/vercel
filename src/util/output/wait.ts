@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import eraseLines from './erase-lines';
 
 export default function wait(msg: string, timeout: number = 300, _ora = ora) {
-  let spinner: ReturnType<typeof ora>
+  let spinner: ReturnType<typeof ora>;
   let running = false;
   let stopped = false;
 

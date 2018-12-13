@@ -1,10 +1,8 @@
-//      
+//
 
-                                           
-
-export default async function getCreditCards(now     ) {
+export default async function getCreditCards(now) {
   const payload = await now.fetch('/stripe/sources/');
-  const cards               = payload.sources;
+  const cards = payload.sources;
 
   return cards;
 }

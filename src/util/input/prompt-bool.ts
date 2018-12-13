@@ -1,15 +1,15 @@
 import chalk from 'chalk';
 
 type Options = {
-  abortSequences?: Set<string>,
-  defaultValue?: boolean,
-  noChar?: string,
-  resolveChars?: Set<string>,
-  stdin?: NodeJS.ReadStream,
-  stdout?: NodeJS.WriteStream,
-  trailing?: string,
-  yesChar?: string,
-}
+  abortSequences?: Set<string>;
+  defaultValue?: boolean;
+  noChar?: string;
+  resolveChars?: Set<string>;
+  stdin?: NodeJS.ReadStream;
+  stdout?: NodeJS.WriteStream;
+  trailing?: string;
+  yesChar?: string;
+};
 
 export default async function promptBool(label: string, options: Options = {}) {
   const {

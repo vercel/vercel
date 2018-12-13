@@ -13,7 +13,8 @@ const ESCAPES = {
   CARRIAGE: '\r'
 };
 
-const formatCC = data => data
+const formatCC = data =>
+  data
     .replace(/\s/g, '')
     .replace(/(.{4})/g, '$1 ')
     .trim();
@@ -265,4 +266,4 @@ export default function(
 
     stdin.on('data', onData);
   });
-};
+}

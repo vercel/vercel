@@ -1,14 +1,7 @@
-//      
+//
 import getDNSRecords from './get-dns-records';
 
-                                          
-
-async function getDNSRecordById(
-  output        ,
-  now     ,
-  contextName        ,
-  id        
-)                                                            {
+async function getDNSRecordById(output, now, contextName, id) {
   const recordsByDomains = await getDNSRecords(output, now, contextName);
   return recordsByDomains.reduce((result, { domainName, records }) => {
     if (result) {

@@ -9,7 +9,11 @@ import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
-import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
+import {
+  staticFiles as getFiles,
+  npm as getNpmFiles,
+  docker as getDockerFiles
+} from './get-files';
 import Agent from './agent.ts';
 import ua from './ua.ts';
 import hash from './hash';
@@ -86,7 +90,11 @@ export default class Now extends EventEmitter {
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!isBuilds && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
+        if (
+          !isBuilds &&
+          !hasNpmStart(pkg) &&
+          !hasFile(paths[0], files, 'server.js')
+        ) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
@@ -202,41 +210,40 @@ export default class Now extends EventEmitter {
 
       const queryProps = {};
 
-      const requestBody = isBuilds ? {
-        version: 2,
-        env,
-        build,
-        public: wantsPublic || nowConfig.public,
-        name,
-        files,
-        meta,
-        regions
-      } : {
-        env,
-        build,
-        meta,
-        public: wantsPublic || nowConfig.public,
-        forceNew,
-        name,
-        description,
-        deploymentType: type,
-        registryAuthToken: authToken,
-        files,
-        engines,
-        scale,
-        sessionAffinity,
-        limits: nowConfig.limits,
-        atlas
-      };
+      const requestBody = isBuilds
+        ? {
+            version: 2,
+            env,
+            build,
+            public: wantsPublic || nowConfig.public,
+            name,
+            files,
+            meta,
+            regions
+          }
+        : {
+            env,
+            build,
+            meta,
+            public: wantsPublic || nowConfig.public,
+            forceNew,
+            name,
+            description,
+            deploymentType: type,
+            registryAuthToken: authToken,
+            files,
+            engines,
+            scale,
+            sessionAffinity,
+            limits: nowConfig.limits,
+            atlas
+          };
 
       if (Object.keys(nowConfig).length > 0) {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = [
-            'alias',
-            'github'
-          ];
+          const exclude = ['alias', 'github'];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -272,10 +279,13 @@ export default class Now extends EventEmitter {
       const query = qs.stringify(queryProps);
       const version = isBuilds ? 'v6' : 'v4';
 
-      const res = await this._fetch(`/${version}/now/deployments${query ? `?${query}` : ''}`, {
-        method: 'POST',
-        body: requestBody
-      });
+      const res = await this._fetch(
+        `/${version}/now/deployments${query ? `?${query}` : ''}`,
+        {
+          method: 'POST',
+          body: requestBody
+        }
+      );
 
       // No retry on 4xx
       let body;
@@ -338,8 +348,13 @@ export default class Now extends EventEmitter {
             const count = unreferencedBuildSpecs.length;
             const prefix = count === 1 ? 'build' : 'builds';
 
-            err.message = `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight('.nowignore')}):` +
-              `\n- ${unreferencedBuildSpecs.map(item => JSON.stringify(item)).join('\n- ')}`;
+            err.message =
+              `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
+                '.nowignore'
+              )}):` +
+              `\n- ${unreferencedBuildSpecs
+                .map(item => JSON.stringify(item))
+                .join('\n- ')}`;
           } else {
             Object.assign(err, body.error);
           }
@@ -494,13 +509,13 @@ export default class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } if (res.status > 200 && res.status < 500) {
+      }
+      if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list secrets'));
       }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list secrets');
-
+      // If something is wrong with the server, we retry
+      throw await responseError(res, 'Failed to list secrets');
     });
 
     return secrets;
@@ -508,9 +523,11 @@ export default class Now extends EventEmitter {
 
   async list(app, { version = 2, meta = {} } = {}) {
     const metaQs = Object.keys(meta)
-      .map((key) => `meta-${key}=${encodeURIComponent(meta[key])}`)
+      .map(key => `meta-${key}=${encodeURIComponent(meta[key])}`)
       .join('&');
-    const query = app ? `?app=${encodeURIComponent(app)}&${metaQs}` : `?${metaQs}`;
+    const query = app
+      ? `?app=${encodeURIComponent(app)}&${metaQs}`
+      : `?${metaQs}`;
 
     const { deployments } = await this.retry(
       async bail => {
@@ -519,13 +536,13 @@ export default class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } if (res.status > 200 && res.status < 500) {
+        }
+        if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list deployments'));
         }
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list deployments');
-
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list deployments');
       },
       {
         retries: 3,
@@ -547,13 +564,13 @@ export default class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } if (res.status > 200 && res.status < 500) {
+        }
+        if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list instances'));
         }
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list instances');
-
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list instances');
       },
       {
         retries: 3,
@@ -576,7 +593,9 @@ export default class Now extends EventEmitter {
         host = host.slice(0, -1);
       }
 
-      const url = `/v3/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`;
+      const url = `/v3/now/hosts/${encodeURIComponent(
+        host
+      )}?resolve=1&noState=1`;
 
       const { deployment } = await this.retry(
         async bail => {
@@ -636,7 +655,6 @@ export default class Now extends EventEmitter {
 
       if (res.status === 200) {
         // What we want
-
       } else if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to remove deployment'));
@@ -710,7 +728,9 @@ export default class Now extends EventEmitter {
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(opts.body) || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
+        opts.body
+      ) || ''}`,
       this._agent.fetch(_url, opts)
     );
   }
@@ -747,20 +767,18 @@ export default class Now extends EventEmitter {
           ? res.json()
           : res;
       }
-        const err = await responseError(res);
-        if (res.status >= 400 && res.status < 500) {
-          return bail(err);
-        }
-          throw err;
-
-
+      const err = await responseError(res);
+      if (res.status >= 400 && res.status < 500) {
+        return bail(err);
+      }
+      throw err;
     }, opts.retry);
   }
 
   async getPlanMax() {
     return 10;
   }
-};
+}
 
 function toRelative(path, base) {
   const fullBase = base.endsWith(SEP) ? base : base + SEP;

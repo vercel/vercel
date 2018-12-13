@@ -20,7 +20,7 @@ export class SchemaValidationFailed extends NowError {
   }
 }
 
-export class InvalidAllForScale extends NowError                              {
+export class InvalidAllForScale extends NowError {
   constructor() {
     super({
       code: 'INVALID_ALL_FOR_SCALE',

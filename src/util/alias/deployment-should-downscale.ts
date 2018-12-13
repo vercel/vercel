@@ -23,10 +23,12 @@ export default async function deploymentShouldDownscale(
 
   return (
     !isAliased &&
-    Object.keys(deployment.scale).reduce((result, dc) => (
+    Object.keys(deployment.scale).reduce(
+      (result, dc) =>
         result ||
         getScaleForDC(dc, deployment).min !== 0 ||
-        getScaleForDC(dc, deployment).max !== 1
-      ), false)
+        getScaleForDC(dc, deployment).max !== 1,
+      false
+    )
   );
 }

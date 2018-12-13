@@ -11,7 +11,7 @@ export default async function getRulesFromFile(filePath: string) {
 
 async function readRulesFile(rulesPath: string) {
   const fullPath = path.resolve(process.cwd(), rulesPath);
-  const result = await readJSONFile(fullPath) as {[key: string]: any};
+  const result = (await readJSONFile(fullPath)) as { [key: string]: any };
   if (result instanceof ERRORS.CantParseJSONFile) {
     return result;
   }
@@ -27,7 +27,7 @@ async function readRulesFile(rulesPath: string) {
     );
   }
 
-  const rules = result.rules as PathRule[]
+  const rules = result.rules as PathRule[];
   const error = validatePathAliasRules(humanizePath(fullPath), rules);
   if (error instanceof ERRORS.RulesFileValidationError) {
     return error;
