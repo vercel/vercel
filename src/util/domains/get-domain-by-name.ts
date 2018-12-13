@@ -9,7 +9,7 @@ type Response = {
 }
 
 async function getDomainByName(client: Client, contextName: string, domainName: string) {
-  const cancelWait = wait(`Fetching domains ${domainName} under ${chalk.bold(contextName)}`);
+  const cancelWait = wait(`Fetching domain ${domainName} under ${chalk.bold(contextName)}`);
   try {
     const { domain } = await client.fetch<Response>(`/v4/domains/${domainName}`);
     cancelWait();

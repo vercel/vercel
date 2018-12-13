@@ -20,16 +20,6 @@ export class SchemaValidationFailed extends NowError {
   }
 }
 
-export class InvalidCert extends NowError                     {
-  constructor() {
-    super({
-      code: 'INVALID_CERT',
-      meta: {},
-      message: `The provided custom certificate is invalid and couldn't be added`
-    });
-  }
-}
-
 export class InvalidAllForScale extends NowError                              {
   constructor() {
     super({

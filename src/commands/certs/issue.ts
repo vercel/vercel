@@ -1,33 +1,31 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
+
 import { handleDomainConfigurationError } from '../../util/error-handlers';
-import dnsTable from '../../util/format-dns-table.ts';
-import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import Now from '../../util';
-import stamp from '../../util/output/stamp.ts';
+import { NowContext } from '../../types';
+import { Output } from '../../util/output';
+import * as ERRORS from '../../util/errors-ts';
+import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
+import dnsTable from '../../util/format-dns-table';
 import finishCertOrder from '../../util/certs/finish-cert-order';
+import getCnsFromArgs from '../../util/certs/get-cns-from-args';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
-import {
-  CantGenerateWildcardCert,
-  CantSolveChallenge,
-  CertOrderNotFound,
-  DomainConfigurationError,
-  DomainPermissionDenied,
-  DomainsShouldShareRoot,
-  DomainValidationRunning,
-  TooManyCertificates,
-  TooManyRequests
-} from '../../util/errors-ts';
-import {
-  InvalidCert
-} from '../../util/errors';
 
-export default async function issue(ctx, opts, args, output) {
+type Options = {
+  '--ca': string,
+  '--challenge-only': boolean,
+  '--crt': string,
+  '--debug': boolean,
+  '--key': string,
+  '--overwrite': boolean,
+}
+
+export default async function issue(ctx: NowContext, opts: Options, args: string[], output: Output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -43,6 +41,7 @@ export default async function issue(ctx, opts, args, output) {
     '--key': keyPath,
     '--ca': caPath
   } = opts;
+
   const client = new Client({
     apiUrl,
     token,
@@ -62,12 +61,8 @@ export default async function issue(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-
   if (overwite) {
     output.error('Overwrite option is deprecated');
-    now.close();
     return 1;
   }
 
@@ -81,19 +76,19 @@ export default async function issue(ctx, opts, args, output) {
           `now certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
         )}\n`
       );
-      now.close();
       return 1;
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName);
-    if (cert instanceof InvalidCert) {
+    cert = await createCertFromFile(client, keyPath, crtPath, caPath, contextName);
+    if (cert instanceof ERRORS.InvalidCert) {
       output.error(
         `The provided certificate is not valid and cannot be added.`
       );
       return 1;
     }
-    if (cert instanceof DomainPermissionDenied) {
+
+    if (cert instanceof ERRORS.DomainPermissionDenied) {
       output.error(
         `You do not have permissions over domain ${chalk.underline(
           cert.meta.domain
@@ -112,11 +107,8 @@ export default async function issue(ctx, opts, args, output) {
   }
 
   if (args.length < 1) {
-    output.error(
-      `Invalid number of arguments to create a custom certificate entry. Usage:`
-    );
+    output.error(`Invalid number of arguments to create a custom certificate entry. Usage:`);
     output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`);
-    now.close();
     return 1;
   }
 
@@ -125,17 +117,17 @@ export default async function issue(ctx, opts, args, output) {
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.
   if (challengeOnly) {
-    return runStartOrder(output, now, cns, contextName, addStamp);
+    return runStartOrder(output, client, cns, contextName, addStamp);
   }
 
   // If the user does not specify anything, we try to fullfill a pending order that may exist
   // and if it doesn't exist we try to issue the cert solving from the server
-  cert = await finishCertOrder(now, cns, contextName);
-  if (cert instanceof CertOrderNotFound) {
-    cert = await createCertForCns(now, cns, contextName);
+  cert = await finishCertOrder(client, cns, contextName);
+  if (cert instanceof ERRORS.CertOrderNotFound) {
+    cert = await createCertForCns(client, cns, contextName);
   }
 
-  if (cert instanceof CantSolveChallenge) {
+  if (cert instanceof ERRORS.CantSolveChallenge) {
     output.error(
       `We could not solve the ${cert.meta.type} challenge for domain ${cert.meta
         .domain}.`
@@ -168,7 +160,7 @@ export default async function issue(ctx, opts, args, output) {
     }
     return 1;
   }
-  if (cert instanceof TooManyRequests) {
+  if (cert instanceof ERRORS.TooManyRequests) {
     output.error(
       `Too many requests detected for ${cert.meta
         .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
@@ -177,7 +169,7 @@ export default async function issue(ctx, opts, args, output) {
     );
     return 1;
   }
-  if (cert instanceof TooManyCertificates) {
+  if (cert instanceof ERRORS.TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
         ', '
@@ -185,7 +177,7 @@ export default async function issue(ctx, opts, args, output) {
     );
     return 1;
   }
-  if (cert instanceof DomainValidationRunning) {
+  if (cert instanceof ERRORS.DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         cert.meta.domain
@@ -193,20 +185,20 @@ export default async function issue(ctx, opts, args, output) {
     );
     return 1;
   }
-  if (cert instanceof DomainConfigurationError) {
+  if (cert instanceof ERRORS.DomainConfigurationError) {
     handleDomainConfigurationError(output, cert);
     return 1;
   }
-  if (cert instanceof CantGenerateWildcardCert) {
-    return runStartOrder(output, now, cns, contextName, addStamp, {
+  if (cert instanceof ERRORS.WildcardNotAllowed) {
+    return runStartOrder(output, client, cns, contextName, addStamp, {
       fallingBack: true
     });
   }
-  if (cert instanceof DomainsShouldShareRoot) {
+  if (cert instanceof ERRORS.DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
   }
-  if (cert instanceof DomainPermissionDenied) {
+  if (cert instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
         cert.meta.domain
@@ -224,14 +216,14 @@ export default async function issue(ctx, opts, args, output) {
 }
 
 async function runStartOrder(
-  output,
-  now,
-  cns,
-  contextName,
-  stamp,
+  output: Output,
+  client: Client,
+  cns: string[],
+  contextName: string,
+  stamp: () => string,
   { fallingBack = false } = {}
 ) {
-  const { challengesToResolve } = await startCertOrder(now, cns, contextName);
+  const { challengesToResolve } = await startCertOrder(client, cns, contextName);
   const pendingChallenges = challengesToResolve.filter(
     challenge => challenge.status === 'pending'
   );

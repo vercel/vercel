@@ -18,13 +18,10 @@ import {
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
+  InvalidCert,
   TooManyCertificates,
   TooManyRequests
 } from '../../util/errors-ts';
-
-import {
-  InvalidCert
-} from '../../util/errors'
 
 async function add(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;

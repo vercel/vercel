@@ -29,7 +29,7 @@ export default async function createDeploy(output, now, contextName, paths, crea
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(output, now, contextName, error.value);
       if (
-        result instanceof ERRORS_TS.CantGenerateWildcardCert ||
+        result instanceof ERRORS_TS.WildcardNotAllowed ||
         result instanceof ERRORS_TS.CantSolveChallenge ||
         result instanceof ERRORS_TS.CDNNeedsUpgrade ||
         result instanceof ERRORS_TS.DomainConfigurationError ||
