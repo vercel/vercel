@@ -395,6 +395,9 @@ test('set platform version using `--platform-version` to `2`', async t => {
     reject: false
   });
 
+  console.log(stdout)
+  console.log(stderr)
+
   // Ensure the exit code is right
   t.is(code, 0);
 
