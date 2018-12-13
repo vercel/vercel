@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import title from 'title';
 import bytes from 'bytes';
-import {isReady, isFailed} from '../build-state';
+import { isReady, isFailed } from '../build-state';
 
 const prepareState = state => title(state.replace('_', ' '));
 
@@ -12,7 +12,7 @@ const longestState = 12;
 const padding = 8;
 
 const styleBuild = (build, times, inspecting, longestSource) => {
-  const {entrypoint, readyState, id, hasOutput} = build;
+  const { entrypoint, readyState, id, hasOutput } = build;
   const state = prepareState(readyState).padEnd(longestState + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
 
@@ -29,11 +29,13 @@ const styleBuild = (build, times, inspecting, longestSource) => {
   const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput ? '┌' : '╶';
 
-  return `${inspecting ? `    ` : `${chalk.grey(prefix)} `}${pathColor(entry)}${stateColor(state)}${time}`;
+  return `${inspecting ? `    ` : `${chalk.grey(prefix)} `}${pathColor(
+    entry
+  )}${stateColor(state)}${time}`;
 };
 
 const styleOutput = (output, inspecting) => {
-  const {type, path, readyState, size, isLast, lambda} = output;
+  const { type, path, readyState, size, isLast, lambda } = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
   const finalSize = size ? ` ${chalk.grey(`(${bytes(size)})`)}` : '';
 
@@ -65,7 +67,7 @@ export default (builds, times, inspecting) => {
 
   for (const build of builds) {
     buildsAndOutput.push(build);
-    const {output, copiedFrom} = build;
+    const { output, copiedFrom } = build;
 
     if (!copiedFrom && output && output.length > 0) {
       build.hasOutput = true;
@@ -97,7 +99,7 @@ export default (builds, times, inspecting) => {
       log = styleBuild(item, times, inspecting, longestSource);
     }
 
-    const newline = (index === buildsAndOutput.length - 1) ? '' : '\n';
+    const newline = index === buildsAndOutput.length - 1 ? '' : '\n';
     return log + newline;
   });
 

@@ -1,17 +1,9 @@
 import { DNSPermissionDenied } from '../errors';
 import { DomainNotFound } from '../errors-ts';
 
-async function addDNSRecord(
-  output        ,
-  now     ,
-  domain        ,
-  recordParams
-) {
+async function addDNSRecord(output, now, domain, recordParams) {
   try {
-    const record
-
-
-      = await now.fetch(`/v3/domains/${domain}/records`, {
+    const record = await now.fetch(`/v3/domains/${domain}/records`, {
       body: recordParams,
       method: 'POST'
     });

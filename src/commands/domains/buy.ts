@@ -16,10 +16,15 @@ import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
 
 type Options = {
-  '--debug': boolean,
-}
+  '--debug': boolean;
+};
 
-export default async function buy(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function buy(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -111,10 +116,18 @@ export default async function buy(ctx: NowContext, opts: Options, args: string[]
     return 1;
   }
 
-  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} purchased ${purchaseStamp()}`);
+  console.log(
+    `${chalk.cyan('> Success!')} Domain ${param(
+      domainName
+    )} purchased ${purchaseStamp()}`
+  );
   if (!buyResult.verified) {
-    output.note(`Your domain is not fully configured yet so it may appear as not verified.`);
-    output.print(`  It might take a few minutes, but you will get an email as soon as it is ready.\n`)
+    output.note(
+      `Your domain is not fully configured yet so it may appear as not verified.`
+    );
+    output.print(
+      `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
+    );
   } else {
     output.note(
       `You may now use your domain as an alias to your deployments. Run ${cmd(

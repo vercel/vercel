@@ -54,12 +54,20 @@ import {
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
-  InvalidRegionOrDCForScale,
+  InvalidRegionOrDCForScale
 } from '../../util/errors';
-import { SchemaValidationFailed, } from '../../util/errors';
+import { SchemaValidationFailed } from '../../util/errors';
 
 const mriOpts = {
-  string: ['name', 'build-env', 'alias', 'meta', 'session-affinity', 'regions', 'dotenv'],
+  string: [
+    'name',
+    'build-env',
+    'alias',
+    'meta',
+    'session-affinity',
+    'regions',
+    'dotenv'
+  ],
   boolean: [
     'help',
     'version',
@@ -156,16 +164,16 @@ export const help = () => `
     -V, --platform-version         Set the platform version to deploy to
     -n, --name                     Set the name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  'FILE'
+)}   Path to the local ${'`now.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  'DIR'
+)}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-    'TOKEN'
-  )}        Login token
+  'TOKEN'
+)}        Login token
     -l, --links                    Copy symlinks without resolving their target
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
@@ -180,8 +188,8 @@ export const help = () => `
       '`-m KEY=value`'
     )}). Can appear many times.
     -E ${chalk.underline('FILE')}, --dotenv=${chalk.underline(
-    'FILE'
-  )}         Include env vars from .env file. Defaults to '.env'
+  'FILE'
+)}         Include env vars from .env file. Defaults to '.env'
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
@@ -214,8 +222,8 @@ export const help = () => `
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-    '`list`'
-  )}
+  '`list`'
+)}
 
     ${chalk.cyan('$ now help list')}
 
@@ -343,11 +351,7 @@ const promptForEnvFields = async list => {
   return answers;
 };
 
-export const pipe = async function main(
-  ctx            ,
-  contextName        ,
-  output
-) {
+export const pipe = async function main(ctx, contextName, output) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
   if (argv._[0] === 'deploy') {
@@ -416,7 +420,7 @@ async function sync({
     const rawPath = argv._[0];
 
     let meta;
-    let deployment                       = null;
+    let deployment = null;
     let isFile;
 
     if (paths.length === 1) {
@@ -567,17 +571,17 @@ async function sync({
 
     if (!meta) {
       try {
-      ({
-        meta,
-        deploymentName,
-        deploymentType,
-        sessionAffinity
-      } = await readMeta(
-        paths[0],
-        deploymentName,
-        deploymentType,
-        sessionAffinity
-      ));
+        ({
+          meta,
+          deploymentName,
+          deploymentType,
+          sessionAffinity
+        } = await readMeta(
+          paths[0],
+          deploymentName,
+          deploymentType,
+          sessionAffinity
+        ));
       } catch (err) {
         if (err.code === 'config_prop_and_file') {
           error(err.message);
@@ -627,7 +631,8 @@ async function sync({
         );
         await exit(1);
         return 1;
-      } if (dcIds instanceof InvalidAllForScale) {
+      }
+      if (dcIds instanceof InvalidAllForScale) {
         error(`You can't use all in the regions list mixed with other regions`);
         await exit(1);
         return 1;
@@ -651,8 +656,7 @@ async function sync({
           await exit(1);
           return 1;
         }
-          scale[dc] = scaleFromConfig[regionOrDc];
-
+        scale[dc] = scaleFromConfig[regionOrDc];
       }
     }
 
@@ -733,7 +737,9 @@ async function sync({
         secrets = await now.listSecrets();
       }
 
-      return secrets.filter(secret => secret.name === uidOrName || secret.uid === uidOrName);
+      return secrets.filter(
+        secret => secret.name === uidOrName || secret.uid === uidOrName
+      );
     };
 
     const env_ = await Promise.all(
@@ -1037,16 +1043,16 @@ async function sync({
         try {
           await copy(url);
           log(
-            `${chalk.bold(
-              chalk.cyan(url)
-            )} ${chalk.gray('[v1]')} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
+              '[in clipboard]'
+            )}${dcs} ${deployStamp()}`
           );
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(
-              chalk.cyan(url)
-            )} ${chalk.gray('[v1]')} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
+              '[in clipboard]'
+            )}${dcs} ${deployStamp()}`
           );
         }
       } else {
@@ -1219,15 +1225,15 @@ async function readMeta(
   }
 }
 
-function getRegionsFromConfig(config = {})                {
+function getRegionsFromConfig(config = {}) {
   return config.regions || [];
 }
 
-function getScaleFromConfig(config = {})         {
+function getScaleFromConfig(config = {}) {
   return config.scale || {};
 }
 
-async function maybeGetEventsStream(now     , deployment               ) {
+async function maybeGetEventsStream(now, deployment) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
@@ -1238,12 +1244,7 @@ async function maybeGetEventsStream(now     , deployment               ) {
   }
 }
 
-function getEventsGenerator(
-  now     ,
-  contextName         ,
-  deployment               ,
-  eventsStream
-)                                              {
+function getEventsGenerator(now, contextName, deployment, eventsStream) {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(
     now,
     contextName,
@@ -1260,12 +1261,7 @@ function getEventsGenerator(
   return stateChangeFromPollingGenerator;
 }
 
-function getVerifyDCsGenerator(
-  output        ,
-  now     ,
-  deployment               ,
-  eventsStream
-) {
+function getVerifyDCsGenerator(output, now, deployment, eventsStream) {
   const verifyDeployment = verifyDeploymentScale(
     output,
     now,
@@ -1283,65 +1279,114 @@ function getVerifyDCsGenerator(
 
 function handleCreateDeployError(output, error) {
   if (error instanceof WildcardNotAllowed) {
-    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
+    output.error(
+      `Custom suffixes are only allowed for domains in ${chalk.underline(
+        'zeit.world'
+      )}`
+    );
     return 1;
-  } if (error instanceof CantSolveChallenge) {
+  }
+  if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
-      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
+      output.error(
+        `The certificate provider could not resolve the DNS queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
+      );
     } else {
-      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
-      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
+      output.error(
+        `The certificate provider could not resolve the HTTP queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
+      );
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
     }
     return 1;
-  } if (error instanceof DomainConfigurationError) {
-    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
+  }
+  if (error instanceof DomainConfigurationError) {
+    output.error(
+      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
+        error.meta.domain
+      )}`
+    );
     if (error.meta.external) {
-      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
+      output.print(
+        `  The propagation may take a few minutes, but please verify your settings:\n\n`
+      );
       output.print(
         `${dnsTable([
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ])  }\n`
+        ])}\n`
       );
     } else {
-      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
+      output.print(
+        `  We configured them for you, but the propagation may take a few minutes.\n`
+      );
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof DomainVerificationFailed) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
+  }
+  if (error instanceof DomainVerificationFailed) {
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} is not verified and can't be used as custom suffix.`
+    );
     return 1;
-  } if (error instanceof DomainPermissionDenied) {
+  }
+  if (error instanceof DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } if (error instanceof DomainsShouldShareRoot) {
+  }
+  if (error instanceof DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
-  } if (error instanceof DomainValidationRunning) {
+  }
+  if (error instanceof DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } if (error instanceof CDNNeedsUpgrade) {
+  }
+  if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } if (error instanceof TooManyCertificates) {
-    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
+  }
+  if (error instanceof TooManyCertificates) {
+    output.error(
+      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
+        ', '
+      )}`
+    );
     return 1;
-  } if (error instanceof TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
+  }
+  if (error instanceof TooManyRequests) {
+    output.error(
+      `Too many requests detected for ${error.meta
+        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
+        long: true
+      })}.`
+    );
     return 1;
-  } if (error instanceof DomainNotFound) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
+  }
+  if (error instanceof DomainNotFound) {
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} no longer exists. Please update or remove your custom suffix.`
+    );
     return 1;
   }
 

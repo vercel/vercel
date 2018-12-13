@@ -17,15 +17,20 @@ import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 
 type Options = {
-  '--ca': string,
-  '--challenge-only': boolean,
-  '--crt': string,
-  '--debug': boolean,
-  '--key': string,
-  '--overwrite': boolean,
-}
+  '--ca': string;
+  '--challenge-only': boolean;
+  '--crt': string;
+  '--debug': boolean;
+  '--key': string;
+  '--overwrite': boolean;
+};
 
-export default async function issue(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function issue(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -80,7 +85,13 @@ export default async function issue(ctx: NowContext, opts: Options, args: string
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(client, keyPath, crtPath, caPath, contextName);
+    cert = await createCertFromFile(
+      client,
+      keyPath,
+      crtPath,
+      caPath,
+      contextName
+    );
     if (cert instanceof ERRORS.InvalidCert) {
       output.error(
         `The provided certificate is not valid and cannot be added.`
@@ -107,7 +118,9 @@ export default async function issue(ctx: NowContext, opts: Options, args: string
   }
 
   if (args.length < 1) {
-    output.error(`Invalid number of arguments to create a custom certificate entry. Usage:`);
+    output.error(
+      `Invalid number of arguments to create a custom certificate entry. Usage:`
+    );
     output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`);
     return 1;
   }
@@ -223,7 +236,11 @@ async function runStartOrder(
   stamp: () => string,
   { fallingBack = false } = {}
 ) {
-  const { challengesToResolve } = await startCertOrder(client, cns, contextName);
+  const { challengesToResolve } = await startCertOrder(
+    client,
+    cns,
+    contextName
+  );
   const pendingChallenges = challengesToResolve.filter(
     challenge => challenge.status === 'pending'
   );

@@ -4,7 +4,10 @@ import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
 
-export default function handleError(error: string | Error | APIError, { debug = false } = {}) {
+export default function handleError(
+  error: string | Error | APIError,
+  { debug = false } = {}
+) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
     error = new Error(error);
@@ -15,18 +18,23 @@ export default function handleError(error: string | Error | APIError, { debug = 
   }
 
   if ((<APIError>error).status === 403) {
-      console.error(errorOutput('Authentication error. Run `now login` to log-in again.'));
+    console.error(
+      errorOutput('Authentication error. Run `now login` to log-in again.')
+    );
   } else if ((<APIError>error).status === 429) {
     if ((<APIError>error).retryAfter === 'never') {
       console.error(errorOutput(error.message));
     } else if (!(<APIError>error).retryAfter) {
-      console.error(errorOutput('Rate limit exceeded error. Please try later.'));
+      console.error(
+        errorOutput('Rate limit exceeded error. Please try later.')
+      );
     } else {
       console.error(
         errorOutput(
-          `Rate limit exceeded error. Try again in ${
-            ms((<APIError>error).retryAfter as number * 1000, { long: true })
-            }, or upgrade your account by running ` +
+          `Rate limit exceeded error. Try again in ${ms(
+            ((<APIError>error).retryAfter as number) * 1000,
+            { long: true }
+          )}, or upgrade your account by running ` +
             `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
         )
       );
@@ -39,7 +47,9 @@ export default function handleError(error: string | Error | APIError, { debug = 
     info('Aborted');
   } else {
     console.error(
-      errorOutput(`Unexpected error. Please try again later. (${error.message})`)
+      errorOutput(
+        `Unexpected error. Please try again later. (${error.message})`
+      )
     );
   }
 }

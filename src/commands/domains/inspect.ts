@@ -11,10 +11,15 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 
 type Options = {
-  '--debug': boolean,
-}
+  '--debug': boolean;
+};
 
-export default async function inspect(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function inspect(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

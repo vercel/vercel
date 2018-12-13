@@ -2,7 +2,7 @@ import arg from 'arg';
 import getCommonArgs from './arg-common';
 
 type ArgOptions = {
-  permissive?: boolean
+  permissive?: boolean;
 };
 
 type Handler = (value: string) => any;
@@ -16,8 +16,8 @@ export default function getArgs<T extends Spec>(
   argsOptions: T,
   argOptions: ArgOptions = {}
 ) {
-  return arg(
-    Object.assign({}, getCommonArgs(), argsOptions),
-    { ...argOptions, argv }
-  );
+  return arg(Object.assign({}, getCommonArgs(), argsOptions), {
+    ...argOptions,
+    argv
+  });
 }

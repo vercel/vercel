@@ -15,4 +15,4 @@ export default function parseMeta(meta) {
   });
 
   return parsed;
-};
+}

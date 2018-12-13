@@ -5,8 +5,14 @@ import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import wait from '../output/wait';
 
-export default async function verifyDomain(client: Client, domainName: string, contextName: string) {
-  const cancelWait = wait(`Verifying domain ${domainName} under ${chalk.bold(contextName)}`);
+export default async function verifyDomain(
+  client: Client,
+  domainName: string,
+  contextName: string
+) {
+  const cancelWait = wait(
+    `Verifying domain ${domainName} under ${chalk.bold(contextName)}`
+  );
   try {
     const { domain } = await performVerifyDomain(client, domainName);
     cancelWait();
@@ -19,24 +25,26 @@ export default async function verifyDomain(client: Client, domainName: string, c
         domain: error.name as string,
         nsVerification: error.nsVerification as ERRORS.NSVerificationError,
         txtVerification: error.txtVerification as ERRORS.TXTVerificationError
-      })
+      });
     }
     throw error;
   }
 }
 
 type Response = {
-  domain: Domain
-}
+  domain: Domain;
+};
 
 async function performVerifyDomain(client: Client, domain: string) {
   return retry(
-    async () => (
-      client.fetch<Response>(`/v4/domains/${encodeURIComponent(domain)}/verify`, {
-        body: { domain },
-        method: 'POST'
-      })
-    ),
+    async () =>
+      client.fetch<Response>(
+        `/v4/domains/${encodeURIComponent(domain)}/verify`,
+        {
+          body: { domain },
+          method: 'POST'
+        }
+      ),
     { retries: 5, maxTimeout: 8000 }
   );
 }

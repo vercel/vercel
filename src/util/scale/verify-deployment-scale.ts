@@ -10,12 +10,12 @@ import returnify from '../returnify-async-generator';
 import uuid from '../uuid';
 
 type InstancesCount = {
-  [dc: string]: number
-}
+  [dc: string]: number;
+};
 
 type Options = {
-  timeout?: number,
-  pollingInterval?: number
+  timeout?: number;
+  pollingInterval?: number;
 };
 
 export default async function* verifyDeploymentScale(
@@ -77,7 +77,9 @@ function allDcsMatched(target: InstancesCount, current: InstancesCount) {
   );
 }
 
-function getTargetInstancesCountForScale(scale: DeploymentScale): {[key: string]: number} {
+function getTargetInstancesCountForScale(
+  scale: DeploymentScale
+): { [key: string]: number } {
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,
@@ -87,7 +89,9 @@ function getTargetInstancesCountForScale(scale: DeploymentScale): {[key: string]
   );
 }
 
-function getInitialInstancesCountForScale(scale: DeploymentScale): {[key: string]: number} {
+function getInitialInstancesCountForScale(
+  scale: DeploymentScale
+): { [key: string]: number } {
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,

@@ -80,4 +80,4 @@ export default async function({
     process.stdout.write(eraseLines(2));
   }
   return answer[nonce];
-};
+}

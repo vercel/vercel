@@ -15,12 +15,17 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 
 type Options = {
-  '--cdn': boolean,
-  '--debug': boolean,
-  '--no-cdn': boolean,
-}
+  '--cdn': boolean;
+  '--debug': boolean;
+  '--no-cdn': boolean;
+};
 
-export default async function add(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function add(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -70,7 +75,12 @@ export default async function add(ctx: NowContext, opts: Options, args: string[]
   }
 
   const addStamp = stamp();
-  const addedDomain = await addDomain(client, domainName, contextName, cdnEnabled);
+  const addedDomain = await addDomain(
+    client,
+    domainName,
+    contextName,
+    cdnEnabled
+  );
   if (addedDomain instanceof ERRORS.CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan.`);
     return 1;
@@ -94,7 +104,11 @@ export default async function add(ctx: NowContext, opts: Options, args: string[]
   }
 
   // We can cast the information because we've just added the domain and it should be there
-  const domainInfo = (await getDomainByName(client, contextName, domain) as (Domain & DomainExtra));
+  const domainInfo = (await getDomainByName(
+    client,
+    contextName,
+    domain
+  )) as Domain & DomainExtra;
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domainInfo.name

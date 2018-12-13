@@ -7,8 +7,8 @@ import joinWords from '../output/join-words';
 import wait from '../output/wait';
 
 type ScaleArgs = {
-  min: number,
-  max: number | 'auto'
+  min: number;
+  max: number | 'auto';
 };
 
 export default async function setScale(
@@ -25,20 +25,26 @@ export default async function setScale(
   );
 
   try {
-    await client.fetch(`/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`, {
-      method: 'PUT',
-      body: scaleArgs
-    });
+    await client.fetch(
+      `/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`,
+      {
+        method: 'PUT',
+        body: scaleArgs
+      }
+    );
     cancelWait();
   } catch (error) {
     cancelWait();
     if (error.code === 'forbidden_min_instances') {
       return new ERRORS.ForbiddenScaleMinInstances(url, error.min);
-    } if (error.code === 'forbidden_max_instances') {
+    }
+    if (error.code === 'forbidden_max_instances') {
       return new ERRORS.ForbiddenScaleMaxInstances(url, error.max);
-    } if (error.code === 'wrong_min_max_relation') {
+    }
+    if (error.code === 'wrong_min_max_relation') {
       return new ERRORS.InvalidScaleMinMaxRelation(url);
-    } if (error.code === 'not_supported_min_scale_slots') {
+    }
+    if (error.code === 'not_supported_min_scale_slots') {
       return new ERRORS.NotSupportedMinScaleSlots(url);
     }
     throw error;

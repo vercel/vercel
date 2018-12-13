@@ -14,7 +14,7 @@ import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
-import {isReady, isDone, isFailed} from '../../util/build-state';
+import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
@@ -33,9 +33,9 @@ import {
   DomainValidationRunning,
   DomainVerificationFailed,
   TooManyCertificates,
-  TooManyRequests,
+  TooManyRequests
 } from '../../util/errors-ts';
-import { SchemaValidationFailed, } from '../../util/errors';
+import { SchemaValidationFailed } from '../../util/errors';
 
 export const help = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
@@ -76,16 +76,16 @@ export const help = () => `
     -V, --platform-version         Set the platform version to deploy to
     -n, --name                     Set the name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  'FILE'
+)}   Path to the local ${'`now.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  'DIR'
+)}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-    'TOKEN'
-  )}        Login token
+  'TOKEN'
+)}        Login token
     -p, --public                   Deployment is public (${chalk.dim(
       '`/_src`'
     )} is exposed)
@@ -102,7 +102,11 @@ export const help = () => `
     -T, --team                     Set a custom team scope
     --regions                      Set default regions to enable the deployment on
 
-  ${note(`To view the usage information for Now 1.0, run ${code('now help deploy-v1')}`)}
+  ${note(
+    `To view the usage information for Now 1.0, run ${code(
+      'now help deploy-v1'
+    )}`
+  )}
 
   ${chalk.dim('Examples:')}
 
@@ -119,8 +123,8 @@ export const help = () => `
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-    '`list`'
-  )}
+  '`list`'
+)}
 
     ${chalk.cyan('$ now help list')}
 
@@ -176,7 +180,12 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (output, { url, readyState }, deployStamp, builds) => {
+const printDeploymentStatus = (
+  output,
+  { url, readyState },
+  deployStamp,
+  builds
+) => {
   if (readyState === 'READY') {
     output.success(`Deployment ready ${deployStamp()}`);
     return 0;
@@ -194,7 +203,11 @@ const printDeploymentStatus = (output, { url, readyState }, deployStamp, builds)
     const name = amount === 1 ? 'failure' : 'failures';
 
     output.error(`${amount} build ${name} occured.`);
-    output.error(`Check your logs at https://${url}/_logs or run ${code(`now logs ${url}`)}.`);
+    output.error(
+      `Check your logs at https://${url}/_logs or run ${code(
+        `now logs ${url}`
+      )}.`
+    );
 
     return 1;
   }
@@ -208,14 +221,14 @@ const renderBuilds = (print, list, times, linesPrinted) => {
     print(eraseLines(linesPrinted));
   }
 
-  const {lines, toPrint} = buildsList(list, times, false);
+  const { lines, toPrint } = buildsList(list, times, false);
   print(toPrint);
 
   return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-const parseEnv = (env) => {
+const parseEnv = env => {
   if (!env) {
     return {};
   }
@@ -247,13 +260,13 @@ const parseEnv = (env) => {
 };
 
 export const pipe = async function main(
-  ctx            ,
-  contextName        ,
-  output        ,
-  stats     ,
-  localConfig     ,
+  ctx,
+  contextName,
+  output,
+  stats,
+  localConfig,
   isFile
-)                  {
+) {
   let argv = null;
 
   try {
@@ -299,26 +312,42 @@ export const pipe = async function main(
 
   let syncCount;
   let deployStamp = stamp();
-  let deployment                          = null;
+  let deployment = null;
 
-  const isObject = item => Object.prototype.toString.call(item) === '[object Object]';
+  const isObject = item =>
+    Object.prototype.toString.call(item) === '[object Object]';
 
   // This validation needs to happen on the client side because
   // the data is merged with other data before it is passed to the API (which
   // also does schema validation).
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
-    error(`The ${code('env')} property in ${highlight('now.json')} needs to be an object`);
+    error(
+      `The ${code('env')} property in ${highlight(
+        'now.json'
+      )} needs to be an object`
+    );
     return 1;
   }
 
   if (typeof localConfig.build !== 'undefined') {
     if (!isObject(localConfig.build)) {
-      error(`The ${code('build')} property in ${highlight('now.json')} needs to be an object`);
+      error(
+        `The ${code('build')} property in ${highlight(
+          'now.json'
+        )} needs to be an object`
+      );
       return 1;
     }
 
-    if (typeof localConfig.build.env !== 'undefined' && !isObject(localConfig.build.env)) {
-      error(`The ${code('build.env')} property in ${highlight('now.json')} needs to be an object`);
+    if (
+      typeof localConfig.build.env !== 'undefined' &&
+      !isObject(localConfig.build.env)
+    ) {
+      error(
+        `The ${code('build.env')} property in ${highlight(
+          'now.json'
+        )} needs to be an object`
+      );
       return 1;
     }
   }
@@ -346,7 +375,10 @@ export const pipe = async function main(
     return 1;
   }
 
-  const regionFlag = (argv['--regions'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  const regionFlag = (argv['--regions'] || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
   try {
@@ -505,16 +537,16 @@ export const pipe = async function main(
       try {
         await copy(url);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-            `[v2]`
-          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
+            '[in clipboard]'
+          )}${dcs} ${deployStamp()}`
         );
       } catch (err) {
         debug(`Error copying to clipboard: ${err}`);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-            `[v2]`
-          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
+            '[in clipboard]'
+          )}${dcs} ${deployStamp()}`
         );
       }
     } else {
@@ -601,82 +633,149 @@ export const pipe = async function main(
 
 function handleCreateDeployError(output, error) {
   if (error instanceof WildcardNotAllowed) {
-    output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
+    output.error(
+      `Custom suffixes are only allowed for domains in ${chalk.underline(
+        'zeit.world'
+      )}`
+    );
     return 1;
-  } if (error instanceof CantSolveChallenge) {
+  }
+  if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
-      output.error(`The certificate provider could not resolve the DNS queries for ${error.meta.domain}.`);
-      output.print(`  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`);
+      output.error(
+        `The certificate provider could not resolve the DNS queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
+      );
     } else {
-      output.error(`The certificate provider could not resolve the HTTP queries for ${error.meta.domain}.`);
-      output.print(`  The DNS propagation may take a few minutes, please verify your settings:\n\n`);
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
+      output.error(
+        `The certificate provider could not resolve the HTTP queries for ${error
+          .meta.domain}.`
+      );
+      output.print(
+        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
+      );
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
     }
     return 1;
-  } if (error instanceof DomainConfigurationError) {
-    output.error(`We couldn't verify the propagation of the DNS settings for ${chalk.underline(error.meta.domain)}`);
+  }
+  if (error instanceof DomainConfigurationError) {
+    output.error(
+      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
+        error.meta.domain
+      )}`
+    );
     if (error.meta.external) {
-      output.print(`  The propagation may take a few minutes, but please verify your settings:\n\n`);
+      output.print(
+        `  The propagation may take a few minutes, but please verify your settings:\n\n`
+      );
       output.print(
         `${dnsTable([
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ])  }\n`
+        ])}\n`
       );
     } else {
-      output.print(`  We configured them for you, but the propagation may take a few minutes.\n`);
+      output.print(
+        `  We configured them for you, but the propagation may take a few minutes.\n`
+      );
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof DomainVerificationFailed) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} is not verified and can't be used as custom suffix.`);
+  }
+  if (error instanceof DomainVerificationFailed) {
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} is not verified and can't be used as custom suffix.`
+    );
     return 1;
-  } if (error instanceof DomainPermissionDenied) {
+  }
+  if (error instanceof DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } if (error instanceof DomainsShouldShareRoot) {
+  }
+  if (error instanceof DomainsShouldShareRoot) {
     output.error(`All given common names should share the same root domain.`);
     return 1;
-  } if (error instanceof DomainValidationRunning) {
+  }
+  if (error instanceof DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } if (error instanceof SchemaValidationFailed) {
+  }
+  if (error instanceof SchemaValidationFailed) {
     const { params, keyword, dataPath } = error.meta;
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
-      output.error(`The property ${code(prop)} is not allowed in ${highlight('now.json')} when using Now 2.0 – please remove it.`);
+      output.error(
+        `The property ${code(prop)} is not allowed in ${highlight(
+          'now.json'
+        )} when using Now 2.0 – please remove it.`
+      );
       if (prop === 'build.env' || prop === 'builds.env') {
-        output.note(`Do you mean ${code('build')} (object) with a property ${code('env')} (object) instead of ${code(prop)}?`);
+        output.note(
+          `Do you mean ${code('build')} (object) with a property ${code(
+            'env'
+          )} (object) instead of ${code(prop)}?`
+        );
       }
       return 1;
-    } if (keyword === 'type') {
+    }
+    if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
-      output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
+      output.error(
+        `The property ${code(prop)} in ${highlight(
+          'now.json'
+        )} can only be of type ${code(title(params.type))}.`
+      );
       return 1;
     }
     const link = 'https://zeit.co/docs/v2/deployments/configuration/';
-    output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
+    output.error(
+      `Failed to validate ${highlight(
+        'now.json'
+      )}. Only use properties mentioned here: ${link}`
+    );
     return 1;
-  } if (error instanceof CDNNeedsUpgrade) {
+  }
+  if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } if (error instanceof TooManyCertificates) {
-    output.error(`Too many certificates already issued for exact set of domains: ${error.meta.domains.join(', ')}`);
+  }
+  if (error instanceof TooManyCertificates) {
+    output.error(
+      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
+        ', '
+      )}`
+    );
     return 1;
-  } if (error instanceof TooManyRequests) {
-    output.error(`Too many requests detected for ${error.meta.api} API. Try again in ${ms(error.meta.retryAfter * 1000, { long: true })}.`);
+  }
+  if (error instanceof TooManyRequests) {
+    output.error(
+      `Too many requests detected for ${error.meta
+        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
+        long: true
+      })}.`
+    );
     return 1;
-  } if (error instanceof DomainNotFound) {
-    output.error(`The domain used as a suffix ${chalk.underline(error.meta.domain)} no longer exists. Please update or remove your custom suffix.`);
+  }
+  if (error instanceof DomainNotFound) {
+    output.error(
+      `The domain used as a suffix ${chalk.underline(
+        error.meta.domain
+      )} no longer exists. Please update or remove your custom suffix.`
+    );
     return 1;
   }
 

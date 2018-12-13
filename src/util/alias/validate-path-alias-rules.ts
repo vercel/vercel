@@ -1,10 +1,14 @@
 import { RulesFileValidationError } from '../../util/errors-ts';
 import { PathRule } from '../../types';
 
-export default function validatePathAliasRules(location: string, rules: PathRule[]) {
+export default function validatePathAliasRules(
+  location: string,
+  rules: PathRule[]
+) {
   if (!Array.isArray(rules)) {
     return new RulesFileValidationError(location, 'rules must be an array');
-  } if (rules.length === 0) {
+  }
+  if (rules.length === 0) {
     return new RulesFileValidationError(location, 'empty rules');
   }
 
@@ -14,7 +18,8 @@ export default function validatePathAliasRules(location: string, rules: PathRule
         location,
         'all rules must be objects'
       );
-    } if (!rule.dest) {
+    }
+    if (!rule.dest) {
       return new RulesFileValidationError(
         location,
         'all rules must have a dest field'

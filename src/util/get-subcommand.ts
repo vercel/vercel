@@ -1,8 +1,11 @@
 type CommandConfig = {
-  [command: string]: string[]
+  [command: string]: string[];
 };
 
-export default function getSubcommand(cliArgs: string[], config: CommandConfig) {
+export default function getSubcommand(
+  cliArgs: string[],
+  config: CommandConfig
+) {
   const [subcommand, ...rest] = cliArgs;
   for (const k of Object.keys(config)) {
     if (k !== 'default' && config[k].indexOf(subcommand) !== -1) {

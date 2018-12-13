@@ -41,11 +41,11 @@ export default function formatTable(header, align, blocks, hsep = '    ') {
     const rows = [header.map(s => chalk.dim(s))].concat(block.rows);
 
     if (rows.length > 0) {
-      rows[0][0] = ` ${  rows[0][0]}`;
+      rows[0][0] = ` ${rows[0][0]}`;
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i].slice(0);
-        row[0] = ` ${  row[0]}`;
+        row[0] = ` ${row[0]}`;
         for (let j = 0; j < nrCols; j++) {
           const col = `${row[j]}`;
           const al = align[j] || 'l';
@@ -60,4 +60,4 @@ export default function formatTable(header, align, blocks, hsep = '    ') {
   }
 
   return out.slice(0, -1);
-};
+}

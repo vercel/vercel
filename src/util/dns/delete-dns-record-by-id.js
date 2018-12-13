@@ -1,13 +1,6 @@
-//      
+//
 
-
-async function deleteDNSRecordById(
-  output        ,
-  now     ,
-  contextName        ,
-  domain        ,
-  recordId        
-) {
+async function deleteDNSRecordById(output, now, contextName, domain, recordId) {
   return now.fetch(
     `/v3/domains/${encodeURIComponent(domain)}/records/${recordId}`,
     {

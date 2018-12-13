@@ -13,10 +13,15 @@ import { Output } from '../../util/output';
 import { Domain, NowContext } from '../../types';
 
 type Options = {
-  '--debug': boolean,
-}
+  '--debug': boolean;
+};
 
-export default async function ls(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function ls(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

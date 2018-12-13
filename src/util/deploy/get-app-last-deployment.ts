@@ -19,7 +19,11 @@ export default async function getAppLastDeployment(
 
   // Try to fetch deployment details
   if (deploymentItem) {
-    return getDeploymentByIdOrHost(client, contextName, deploymentItem.uid) as Promise<Deployment>
+    return getDeploymentByIdOrHost(
+      client,
+      contextName,
+      deploymentItem.uid
+    ) as Promise<Deployment>;
   }
 
   return null;
