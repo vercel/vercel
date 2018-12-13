@@ -10,7 +10,6 @@ import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import parseList from './helpers/parse-list';
-import removeDeployment from './helpers/remove';
 import prepareFixtures from './helpers/prepare';
 
 const binary = {
@@ -415,8 +414,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('ensure the `alias` property is not sent to the API', async t => {
@@ -453,8 +450,6 @@ test('ensure the `alias` property is not sent to the API', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('try to create a builds deployments with wrong config', async t => {
@@ -510,8 +505,6 @@ test('create a builds deployments without platform version flag', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('deploy a node microservice', async t => {
@@ -697,8 +690,6 @@ test('scale down the deployment directly', async t => {
 
   t.is(code, 0);
   t.true(stdout.includes(`(min: 0, max: 0)`));
-
-  await removeDeployment(t, binaryPath, defaultArgs, context.deployment);
 });
 
 test('deploy multiple static files', async t => {
@@ -733,8 +724,6 @@ test('deploy multiple static files', async t => {
 
   const content = await response.json();
   t.is(content.files.length, 3);
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('deploy single static file', async t => {
@@ -763,8 +752,6 @@ test('deploy single static file', async t => {
 
   t.is(contentType, 'image/png');
   t.deepEqual(await fs.promises.readFile(file), await response.buffer());
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('deploy a static directory', async t => {
@@ -792,8 +779,6 @@ test('deploy a static directory', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('deploy a static build deployment', async t => {
@@ -823,8 +808,6 @@ test('deploy a static build deployment', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), 'hello');
-
-  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl);
 });
 
 test('use build-env', async t => {
@@ -854,8 +837,6 @@ test('use build-env', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), 'bar');
-
-  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl);
 });
 
 test('deploy a dockerfile project', async t => {
@@ -896,8 +877,6 @@ test('deploy a dockerfile project', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8');
   t.is(content.id, session);
-
-  await removeDeployment(t, binaryPath, defaultArgs, stdout);
 });
 
 test('use `--build-env` CLI flag', async t => {
@@ -930,8 +909,6 @@ test('use `--build-env` CLI flag', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), nonce);
-
-  await removeDeployment(t, binaryPath, defaultArgs, deploymentUrl);
 });
 
 test('try to deploy non-existing path', async t => {
@@ -963,27 +940,6 @@ test('try to deploy with non-existing team', async t => {
 
   t.is(code, 1);
   t.true(stderr.includes(goal));
-});
-
-test.after.always(async t => {
-  const { stdout, code } = await execa(binaryPath, [
-    'ls',
-    session,
-    ...defaultArgs
-  ], {
-    reject: false
-  });
-
-  t.is(code, 0);
-
-  const deployments = parseList(stdout);
-  const removers = [];
-
-  for (const deployment of deployments) {
-    removers.push(removeDeployment(t, binaryPath, defaultArgs, deployment));
-  }
-
-  await Promise.all(removers);
 });
 
 test.after.always(async () => {
