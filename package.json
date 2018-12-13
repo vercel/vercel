@@ -118,6 +118,7 @@
     "@types/pluralize": "0.0.29",
     "@types/text-table": "0.2.0",
     "@zeit/dockerignore": "0.0.3",
+    "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.5.0",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
