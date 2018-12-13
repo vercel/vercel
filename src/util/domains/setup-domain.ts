@@ -1,4 +1,5 @@
 import psl from 'psl';
+import { NowError } from '../now-error'
 import { Domain } from '../../types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
@@ -36,26 +37,14 @@ export default async function setupDomain(output: Output, client: Client, alias:
 
   output.debug(`The domain ${domain} was not found, trying to purchase it`);
   const purchased = await purchaseDomainIfAvailable(output, client, alias, contextName);
-  if (
-    purchased instanceof ERRORS.DomainNotAvailable ||
-    purchased instanceof ERRORS.DomainNotFound ||
-    purchased instanceof ERRORS.DomainServiceNotAvailable ||
-    purchased instanceof ERRORS.InvalidDomain ||
-    purchased instanceof ERRORS.UnexpectedDomainPurchaseError ||
-    purchased instanceof ERRORS.UnsupportedTLD ||
-    purchased instanceof ERRORS.UserAborted
-  ) {
+  if (purchased instanceof NowError) {
     return purchased;
   }
 
   if (!purchased) {
     output.debug(`Domain ${domain} is not available to be purchased. Trying to add it`);
     const addResult = await addDomain(client, domain, contextName);
-    if (
-      addResult instanceof ERRORS.InvalidDomain ||
-      addResult instanceof ERRORS.CDNNeedsUpgrade ||
-      addResult instanceof ERRORS.DomainAlreadyExists
-    ) {
+    if (addResult instanceof NowError) {
       return addResult;
     }
 
