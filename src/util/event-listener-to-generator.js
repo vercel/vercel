@@ -1,6 +1,10 @@
-//
+//      
+                                       
 
-async function* eventListenerToGenerator(event, emitter) {
+async function* eventListenerToGenerator(
+  event        ,
+  emitter          
+)                                {
   while (true) {
     yield new Promise(resolve => {
       const handler = (...args) => {

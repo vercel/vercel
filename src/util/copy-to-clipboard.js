@@ -1,4 +1,4 @@
-//
+//      
 
 // Packages
 import { write } from 'clipboardy';
@@ -6,7 +6,11 @@ import { write } from 'clipboardy';
 // $FlowFixMe
 const _isTTY = process.stdout.isTTY;
 
-async function copyToClipboard(str, shouldCopy = 'auto', isTTY = _isTTY) {
+async function copyToClipboard(
+  str        ,
+  shouldCopy                   = 'auto',
+  isTTY          = _isTTY
+) {
   if (shouldCopy === false) {
     return false;
   }
@@ -15,8 +19,9 @@ async function copyToClipboard(str, shouldCopy = 'auto', isTTY = _isTTY) {
     if (isTTY) {
       await write(str);
       return true;
-    }
-    return false;
+    } 
+      return false;
+    
   }
 
   if (shouldCopy === true) {

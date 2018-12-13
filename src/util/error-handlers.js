@@ -4,7 +4,10 @@ import table from 'text-table';
 
 import strlen from './strlen.ts';
 
-export function handleDomainConfigurationError(output, error) {
+export function handleDomainConfigurationError(
+  output        ,
+  error
+) {
   output.error(
     `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
       error.meta.domain
@@ -19,7 +22,7 @@ export function handleDomainConfigurationError(output, error) {
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
           : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-      ])}\n\n`
+      ])  }\n\n`
     );
     output.log(
       `Alternatively, you can issue a certificate solving DNS challenges manually after running:`

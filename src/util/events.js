@@ -147,14 +147,12 @@ async function printEvents(
 
             setTimeout(() => {
               // retry without maximum amount nor clear past logs etc
-              printEvents(now, deploymentIdOrURL, currentTeam, {
-                mode,
-                onOpen,
-                onEvent,
-                quiet,
-                debugEnabled,
-                findOpts: retryFindOpts
-              }).then(resolve, reject);
+              printEvents(
+                now,
+                deploymentIdOrURL,
+                currentTeam,
+                { mode, onOpen, onEvent, quiet, debugEnabled, findOpts: retryFindOpts }
+              ).then(resolve, reject);
             }, 2000);
           };
 
@@ -163,15 +161,16 @@ async function printEvents(
           stream.on('error', onError);
           readable.on('error', onError);
         });
-      }
-      callOnOpenOnce();
-      const err = new Error(`Deployment events status ${eventsRes.status}`);
+      } 
+        callOnOpenOnce();
+        const err = new Error(`Deployment events status ${eventsRes.status}`);
 
-      if (eventsRes.status < 500) {
-        bail(err);
-      } else {
-        throw err;
-      }
+        if (eventsRes.status < 500) {
+          bail(err);
+        } else {
+          throw err;
+        }
+      
     },
     {
       retries: 4,
