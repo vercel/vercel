@@ -1,13 +1,9 @@
-//
+import { DomainConfigurationError } from './errors-ts';
+import { Output } from './output';
 import chalk from 'chalk';
-import table from 'text-table';
+import dnsTable from './format-dns-table'
 
-import strlen from './strlen.ts';
-
-export function handleDomainConfigurationError(
-  output        ,
-  error
-) {
+export function handleDomainConfigurationError(output: Output, error: DomainConfigurationError) {
   output.error(
     `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
       error.meta.domain
@@ -39,12 +35,4 @@ export function handleDomainConfigurationError(
       '  Read more: https://err.sh/now-cli/dns-configuration-error\n'
     );
   }
-}
-
-function dnsTable(rows, extraSpace = '') {
-  return table([['name', 'type', 'value'].map(v => chalk.gray(v)), ...rows], {
-    align: ['l', 'l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen
-  }).replace(/^(.*)/gm, `${extraSpace}  $1`);
 }

@@ -597,3 +597,13 @@ export class WildcardNotAllowed extends NowError<'WILDCARD_NOT_ALLOWED', { domai
     });
   }
 }
+
+export class InvalidCert extends NowError<'INVALID_CERT', {}> {
+  constructor() {
+    super({
+      code: 'INVALID_CERT',
+      meta: {},
+      message: `The provided custom certificate is invalid and couldn't be added`
+    });
+  }
+}

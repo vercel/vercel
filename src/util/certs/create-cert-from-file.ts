@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { DomainPermissionDenied } from '../errors-ts';
-import { InvalidCert } from '../errors';
+import { DomainPermissionDenied, InvalidCert } from '../errors-ts';
 import wait from '../output/wait';
 import Client from '../client';
 import { Cert } from '../../types';
