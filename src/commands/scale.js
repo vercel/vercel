@@ -28,12 +28,9 @@ import {
   InvalidMaxForScale,
   InvalidMinForScale,
   InvalidScaleMinMaxRelation,
-  NotSupportedMinScaleSlots,
+  NotSupportedMinScaleSlots
 } from '../util/errors-ts';
-import {
-  InvalidAllForScale,
-  InvalidRegionOrDCForScale,
-} from '../util/errors'
+import { InvalidAllForScale, InvalidRegionOrDCForScale } from '../util/errors';
 
 const help = () => {
   console.log(`

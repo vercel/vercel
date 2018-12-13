@@ -95,4 +95,4 @@ export default class Secrets extends Now {
       return body;
     });
   }
-};
+}

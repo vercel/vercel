@@ -19,7 +19,7 @@
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build && cd link && npm link",
     "build": "ncc build ./src",
-    "format": "prettier --write --single-quote ./src/**/*.js"
+    "format-modified": "prettier --write --single-quote `git diff --name-only | xargs echo`"
   },
   "nyc": {
     "include": [
@@ -29,7 +29,7 @@
   "git": {
     "pre-commit": [
       "test-lint",
-      "format"
+      "format-modified"
     ]
   },
   "bin": {
