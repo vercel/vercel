@@ -18,18 +18,11 @@
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build && cd link && npm link",
-    "build": "ncc build ./src",
-    "format": "prettier --write --single-quote ./src/**/*.js"
+    "build": "ncc build ./src"
   },
   "nyc": {
     "include": [
       "src/*"
-    ]
-  },
-  "git": {
-    "pre-commit": [
-      "test-lint",
-      "format"
     ]
   },
   "bin": {
