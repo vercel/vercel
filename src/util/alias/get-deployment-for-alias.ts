@@ -16,7 +16,9 @@ export default async function getDeploymentForAlias(
   user: User,
   contextName: string
 ) {
-  const cancelWait = wait(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
+  const cancelWait = wait(
+    `Fetching deployment to alias in ${chalk.bold(contextName)}`
+  );
   let deployment;
 
   // When there are no args at all we try to get the targets from the config

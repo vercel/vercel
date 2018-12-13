@@ -12,10 +12,15 @@ import stamp from '../../util/output/stamp';
 import verifyDomain from '../../util/domains/verify-domain';
 
 type Options = {
-  '--debug': boolean,
-}
+  '--debug': boolean;
+};
 
-export default async function verify(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function verify(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;

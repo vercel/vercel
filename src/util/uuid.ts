@@ -10,7 +10,7 @@ export default function uuid() {
   return [
     s(4) + s(4),
     s(4),
-    `4${  s(3)}`, // UUID version 4
+    `4${s(3)}`, // UUID version 4
     h(8 | (Math.random() * 4)) + s(3), // {8|9|A|B}xxx
     Date.now()
       .toString(16)

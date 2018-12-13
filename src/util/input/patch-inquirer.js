@@ -5,11 +5,11 @@ import chalk from 'chalk';
 
 /* eslint-disable no-multiple-empty-lines, no-var, no-undef, no-eq-null, eqeqeq, semi */
 const getQuestion = function() {
-  var message = `${chalk.bold(`> ${  this.opt.message}`)  } `;
+  var message = `${chalk.bold(`> ${this.opt.message}`)} `;
 
   // Append the default if available, and if question isn't answered
   if (this.opt.default != null && this.status !== 'answered') {
-    message += chalk.dim(`(${  this.opt.default  }) `);
+    message += chalk.dim(`(${this.opt.default}) `);
   }
 
   return message;

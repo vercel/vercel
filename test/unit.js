@@ -20,10 +20,14 @@ import toHost from '../src/util/to-host';
 import wait from '../src/util/output/wait';
 import { responseError } from '../src/util/error';
 import getURL from './helpers/get-url';
-import { npm as getNpmFiles_, docker as getDockerFiles_, staticFiles as getStaticFiles_ } from '../src/util/get-files';
+import {
+  npm as getNpmFiles_,
+  docker as getDockerFiles_,
+  staticFiles as getStaticFiles_
+} from '../src/util/get-files';
 
 const output = createOutput({ debug: false });
-const prefix = `${join(__dirname, 'fixtures', 'unit')  }/`;
+const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
 const base = path => path.replace(prefix, '');
 const fixture = name => join(prefix, name);
 
@@ -237,15 +241,15 @@ test('hashes', async t => {
     hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names
   );
   t.is(many.size, 2);
-  t.is(many.has(`${prefix  }hashes/dei.png`), true);
-  t.is(many.has(`${prefix  }hashes/duplicate/dei.png`), true);
+  t.is(many.has(`${prefix}hashes/dei.png`), true);
+  t.is(many.has(`${prefix}hashes/duplicate/dei.png`), true);
   t.is(
     hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0],
-    `${prefix  }hashes/index.js`
+    `${prefix}hashes/index.js`
   );
   t.is(
     hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').names[0],
-    `${prefix  }hashes/package.json`
+    `${prefix}hashes/package.json`
   );
 });
 
@@ -392,7 +396,10 @@ test('simple to host', t => {
 });
 
 test('leading // to host', t => {
-  t.is(toHost('//zeit-logos-rnemgaicnc.now.sh'), 'zeit-logos-rnemgaicnc.now.sh');
+  t.is(
+    toHost('//zeit-logos-rnemgaicnc.now.sh'),
+    'zeit-logos-rnemgaicnc.now.sh'
+  );
 });
 
 test('leading http:// to host', t => {
@@ -444,7 +451,8 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
 
   const timeOut = 200;
 
-  const delayedWait = () => new Promise((resolve) => {
+  const delayedWait = () =>
+    new Promise(resolve => {
       const stop = wait('test', timeOut, oraStub);
 
       setTimeout(() => {
@@ -466,7 +474,8 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
 
   const timeOut = 200;
 
-  const delayedWait = () => new Promise((resolve) => {
+  const delayedWait = () =>
+    new Promise(resolve => {
       const stop = wait('test', timeOut, oraStub);
       stop();
 

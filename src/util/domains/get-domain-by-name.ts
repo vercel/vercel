@@ -5,13 +5,21 @@ import { Domain, DomainExtra } from '../../types';
 import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
 type Response = {
-  domain: Domain & DomainExtra
-}
+  domain: Domain & DomainExtra;
+};
 
-async function getDomainByName(client: Client, contextName: string, domainName: string) {
-  const cancelWait = wait(`Fetching domain ${domainName} under ${chalk.bold(contextName)}`);
+async function getDomainByName(
+  client: Client,
+  contextName: string,
+  domainName: string
+) {
+  const cancelWait = wait(
+    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
+  );
   try {
-    const { domain } = await client.fetch<Response>(`/v4/domains/${domainName}`);
+    const { domain } = await client.fetch<Response>(
+      `/v4/domains/${domainName}`
+    );
     cancelWait();
     return domain;
   } catch (error) {

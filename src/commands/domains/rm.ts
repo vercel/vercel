@@ -16,11 +16,16 @@ import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
 
 type Options = {
-  '--debug': boolean,
-  '--yes': boolean,
-}
+  '--debug': boolean;
+  '--yes': boolean;
+};
 
-export default async function rm(ctx: NowContext, opts: Options, args: string[], output: Output) {
+export default async function rm(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -99,7 +104,10 @@ export default async function rm(ctx: NowContext, opts: Options, args: string[],
   return 0;
 }
 
-async function confirmDomainRemove(output: Output, domain: Domain & DomainExtra) {
+async function confirmDomainRemove(
+  output: Output,
+  domain: Domain & DomainExtra
+) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(Date.now() - domain.createdAt)} ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {

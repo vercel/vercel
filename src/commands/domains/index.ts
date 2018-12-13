@@ -106,4 +106,4 @@ export default async function main(ctx: NowContext) {
     default:
       return ls(ctx, argv, args, output);
   }
-};
+}

@@ -9,11 +9,11 @@ import wait from '../output/wait';
 const NOW_SH_REGEX = /\.now\.sh$/;
 
 type AliasRecord = {
-  uid: string,
-  alias: string,
-  created?: string,
-  oldDeploymentId?: string
-}
+  uid: string;
+  alias: string;
+  created?: string;
+  oldDeploymentId?: string;
+};
 
 export default async function upsertPathAlias(
   output: Output,
@@ -45,9 +45,20 @@ export default async function upsertPathAlias(
     externalDomain = domainInfo.serviceType === 'external';
   }
 
-  const result = await performUpsertPathAlias(client, alias, rules, contextName);
+  const result = await performUpsertPathAlias(
+    client,
+    alias,
+    rules,
+    contextName
+  );
   if (result instanceof ERRORS.CertMissing) {
-    const cert = await createCertForAlias(output, client, contextName, alias, !externalDomain);
+    const cert = await createCertForAlias(
+      output,
+      client,
+      contextName,
+      alias,
+      !externalDomain
+    );
     if (
       cert instanceof ERRORS.CantSolveChallenge ||
       cert instanceof ERRORS.DomainConfigurationError ||
@@ -66,7 +77,12 @@ export default async function upsertPathAlias(
   return result;
 }
 
-async function performUpsertPathAlias(client: Client, alias: string, rules: PathRule[], contextName: string) {
+async function performUpsertPathAlias(
+  client: Client,
+  alias: string,
+  rules: PathRule[],
+  contextName: string
+) {
   const cancelMessage = wait(`Updating path alias rules for ${alias}`);
   try {
     const record = await client.fetch<AliasRecord>(`/now/aliases`, {
@@ -79,17 +95,22 @@ async function performUpsertPathAlias(client: Client, alias: string, rules: Path
     cancelMessage();
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
       return new ERRORS.CertMissing(alias);
-    } if (error.status === 409) {
+    }
+    if (error.status === 409) {
       return { uid: error.uid, alias: error.alias } as AliasRecord;
-    } if (error.code === 'rule_validation_failed') {
+    }
+    if (error.code === 'rule_validation_failed') {
       return new ERRORS.RuleValidationFailed(error.serverMessage);
-    } if (error.code === 'invalid_alias') {
+    }
+    if (error.code === 'invalid_alias') {
       return new ERRORS.InvalidAlias(alias);
-    } if (error.status === 403) {
+    }
+    if (error.status === 403) {
       if (error.code === 'alias_in_use') {
         console.log(error);
         return new ERRORS.AliasInUse(alias);
-      } if (error.code === 'forbidden') {
+      }
+      if (error.code === 'forbidden') {
         return new ERRORS.DomainPermissionDenied(alias, contextName);
       }
     }

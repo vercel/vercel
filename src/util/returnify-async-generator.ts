@@ -17,7 +17,7 @@ export default async function* returnify<T>(
       }
       break;
     } catch (e) {
-      yield [(e as Error), null];
+      yield [e as Error, null];
       it = gx();
     }
   }

@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 
-export default function error(...input: string[] | [{ slug: string, message: string }]) {
+export default function error(
+  ...input: string[] | [{ slug: string; message: string }]
+) {
   let messages = input;
   if (typeof input[0] === 'object') {
     const { slug, message } = input[0];
@@ -10,4 +12,4 @@ export default function error(...input: string[] | [{ slug: string, message: str
     }
   }
   return `${chalk.red('> Error!')} ${messages.join('\n')}`;
-};
+}

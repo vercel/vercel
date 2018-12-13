@@ -1,18 +1,18 @@
-//      
+//
 import sleep from '../sleep';
 
 import createPollingFn from '../create-polling-fn';
-                                                 
+
 import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw';
 
 const POLLING_INTERVAL = 5000;
 
 async function* getStatusChangeFromPolling(
-  now     ,
-  contextName         ,
-  idOrHost        ,
-  initialState                                               
-)                                               {
+  now,
+  contextName,
+  idOrHost,
+  initialState
+) {
   const pollDeployment = createPollingFn(
     getDeploymentByIdOrThrow,
     POLLING_INTERVAL

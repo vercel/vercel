@@ -1,9 +1,12 @@
 import { DomainConfigurationError } from './errors-ts';
 import { Output } from './output';
 import chalk from 'chalk';
-import dnsTable from './format-dns-table'
+import dnsTable from './format-dns-table';
 
-export function handleDomainConfigurationError(output: Output, error: DomainConfigurationError) {
+export function handleDomainConfigurationError(
+  output: Output,
+  error: DomainConfigurationError
+) {
   output.error(
     `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
       error.meta.domain
@@ -18,7 +21,7 @@ export function handleDomainConfigurationError(output: Output, error: DomainConf
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
           : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-      ])  }\n\n`
+      ])}\n\n`
     );
     output.log(
       `Alternatively, you can issue a certificate solving DNS challenges manually after running:`

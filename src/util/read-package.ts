@@ -4,8 +4,8 @@ import readJSONFile from './read-json-file';
 import { Config } from '../types';
 
 type Package = {
-  name: string,
-  now?: Config
+  name: string;
+  now?: Config;
 };
 
 export default async function readPackage(file?: string) {

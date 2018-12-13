@@ -129,7 +129,7 @@ export default class NowAgent {
         body = new JsonBody(opts.body);
       }
     } else {
-      body = opts.body
+      body = opts.body;
     }
 
     const handleCompleted = async <T>(res: T) => {

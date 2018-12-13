@@ -2,7 +2,13 @@ import generateCertForDeploy from './generate-cert-for-deploy';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 
-export default async function createDeploy(output, now, contextName, paths, createArgs) {
+export default async function createDeploy(
+  output,
+  now,
+  contextName,
+  paths,
+  createArgs
+) {
   try {
     return await now.create(paths, createArgs);
   } catch (error) {
@@ -22,12 +28,22 @@ export default async function createDeploy(output, now, contextName, paths, crea
     }
 
     if (error.code === 'bad_request' && error.keyword) {
-      return new ERRORS.SchemaValidationFailed(error.message, error.keyword, error.dataPath, error.params);
+      return new ERRORS.SchemaValidationFailed(
+        error.message,
+        error.keyword,
+        error.dataPath,
+        error.params
+      );
     }
 
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
-      const result = await generateCertForDeploy(output, now, contextName, error.value);
+      const result = await generateCertForDeploy(
+        output,
+        now,
+        contextName,
+        error.value
+      );
       if (
         result instanceof ERRORS_TS.WildcardNotAllowed ||
         result instanceof ERRORS_TS.CantSolveChallenge ||

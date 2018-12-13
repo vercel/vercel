@@ -24,6 +24,10 @@ export default async function createCertificateForAlias(
   }
 
   cancelMessage();
-  output.log(`Certificate for ${joinWords(cert.cns)} (${cert.uid}) created ${certStamp()}`);
+  output.log(
+    `Certificate for ${joinWords(
+      cert.cns
+    )} (${cert.uid}) created ${certStamp()}`
+  );
   return cert;
 }
