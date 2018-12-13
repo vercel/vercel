@@ -13,7 +13,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import startCertOrder from '../../util/certs/start-cert-order';
 import {
-  CantGenerateWildcardCert,
+  WildcardNotAllowed,
   CantSolveChallenge,
   CertOrderNotFound,
   DomainConfigurationError,
@@ -197,7 +197,7 @@ export default async function issue(ctx, opts, args, output) {
     handleDomainConfigurationError(output, cert);
     return 1;
   }
-  if (cert instanceof CantGenerateWildcardCert) {
+  if (cert instanceof WildcardNotAllowed) {
     return runStartOrder(output, now, cns, contextName, addStamp, {
       fallingBack: true
     });

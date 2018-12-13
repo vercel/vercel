@@ -588,11 +588,11 @@ export class InvalidMaxForScale extends NowError<'INVALID_MAX_FOR_SCALE', { valu
   }
 }
 
-export class CantGenerateWildcardCert extends NowError<'CANT_GENERATE_WILDCARD_CERT', {}> {
-  constructor() {
+export class WildcardNotAllowed extends NowError<'WILDCARD_NOT_ALLOWED', { domain: string }> {
+  constructor(domain: string) {
     super({
-      code: 'CANT_GENERATE_WILDCARD_CERT',
-      meta: {},
+      code: 'WILDCARD_NOT_ALLOWED',
+      meta: { domain },
       message: `We can't generate a certificate for an external domain`
     });
   }

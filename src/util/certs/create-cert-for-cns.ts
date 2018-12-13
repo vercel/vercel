@@ -33,6 +33,8 @@ export default async function createCertForCns(client: Client, cns: string[], co
       return new ERRORS.DomainsShouldShareRoot(error.domains);
     } if (error.code === 'cant_solve_challenge') {
       return new ERRORS.CantSolveChallenge(error.domain, error.type);
+    } if (error.code === 'wildcard_not_allowed') {
+      return new ERRORS.WildcardNotAllowed(error.domain);
     }
     throw error;
   }
