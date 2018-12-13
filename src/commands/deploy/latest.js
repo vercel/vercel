@@ -23,7 +23,7 @@ import code from '../../util/output/code';
 import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
 import {
-  CantGenerateWildcardCert,
+  WildcardNotAllowed,
   CantSolveChallenge,
   CDNNeedsUpgrade,
   DomainConfigurationError,
@@ -380,7 +380,7 @@ export const pipe = async function main(
     );
 
     if (
-      firstDeployCall instanceof CantGenerateWildcardCert ||
+      firstDeployCall instanceof WildcardNotAllowed ||
       firstDeployCall instanceof CantSolveChallenge ||
       firstDeployCall instanceof CDNNeedsUpgrade ||
       firstDeployCall instanceof DomainConfigurationError ||
@@ -456,7 +456,7 @@ export const pipe = async function main(
           createArgs
         );
         if (
-          secondDeployCall instanceof CantGenerateWildcardCert ||
+          secondDeployCall instanceof WildcardNotAllowed ||
           secondDeployCall instanceof CantSolveChallenge ||
           secondDeployCall instanceof CDNNeedsUpgrade ||
           secondDeployCall instanceof DomainConfigurationError ||
@@ -600,7 +600,7 @@ export const pipe = async function main(
 };
 
 function handleCreateDeployError(output, error) {
-  if (error instanceof CantGenerateWildcardCert) {
+  if (error instanceof WildcardNotAllowed) {
     output.error(`Custom suffixes are only allowed for domains in ${chalk.underline('zeit.world')}`);
     return 1;
   } if (error instanceof CantSolveChallenge) {
