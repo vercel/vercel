@@ -111,13 +111,15 @@ async function run({ token, contextName, currentTeam }) {
 
     if (list.length > 0) {
       const cur = Date.now();
-      const header = [['', 'name', 'updated'].map(s => chalk.dim(s))];
+      const header = [['', 'name', 'updated', 'id'].map(s => chalk.dim(s))];
+
       const out = table(
         header.concat(
           list.map(secret => [
-              '',
+            '',
               chalk.bold(secret.name),
-              chalk.gray(`${ms(cur - new Date(secret.updatedAt))  } ago`)
+              chalk.gray(`${ms(cur - new Date(secret.updatedAt))  } ago`),
+              chalk.gray(secret.id)
             ])
         ),
         {
