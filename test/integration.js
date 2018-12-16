@@ -138,6 +138,20 @@ test('list the payment methods', async t => {
   t.true(stdout.startsWith(`> 0 cards found under ${email}`));
 });
 
+test('try to purchase a domain', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
+    {
+      reject: false,
+      input: 'y'
+    }
+  );
+
+  t.is(code, 1);
+  t.true(stderr.includes(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
+});
+
 test('try to set default without existing payment method', async t => {
   const { stderr, code } = await execa(
     binaryPath,

@@ -31,6 +31,9 @@ export default async function purchaseDomain(
     if (error.code === 'unexpected_error') {
       return new ERRORS.UnexpectedDomainPurchaseError(name);
     }
+    if (error.code === 'source_not_found') {
+      return new ERRORS.SourceNotFound();
+    }
     throw error;
   }
 }
