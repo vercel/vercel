@@ -29,17 +29,20 @@ async function createLambda({
   await sema.acquire();
   try {
     const zipFile = new ZipFile();
+    const zipBuffer = await new Promise((resolve, reject) => {
+      Object.keys(files)
+        .sort()
+        .forEach((name) => {
+          const file = files[name];
+          const stream = file.toStream();
+          stream.on('error', reject);
+          zipFile.addReadStream(stream, name, { mode: file.mode, mtime });
+        });
 
-    Object.keys(files)
-      .sort()
-      .forEach((name) => {
-        const file = files[name];
-        const stream = file.toStream();
-        zipFile.addReadStream(stream, name, { mode: file.mode, mtime });
-      });
+      zipFile.end();
+      streamToBuffer(zipFile.outputStream).then(resolve).catch(reject);
+    });
 
-    zipFile.end();
-    const zipBuffer = await streamToBuffer(zipFile.outputStream);
     return new Lambda({
       zipBuffer,
       handler,
