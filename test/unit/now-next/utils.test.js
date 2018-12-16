@@ -216,7 +216,8 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
       },
     });
   });
@@ -246,7 +247,8 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
       },
     });
   });
@@ -270,7 +272,8 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
       },
     });
   });
@@ -294,7 +297,8 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
       },
     });
   });
@@ -318,7 +322,8 @@ describe('normalizePackageJson', () => {
         next: 'canary',
       },
       scripts: {
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
       },
     });
   });
@@ -380,7 +385,8 @@ describe('normalizePackageJson', () => {
       scripts: {
         dev: 'next',
         build: 'next build',
-        'now-build': 'next build --lambdas',
+        'now-build':
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
         start: 'next start',
         test: "xo && stylelint './pages/**/*.js' && jest",
       },

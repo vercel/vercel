@@ -164,7 +164,7 @@ function normalizePackageJson(defaultPackageJson = {}) {
     },
     scripts: {
       ...defaultPackageJson.scripts,
-      'now-build': 'next build --lambdas',
+      'now-build': 'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
     },
   };
 }
