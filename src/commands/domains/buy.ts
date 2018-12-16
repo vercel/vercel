@@ -92,7 +92,13 @@ export default async function buy(
   const purchaseStamp = stamp();
   const stopPurchaseSpinner = wait('Purchasing');
   const buyResult = await purchaseDomain(client, domainName, price);
+
   stopPurchaseSpinner();
+
+  if (buyResult instanceof ERRORS.SourceNotFound) {
+    output.error(`Could not purchase domain. Please add a payment method using ${cmd('now billing add')}.`);
+    return 1;
+  }
 
   if (buyResult instanceof ERRORS.InvalidDomain) {
     output.error(`The domain ${buyResult.meta.domain} is not valid.`);

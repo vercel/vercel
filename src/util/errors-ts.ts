@@ -1,6 +1,7 @@
 import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
+import cmd from './output/cmd';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -144,6 +145,19 @@ export class DomainPermissionDenied extends NowError<
       code: 'DOMAIN_PERMISSION_DENIED',
       meta: { domain, context },
       message: `You don't have access to the domain ${domain} under ${context}.`
+    });
+  }
+}
+
+/**
+ * When information about a domain is requested but the domain doesn't exist
+ */
+export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
+  constructor() {
+    super({
+      code: 'SOURCE_NOT_FOUND',
+      meta: {},
+      message: `Not able to purchase. Please add a payment method using ${cmd('now billing add')}.`
     });
   }
 }
