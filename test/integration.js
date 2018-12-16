@@ -149,7 +149,7 @@ test('try to purchase a domain', async t => {
   );
 
   t.is(code, 1);
-  t.true(stderr.endsWith(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
+  t.true(stderr.includes(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
 });
 
 test('try to set default without existing payment method', async t => {
