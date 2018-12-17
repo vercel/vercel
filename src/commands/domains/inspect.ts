@@ -83,8 +83,6 @@ export default async function inspect(
   );
   output.print(`    ${chalk.dim('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
   output.print(`    ${chalk.dim('suffix')}\t\t${domain.suffix}\n`);
-  output.print(`    ${chalk.dim('aliases')}\t\t${domain.aliases.length}\n`);
-  output.print(`    ${chalk.dim('certs')}\t\t${domain.certs.length}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n'));
