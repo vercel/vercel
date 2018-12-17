@@ -7,8 +7,8 @@ export default function formatNSTable(
   currentNameServers: string[],
   { extraSpace = '' } = {}
 ) {
-  const sortedIntended = intendedNameServers.sort();
-  const sortedCurrent = currentNameServers.sort();
+  const sortedIntended = getSortedItems(intendedNameServers);
+  const sortedCurrent = getSortedItems(currentNameServers);
   const maxLength = Math.max(
     intendedNameServers.length,
     currentNameServers.length
@@ -30,4 +30,10 @@ export default function formatNSTable(
       stringLength: strlen
     }
   ).replace(/^(.*)/gm, `${extraSpace}$1`);
+}
+
+function getSortedItems(items: string[] = []) {
+  return items.length === 0
+    ? [chalk.gray('-')]
+    : items.sort();
 }
