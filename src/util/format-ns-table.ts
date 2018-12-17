@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import table from 'text-table';
 import strlen from './strlen';
+import chars from './output/chars';
 
 export default function formatNSTable(
   intendedNameServers: string[],
@@ -16,16 +17,22 @@ export default function formatNSTable(
   const rows = [];
 
   for (let i = 0; i < maxLength; i++) {
-    rows.push([sortedIntended[i] || '', sortedCurrent[i] || '']);
+    rows.push([
+      sortedIntended[i] || '',
+      sortedCurrent[i] || '',
+      sortedIntended[i] === sortedCurrent[i]
+        ? chalk.green(chars.tick)
+        : chalk.red(chars.cross)
+    ]);
   }
 
   return table(
     [
-      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers')],
+      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers'), ''],
       ...rows
     ],
     {
-      align: ['l', 'l', 'l'],
+      align: ['l', 'l', 'l', 'l'],
       hsep: ' '.repeat(4),
       stringLength: strlen
     }
