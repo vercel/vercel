@@ -122,6 +122,7 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
 
     return 0;
   }
+
   // If there are no rules for path alias we should find out a deployment and perform the alias
   const deployment = await getDeploymentForAlias(client, output, args, opts['--local-config'], user, contextName);
   if (deployment instanceof ERRORS.DeploymentNotFound) {
@@ -143,14 +144,12 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
   for (const target of targets) {
     output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
     const record = await assignAlias(output, client, deployment, target, contextName, noVerify);
-    const restOfErrors = handleCreateAliasError(output, record);
-    const handleResult = handleSetupDomainError(output, restOfErrors);
-    if (handleResult !== 1) {
+    const handleResult = handleSetupDomainError(output, handleCreateAliasError(output, record));
+    if (handleResult === 1) {
+      return 1;
+    } else {
       console.log(`${chalk.cyan('> Success!')} ${handleResult.alias} now points to ${chalk.bold(deployment.url)} ${setStamp()}`);
-      return 0;
     }
-
-    return 1;
   }
 
   return 0;
