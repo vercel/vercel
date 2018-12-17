@@ -66,7 +66,7 @@ function formatDomainsTable(domains: Domain[]) {
   const current = new Date();
   return table(
     [
-      ['', 'domain', 'serviceType', 'verified', 'cdn', 'age'].map(s => chalk.dim(s)),
+      ['', chalk.gray('domain'), chalk.gray('serviceType'), chalk.gray('verified'), chalk.gray('cdn'), chalk.gray('age')].map(s => chalk.dim(s)),
       ...domains.map(domain => {
         const cdnEnabled = domain.cdnEnabled || false;
         const url = chalk.bold(domain.name);
@@ -76,7 +76,7 @@ function formatDomainsTable(domains: Domain[]) {
     ],
     {
       align: ['l', 'l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(2),
+      hsep: ' '.repeat(4),
       stringLength: strlen
     }
   );
