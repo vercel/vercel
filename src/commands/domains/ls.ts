@@ -66,18 +66,17 @@ function formatDomainsTable(domains: Domain[]) {
   const current = new Date();
   return table(
     [
-      ['', 'domain', 'dns', 'verified', 'cdn', 'age'].map(s => chalk.dim(s)),
+      ['', chalk.gray('domain'), chalk.gray('serviceType'), chalk.gray('verified'), chalk.gray('cdn'), chalk.gray('age')].map(s => chalk.dim(s)),
       ...domains.map(domain => {
         const cdnEnabled = domain.cdnEnabled || false;
-        const ns = isDomainExternal(domain) ? 'external' : 'zeit.world';
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, ns, domain.verified, cdnEnabled, time];
+        return ['', url, domain.serviceType, domain.verified, cdnEnabled, time];
       })
     ],
     {
       align: ['l', 'l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(2),
+      hsep: ' '.repeat(4),
       stringLength: strlen
     }
   );
