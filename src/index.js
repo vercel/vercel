@@ -573,7 +573,7 @@ const handleRejection = async err => {
 
   if (err) {
     if (err instanceof Error) {
-      handleUnexpected(err);
+      await handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
       await reportError(Sentry, err, apiUrl, configFiles);
