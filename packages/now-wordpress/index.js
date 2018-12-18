@@ -72,11 +72,7 @@ exports.build = async ({ files, entrypoint, config }) => {
     throw new Error(`Entrypoint must be "wp-config.php". Currently it is ${entrypoint}`);
   }
 
-  const { releaseUrl } = config;
-  if (!releaseUrl) {
-    throw new Error('Config must contain a "releaseUrl" for wordpress.zip');
-  }
-
+  const { releaseUrl = 'https://wordpress.org/latest.zip' } = config;
   console.log(`downloading release url ${releaseUrl}...`);
   const releaseBuffer = await readReleaseUrl(releaseUrl);
   console.log('decompressing release url...');
