@@ -1,4 +1,4 @@
-const yodasay = require('yodasay/build/yodasay.umd.js').say;
+const yodasay = require('yodasay').say;
 const http = require('http');
 
 // test that process.env is not replaced by webpack

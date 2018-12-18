@@ -1,4 +1,4 @@
-const cowsay = require('cowsay/build/cowsay.umd.js').say;
+const cowsay = require('cowsay').say;
 const http = require('http');
 
 // test that process.env is not replaced by webpack
