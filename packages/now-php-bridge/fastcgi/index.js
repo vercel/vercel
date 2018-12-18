@@ -22,7 +22,7 @@ async function startPhp() {
   const child = spawn(
     './php-fpm',
     ['-c', 'php.ini',
-      '--fpm-config', '/var/task/native/php-fpm.ini',
+      '--fpm-config', 'php-fpm.ini',
       '--nodaemonize'],
     {
       stdio: 'inherit',
