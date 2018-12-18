@@ -1,0 +1,10 @@
+{
+  "name": "@now/php-bridge",
+  "version": "0.4.12",
+  "dependencies": {
+    "fastcgi-client": "0.0.1"
+  },
+  "peerDependencies": {
+    "@now/build-utils": ">=0.0.1"
+  }
+}

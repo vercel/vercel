@@ -24,5 +24,5 @@ var_dump($_REQUEST['post2']);
 print($_REQUEST['cookie1'] . PHP_EOL);
 var_dump($_REQUEST['cookie2']);
 
-print($HTTP_RAW_POST_DATA . PHP_EOL);
+print(file_get_contents('php://input') . PHP_EOL);
 print('end' . PHP_EOL);
