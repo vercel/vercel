@@ -1,8 +1,8 @@
 {
   "name": "@now/wordpress",
-  "version": "0.4.12",
+  "version": "0.4.13-canary.0",
   "dependencies": {
-    "@now/php-bridge": "^0.4.12",
+    "@now/php-bridge": "^0.4.13-canary.0",
     "node-fetch": "2.3.0",
     "yauzl": "2.10.0"
   },
