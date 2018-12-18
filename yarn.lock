@@ -2839,6 +2839,11 @@ fast-stream-to-buffer@1.0.0:
   dependencies:
     end-of-stream "^1.4.1"
 
+fastcgi-client@0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/fastcgi-client/-/fastcgi-client-0.0.1.tgz#1046d42ff2cee2a9ac03fea04695b3ef7311861c"
+  integrity sha1-EEbUL/LO4qmsA/6gRpWz73MRhhw=
+
 fb-watchman@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/fb-watchman/-/fb-watchman-2.0.0.tgz#54e9abf7dfa2f26cd9b1636c588c1afc05de5d58"
@@ -5712,7 +5717,7 @@ node-fetch@2.2.0:
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.2.0.tgz#4ee79bde909262f9775f731e3656d0db55ced5b5"
   integrity sha512-OayFWziIxiHY8bCUyLX6sTpDH8Jsbp4FfYd1j1f7vZyfgkcOnAyM4oQR16f8a0s7Gl/viMGRey8eScYk4V4EZA==
 
-node-fetch@^2.2.0, node-fetch@^2.2.1, node-fetch@^2.3.0:
+node-fetch@2.3.0, node-fetch@^2.2.0, node-fetch@^2.2.1, node-fetch@^2.3.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.3.0.tgz#1a1d940bbfb916a1d3e0219f037e89e71f8c5fa5"
   integrity sha512-MOd8pV3fxENbryESLgVIeaGKrdl+uaYhCSSVkjeOb/31/njTpcis5aWfdqgNlHIrKOLRbMnfPINPOML2CIFeXA==
@@ -8593,7 +8598,7 @@ yargs@^12.0.1:
     y18n "^3.2.1 || ^4.0.0"
     yargs-parser "^11.1.1"
 
-yauzl@^2.2.1:
+yauzl@2.10.0, yauzl@^2.2.1:
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/yauzl/-/yauzl-2.10.0.tgz#c7eb17c93e112cb1086fa6d8e51fb0667b79a5f9"
   integrity sha1-x+sXyT4RLLEIb6bY5R+wZnt5pfk=
