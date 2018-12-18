@@ -12,7 +12,7 @@ exports.build = async ({ files, entrypoint }) => {
   const userFiles = rename(files, name => path.join('user', name));
   const bridgeFiles = await getFiles();
 
-  // TODO
+  // TODO config.extensions. OR php.ini from user
   delete bridgeFiles['native/modules/mysqli.so'];
   delete bridgeFiles['native/modules/libmysqlclient.so.16'];
 

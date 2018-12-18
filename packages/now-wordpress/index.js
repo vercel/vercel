@@ -71,12 +71,14 @@ exports.build = async ({ files, entrypoint, config }) => {
   if (entrypoint !== 'wp-config.php') {
     throw new Error(`Entrypoint must be "wp-config.php". Currently it is ${entrypoint}`);
   }
-  if (!config.releaseUrl) {
+
+  const { releaseUrl } = config;
+  if (!releaseUrl) {
     throw new Error('Config must contain a "releaseUrl" for wordpress.zip');
   }
 
-  console.log('downloading release url...');
-  const releaseBuffer = await readReleaseUrl(config.releaseUrl);
+  console.log(`downloading release url ${releaseUrl}...`);
+  const releaseBuffer = await readReleaseUrl(releaseUrl);
   console.log('decompressing release url...');
   const releaseFiles = await decompressBuffer(releaseBuffer);
   const mergedFiles = { ...releaseFiles, ...files };
