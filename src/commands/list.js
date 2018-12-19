@@ -9,6 +9,7 @@ import ZeitAgent from '../util/zeit-agent';
 import exit from '../util/exit';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
+import wait from '../util/output/wait';
 
 const help = () => {
   console.log(`
@@ -21,6 +22,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -T, --team                     Set a custom team scope
+    -P, --projects-limit           No. of projects to list (default: 5)
 
   ${chalk.dim('Examples:')}
 
@@ -40,7 +42,8 @@ const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help'],
     alias: {
-      help: 'h'
+      help: 'h',
+      'projects-limit': 'P'
     }
   });
 
@@ -88,10 +91,19 @@ async function run({ token, contextName, currentTeam }) {
   const agentDeployments = new ZeitAgent('http://localhost:4008', {useHttp2:false, token, teamId: currentTeam});
   const start = Date.now();
 
-  console.log(chalk.gray('\n  This is a list of most recent deployments grouped by the project.\n'));
+  const stopSpinner = wait(
+    `Fetching deployments in ${chalk.bold(contextName)}`
+  );
 
   // Fetch most recent projects
-  const recentProjects = await agentProjects.fetchAndThrow('/projects/list?limit=5&recentDeployments=1');
+  const projectsLimit = argv['projects-limit'] || 5;
+  const recentProjects = await agentProjects.fetchAndThrow(
+   `/projects/list?limit=${projectsLimit}&recentDeployments=1`
+  );
+
+  stopSpinner();
+
+  console.log(chalk.gray('\n  This is a list of most recent deployments grouped by the project.\n'));
 
   for (let lc=0; lc<recentProjects.length; lc++) {
     const project = recentProjects[lc];
@@ -109,6 +121,7 @@ async function run({ token, contextName, currentTeam }) {
     console.log('');
   }
 
+  console.log(`  To list deployments of 10 projects, type: ${chalk.bold('now ls -P 10')}`);
   console.log(`  To list all projects, type: ${chalk.bold('now projects ls')}`);
   console.log(`  To list deployments of a project, type: ${chalk.bold('now ls --filter project=<name>')}`);
   console.log(`  To view all options, type: ${chalk.bold('now ls --help')}`);
