@@ -89,7 +89,11 @@ async function run({ token, contextName, currentTeam }) {
 
   const agentProjects = new ZeitAgent('https://api.zeit.co', {token, teamId: currentTeam});
   const agentDeployments = new ZeitAgent('http://localhost:4008', {useHttp2:false, token, teamId: currentTeam});
-  const start = Date.now();
+  const doExit = (exitCode=0) => {
+    agentProjects.close();
+    agentDeployments.close();
+    process.exit(exitCode);
+  };
 
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`
@@ -103,33 +107,38 @@ async function run({ token, contextName, currentTeam }) {
 
   stopSpinner();
 
-  console.log(chalk.gray('\n  This is a list of most recent deployments grouped by the project.\n'));
+  if (recentProjects.length === 0) {
+    console.log(chalk.gray(`No deployments found under ${chalk.white.bold(contextName)}`));
+    doExit();
+    return;
+  }
+
+  console.log(chalk.gray(`\nShowing recent deployments for ${recentProjects.length} projects under ${chalk.white.bold(contextName)}\n`));
 
   for (let lc=0; lc<recentProjects.length; lc++) {
     const project = recentProjects[lc];
     const deployments = project.recentDeployments? project.recentDeployments.slice(0, 3) : [];
 
     const caption = `project: ${chalk.bold(project.name)}`
-    console.log(`  ${caption}`);
+    console.log(`  ${chalk.green(caption)}`);
 
     const now = Date.now();
     for (const deployment of deployments) {
+      const url = `https://${deployment.url}`
       const updated = `${ms(now - deployment.createdAt)} ago`;
-      console.log(`    * https://${deployment.url} - ${chalk.gray(updated)}`);
+      console.log(`    ${chalk.white(url)} - ${chalk.gray(updated)} - ${chalk.gray(deployment.type)}`);
     }
 
     console.log('');
   }
 
-  console.log(`  To list deployments of 10 projects, type: ${chalk.bold('now ls -P 10')}`);
-  console.log(`  To list all projects, type: ${chalk.bold('now projects ls')}`);
-  console.log(`  To list deployments of a project, type: ${chalk.bold('now ls --filter project=<name>')}`);
-  console.log(`  To view all options, type: ${chalk.bold('now ls --help')}`);
+  console.log(chalk.gray(`  To list deployments of 10 projects, type: ${chalk.white('now ls -P 10')}`));
+  console.log(chalk.gray(`  To list all projects, type: ${chalk.white('now projects ls')}`));
+  console.log(chalk.gray(`  To list all deployments of a project, type: ${chalk.white('now ls -F project=<name>')}`));
+  console.log(chalk.gray(`  To view all options, type: ${chalk.white('now ls --help')}`));
   console.log('');
 
-  agentProjects.close();
-  agentDeployments.close();
-  exit(1);
+  doExit();
 }
 
 process.on('uncaughtException', err => {
