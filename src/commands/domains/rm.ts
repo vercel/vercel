@@ -4,10 +4,12 @@ import plural from 'pluralize';
 import table from 'text-table';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { NowContext, Domain, DomainExtra } from '../../types';
+import { NowContext, Domain, Alias, Cert } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
+import getDomainAliases from '../../util/alias/get-domain-aliases';
+import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
@@ -78,20 +80,22 @@ export default async function rm(
     return 1;
   }
 
-  if (!opts['--yes'] && !await confirmDomainRemove(output, domain)) {
+  const aliases = await getDomainAliases(client, domain.name);
+  const certs = await getCertsForDomain(output, client, domain.name);
+  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, aliases, certs)) {
     output.log('Aborted');
     return 0;
   }
 
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
-  for (const alias of domain.aliases) {
-    await removeAliasById(client, alias.id);
+  for (const alias of aliases) {
+    await removeAliasById(client, alias.uid);
   }
 
   output.debug(`Removing certs`);
-  for (const cert of domain.certs) {
-    await deleteCertById(output, client, cert.id);
+  for (const cert of certs) {
+    await deleteCertById(output, client, cert.uid);
   }
 
   output.debug(`Removing domain`);
@@ -104,10 +108,7 @@ export default async function rm(
   return 0;
 }
 
-async function confirmDomainRemove(
-  output: Output,
-  domain: Domain & DomainExtra
-) {
+async function confirmDomainRemove(output: Output, domain: Domain, aliases: Alias[], certs: Cert[]) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(Date.now() - domain.createdAt)} ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
@@ -118,18 +119,18 @@ async function confirmDomainRemove(
     output.log(`The following domain will be removed permanently`);
     output.print(`  ${tbl}\n`);
 
-    if (domain.aliases.length > 0) {
+    if (aliases.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('alias', domain.aliases.length, true)
+          plural('alias', aliases.length, true)
         )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
       );
     }
 
-    if (domain.certs.length > 0) {
+    if (certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('certificate', domain.certs.length, true)
+          plural('certificate', certs.length, true)
         )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
