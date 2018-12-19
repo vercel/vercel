@@ -1,11 +1,11 @@
 import chalk from 'chalk';
 import Client from '../client';
 import wait from '../output/wait';
-import { Domain, DomainExtra } from '../../types';
+import { Domain } from '../../types';
 import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
 type Response = {
-  domain: Domain & DomainExtra;
+  domain: Domain;
 };
 
 async function getDomainByName(

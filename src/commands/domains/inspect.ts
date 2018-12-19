@@ -4,6 +4,7 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
 import dnsTable from '../../util/format-dns-table';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
@@ -27,6 +28,7 @@ export default async function inspect(
   const client = new Client({ apiUrl, token, currentTeam, debug });
   const { contextName } = await getScope(client);
   const [domainName] = args;
+  const inspectStamp = stamp();
 
   if (!domainName) {
     output.error(`${cmd('now domains inspect <domain>')} expects one argument`);
@@ -62,6 +64,7 @@ export default async function inspect(
     return 1;
   }
 
+  output.log(`Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(inspectStamp())}`);
   output.print('\n');
   output.print(chalk.bold('  Domain Info\n'));
   output.print(`    ${chalk.dim('name')}\t\t${domain.name}\n`);
@@ -82,12 +85,11 @@ export default async function inspect(
     `    ${chalk.dim('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
   );
   output.print(`    ${chalk.dim('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
-  output.print(`    ${chalk.dim('suffix')}\t\t${domain.suffix}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n'));
   output.print(
-    `${formatNSTable(domain.intendedNameServers, domain.nameServers, {
+    `${formatNSTable(domain.intendedNameservers, domain.nameservers, {
       extraSpace: '    '
     })}\n`
   );
@@ -123,7 +125,7 @@ export default async function inspect(
         'now domains verify <domain>'
       )}\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
   }
 
   return null;
