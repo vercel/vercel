@@ -1,4 +1,4 @@
-//
+import psl from 'psl';
 import chalk from 'chalk';
 
 import wait from '../output/wait';
@@ -24,11 +24,13 @@ async function getDomainByName(
 
 async function getDomain(now, domainName) {
   try {
-    const { domain } = await now.fetch(
-      `/v4/domains/${toHost(domainName)}`
+    const domain = await now.fetch(
+      `/v3/domains/${toHost(domainName)}`
     );
 
-    return domain;
+    return domain
+      ? { ...domain, name: psl.parse(domainName).domain }
+      : domain;
   } catch (error) {
     if (error.status === 404) {
       return new Errors.DomainNotFound(domainName);
