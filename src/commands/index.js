@@ -2,6 +2,7 @@ export default {
   deploy: 'deploy',
   help: 'help',
   list: 'list',
+  'legacy-list': 'list_',
   remove: 'remove',
   alias: 'alias',
   domains: 'domains',

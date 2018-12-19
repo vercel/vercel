@@ -72,7 +72,6 @@ export default class Agent {
     if (path.includes('/deployments')) {
       opts.body = JSON.stringify(opts.body)
       const url = `http://localhost:3000${path}`
-      console.log('xxxx', url)
       return nodeFetch(url, opts)
     }
 

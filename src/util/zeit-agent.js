@@ -1,10 +1,13 @@
 import {parse as parseUrl} from 'url';
 import qs from 'querystring';
+import nodeFetch from 'node-fetch';
 import Agent from './agent';
 
 export default class ZeitAgent extends Agent {
   constructor(url, options) {
     super(url, options);
+    this.url = url;
+    this.options = options;
     this.token = options.token;
     this.teamId = options.teamId;
   }
@@ -20,6 +23,12 @@ export default class ZeitAgent extends Agent {
       query.teamId = this.teamId;
       path = `${path}?${qs.stringify(query)}`;
     }
+
+    if (this.options.useHttp2 === false) {
+      opts.body = JSON.stringify(opts.body);
+      const finalUrl = this.url + path;
+      return nodeFetch(finalUrl, opts);
+    };
 
     return super.fetch(path, opts);
   }

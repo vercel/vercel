@@ -88,7 +88,7 @@ export default async ctx => {
 };
 
 async function run({ token, contextName, currentTeam }) {
-  const agent = new ZeitAgent('https://api-projects.zeit.sh', {token, teamId: currentTeam});
+  const agent = new ZeitAgent('https://api.zeit.co', {token, teamId: currentTeam});
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -102,7 +102,7 @@ async function run({ token, contextName, currentTeam }) {
       return exit(1);
     }
 
-    const list = await agent.fetchAndThrow('/list', {method: 'GET'});
+    const list = await agent.fetchAndThrow('/projects/list', {method: 'GET'});
     const elapsed = ms(new Date() - start);
 
     console.log(
@@ -155,7 +155,7 @@ async function run({ token, contextName, currentTeam }) {
       return exit(0);
     }
 
-    await agent.fetchAndThrow('/remove', {method: 'DELETE', body: {name}});
+    await agent.fetchAndThrow('/projects/remove', {method: 'DELETE', body: {name}});
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
@@ -186,7 +186,7 @@ async function run({ token, contextName, currentTeam }) {
     }
 
     const [name] = args;
-    await agent.fetchAndThrow('/ensure-project', {method: 'POST', body: {name}});
+    await agent.fetchAndThrow('/projects/ensure-project', {method: 'POST', body: {name}});
     const elapsed = ms(new Date() - start);
 
     console.log(
