@@ -24,7 +24,7 @@ async function readReleaseUrl(releaseUrl) {
 
 const prefixRegexp = /^wordpress\//;
 
-function decompressBuffer(buffer) {
+function decompressBuffer(buffer, mountpoint) {
   return new Promise((resolve, reject) => {
     const files = {};
 
@@ -52,7 +52,8 @@ function decompressBuffer(buffer) {
           streamToBuffer(readStream).then((data) => {
             assert(prefixRegexp.test(fileName), fileName);
             const fileName2 = fileName.replace(prefixRegexp, '');
-            files[fileName2] = new FileBlob({ data });
+            const fileName3 = path.join(mountpoint, fileName2);
+            files[fileName3] = new FileBlob({ data });
             zipfile.readEntry();
           }).catch(reject);
         });
@@ -68,20 +69,22 @@ const staticRegexps = [
 ];
 
 exports.build = async ({ files, entrypoint, config }) => {
-  if (entrypoint !== 'wp-config.php') {
-    throw new Error(`Entrypoint must be "wp-config.php". Currently it is ${entrypoint}`);
+  if (path.basename(entrypoint) !== 'wp-config.php') {
+    throw new Error(`Entrypoint file name must be "wp-config.php". Currently it is ${entrypoint}`);
   }
 
   const { releaseUrl = 'https://wordpress.org/latest.zip' } = config;
   console.log(`downloading release url ${releaseUrl}...`);
   const releaseBuffer = await readReleaseUrl(releaseUrl);
   console.log('decompressing release url...');
-  const releaseFiles = await decompressBuffer(releaseBuffer);
+  const mountpoint = path.dirname(entrypoint);
+  const releaseFiles = await decompressBuffer(releaseBuffer, mountpoint);
   const mergedFiles = { ...releaseFiles, ...files };
 
   if (config.patchForPersistentConnections) {
-    const wpDbPhp = mergedFiles['wp-includes/wp-db.php'];
-    wpDbPhp.data = wpDbPhp.data.toString()
+    const wpDbPhp = path.join(mountpoint, 'wp-includes/wp-db.php');
+    const wpDbPhpBlob = mergedFiles[wpDbPhp];
+    wpDbPhpBlob.data = wpDbPhpBlob.data.toString()
       .replace(/mysqli_real_connect\( \$this->dbh, \$host,/g,
         'mysqli_real_connect( $this->dbh, \'p:\' . $host,');
   }
@@ -104,5 +107,6 @@ exports.build = async ({ files, entrypoint, config }) => {
     runtime: 'nodejs8.10',
   });
 
-  return { ...staticFiles, ...{ 'index.php': lambda } };
+  const indexPhp = path.join(mountpoint, 'index.php');
+  return { ...staticFiles, ...{ [indexPhp]: lambda } };
 };
