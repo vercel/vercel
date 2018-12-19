@@ -114,7 +114,7 @@ async function confirmDomainRemove(
   certs
 ) {
   return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(domain.createdAt))  } ago`);
+    const time = chalk.gray(`${ms(new Date() - new Date(domain.created))  } ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
