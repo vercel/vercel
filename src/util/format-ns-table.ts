@@ -4,22 +4,22 @@ import strlen from './strlen';
 import chars from './output/chars';
 
 export default function formatNSTable(
-  intendedNameServers: string[],
-  currentNameServers: string[],
+  intendedNameservers: string[],
+  currentNameservers: string[],
   { extraSpace = '' } = {}
 ) {
-  const sortedIntended = getSortedItems(intendedNameServers);
-  const sortedCurrent = getSortedItems(currentNameServers);
+  const sortedIntended = intendedNameservers.sort();
+  const sortedCurrent = currentNameservers.sort();
   const maxLength = Math.max(
-    intendedNameServers.length,
-    currentNameServers.length
+    intendedNameservers.length,
+    currentNameservers.length
   );
   const rows = [];
 
   for (let i = 0; i < maxLength; i++) {
     rows.push([
-      sortedIntended[i] || '',
-      sortedCurrent[i] || '',
+      sortedIntended[i] || chalk.gray('-'),
+      sortedCurrent[i] || chalk.gray('-'),
       sortedIntended[i] === sortedCurrent[i]
         ? chalk.green(chars.tick)
         : chalk.red(chars.cross)
@@ -37,10 +37,4 @@ export default function formatNSTable(
       stringLength: strlen
     }
   ).replace(/^(.*)/gm, `${extraSpace}$1`);
-}
-
-function getSortedItems(items: string[] = []) {
-  return items.length === 0
-    ? [chalk.gray('-')]
-    : items.sort();
 }

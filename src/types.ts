@@ -72,27 +72,14 @@ export type Domain = {
   verified: boolean;
   nsVerifiedAt: number | null;
   txtVerifiedAt: number | null;
+  verificationRecord: string;
+  nameservers: string[];
+  intendedNameservers: string[];
   creator: {
     id: string;
     username: string;
     email: string;
   };
-};
-
-export type DomainExtra = {
-  suffix: boolean;
-  nameServers: string[];
-  verificationRecord: string;
-  intendedNameServers: string[];
-  aliases: Array<{
-    id: string;
-    alias: string;
-    created: number;
-  }>;
-  certs: Array<{
-    id: string;
-    cns: string[];
-  }>;
 };
 
 export type Cert = {
