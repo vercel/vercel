@@ -104,14 +104,13 @@ export default async function add(
   }
 
   // We can cast the information because we've just added the domain and it should be there
-  const domainInfo = await getDomainByName(client, contextName, domain) as Domain;
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domainInfo.name
+      addedDomain.name
     )} added correctly. ${addStamp()}\n`
   );
 
-  if (!domainInfo.verified) {
+  if (!addedDomain.verified) {
     output.warn(
       `The domain was added but it is not verified. To verify it, you should either:`
     );
@@ -124,8 +123,8 @@ export default async function add(
     );
     output.print(
       `\n${formatNSTable(
-        domainInfo.intendedNameservers,
-        domainInfo.nameservers,
+        addedDomain.intendedNameservers,
+        addedDomain.nameservers,
         { extraSpace: '     ' }
       )}\n\n`
     );
@@ -135,7 +134,7 @@ export default async function add(
       )} Add a DNS TXT record with the name and value shown below.\n`
     );
     output.print(
-      `\n${formatDnsTable([['_now', 'TXT', domainInfo.verificationRecord]], {
+      `\n${formatDnsTable([['_now', 'TXT', addedDomain.verificationRecord]], {
         extraSpace: '     '
       })}\n\n`
     );
