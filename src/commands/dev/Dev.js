@@ -213,6 +213,7 @@ export default class Dev {
           mime.contentType(path.basename(target)) || 'text/html; charset=utf-8',
         'Transfer-Encoding': 'chunked',
         'X-Content-Type-Options': 'nosniff',
+        ...route.headers,
       });
 
       if (artifact instanceof FileBlob || artifact instanceof FileFsRef) {
