@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/index.js", "use": "@now/node" }
+  ],
+  "probes": [
+    { "path": "/api/index.js", "mustContain": "cross-cow:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
