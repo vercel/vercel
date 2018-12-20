@@ -14,15 +14,15 @@ const cachePath = spawnSync(yarnPath, ['cache', 'dir'])
 spawnSync(yarnPath, ['cache', 'clean']);
 const vfs = new MemoryFileSystem();
 
-function isOutsideCachePath(filename) {
+function isInsideCachePath(filename) {
   const relative = path.relative(cachePath, filename);
-  return relative.startsWith('..');
+  return !relative.startsWith('..');
 }
 
 const saveCreateWriteStream = fs.createWriteStream;
 fs.createWriteStream = (...args) => {
   const filename = args[0];
-  if (isOutsideCachePath(filename)) {
+  if (!isInsideCachePath(filename)) {
     return saveCreateWriteStream.call(fs, ...args);
   }
 
@@ -42,7 +42,7 @@ fs.createWriteStream = (...args) => {
 const saveReadFile = fs.readFile;
 fs.readFile = (...args) => {
   const filename = args[0];
-  if (isOutsideCachePath(filename)) {
+  if (!isInsideCachePath(filename)) {
     return saveReadFile.call(fs, ...args);
   }
 
@@ -60,23 +60,33 @@ fs.readFile = (...args) => {
 const saveCopyFile = fs.copyFile;
 fs.copyFile = (...args) => {
   const src = args[0];
-  if (isOutsideCachePath(src)) {
-    return saveCopyFile.call(fs, ...args);
-  }
-
   const dest = args[1];
   const callback = args[args.length - 1];
-  const buffer = vfs.readFileSync(src);
-  return fs.writeFile(dest, buffer, callback);
+
+  if (isInsideCachePath(src) && !isInsideCachePath(dest)) {
+    const buffer = vfs.readFileSync(src);
+    return fs.writeFile(dest, buffer, callback);
+  } else
+  if (!isInsideCachePath(src) && isInsideCachePath(dest)) {
+    const buffer = fs.readFileSync(src);
+
+    vfs.mkdirpSync(path.dirname(dest));
+    fs.writeFileSync(dest, Buffer.alloc(0));
+    return vfs.writeFile(dest, buffer, callback);
+  } else {
+    return saveCopyFile.call(fs, ...args);
+  }
 };
 
 const saveWriteFile = fs.writeFile;
 fs.writeFile = (...args) => {
   const filename = args[0];
-  if (isOutsideCachePath(filename)) {
+  if (!isInsideCachePath(filename)) {
     return saveWriteFile.call(fs, ...args);
   }
 
+  vfs.mkdirpSync(path.dirname(filename));
+  fs.writeFileSync(filename, Buffer.alloc(0));
   return vfs.writeFile(...args);
 };
 
