@@ -38,6 +38,7 @@ exports.build = async ({ files, entrypoint, config }) => {
   await execa(builderPath, [entrypoint], {
     env,
     cwd: workDir,
+    stdio: 'inherit',
   });
 
   const lambda = await createLambda({
