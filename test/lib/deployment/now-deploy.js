@@ -140,6 +140,12 @@ async function fetchApi (url, opts = {}) {
     if (body) console.log(encodeURIComponent(body).slice(0, 80));
   }
 
+  if (!opts.headers) opts.headers = {};
+
+  if (!opts.headers.Accept) {
+    opts.headers.Accept = 'application/json';
+  }
+
   return await fetch(urlWithHost, opts);
 }
 

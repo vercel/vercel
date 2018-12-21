@@ -66,16 +66,17 @@ fs.copyFile = (...args) => {
   if (isInsideCachePath(src) && !isInsideCachePath(dest)) {
     const buffer = vfs.readFileSync(src);
     return fs.writeFile(dest, buffer, callback);
-  } else
+  }
+
   if (!isInsideCachePath(src) && isInsideCachePath(dest)) {
     const buffer = fs.readFileSync(src);
 
     vfs.mkdirpSync(path.dirname(dest));
     fs.writeFileSync(dest, Buffer.alloc(0));
     return vfs.writeFile(dest, buffer, callback);
-  } else {
-    return saveCopyFile.call(fs, ...args);
   }
+
+  return saveCopyFile.call(fs, ...args);
 };
 
 const saveWriteFile = fs.writeFile;
