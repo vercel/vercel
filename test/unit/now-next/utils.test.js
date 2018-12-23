@@ -208,12 +208,12 @@ describe('normalizePackageJson', () => {
     const result = normalizePackageJson();
     expect(result).toEqual({
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build':
@@ -225,12 +225,12 @@ describe('normalizePackageJson', () => {
   it('should work with a package.json being supplied', () => {
     const defaultPackage = {
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build': 'next build',
@@ -239,12 +239,12 @@ describe('normalizePackageJson', () => {
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build':
@@ -264,12 +264,12 @@ describe('normalizePackageJson', () => {
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build':
@@ -289,12 +289,12 @@ describe('normalizePackageJson', () => {
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build':
@@ -314,12 +314,12 @@ describe('normalizePackageJson', () => {
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: 'latest',
         'react-dom': 'latest',
       },
       devDependencies: {
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
       },
       scripts: {
         'now-build':
@@ -403,7 +403,7 @@ describe('normalizePackageJson', () => {
         'stylelint-config-recommended': '^2.1.0',
         'stylelint-config-styled-components': '^0.1.1',
         'stylelint-processor-styled-components': '^1.5.1',
-        next: 'canary',
+        next: 'v7.0.2-canary.49',
         'next-server': undefined,
         xo: '^0.23.0',
         consola: '^2.2.6',
@@ -411,7 +411,7 @@ describe('normalizePackageJson', () => {
         'styled-components': '^4.1.1',
       },
       dependencies: {
-        'next-server': 'canary',
+        'next-server': 'v7.0.2-canary.49',
         react: '^16.6.3',
         'react-dom': '^16.6.3',
       },
