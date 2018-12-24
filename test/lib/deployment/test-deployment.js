@@ -94,7 +94,7 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
 
   const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
   if (await fs.exists(probeJsFullPath)) {
-    await require(probeJsFullPath)({ deploymentUrl, fetch });
+    await require(probeJsFullPath)({ deploymentUrl, fetch, randomness });
   }
 
   return { deploymentId, deploymentUrl };
@@ -112,11 +112,9 @@ async function nowDeployIndexTgz (file) {
 async function fetchDeploymentUrl (url, opts) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url, opts);
-    if (resp.status === 200) {
-      const text = await resp.text();
-      if (!text.includes('Join Free')) {
-        return text;
-      }
+    const text = await resp.text();
+    if (text && !text.includes('Join Free')) {
+      return text;
     }
 
     await new Promise((r) => setTimeout(r, 1000));
