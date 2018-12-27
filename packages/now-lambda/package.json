@@ -1,6 +1,7 @@
 {
   "name": "@now/lambda",
   "version": "0.4.8",
+  "license": "MIT",
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"
   },

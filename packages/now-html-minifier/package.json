@@ -1,6 +1,7 @@
 {
   "name": "@now/html-minifier",
   "version": "1.0.6",
+  "license": "MIT",
   "dependencies": {
     "html-minifier": "3.5.21"
   },

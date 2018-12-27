@@ -1,6 +1,7 @@
 {
   "name": "@now/cgi",
   "version": "0.0.14",
+  "license": "MIT",
   "scripts": {
     "test": "best -I test/*.js",
     "prepublish": "./build.sh"

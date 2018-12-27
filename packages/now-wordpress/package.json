@@ -1,6 +1,7 @@
 {
   "name": "@now/wordpress",
   "version": "0.4.14-canary.0",
+  "license": "MIT",
   "dependencies": {
     "@now/php-bridge": "^0.4.13-canary.0",
     "node-fetch": "2.3.0",

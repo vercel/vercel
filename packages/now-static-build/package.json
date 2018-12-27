@@ -1,6 +1,7 @@
 {
   "name": "@now/static-build",
   "version": "0.4.16",
+  "license": "MIT",
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"
   },

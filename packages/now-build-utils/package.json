@@ -1,6 +1,7 @@
 {
   "name": "@now/build-utils",
   "version": "0.4.32-canary.3",
+  "license": "MIT",
   "dependencies": {
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
