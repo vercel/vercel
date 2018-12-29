@@ -952,8 +952,9 @@ const verifyExampleApollo = (cwd) => (
 );
 
 test('initialize selected example ("apollo")', async t => {
-  const goal = '> Success! Initialized "apollo" example.';
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
 
   const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
 
@@ -963,8 +964,9 @@ test('initialize selected example ("apollo")', async t => {
 });
 
 test('guess what example user try to install (yes: "apollo")', async t => {
-  const goal = '> Success! Initialized "apollo" example.';
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
 
   const { stdout, code } = await execute(['init', 'apoll'], { cwd, input: 'y' });
 
@@ -974,6 +976,7 @@ test('guess what example user try to install (yes: "apollo")', async t => {
 });
 
 test('guess what example user try to install (nope)', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
 
   const { code } = await execute(['init', 'apoll'], { cwd, input: '\n' });
@@ -982,8 +985,9 @@ test('guess what example user try to install (nope)', async t => {
 });
 
 test('initialize example "apollo"', async t => {
-  const goal = '> Success! Initialized "apollo" example.';
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
 
   const { stdout, code } = await execute(['init', 'apollo'], { cwd });
 
@@ -993,8 +997,9 @@ test('initialize example "apollo"', async t => {
 });
 
 test('try to initialize example "example-404"', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
   const goal = 'No example for example-404';
-  const cwd = tmpDir.name
 
   const { stdout, code } = await execute(['init', 'example-404'], { cwd });
 
