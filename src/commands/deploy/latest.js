@@ -58,6 +58,7 @@ export const help = () => `
       logs                 [url]       Displays the logs for a deployment
       scale                [args]      Scales the instance count of a deployment
       help                 [cmd]       Displays complete help for [cmd]
+      init                 [name]      Initialize an example project
 
     ${chalk.dim('Administrative')}
 

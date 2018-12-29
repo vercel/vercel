@@ -46,6 +46,7 @@ const waitForDeployment = async href => {
 // but we want to set it within as well
 const context = {};
 
+const defaultOptions = { reject: false };
 const defaultArgs = [];
 const email = `now-cli-${session}@zeit.pub`;
 
@@ -68,6 +69,12 @@ test.before(async () => {
     console.error(err);
   }
 });
+
+const execute = (args, options) => execa(
+  binaryPath,
+  [...defaultArgs, ...args],
+  {...defaultOptions, ...options}
+);
 
 test('print the deploy help message', async t => {
   const { stderr, code } = await execa(binaryPath, ['help', ...defaultArgs], {
@@ -935,6 +942,64 @@ test('try to deploy with non-existing team', async t => {
 
   t.is(code, 1);
   t.true(stderr.includes(goal));
+});
+
+
+const verifyExampleApollo = (cwd) => (
+  fs.existsSync(path.join(cwd, 'package.json'))
+    && fs.existsSync(path.join(cwd, 'now.json'))
+    && fs.existsSync(path.join(cwd, 'index.js'))
+);
+
+test('initialize selected example ("apollo")', async t => {
+  const goal = '> Success! Initialized "apollo" example.';
+  const cwd = tmpDir.name;
+
+  const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd));
+});
+
+test('guess what example user try to install (yes: "apollo")', async t => {
+  const goal = '> Success! Initialized "apollo" example.';
+  const cwd = tmpDir.name;
+
+  const { stdout, code } = await execute(['init', 'apoll'], { cwd, input: 'y' });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd));
+});
+
+test('guess what example user try to install (nope)', async t => {
+  const cwd = tmpDir.name;
+
+  const { code } = await execute(['init', 'apoll'], { cwd, input: '\n' });
+
+  t.is(code, 0);
+});
+
+test('initialize example "apollo"', async t => {
+  const goal = '> Success! Initialized "apollo" example.';
+  const cwd = tmpDir.name;
+
+  const { stdout, code } = await execute(['init', 'apollo'], { cwd });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd));
+});
+
+test('try to initialize example "example-404"', async t => {
+  const goal = 'No example for example-404';
+  const cwd = tmpDir.name
+
+  const { stdout, code } = await execute(['init', 'example-404'], { cwd });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
 });
 
 test.after.always(async () => {
