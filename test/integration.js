@@ -944,45 +944,13 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-
-const verifyExampleApollo = (cwd) => (
-  fs.existsSync(path.join(cwd, 'package.json'))
-    && fs.existsSync(path.join(cwd, 'now.json'))
-    && fs.existsSync(path.join(cwd, 'index.js'))
+const createFile = (dest) => fs.closeSync(fs.openSync(dest, 'w'));
+const createDirectory = (dest) => fs.mkdirSync(dest);
+const verifyExampleApollo = (cwd, dir) => (
+  fs.existsSync(path.join(cwd, dir, 'package.json'))
+    && fs.existsSync(path.join(cwd, dir, 'now.json'))
+    && fs.existsSync(path.join(cwd, dir, 'index.js'))
 );
-
-test('initialize selected example ("apollo")', async t => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
-  const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
-
-  const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
-
-  t.is(code, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd));
-});
-
-test('guess what example user try to install (yes: "apollo")', async t => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
-  const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
-
-  const { stdout, code } = await execute(['init', 'apoll'], { cwd, input: 'y' });
-
-  t.is(code, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd));
-});
-
-test('guess what example user try to install (nope)', async t => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
-  const cwd = tmpDir.name;
-
-  const { code } = await execute(['init', 'apoll'], { cwd, input: '\n' });
-
-  t.is(code, 0);
-});
 
 test('initialize example "apollo"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
@@ -993,7 +961,69 @@ test('initialize example "apollo"', async t => {
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd));
+  t.true(verifyExampleApollo(cwd, 'apollo'));
+});
+
+test('initialize example ("apollo") to specified directory', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
+
+  const { stdout, code } = await execute(['init', 'apollo', 'apo'], { cwd });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd, 'apo'));
+});
+
+test('initialize selected example ("apollo")', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
+
+  const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd, 'apollo'));
+});
+
+test('initialize example to existing directory with "-f"', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
+  const goal = '> Success! Initialized "apollo" example.';
+
+  createDirectory(path.join(cwd, 'apollo'));
+  createFile(path.join(cwd, 'apollo', '.gitignore'));
+  const { stdout, code } = await execute(['init', 'apollo', '-f'], { cwd });
+
+  t.is(code, 0);
+  t.true(stdout.includes(goal));
+  t.true(verifyExampleApollo(cwd, 'apollo'));
+});
+
+test('try to initialize example to existing directory', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
+  const goal = '> Error! Destination path "apollo" already exists and is not an empty directory.';
+
+  createDirectory(path.join(cwd, 'apollo'));
+  createFile(path.join(cwd, 'apollo', '.gitignore'));
+  const { stdout, code } = await execute(['init', 'apollo'], { cwd, input: '\n' });
+
+  t.is(code, 1);
+  t.true(stdout.includes(goal));
+});
+
+test('try to initialize misspelled example (noce) in non-tty', async t => {
+  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const cwd = tmpDir.name;
+  const goal = '> Error! No example for noce.';
+
+  const { stdout, code } = await execute(['init', 'noce'], { cwd });
+
+  t.is(code, 1);
+  t.true(stdout.includes(goal));
 });
 
 test('try to initialize example "example-404"', async t => {
@@ -1003,7 +1033,7 @@ test('try to initialize example "example-404"', async t => {
 
   const { stdout, code } = await execute(['init', 'example-404'], { cwd });
 
-  t.is(code, 0);
+  t.is(code, 1);
   t.true(stdout.includes(goal));
 });
 
