@@ -30,4 +30,4 @@ As always, you should use `yarn test` to run the tests and see if your changes h
 
 ## How to Create a Release
 
-If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/zeit/blob/master/guides/now-cli-release.md).
+If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/now-cli/wiki/Creating-a-Release).
