@@ -5,7 +5,6 @@ import { basename } from 'path';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
-import logo from '../../util/output/logo';
 import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
@@ -20,7 +19,6 @@ import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
-import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
 import {
   WildcardNotAllowed,
@@ -36,119 +34,6 @@ import {
   TooManyRequests
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
-
-export const help = () => `
-  ${chalk.bold(`${logo} now`)} [options] <command | path>
-
-  ${chalk.dim('Commands:')}
-
-    ${chalk.dim('Cloud')}
-
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
-      ls | list            [app]       Lists deployments
-      rm | remove          [id]        Removes a deployment
-      ln | alias           [id] [url]  Configures aliases for deployments
-      inspect              [id]        Displays information related to a deployment
-      domains              [name]      Manages your domain names
-      certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
-      dns                  [name]      Manages your DNS records
-      logs                 [url]       Displays the logs for a deployment
-      scale                [args]      Scales the instance count of a deployment
-      help                 [cmd]       Displays complete help for [cmd]
-
-    ${chalk.dim('Administrative')}
-
-      billing | cc         [cmd]       Manages your credit cards and billing methods
-      upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
-      switch               [scope]     Switches between teams and your personal account
-      login                [email]     Logs into your account or creates a new one
-      logout                           Logs out of your account
-      whoami                           Displays the current scope
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -v, --version                  Output the version number
-    -V, --platform-version         Set the platform version to deploy to
-    -n, --name                     Set the name of the deployment
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-  'FILE'
-)}   Path to the local ${'`now.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-  'DIR'
-)}    Path to the global ${'`.now`'} directory
-    -d, --debug                    Debug mode [off]
-    -f, --force                    Force a new deployment even if nothing has changed
-    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-  'TOKEN'
-)}        Login token
-    -p, --public                   Deployment is public (${chalk.dim(
-      '`/_src`'
-    )} is exposed)
-    -e, --env                      Include an env var during run time (e.g.: ${chalk.dim(
-      '`-e KEY=value`'
-    )}). Can appear many times.
-    -b, --build-env                Similar to ${chalk.dim(
-      '`--env`'
-    )} but for build time only.
-    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
-      '`-m KEY=value`'
-    )}). Can appear many times.
-    -C, --no-clipboard             Do not attempt to copy URL to clipboard
-    -T, --team                     Set a custom team scope
-    --regions                      Set default regions to enable the deployment on
-
-  ${note(
-    `To view the usage information for Now 1.0, run ${code(
-      'now help deploy-v1'
-    )}`
-  )}
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Deploy the current directory
-
-    ${chalk.cyan('$ now')}
-
-  ${chalk.gray('–')} Deploy a custom path
-
-    ${chalk.cyan('$ now /usr/src/project')}
-
-  ${chalk.gray('–')} Deploy with environment variables
-
-    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
-
-  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-  '`list`'
-)}
-
-    ${chalk.cyan('$ now help list')}
-
-`;
-
-export const args = {
-  '--name': String,
-  '--force': Boolean,
-  '--public': Boolean,
-  '--no-clipboard': Boolean,
-  '--env': [String],
-  '--build-env': [String],
-  '--meta': [String],
-  // This is not an array in favor of matching
-  // the config property name.
-  '--regions': String,
-  '-n': '--name',
-  '-f': '--force',
-  '-p': '--public',
-  '-e': '--env',
-  '-b': '--build-env',
-  '-C': '--no-clipboard',
-  '-m': '--meta'
-};
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -259,13 +144,14 @@ const parseEnv = env => {
   return env;
 };
 
-export const pipe = async function main(
+export default async function main(
   ctx,
   contextName,
   output,
   stats,
   localConfig,
-  isFile
+  isFile,
+  args
 ) {
   let argv = null;
 
