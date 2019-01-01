@@ -1,7 +1,5 @@
 import { resolve, basename, parse } from 'path';
 import { promises as fs } from 'fs';
-import * as latest from './latest';
-import * as legacy from './legacy';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
@@ -10,11 +8,12 @@ import highlight from '../../util/output/highlight';
 import param from '../../util/output/param.ts';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
+import * as parts from './args';
 import { handleError } from '../../util/error';
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
-  const combinedArgs = Object.assign({}, legacy.args, latest.args);
+  const combinedArgs = Object.assign({}, parts.legacyArgs, parts.latestArgs);
 
   let platformVersion = null;
   let contextName = currentTeam || 'current user';
@@ -48,7 +47,7 @@ export default async ctx => {
 
   if (argv['--help']) {
     const lastArg = argv._[argv._.length - 1];
-    const help = lastArg === 'deploy-v1' ? legacy.help : latest.help;
+    const help = lastArg === 'deploy-v1' ? parts.legacyHelp : parts.latestHelp;
 
     output.print(help());
     return 2;
@@ -149,15 +148,16 @@ export default async ctx => {
   }
 
   if (platformVersion === null || platformVersion > 1) {
-    return latest.pipe(
+    return require('./latest').default(
       ctx,
       contextName,
       output,
       stats,
       localConfig || {},
-      isFile
+      isFile,
+      parts.latestArgs
     );
   }
 
-  return legacy.pipe(ctx, contextName, output);
+  return require('./legacy').default(ctx, contextName, output, parts.legacyArgsMri);
 };
