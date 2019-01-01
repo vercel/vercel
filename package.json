@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "13.0.0-canary.34",
+  "version": "13.0.0-canary.35",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
