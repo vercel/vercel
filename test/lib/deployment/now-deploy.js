@@ -107,21 +107,21 @@ async function deploymentGet (deploymentId) {
   return await resp.json();
 }
 
+let token;
+
 async function fetchWithAuth (url, opts = {}) {
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
-    let token;
-    if (process.env.NOW_AUTH_TOKENS) {
-      const tokens = process.env.NOW_AUTH_TOKENS.split(',');
-      if (process.env.CIRCLE_BUILD_NUM) {
-        token = tokens[Number(process.env.CIRCLE_BUILD_NUM) % tokens.length];
+    if (!token) {
+      const { NOW_TOKEN_FACTORY_URL } = process.env;
+      if (NOW_TOKEN_FACTORY_URL) {
+        const resp = await fetch(NOW_TOKEN_FACTORY_URL);
+        token = (await resp.json()).token;
       } else {
-        token = tokens[Math.floor(Math.random() * tokens.length)];
+        const authJsonPath = path.join(homedir(), '.now/auth.json');
+        token = require(authJsonPath).token;
       }
-    } else {
-      const authJsonPath = path.join(homedir(), '.now/auth.json');
-      token = require(authJsonPath).token;
     }
 
     opts.headers.Authorization = `Bearer ${token}`;
