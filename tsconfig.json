@@ -20,6 +20,7 @@
     "./packages/now-next"
   ],
   "exclude": [
-    "./packages/now-next/launcher.js"
+    "./packages/now-next/launcher.js",
+    "./packages/now-next/legacy-launcher.js"
   ]
 }

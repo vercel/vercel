@@ -5,7 +5,8 @@
   "dependencies": {
     "@now/node-bridge": "0.1.4",
     "execa": "^1.0.0",
-    "fs.promised": "^3.0.0"
+    "fs.promised": "^3.0.0",
+    "semver": "^5.6.0"
   },
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"

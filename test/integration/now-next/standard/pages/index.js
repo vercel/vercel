@@ -1,1 +1,1 @@
-export default () => 'Index page';
+export default () => 'Hello World!';
