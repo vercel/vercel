@@ -182,7 +182,7 @@ async function guess (exampleList: string[], name: string, dir: string) {
  * Guess user's intention with jaro-winkler algorithm (with "-" awared)
  */
 function didYouMean (input: string, list: string[], threshold: number = 0.5) {
-  const rated = list.map(item => [dashAwareDistance(item, input), item])
+  const rated = list.map(item => [dashAwareDistance(input, item), item])
   const found = rated.filter(item => item[0] > threshold)
   if (found.length) {
     return found.sort((a, b) => (b[0] - a[0]))[0][1]
