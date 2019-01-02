@@ -1,9 +1,9 @@
 {
   "name": "@now/node",
-  "version": "0.4.28-canary.4",
+  "version": "0.4.28-canary.5",
   "license": "MIT",
   "dependencies": {
-    "@now/node-bridge": "^0.1.10-canary.0",
+    "@now/node-bridge": "^0.1.10-canary.1",
     "fs-extra": "7.0.1"
   },
   "peerDependencies": {

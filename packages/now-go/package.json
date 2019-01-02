@@ -1,6 +1,6 @@
 {
   "name": "@now/go",
-  "version": "0.2.11",
+  "version": "0.2.12-canary.0",
   "license": "MIT",
   "scripts": {
     "test": "best -I test/*.js",
