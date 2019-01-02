@@ -131,8 +131,6 @@ export default async function({ apiUrl, token, debug, args, config }) {
     message = `Switch to:`;
   }
 
-  console.log(choices);
-
   const choice = await listInput({
     message,
     choices,
