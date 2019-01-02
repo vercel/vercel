@@ -29,6 +29,7 @@ export const latestHelp = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       whoami                           Displays the current scope
+      init                 [example]   Initialize an example project
   ${chalk.dim('Options:')}
     -h, --help                     Output usage information
     -v, --version                  Output the version number
@@ -191,6 +192,7 @@ export const legacyHelp = () => `
       login                            Logs into your account or creates a new one
       logout                           Logs out of your account
       whoami                           Displays the currently logged in username
+      init                 [example]   Initialize an example project
   ${chalk.dim('Options:')}
     -h, --help                     Output usage information
     -v, --version                  Output the version number
