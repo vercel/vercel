@@ -21,7 +21,10 @@ export default async function verify(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -67,7 +70,9 @@ export default async function verify(
   if (result instanceof ERRORS.DomainVerificationFailed) {
     const { nsVerification, txtVerification } = result.meta;
     output.error(
-      `The domain ${domain.name} could not be verified due to the following reasons: ${verifyStamp()}\n`
+      `The domain ${
+        domain.name
+      } could not be verified due to the following reasons: ${verifyStamp()}\n`
     );
     output.print(
       `  ${chalk.gray(
@@ -100,7 +105,7 @@ export default async function verify(
     output.print(
       `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
     return 1;
   }
 
