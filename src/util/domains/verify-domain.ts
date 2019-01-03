@@ -41,7 +41,7 @@ async function performVerifyDomain(client: Client, domain: string) {
       client.fetch<Response>(
         `/v4/domains/${encodeURIComponent(domain)}/verify`,
         {
-          body: { domain },
+          body: {},
           method: 'POST'
         }
       ),
