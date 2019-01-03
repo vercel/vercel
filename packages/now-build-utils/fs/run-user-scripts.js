@@ -3,6 +3,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
 
+const prod = process.env.AWS_EXECUTION_ENV
+  || process.env.X_GOOGLE_CODE_LOCATION;
+
 function spawnAsync(command, args, cwd) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit', cwd });
@@ -63,7 +66,7 @@ async function runNpmInstall(destPath, args = []) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync('npm', ['install'].concat(commandArgs), destPath);
     await spawnAsync('npm', ['cache', 'clean', '--force'], destPath);
-  } else if (process.env.AWS_EXECUTION_ENV) {
+  } else if (prod) {
     console.log('using memory-fs for yarn cache');
     await spawnAsync(
       'node',
