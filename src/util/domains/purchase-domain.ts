@@ -5,6 +5,7 @@ type Response = {
   created: number;
   ns: string[];
   uid: string;
+  pending: boolean;
   verified: boolean;
 };
 
