@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "0.0.83",
+  "version": "0.0.84-canary.0",
   "license": "MIT",
   "dependencies": {
     "@now/node-bridge": "0.1.4",
