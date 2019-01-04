@@ -9,6 +9,7 @@ import distance from 'jaro-winkler';
 // @ts-ignore
 import listInput from '../../util/input/list';
 import promptBool from '../../util/input/prompt-bool';
+import toHumanPath from '../../util/humanize-path';
 import wait from '../../util/output/wait';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
@@ -57,7 +58,7 @@ export default async function init (
     return extractExample(found, dir, force);
   }
 
-  console.log(info('\nNo changes made'));
+  console.log(info('No changes made.'));
   return 0;
 }
 
@@ -123,7 +124,9 @@ async function extractExample(name: string, dir: string, force?: boolean) {
       resp.body.pipe(extractor);
     });
 
-    console.log(success(`Initialized "${chalk.bold(name)}" example.`));
+    console.log(success(
+      `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`
+    ));
     return 0;
   }).catch(e => {
     stopSpinner();
