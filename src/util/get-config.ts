@@ -1,7 +1,7 @@
 import path from 'path';
 import { CantParseJSONFile, CantFindConfig } from './errors-ts';
 import humanizePath from './humanize-path';
-import readJSONFile from './read-json-file';
+import readConfigFile from './read-config-file';
 import readPackage from './read-package';
 import { Config } from '../types';
 import { Output } from './output';
@@ -22,7 +22,7 @@ export default async function getConfig(output: Output, configFile?: string) {
     output.debug(
       `Found config in provided --local-config path ${localFilePath}`
     );
-    const localConfig = await readJSONFile(localFilePath);
+    const localConfig = await readConfigFile.json(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
     }
@@ -35,13 +35,26 @@ export default async function getConfig(output: Output, configFile?: string) {
 
   // Then try with now.json in the same directory
   const nowFilePath = path.resolve(localPath, 'now.json');
-  const mainConfig = await readJSONFile(nowFilePath);
+  const mainConfig = await readConfigFile.json(nowFilePath);
   if (mainConfig instanceof CantParseJSONFile) {
     return mainConfig;
   }
   if (mainConfig !== null) {
     output.debug(`Found config in file ${nowFilePath}`);
     const castedConfig = mainConfig;
+    config = castedConfig;
+    return config;
+  }
+
+  // Then try with now.js in the same directory
+  const nowJsPath = path.resolve(localPath, 'now.js');
+  const mainJsConfig = await readConfigFile.js(nowJsPath);
+  if (mainJsConfig instanceof CantParseJSONFile) {
+    return mainJsConfig;
+  }
+  if (mainJsConfig !== null) {
+    output.debug(`Found config in file ${nowJsPath}`);
+    const castedConfig = mainJsConfig;
     config = castedConfig;
     return config;
   }

@@ -1,7 +1,7 @@
 import path from 'path';
 import * as ERRORS from '../../util/errors-ts';
 import humanizePath from '../../util/humanize-path';
-import readJSONFile from '../../util/read-json-file';
+import readConfigFile from '../../util/read-config-file';
 import validatePathAliasRules from './validate-path-alias-rules';
 import { PathRule } from '../../types';
 
@@ -11,7 +11,7 @@ export default async function getRulesFromFile(filePath: string) {
 
 async function readRulesFile(rulesPath: string) {
   const fullPath = path.resolve(process.cwd(), rulesPath);
-  const result = (await readJSONFile(fullPath)) as { [key: string]: any };
+  const result = (await readConfigFile.json(fullPath)) as { [key: string]: any };
   if (result instanceof ERRORS.CantParseJSONFile) {
     return result;
   }

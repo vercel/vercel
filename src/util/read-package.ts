@@ -1,6 +1,6 @@
 import path from 'path';
 import { CantParseJSONFile } from './errors-ts';
-import readJSONFile from './read-json-file';
+import readConfigFile from './read-config-file';
 import { Config } from '../types';
 
 type Package = {
@@ -10,7 +10,7 @@ type Package = {
 
 export default async function readPackage(file?: string) {
   const pkgFilePath = file || path.resolve(process.cwd(), 'package.json');
-  const result = await readJSONFile(pkgFilePath);
+  const result = await readConfigFile.json(pkgFilePath);
   if (result instanceof CantParseJSONFile) {
     return result;
   }
