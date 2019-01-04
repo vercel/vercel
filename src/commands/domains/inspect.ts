@@ -76,6 +76,9 @@ export default async function inspect(
     `    ${chalk.dim('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
   );
   output.print(
+    `    ${chalk.dim('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`
+  );
+  output.print(
     `    ${chalk.dim('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
   );
   output.print(
