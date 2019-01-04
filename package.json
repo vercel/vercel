@@ -19,7 +19,7 @@
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build && cd link && npm link",
     "build": "ncc build ./src",
-    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | xargs echo`"
+    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
     "include": [
