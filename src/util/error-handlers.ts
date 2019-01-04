@@ -17,7 +17,7 @@ export function handleDomainConfigurationError(
       `  The propagation may take a few minutes, but please verify your settings:\n\n`
     );
     output.print(
-      `${dnsTable([
+      `${  dnsTable([
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
           : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
@@ -35,7 +35,7 @@ export function handleDomainConfigurationError(
       `  We configured them for you, but the propagation may take a few minutes. Please try again later.\n`
     );
     output.print(
-      '  Read more: https://err.sh/now-cli/dns-configuration-error\n'
+      '  Read more: https://err.sh/now-cli/dns-configuration-error\n\n'
     );
   }
 }
