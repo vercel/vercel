@@ -77,4 +77,4 @@ export default async function main(ctx: NowContext) {
     output.debug(err.stack);
     return 1;
   }
-};
+}
