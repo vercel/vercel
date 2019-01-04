@@ -165,7 +165,7 @@ export default async function issue(
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
+      output.print(`  ${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
       output.log(
         `Alternatively, you can solve DNS challenges manually after running:\n`
       );
@@ -173,7 +173,7 @@ export default async function issue(
         `  ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`
       );
       output.print(
-        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n'
+        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n\n'
       );
     }
     return 1;
