@@ -955,7 +955,7 @@ const verifyExampleApollo = (cwd, dir) => (
 test('initialize example "apollo"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
+  const goal = '> Success! Initialized "apollo" example in';
 
   const { stdout, code } = await execute(['init', 'apollo'], { cwd });
 
@@ -967,7 +967,7 @@ test('initialize example "apollo"', async t => {
 test('initialize example ("apollo") to specified directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
+  const goal = '> Success! Initialized "apollo" example in';
 
   const { stdout, code } = await execute(['init', 'apollo', 'apo'], { cwd });
 
@@ -979,7 +979,7 @@ test('initialize example ("apollo") to specified directory', async t => {
 test('initialize selected example ("apollo")', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
+  const goal = '> Success! Initialized "apollo" example in';
 
   const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
 
@@ -991,7 +991,7 @@ test('initialize selected example ("apollo")', async t => {
 test('initialize example to existing directory with "-f"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example.';
+  const goal = '> Success! Initialized "apollo" example in';
 
   createDirectory(path.join(cwd, 'apollo'));
   createFile(path.join(cwd, 'apollo', '.gitignore'));
