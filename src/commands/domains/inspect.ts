@@ -69,21 +69,11 @@ export default async function inspect(
   output.print(chalk.bold('  Domain Info\n'));
   output.print(`    ${chalk.dim('name')}\t\t${domain.name}\n`);
   output.print(`    ${chalk.dim('serviceType')}\t\t${domain.serviceType}\n`);
-  output.print(
-    `    ${chalk.dim('createdAt')}\t\t${formatDate(domain.createdAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`
-  );
+  output.print(`    ${chalk.dim('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`);
+  output.print(`    ${chalk.dim('createdAt')}\t\t${formatDate(domain.createdAt)}\n`);
+  output.print(`    ${chalk.dim('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`);
+  output.print(`    ${chalk.dim('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`);
+  output.print(`    ${chalk.dim('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`);
   output.print(
     `    ${chalk.dim('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
   );

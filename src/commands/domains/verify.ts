@@ -117,7 +117,7 @@ export default async function verify(
     );
     output.print(
       `  You can verify with nameservers too. Run ${cmd(
-        'now domains inspect <domain>'
+        `now domains inspect ${domain.name}`
       )} to find out the intended set.\n`
     );
     return 0;
