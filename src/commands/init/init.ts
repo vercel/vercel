@@ -25,14 +25,14 @@ type Options = {
 
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
-export default async function init (
+export default async function init(
   ctx: NowContext,
   opts: Options,
   args: string[],
   output: Output
 ) {
   const [name, dir] = args;
-  const force =  opts['-f'] || opts['--force'];
+  const force = opts['-f'] || opts['--force'];
 
   const exampleList = await fetchExampleList();
 
@@ -65,7 +65,7 @@ export default async function init (
 /**
  * Fetch example list json
  */
-async function fetchExampleList () {
+async function fetchExampleList() {
   const stopSpinner = wait('Fetching examples');
   const url = `${EXAMPLE_API}/list.json`;
 
@@ -107,45 +107,51 @@ async function extractExample(name: string, dir: string, force?: boolean) {
   const stopSpinner = wait(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/download/${name}.tar.gz`;
-  return fetch(url).then(async resp => {
-    if (resp.status !== 200) {
-      throw new Error(`Could not get ${name}.tar.gz`);
-    }
+  return fetch(url)
+    .then(async resp => {
+      if (resp.status !== 200) {
+        throw new Error(`Could not get ${name}.tar.gz`);
+      }
 
-    stopSpinner();
+      stopSpinner();
 
-    const folder = prepareFolder(process.cwd(), dir || name, force);
+      const folder = prepareFolder(process.cwd(), dir || name, force);
 
-    await new Promise((resolve, reject) => {
-      const extractor = tar.extract(folder);
-      resp.body.on('error', reject);
-      extractor.on('error', reject);
-      extractor.on('finish', resolve);
-      resp.body.pipe(extractor);
+      await new Promise((resolve, reject) => {
+        const extractor = tar.extract(folder);
+        resp.body.on('error', reject);
+        extractor.on('error', reject);
+        extractor.on('finish', resolve);
+        resp.body.pipe(extractor);
+      });
+
+      console.log(success(
+        `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`
+      ));
+      return 0;
+    })
+    .catch(e => {
+      stopSpinner();
+      throw e;
     });
-
-    console.log(success(
-      `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`
-    ));
-    return 0;
-  }).catch(e => {
-    stopSpinner();
-    throw e;
-  });
 }
 
 /**
  * Check & prepare destination folder for extracting.
  */
-function prepareFolder (cwd: string, folder: string, force?: boolean) {
+function prepareFolder(cwd: string, folder: string, force?: boolean) {
   const dest = path.join(cwd, folder);
 
   if (fs.existsSync(dest)) {
     if (!fs.lstatSync(dest).isDirectory()) {
-      throw new Error(`Destination path "${chalk.bold(folder)}" already exists and is not a directory.`);
+      throw new Error(
+        `Destination path "${chalk.bold(folder)}" already exists and is not a directory.`
+      );
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
-      throw new Error(`Destination path "${chalk.bold(folder)}" already exists and is not an empty directory.`);
+      throw new Error(
+        `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory.`
+      );
     }
   } else {
     if (dest !== cwd) {
@@ -163,7 +169,7 @@ function prepareFolder (cwd: string, folder: string, force?: boolean) {
 /**
  * Guess which example user try to init
  */
-async function guess (exampleList: string[], name: string, dir: string) {
+async function guess(exampleList: string[], name: string, dir: string) {
   const GuessError = new Error(`No example for ${chalk.bold(name)}.`);
 
   if (process.stdout.isTTY !== true) {
@@ -184,17 +190,20 @@ async function guess (exampleList: string[], name: string, dir: string) {
 /**
  * Guess user's intention with jaro-winkler algorithm (with "-" awared)
  */
-function didYouMean (input: string, list: string[], threshold: number = 0.5) {
-  const rated = list.map(item => [dashAwareDistance(input, item), item])
-  const found = rated.filter(item => item[0] > threshold)
+function didYouMean(input: string, list: string[], threshold: number = 0.5) {
+  const rated = list.map(item => [dashAwareDistance(input, item), item]);
+  const found = rated.filter(item => item[0] > threshold);
   if (found.length) {
-    return found.sort((a, b) => (b[0] - a[0]))[0][1]
+    return found.sort((a, b) => b[0] - a[0])[0][1];
   }
 }
 
 /**
  * jaro-winkler algorithm (with "-" awared)
  */
-function dashAwareDistance (word: string, dashWord: string) {
-  return dashWord.split('-').map(w => distance(w, word)).sort((a,b) => (b - a))[0]
+function dashAwareDistance(word: string, dashWord: string) {
+  return dashWord
+    .split('-')
+    .map(w => distance(w, word))
+    .sort((a, b) => b - a)[0];
 }
