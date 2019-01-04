@@ -13,8 +13,6 @@ import stamp from '../../util/output/stamp';
 
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import getDomainAliases from '../../util/alias/get-domain-aliases';
-import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 
@@ -79,22 +77,20 @@ async function rm(
     return 1;
   }
 
-  const aliases = await getDomainAliases(output, now, domain.name);
-  const certs = await getCertsForDomain(output, now, domain.name);
-  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, aliases, certs)) {
+  if (!opts['--yes'] && !await confirmDomainRemove(output, domain)) {
     output.log('Aborted');
     return 0;
   }
 
   const removeStamp = stamp();
   output.debug(`Removing aliases`);
-  for (const alias of aliases) {
-    await removeAliasById(now, alias.uid);
+  for (const alias of domain.aliases) {
+    await removeAliasById(now, alias.id);
   }
 
   output.debug(`Removing certs`);
-  for (const cert of certs) {
-    await deleteCertById(output, now, cert.uid);
+  for (const cert of domain.certs) {
+    await deleteCertById(output, now, cert.id);
   }
 
   output.debug(`Removing domain`);
@@ -109,9 +105,7 @@ async function rm(
 
 async function confirmDomainRemove(
   output        ,
-  domain        ,
-  aliases       ,
-  certs
+  domain
 ) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(new Date() - new Date(domain.createdAt))  } ago`);
@@ -123,18 +117,18 @@ async function confirmDomainRemove(
     output.log(`The following domain will be removed permanently`);
     output.print(`  ${tbl}\n`);
 
-    if (aliases.length > 0) {
+    if (domain.aliases.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('alias', aliases.length, true)
+          plural('alias', domain.aliases.length, true)
         )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
       );
     }
 
-    if (certs.length > 0) {
+    if (domain.certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('certificate', certs.length, true)
+          plural('certificate', domain.certs.length, true)
         )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
