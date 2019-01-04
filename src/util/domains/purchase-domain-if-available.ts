@@ -45,11 +45,11 @@ export default async function purchaseDomainIfAvailable(
     );
 
     if (
-      !await promptBool(
+      !(await promptBool(
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
           `$${price}`
         )} (${plural('yr', period, true)})?`
-      )
+      ))
     ) {
       output.print(eraseLines(1));
       return new ERRORS.UserAborted();
@@ -58,12 +58,17 @@ export default async function purchaseDomainIfAvailable(
     output.print(eraseLines(1));
     const result = await purchaseDomain(client, domain, price);
     if (
+      result instanceof ERRORS.SourceNotFound ||
       result instanceof ERRORS.DomainNotAvailable ||
       result instanceof ERRORS.DomainServiceNotAvailable ||
       result instanceof ERRORS.InvalidDomain ||
       result instanceof ERRORS.UnexpectedDomainPurchaseError
     ) {
       return result;
+    }
+
+    if (result.pending) {
+      return new ERRORS.DomainPurchasePending(domain);
     }
 
     return true;

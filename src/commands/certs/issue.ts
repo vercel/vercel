@@ -31,7 +31,10 @@ export default async function issue(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const addStamp = stamp();
@@ -142,8 +145,9 @@ export default async function issue(
 
   if (cert instanceof ERRORS.CantSolveChallenge) {
     output.error(
-      `We could not solve the ${cert.meta.type} challenge for domain ${cert.meta
-        .domain}.`
+      `We could not solve the ${cert.meta.type} challenge for domain ${
+        cert.meta.domain
+      }.`
     );
     if (cert.meta.type === 'dns-01') {
       output.log(
@@ -154,8 +158,9 @@ export default async function issue(
       );
     } else {
       output.log(
-        `The certificate provider could not resolve the HTTP queries for ${cert
-          .meta.domain}.`
+        `The certificate provider could not resolve the HTTP queries for ${
+          cert.meta.domain
+        }.`
       );
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
@@ -175,10 +180,12 @@ export default async function issue(
   }
   if (cert instanceof ERRORS.TooManyRequests) {
     output.error(
-      `Too many requests detected for ${cert.meta
-        .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(
+        cert.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }

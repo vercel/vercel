@@ -157,7 +157,9 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${cmd('now billing add')}.`
+      message: `Not able to purchase. Please add a payment method using ${cmd(
+        'now billing add'
+      )}.`
     });
   }
 }
@@ -307,6 +309,23 @@ export class UnexpectedDomainPurchaseError extends NowError<
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: { domain },
       message: `An unexpected error happened while purchasing.`
+    });
+  }
+}
+
+/**
+ * Returned during purchase in alias when the domain was purchased but the
+ * order is pending so the alias can't be completed yet
+ */
+export class DomainPurchasePending extends NowError<
+  'DOMAIN_PURCHASE_PENDING',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PURCHASE_PENDING',
+      meta: { domain },
+      message: `The domain purchase for ${domain} is pending.`
     });
   }
 }

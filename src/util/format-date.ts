@@ -2,7 +2,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 
-export default function formatDate(dateStrOrNumber: number | string | null) {
+export default function formatDate(dateStrOrNumber?: number | string | null) {
   if (!dateStrOrNumber) {
     return chalk.gray('-');
   }

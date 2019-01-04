@@ -67,6 +67,7 @@ export type Domain = {
   boughtAt: number;
   createdAt: number;
   expiresAt: number;
+  orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
   cdnEnabled: boolean;
   verified: boolean;

@@ -25,7 +25,10 @@ export default async function buy(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -80,11 +83,11 @@ export default async function buy(
     )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
   if (
-    !await promptBool(
-      `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${period > 1
-        ? 's'
-        : ''}`})?`
-    )
+    !(await promptBool(
+      `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
+        period > 1 ? 's' : ''
+      }`})?`
+    ))
   ) {
     return 0;
   }
@@ -96,7 +99,11 @@ export default async function buy(
   stopPurchaseSpinner();
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
-    output.error(`Could not purchase domain. Please add a payment method using ${cmd('now billing add')}.`);
+    output.error(
+      `Could not purchase domain. Please add a payment method using ${cmd(
+        'now billing add'
+      )}.`
+    );
     return 1;
   }
 
@@ -122,24 +129,39 @@ export default async function buy(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} purchased ${purchaseStamp()}`
-  );
-  if (!buyResult.verified) {
+  if (buyResult.pending) {
+    console.log(
+      `${chalk.cyan('> Success!')} Domain ${param(
+        domainName
+      )} order was submitted ${purchaseStamp()}`
+    );
     output.note(
-      `Your domain is not fully configured yet so it may appear as not verified.`
+      `Your domain is processing and will be available once the order is completed.`
     );
     output.print(
-      `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
+      `  An email will be sent upon completion for you to start using your new domain.\n`
     );
   } else {
-    output.note(
-      `You may now use your domain as an alias to your deployments. Run ${cmd(
-        'now alias --help'
-      )}`
+    console.log(
+      `${chalk.cyan('> Success!')} Domain ${param(
+        domainName
+      )} purchased ${purchaseStamp()}`
     );
+    if (!buyResult.verified) {
+      output.note(
+        `Your domain is not fully configured yet so it may appear as not verified.`
+      );
+      output.print(
+        `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
+      );
+    } else {
+      output.note(
+        `You may now use your domain as an alias to your deployments. Run ${cmd(
+          'now alias --help'
+        )}`
+      );
+    }
   }
+
   return 0;
 }
