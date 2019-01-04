@@ -258,7 +258,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    const subcommandsWithoutToken = ['config', 'login', 'help'];
+    const subcommandsWithoutToken = ['config', 'login', 'help', 'init'];
 
     // This is from when Now CLI supported
     // multiple providers. In that case, we really

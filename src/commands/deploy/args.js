@@ -20,6 +20,7 @@ export const latestHelp = () => `
       dns                  [name]      Manages your DNS records
       logs                 [url]       Displays the logs for a deployment
       scale                [args]      Scales the instance count of a deployment
+      init                 [example]   Initialize an example project
       help                 [cmd]       Displays complete help for [cmd]
     ${chalk.dim('Administrative')}
       billing | cc         [cmd]       Manages your credit cards and billing methods
@@ -182,6 +183,7 @@ export const legacyHelp = () => `
       dns                  [name]      Manages your DNS records
       logs                 [url]       Displays the logs for a deployment
       scale                [args]      Scales the instance count of a deployment
+      init                 [example]   Initialize an example project
       help                 [cmd]       Displays complete help for [cmd]
     ${chalk.dim('Administrative')}
       billing | cc         [cmd]       Manages your credit cards and billing methods
