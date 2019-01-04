@@ -19,7 +19,7 @@ export default async function responseError(
     }
 
     // Some APIs wrongly return `err` instead of `error`
-    bodyError = body.error || body.err || {};
+    bodyError = body.error || body.err || body;
     message = bodyError.message;
   }
 

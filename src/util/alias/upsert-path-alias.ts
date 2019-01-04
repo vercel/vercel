@@ -32,9 +32,11 @@ export default async function upsertPathAlias(
       domainInfo instanceof ERRORS.DomainNotAvailable ||
       domainInfo instanceof ERRORS.DomainNotFound ||
       domainInfo instanceof ERRORS.DomainPermissionDenied ||
+      domainInfo instanceof ERRORS.DomainPurchasePending ||
       domainInfo instanceof ERRORS.DomainServiceNotAvailable ||
       domainInfo instanceof ERRORS.DomainVerificationFailed ||
       domainInfo instanceof ERRORS.InvalidDomain ||
+      domainInfo instanceof ERRORS.SourceNotFound ||
       domainInfo instanceof ERRORS.UnexpectedDomainPurchaseError ||
       domainInfo instanceof ERRORS.UnsupportedTLD ||
       domainInfo instanceof ERRORS.UserAborted

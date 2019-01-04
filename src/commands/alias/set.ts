@@ -22,14 +22,22 @@ import stamp from '../../util/output/stamp';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 
 type Options = {
-  '--debug': boolean,
-  '--local-config': string,
-  '--no-verify': boolean,
-  '--rules': string
-}
+  '--debug': boolean;
+  '--local-config': string;
+  '--no-verify': boolean;
+  '--rules': string;
+};
 
-export default async function set(ctx: NowContext, opts: Options, args: string[], output: Output) {
-  const { authConfig: { token }, config } = ctx;
+export default async function set(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const setStamp = stamp();
@@ -40,7 +48,12 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
     '--rules': rulesPath
   } = opts;
 
-  const client = new Client({ apiUrl, token, currentTeam, debug: debugEnabled });
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam,
+    debug: debugEnabled
+  });
   let contextName = null;
   let user = null;
 
@@ -57,7 +70,9 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
 
   // If there are more than two args we have to error
   if (args.length > 2) {
-    output.error(`${cmd('now alias <deployment> <target>')} accepts at most two arguments`);
+    output.error(
+      `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
+    );
     return 1;
   }
 
@@ -83,14 +98,24 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
 
   // If the user provided rules and also a deployment target, we should fail
   if (args.length === 2 && rules) {
-    output.error(`You can't supply a deployment target and target rules simultaneously.`);
+    output.error(
+      `You can't supply a deployment target and target rules simultaneously.`
+    );
     return 1;
   }
 
   // Find the targets to perform the alias
-  const targets = await getTargetsForAlias(output, args, opts['--local-config']);
+  const targets = await getTargetsForAlias(
+    output,
+    args,
+    opts['--local-config']
+  );
   if (targets instanceof ERRORS.CantFindConfig) {
-    output.error(`Couldn't find a project configuration file at \n    ${targets.meta.paths.join(' or\n    ')}`);
+    output.error(
+      `Couldn't find a project configuration file at \n    ${targets.meta.paths.join(
+        ' or\n    '
+      )}`
+    );
     return 1;
   }
 
@@ -100,7 +125,9 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
   }
 
   if (targets instanceof ERRORS.InvalidAliasInConfig) {
-    output.error(`Wrong value for alias found in config. It must be a string or array of string.`);
+    output.error(
+      `Wrong value for alias found in config. It must be a string or array of string.`
+    );
     return 1;
   }
 
@@ -112,11 +139,25 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
   if (rules) {
     // If we have rules for path alias we assign them to the domain
     for (const target of targets) {
-      output.log(`Assigning path alias rules from ${humanizePath(rulesPath)} to ${target}`);
-      const pathAlias = await upsertPathAlias(output, client, rules, target, contextName);
+      output.log(
+        `Assigning path alias rules from ${humanizePath(
+          rulesPath
+        )} to ${target}`
+      );
+      const pathAlias = await upsertPathAlias(
+        output,
+        client,
+        rules,
+        target,
+        contextName
+      );
       const remaining = handleCreateAliasError(output, pathAlias);
       if (handleSetupDomainError(output, remaining) !== 1) {
-        console.log(`${chalk.cyan('> Success!')} ${rules.length} rules configured for ${chalk.underline(target)} ${setStamp()}`);
+        console.log(
+          `${chalk.cyan('> Success!')} ${
+            rules.length
+          } rules configured for ${chalk.underline(target)} ${setStamp()}`
+        );
       }
     }
 
@@ -124,57 +165,122 @@ export default async function set(ctx: NowContext, opts: Options, args: string[]
   }
 
   // If there are no rules for path alias we should find out a deployment and perform the alias
-  const deployment = await getDeploymentForAlias(client, output, args, opts['--local-config'], user, contextName);
+  const deployment = await getDeploymentForAlias(
+    client,
+    output,
+    args,
+    opts['--local-config'],
+    user,
+    contextName
+  );
   if (deployment instanceof ERRORS.DeploymentNotFound) {
-    output.error(`Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(contextName)}`);
+    output.error(
+      `Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(
+        contextName
+      )}`
+    );
     return 1;
   }
 
   if (deployment instanceof ERRORS.DeploymentPermissionDenied) {
-    output.error(`No permission to access deployment "${deployment.meta.id}" under ${chalk.bold(deployment.meta.context)}`);
+    output.error(
+      `No permission to access deployment "${
+        deployment.meta.id
+      }" under ${chalk.bold(deployment.meta.context)}`
+    );
     return 1;
   }
 
   if (deployment === null) {
-    output.error(`Couldn't find a deployment to alias. Please provide one as an argument.`);
+    output.error(
+      `Couldn't find a deployment to alias. Please provide one as an argument.`
+    );
     return 1;
   }
 
   // Assign the alias for each of the targets in the array
   for (const target of targets) {
     output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
-    const record = await assignAlias(output, client, deployment, target, contextName, noVerify);
-    const handleResult = handleSetupDomainError(output, handleCreateAliasError(output, record));
+    const record = await assignAlias(
+      output,
+      client,
+      deployment,
+      target,
+      contextName,
+      noVerify
+    );
+    const handleResult = handleSetupDomainError(
+      output,
+      handleCreateAliasError(output, record)
+    );
     if (handleResult === 1) {
       return 1;
     } else {
-      console.log(`${chalk.cyan('> Success!')} ${handleResult.alias} now points to ${chalk.bold(deployment.url)} ${setStamp()}`);
+      console.log(
+        `${chalk.cyan('> Success!')} ${
+          handleResult.alias
+        } now points to ${chalk.bold(deployment.url)} ${setStamp()}`
+      );
     }
   }
 
   return 0;
 }
 
-type ThenArg<T> = T extends Promise<infer U> ? U : T
+type ThenArg<T> = T extends Promise<infer U> ? U : T;
 type SetupDomainResolve = ThenArg<ReturnType<typeof setupDomain>>;
 type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
-function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T): T | 1 {
+function handleSetupDomainError<T>(
+  output: Output,
+  error: SetupDomainError | T
+): T | 1 {
   if (error instanceof ERRORS.DomainVerificationFailed) {
     const { nsVerification, txtVerification, domain } = error.meta;
-    output.error(`We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`);
-    output.print(`  ${chalk.gray('a)')} Nameservers verification failed since we see a different set than the intended set:`);
-    output.print(`\n${formatNSTable(nsVerification.intendedNameservers, nsVerification.nameservers, { extraSpace: '     ' })}\n\n`);
-    output.print(`  ${chalk.gray('b)')} DNS TXT verification failed since found no matching records.`);
-    output.print(`\n${formatDnsTable([['_now', 'TXT', txtVerification.verificationRecord]], { extraSpace: '     ' })}\n\n`);
-    output.print(`  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd('now domains verify <domain>')}.\n`);
-    output.print(`  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`);
+    output.error(
+      `We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`
+    );
+    output.print(
+      `  ${chalk.gray(
+        'a)'
+      )} Nameservers verification failed since we see a different set than the intended set:`
+    );
+    output.print(
+      `\n${formatNSTable(
+        nsVerification.intendedNameservers,
+        nsVerification.nameservers,
+        { extraSpace: '     ' }
+      )}\n\n`
+    );
+    output.print(
+      `  ${chalk.gray(
+        'b)'
+      )} DNS TXT verification failed since found no matching records.`
+    );
+    output.print(
+      `\n${formatDnsTable(
+        [['_now', 'TXT', txtVerification.verificationRecord]],
+        { extraSpace: '     ' }
+      )}\n\n`
+    );
+    output.print(
+      `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
+        'now domains verify <domain>'
+      )}.\n`
+    );
+    output.print(
+      `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
+    );
     output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
     return 1;
   }
 
   if (error instanceof ERRORS.DomainPermissionDenied) {
-    output.error(`You don't have permissions over domain ${chalk.underline(error.meta.domain)} under ${chalk.bold(error.meta.context)}.`);
+    output.error(
+      `You don't have permissions over domain ${chalk.underline(
+        error.meta.domain
+      )} under ${chalk.bold(error.meta.context)}.`
+    );
     return 1;
   }
 
@@ -194,22 +300,30 @@ function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T):
   }
 
   if (error instanceof ERRORS.UnsupportedTLD) {
-    output.error(`The TLD for domain name ${error.meta.domain} is not supported.`);
+    output.error(
+      `The TLD for domain name ${error.meta.domain} is not supported.`
+    );
     return 1;
   }
 
   if (error instanceof ERRORS.InvalidDomain) {
-    output.error(`The domain ${error.meta.domain} used for the alias is not valid.`);
+    output.error(
+      `The domain ${error.meta.domain} used for the alias is not valid.`
+    );
     return 1;
   }
 
   if (error instanceof ERRORS.DomainNotAvailable) {
-    output.error(`The domain ${error.meta.domain} is not available to be purchased.`);
+    output.error(
+      `The domain ${error.meta.domain} is not available to be purchased.`
+    );
     return 1;
   }
 
   if (error instanceof ERRORS.DomainServiceNotAvailable) {
-    output.error(`The domain purchase service is not available. Try again later.`);
+    output.error(
+      `The domain purchase service is not available. Try again later.`
+    );
     return 1;
   }
 
@@ -219,7 +333,29 @@ function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T):
   }
 
   if (error instanceof ERRORS.DomainAlreadyExists) {
-    output.error(`The domain  ${error.meta.domain} exists for a different account.`);
+    output.error(
+      `The domain  ${error.meta.domain} exists for a different account.`
+    );
+    return 1;
+  }
+
+  if (error instanceof ERRORS.DomainPurchasePending) {
+    output.error(
+      `The domain ${
+        error.meta.domain
+      } is processing and will be available once the order is completed.`
+    );
+    output.print(
+      `  An email will be sent upon completion so you can alias to your new domain.\n`
+    );
+    return 1;
+  }
+
+  if (error instanceof ERRORS.SourceNotFound) {
+    output.error(
+      `You can't purchase the domain your aliasing to since you have no valid payment method.`
+    );
+    output.print(`  Please add a valid payment method and retry.\n`);
     return 1;
   }
 
@@ -228,11 +364,21 @@ function handleSetupDomainError<T>(output: Output, error: SetupDomainError | T):
 
 type AliasResolved = ThenArg<ReturnType<typeof assignAlias>>;
 type AssignAliasError = Exclude<AliasResolved, AliasRecord>;
-type RemainingAssignAliasErrors = SetDifference<AssignAliasError, SetupDomainError>
+type RemainingAssignAliasErrors = SetDifference<
+  AssignAliasError,
+  SetupDomainError
+>;
 
-function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasErrors | T): 1 | T {
+function handleCreateAliasError<T>(
+  output: Output,
+  error: RemainingAssignAliasErrors | T
+): 1 | T {
   if (error instanceof ERRORS.AliasInUse) {
-    output.error(`The alias ${chalk.dim(error.meta.alias)} is a deployment URL or it's in use by a different team.`);
+    output.error(
+      `The alias ${chalk.dim(
+        error.meta.alias
+      )} is a deployment URL or it's in use by a different team.`
+    );
     return 1;
   }
 
@@ -298,16 +444,18 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
   if (error instanceof ERRORS.CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
+        `The certificate provider could not resolve the DNS queries for ${
+          error.meta.domain
+        }.`
       );
       output.print(
         `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
       );
     } else {
       output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
+        `The certificate provider could not resolve the HTTP queries for ${
+          error.meta.domain
+        }.`
       );
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
@@ -331,10 +479,12 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
   }
   if (error instanceof ERRORS.TooManyRequests) {
     output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
+        error.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }
@@ -365,8 +515,9 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
-      )} could not be copied since the given number of max instances (${error
-        .meta.max}) is not allowed.`
+      )} could not be copied since the given number of max instances (${
+        error.meta.max
+      }) is not allowed.`
     );
     output.log(
       `Update the scale settings on ${chalk.dim(
@@ -379,8 +530,9 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
     output.error(
       `Scale rules from previous aliased deployment ${chalk.dim(
         error.meta.url
-      )} could not be copied since the given number of min instances (${error
-        .meta.min}) is not allowed.`
+      )} could not be copied since the given number of min instances (${
+        error.meta.min
+      }) is not allowed.`
     );
     output.log(
       `Update the scale settings on ${chalk.dim(
@@ -405,8 +557,16 @@ function handleCreateAliasError<T>(output: Output, error: RemainingAssignAliasEr
   }
 
   if (error instanceof ERRORS.CertMissing) {
-    output.error(`There is no certificate for the domain ${error.meta.domain} and it could not be created.`);
-    output.log(`Please generate a new certificate manually with ${cmd(`now certs issue ${error.meta.domain}`)}`);
+    output.error(
+      `There is no certificate for the domain ${
+        error.meta.domain
+      } and it could not be created.`
+    );
+    output.log(
+      `Please generate a new certificate manually with ${cmd(
+        `now certs issue ${error.meta.domain}`
+      )}`
+    );
     return 1;
   }
 
