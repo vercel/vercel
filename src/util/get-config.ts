@@ -49,9 +49,6 @@ export default async function getConfig(output: Output, configFile?: string) {
   // Then try with now.js in the same directory
   const nowJsPath = path.resolve(localPath, 'now.js');
   const mainJsConfig = await readConfigFile.js(nowJsPath);
-  if (mainJsConfig instanceof CantParseJSONFile) {
-    return mainJsConfig;
-  }
   if (mainJsConfig !== null) {
     output.debug(`Found config in file ${nowJsPath}`);
     const castedConfig = mainJsConfig;
