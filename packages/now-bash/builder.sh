@@ -38,12 +38,3 @@ if ! declare -f handler > /dev/null; then
 	echo "ERROR: A \`handler\` function must be defined in \"$ENTRYPOINT\"!" >&2
 	exit 1
 fi
-
-# Show a tree of the final lambda build
-show_tree() {
-	import "static-binaries@0.0.6"
-	static_binaries tree
-	echo "Final lambda file tree:"
-	tree -a .
-}
-IMPORT_DEBUG= IMPORT_CACHE="$(mktemp -d)" show_tree
