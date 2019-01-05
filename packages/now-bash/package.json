@@ -1,6 +1,6 @@
 {
   "name": "@now/bash",
-  "version": "0.0.4-canary.1",
+  "version": "0.0.4-canary.2",
   "description": "Now 2.0 builder for HTTP endpoints written in Bash",
   "main": "index.js",
   "author": "Nathan Rajlich <nate@zeit.co>",
