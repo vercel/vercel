@@ -35,7 +35,7 @@ _lambda_runtime_next() {
 	# Get an event
 	local event
 	event="$(mktemp)"
-	_lambda_runtime_api invocation/next -D "$headers" | jq -r '.body' > "$event"
+	_lambda_runtime_api invocation/next -D "$headers" | jq --raw-output --monochrome-output '.body' > "$event"
 
 	local request_id
 	request_id="$(grep -Fi Lambda-Runtime-Aws-Request-Id "$headers" | tr -d '[:space:]' | cut -d: -f2)"
@@ -61,28 +61,25 @@ _lambda_runtime_next() {
 
 	if [ "$exit_code" -eq 0 ]; then
 		# Send the response
-		local response
-		response="$(jq -cnMr \
+		jq --raw-input --raw-output --compact-output --slurp --monochrome-output \
 			--arg statusCode "$(cat "$_STATUS_CODE")" \
 			--argjson headers "$(cat "$_HEADERS")" \
-			--arg body "$(base64 --wrap=0 < "$body")" \
-			'{statusCode:$statusCode|tonumber, headers:$headers, encoding:"base64", body:$body}')"
+			'{statusCode:$statusCode|tonumber, headers:$headers, encoding:"base64", body:.|@base64}' < "$body" \
+			| _lambda_runtime_api "invocation/$request_id/response" -X POST -d @- > /dev/null
 		rm -f "$body" "$_HEADERS"
-		_lambda_runtime_api "invocation/$request_id/response" -X POST -d "$response" > /dev/null
 	else
 		echo "\`handler\` function return code: $exit_code"
-		local error='{"exitCode":'"$exit_code"'}'
-		_lambda_runtime_api "invocation/$request_id/error" -X POST -d "$error" > /dev/null
+		_lambda_runtime_api "invocation/$request_id/error" -X POST -d @- > /dev/null <<< '{"exitCode":'"$exit_code"'}'
 	fi
 }
 
 _lambda_runtime_body() {
-	if [ "$(jq -r '.body | type' < "$1")" = "string" ]; then
-		if [ "$(jq -r '.encoding' < "$1")" = "base64" ]; then
-			jq -r '.body' < "$1" | base64 -d
+	if [ "$(jq --raw-output '.body | type' < "$1")" = "string" ]; then
+		if [ "$(jq --raw-output '.encoding' < "$1")" = "base64" ]; then
+			jq --raw-output '.body' < "$1" | base64 -d
 		else
 			# assume plain-text body
-			jq -r '.body' < "$1"
+			jq --raw-output '.body' < "$1"
 		fi
 	fi
 }
