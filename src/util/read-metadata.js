@@ -103,11 +103,13 @@ async function readMetaData(
   } else if (type === 'docker') {
     if (!dockerfile) {
       const err = new Error('`Dockerfile` missing');
+      err.code = 'dockerfile_missing';
       throw err;
     }
 
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
+      err.code = 'no_dockerfile_commands';
       throw err;
     }
 
@@ -140,7 +142,9 @@ async function readMetaData(
   } else if (type === 'static') {
     // Do nothing
   } else {
-    throw new TypeError(`Unsupported "deploymentType": ${type}`);
+    const err = new TypeError(`Unsupported "deploymentType": ${type}`);
+    err.code = 'unsupported_deployment_type';
+    throw err;
   }
 
   // No name in `package.json` / `now.json`, or "name" label in Dockerfile.

@@ -585,7 +585,7 @@ export default class Now extends EventEmitter {
   async findDeployment(hostOrId) {
     const { debug } = this._output;
 
-    let id = !hostOrId.includes('.') && hostOrId;
+    let id = hostOrId && !hostOrId.includes('.');
     let isBuilds = null;
 
     if (!id) {

@@ -411,7 +411,7 @@ async function sync({
           sessionAffinity
         ));
       } catch (err) {
-        if (err.code === 'config_prop_and_file') {
+        if (err.code === 'config_prop_and_file' || err.code === 'dockerfile_missing' || err.code === 'no_dockerfile_commands' || err.code === 'unsupported_deployment_type') {
           error(err.message);
           return 1;
         }
@@ -878,9 +878,7 @@ async function sync({
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
-              '[in clipboard]'
-            )}${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${dcs} ${deployStamp()}`
           );
         }
       } else {
@@ -1049,6 +1047,7 @@ async function readMeta(
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
     }
+
     throw err;
   }
 }
