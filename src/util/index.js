@@ -584,7 +584,9 @@ export default class Now extends EventEmitter {
 
   async findDeployment(hostOrId) {
     const { debug } = this._output;
+
     let id = !hostOrId.includes('.') && hostOrId;
+    let isBuilds = null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -619,9 +621,10 @@ export default class Now extends EventEmitter {
       );
 
       id = deployment.id;
+      isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/v5/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${isBuilds ? 'v6' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {

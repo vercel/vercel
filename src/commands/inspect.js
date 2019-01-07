@@ -2,6 +2,8 @@ import chalk from 'chalk';
 import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
+import routesList from '../util/output/routes';
+import indent from '../util/output/indent';
 import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
@@ -136,7 +138,9 @@ export default async function main(ctx) {
     url,
     created,
     limits,
-    version
+    version,
+    routes,
+    readyState
   } = deployment;
 
   const isBuilds = version === 2;
@@ -166,28 +170,30 @@ export default async function main(ctx) {
   );
 
   print('\n');
-  print(chalk.bold('  Meta\n'));
-  print(`    ${chalk.dim('version')}\t${version}\n`);
-  print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
-  print(`    ${chalk.dim('name')}\t${name}\n`);
-  print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
+  print(chalk.bold('  Meta\n\n'));
+  print(`    ${chalk.cyan('version')}\t${version}\n`);
+  print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
+  print(`    ${chalk.cyan('name')}\t${name}\n`);
+  print(`    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`);
   if (!isBuilds) {
-    print(`    ${chalk.dim('type')}\t${type}\n`);
+    print(`    ${chalk.cyan('type')}\t${type}\n`);
   }
   if (slot) {
-    print(`    ${chalk.dim('slot')}\t${slot}\n`);
+    print(`    ${chalk.cyan('slot')}\t${slot}\n`);
   }
   if (sessionAffinity) {
-    print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`);
+    print(`    ${chalk.cyan('affinity')}\t${sessionAffinity}\n`);
   }
-  print(`    ${chalk.dim('url')}\t\t${url}\n`);
-  print(
-    `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created,
-      true
-    )}\n`
-  );
-  print('\n');
+  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
+  if (created) {
+    print(
+      `    ${chalk.cyan('createdAt')}\t${new Date(created)} ${elapsed(
+        Date.now() - created,
+        true
+      )}\n`
+    );
+  }
+  print('\n\n');
 
   if (builds.length > 0) {
     const times = {};
@@ -197,13 +203,19 @@ export default async function main(ctx) {
       times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
-    print(chalk.bold('  Builds\n'));
-    print(buildsList(builds, times, true).toPrint);
-    print('\n');
+    print(chalk.bold('  Builds\n\n'));
+    print(indent(buildsList(builds, times).toPrint, 4));
+    print('\n\n');
+  }
+
+  if (Array.isArray(routes) && routes.length > 0) {
+    print(chalk.bold('  Routes\n\n'));
+    print(indent(routesList(routes), 4));
+    print(`\n\n`);
   }
 
   if (limits) {
-    print(chalk.bold('  Limits\n'));
+    print(chalk.bold('  Limits\n\n'));
     print(
       `    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(
         limits.duration
@@ -224,7 +236,7 @@ export default async function main(ctx) {
     return 0;
   }
 
-  print(chalk.bold('  Scale\n'));
+  print(chalk.bold('  Scale\n\n'));
 
   let exitCode = 0;
 
@@ -249,7 +261,7 @@ export default async function main(ctx) {
     print('\n');
   }
 
-  print(chalk.bold('  Events\n'));
+  print(chalk.bold('  Events\n\n'));
   if (events instanceof Error) {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
