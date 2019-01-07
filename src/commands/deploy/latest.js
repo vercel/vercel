@@ -416,7 +416,6 @@ export default async function main(
   }
 
   const { url } = now;
-  const dcs = '';
 
   if (isTTY) {
     if (!argv['--no-clipboard']) {
@@ -425,18 +424,16 @@ export default async function main(
         log(
           `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
             '[in clipboard]'
-          )}${dcs} ${deployStamp()}`
+          )} ${deployStamp()}`
         );
       } catch (err) {
         debug(`Error copying to clipboard: ${err}`);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
-            '[in clipboard]'
-          )}${dcs} ${deployStamp()}`
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${deployStamp()}`
         );
       }
     } else {
-      log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
+      log(`${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
     }
   } else {
     process.stdout.write(url);

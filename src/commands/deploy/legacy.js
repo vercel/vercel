@@ -878,9 +878,7 @@ async function sync({
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
-              '[in clipboard]'
-            )}${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${dcs} ${deployStamp()}`
           );
         }
       } else {
