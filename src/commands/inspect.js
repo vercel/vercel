@@ -216,7 +216,6 @@ export default async function main(ctx) {
 
     for (const item of routes) {
       const src = item.src.padEnd(longestSrc + padding);
-
       toPrint += `    ${src}${chalk.grey('->')}${' '.repeat(padding)}${item.dest}\n`;
     }
 
