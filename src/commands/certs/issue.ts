@@ -61,7 +61,7 @@ export default async function issue(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
       output.error(err.message);
       return 1;
     }

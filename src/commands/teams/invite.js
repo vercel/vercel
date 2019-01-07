@@ -6,12 +6,12 @@ import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
 import param from '../../util/output/param.ts';
+import error from '../../util/output/error.ts';
 import chars from '../../util/output/chars';
 import rightPad from '../../util/output/right-pad';
 import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
-import error from '../../util/output/error';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
 
@@ -101,8 +101,19 @@ export default async function(
       if (regexEmail.test(email)) {
         const stopSpinner = wait(email);
         const elapsed = stamp();
-        // eslint-disable-next-line no-await-in-loop
-        await teams.inviteUser({ teamId: currentTeam.id, email });
+
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await teams.inviteUser({ teamId: currentTeam.id, email });
+        } catch (err) {
+          if (err.code === 'user_not_found') {
+            console.error(error(`No user exists with the email address "${email}".`));
+            return 1;
+          }
+
+          throw err;
+        }
+
         stopSpinner();
         console.log(`${chalk.cyan(chars.tick)} ${email} ${elapsed()}`);
       } else {
