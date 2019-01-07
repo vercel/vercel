@@ -142,7 +142,9 @@ async function readMetaData(
   } else if (type === 'static') {
     // Do nothing
   } else {
-    throw new TypeError(`Unsupported "deploymentType": ${type}`);
+    const err = new TypeError(`Unsupported "deploymentType": ${type}`);
+    err.code = 'unsupported_deployment_type';
+    throw err;
   }
 
   // No name in `package.json` / `now.json`, or "name" label in Dockerfile.
