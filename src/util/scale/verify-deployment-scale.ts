@@ -48,7 +48,7 @@ export default async function* verifyDeploymentScale(
     if (error) {
       // These ResponseErrors aren't typed yet :(
       // @ts-ignore
-      if (err.status !== 'not_ready') {
+      if (error.status !== 'not_ready') {
         throw error;
       }
     } else if (instances) {
