@@ -2,6 +2,8 @@ import chalk from 'chalk';
 import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
+import routesList from '../util/output/routes';
+import indent from '../util/output/indent';
 import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
@@ -168,7 +170,7 @@ export default async function main(ctx) {
   );
 
   print('\n');
-  print(chalk.bold('  Meta\n'));
+  print(chalk.bold('  Meta\n\n'));
   print(`    ${chalk.dim('version')}\t${version}\n`);
   print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
@@ -191,7 +193,7 @@ export default async function main(ctx) {
       )}\n`
     );
   }
-  print('\n');
+  print('\n\n');
 
   if (builds.length > 0) {
     const times = {};
@@ -201,29 +203,19 @@ export default async function main(ctx) {
       times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
-    print(chalk.bold('  Builds\n'));
-    print(buildsList(builds, times, true).toPrint);
-    print('\n');
+    print(chalk.bold('  Builds\n\n'));
+    print(indent(buildsList(builds, times).toPrint, 4));
+    print('\n\n');
   }
 
   if (Array.isArray(routes) && routes.length > 0) {
-    let toPrint = chalk.bold('  Routes\n');
-
-    const longestRoute = routes.sort((a, b) => b.src.length - a.src.length)[0];
-    const longestSrc = longestRoute.src.length;
-
-    const padding = 6;
-
-    for (const item of routes) {
-      const src = item.src.padEnd(longestSrc + padding);
-      toPrint += `    ${src}${chalk.grey('->')}${' '.repeat(padding)}${item.dest}\n`;
-    }
-
-    print(`${toPrint}\n\n`);
+    print(chalk.bold('  Routes\n\n'));
+    print(indent(routesList(routes), 4));
+    print(`\n\n`);
   }
 
   if (limits) {
-    print(chalk.bold('  Limits\n'));
+    print(chalk.bold('  Limits\n\n'));
     print(
       `    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(
         limits.duration
@@ -244,7 +236,7 @@ export default async function main(ctx) {
     return 0;
   }
 
-  print(chalk.bold('  Scale\n'));
+  print(chalk.bold('  Scale\n\n'));
 
   let exitCode = 0;
 
@@ -269,7 +261,7 @@ export default async function main(ctx) {
     print('\n');
   }
 
-  print(chalk.bold('  Events\n'));
+  print(chalk.bold('  Events\n\n'));
   if (events instanceof Error) {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
