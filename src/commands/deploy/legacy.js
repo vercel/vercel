@@ -411,7 +411,7 @@ async function sync({
           sessionAffinity
         ));
       } catch (err) {
-        if (err.code === 'config_prop_and_file') {
+        if (err.code === 'config_prop_and_file' || err.code === 'dockerfile_missing' || err.code === 'no_dockerfile_commands') {
           error(err.message);
           return 1;
         }
@@ -1049,6 +1049,7 @@ async function readMeta(
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
     }
+
     throw err;
   }
 }
