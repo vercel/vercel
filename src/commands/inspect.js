@@ -136,7 +136,9 @@ export default async function main(ctx) {
     url,
     created,
     limits,
-    version
+    version,
+    routes,
+    readyState
   } = deployment;
 
   const isBuilds = version === 2;
@@ -170,7 +172,7 @@ export default async function main(ctx) {
   print(`    ${chalk.dim('version')}\t${version}\n`);
   print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
   print(`    ${chalk.dim('name')}\t${name}\n`);
-  print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
+  print(`    ${chalk.dim('readyState')}\t${stateString(state || readyState)}\n`);
   if (!isBuilds) {
     print(`    ${chalk.dim('type')}\t${type}\n`);
   }
@@ -181,12 +183,14 @@ export default async function main(ctx) {
     print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`);
   }
   print(`    ${chalk.dim('url')}\t\t${url}\n`);
-  print(
-    `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created,
-      true
-    )}\n`
-  );
+  if (created) {
+    print(
+      `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
+        Date.now() - created,
+        true
+      )}\n`
+    );
+  }
   print('\n');
 
   if (builds.length > 0) {
@@ -200,6 +204,23 @@ export default async function main(ctx) {
     print(chalk.bold('  Builds\n'));
     print(buildsList(builds, times, true).toPrint);
     print('\n');
+  }
+
+  if (Array.isArray(routes) && routes.length > 0) {
+    let toPrint = chalk.bold('  Routes\n');
+
+    const longestRoute = routes.sort((a, b) => b.src.length - a.src.length)[0];
+    const longestSrc = longestRoute.src.length;
+
+    const padding = 6;
+
+    for (const item of routes) {
+      const src = item.src.padEnd(longestSrc + padding);
+
+      toPrint += `    ${src}${chalk.grey('->')}${' '.repeat(padding)}${item.dest}\n`;
+    }
+
+    print(`${toPrint}\n\n`);
   }
 
   if (limits) {
