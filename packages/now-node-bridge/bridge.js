@@ -91,7 +91,14 @@ class Bridge {
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (error) => {
+        setTimeout(() => {
+          // this lets express print the true error of why the connection was closed.
+          // it is probably 'Cannot set headers after they are sent to the client'
+          reject(error);
+        }, 2);
+      });
+
       if (body) req.write(body);
       req.end();
     });

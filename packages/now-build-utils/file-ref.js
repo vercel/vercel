@@ -56,7 +56,7 @@ class FileRef {
           const resp = await fetch(url);
           if (!resp.ok) {
             const error = new BailableError(
-              `${resp.status} ${resp.statusText}`,
+              `download: ${resp.status} ${resp.statusText} for ${url}`,
             );
             if (resp.status === 403) error.bail = true;
             throw error;
