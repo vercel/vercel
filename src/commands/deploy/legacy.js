@@ -1039,7 +1039,7 @@ async function readMeta(
       sessionAffinity: _sessionAffinity
     };
   } catch (err) {
-    if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
+    if (isTTY && err.code === 'multiple_manifests') {
       debug('Multiple manifests found, disambiguating');
       log(
         `Two manifests found. Press [${chalk.bold(
