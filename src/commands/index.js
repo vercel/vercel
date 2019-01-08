@@ -3,7 +3,6 @@ export default {
   help: 'help',
   init: 'init',
   list: 'list',
-  'legacy-list': 'list_',
   remove: 'remove',
   alias: 'alias',
   domains: 'domains',
