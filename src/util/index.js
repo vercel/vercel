@@ -1,27 +1,23 @@
-// Native
 import { homedir } from 'os';
-
 import { resolve as resolvePath, join, basename } from 'path';
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
-
-// Packages
 import bytes from 'bytes';
-
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
-
-// Utilities
-import { staticFiles as getFiles, npm as getNpmFiles, docker as getDockerFiles } from './get-files';
-
-import Agent from './agent';
-import ua from './ua';
+import {
+  staticFiles as getFiles,
+  npm as getNpmFiles,
+  docker as getDockerFiles
+} from './get-files';
+import Agent from './agent.ts';
+import ua from './ua.ts';
 import hash from './hash';
-import cmd from './output/cmd';
+import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
 import { responseError } from './error';
@@ -95,12 +91,15 @@ export default class Now extends EventEmitter {
 
         // A `start` or `now-start` npm script, or a `server.js` file
         // in the root directory of the deployment are required
-        if (!isBuilds && !hasNpmStart(pkg) && !hasFile(paths[0], files, 'server.js')) {
+        if (
+          !isBuilds &&
+          !hasNpmStart(pkg) &&
+          !hasFile(paths[0], files, 'server.js')
+        ) {
           const err = new Error(
             'Missing `start` (or `now-start`) script in `package.json`. ' +
               'See: https://docs.npmjs.com/cli/start'
           );
-          err.userError = true;
           throw err;
         }
 
@@ -211,44 +210,42 @@ export default class Now extends EventEmitter {
       );
 
       const queryProps = {};
-
-      const requestBody = isBuilds ? {
-        version: 2,
-        env,
-        build,
-        public: wantsPublic || nowConfig.public,
-        name,
-        project,
-        files,
-        meta,
-        regions
-      } : {
-        env,
-        build,
-        meta,
-        public: wantsPublic || nowConfig.public,
-        forceNew,
-        name,
-        project,
-        description,
-        deploymentType: type,
-        registryAuthToken: authToken,
-        files,
-        engines,
-        scale,
-        sessionAffinity,
-        limits: nowConfig.limits,
-        atlas
-      };
+      const requestBody = isBuilds
+        ? {
+            version: 2,
+            env,
+            build,
+            public: wantsPublic || nowConfig.public,
+            name,
+            project,
+            files,
+            meta,
+            regions
+          }
+        : {
+            env,
+            build,
+            meta,
+            public: wantsPublic || nowConfig.public,
+            forceNew,
+            name,
+            project,
+            description,
+            deploymentType: type,
+            registryAuthToken: authToken,
+            files,
+            engines,
+            scale,
+            sessionAffinity,
+            limits: nowConfig.limits,
+            atlas
+          };
 
       if (Object.keys(nowConfig).length > 0) {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = [
-            'alias',
-            'github'
-          ];
+          const exclude = ['alias', 'github'];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -284,10 +281,13 @@ export default class Now extends EventEmitter {
       const query = qs.stringify(queryProps);
       const version = isBuilds ? 'v6' : 'v4';
 
-      const res = await this._fetch(`/${version}/now/deployments${query ? `?${query}` : ''}`, {
-        method: 'POST',
-        body: requestBody
-      });
+      const res = await this._fetch(
+        `/${version}/now/deployments${query ? `?${query}` : ''}`,
+        {
+          method: 'POST',
+          body: requestBody
+        }
+      );
 
       // No retry on 4xx
       let body;
@@ -350,8 +350,13 @@ export default class Now extends EventEmitter {
             const count = unreferencedBuildSpecs.length;
             const prefix = count === 1 ? 'build' : 'builds';
 
-            err.message = `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight('.nowignore')}):` +
-              `\n- ${unreferencedBuildSpecs.map(item => JSON.stringify(item)).join('\n- ')}`;
+            err.message =
+              `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
+                '.nowignore'
+              )}):` +
+              `\n- ${unreferencedBuildSpecs
+                .map(item => JSON.stringify(item))
+                .join('\n- ')}`;
           } else {
             Object.assign(err, body.error);
           }
@@ -359,7 +364,6 @@ export default class Now extends EventEmitter {
           err.message = 'Not able to create deployment';
         }
 
-        err.userError = true;
         return bail(err);
       }
 
@@ -507,13 +511,13 @@ export default class Now extends EventEmitter {
       if (res.status === 200) {
         // What we want
         return res.json();
-      } if (res.status > 200 && res.status < 500) {
+      }
+      if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to list secrets'));
       }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list secrets');
-
+      // If something is wrong with the server, we retry
+      throw await responseError(res, 'Failed to list secrets');
     });
 
     return secrets;
@@ -521,9 +525,11 @@ export default class Now extends EventEmitter {
 
   async list(app, { version = 2, meta = {} } = {}) {
     const metaQs = Object.keys(meta)
-      .map((key) => `meta-${key}=${encodeURIComponent(meta[key])}`)
+      .map(key => `meta-${key}=${encodeURIComponent(meta[key])}`)
       .join('&');
-    const query = app ? `?app=${encodeURIComponent(app)}&${metaQs}` : `?${metaQs}`;
+    const query = app
+      ? `?app=${encodeURIComponent(app)}&${metaQs}`
+      : `?${metaQs}`;
 
     const { deployments } = await this.retry(
       async bail => {
@@ -532,13 +538,13 @@ export default class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } if (res.status > 200 && res.status < 500) {
+        }
+        if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list deployments'));
         }
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list deployments');
-
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list deployments');
       },
       {
         retries: 3,
@@ -560,13 +566,13 @@ export default class Now extends EventEmitter {
         if (res.status === 200) {
           // What we want
           return res.json();
-        } if (res.status > 200 && res.status < 500) {
+        }
+        if (res.status > 200 && res.status < 500) {
           // If something is wrong with our request, we don't retry
           return bail(await responseError(res, 'Failed to list instances'));
         }
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list instances');
-
+        // If something is wrong with the server, we retry
+        throw await responseError(res, 'Failed to list instances');
       },
       {
         retries: 3,
@@ -580,7 +586,9 @@ export default class Now extends EventEmitter {
 
   async findDeployment(hostOrId) {
     const { debug } = this._output;
-    let id = !hostOrId.includes('.') && hostOrId;
+
+    let id = hostOrId && !hostOrId.includes('.');
+    let isBuilds = null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -589,7 +597,9 @@ export default class Now extends EventEmitter {
         host = host.slice(0, -1);
       }
 
-      const url = `/v3/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`;
+      const url = `/v3/now/hosts/${encodeURIComponent(
+        host
+      )}?resolve=1&noState=1`;
 
       const { deployment } = await this.retry(
         async bail => {
@@ -613,9 +623,10 @@ export default class Now extends EventEmitter {
       );
 
       id = deployment.id;
+      isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/v5/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${isBuilds ? 'v6' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
@@ -639,251 +650,6 @@ export default class Now extends EventEmitter {
     );
   }
 
-  async logs(
-    deploymentIdOrURL,
-    { instanceId, types, limit, query, since, until } = {}
-  ) {
-    const q = qs.stringify({
-      instanceId,
-      types: types.join(','),
-      limit,
-      q: query,
-      since,
-      until
-    });
-
-    const { logs } = await this.retry(
-      async bail => {
-        const url = `/now/deployments/${encodeURIComponent(
-          deploymentIdOrURL
-        )}/logs?${q}`;
-
-        const res = await this._fetch(url);
-
-        if (res.status === 200) {
-          // What we want
-          return res.json();
-        } if (res.status > 200 && res.status < 500) {
-          // If something is wrong with our request, we don't retry
-          return bail(
-            await responseError(res, 'Failed to fetch deployment logs')
-          );
-        }
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to fetch deployment logs');
-
-      },
-      {
-        retries: 3,
-        minTimeout: 2500,
-        onRetry: this._onRetry
-      }
-    );
-
-    return logs;
-  }
-
-  async last(app) {
-    const deployments = await this.list(app);
-
-    const last = deployments
-      .sort((a, b) => b.created - a.created)
-      .shift();
-
-    if (!last) {
-      const e = Error(`No deployments found for "${app}"`);
-      e.userError = true;
-      throw e;
-    }
-
-    return last;
-  }
-
-  async listDomains() {
-    const { domains } = await this.retry(async bail => {
-      const res = await this._fetch('/v3/domains');
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      } if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list domains'));
-      }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list domains');
-
-    });
-
-    return domains;
-  }
-
-  async getDomain(domain) {
-    return this.retry(async bail => {
-      const res = await this._fetch(`/v3/domains/${domain}`);
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      } if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to fetch domain'));
-      }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to fetch domain');
-
-    });
-  }
-
-  async getNameservers(domain) {
-    const body = await this.retry(async () => {
-      const res = await this._fetch(
-        `/whois-ns?domain=${encodeURIComponent(domain)}`
-      );
-
-      const body = await res.json();
-
-      if (res.status === 200) {
-        return body;
-      }
-
-      throw new Error(`Whois error (${res.status}): ${body.error.message}`);
-    });
-
-    body.nameservers = body.nameservers.filter(ns =>
-      // Temporary hack:
-      // sometimes we get a response that looks like:
-      // ['ns', 'ns', '', '']
-      // so we filter the empty ones
-       ns.length > 0
-    );
-
-    return body;
-  }
-
-  // _ensures_ the domain is setup (idempotent)
-  setupDomain(name, { isExternal } = {}) {
-    const { debug } = this._output;
-
-    return this.retry(async bail => {
-      const res = await this._fetch('/v3/domains', {
-        method: 'POST',
-        body: { name, isExternal: Boolean(isExternal) }
-      });
-
-      const body = await res.json();
-
-      if (res.status === 403) {
-        const code = body.error.code;
-        let err;
-        if (code === 'custom_domain_needs_upgrade') {
-          err = new Error(
-            `Custom domains are only enabled for premium accounts. ${
-              chalk`Please upgrade at {underline https://zeit.co/account}`}`
-          );
-        } else {
-          err = new Error(
-            `Not authorized to access domain ${name} http://err.sh/now-cli/unauthorized-domain`
-          );
-        }
-        err.userError = true;
-        return bail(err);
-      } if (res.status === 409) {
-        // Domain already exists
-        debug('Domain already exists (noop)');
-        return { uid: body.error.uid, code: body.error.code };
-      } if (
-        res.status === 401 &&
-        body.error &&
-        body.error.code === 'verification_failed'
-      ) {
-        throw new Error(body.error.message);
-      } else if (res.status !== 200) {
-        throw new Error(body.error.message);
-      }
-
-      return body;
-    });
-  }
-
-  createCert(domain, { renew, overwriteCustom } = {}) {
-    const { log } = this._output;
-
-    return this.retry(
-      async bail => {
-        const res = await this._fetch('/now/certs', {
-          method: 'POST',
-          body: {
-            domains: [domain],
-            renew,
-            overwriteCustom
-          }
-        });
-
-        if (res.status === 304) {
-          log('Certificate already issued.');
-          return;
-        }
-
-        const body = await res.json();
-
-        if (body.error) {
-          const { code } = body.error;
-
-          if (code === 'verification_failed') {
-            const err = new Error(
-              'The certificate issuer failed to verify ownership of the domain. ' +
-                'This likely has to do with DNS propagation and caching issues. Please retry later!'
-            );
-            err.userError = true;
-            // Retry
-            throw err;
-          } else if (code === 'rate_limited') {
-            const err = new Error(body.error.message);
-            err.userError = true;
-            // Dont retry
-            return bail(err);
-          }
-
-          throw new Error(body.error.message);
-        }
-
-        if (res.status !== 200 && res.status !== 304) {
-          throw new Error('Unhandled error');
-        }
-
-        return body;
-      },
-      {
-        retries: 3,
-        minTimeout: 30000,
-        maxTimeout: 90000
-      }
-    );
-  }
-
-  deleteCert(domain) {
-    return this.retry(
-      async bail => {
-        const res = this._fetch(`/now/certs/${domain}`, {
-          method: 'DELETE'
-        });
-
-        if (res.status !== 200) {
-          const err = new Error(res.body.error.message);
-          err.userError = false;
-
-          if (res.status === 400 || res.status === 404) {
-            return bail(err);
-          }
-
-          throw err;
-        }
-      },
-      { retries: 3 }
-    );
-  }
-
   async remove(deploymentId, { hard }) {
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`;
 
@@ -894,7 +660,6 @@ export default class Now extends EventEmitter {
 
       if (res.status === 200) {
         // What we want
-
       } else if (res.status > 200 && res.status < 500) {
         // If something is wrong with our request, we don't retry
         return bail(await responseError(res, 'Failed to remove deployment'));
@@ -968,7 +733,9 @@ export default class Now extends EventEmitter {
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(opts.body) || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
+        opts.body
+      ) || ''}`,
       this._agent.fetch(_url, opts)
     );
   }
@@ -1005,20 +772,18 @@ export default class Now extends EventEmitter {
           ? res.json()
           : res;
       }
-        const err = await responseError(res);
-        if (res.status >= 400 && res.status < 500) {
-          return bail(err);
-        }
-          throw err;
-
-
+      const err = await responseError(res);
+      if (res.status >= 400 && res.status < 500) {
+        return bail(err);
+      }
+      throw err;
     }, opts.retry);
   }
 
   async getPlanMax() {
     return 10;
   }
-};
+}
 
 function toRelative(path, base) {
   const fullBase = base.endsWith(SEP) ? base : base + SEP;

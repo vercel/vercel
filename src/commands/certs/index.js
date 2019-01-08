@@ -1,4 +1,4 @@
-//      
+//
 import chalk from 'chalk';
 
 import { handleError } from '../../util/error';
@@ -7,7 +7,6 @@ import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-
 
 import add from './add';
 import issue from './issue';
@@ -72,8 +71,8 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove']
 };
 
-export default async function main(ctx     )                  {
-  let argv                 ;
+export default async function main(ctx) {
+  let argv;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -94,7 +93,7 @@ export default async function main(ctx     )                  {
     return 0;
   }
 
-  const output         = createOutput({ debug: argv['--debug'] });
+  const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'issue':
@@ -113,4 +112,4 @@ export default async function main(ctx     )                  {
       help();
       return 2;
   }
-};
+}

@@ -1,1 +1,1 @@
-export const email = /.+@.+\..+$/
+export const email = /.+@.+\..+$/;

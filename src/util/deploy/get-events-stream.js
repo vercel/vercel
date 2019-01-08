@@ -1,28 +1,11 @@
-//      
+//
 import through2 from 'through2';
 import jsonlines from 'jsonlines';
 import { stringify } from 'querystring';
-                                       
 
 import noop from '../noop';
 
-                
-                                     
-                  
-                   
-                      
-                 
-                 
-                 
-                   
-                
-  
-
-async function getEventsStream(
-  now     ,
-  idOrHost        ,
-  options         
-)                    {
+async function getEventsStream(now, idOrHost, options) {
   const response = await now.fetch(
     `/v2/now/deployments/${idOrHost}/events?${stringify({
       direction: options.direction,

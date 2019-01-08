@@ -4,7 +4,12 @@ import fetch from 'node-fetch';
 import ora from 'ora';
 import logo from '../util/output/logo';
 import { handleError } from '../util/error';
-import { readConfigFile, writeToConfigFile, readAuthConfigFile, writeToAuthConfigFile } from '../util/config/files';
+import {
+  readConfigFile,
+  writeToConfigFile,
+  readAuthConfigFile,
+  writeToAuthConfigFile
+} from '../util/config/files';
 import error from '../util/output/error';
 import exit from '../util/exit';
 
@@ -43,7 +48,7 @@ const main = async ctx => {
   });
 
   apiUrl = ctx.apiUrl;
-  endpoint = `${apiUrl  }/user/tokens/`;
+  endpoint = `${apiUrl}/user/tokens/`;
 
   argv._ = argv._.slice(1);
 

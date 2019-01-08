@@ -1,16 +1,10 @@
-// Native
 import { basename, resolve as resolvePath } from 'path';
-
-// Packages
 import chalk from 'chalk';
-
 import loadJSON from 'load-json-file';
 import loadPackageJSON from 'read-pkg';
 import fs from 'fs';
 import { parse as parseDockerfile } from 'docker-file-parser';
 import determineType from 'deployment-type';
-
-// Utilities
 import getLocalConfigPath from './config/local-path';
 
 export default readMetaData;
@@ -46,7 +40,7 @@ async function readMetaData(
           'but configuration is also present in `now.json`! ' +
           "Please ensure there's a single source of configuration by removing one."
       );
-      err.userError = true;
+      err.code = 'config_prop_and_file';
       throw err;
     } else {
       nowConfig = pkg.now;
@@ -74,8 +68,7 @@ async function readMetaData(
           'Please supply `--npm` or `--docker` to disambiguate.'
       );
 
-      err.userError = true;
-      err.code = 'MULTIPLE_MANIFESTS';
+      err.code = 'multiple_manifests';
 
       throw err;
     }
@@ -102,10 +95,15 @@ async function readMetaData(
       description = pkg.description;
     }
   } else if (type === 'docker') {
+    if (!dockerfile) {
+      const err = new Error('`Dockerfile` missing');
+      err.code = 'dockerfile_missing';
+      throw err;
+    }
+
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
-      err.userError = true;
-
+      err.code = 'no_dockerfile_commands';
       throw err;
     }
 
@@ -125,7 +123,6 @@ async function readMetaData(
             `Error parsing value for LABEL ${key} in \`Dockerfile\``
           );
 
-          e.userError = true;
           throw e;
         }
       }
@@ -139,7 +136,9 @@ async function readMetaData(
   } else if (type === 'static') {
     // Do nothing
   } else {
-    throw new TypeError(`Unsupported "deploymentType": ${type}`);
+    const err = new TypeError(`Unsupported "deploymentType": ${type}`);
+    err.code = 'unsupported_deployment_type';
+    throw err;
   }
 
   // No name in `package.json` / `now.json`, or "name" label in Dockerfile.
@@ -187,7 +186,6 @@ function decorateUserErrors(fn) {
     } catch (err) {
       // If the file doesn't exist then that's fine; any other error bubbles up
       if (err.code !== 'ENOENT') {
-        err.userError = true;
         throw err;
       }
     }

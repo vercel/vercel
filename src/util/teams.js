@@ -28,7 +28,8 @@ export default class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } if (res.status !== 200) {
+      }
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -71,7 +72,8 @@ export default class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } if (res.status !== 200) {
+      }
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -86,6 +88,7 @@ export default class Teams extends Now {
       if (this._debug) {
         console.time(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
       }
+
       const res = await this._fetch(`/teams/${teamId}/members`, {
         method: 'POST',
         body: {
@@ -107,7 +110,9 @@ export default class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } if (res.status !== 200) {
+      }
+
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -138,4 +143,4 @@ export default class Teams extends Now {
       return res.json();
     });
   }
-};
+}

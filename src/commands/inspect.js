@@ -2,15 +2,18 @@ import chalk from 'chalk';
 import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
-import cmd from '../util/output/cmd';
+import routesList from '../util/output/routes';
+import indent from '../util/output/indent';
+import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
+import elapsed from '../util/output/elapsed.ts';
 import wait from '../util/output/wait';
 import { handleError } from '../util/error';
-import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
+import strlen from '../util/strlen.ts';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const STATIC = 'STATIC';
 
@@ -45,7 +48,7 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx     )                  {
+export default async function main(ctx) {
   let id;
   let deployment;
   let argv;
@@ -78,12 +81,24 @@ export default async function main(ctx     )                  {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getScope({
+  const client = new Client({
     apiUrl,
     token,
-    debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    debug: debugEnabled
   });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
@@ -100,7 +115,8 @@ export default async function main(ctx     )                  {
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
       return 1;
-    } if (err.status === 403) {
+    }
+    if (err.status === 403) {
       error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
@@ -108,9 +124,8 @@ export default async function main(ctx     )                  {
       );
       return 1;
     }
-      // unexpected
-      throw err;
-
+    // unexpected
+    throw err;
   }
 
   const {
@@ -123,13 +138,15 @@ export default async function main(ctx     )                  {
     url,
     created,
     limits,
-    version
+    version,
+    routes,
+    readyState
   } = deployment;
 
   const isBuilds = version === 2;
   const buildsUrl = `/v1/now/deployments/${finalId}/builds`;
 
-  const [scale, events, {builds}] = await Promise.all([
+  const [scale, events, { builds }] = await Promise.all([
     caught(
       now.fetch(`/v3/now/deployments/${encodeURIComponent(finalId)}/instances`)
     ),
@@ -137,10 +154,12 @@ export default async function main(ctx     )                  {
       ? null
       : caught(
           now.fetch(
-            `/v1/now/deployments/${encodeURIComponent(finalId)}/events?types=event`
+            `/v1/now/deployments/${encodeURIComponent(
+              finalId
+            )}/events?types=event`
           )
-      ),
-    isBuilds ? now.fetch(buildsUrl): { builds: [] }
+        ),
+    isBuilds ? now.fetch(buildsUrl) : { builds: [] }
   ]);
 
   cancelWait();
@@ -151,42 +170,52 @@ export default async function main(ctx     )                  {
   );
 
   print('\n');
-  print(chalk.bold('  Meta\n'));
-  print(`    ${chalk.dim('version')}\t${version}\n`);
-  print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
-  print(`    ${chalk.dim('name')}\t${name}\n`);
-  print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
+  print(chalk.bold('  Meta\n\n'));
+  print(`    ${chalk.cyan('version')}\t${version}\n`);
+  print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
+  print(`    ${chalk.cyan('name')}\t${name}\n`);
+  print(`    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`);
   if (!isBuilds) {
-    print(`    ${chalk.dim('type')}\t${type}\n`);
+    print(`    ${chalk.cyan('type')}\t${type}\n`);
   }
   if (slot) {
-    print(`    ${chalk.dim('slot')}\t${slot}\n`);
+    print(`    ${chalk.cyan('slot')}\t${slot}\n`);
   }
   if (sessionAffinity) {
-    print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`);
+    print(`    ${chalk.cyan('affinity')}\t${sessionAffinity}\n`);
   }
-  print(`    ${chalk.dim('url')}\t\t${url}\n`);
-  print(
-    `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created, true)}\n`
-  );
-  print('\n');
+  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
+  if (created) {
+    print(
+      `    ${chalk.cyan('createdAt')}\t${new Date(created)} ${elapsed(
+        Date.now() - created,
+        true
+      )}\n`
+    );
+  }
+  print('\n\n');
 
   if (builds.length > 0) {
     const times = {};
 
     for (const build of builds) {
-      const {id, createdAt, readyStateAt} = build;
+      const { id, createdAt, readyStateAt } = build;
       times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
-    print(chalk.bold('  Builds\n'));
-    print(buildsList(builds, times, true).toPrint);
-    print('\n');
+    print(chalk.bold('  Builds\n\n'));
+    print(indent(buildsList(builds, times).toPrint, 4));
+    print('\n\n');
+  }
+
+  if (Array.isArray(routes) && routes.length > 0) {
+    print(chalk.bold('  Routes\n\n'));
+    print(indent(routesList(routes), 4));
+    print(`\n\n`);
   }
 
   if (limits) {
-    print(chalk.bold('  Limits\n'));
+    print(chalk.bold('  Limits\n\n'));
     print(
       `    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(
         limits.duration
@@ -207,7 +236,7 @@ export default async function main(ctx     )                  {
     return 0;
   }
 
-  print(chalk.bold('  Scale\n'));
+  print(chalk.bold('  Scale\n\n'));
 
   let exitCode = 0;
 
@@ -227,12 +256,12 @@ export default async function main(ctx     )                  {
         align: ['l', 'c', 'c', 'c'],
         hsep: ' '.repeat(8),
         stringLength: strlen
-      }).replace(/^(.*)/gm, '    $1')  }\n`
+      }).replace(/^(.*)/gm, '    $1')}\n`
     );
     print('\n');
   }
 
-  print(chalk.bold('  Events\n'));
+  print(chalk.bold('  Events\n\n'));
   if (events instanceof Error) {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
@@ -249,18 +278,12 @@ export default async function main(ctx     )                  {
   }
 
   return exitCode;
-};
+}
 
 // gets the metadata that should be printed next to
 // each event
 
-
-
-
-
-
-
-function getEventMetadata({ event, payload }       )         {
+function getEventMetadata({ event, payload }) {
   if (event === 'state') {
     return chalk.bold(payload.value);
   }
@@ -276,14 +299,14 @@ function getEventMetadata({ event, payload }       )         {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught(p)               {
+function caught(p) {
   return new Promise(r => {
     p.then(r).catch(r);
   });
 }
 
 // renders the state string
-function stateString(s        )         {
+function stateString(s) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

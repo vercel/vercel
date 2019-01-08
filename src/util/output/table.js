@@ -8,11 +8,15 @@ const printLine = (data, sizes) =>
 export default (fieldNames = [], data = [], margins = []) => {
   // Compute size of each column
   const sizes = data
-    .reduce((acc, row) => row.map((col, i) => {
-        const currentMaxColSize = acc[i] || 0;
-        const colSize = (col && col.length) || 0;
-        return Math.max(currentMaxColSize, colSize);
-      }), fieldNames.map(col => col.length))
+    .reduce(
+      (acc, row) =>
+        row.map((col, i) => {
+          const currentMaxColSize = acc[i] || 0;
+          const colSize = (col && col.length) || 0;
+          return Math.max(currentMaxColSize, colSize);
+        }),
+      fieldNames.map(col => col.length)
+    )
     // Add margin to all columns except the last
     .map((size, i) => (i < margins.length && size + margins[i]) || size);
 

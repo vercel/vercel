@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import info from '../../util/output/info';
 import error from '../../util/output/error';
 import wait from '../../util/output/wait';
@@ -7,7 +7,7 @@ import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import success from '../../util/output/success';
-import cmd from '../../util/output/cmd';
+import cmd from '../../util/output/cmd.ts';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
@@ -16,8 +16,7 @@ import { writeToConfigFile } from '../../util/config/files';
 const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
-   /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data)
-;
+  /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
 
 const validateNameKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -65,8 +64,10 @@ export default async function({ apiUrl, token, teams, config }) {
         console.log(info('Aborted'));
         return 0;
       }
+
       throw err;
     }
+
     elapsed = stamp();
     stopSpinner = wait(teamUrlPrefix + slug);
 
@@ -84,11 +85,13 @@ export default async function({ apiUrl, token, teams, config }) {
   } while (!team);
 
   process.stdout.write(eraseLines(2));
-  console.log(success(`Team created ${elapsed()}`));
-  console.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug  }\n`);
 
+  console.log(success(`Team created ${elapsed()}`));
+  console.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
   console.log(info('Pick a display name for your team'));
+
   let name;
+
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
@@ -99,18 +102,23 @@ export default async function({ apiUrl, token, teams, config }) {
       console.log(info('No name specified'));
       return gracefulExit();
     }
-      throw err;
 
+    throw err;
   }
+
   elapsed = stamp();
   stopSpinner = wait(teamNamePrefix + name);
+
   const res = await teams.edit({ id: team.id, name });
+
   stopSpinner();
 
   process.stdout.write(eraseLines(2));
+
   if (res.error) {
     console.error(error(res.error.message));
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
+
     return 1;
     // TODO: maybe we want to ask the user to retry? not sure if
     // there's a scenario where that would be wanted
@@ -119,7 +127,7 @@ export default async function({ apiUrl, token, teams, config }) {
   team = Object.assign(team, res);
 
   console.log(success(`Team name saved ${elapsed()}`));
-  console.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name  }\n`);
+  console.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
 
   stopSpinner = wait('Saving');
 
@@ -149,4 +157,4 @@ export default async function({ apiUrl, token, teams, config }) {
   });
 
   gracefulExit();
-};
+}

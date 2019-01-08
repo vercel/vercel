@@ -1,11 +1,7 @@
-// Packages
 import ansiEscapes from 'ansi-escapes';
-
 import ansiRegex from 'ansi-regex';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
-
-// Utilities
 import eraseLines from '../output/erase-lines';
 
 const ESCAPES = {
@@ -17,7 +13,8 @@ const ESCAPES = {
   CARRIAGE: '\r'
 };
 
-const formatCC = data => data
+const formatCC = data =>
+  data
     .replace(/\s/g, '')
     .replace(/(.{4})/g, '$1 ')
     .trim();
@@ -103,11 +100,17 @@ export default function(
       regex = new RegExp(`(${regex})`, 'g');
     }
 
-    stdin.setRawMode(true);
+    if (stdin.setRawMode) {
+      stdin.setRawMode(true);
+    }
+
     stdin.resume();
 
     function restore() {
-      stdin.setRawMode(isRaw);
+      if (stdin.setRawMode) {
+        stdin.setRawMode(isRaw);
+      }
+
       stdin.pause();
       stdin.removeListener('data', onData);
 
@@ -123,7 +126,8 @@ export default function(
 
       if (abortSequences.has(data)) {
         restore();
-        return reject(new Error('USER_ABORT'));
+        const error = new Error('USER_ABORT');
+        return reject(error);
       }
 
       if (forceLowerCase) {
@@ -262,4 +266,4 @@ export default function(
 
     stdin.on('data', onData);
   });
-};
+}

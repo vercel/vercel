@@ -8,7 +8,8 @@ import info from '../../util/output/info';
 import error from '../../util/output/error';
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import getUser from '../../util/get-user';
+import getUser from '../../util/get-user.ts';
+import Client from '../../util/client.ts';
 
 export default async function({ teams, config, apiUrl, token }) {
   const stopSpinner = wait('Fetching teams');
@@ -19,7 +20,8 @@ export default async function({ teams, config, apiUrl, token }) {
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const user = await getUser({ apiUrl, token });
+  const client = new Client({ apiUrl, token, currentTeam });
+  const user = await getUser(client);
 
   stopUserSpinner();
 
@@ -30,10 +32,10 @@ export default async function({ teams, config, apiUrl, token }) {
   }
 
   const teamList = list.map(({ slug, name }) => ({
-      name,
-      value: slug,
-      current: slug === currentTeam.slug ? chars.tick : ''
-    }));
+    name,
+    value: slug,
+    current: slug === currentTeam.slug ? chars.tick : ''
+  }));
 
   teamList.unshift({
     name: user.email,
@@ -66,4 +68,4 @@ export default async function({ teams, config, apiUrl, token }) {
     teamList.map(team => [team.current, team.value, team.name]),
     [1, 5]
   );
-};
+}

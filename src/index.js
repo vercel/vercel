@@ -9,57 +9,75 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
-import param from './util/output/param';
+import param from './util/output/param.ts';
 import info from './util/output/info';
 import getNowDir from './util/config/global-path';
-import { getDefaultConfig, getDefaultAuthConfig } from './util/config/get-default';
+import {
+  getDefaultConfig,
+  getDefaultAuthConfig
+} from './util/config/get-default';
 import hp from './util/humanize-path';
 import commands from './commands';
 import * as configFiles from './util/config/files';
-import pkg from './util/pkg';
+import pkg from './util/pkg.ts';
 import createOutput from './util/output';
 import getArgs from './util/get-args';
-import getUser from './util/get-user';
+import getUser from './util/get-user.ts';
+import Client from './util/client.ts';
 import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
+import { handleError } from './util/error';
+import reportError from './util/report-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+const insidePkg = process.pkg;
 
 epipebomb();
 
 // we only enable source maps while developing, since
 // they have a small performance hit. for this, we
 // look for `pkg`, which is only present in the final bin
-if (!process.pkg) {
+if (!insidePkg) {
   sourceMap.install();
 }
 
-// Send errors away
-Sentry.init({ dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225' });
+// Configure the error reporting system
+Sentry.init({
+  dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
+  release: `now-cli@${pkg.version}`,
+  environment: pkg.version.includes('canary') ? 'canary' : 'stable'
+});
 
 let debug = () => {};
+let apiUrl = 'https://api.zeit.co';
 
 const main = async argv_ => {
-  // $FlowFixMe
   const { isTTY } = process.stdout;
 
-  const argv = getArgs(
-    argv_,
-    {
-      '--version': Boolean,
-      '-v': '--version',
-      '--debug': Boolean,
-      '-d': '--debug'
-    },
-    { permissive: true }
-  );
+  let argv = null;
+
+  try {
+    argv = getArgs(
+      argv_,
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--debug': Boolean,
+        '-d': '--debug'
+      },
+      { permissive: true }
+    );
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   const isDebugging = argv['--debug'];
-  const output         = createOutput({ debug: isDebugging });
+  const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
 
@@ -103,15 +121,14 @@ const main = async argv_ => {
   // the second argument to the command can be a path
   // (as in: `now path/`) or a subcommand / provider
   // (as in: `now ls`)
-  const targetOrSubcommand          = argv._[2];
+  const targetOrSubcommand = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
       console.log(
-        `${require('../package').version
-          }${// $FlowFixMe
-          process.pkg ? '' : chalk.magenta(' (dev)')}`
+        `${require('../package').version}${// $FlowFixMe
+        process.pkg ? '' : chalk.magenta(' (dev)')}`
       );
       return 0;
     }
@@ -125,8 +142,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          'now global directory: '}${
-          err.message}`
+          'now global directory: '}${err.message}`
       )
     );
 
@@ -140,8 +156,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" `}${
-            err.message}`
+            `now global directory "${hp(NOW_DIR)}" `}${err.message}`
         )
       );
     }
@@ -156,8 +171,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" `}${
-          err.message}`
+          `now config file "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -173,8 +187,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" `}${
-            err.message}`
+            `now config in "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -206,8 +219,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${
-            err.message}`
+            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -223,8 +235,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-          err.message}`
+          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -240,15 +251,14 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-            err.message}`
+            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
       return 1;
     }
 
-    const subcommandsWithoutToken = ['config', 'login', 'help'];
+    const subcommandsWithoutToken = ['config', 'login', 'help', 'init'];
 
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
@@ -283,8 +293,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
-            err.message}`
+            `default now config to "${hp(
+              NOW_AUTH_CONFIG_PATH
+            )}" `}${err.message}`
         )
       );
       return 1;
@@ -294,11 +305,13 @@ const main = async argv_ => {
   // Let the user know we migrated the config
   if (migrated) {
     const directory = param(hp(NOW_DIR));
-    debug(`The credentials and configuration within the ${directory} directory were upgraded`);
+    debug(
+      `The credentials and configuration within the ${directory} directory were upgraded`
+    );
   }
 
   // the context object to supply to the providers or the commands
-  const ctx         = {
+  const ctx = {
     config,
     authConfig,
     argv: argv_
@@ -311,8 +324,7 @@ const main = async argv_ => {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
-      commands[targetOrSubcommand];
+      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands[targetOrSubcommand];
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -343,12 +355,22 @@ const main = async argv_ => {
     ctx.argv.push('-h');
   }
 
-  ctx.apiUrl = 'https://api.zeit.co';
-
   if (argv['--api'] && typeof argv['--api'] === 'string') {
-    ctx.apiUrl = argv['--api'];
+    apiUrl = argv['--api'];
   } else if (ctx.config && ctx.config.api) {
-    ctx.apiUrl = ctx.config.api;
+    apiUrl = ctx.config.api;
+  }
+
+  ctx.apiUrl = apiUrl;
+
+  try {
+    // eslint-disable-next-line no-new
+    new URL(ctx.apiUrl);
+  } catch (err) {
+    console.error(
+      error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
+    );
+    return 1;
   }
 
   // If no credentials are set at all, prompt for
@@ -432,12 +454,13 @@ const main = async argv_ => {
       return 1;
     }
 
-    const { apiUrl, authConfig: { token } } = ctx;
+    const { authConfig: { token } } = ctx;
+    const client = new Client({ apiUrl, token });
 
     let user = null;
 
     try {
-      user = await getUser({ apiUrl, token });
+      user = await getUser(client);
     } catch (err) {
       if (err.code === 'not_authorized') {
         console.error(
@@ -478,12 +501,13 @@ const main = async argv_ => {
         return 1;
       }
 
-      const related = list.find(item => item.id === team || item.slug === team);
+      const related =
+        list && list.find(item => item.id === team || item.slug === team);
 
       if (!related) {
         console.error(
           error({
-            message: "The specified team does not exist",
+            message: 'The specified team does not exist',
             slug: 'team-not-existent'
           })
         );
@@ -510,20 +534,17 @@ const main = async argv_ => {
     exitCode = await full(ctx);
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
-      output.error(`The hostname ${highlight('api.zeit.co')} could not be resolved. Please verify your internet connectivity and DNS configuration.`);
+      output.error(
+        `The hostname ${highlight(
+          'api.zeit.co'
+        )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+      );
       output.debug(err.stack);
 
       return 1;
     }
 
-    Sentry.captureException(err);
-
-    const client = Sentry.getCurrentHub().getClient();
-
-    // Ensure all Sentry events are flushed
-    if (client) {
-      await client.close();
-    }
+    await reportError(Sentry, err, apiUrl, configFiles);
 
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
@@ -552,20 +573,13 @@ const handleRejection = async err => {
 
   if (err) {
     if (err instanceof Error) {
-      handleUnexpected(err);
+      await handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      Sentry.captureException(err);
+      await reportError(Sentry, err, apiUrl, configFiles);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
-  }
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
   }
 
   process.exit(1);
@@ -580,19 +594,12 @@ const handleUnexpected = async err => {
     return;
   }
 
-  Sentry.captureException(err);
+  await reportError(Sentry, err, apiUrl, configFiles);
   debug('handling unexpected error');
 
   console.error(
     error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
   );
-
-  const client = Sentry.getCurrentHub().getClient();
-
-  // Ensure all Sentry events are flushed
-  if (client) {
-    await client.close();
-  }
 
   process.exit(1);
 };

@@ -41,6 +41,7 @@ jobs:
           root: .
           paths:
             - packed
+            - dist
 
   test-lint:
     docker:
@@ -123,6 +124,27 @@ jobs:
           key: v1-pkg-cache
           paths:
             - "/go/pkg"
+
+  source-maps:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Installing Sentry CLI
+          command: npm install -g @sentry/cli
+      - run:
+          name: Creating a New Sentry Release
+          command: sentry-cli releases new now-cli@`git describe --tags`
+      - run:
+          name: Upload Sourcemap Files
+          command: sentry-cli releases files now-cli@`git describe --tags` upload-sourcemaps ./dist
+      - run:
+          name: Finalize Sentry Release
+          command: sentry-cli releases finalize now-cli@`git describe --tags`
 
   publish-stable:
     docker:

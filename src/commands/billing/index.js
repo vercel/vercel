@@ -12,7 +12,9 @@ import info from '../../util/output/info';
 import logo from '../../util/output/logo';
 import addBilling from './add';
 import exit from '../../util/exit';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
+import createOutput from '../../util/output';
 
 const help = () => {
   console.log(`
@@ -75,24 +77,14 @@ export default async ctx => {
 
   const { authConfig: { token }, config } = ctx;
 
-  try {
-    return run({ token, config });
-  } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message));
-    } else {
-      console.error(error(`Unknown error: ${err.stack}`));
-    }
-
-    return 1;
-  }
+  return run({ token, config });
 };
 
 // Builds a `choices` object that can be passesd to inquirer.prompt()
 function buildInquirerChoices(cards) {
   return cards.sources.map(source => {
     const _default =
-      source.id === cards.defaultSource ? ` ${  chalk.bold('(default)')}` : '';
+      source.id === cards.defaultSource ? ` ${chalk.bold('(default)')}` : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
     const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
       source.card.last4}`;
@@ -113,12 +105,21 @@ function buildInquirerChoices(cards) {
 async function run({ token, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  const output = createOutput({ debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
   const args = argv._.slice(1);
 
   switch (subcommand) {
@@ -137,7 +138,7 @@ async function run({ token, config: { currentTeam } }) {
         .map(source => {
           const _default =
             source.id === cards.defaultSource
-              ? ` ${  chalk.bold('(default)')}`
+              ? ` ${chalk.bold('(default)')}`
               : '';
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`

@@ -41,12 +41,15 @@ const getIndexFile = session => `
   })
 `;
 
-const getConfigFile = builds => builds ? `{
+const getConfigFile = builds =>
+  builds
+    ? `{
   "version": 2,
   "builds": [
     { "src": "*.html", "use": "@now/static" }
   ]
-}` : `{
+}`
+    : `{
   "version": 1
 }`;
 
@@ -80,7 +83,7 @@ http_request(
 
 module.exports = async session => {
   const files = {
-    'Dockerfile': getDockerFile(session),
+    Dockerfile: getDockerFile(session),
     'index.js': getIndexFile(session),
     'package.json': getPackageFile(session),
     'now.json': getConfigFile(false),
@@ -93,35 +96,17 @@ module.exports = async session => {
     'now.json-builds': getConfigFile(true),
     'index.html': getIndexHTMLFile(session),
     'contact.php': getContactFile(session)
- };
+  };
 
   const spec = {
-    'dockerfile': [
-      'index.js',
-      'Dockerfile',
-      'package.json',
-      'now.json'
-    ],
-    'node': [
-      'index.js',
-      'package.json',
-      'now.json'
-    ],
-    'builds': [
-      'index.html',
-      'now.json-builds'
-    ],
-    'static-single-file': [
-      'first.png',
-      'now.json'
-    ],
-    'static-multiple-files': [
-      'first.png',
-      'second.png',
-      'now.json'
-    ],
+    dockerfile: ['index.js', 'Dockerfile', 'package.json', 'now.json'],
+    node: ['index.js', 'package.json', 'now.json'],
+    builds: ['index.html', 'now.json-builds'],
+    'static-single-file': ['first.png', 'now.json'],
+    'static-multiple-files': ['first.png', 'second.png', 'now.json'],
     'config-alias-property': {
-      'now.json': '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
+      'now.json':
+        '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
       'index.html': '<span>test alias</span'
     },
     'builds-wrong': {
@@ -130,7 +115,7 @@ module.exports = async session => {
     },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 RUN mkdir /public
 RUN echo hello > /public/index.html
@@ -141,10 +126,10 @@ RUN echo hello > /public/index.html
         version: 1,
         type: 'static',
         build: {
-          env: {FOO: 'bar'}
+          env: { FOO: 'bar' }
         }
       }),
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 ARG FOO
 RUN mkdir /public
@@ -156,7 +141,7 @@ RUN echo $FOO > /public/index.html
         version: 1,
         type: 'static'
       }),
-      'Dockerfile': `
+      Dockerfile: `
 FROM alpine
 ARG NONCE
 RUN mkdir /public
@@ -170,7 +155,7 @@ RUN echo $NONCE > /public/index.html
     const directory = join(__dirname, '..', 'fixtures', 'integration', type);
     await ensureDir(directory);
 
-    if(Array.isArray(needed)) {
+    if (Array.isArray(needed)) {
       // Get content from the defined files
       for (const name of needed) {
         const file = join(directory, name);

@@ -5,138 +5,36 @@ import { basename } from 'path';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
-import logo from '../../util/output/logo';
 import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
-import {isReady, isDone, isFailed} from '../../util/build-state';
+import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/dns-table';
-import zeitWorldTable from '../../util/zeit-world-table';
-import * as Errors from '../../util/errors';
+import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
-import note from '../../util/output/note';
 import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
-
-export const help = () => `
-  ${chalk.bold(`${logo} now`)} [options] <command | path>
-
-  ${chalk.dim('Commands:')}
-
-    ${chalk.dim('Cloud')}
-
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
-      ls | list            [app]       Lists deployments
-      rm | remove          [id]        Removes a deployment
-      ln | alias           [id] [url]  Configures aliases for deployments
-      inspect              [id]        Displays information related to a deployment
-      domains              [name]      Manages your domain names
-      certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
-      dns                  [name]      Manages your DNS records
-      logs                 [url]       Displays the logs for a deployment
-      scale                [args]      Scales the instance count of a deployment
-      help                 [cmd]       Displays complete help for [cmd]
-
-    ${chalk.dim('Administrative')}
-
-      billing | cc         [cmd]       Manages your credit cards and billing methods
-      upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
-      switch               [scope]     Switches between teams and your personal account
-      login                [email]     Logs into your account or creates a new one
-      logout                           Logs out of your account
-      whoami                           Displays the current scope
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -v, --version                  Output the version number
-    -V, --platform-version         Set the platform version to deploy to
-    -P, --project                  Set the project of the deployment
-    -n, --name                     Set the name of the deployment
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`now.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.now`'} directory
-    -d, --debug                    Debug mode [off]
-    -f, --force                    Force a new deployment even if nothing has changed
-    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-    'TOKEN'
-  )}        Login token
-    -p, --public                   Deployment is public (${chalk.dim(
-      '`/_src`'
-    )} is exposed)
-    -e, --env                      Include an env var during run time (e.g.: ${chalk.dim(
-      '`-e KEY=value`'
-    )}). Can appear many times.
-    -b, --build-env                Similar to ${chalk.dim(
-      '`--env`'
-    )} but for build time only.
-    -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
-      '`-m KEY=value`'
-    )}). Can appear many times.
-    -C, --no-clipboard             Do not attempt to copy URL to clipboard
-    -T, --team                     Set a custom team scope
-    --regions                      Set default regions to enable the deployment on
-
-  ${note(`To view the usage information for Now 1.0, run ${code('now help deploy-v1')}`)}
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Deploy the current directory
-
-    ${chalk.cyan('$ now')}
-
-  ${chalk.gray('–')} Deploy a custom path
-
-    ${chalk.cyan('$ now /usr/src/project')}
-
-  ${chalk.gray('–')} Deploy with environment variables
-
-    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
-
-  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-    '`list`'
-  )}
-
-    ${chalk.cyan('$ now help list')}
-
-`;
-
-export const args = {
-  '--name': String,
-  '--project': String,
-  '--force': Boolean,
-  '--public': Boolean,
-  '--no-clipboard': Boolean,
-  '--env': [String],
-  '--build-env': [String],
-  '--meta': [String],
-  // This is not an array in favor of matching
-  // the config property name.
-  '--regions': String,
-  '-n': '--name',
-  '-P': '--project',
-  '-f': '--force',
-  '-p': '--public',
-  '-e': '--env',
-  '-b': '--build-env',
-  '-C': '--no-clipboard',
-  '-m': '--meta'
-};
+import {
+  WildcardNotAllowed,
+  CantSolveChallenge,
+  CDNNeedsUpgrade,
+  DomainConfigurationError,
+  DomainNotFound,
+  DomainPermissionDenied,
+  DomainsShouldShareRoot,
+  DomainValidationRunning,
+  DomainVerificationFailed,
+  TooManyCertificates,
+  TooManyRequests
+} from '../../util/errors-ts';
+import { SchemaValidationFailed } from '../../util/errors';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -168,7 +66,12 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (output, { url, readyState }, deployStamp, builds) => {
+const printDeploymentStatus = (
+  output,
+  { url, readyState },
+  deployStamp,
+  builds
+) => {
   if (readyState === 'READY') {
     output.success(`Deployment ready ${deployStamp()}`);
     return 0;
@@ -186,7 +89,11 @@ const printDeploymentStatus = (output, { url, readyState }, deployStamp, builds)
     const name = amount === 1 ? 'failure' : 'failures';
 
     output.error(`${amount} build ${name} occured.`);
-    output.error(`Check your logs at https://${url}/_logs or run ${code(`now logs ${url}`)}.`);
+    output.error(
+      `Check your logs at https://${url}/_logs or run ${code(
+        `now logs ${url}`
+      )}.`
+    );
 
     return 1;
   }
@@ -200,14 +107,14 @@ const renderBuilds = (print, list, times, linesPrinted) => {
     print(eraseLines(linesPrinted));
   }
 
-  const {lines, toPrint} = buildsList(list, times, false);
+  const { lines, toPrint } = buildsList(list, times, false);
   print(toPrint);
 
   return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-const parseEnv = (env) => {
+const parseEnv = env => {
   if (!env) {
     return {};
   }
@@ -238,14 +145,15 @@ const parseEnv = (env) => {
   return env;
 };
 
-export const pipe = async function main(
-  ctx            ,
-  contextName        ,
-  output        ,
-  stats     ,
-  localConfig     ,
-  isFile
-)                  {
+export default async function main(
+  ctx,
+  contextName,
+  output,
+  stats,
+  localConfig,
+  isFile,
+  args
+) {
   let argv = null;
 
   try {
@@ -291,26 +199,42 @@ export const pipe = async function main(
 
   let syncCount;
   let deployStamp = stamp();
-  let deployment                          = null;
+  let deployment = null;
 
-  const isObject = item => Object.prototype.toString.call(item) === '[object Object]';
+  const isObject = item =>
+    Object.prototype.toString.call(item) === '[object Object]';
 
   // This validation needs to happen on the client side because
   // the data is merged with other data before it is passed to the API (which
   // also does schema validation).
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
-    error(`The ${code('env')} property in ${highlight('now.json')} needs to be an object`);
+    error(
+      `The ${code('env')} property in ${highlight(
+        'now.json'
+      )} needs to be an object`
+    );
     return 1;
   }
 
   if (typeof localConfig.build !== 'undefined') {
     if (!isObject(localConfig.build)) {
-      error(`The ${code('build')} property in ${highlight('now.json')} needs to be an object`);
+      error(
+        `The ${code('build')} property in ${highlight(
+          'now.json'
+        )} needs to be an object`
+      );
       return 1;
     }
 
-    if (typeof localConfig.build.env !== 'undefined' && !isObject(localConfig.build.env)) {
-      error(`The ${code('build.env')} property in ${highlight('now.json')} needs to be an object`);
+    if (
+      typeof localConfig.build.env !== 'undefined' &&
+      !isObject(localConfig.build.env)
+    ) {
+      error(
+        `The ${code('build.env')} property in ${highlight(
+          'now.json'
+        )} needs to be an object`
+      );
       return 1;
     }
   }
@@ -338,7 +262,10 @@ export const pipe = async function main(
     return 1;
   }
 
-  const regionFlag = (argv['--regions'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  const regionFlag = (argv['--regions'] || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
   try {
@@ -373,21 +300,18 @@ export const pipe = async function main(
     );
 
     if (
-      firstDeployCall instanceof Errors.CantSolveChallenge ||
-      firstDeployCall instanceof Errors.CantGenerateWildcardCert ||
-      firstDeployCall instanceof Errors.DomainConfigurationError ||
-      firstDeployCall instanceof Errors.DomainNameserversNotFound ||
-      firstDeployCall instanceof Errors.DomainNotFound ||
-      firstDeployCall instanceof Errors.DomainNotVerified ||
-      firstDeployCall instanceof Errors.DomainPermissionDenied ||
-      firstDeployCall instanceof Errors.DomainsShouldShareRoot ||
-      firstDeployCall instanceof Errors.DomainValidationRunning ||
-      firstDeployCall instanceof Errors.DomainVerificationFailed ||
-      firstDeployCall instanceof Errors.SchemaValidationFailed||
-      firstDeployCall instanceof Errors.InvalidWildcardDomain ||
-      firstDeployCall instanceof Errors.CDNNeedsUpgrade ||
-      firstDeployCall instanceof Errors.TooManyCertificates ||
-      firstDeployCall instanceof Errors.TooManyRequests
+      firstDeployCall instanceof WildcardNotAllowed ||
+      firstDeployCall instanceof CantSolveChallenge ||
+      firstDeployCall instanceof CDNNeedsUpgrade ||
+      firstDeployCall instanceof DomainConfigurationError ||
+      firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainPermissionDenied ||
+      firstDeployCall instanceof DomainsShouldShareRoot ||
+      firstDeployCall instanceof DomainValidationRunning ||
+      firstDeployCall instanceof DomainVerificationFailed ||
+      firstDeployCall instanceof SchemaValidationFailed ||
+      firstDeployCall instanceof TooManyCertificates ||
+      firstDeployCall instanceof TooManyRequests
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -452,20 +376,18 @@ export const pipe = async function main(
           createArgs
         );
         if (
-          secondDeployCall instanceof Errors.CantSolveChallenge ||
-          secondDeployCall instanceof Errors.CantGenerateWildcardCert ||
-          secondDeployCall instanceof Errors.DomainConfigurationError ||
-          secondDeployCall instanceof Errors.DomainNameserversNotFound ||
-          secondDeployCall instanceof Errors.DomainNotFound ||
-          secondDeployCall instanceof Errors.DomainNotVerified ||
-          secondDeployCall instanceof Errors.DomainPermissionDenied ||
-          secondDeployCall instanceof Errors.DomainsShouldShareRoot ||
-          secondDeployCall instanceof Errors.DomainValidationRunning ||
-          secondDeployCall instanceof Errors.DomainVerificationFailed ||
-          secondDeployCall instanceof Errors.InvalidWildcardDomain ||
-          secondDeployCall instanceof Errors.CDNNeedsUpgrade ||
-          secondDeployCall instanceof Errors.TooManyCertificates ||
-          secondDeployCall instanceof Errors.TooManyRequests
+          secondDeployCall instanceof WildcardNotAllowed ||
+          secondDeployCall instanceof CantSolveChallenge ||
+          secondDeployCall instanceof CDNNeedsUpgrade ||
+          secondDeployCall instanceof DomainConfigurationError ||
+          secondDeployCall instanceof DomainNotFound ||
+          secondDeployCall instanceof DomainPermissionDenied ||
+          secondDeployCall instanceof DomainsShouldShareRoot ||
+          secondDeployCall instanceof DomainValidationRunning ||
+          secondDeployCall instanceof DomainVerificationFailed ||
+          secondDeployCall instanceof SchemaValidationFailed ||
+          secondDeployCall instanceof TooManyCertificates ||
+          secondDeployCall instanceof TooManyRequests
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -496,27 +418,24 @@ export const pipe = async function main(
   }
 
   const { url } = now;
-  const dcs = '';
 
   if (isTTY) {
     if (!argv['--no-clipboard']) {
       try {
         await copy(url);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-            `[v2]`
-          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
+            '[in clipboard]'
+          )} ${deployStamp()}`
         );
       } catch (err) {
         debug(`Error copying to clipboard: ${err}`);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-            `[v2]`
-          )} ${chalk.gray('[in clipboard]')}${dcs} ${deployStamp()}`
+          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${deployStamp()}`
         );
       }
     } else {
-      log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
+      log(`${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
     }
   } else {
     process.stdout.write(url);
@@ -597,18 +516,16 @@ export const pipe = async function main(
   return printDeploymentStatus(output, deployment, deployStamp, builds);
 };
 
-function handleCreateDeployError            (
-  output        ,
-  error
-)                 {
-  if (error instanceof Errors.CantGenerateWildcardCert) {
+function handleCreateDeployError(output, error) {
+  if (error instanceof WildcardNotAllowed) {
     output.error(
       `Custom suffixes are only allowed for domains in ${chalk.underline(
         'zeit.world'
       )}`
     );
     return 1;
-  } if (error instanceof Errors.CantSolveChallenge) {
+  }
+  if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
         `The certificate provider could not resolve the DNS queries for ${error
@@ -625,10 +542,11 @@ function handleCreateDeployError            (
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])  }\n`);
+      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
     }
     return 1;
-  } if (error instanceof Errors.DomainConfigurationError) {
+  }
+  if (error instanceof DomainConfigurationError) {
     output.error(
       `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
         error.meta.domain
@@ -643,7 +561,7 @@ function handleCreateDeployError            (
           error.meta.subdomain === null
             ? ['', 'ALIAS', 'alias.zeit.co']
             : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ])  }\n`
+        ])}\n`
       );
     } else {
       output.print(
@@ -652,106 +570,83 @@ function handleCreateDeployError            (
       output.print(`  Please try again later.\n`);
     }
     return 1;
-  } if (error instanceof Errors.DomainNameserversNotFound) {
-    output.error(
-      `Couldn't find nameservers for the domain ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
-    return 1;
-  } if (error instanceof Errors.DomainNotVerified) {
+  }
+  if (error instanceof DomainVerificationFailed) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
       )} is not verified and can't be used as custom suffix.`
     );
     return 1;
-  } if (error instanceof Errors.DomainPermissionDenied) {
+  }
+  if (error instanceof DomainPermissionDenied) {
     output.error(
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
     );
     return 1;
-  } if (error instanceof Errors.DomainsShouldShareRoot) {
-    // this is not going to happen
+  }
+  if (error instanceof DomainsShouldShareRoot) {
+    output.error(`All given common names should share the same root domain.`);
     return 1;
-  } if (error instanceof Errors.DomainValidationRunning) {
+  }
+  if (error instanceof DomainValidationRunning) {
     output.error(
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
     );
     return 1;
-  } if (error instanceof Errors.SchemaValidationFailed) {
+  }
+  if (error instanceof SchemaValidationFailed) {
     const { params, keyword, dataPath } = error.meta;
-
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
-      output.error(`The property ${code(prop)} is not allowed in ${highlight('now.json')} when using Now 2.0 – please remove it.`);
-
+      output.error(
+        `The property ${code(prop)} is not allowed in ${highlight(
+          'now.json'
+        )} when using Now 2.0 – please remove it.`
+      );
       if (prop === 'build.env' || prop === 'builds.env') {
-        output.note(`Do you mean ${code('build')} (object) with a property ${code('env')} (object) instead of ${code(prop)}?`);
+        output.note(
+          `Do you mean ${code('build')} (object) with a property ${code(
+            'env'
+          )} (object) instead of ${code(prop)}?`
+        );
       }
-
-      return 1;
-    } if (keyword === 'type') {
-      const prop = dataPath.substr(1, dataPath.length);
-      output.error(`The property ${code(prop)} in ${highlight('now.json')} can only be of type ${code(title(params.type))}.`);
       return 1;
     }
-
+    if (keyword === 'type') {
+      const prop = dataPath.substr(1, dataPath.length);
+      output.error(
+        `The property ${code(prop)} in ${highlight(
+          'now.json'
+        )} can only be of type ${code(title(params.type))}.`
+      );
+      return 1;
+    }
     const link = 'https://zeit.co/docs/v2/deployments/configuration/';
-    output.error(`Failed to validate ${highlight('now.json')}. Only use properties mentioned here: ${link}`);
-
-    return 1;
-  } if (error instanceof Errors.DomainVerificationFailed) {
     output.error(
-      `We couldn't verify the domain ${chalk.underline(error.meta.domain)}.\n`
-    );
-    output.print(
-      `  Please make sure that your nameservers point to ${chalk.underline(
-        'zeit.world'
-      )}.\n`
-    );
-    output.print(
-      `  Examples: (full list at ${chalk.underline('https://zeit.world')})\n`
-    );
-    output.print(`${zeitWorldTable()  }\n`);
-    output.print(
-      `\n  As an alternative, you can add following records to your DNS settings:\n`
-    );
-    output.print(
-      `${dnsTable(
-        [
-          ['_now', 'TXT', error.meta.token],
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ],
-        { extraSpace: '  ' }
-      )  }\n`
+      `Failed to validate ${highlight(
+        'now.json'
+      )}. Only use properties mentioned here: ${link}`
     );
     return 1;
-  } if (error instanceof Errors.InvalidWildcardDomain) {
-    // this should never happen
-    output.error(
-      `Invalid domain ${chalk.underline(
-        error.meta.domain
-      )}. Wildcard domains can only be followed by a root domain.`
-    );
-    return 1;
-  } if (error instanceof Errors.CDNNeedsUpgrade) {
+  }
+  if (error instanceof CDNNeedsUpgrade) {
     output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
-  } if (error instanceof Errors.TooManyCertificates) {
+  }
+  if (error instanceof TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
         ', '
       )}`
     );
     return 1;
-  } if (error instanceof Errors.TooManyRequests) {
+  }
+  if (error instanceof TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta
         .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
@@ -759,7 +654,8 @@ function handleCreateDeployError            (
       })}.`
     );
     return 1;
-  } if (error instanceof Errors.DomainNotFound) {
+  }
+  if (error instanceof DomainNotFound) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain

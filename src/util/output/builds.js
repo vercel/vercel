@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import title from 'title';
 import bytes from 'bytes';
-import {isReady, isFailed} from '../build-state';
+import { isReady, isFailed } from '../build-state';
 
 const prepareState = state => title(state.replace('_', ' '));
 
@@ -11,13 +11,13 @@ const longestState = 12;
 // That's the spacing between the source, state and time
 const padding = 8;
 
-const styleBuild = (build, times, inspecting, longestSource) => {
-  const {entrypoint, readyState, id, hasOutput} = build;
+const styleBuild = (build, times, longestSource) => {
+  const { entrypoint, readyState, id, hasOutput } = build;
   const state = prepareState(readyState).padEnd(longestState + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
 
   let stateColor = chalk.grey;
-  let pathColor = inspecting ? chalk.grey : chalk.cyan;
+  let pathColor = chalk.cyan;
 
   if (isReady({ readyState })) {
     stateColor = item => item;
@@ -29,11 +29,13 @@ const styleBuild = (build, times, inspecting, longestSource) => {
   const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput ? '┌' : '╶';
 
-  return `${inspecting ? `    ` : `${chalk.grey(prefix)} `}${pathColor(entry)}${stateColor(state)}${time}`;
+  return `${chalk.grey(prefix)} ${pathColor(
+    entry
+  )}${stateColor(state)}${time}`;
 };
 
-const styleOutput = (output, inspecting) => {
-  const {type, path, readyState, size, isLast, lambda} = output;
+const styleOutput = (output) => {
+  const { type, path, readyState, size, isLast, lambda } = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
   const finalSize = size ? ` ${chalk.grey(`(${bytes(size)})`)}` : '';
 
@@ -57,15 +59,15 @@ const styleOutput = (output, inspecting) => {
   const corner = isLast ? '└──' : '├──';
   const main = prefix + path + finalSize + finalRegion;
 
-  return `${inspecting ? `      ` : `${chalk.grey(corner)} `}${color(main)}`;
+  return `${chalk.grey(corner)} ${color(main)}`;
 };
 
-export default (builds, times, inspecting) => {
+export default (builds, times) => {
   const buildsAndOutput = [];
 
   for (const build of builds) {
     buildsAndOutput.push(build);
-    const {output, copiedFrom} = build;
+    const { output, copiedFrom } = build;
 
     if (!copiedFrom && output && output.length > 0) {
       build.hasOutput = true;
@@ -92,12 +94,12 @@ export default (builds, times, inspecting) => {
     let log = null;
 
     if (item.isOutput) {
-      log = styleOutput(item, inspecting);
+      log = styleOutput(item);
     } else {
-      log = styleBuild(item, times, inspecting, longestSource);
+      log = styleBuild(item, times, longestSource);
     }
 
-    const newline = (index === buildsAndOutput.length - 1) ? '' : '\n';
+    const newline = index === buildsAndOutput.length - 1 ? '' : '\n';
     return log + newline;
   });
 

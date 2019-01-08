@@ -5,29 +5,32 @@ import table from 'text-table';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import getCerts from '../../util/certs/get-certs';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import Now from '../../util';
-import stamp from '../../util/output/stamp';
+import stamp from '../../util/output/stamp.ts';
 
-async function rm(
-  ctx            ,
-  opts                 ,
-  args          ,
-  output
-)                  {
+async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const rmStamp = stamp();
   const debug = opts['--debug'];
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  const client = new Client({ apiUrl, token, currentTeam, debug });
 
-  // $FlowFixMe
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
   const now = new Now({ apiUrl, token, debug, currentTeam });
 
   if (args.length !== 1) {
@@ -42,6 +45,7 @@ async function rm(
 
   const idOrCn = args[0];
   const certs = await getCertsToDelete(output, now, idOrCn);
+
   if (certs.length === 0) {
     output.error(
       `No certificates found by id or cn "${idOrCn}" under ${chalk.bold(
@@ -57,6 +61,7 @@ async function rm(
     'The following certificates will be removed permanently',
     certs
   );
+
   if (!yes) {
     now.close();
     return 0;
@@ -71,7 +76,7 @@ async function rm(
   return 0;
 }
 
-async function getCertsToDelete(output        , now     , idOrCn        ) {
+async function getCertsToDelete(output, now, idOrCn) {
   const cert = await getCertById(output, now, idOrCn);
   return !cert ? getCerts(output, now, [idOrCn]) : [cert];
 }
@@ -83,7 +88,7 @@ function readConfirmation(output, msg, certs) {
       `${table([...certs.map(formatCertRow)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
-      }).replace(/^(.*)/gm, '  $1')  }\n`
+      }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
@@ -105,8 +110,8 @@ function readConfirmation(output, msg, certs) {
 function formatCertRow(cert) {
   return [
     cert.uid,
-    chalk.bold(cert.cns.join(', ')),
-    chalk.gray(`${ms(new Date() - new Date(cert.created))  } ago`)
+    chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
+    chalk.gray(`${ms(new Date() - new Date(cert.created))} ago`)
   ];
 }
 
