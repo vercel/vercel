@@ -384,9 +384,6 @@ async function sync({
       debug(`Forcing \`deploymentType\` = \`static\` automatically`);
 
       meta = {
-        name:
-          deploymentName ||
-          (isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -660,6 +657,7 @@ async function sync({
 
     try {
       meta.project = getProjectName({argv, nowConfig, isFile, paths});
+      meta.name = meta.project;
       // $FlowFixMe
       const createArgs = Object.assign(
         {

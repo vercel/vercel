@@ -1,7 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
-import { basename } from 'path';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
@@ -188,9 +187,6 @@ export default async function main(
   log(`Deploying ${list} under ${chalk.bold(contextName)}`);
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-  const filesName = isFile
-    ? 'file'
-    : paths.length === 1 ? basename(paths[0]) : 'files';
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
@@ -270,6 +266,7 @@ export default async function main(
 
   try {
     // $FlowFixMe
+    const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
     const createArgs = Object.assign(
       {
         env: deploymentEnv,
@@ -284,8 +281,8 @@ export default async function main(
         meta
       },
       {
-        name: argv['--name'] || localConfig.name || filesName,
-        project: getProjectName({argv, nowConfig: localConfig, isFile, paths})
+        project,
+        name: project
       }
     );
 
