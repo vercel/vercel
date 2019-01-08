@@ -362,7 +362,7 @@ test('throws when `package.json` and `Dockerfile` exist', async t => {
   } catch (err) {
     e = err;
   }
-  t.is(e.code, 'MULTIPLE_MANIFESTS');
+  t.is(e.code, 'multiple_manifests');
   t.pass(/ambiguous deployment/i.test(e.message));
 });
 

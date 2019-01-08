@@ -1,16 +1,10 @@
-// Native
 import { basename, resolve as resolvePath } from 'path';
-
-// Packages
 import chalk from 'chalk';
-
 import loadJSON from 'load-json-file';
 import loadPackageJSON from 'read-pkg';
 import fs from 'fs';
 import { parse as parseDockerfile } from 'docker-file-parser';
 import determineType from 'deployment-type';
-
-// Utilities
 import getLocalConfigPath from './config/local-path';
 
 export default readMetaData;
@@ -74,7 +68,7 @@ async function readMetaData(
           'Please supply `--npm` or `--docker` to disambiguate.'
       );
 
-      err.code = 'MULTIPLE_MANIFESTS';
+      err.code = 'multiple_manifests';
 
       throw err;
     }

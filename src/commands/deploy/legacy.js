@@ -411,7 +411,15 @@ async function sync({
           sessionAffinity
         ));
       } catch (err) {
-        if (err.code === 'config_prop_and_file' || err.code === 'dockerfile_missing' || err.code === 'no_dockerfile_commands' || err.code === 'unsupported_deployment_type') {
+        const print = [
+          'config_prop_and_file',
+          'dockerfile_missing',
+          'no_dockerfile_commands',
+          'unsupported_deployment_type',
+          'multiple_manifests'
+        ];
+
+        if (err.code && print.includes(err.code)) {
           error(err.message);
           return 1;
         }
