@@ -267,6 +267,7 @@ export default async function main(
   try {
     // $FlowFixMe
     const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
+    log(`Using project ${chalk.bold(project)}`);
     const createArgs = Object.assign(
       {
         env: deploymentEnv,
