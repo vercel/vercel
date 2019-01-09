@@ -29,7 +29,7 @@ export default routes => {
 
     const finalSrc = chalk.cyan(src.padEnd(longestSrc + padding));
     const finalDest = dest ? `${arrow}${space}${dest}` : `  ${space}${destSpace}`;
-    const finalStatus = chalk.grey(status ? `[${status}]` : '[status inferred]');
+    const finalStatus = status ? chalk.grey(`[${status}]`) : '';
 
     let finalHeaders = null;
 
