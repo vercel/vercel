@@ -216,6 +216,14 @@ export default async function main(ctx, contextName, output, mriOpts) {
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
+  if (argv.name) {
+    error(`
+      The option ${chalk.bold('--name')} (or ${chalk.bold('-n')}) option is not supported in this Now CLI version.
+      Use ${chalk.bold('--project')} instead.
+    `)
+    await exit(1)
+  }
+
   warn(
     'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );

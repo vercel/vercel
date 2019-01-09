@@ -119,6 +119,46 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
+test('force --project instead --name in V2', async t => {
+  const directory = fixture('node');
+  const goal =
+    'The option `--name` (or `-n`) option is not supported in this Now CLI version';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 2],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('force --project instead --name in V1', async t => {
+  const directory = fixture('node');
+  const goal =
+    'The option --name (or -n) option is not supported in this Now CLI version';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
 test('list the scopes', async t => {
   const { stdout, code } = await execa(
     binaryPath,

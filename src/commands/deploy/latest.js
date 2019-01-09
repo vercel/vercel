@@ -163,10 +163,17 @@ export default async function main(
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
-
   const { log, debug, error, print } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
+
+  if (argv['--name']) {
+    error(`
+      The option ${code('--name')} (or ${code('-n')}) option is not supported in this Now CLI version.
+      Use ${code('--project')} instead.
+    `)
+    return 1
+  }
 
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
@@ -196,6 +203,7 @@ export default async function main(
   let syncCount;
   let deployStamp = stamp();
   let deployment = null;
+
 
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
