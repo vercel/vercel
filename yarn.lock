@@ -6586,10 +6586,10 @@ unzip-response@^2.0.1:
   resolved "https://registry.yarnpkg.com/unzip-response/-/unzip-response-2.0.1.tgz#d2f0f737d16b0615e72a6935ed04214572d56f97"
   integrity sha1-0vD3N9FrBhXnKmk17QQhRXLVb5c=
 
-update-check@1.5.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/update-check/-/update-check-1.5.0.tgz#9faf2d4ff3c50bcf058df61cebf690c8b484e7bc"
-  integrity sha512-bSzhZ5bTcihI+Yab37pDAQc4Nmf/MvO9gwKoF+Sn5XMr2twBZG4Ri4iuSK7rpe+j8UmA9N2GUzyJtySEYjaf7w==
+update-check@1.5.3:
+  version "1.5.3"
+  resolved "https://registry.yarnpkg.com/update-check/-/update-check-1.5.3.tgz#45240fcfb8755a7c7fa68bbdd9eda026a41639ed"
+  integrity sha512-6KLU4/dd0Tg/l0xwL+f9V7kEIPSL1vOIbnNnhSLiRDlj4AVG6Ks9Zoc9Jgt9kIgWFPZ/wp2AHgmG7xNf15TJOA==
   dependencies:
     registry-auth-token "3.3.2"
     registry-url "3.1.0"
