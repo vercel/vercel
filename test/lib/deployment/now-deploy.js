@@ -114,7 +114,11 @@ async function fetchWithAuth (url, opts = {}) {
 
   if (!opts.headers.Authorization) {
     if (!token) {
-      const { NOW_TOKEN_FACTORY_URL } = process.env;
+      const { NOW_TOKEN, NOW_TOKEN_FACTORY_URL } = process.env;
+
+      if (NOW_TOKEN) {
+        token = NOW_TOKEN;
+      } else
       if (NOW_TOKEN_FACTORY_URL) {
         const resp = await fetch(NOW_TOKEN_FACTORY_URL);
         token = (await resp.json()).token;
