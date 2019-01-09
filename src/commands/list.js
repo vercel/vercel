@@ -254,12 +254,12 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
             [
-              dep.name,
+              getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               dep.instanceCount == null || dep.type === 'LAMBDAS'
                 ? chalk.gray('-')
@@ -296,6 +296,15 @@ export default async function main(ctx) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+}
+
+function getProjectName(d) {
+  // We group both file and files into a single project
+  if (d.name === 'file') {
+    return 'files';
+  }
+
+  return d.name
 }
 
 // renders the state string
