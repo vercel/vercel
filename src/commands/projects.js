@@ -7,6 +7,7 @@ import strlen from '../util/strlen';
 import { handleError, error } from '../util/error';
 import ZeitAgent from '../util/zeit-agent';
 import exit from '../util/exit';
+import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 
@@ -62,13 +63,9 @@ const main = async ctx => {
   }
 
   const { authConfig: { token }, config: { currentTeam }} = ctx;
+  const client = new Client({ apiUrl, token, currentTeam, debug });
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  const { contextName } = await getScope(client);
 
   try {
     await run({ token, contextName, currentTeam });
@@ -111,15 +108,14 @@ async function run({ token, contextName, currentTeam }) {
 
     if (list.length > 0) {
       const cur = Date.now();
-      const header = [['', 'name', 'updated', 'id'].map(s => chalk.dim(s))];
+      const header = [['', 'name', 'updated'].map(s => chalk.dim(s))];
 
       const out = table(
         header.concat(
           list.map(secret => [
             '',
               chalk.bold(secret.name),
-              chalk.gray(`${ms(cur - new Date(secret.updatedAt))  } ago`),
-              chalk.gray(secret.id)
+              chalk.gray(`${ms(cur - new Date(secret.updatedAt))  } ago`)
             ])
         ),
         {
