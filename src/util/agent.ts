@@ -3,7 +3,6 @@ import { Agent as HttpsAgent } from 'https';
 import { JsonBody, StreamBody, context } from 'fetch-h2';
 
 // Packages
-import nodeFetch from 'node-fetch';
 import { parse } from 'url';
 import Sema from 'async-sema';
 import createOutput, { Output } from './output/create-output';
