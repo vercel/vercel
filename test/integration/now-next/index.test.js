@@ -21,6 +21,22 @@ it(
 );
 
 it(
+  'Should build the monorepo example',
+  async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, 'monorepo'),
+    );
+    expect(buildResult['www/index']).toBeDefined();
+    const filePaths = Object.keys(buildResult);
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+  },
+  FOUR_MINUTES,
+);
+
+it(
   'Should build the legacy standard example',
   async () => {
     const { buildResult } = await runBuildLambda(
