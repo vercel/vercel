@@ -437,6 +437,14 @@ async function sync({
     const nowConfig = meta.nowConfig || {};
     const scaleFromConfig = getScaleFromConfig(nowConfig);
 
+    if (nowConfig.name) {
+      error(`
+        The property ${chalk.bold('name')} inside ${chalk.bold('now.json')} is not supported with this Now CLI version.
+        Use ${chalk.bold('project')} property instead.
+      `)
+      await exit(1);
+    }
+
     let scale = {};
     let dcIds;
 

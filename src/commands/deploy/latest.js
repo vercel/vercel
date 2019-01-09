@@ -175,6 +175,14 @@ export default async function main(
     return 1
   }
 
+  if (localConfig.name) {
+    error(`
+      The property ${code('name')} inside ${code('now.json')} is not supported with this Now CLI version.
+      Use ${code('project')} property instead.
+    `)
+    return 1
+  }
+
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
