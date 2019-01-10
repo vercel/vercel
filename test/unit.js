@@ -44,14 +44,14 @@ const getDockerFiles = async dir => {
   return getDockerFiles_(dir, nowConfig, { hasNowJson, output });
 };
 
-const getStaticFiles = async dir => {
+const getStaticFiles = async (dir, isBuilds = false) => {
   const { nowConfig, hasNowJson } = await readMetadata(dir, {
     deploymentType: 'static',
     quiet: true,
     strict: false
   });
 
-  return getStaticFiles_(dir, nowConfig, { hasNowJson, output });
+  return getStaticFiles_(dir, nowConfig, { hasNowJson, output, isBuilds });
 };
 
 test('`files`', async t => {
@@ -169,8 +169,7 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
   process.argv = [...process.argv, '--local-config', './now.json']
 
   let files = await getStaticFiles(
-    fixture(path),
-    await loadJSON(getLocalConfigPath(fixture(path)))
+    fixture(path)
   );
 
   files = files.sort(alpha);
@@ -184,8 +183,7 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
 test('`now.files` overrides `.gitignore` in Static', async t => {
   const path = 'now-json-static-gitignore-override';
   let files = await getStaticFiles(
-    fixture(path),
-    await loadJSON(getLocalConfigPath(fixture(path)))
+    fixture(path)
   );
   files = files.sort(alpha);
 
@@ -193,6 +191,32 @@ test('`now.files` overrides `.gitignore` in Static', async t => {
   t.is(base(files[0]), `${path}/a.js`);
   t.is(base(files[1]), `${path}/b.js`);
   t.is(base(files[2]), `${path}/build/a/c.js`);
+});
+
+test('discover static files without `now.files`', async t => {
+  const path = 'now-json-static-no-files';
+  let files = await getStaticFiles(fixture(path));
+  files = files.sort(alpha);
+
+  t.is(files.length, 4);
+
+  t.is(base(files[0]), `${path}/a.js`);
+  t.is(base(files[1]), `${path}/b.js`);
+  t.is(base(files[2]), `${path}/build/a/c.js`);
+  t.is(base(files[3]), `${path}/package.json`);
+});
+
+test('discover files for builds deployment', async t => {
+  const path = 'now-json-static-no-files';
+  let files = await getStaticFiles(fixture(path), true);
+  files = files.sort(alpha);
+
+  t.is(files.length, 4);
+
+  t.is(base(files[0]), `${path}/a.js`);
+  t.is(base(files[1]), `${path}/b.js`);
+  t.is(base(files[2]), `${path}/build/a/c.js`);
+  t.is(base(files[3]), `${path}/package.json`);
 });
 
 test('`now.files` overrides `.npmignore`', async t => {
