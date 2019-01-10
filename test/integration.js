@@ -379,11 +379,28 @@ test('set platform version using `-V` to `2`', async t => {
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
+  if (host) {
+    context.deployment = host;
+  }
+
   // Send a test request to the deployment
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('output logs of a 2.0 deployment', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
+  t.is(code, 0);
 });
 
 test('ensure type and instance count in list is right', async t => {
@@ -594,7 +611,7 @@ test('find deployment in list with mixed args', async t => {
   }
 });
 
-test('output logs of deployment', async t => {
+test('output logs of a 1.0 deployment', async t => {
   const { stdout, code } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
