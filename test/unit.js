@@ -1,18 +1,11 @@
-// Native
 import { join } from 'path';
-
-// Packages
 import { send } from 'micro';
-
 import test from 'ava';
 import sinon from 'sinon';
 import { asc as alpha } from 'alpha-sort';
 import loadJSON from 'load-json-file';
 import fetch from 'node-fetch';
-
-// Utilities
 import createOutput from '../src/util/output';
-
 import hash from '../src/util/hash';
 import readMetadata from '../src/util/read-metadata';
 import getLocalConfigPath from '../src/util/config/local-path';
@@ -166,6 +159,25 @@ test('`now.files` overrides `.npmignore` in Node', async t => {
   t.is(base(files[3]), `${path}/c.js`);
   t.is(base(files[4]), `${path}/now.json`);
   t.is(base(files[5]), `${path}/package.json`);
+});
+
+test('`now.files` overrides `.gitignore` in Static with custom config path', async t => {
+  const path = 'now-json-static-gitignore-override';
+
+  // Simulate custom args passed by the user
+  process.argv = [...process.argv, '--local-config', './now.json']
+
+  let files = await getStaticFiles(
+    fixture(path),
+    await loadJSON(getLocalConfigPath(fixture(path)))
+  );
+
+  files = files.sort(alpha);
+
+  t.is(files.length, 3);
+  t.is(base(files[0]), `${path}/a.js`);
+  t.is(base(files[1]), `${path}/b.js`);
+  t.is(base(files[2]), `${path}/build/a/c.js`);
 });
 
 test('`now.files` overrides `.gitignore` in Static', async t => {
