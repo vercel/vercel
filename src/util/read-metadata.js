@@ -112,7 +112,7 @@ async function readMetaData(
       }
     });
 
-    if (!name) {
+    if (!name && labels.name) {
       name = labels.name;
     }
 

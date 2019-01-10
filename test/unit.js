@@ -46,6 +46,7 @@ const getDockerFiles = async dir => {
 
 const getStaticFiles = async dir => {
   const { nowConfig, hasNowJson } = await readMetadata(dir, {
+    deploymentType: 'static',
     quiet: true,
     strict: false
   });
@@ -445,6 +446,17 @@ test('support `now.json` files with Dockerfile', async t => {
   t.is(base(files[0]), 'now-json-docker/Dockerfile');
   t.is(base(files[1]), 'now-json-docker/b.js');
   t.is(base(files[2]), 'now-json-docker/now.json');
+});
+
+test('load name from Dockerfile', async t => {
+  const f = fixture('now-json-docker-name');
+  const { deploymentType, name } = await readMetadata(f, {
+    quiet: true,
+    strict: false
+  });
+
+  t.is(deploymentType, 'docker');
+  t.is(name, 'testing');
 });
 
 test('support `now.json` files with Dockerfile non quiet', async t => {
