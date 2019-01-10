@@ -18,7 +18,8 @@
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build && cd link && npm link",
-    "build": "ncc build ./src",
+    "build": "ncc build -m -s ./src",
+    "build-dev": "ncc build ./src",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
@@ -127,7 +128,7 @@
     "@types/text-table": "0.2.0",
     "@zeit/dockerignore": "0.0.3",
     "@zeit/git-hooks": "0.1.4",
-    "@zeit/ncc": "0.5.0",
+    "@zeit/ncc": "0.8.1",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
