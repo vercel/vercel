@@ -17,7 +17,7 @@
     "bundle": "pkg bin/now.js -c package.json -o packed/now --options no-warnings",
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "ncc build ./download/src --out ./download/dist",
-    "link": "yarn run build && cd link && npm link",
+    "link": "yarn run build-dev && cd link && npm link",
     "build": "ncc build -m -s ./src",
     "build-dev": "ncc build ./src",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
