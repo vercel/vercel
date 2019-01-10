@@ -25,6 +25,7 @@ import {
   docker as getDockerFiles_,
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
+import didYouMean from '../src/util/init/did-you-mean';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -564,4 +565,13 @@ test('5xx response error with random JSON', async t => {
   const formatted = await responseError(res, 'Failed to process data');
 
   t.is(formatted.message, 'Failed to process data (500)');
+});
+
+test('guess user\'s intention with custom didYouMean', async t => {
+  const examples = ["apollo","create-react-app","docz","gatsby","go","gridsome","html-minifier","mdx-deck","monorepo","nextjs","nextjs-news","nextjs-static","node-server","nodejs","nodejs-canvas-partyparrot","nodejs-coffee","nodejs-express","nodejs-hapi","nodejs-koa","nodejs-koa-ts","nodejs-pdfkit","nuxt-static","optipng","php-7","puppeteer-screenshot","python","redirect","serverless-ssr-reddit","static","vue","vue-ssr","vuepress"];
+
+  t.is(didYouMean('md', examples, 0.7), 'mdx-deck');
+  t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
+  t.is(didYouMean('node', examples, 0.7), 'nodejs');
+  t.is(didYouMean('12345', examples, 0.7), undefined);
 });

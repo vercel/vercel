@@ -3,8 +3,6 @@ import path from 'path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
-// @ts-ignore
-import distance from 'jaro-winkler';
 
 // @ts-ignore
 import listInput from '../../util/input/list';
@@ -16,6 +14,7 @@ import { NowContext } from '../../types';
 // @ts-ignore
 import success from '../../util/output/success';
 import info from '../../util/output/info';
+import didYouMean from '../../util/init/did-you-mean';
 
 type Options = {
   '--debug': boolean;
@@ -185,25 +184,4 @@ async function guess(exampleList: string[], name: string, dir: string) {
   } else {
     throw GuessError;
   }
-}
-
-/**
- * Guess user's intention with jaro-winkler algorithm (with "-" awared)
- */
-function didYouMean(input: string, list: string[], threshold: number = 0.5) {
-  const rated = list.map(item => [dashAwareDistance(input, item), item]);
-  const found = rated.filter(item => item[0] > threshold);
-  if (found.length) {
-    return found.sort((a, b) => b[0] - a[0])[0][1];
-  }
-}
-
-/**
- * jaro-winkler algorithm (with "-" awared)
- */
-function dashAwareDistance(word: string, dashWord: string) {
-  return dashWord
-    .split('-')
-    .map(w => distance(w, word))
-    .sort((a, b) => b - a)[0];
 }
