@@ -11,7 +11,7 @@ import readMetadata from '../src/util/read-metadata';
 import getLocalConfigPath from '../src/util/config/local-path';
 import toHost from '../src/util/to-host';
 import wait from '../src/util/output/wait';
-import { responseError } from '../src/util/error';
+import { responseError, responseErrorMessage } from '../src/util/error';
 import getURL from './helpers/get-url';
 import {
   npm as getNpmFiles_,
@@ -577,6 +577,116 @@ test('5xx response error with random JSON', async t => {
   const formatted = await responseError(res, 'Failed to process data');
 
   t.is(formatted.message, 'Failed to process data (500)');
+});
+
+test('4xx error message with broken JSON', async t => {
+  const fn = async (req, res) => {
+    send(res, 403, `32puuuh2332`);
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseErrorMessage(res, 'Not authenticated');
+
+  t.is(formatted, 'Not authenticated (403)');
+});
+
+test('4xx error message with proper message', async t => {
+  const fn = async (req, res) => {
+    send(res, 403, {
+      error: {
+        message: 'This is a test'
+      }
+    });
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseErrorMessage(res);
+
+  t.is(formatted, 'This is a test (403)');
+});
+
+test('5xx error message with proper message', async t => {
+  const fn = async (req, res) => {
+    send(res, 500, {
+      error: {
+        message: 'This is a test'
+      }
+    });
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseErrorMessage(res);
+
+  t.is(formatted, 'Response Error (500)');
+});
+
+test('4xx response error with broken JSON', async t => {
+  const fn = async (req, res) => {
+    send(res, 403, `122{"sss"`);
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseError(res, 'Not authenticated');
+
+  t.is(formatted.message, 'Not authenticated (403)');
+});
+
+test('4xx response error as correct JSON with more properties', async t => {
+  const fn = async (req, res) => {
+    send(res, 403, {
+      error: {
+        message: 'The request is not correct',
+        additionalProperty: 'test'
+      }
+    });
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseError(res);
+
+  t.is(formatted.message, 'The request is not correct (403)');
+  t.is(formatted.additionalProperty, 'test');
+});
+
+test('429 response error with retry header', async t => {
+  const fn = async (req, res) => {
+    res.setHeader('Retry-After', '20');
+
+    send(res, 429, {
+      error: {
+        message: 'You were rate limited'
+      }
+    });
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseError(res);
+
+  t.is(formatted.message, 'You were rate limited (429)');
+  t.is(formatted.retryAfter, 20);
+});
+
+test('429 response error without retry header', async t => {
+  const fn = async (req, res) => {
+    send(res, 429, {
+      error: {
+        message: 'You were rate limited'
+      }
+    });
+  };
+
+  const url = await getURL(fn);
+  const res = await fetch(url);
+  const formatted = await responseError(res);
+
+  t.is(formatted.message, 'You were rate limited (429)');
+  t.is(formatted.retryAfter, undefined);
 });
 
 test('guess user\'s intention with custom didYouMean', async t => {
