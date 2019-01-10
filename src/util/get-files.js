@@ -4,10 +4,7 @@ import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob from 'glob';
 import fs from 'fs';
-
-// Utilities
 import IGNORED from './ignored';
-
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
 
