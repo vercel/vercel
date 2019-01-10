@@ -333,6 +333,14 @@ test('support `now.json` files with package.json', async t => {
   t.is(base(files[2]), 'now-json/package.json');
 });
 
+test('support `now.json` files with no package.json', async t => {
+  let files = await getNpmFiles(fixture('now-json-no-package'));
+  files = files.sort(alpha);
+  t.is(files.length, 3);
+  t.is(base(files[0]), 'now-json-no-package/b.js');
+  t.is(base(files[1]), 'now-json-no-package/now.json');
+});
+
 test('throw for unsupported `now.json` type property', async t => {
   const f = fixture('now-json-unsupported');
 
@@ -363,6 +371,36 @@ test('support `now.json` files with package.json non quiet', async t => {
   t.is(base(files[0]), 'now-json-no-name/b.js');
   t.is(base(files[1]), 'now-json-no-name/now.json');
   t.is(base(files[2]), 'now-json-no-name/package.json');
+});
+
+test('support `now.json` files with package.json non quiet not specified', async t => {
+  const f = fixture('now-json-no-name');
+  const { deploymentType } = await readMetadata(f, {
+    strict: false
+  });
+
+  t.is(deploymentType, 'npm');
+
+  let files = await getNpmFiles(f);
+  files = files.sort(alpha);
+
+  t.is(files.length, 3);
+  t.is(base(files[0]), 'now-json-no-name/b.js');
+  t.is(base(files[1]), 'now-json-no-name/now.json');
+  t.is(base(files[2]), 'now-json-no-name/package.json');
+});
+
+test('No commands in Dockerfile with automatic strictness', async t => {
+  const f = fixture('dockerfile-empty');
+
+  try {
+    await readMetadata(f, {
+      quiet: true
+    });
+  } catch (err) {
+    t.is(err.code, 'no_dockerfile_commands');
+    t.is(err.message, 'No commands found in `Dockerfile`');
+  }
 });
 
 test('No commands in Dockerfile', async t => {

@@ -108,15 +108,7 @@ async function readMetaData(
     dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
       for (const key of Object.keys(args)) {
         // Unescape and convert into string
-        try {
-          labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
-        } catch (err) {
-          const e = new Error(
-            `Error parsing value for LABEL ${key} in \`Dockerfile\``
-          );
-
-          throw e;
-        }
+        labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
       }
     });
 
