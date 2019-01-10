@@ -251,29 +251,19 @@ export async function npm(
 
     const prefixLength = path.length + 1;
 
-    // The package.json `files` whitelist still
-    // honors npmignores: https://docs.npmjs.com/files/package.json#files
-    // but we don't ignore if the user is explicitly listing files
-    // under the now namespace, or using files in combination with gitignore
-    const overrideIgnores =
-      (pkg.now && pkg.now.files) ||
-      nowConfig.files ||
-      (gitIgnore !== null && pkg.files);
-    const accepts = overrideIgnores
-      ? () => true
-      : file => {
-          const relativePath = file.substr(prefixLength);
+    const accepts = file => {
+      const relativePath = file.substr(prefixLength);
 
-          if (relativePath === '') {
-            return true;
-          }
+      if (relativePath === '') {
+        return true;
+      }
 
-          const accepted = filter(relativePath);
-          if (!accepted) {
-            debug(`Ignoring ${file}`);
-          }
-          return accepted;
-        };
+      const accepted = filter(relativePath);
+      if (!accepted) {
+        debug(`Ignoring ${file}`);
+      }
+      return accepted;
+    };
 
     // Locate files
     files = await time(
