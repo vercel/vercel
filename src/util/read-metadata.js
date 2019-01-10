@@ -110,11 +110,7 @@ async function readMetaData(
     const labels = {};
 
     dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
-      for (const key in args) {
-        if (!{}.hasOwnProperty.call(args, key)) {
-          continue;
-        }
-
+      for (const key of Object.keys(args)) {
         // Unescape and convert into string
         try {
           labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');

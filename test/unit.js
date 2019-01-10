@@ -333,10 +333,86 @@ test('support `now.json` files with package.json', async t => {
   t.is(base(files[2]), 'now-json/package.json');
 });
 
+test('throw for unsupported `now.json` type property', async t => {
+  const f = fixture('now-json-unsupported');
+
+  try {
+    await readMetadata(f, {
+      quiet: true,
+      strict: false
+    });
+  } catch (err) {
+    t.is(err.code, 'unsupported_deployment_type');
+    t.is(err.message, 'Unsupported "deploymentType": weird-type');
+  }
+});
+
+test('support `now.json` files with package.json non quiet', async t => {
+  const f = fixture('now-json-no-name');
+  const { deploymentType } = await readMetadata(f, {
+    quiet: false,
+    strict: false
+  });
+
+  t.is(deploymentType, 'npm');
+
+  let files = await getNpmFiles(f);
+  files = files.sort(alpha);
+
+  t.is(files.length, 3);
+  t.is(base(files[0]), 'now-json-no-name/b.js');
+  t.is(base(files[1]), 'now-json-no-name/now.json');
+  t.is(base(files[2]), 'now-json-no-name/package.json');
+});
+
+test('No commands in Dockerfile', async t => {
+  const f = fixture('dockerfile-empty');
+
+  try {
+    await readMetadata(f, {
+      quiet: true,
+      strict: true
+    });
+  } catch (err) {
+    t.is(err.code, 'no_dockerfile_commands');
+    t.is(err.message, 'No commands found in `Dockerfile`');
+  }
+});
+
+test('Missing Dockerfile for `docker` type', async t => {
+  const f = fixture('now-json-docker-missing');
+
+  try {
+    await readMetadata(f, {
+      quiet: true,
+      strict: true
+    });
+  } catch (err) {
+    t.is(err.code, 'dockerfile_missing');
+    t.is(err.message, '`Dockerfile` missing');
+  }
+});
+
 test('support `now.json` files with Dockerfile', async t => {
   const f = fixture('now-json-docker');
   const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
     quiet: true,
+    strict: false
+  });
+  t.is(deploymentType, 'docker');
+
+  let files = await getDockerFiles(f, nowConfig, { hasNowJson });
+  files = files.sort(alpha);
+  t.is(files.length, 3);
+  t.is(base(files[0]), 'now-json-docker/Dockerfile');
+  t.is(base(files[1]), 'now-json-docker/b.js');
+  t.is(base(files[2]), 'now-json-docker/now.json');
+});
+
+test('support `now.json` files with Dockerfile non quiet', async t => {
+  const f = fixture('now-json-docker');
+  const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
+    quiet: false,
     strict: false
   });
   t.is(deploymentType, 'docker');
