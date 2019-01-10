@@ -84,10 +84,6 @@ async function readMetaData(
 
   if (type === 'npm') {
     if (pkg) {
-      if (!name && pkg.now && pkg.now.name) {
-        name = String(pkg.now.name);
-      }
-
       if (!name && pkg.name) {
         name = String(pkg.name);
       }
