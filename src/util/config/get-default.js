@@ -3,7 +3,7 @@ export const getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. See `now config help`. More: https://bit.ly/2qAK8bb'
+      'This is your Now config file. For more information see the global configuration documentation: https://bit.ly/2qAK8bb'
   };
 
   if (existingCopy) {
