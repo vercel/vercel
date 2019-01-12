@@ -45,7 +45,7 @@ async function downloadInstallAndBundle(
       'package.json': new FileBlob({
         data: JSON.stringify({
           dependencies: {
-            '@zeit/ncc': '0.6.0',
+            '@zeit/ncc': '0.9.0',
           },
         }),
       }),
@@ -69,7 +69,8 @@ async function compile(workNccPath, downloadedFiles, entrypoint) {
   preparedFiles[path.join('user', entrypoint)] = blob;
   // eslint-disable-next-line no-restricted-syntax
   for (const assetName of Object.keys(assets)) {
-    const blob2 = new FileBlob({ data: assets[assetName] });
+    const { source: data, permissions: mode } = assets[assetName];
+    const blob2 = new FileBlob({ data, mode });
     preparedFiles[
       path.join('user', path.dirname(entrypoint), assetName)
     ] = blob2;
