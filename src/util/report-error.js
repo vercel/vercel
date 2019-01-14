@@ -43,6 +43,9 @@ export default async (sentry, error, apiUrl, configFiles) => {
         scope.setTag('currentTeam', team.id);
       }
 
+      const command = process.argv.slice(2).join(' ');
+      scope.setTag('command', `now ${command}`);
+
       sentry.captureException(error);
     });
   } else {
