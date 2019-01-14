@@ -43,8 +43,7 @@ export default async (sentry, error, apiUrl, configFiles) => {
         scope.setTag('currentTeam', team.id);
       }
 
-      const argv = process.argv.join(' ');
-      scope.setExtra('argv', argv);
+      scope.setExtra('argv', process.argv);
 
       sentry.captureException(error);
     });
