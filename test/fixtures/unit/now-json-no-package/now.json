@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "type": "npm",
   "files": [
     "b.js"
   ]

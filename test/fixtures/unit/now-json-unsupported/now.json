@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "type": "weird-type",
   "files": [
     "b.js"
   ]

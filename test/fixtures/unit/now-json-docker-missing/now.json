@@ -1,4 +1,5 @@
 {
+  "type": "docker",
   "version": 1,
   "files": [
     "b.js"
