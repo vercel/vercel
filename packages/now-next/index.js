@@ -168,7 +168,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     await writeNpmRc(workPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  console.log('running npm install...');
+  console.log('installing dependencies...');
   await runNpmInstall(workPath, ['--prefer-offline']);
   console.log('running user script...');
   await runPackageJsonScript(workPath, 'now-build');

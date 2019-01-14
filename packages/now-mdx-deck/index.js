@@ -15,7 +15,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   const packageJson = { dependencies: { 'mdx-deck': '1.7.15' } };
   const packageJsonPath = path.join(workPath, 'package.json');
   await writeFile(packageJsonPath, JSON.stringify(packageJson));
-  console.log('running npm install...');
+  console.log('installing dependencies...');
   process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = '1'; // TODO opts argument for runNpmInstall
   await runNpmInstall(path.dirname(packageJsonPath), [
     '--prod',

@@ -35,7 +35,7 @@ async function downloadInstallAndBundle(
   console.log('downloading user files...');
   const downloadedFiles = await download(files, userPath);
 
-  console.log('running npm install for user...');
+  console.log('installing dependencies for user\'s code...');
   const entrypointFsDirname = path.join(userPath, path.dirname(entrypoint));
   await runNpmInstall(entrypointFsDirname, npmArguments);
 
@@ -53,7 +53,7 @@ async function downloadInstallAndBundle(
     nccPath,
   );
 
-  console.log('running npm install for ncc...');
+  console.log('installing dependencies for ncc...');
   await runNpmInstall(nccPath, npmArguments);
   return [downloadedFiles, nccPath, entrypointFsDirname];
 }
