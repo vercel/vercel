@@ -44,7 +44,7 @@ const help = () => {
 
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
-    ${chalk.cyan('$ now scale my-deployment.now.sh')}
+    ${chalk.cyan('$ now inspect my-deployment.now.sh')}
   `);
 };
 
@@ -170,7 +170,7 @@ export default async function main(ctx) {
   );
 
   print('\n');
-  print(chalk.bold('  Meta\n\n'));
+  print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('version')}\t${version}\n`);
   print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
