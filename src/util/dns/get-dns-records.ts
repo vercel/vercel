@@ -45,7 +45,6 @@ function getAddDomainName(domainNames: string[]) {
 async function getDomainNames(client: Client, contextName: string) {
   const domains = await getDomains(client, contextName);
   return domains
-    .filter(domain => !isDomainExternal(domain))
     .map(domain => domain.name)
     .sort((a, b) => a.localeCompare(b));
 }

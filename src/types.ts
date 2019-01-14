@@ -1,3 +1,5 @@
+export type ThenArg<T> = T extends Promise<infer U> ? U : T;
+
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -186,3 +188,27 @@ export type DNSRecord = {
   created: number;
   updated: number;
 };
+
+type SRVRecordData = {
+  name: string,
+  type: 'SRV',
+  srv: {
+    port: number,
+    priority: number,
+    target: string,
+    weight: number,
+  }
+}
+
+type MXRecordData = {
+  name: string,
+  type: 'MX',
+  value: string,
+  mxPriority: number,
+};
+
+export type DNSRecordData = {
+  name: string,
+  type: string,
+  value: string,
+} | SRVRecordData | MXRecordData;
