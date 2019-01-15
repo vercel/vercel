@@ -10,6 +10,15 @@ export default function getProjectName({argv, nowConfig, isFile, paths}) {
     return nowConfig.project;
   }
 
+  const nameCli = argv['--name'] || argv.name;
+  if (nameCli) {
+    return nameCli;
+  }
+
+  if (nowConfig.name) {
+    return nowConfig.name;
+  }
+
   if (isFile || paths.length > 1) {
     return 'files';
   }

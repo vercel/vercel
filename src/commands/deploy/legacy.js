@@ -217,11 +217,10 @@ export default async function main(ctx, contextName, output, mriOpts) {
   ({ log, error, note, debug, warn } = output);
 
   if (argv.name) {
-    error(`
-      The option ${chalk.bold('--name')} (or ${chalk.bold('-n')}) option is not supported in this Now CLI version.
+    log(`
+      The option ${chalk.bold('--name')} (or ${chalk.bold('-n')}) is deprecated.
       Use ${chalk.bold('--project')} instead.
     `)
-    await exit(1)
   }
 
   warn(
@@ -438,11 +437,10 @@ async function sync({
     const scaleFromConfig = getScaleFromConfig(nowConfig);
 
     if (nowConfig.name) {
-      error(`
-        The property ${chalk.bold('name')} inside ${chalk.bold('now.json')} is not supported with this Now CLI version.
+      log(`
+        The property ${chalk.bold('name')} inside ${chalk.bold('now.json')} is deprecated.
         Use ${chalk.bold('project')} property instead.
       `)
-      await exit(1);
     }
 
     let scale = {};

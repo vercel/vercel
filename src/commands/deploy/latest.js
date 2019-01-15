@@ -168,19 +168,17 @@ export default async function main(
   const debugEnabled = argv['--debug'];
 
   if (argv['--name']) {
-    error(`
-      The option ${code('--name')} (or ${code('-n')}) option is not supported in this Now CLI version.
+    log(`
+      The option ${code('--name')} (or ${code('-n')}) is deprecated.
       Use ${code('--project')} instead.
     `)
-    return 1
   }
 
   if (localConfig.name) {
-    error(`
-      The property ${code('name')} inside ${code('now.json')} is not supported with this Now CLI version.
+    log(`
+      The property ${code('name')} inside ${code('now.json')} is deprecated.
       Use ${code('project')} property instead.
     `)
-    return 1
   }
 
   // $FlowFixMe
