@@ -1,16 +1,28 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import Now from '../../util';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
+import { Output } from '../../util/output';
+import { DomainNotFound } from '../../util/errors-ts';
+import { ThenArg, DNSRecord, NowContext } from '../../types';
+import Client from '../../util/client';
+import formatTable from '../../util/format-table';
 import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import stamp from '../../util/output/stamp.ts';
-import formatTable from '../../util/format-table';
-import { DomainNotFound } from '../../util/errors-ts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 
-async function ls(ctx, opts, args, output) {
+type DNSRecords = ThenArg<ReturnType<typeof getDNSRecords>>;
+
+type Options = {
+  '--debug': boolean;
+};
+
+export default async function ls(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -29,8 +41,6 @@ async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const [domainName] = args;
   const lsStamp = stamp();
 
@@ -44,7 +54,7 @@ async function ls(ctx, opts, args, output) {
   }
 
   if (domainName) {
-    const records = await getDomainDNSRecords(output, now, domainName);
+    const records = await getDomainDNSRecords(output, client, domainName);
     if (records instanceof DomainNotFound) {
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
@@ -63,7 +73,7 @@ async function ls(ctx, opts, args, output) {
     return 0;
   }
 
-  const dnsRecords = await getDNSRecords(output, now, contextName);
+  const dnsRecords = await getDNSRecords(output, client, contextName);
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
     `${plural('Record', nRecords, true)} found under ${chalk.bold(
@@ -74,20 +84,20 @@ async function ls(ctx, opts, args, output) {
   return 0;
 }
 
-function getDNSRecordsTable(dnsRecords) {
+function getDNSRecordsTable(dnsRecords: DNSRecords) {
   return formatTable(
     ['', 'id', 'name', 'type', 'value', 'created'],
     ['l', 'r', 'l', 'l', 'l', 'l'],
     dnsRecords.map(({ domainName, records }) => ({
       name: chalk.bold(domainName),
-      rows: records.map(record => getDNSRecordRow(domainName, record))
+      rows: records.map(getDNSRecordRow)
     }))
   );
 }
 
-function getDNSRecordRow(domainName, record) {
+function getDNSRecordRow(record: DNSRecord) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = `${ms(Date.now() - new Date(Number(record.created)))} ago`;
+  const createdAt = `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',
@@ -98,5 +108,3 @@ function getDNSRecordRow(domainName, record) {
     chalk.gray(isSystemRecord ? 'default' : createdAt)
   ];
 }
-
-export default ls;

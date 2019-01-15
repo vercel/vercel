@@ -1,11 +1,11 @@
-//
 import chalk from 'chalk';
+
+import { NowContext } from '../../types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
+import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-
-import { handleError } from '../../util/error';
 
 import add from './add';
 import ls from './ls';
@@ -72,7 +72,7 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove']
 };
 
-export default async function main(ctx) {
+export default async function main(ctx: NowContext) {
   let argv;
 
   try {

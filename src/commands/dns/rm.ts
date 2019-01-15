@@ -1,21 +1,29 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
+import { NowContext, DNSRecord } from '../../types';
+import { Output } from '../../util/output';
+import Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import stamp from '../../util/output/stamp.ts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 
-async function rm(ctx, opts, args, output) {
-  // eslint-disable-line
+type Options = {
+  '--debug': boolean;
+};
+
+export default async function rm(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-
   let contextName = null;
 
   try {
@@ -29,10 +37,7 @@ async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const [recordId] = args;
-
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`
@@ -42,10 +47,11 @@ async function rm(ctx, opts, args, output) {
 
   const domainRecord = await getDNSRecordById(
     output,
-    now,
+    client,
     contextName,
     recordId
   );
+
   if (!domainRecord) {
     output.error('DNS record not found');
     return 1;
@@ -58,13 +64,14 @@ async function rm(ctx, opts, args, output) {
     domainName,
     record
   );
+
   if (!yes) {
     output.error(`User aborted.`);
     return 0;
   }
 
   const rmStamp = stamp();
-  await deleteDNSRecordById(output, now, contextName, domainName, record.id);
+  await deleteDNSRecordById(client, domainName, record.id);
   console.log(
     `${chalk.cyan('> Success!')} Record ${chalk.gray(
       `${record.id}`
@@ -73,7 +80,12 @@ async function rm(ctx, opts, args, output) {
   return 0;
 }
 
-function readConfirmation(output, msg, domainName, record) {
+function readConfirmation(
+  output: Output,
+  msg: string,
+  domainName: string,
+  record: DNSRecord
+) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
@@ -99,17 +111,13 @@ function readConfirmation(output, msg, domainName, record) {
   });
 }
 
-function getDeleteTableRow(domainName, record) {
+function getDeleteTableRow(domainName: string, record: DNSRecord) {
   const recordName = `${record.name.length > 0
     ? `${record.name}.`
     : ''}${domainName}`;
   return [
     record.id,
-    chalk.bold(
-      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
-    ),
-    chalk.gray(`${ms(new Date() - new Date(Number(record.created)))} ago`)
+    chalk.bold(`${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`),
+    chalk.gray(`${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`)
   ];
 }
-
-export default rm;

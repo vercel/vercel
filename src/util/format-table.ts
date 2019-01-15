@@ -1,10 +1,6 @@
-// Packages
 import chalk from 'chalk';
-
 import table from 'text-table';
-
-// Utilities
-import strlen from './strlen.ts';
+import strlen from './strlen';
 
 // header:
 // [ 'a', 'b', 'c', ... ]
@@ -21,7 +17,12 @@ import strlen from './strlen.ts';
 //   },
 //   ...
 // ]
-export default function formatTable(header, align, blocks, hsep = '    ') {
+export default function formatTable(
+  header: string[],
+  align: Array<'l' | 'r' | 'c' | '.'>,
+  blocks: { name: string, rows: string[][] }[],
+  hsep = '    '
+) {
   const nrCols = header.length;
   const padding = [];
   let out = '\n';

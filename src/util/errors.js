@@ -1,15 +1,5 @@
 import { NowError } from './now-error';
 
-export class DNSPermissionDenied extends NowError {
-  constructor(domain) {
-    super({
-      code: 'DNS_PERMISSION_DENIED',
-      meta: { domain },
-      message: `You don't have access to the DNS records of ${domain}.`
-    });
-  }
-}
-
 export class SchemaValidationFailed extends NowError {
   constructor(message, keyword, dataPath, params) {
     super({

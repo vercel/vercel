@@ -751,3 +751,13 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
     });
   }
 }
+
+export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', { domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DNS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to the DNS records of ${domain}.`
+    });
+  }
+}
