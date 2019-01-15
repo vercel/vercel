@@ -119,10 +119,10 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('force --project instead --name in V2', async t => {
+test('warn --project instead --name in V2', async t => {
   const directory = fixture('node');
   const goal =
-    'The option `--name` (or `-n`) option is not supported in this Now CLI version';
+    'The option `--name` (or `-n`) is deprecated';
 
   const { stderr, code } = await execa(
     binaryPath,
@@ -133,16 +133,16 @@ test('force --project instead --name in V2', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(code, 0);
 
   // Ensure the error message shows up
   t.true(stderr.includes(goal));
 });
 
-test('force --project instead --name in V1', async t => {
+test('warn --project instead --name in V1', async t => {
   const directory = fixture('node');
   const goal =
-    'The option --name (or -n) option is not supported in this Now CLI version';
+    'The option --name (or -n) is deprecated';
 
   const { stderr, code } = await execa(
     binaryPath,
@@ -153,7 +153,7 @@ test('force --project instead --name in V1', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(code, 0);
 
   // Ensure the error message shows up
   t.true(stderr.includes(goal));
