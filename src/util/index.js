@@ -65,6 +65,7 @@ export default class Now extends EventEmitter {
 
       // Latest
       name,
+      project,
       wantsPublic,
       meta,
       regions,
@@ -209,7 +210,6 @@ export default class Now extends EventEmitter {
       );
 
       const queryProps = {};
-
       const requestBody = isBuilds
         ? {
             version: 2,
@@ -217,6 +217,7 @@ export default class Now extends EventEmitter {
             build,
             public: wantsPublic || nowConfig.public,
             name,
+            project,
             files,
             meta,
             regions
@@ -228,6 +229,7 @@ export default class Now extends EventEmitter {
             public: wantsPublic || nowConfig.public,
             forceNew,
             name,
+            project,
             description,
             deploymentType: type,
             registryAuthToken: authToken,
