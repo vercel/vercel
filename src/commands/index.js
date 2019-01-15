@@ -25,6 +25,7 @@ export default {
   domain: 'domains',
   cert: 'certs',
   secret: 'secrets',
+  projects: 'projects',
   cc: 'billing',
   downgrade: 'upgrade',
   team: 'teams',

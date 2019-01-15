@@ -119,142 +119,30 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('list the scopes', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['teams', 'ls', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.includes(`✔ ${email}     ${email}`));
-});
-
-test('list the payment methods', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['billing', 'ls', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.startsWith(`> 0 cards found under ${email}`));
-});
-
-test('try to purchase a domain', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
-    {
-      reject: false,
-      input: 'y'
-    }
-  );
-
-  t.is(code, 1);
-  t.true(stderr.includes(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
-});
-
-test('try to set default without existing payment method', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    ['billing', 'set-default', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stderr.includes('You have no credit cards to choose from'));
-});
-
-test('try to remove a non-existing payment method', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(
-    stderr.includes(
-      `You have no credit cards to choose from to delete under ${email}`
-    )
-  );
-});
-
-test('use `-V 1` to deploy a GitHub repository', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['-V', 1, '--public', '--name', session, ...defaultArgs, 'leo/hub'],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json'
-    }
-  });
-
-  const contentType = response.headers.get('content-type');
-  t.is(contentType, 'application/json; charset=utf-8');
-});
-
-test('use `--platform-version 1` to deploy a GitHub repository', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    [
-      '--platform-version',
-      1,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      'leo/hub'
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json'
-    }
-  });
-
-  const contentType = response.headers.get('content-type');
-  t.is(contentType, 'application/json; charset=utf-8');
-});
-
-test('set platform version using `-V` to `1`', async t => {
-  const directory = fixture('builds');
+test('warn --project instead --name in V2', async t => {
+  const directory = fixture('node');
   const goal =
-    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+    'The option `--name` (or `-n`) is deprecated';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 2],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('warn --project instead --name in V1', async t => {
+  const directory = fixture('node');
+  const goal =
+    'The option --name (or -n) is deprecated';
 
   const { stderr, code } = await execa(
     binaryPath,
@@ -265,277 +153,10 @@ test('set platform version using `-V` to `1`', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(code, 0);
 
   // Ensure the error message shows up
   t.true(stderr.includes(goal));
-});
-
-test('set platform version using `--platform-version` to `1`', async t => {
-  const directory = fixture('builds');
-  const goal =
-    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--platform-version',
-      1
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 1);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('set platform version using `-V` to invalid number', async t => {
-  const directory = fixture('builds');
-  const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 1);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('set platform version using `--platform-version` to invalid number', async t => {
-  const directory = fixture('builds');
-  const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--platform-version',
-      3
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 1);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('set platform version using `-V` to `2`', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '-V',
-      2,
-      '--force'
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  if (host) {
-    context.deployment = host;
-  }
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
-test('output logs of a 2.0 deployment', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
-  t.is(code, 0);
-});
-
-test('ensure type and instance count in list is right', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
-  });
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
-  const columns = line.split(/\s+/);
-
-  // Ensure those columns only contain a dash
-  t.is(columns[3], '-');
-  t.is(columns[4], '-');
-});
-
-test('set platform version using `--platform-version` to `2`', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--platform-version',
-      2,
-      '--force'
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
-test('ensure the `alias` property is not sent to the API', async t => {
-  const directory = fixture('config-alias-property');
-
-  const { stderr, stdout, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
-test('try to create a builds deployments with wrong config', async t => {
-  const directory = fixture('builds-wrong');
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 1);
-  t.true(
-    stderr.includes(
-      '> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
-    )
-  );
-});
-
-test('create a builds deployments without platform version flag', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 test('deploy a node microservice', async t => {
@@ -543,7 +164,7 @@ test('deploy a node microservice', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [target, '--public', '--name', session, ...defaultArgs],
+    [target, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -715,12 +336,431 @@ test('scale down the deployment directly', async t => {
   t.true(stdout.includes(`(min: 0, max: 0)`));
 });
 
+test('list the scopes', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['teams', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.includes(`✔ ${email}     ${email}`));
+});
+
+test('list the payment methods', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['billing', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(`> 0 cards found under ${email}`));
+});
+
+test('try to purchase a domain', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
+    {
+      reject: false,
+      input: 'y'
+    }
+  );
+
+  t.is(code, 1);
+  t.true(stderr.includes(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
+});
+
+test('try to set default without existing payment method', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['billing', 'set-default', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stderr.includes('You have no credit cards to choose from'));
+});
+
+test('try to remove a non-existing payment method', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(
+    stderr.includes(
+      `You have no credit cards to choose from to delete under ${email}`
+    )
+  );
+});
+
+test('use `-V 1` to deploy a GitHub repository', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['-V', 1, '--public', '--project', session, ...defaultArgs, 'leo/hub'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
+test('use `--platform-version 1` to deploy a GitHub repository', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    [
+      '--platform-version',
+      1,
+      '--public',
+      '--project',
+      session,
+      ...defaultArgs,
+      'leo/hub'
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
+test('set platform version using `-V` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--project', session, ...defaultArgs, '-V', 1],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--project',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      1
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `-V` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The "--platform-version" option must be either `1` or `2`.';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--project', session, ...defaultArgs, '-V', 3],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The "--platform-version" option must be either `1` or `2`.';
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--project',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      3
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `-V` to `2`', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--project',
+      session,
+      ...defaultArgs,
+      '-V',
+      2,
+      '--force'
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  if (host) {
+    context.deployment = host;
+  }
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('output logs of a 2.0 deployment', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
+  t.is(code, 0);
+});
+
+test('ensure type and instance count in list is right', async t => {
+  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
+    reject: false
+  });
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const columns = line.split(/\s+/);
+
+  // Ensure those columns only contain a dash
+  t.is(columns[3], '-');
+  t.is(columns[4], '-');
+});
+
+test('set platform version using `--platform-version` to `2`', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--project',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      2,
+      '--force'
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('ensure the `alias` property is not sent to the API', async t => {
+  const directory = fixture('config-alias-property');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('try to create a builds deployments with wrong config', async t => {
+  const directory = fixture('builds-wrong');
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+  t.true(
+    stderr.includes(
+      '> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+    )
+  );
+});
+
+test('create a builds deployments without platform version flag', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
+    [directory, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -752,7 +792,7 @@ test('deploy single static file', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [file, '--public', '--name', session, ...defaultArgs],
+    [file, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -778,7 +818,7 @@ test('deploy a static directory', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
+    [directory, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -803,7 +843,7 @@ test('deploy a static build deployment', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
+    [directory, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -830,7 +870,7 @@ test('use build-env', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
+    [directory, '--public', '--project', session, ...defaultArgs],
     {
       reject: false
     }
@@ -860,7 +900,7 @@ test('deploy a dockerfile project', async t => {
     [
       target,
       '--public',
-      '--name',
+      '--project',
       session,
       '--docker',
       '--no-verify',
@@ -871,7 +911,7 @@ test('deploy a dockerfile project', async t => {
     }
   );
 
-  // Ensure the exit code is right
+	// Ensure the exit code is right
   t.is(code, 0);
 
   // Test if the output is really a URL
@@ -907,7 +947,7 @@ test('use `--build-env` CLI flag', async t => {
     [
       directory,
       '--public',
-      '--name',
+      '--project',
       session,
       '--build-env',
       `NONCE=${nonce}`,

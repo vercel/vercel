@@ -37,6 +37,7 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp.ts';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import parseMeta from '../../util/parse-meta';
+import getProjectName from '../../util/get-project-name';
 import {
   WildcardNotAllowed,
   CantSolveChallenge,
@@ -215,6 +216,13 @@ export default async function main(ctx, contextName, output, mriOpts) {
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
+  if (argv.name) {
+    log(`
+      The option ${chalk.bold('--name')} (or ${chalk.bold('-n')}) is deprecated.
+      Use ${chalk.bold('--project')} instead.
+    `)
+  }
+
   warn(
     'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
@@ -383,9 +391,6 @@ async function sync({
       debug(`Forcing \`deploymentType\` = \`static\` automatically`);
 
       meta = {
-        name:
-          deploymentName ||
-          (isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -430,6 +435,13 @@ async function sync({
 
     const nowConfig = meta.nowConfig || {};
     const scaleFromConfig = getScaleFromConfig(nowConfig);
+
+    if (nowConfig.name) {
+      log(`
+        The property ${chalk.bold('name')} inside ${chalk.bold('now.json')} is deprecated.
+        Use ${chalk.bold('project')} property instead.
+      `)
+    }
 
     let scale = {};
     let dcIds;
@@ -658,6 +670,9 @@ async function sync({
     let syncCount;
 
     try {
+      meta.project = getProjectName({argv, nowConfig, isFile, paths});
+      meta.name = meta.project;
+      log(`Using project ${chalk.bold(meta.project)}`);
       // $FlowFixMe
       const createArgs = Object.assign(
         {

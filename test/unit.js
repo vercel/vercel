@@ -8,6 +8,7 @@ import fetch from 'node-fetch';
 import createOutput from '../src/util/output';
 import hash from '../src/util/hash';
 import readMetadata from '../src/util/read-metadata';
+import getProjectName from '../src/util/get-project-name';
 import getLocalConfigPath from '../src/util/config/local-path';
 import toHost from '../src/util/to-host';
 import wait from '../src/util/output/wait';
@@ -727,6 +728,62 @@ test('5xx response error with random JSON', async t => {
   const formatted = await responseError(res, 'Failed to process data');
 
   t.is(formatted.message, 'Failed to process data (500)');
+});
+
+test('getProjectName with argv - option 1', t => {
+  const project = getProjectName({argv: {
+    project: 'abc'
+  }});
+  t.is(project, 'abc');
+});
+
+test('getProjectName with argv - option 2', t => {
+  const project = getProjectName({argv: {
+    '--project': 'abc'
+  }});
+  t.is(project, 'abc');
+});
+
+test('getProjectName with argv - option 2', t => {
+  const project = getProjectName({argv: {
+    '--project': 'abc'
+  }});
+  t.is(project, 'abc');
+});
+
+test('getProjectName with now.json', t => {
+  const project = getProjectName({
+    argv: {},
+    nowConfig: {project: 'abc'}
+  });
+  t.is(project, 'abc');
+});
+
+test('getProjectName with a file', t => {
+  const project = getProjectName({
+    argv: {},
+    nowConfig: {},
+    isFile: true
+  });
+  t.is(project, 'files');
+});
+
+test('getProjectName with a multiple files', t => {
+  const project = getProjectName({
+    argv: {},
+    nowConfig: {},
+    paths: ['/tmp/aa/abc.png', '/tmp/aa/bbc.png']
+  });
+  t.is(project, 'files');
+});
+
+test('getProjectName with a directory', t => {
+  const project = getProjectName({
+    argv: {},
+    nowConfig: {},
+    paths: ['/tmp/aa']
+  });
+  t.is(project, 'aa');
 });
 
 test('4xx error message with broken JSON', async t => {

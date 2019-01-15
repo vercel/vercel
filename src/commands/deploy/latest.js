@@ -1,7 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
-import { basename } from 'path';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
@@ -20,6 +19,7 @@ import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+import getProjectName from '../../util/get-project-name';
 import {
   WildcardNotAllowed,
   CantSolveChallenge,
@@ -163,10 +163,23 @@ export default async function main(
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
-
   const { log, debug, error, print } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
+
+  if (argv['--name']) {
+    log(`
+      The option ${code('--name')} (or ${code('-n')}) is deprecated.
+      Use ${code('--project')} instead.
+    `)
+  }
+
+  if (localConfig.name) {
+    log(`
+      The property ${code('name')} inside ${code('now.json')} is deprecated.
+      Use ${code('project')} property instead.
+    `)
+  }
 
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
@@ -187,9 +200,6 @@ export default async function main(
   log(`Deploying ${list} under ${chalk.bold(contextName)}`);
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-  const filesName = isFile
-    ? 'file'
-    : paths.length === 1 ? basename(paths[0]) : 'files';
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
@@ -199,6 +209,7 @@ export default async function main(
   let syncCount;
   let deployStamp = stamp();
   let deployment = null;
+
 
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
@@ -269,6 +280,8 @@ export default async function main(
 
   try {
     // $FlowFixMe
+    const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
+    log(`Using project ${chalk.bold(project)}`);
     const createArgs = Object.assign(
       {
         env: deploymentEnv,
@@ -283,7 +296,8 @@ export default async function main(
         meta
       },
       {
-        name: argv['--name'] || localConfig.name || filesName
+        project,
+        name: project
       }
     );
 
