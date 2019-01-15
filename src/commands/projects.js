@@ -5,7 +5,6 @@ import ms from 'ms';
 import plural from 'pluralize';
 import strlen from '../util/strlen';
 import { handleError, error } from '../util/error';
-import ZeitAgent from '../util/zeit-agent';
 import exit from '../util/exit';
 import Client from '../util/client.ts';
 import logo from '../util/output/logo';
@@ -68,7 +67,7 @@ const main = async ctx => {
   const { contextName } = await getScope(client);
 
   try {
-    await run({ token, contextName, currentTeam });
+    await run({ client, contextName });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -84,8 +83,7 @@ export default async ctx => {
   }
 };
 
-async function run({ token, contextName, currentTeam }) {
-  const agent = new ZeitAgent('https://api.zeit.co', {token, teamId: currentTeam});
+async function run({ client, contextName }) {
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -99,7 +97,7 @@ async function run({ token, contextName, currentTeam }) {
       return exit(1);
     }
 
-    const list = await agent.fetchAndThrow('/projects/list', {method: 'GET'});
+    const list = await client.fetch('/projects/list', {method: 'GET'});
     const elapsed = ms(new Date() - start);
 
     console.log(
@@ -129,7 +127,7 @@ async function run({ token, contextName, currentTeam }) {
         console.log(`\n${  out  }\n`);
       }
     }
-    return agent.close();
+    return;
   }
 
   if (subcommand === 'rm' || subcommand === 'remove') {
@@ -151,14 +149,14 @@ async function run({ token, contextName, currentTeam }) {
       return exit(0);
     }
 
-    await agent.fetchAndThrow('/projects/remove', {method: 'DELETE', body: {name}});
+    await client.fetch('/projects/remove', {method: 'DELETE', body: {name}});
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
         name
       )} removed ${chalk.gray(`[${elapsed}]`)}`
     );
-    return agent.close();
+    return;
   }
 
   if (subcommand === 'add') {
@@ -182,7 +180,7 @@ async function run({ token, contextName, currentTeam }) {
     }
 
     const [name] = args;
-    await agent.fetchAndThrow('/projects/ensure-project', {method: 'POST', body: {name}});
+    await client.fetch('/projects/ensure-project', {method: 'POST', body: {name}});
     const elapsed = ms(new Date() - start);
 
     console.log(
@@ -190,7 +188,7 @@ async function run({ token, contextName, currentTeam }) {
         name.toLowerCase()
       )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
     );
-    return agent.close();
+    return;
   }
 
   console.error(
