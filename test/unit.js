@@ -732,21 +732,21 @@ test('5xx response error with random JSON', async t => {
 
 test('getProjectName with argv - option 1', t => {
   const project = getProjectName({argv: {
-    project: 'abc'
+    name: 'abc'
   }});
   t.is(project, 'abc');
 });
 
 test('getProjectName with argv - option 2', t => {
   const project = getProjectName({argv: {
-    '--project': 'abc'
+    '--name': 'abc'
   }});
   t.is(project, 'abc');
 });
 
 test('getProjectName with argv - option 2', t => {
   const project = getProjectName({argv: {
-    '--project': 'abc'
+    '--name': 'abc'
   }});
   t.is(project, 'abc');
 });
@@ -754,7 +754,7 @@ test('getProjectName with argv - option 2', t => {
 test('getProjectName with now.json', t => {
   const project = getProjectName({
     argv: {},
-    nowConfig: {project: 'abc'}
+    nowConfig: {name: 'abc'}
   });
   t.is(project, 'abc');
 });
