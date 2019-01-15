@@ -250,6 +250,92 @@ test('output logs of a 1.0 deployment', async t => {
   t.is(code, 0);
 });
 
+test('create alias for deployment', async t => {
+  const hosts = {
+    deployment: context.deployment,
+    alias: `${session}.now.sh`
+  };
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://${hosts.alias}`);
+  const contentType = response.headers.get('content-type');
+  const content = await response.json();
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, session);
+
+  context.alias = hosts.alias;
+});
+
+test('list the aliases', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  const results = parseList(stdout);
+
+  t.is(code, 0);
+  t.true(results.includes(context.deployment));
+});
+
+test('scale the alias', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['scale', context.alias, 'bru', '1', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.includes(`(min: 1, max: 1)`));
+});
+
+test('remove the alias', async t => {
+  const goal = `> Success! Alias ${context.alias} removed`;
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+});
+
+test('scale down the deployment directly', async t => {
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['scale', context.deployment, 'bru', '0', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.includes(`(min: 0, max: 0)`));
+});
+
 test('list the scopes', async t => {
   const { stdout, code } = await execa(
     binaryPath,
@@ -669,92 +755,6 @@ test('create a builds deployments without platform version flag', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('create alias for deployment', async t => {
-  const hosts = {
-    deployment: context.deployment,
-    alias: `${session}.now.sh`
-  };
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}`;
-
-  t.is(code, 0);
-  t.true(stdout.startsWith(goal));
-
-  // Send a test request to the alias
-  const response = await fetch(`https://${hosts.alias}`);
-  const contentType = response.headers.get('content-type');
-  const content = await response.json();
-
-  t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, session);
-
-  context.alias = hosts.alias;
-});
-
-test('list the aliases', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['alias', 'ls', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  const results = parseList(stdout);
-
-  t.is(code, 0);
-  t.true(results.includes(context.deployment));
-});
-
-test('scale the alias', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['scale', context.alias, 'bru', '1', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.includes(`(min: 1, max: 1)`));
-});
-
-test('remove the alias', async t => {
-  const goal = `> Success! Alias ${context.alias} removed`;
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.startsWith(goal));
-});
-
-test('scale down the deployment directly', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['scale', context.deployment, 'bru', '0', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.includes(`(min: 0, max: 0)`));
-});
-
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
@@ -895,7 +895,7 @@ test('use build-env', async t => {
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [
       target,
@@ -911,7 +911,8 @@ test('deploy a dockerfile project', async t => {
     }
   );
 
-  // Ensure the exit code is right
+  console.log('xxxxx', code, stdout, stderr)
+	// Ensure the exit code is right
   t.is(code, 0);
 
   // Test if the output is really a URL
