@@ -167,20 +167,6 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  if (argv['--name']) {
-    log(`
-      The option ${code('--name')} (or ${code('-n')}) is deprecated.
-      Use ${code('--project')} instead.
-    `)
-  }
-
-  if (localConfig.name) {
-    log(`
-      The property ${code('name')} inside ${code('now.json')} is deprecated.
-      Use ${code('project')} property instead.
-    `)
-  }
-
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
@@ -296,7 +282,6 @@ export default async function main(
         meta
       },
       {
-        project,
         name: project
       }
     );

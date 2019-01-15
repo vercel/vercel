@@ -119,46 +119,6 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('warn --project instead --name in V2', async t => {
-  const directory = fixture('node');
-  const goal =
-    'The option `--name` (or `-n`) is deprecated';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 2],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('warn --project instead --name in V1', async t => {
-  const directory = fixture('node');
-  const goal =
-    'The option --name (or -n) is deprecated';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
