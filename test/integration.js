@@ -895,7 +895,7 @@ test('use build-env', async t => {
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [
       target,
@@ -911,7 +911,6 @@ test('deploy a dockerfile project', async t => {
     }
   );
 
-  console.log('xxxxx', code, stdout, stderr)
 	// Ensure the exit code is right
   t.is(code, 0);
 
