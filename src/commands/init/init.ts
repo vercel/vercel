@@ -42,10 +42,14 @@ export default async function init(
   if (!name) {
     const chosen = await chooseFromDropdown(exampleList);
 
-    if (chosen) {
-      return extractExample(chosen, dir, force);
+    if (!chosen) {
+      output.log('Aborted');
+      return 0;
     }
+
+    return extractExample(chosen, dir, force);
   }
+
 
   if (exampleList.includes(name)) {
     return extractExample(name, dir, force);
