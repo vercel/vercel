@@ -1,9 +1,11 @@
 node_modules
 package-lock.json
-dist
+dist/*
 packed
 test/fixtures/integration
 npm-debug.log
 yarn-error.log
 .nyc_output
 coverage
+download/dist/index.js
+!download/dist/now
