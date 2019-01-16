@@ -85,10 +85,7 @@ export default async function(
   domains.push(user.email.split('@')[1]);
 
   if (!currentTeam) {
-    let err = `You can't run this command under ${param(
-      user.username || user.email
-    )}.\n`;
-    err += `${chalk.gray('>')} Run ${cmd('now switch')} to choose to a team.`;
+    let err = `You can't run this command under ${param(user.username || user.email)}.\nPlease select a team scope using ${cmd('now switch')} or use ${cmd('--team')}`;
     return fatalError(err);
   }
 
@@ -101,21 +98,23 @@ export default async function(
       if (regexEmail.test(email)) {
         const stopSpinner = wait(email);
         const elapsed = stamp();
+        let userInfo = null;
 
         try {
           // eslint-disable-next-line no-await-in-loop
-          await teams.inviteUser({ teamId: currentTeam.id, email });
+          const res = await teams.inviteUser({ teamId: currentTeam.id, email });
+          userInfo = res.name || res.username;
         } catch (err) {
           if (err.code === 'user_not_found') {
             console.error(error(`No user exists with the email address "${email}".`));
             return 1;
           }
-
+          
           throw err;
         }
-
+        
         stopSpinner();
-        console.log(`${chalk.cyan(chars.tick)} ${email} ${elapsed()}`);
+        console.log(`${chalk.cyan(chars.tick)} ${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`);
       } else {
         console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
@@ -124,6 +123,7 @@ export default async function(
   }
 
   const inviteUserPrefix = rightPad('Invite User', 14);
+  const sentEmailPrefix = rightPad('Sent Email', 14);
   const emails = [];
   let hasError = false;
   let email;
@@ -148,11 +148,12 @@ export default async function(
       stopSpinner = wait(inviteUserPrefix + email);
       try {
         // eslint-disable-next-line no-await-in-loop
-        await teams.inviteUser({ teamId: currentTeam.id, email });
+        const { name, username } = await teams.inviteUser({ teamId: currentTeam.id, email });
         stopSpinner();
-        email = `${email} ${elapsed()}`;
+        const userInfo = name || username;
+        email = `${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`;
         emails.push(email);
-        console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+        console.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         if (hasError) {
           hasError = false;
           process.stdout.write(eraseLines(emails.length + 2));
@@ -174,7 +175,7 @@ export default async function(
         console.error(error(err.message));
         hasError = true;
         for (const email of emails) {
-          console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+          console.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         }
       }
     }
@@ -186,7 +187,7 @@ export default async function(
   if (emails.length === 0) {
     console.log(info(noopMsg));
   } else {
-    console.log(success(`Invited ${n} team mate${n > 1 ? 's' : ''}`));
+    console.log(success(`Invited ${n} teammate${n > 1 ? 's' : ''}`));
     for (const email of emails) {
       console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
