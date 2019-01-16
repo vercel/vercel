@@ -98,7 +98,7 @@ export default async function(
       if (regexEmail.test(email)) {
         const stopSpinner = wait(email);
         const elapsed = stamp();
-        let userInfo
+        let userInfo = null;
 
         try {
           // eslint-disable-next-line no-await-in-loop
