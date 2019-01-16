@@ -206,8 +206,8 @@ process.on('uncaughtException', err => {
 function readConfirmation(projectName) {
   return new Promise(resolve => {
     process.stdout.write(
-      ` The project: ${chalk.bold(projectName)} will be removed permanently\n` +
-      ` It will also delete everything under the project including deployments\n.`
+      `The project: ${chalk.bold(projectName)} will be removed permanently.\n` +
+      `It will also delete everything under the project including deployments.\n`
     );
 
     process.stdout.write(
