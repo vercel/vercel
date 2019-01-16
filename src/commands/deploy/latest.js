@@ -72,7 +72,7 @@ const printDeploymentStatus = (
   builds
 ) => {
   if (readyState === 'READY') {
-    output.success(`Deployment ready at ${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
+    output.success(`Deployment ready ${deployStamp()}`);
     return 0;
   }
 
