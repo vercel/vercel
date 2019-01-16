@@ -89,6 +89,9 @@ export default class Teams extends Now {
         console.time(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
       }
 
+      const publicRes = await this._fetch(`/www/user/public?email=${email}`);
+      const { name, username } = await publicRes.json();
+
       const res = await this._fetch(`/teams/${teamId}/members`, {
         method: 'POST',
         body: {
@@ -118,7 +121,7 @@ export default class Teams extends Now {
         throw e;
       }
 
-      return body;
+      return { ...body, name, username };
     });
   }
 
