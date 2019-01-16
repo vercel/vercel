@@ -657,7 +657,7 @@ async function sync({
 
     try {
       meta.name = getProjectName({argv, nowConfig, isFile, paths});
-      log(`Using project ${chalk.bold(meta.project)}`);
+      log(`Using project ${chalk.bold(meta.name)}`);
       // $FlowFixMe
       const createArgs = Object.assign(
         {

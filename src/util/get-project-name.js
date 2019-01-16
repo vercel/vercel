@@ -2,6 +2,7 @@ import {basename} from 'path';
 
 export default function getProjectName({argv, nowConfig, isFile, paths}) {
   const nameCli = argv['--name'] || argv.name;
+
   if (nameCli) {
     return nameCli;
   }
