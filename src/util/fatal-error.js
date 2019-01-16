@@ -2,6 +2,6 @@ import error from './output/error';
 import exit from './exit';
 
 export default (msg, code = 1) => {
-  error(msg);
+  console.log(error(msg));
   exit(code);
 };
