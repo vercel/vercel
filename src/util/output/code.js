@@ -1,8 +1,7 @@
 // Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
 
 // The equivalent of <code>, for embedding anything
 // you may want to take a look at ./cmd.js
 
-module.exports = cmd =>
-  `${chalk.gray('`')}${chalk.bold(cmd)}${chalk.gray('`')}`;
+export default cmd => `${chalk.gray('`')}${chalk.bold(cmd)}${chalk.gray('`')}`;

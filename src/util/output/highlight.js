@@ -1,5 +1,5 @@
-const { bold } = require('chalk');
+import { bold } from 'chalk';
 
 const highlight = text => bold.underline(text);
 
-module.exports = highlight;
+export default highlight;

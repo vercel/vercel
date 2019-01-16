@@ -1,11 +1,8 @@
-// Packages
-const ansiEscapes = require('ansi-escapes');
-const ansiRegex = require('ansi-regex');
-const chalk = require('chalk');
-const stripAnsi = require('strip-ansi');
-
-// Utilities
-const eraseLines = require('../output/erase-lines');
+import ansiEscapes from 'ansi-escapes';
+import ansiRegex from 'ansi-regex';
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
+import eraseLines from '../output/erase-lines';
 
 const ESCAPES = {
   LEFT: '\u001B[D',
@@ -16,14 +13,13 @@ const ESCAPES = {
   CARRIAGE: '\r'
 };
 
-const formatCC = data => {
-  return data
+const formatCC = data =>
+  data
     .replace(/\s/g, '')
     .replace(/(.{4})/g, '$1 ')
     .trim();
-};
 
-module.exports = function(
+export default function(
   {
     label = '',
     initialValue = '',
@@ -104,11 +100,17 @@ module.exports = function(
       regex = new RegExp(`(${regex})`, 'g');
     }
 
-    stdin.setRawMode(true);
+    if (stdin.setRawMode) {
+      stdin.setRawMode(true);
+    }
+
     stdin.resume();
 
     function restore() {
-      stdin.setRawMode(isRaw);
+      if (stdin.setRawMode) {
+        stdin.setRawMode(isRaw);
+      }
+
       stdin.pause();
       stdin.removeListener('data', onData);
 
@@ -124,7 +126,8 @@ module.exports = function(
 
       if (abortSequences.has(data)) {
         restore();
-        return reject(new Error('USER_ABORT'));
+        const error = new Error('USER_ABORT');
+        return reject(error);
       }
 
       if (forceLowerCase) {
@@ -263,4 +266,4 @@ module.exports = function(
 
     stdin.on('data', onData);
   });
-};
+}

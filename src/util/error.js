@@ -1,56 +1,14 @@
-// Packages
-const ms = require('ms');
-const chalk = require('chalk');
+import errorOutput from './output/error';
 
-// Utilities
-const error = require('./output/error');
-const info = require('./output/info');
+export { default as handleError } from './handle-error';
+export const error = errorOutput;
 
-function handleError(err, { debug = false } = {}) {
-  // Coerce Strings to Error instances
-  if (typeof err === 'string') {
-    err = new Error(err);
-  }
-
-  if (debug) {
-    console.log(`> [debug] handling error: ${err.stack}`);
-  }
-
-  if (err.status === 403) {
-    console.error(
-      error('Authentication error. Run `now login` to log-in again.')
-    );
-  } else if (err.status === 429) {
-    if (err.retryAfter === 'never') {
-      console.error(error(err.message));
-    } else if (err.retryAfter === null) {
-      console.error(error('Rate limit exceeded error. Please try later.'));
-    } else {
-      console.error(
-        error(
-          'Rate limit exceeded error. Try again in ' +
-            ms(err.retryAfter * 1000, { long: true }) +
-            ', or upgrade your account by running ' +
-            `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
-        )
-      );
-    }
-  } else if (err.userError || err.message) {
-    console.error(error(err.message));
-  } else if (err.status === 500) {
-    console.error(error('Unexpected server error. Please retry.'));
-  } else if (err.code === 'USER_ABORT') {
-    info('Aborted');
-  } else {
-    console.error(
-      error(`Unexpected error. Please try again later. (${err.message})`)
-    );
-  }
-}
-
-async function responseError(res, fallbackMessage = null, parsedBody = {}) {
+export async function responseError(
+  res,
+  fallbackMessage = null,
+  parsedBody = {}
+) {
   let message;
-  let userError;
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
@@ -65,9 +23,6 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
     // Some APIs wrongly return `err` instead of `error`
     bodyError = body.error || body.err || {};
     message = bodyError.message;
-    userError = true;
-  } else {
-    userError = false;
   }
 
   if (message == null) {
@@ -77,7 +32,6 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   const err = new Error(`${message} (${res.status})`);
 
   err.status = res.status;
-  err.userError = userError;
   err.serverMessage = message;
 
   // Copy every field that was added manually to the error
@@ -100,7 +54,7 @@ async function responseError(res, fallbackMessage = null, parsedBody = {}) {
   return err;
 }
 
-async function responseErrorMessage(res, fallbackMessage = null) {
+export async function responseErrorMessage(res, fallbackMessage = null) {
   let message;
 
   if (res.status >= 400 && res.status < 500) {
@@ -122,10 +76,3 @@ async function responseErrorMessage(res, fallbackMessage = null) {
 
   return `${message} (${res.status})`;
 }
-
-module.exports = {
-  handleError,
-  responseError,
-  responseErrorMessage,
-  error
-};

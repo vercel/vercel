@@ -1,5 +1,5 @@
-const { gray } = require('chalk');
+import { gray } from 'chalk';
 
 const effect = msg => `${gray(`+ ${msg}`)}`;
 
-module.exports = effect;
+export default effect;

@@ -1,43 +1,74 @@
-// Native
-const { join: joinPath } = require('path');
-
-// Packages
-const loadJSON = require('load-json-file');
-const writeJSON = require('write-json-file');
-const { existsSync } = require('fs');
-
-// Utilities
-const getNowDir = require('./global-path');
-const getLocalPathConfig = require('./local-path');
-const error = require('../output/error');
+import { join as joinPath } from 'path';
+import loadJSON from 'load-json-file';
+import writeJSON from 'write-json-file';
+import { existsSync } from 'fs';
+import getNowDir from './global-path';
+import getLocalPathConfig from './local-path';
+import error from '../output/error';
+import highlight from '../output/highlight';
 
 const NOW_DIR = getNowDir();
 const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json');
 const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json');
 
 // reads `CONFIG_FILE_PATH` atomically
-const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
+export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
 
 // writes whatever's in `stuff` to `CONFIG_FILE_PATH`, atomically
-const writeToConfigFile = stuff =>
-  writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+export const writeToConfigFile = stuff => {
+  try {
+    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+  } catch (err) {
+    if (err.code === 'EPERM') {
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            CONFIG_FILE_PATH
+          )} (operation not permitted).`
+        )
+      );
+      process.exit(1);
+    }
+
+    throw err;
+  }
+};
 
 // reads `AUTH_CONFIG_FILE_PATH` atomically
-const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
+export const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
 
 // writes whatever's in `stuff` to `AUTH_CONFIG_FILE_PATH`, atomically
-const writeToAuthConfigFile = stuff =>
-  writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, { indent: 2, mode: 0o600 });
+export const writeToAuthConfigFile = stuff => {
+  try {
+    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
+      indent: 2,
+      mode: 0o600
+    });
+  } catch (err) {
+    if (err.code === 'EPERM') {
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            AUTH_CONFIG_FILE_PATH
+          )} (operation not permitted).`
+        )
+      );
+      process.exit(1);
+    }
 
-function getConfigFilePath() {
+    throw err;
+  }
+};
+
+export function getConfigFilePath() {
   return CONFIG_FILE_PATH;
 }
 
-function getAuthConfigFilePath() {
+export function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-function readLocalConfig(prefix) {
+export function readLocalConfig(prefix) {
   const target = getLocalPathConfig(prefix || process.cwd());
   let localConfigExists;
 
@@ -65,13 +96,3 @@ function readLocalConfig(prefix) {
 
   return null;
 }
-
-module.exports = {
-  readConfigFile,
-  writeToConfigFile,
-  readAuthConfigFile,
-  writeToAuthConfigFile,
-  readLocalConfig,
-  getConfigFilePath,
-  getAuthConfigFilePath
-};

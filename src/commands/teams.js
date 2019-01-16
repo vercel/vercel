@@ -1,19 +1,14 @@
-#!/usr/bin/env node
-
-// Packages
-const chalk = require('chalk');
-const mri = require('mri');
-
-// Utilities
-const error = require('../util/output/error');
-const NowTeams = require('../util/teams');
-const logo = require('../util/output/logo');
-const exit = require('../util/exit');
-const { handleError } = require('../util/error');
-const list = require('./teams/list');
-const add = require('./teams/add');
-const change = require('./teams/switch');
-const invite = require('./teams/invite');
+import chalk from 'chalk';
+import mri from 'mri';
+import error from '../util/output/error';
+import NowTeams from '../util/teams';
+import logo from '../util/output/logo';
+import exit from '../util/exit';
+import { handleError } from '../util/error';
+import list from './teams/list';
+import add from './teams/add';
+import change from './teams/switch';
+import invite from './teams/invite';
 
 const help = () => {
   console.log(`
@@ -93,20 +88,10 @@ const main = async ctx => {
 
   const { authConfig: { token }, config } = ctx;
 
-  try {
-    return run({ token, config });
-  } catch (err) {
-    if (err.userError) {
-      console.error(error(err.message));
-    } else {
-      console.error(error(`Unknown error: ${err.stack}`));
-    }
-
-    return 1;
-  }
+  return run({ token, config });
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     return main(ctx);
   } catch (err) {
@@ -145,7 +130,7 @@ async function run({ token, config }) {
     }
     case 'add':
     case 'create': {
-      exitCode = await add({ teams, config });
+      exitCode = await add({ apiUrl, token, teams, config });
       break;
     }
 

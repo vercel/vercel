@@ -1,16 +1,18 @@
 // Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
 
 // Utilities
-const wait = require('../../util/output/wait');
-const listInput = require('../../util/input/list');
-const success = require('../../util/output/success');
-const info = require('../../util/output/info');
-const error = require('../../util/output/error');
-const param = require('../../util/output/param');
-const { writeToConfigFile } = require('../../util/config/files');
-const getUser = require('../../util/get-user');
-const NowTeams = require('../../util/teams');
+import wait from '../../util/output/wait';
+
+import listInput from '../../util/input/list';
+import success from '../../util/output/success';
+import info from '../../util/output/info';
+import error from '../../util/output/error';
+import param from '../../util/output/param.ts';
+import { writeToConfigFile } from '../../util/config/files';
+import getUser from '../../util/get-user.ts';
+import Client from '../../util/client.ts';
+import NowTeams from '../../util/teams';
 
 const updateCurrentTeam = (config, newTeam) => {
   if (newTeam) {
@@ -22,7 +24,7 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config);
 };
 
-module.exports = async function({ apiUrl, token, debug, args, config }) {
+export default async function({ apiUrl, token, debug, args, config }) {
   let stopSpinner = wait('Fetching teams');
 
   // We're loading the teams here without `currentTeam`, so that
@@ -36,8 +38,9 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
 
   stopSpinner();
 
-  let stopUserSpinner = wait('Fetching user information');
-  const user = await getUser({ apiUrl, token });
+  const stopUserSpinner = wait('Fetching user information');
+  const client = new Client({ apiUrl, token });
+  const user = await getUser(client);
 
   stopUserSpinner();
 
@@ -47,6 +50,11 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
     };
   } else {
     currentTeam = list.find(team => team.id === currentTeam);
+
+    if (!currentTeam) {
+      console.error(error(`You are not a part of the current team anymore`));
+      return 1;
+    }
   }
 
   if (args.length !== 0) {
@@ -168,4 +176,4 @@ module.exports = async function({ apiUrl, token, debug, args, config }) {
     )
   );
   return 0;
-};
+}

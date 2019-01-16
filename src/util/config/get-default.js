@@ -1,9 +1,9 @@
-exports.getDefaultConfig = async existingCopy => {
+export const getDefaultConfig = async existingCopy => {
   let migrated = false;
 
   const config = {
     _:
-      'This is your Now config file. See `now config help`. More: https://bit.ly/2qAK8bb'
+      'This is your Now config file. For more information see the global configuration documentation: https://bit.ly/2qAK8bb'
   };
 
   if (existingCopy) {
@@ -59,7 +59,7 @@ exports.getDefaultConfig = async existingCopy => {
   return { config, migrated };
 };
 
-exports.getDefaultAuthConfig = async existing => {
+export const getDefaultAuthConfig = async existing => {
   let migrated = false;
 
   const config = {

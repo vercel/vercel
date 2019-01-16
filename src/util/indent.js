@@ -5,4 +5,4 @@ function indent(text, n) {
     .join('\n');
 }
 
-module.exports = indent;
+export default indent;

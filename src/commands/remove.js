@@ -1,23 +1,18 @@
-#!/usr/bin/env node
-//@flow
-
-// Packages
-const mri = require('mri');
-const chalk = require('chalk');
-const ms = require('ms');
-const plural = require('pluralize');
-const table = require('text-table');
-
-// Utilities
-const Now = require('../util');
-const createOutput = require('../util/output');
-const wait = require('../util/output/wait');
-const logo = require('../util/output/logo');
-const cmd = require('../util/output/cmd');
-const elapsed = require('../util/output/elapsed');
-const { normalizeURL } = require('../util/url');
-const getScope = require('../util/get-scope');
+import mri from 'mri';
+import chalk from 'chalk';
+import ms from 'ms';
+import plural from 'pluralize';
+import table from 'text-table';
+import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
+import createOutput from '../util/output';
+import wait from '../util/output/wait';
+import logo from '../util/output/logo';
+import cmd from '../util/output/cmd.ts';
+import elapsed from '../util/output/elapsed.ts';
+import { normalizeURL } from '../util/url';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const help = () => {
   console.log(`
@@ -62,7 +57,7 @@ const help = () => {
 
 // Options
 
-module.exports = async function main(ctx: any): Promise<number> {
+export default async function main(ctx) {
   let argv;
 
   argv = mri(ctx.argv.slice(2), {
@@ -98,12 +93,24 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getScope({
+  const client = new Client({
     apiUrl,
     token,
-    debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    debug: debugEnabled
   });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
@@ -123,11 +130,9 @@ module.exports = async function main(ctx: any): Promise<number> {
     throw err;
   }
 
-  let matches = deployments.filter(d => {
-    return ids.some(id => {
-      return d.uid === id || d.name === id || d.url === normalizeURL(id);
-    });
-  });
+  let matches = deployments.filter(d =>
+    ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id))
+  );
 
   let aliases;
 
@@ -156,7 +161,7 @@ module.exports = async function main(ctx: any): Promise<number> {
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${cmd('now ls')} to list.`
     );
-    return 1;
+    return 0;
   }
 
   log(
@@ -201,10 +206,10 @@ module.exports = async function main(ctx: any): Promise<number> {
   //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
   // which seems fixable only by exiting directly here, and only
   // impacts this command, consistently
-  //now.close()
+  // now.close()
   process.exit(0);
   return 0;
-};
+}
 
 function readConfirmation(matches, output) {
   return new Promise(resolve => {
@@ -218,13 +223,13 @@ function readConfirmation(matches, output) {
 
     const tbl = table(
       matches.map(depl => {
-        const time = chalk.gray(ms(new Date() - depl.created) + ' ago');
+        const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
         const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return ['  ' + depl.uid, url, time];
+        return [`  ${depl.uid}`, url, time];
       }),
       { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
     );
-    output.print(tbl + '\n');
+    output.print(`${tbl}\n`);
 
     for (const depl of matches) {
       for (const alias of depl.aliases) {

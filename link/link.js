@@ -2,7 +2,7 @@
 
 try {
   // eslint-disable-next-line import/no-unassigned-import
-  require('../dist/now.js');
+  require('../dist');
 } catch (err) {
   if (err.code === 'ENOENT' && err.syscall === 'uv_cwd') {
     console.error(`Current path doesn't exist!`);

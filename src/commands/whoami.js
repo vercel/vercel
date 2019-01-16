@@ -1,13 +1,10 @@
-#!/usr/bin/env node
-
-// Packages
-const mri = require('mri');
-const chalk = require('chalk');
-
-// Utilities
-const logo = require('../util/output/logo');
-const { handleError } = require('../util/error');
-const getScope = require('../util/get-scope');
+import mri from 'mri';
+import chalk from 'chalk';
+import logo from '../util/output/logo';
+import { handleError } from '../util/error';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
+import createOutput from '../util/output';
 
 const help = () => {
   console.log(`
@@ -56,17 +53,25 @@ const main = async ctx => {
 
   const debug = argv['--debug'];
   const { authConfig: { token }, apiUrl } = ctx;
+  const output = createOutput({ debug });
+  const client = new Client({ apiUrl, token, debug });
+  let contextName = null;
 
-  const { contextName: username } = await getScope({
-    apiUrl,
-    token,
-    debug
-  });
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
 
-  await whoami(username);
+    throw err;
+  }
+
+  await whoami(contextName);
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     await main(ctx);
   } catch (err) {

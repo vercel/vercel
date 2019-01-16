@@ -1,8 +1,8 @@
 // Native
-const { resolve } = require('path');
+import { resolve } from 'path';
 
 // Ours
-const { npm: getFiles } = require('./get-files');
+import { npm as getFiles } from './get-files';
 
 getFiles(resolve('../mng-test/files-in-package'))
   .then(files => {

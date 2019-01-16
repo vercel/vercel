@@ -1,6 +1,7 @@
-![now](https://assets.zeit.co/image/upload/v1537715060/repositories/now-cli/now-cli-repo-banner.png)
+![now](https://assets.zeit.co/image/upload/v1542240976/repositories/now-cli/now-cli-repo-banner-v2.png)
 
-[![Build Status](https://circleci.com/gh/zeit/now-cli.svg?&style=shield)](https://circleci.com/gh/zeit/workflows/now-cli) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
+[![Build Status](https://circleci.com/gh/zeit/now-cli.svg?&style=shield)](https://circleci.com/gh/zeit/workflows/now-cli)
+[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
 **Note**: The [canary](https://github.com/zeit/now-cli/tree/canary) branch is under heavy development – the stable release branch is [master](https://github.com/zeit/now-cli/tree/master).
 
@@ -28,4 +29,4 @@ As always, you should use `yarn test` to run the tests and see if your changes h
 
 ## How to Create a Release
 
-If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/zeit/blob/master/guides/now-cli-release.md).
+If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/now-cli/wiki/Creating-a-Release).
