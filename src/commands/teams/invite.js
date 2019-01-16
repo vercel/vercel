@@ -103,7 +103,7 @@ export default async function(
         try {
           // eslint-disable-next-line no-await-in-loop
           const res = await teams.inviteUser({ teamId: currentTeam.id, email });
-          userInfo = res.name || res.username
+          userInfo = res.name || res.username;
         } catch (err) {
           if (err.code === 'user_not_found') {
             console.error(error(`No user exists with the email address "${email}".`));
