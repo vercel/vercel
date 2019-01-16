@@ -34,7 +34,7 @@ export const latestHelp = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
-    -P, --project                  Set the project of the deployment
+    -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
 )}   Path to the local ${'`now.json`'} file
@@ -81,7 +81,6 @@ export const latestHelp = () => `
 
 export const latestArgs = {
   '--name': String,
-  '--project': String,
   '--force': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
@@ -92,7 +91,6 @@ export const latestArgs = {
   // the config property name.
   '--regions': String,
   '-n': '--name',
-  '-P': '--project',
   '-f': '--force',
   '-p': '--public',
   '-e': '--env',
@@ -104,7 +102,6 @@ export const latestArgs = {
 export const legacyArgsMri = {
   string: [
     'name',
-    'project',
     'build-env',
     'alias',
     'meta',
@@ -201,7 +198,7 @@ export const legacyHelp = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
-    -P, --project                  Set the project of the deployment
+    -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
 )}   Path to the local ${'`now.json`'} file

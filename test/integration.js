@@ -119,52 +119,12 @@ test('log in', async t => {
   t.is(last, goal);
 });
 
-test('warn --project instead --name in V2', async t => {
-  const directory = fixture('node');
-  const goal =
-    'The option `--name` (or `-n`) is deprecated';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 2],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('warn --project instead --name in V1', async t => {
-  const directory = fixture('node');
-  const goal =
-    'The option --name (or -n) is deprecated';
-
-  const { stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
   const { stdout, code } = await execa(
     binaryPath,
-    [target, '--public', '--project', session, ...defaultArgs],
+    [target, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -409,7 +369,7 @@ test('try to remove a non-existing payment method', async t => {
 test('use `-V 1` to deploy a GitHub repository', async t => {
   const { stdout, code } = await execa(
     binaryPath,
-    ['-V', 1, '--public', '--project', session, ...defaultArgs, 'leo/hub'],
+    ['-V', 1, '--public', '--name', session, ...defaultArgs, 'leo/hub'],
     {
       reject: false
     }
@@ -440,7 +400,7 @@ test('use `--platform-version 1` to deploy a GitHub repository', async t => {
       '--platform-version',
       1,
       '--public',
-      '--project',
+      '--name',
       session,
       ...defaultArgs,
       'leo/hub'
@@ -475,7 +435,7 @@ test('set platform version using `-V` to `1`', async t => {
 
   const { stderr, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs, '-V', 1],
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
     {
       reject: false
     }
@@ -498,7 +458,7 @@ test('set platform version using `--platform-version` to `1`', async t => {
     [
       directory,
       '--public',
-      '--project',
+      '--name',
       session,
       ...defaultArgs,
       '--platform-version',
@@ -523,7 +483,7 @@ test('set platform version using `-V` to invalid number', async t => {
 
   const { stderr, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs, '-V', 3],
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
     {
       reject: false
     }
@@ -546,7 +506,7 @@ test('set platform version using `--platform-version` to invalid number', async 
     [
       directory,
       '--public',
-      '--project',
+      '--name',
       session,
       ...defaultArgs,
       '--platform-version',
@@ -572,7 +532,7 @@ test('set platform version using `-V` to `2`', async t => {
     [
       directory,
       '--public',
-      '--project',
+      '--name',
       session,
       ...defaultArgs,
       '-V',
@@ -644,7 +604,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
     [
       directory,
       '--public',
-      '--project',
+      '--name',
       session,
       ...defaultArgs,
       '--platform-version',
@@ -680,7 +640,7 @@ test('ensure the `alias` property is not sent to the API', async t => {
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false
     }
@@ -710,7 +670,7 @@ test('try to create a builds deployments with wrong config', async t => {
 
   const { stderr, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false
     }
@@ -730,7 +690,7 @@ test('create a builds deployments without platform version flag', async t => {
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs, '--force'],
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false
     }
@@ -760,7 +720,7 @@ test('deploy multiple static files', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs],
+    [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -792,7 +752,7 @@ test('deploy single static file', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [file, '--public', '--project', session, ...defaultArgs],
+    [file, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -818,7 +778,7 @@ test('deploy a static directory', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs],
+    [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -843,7 +803,7 @@ test('deploy a static build deployment', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs],
+    [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -870,7 +830,7 @@ test('use build-env', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--project', session, ...defaultArgs],
+    [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
@@ -900,7 +860,7 @@ test('deploy a dockerfile project', async t => {
     [
       target,
       '--public',
-      '--project',
+      '--name',
       session,
       '--docker',
       '--no-verify',
@@ -947,7 +907,7 @@ test('use `--build-env` CLI flag', async t => {
     [
       directory,
       '--public',
-      '--project',
+      '--name',
       session,
       '--build-env',
       `NONCE=${nonce}`,

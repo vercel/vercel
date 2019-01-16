@@ -216,13 +216,6 @@ export default async function main(ctx, contextName, output, mriOpts) {
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  if (argv.name) {
-    log(`
-      The option ${chalk.bold('--name')} (or ${chalk.bold('-n')}) is deprecated.
-      Use ${chalk.bold('--project')} instead.
-    `)
-  }
-
   warn(
     'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
@@ -435,13 +428,6 @@ async function sync({
 
     const nowConfig = meta.nowConfig || {};
     const scaleFromConfig = getScaleFromConfig(nowConfig);
-
-    if (nowConfig.name) {
-      log(`
-        The property ${chalk.bold('name')} inside ${chalk.bold('now.json')} is deprecated.
-        Use ${chalk.bold('project')} property instead.
-      `)
-    }
 
     let scale = {};
     let dcIds;
@@ -670,8 +656,7 @@ async function sync({
     let syncCount;
 
     try {
-      meta.project = getProjectName({argv, nowConfig, isFile, paths});
-      meta.name = meta.project;
+      meta.name = getProjectName({argv, nowConfig, isFile, paths});
       log(`Using project ${chalk.bold(meta.project)}`);
       // $FlowFixMe
       const createArgs = Object.assign(
