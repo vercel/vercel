@@ -213,8 +213,6 @@ export default async function main(ctx) {
     }
   }
 
-  now.close();
-
   if (argv['--all']) {
     await Promise.all(
       deployments.map(async ({ uid, instanceCount }, i) => {
@@ -232,6 +230,8 @@ export default async function main(ctx) {
       })
     );
   }
+
+  now.close();
 
   if (host) {
     deployments = deployments.filter(deployment => deployment.url === host);
@@ -320,7 +320,7 @@ function getProjectName(d) {
     return 'files';
   }
 
-  return d.name
+  return d.name;
 }
 
 // renders the state string
