@@ -162,7 +162,7 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
-  t.is(host.split('-')[0], `node-test-${session}`);
+  t.true(host.startsWith(`node-test-${session}`));
 });
 
 test('find deployment in list', async t => {
