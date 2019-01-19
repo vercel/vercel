@@ -1,6 +1,6 @@
 {
   "name": "@now/md",
-  "version": "0.4.9-canary.0",
+  "version": "0.4.9",
   "license": "MIT",
   "dependencies": {
     "rehype-document": "^2.2.0",
