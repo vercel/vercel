@@ -32,7 +32,7 @@ interface RouteConfig {
   status?: number
 }
 
-enum DevServerStatus { busy, idle }
+enum DevServerStatus { busy, idle, error }
 
 type HttpHandler = (
   req: http.IncomingMessage,
@@ -97,6 +97,11 @@ export default class DevServer {
 
   setStatusBusy = (msg = '') => {
     this.status = DevServerStatus.busy;
+    this.statusMessage = msg;
+  }
+
+  setStatusError = (msg: string) => {
+    this.status = DevServerStatus.error;
     this.statusMessage = msg;
   }
 
