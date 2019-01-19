@@ -6,6 +6,8 @@ import http from 'http';
 import glob from '@now/build-utils/fs/glob';
 import chalk from 'chalk';
 import { send } from 'micro';
+// @ts-ignore
+import { createFunction } from '../../../../lambdas/lambda-dev';
 
 import wait from '../../util/output/wait';
 import info from '../../util/output/info';
@@ -16,11 +18,18 @@ import { readLocalConfig } from '../../util/config/files';
 
 import builderCache from './builder-cache';
 
-// temporally type
 interface BuildConfig {
   src: string,
   use: string,
   config?: object
+}
+
+interface RouteConfig {
+  src: string,
+  dest: string,
+  methods?: string[],
+  headers?: object,
+  status?: number
 }
 
 enum DevServerStatus { busy, idle }
@@ -74,6 +83,7 @@ export default class DevServer {
           }
         }
 
+        this.logSuccess('ready');
         this.setStatusIdle();
         resolve();
       });
@@ -103,6 +113,8 @@ export default class DevServer {
       return res.end('');
     }
 
+    this.logHttp(req.url);
+
     const nowJson = readLocalConfig(this.cwd);
 
     if (nowJson === null) {
@@ -117,27 +129,52 @@ export default class DevServer {
       return send(res, 404);
     }
 
-    if (nowJson) {
-      let assets = [];
+    // invoke lambda
 
-      if (nowJson.builds) {
-        assets = await this.buildUserProject(nowJson.builds);
-      }
+    let assets: { [key: string]: any } = {};
 
-      if (nowJson.routes) {
-        const dest = nowJson.routes.reduce((accu: string, curr: any) => {
-
-        }, reqPath);
-      }
-
-      console.log(12, assets, reqPath);
-
-      // if (assets.includes(reqPath)) {
-      //   this.handleRequest(req, res, )
-      // }
+    if (nowJson.builds) {
+      assets = await this.buildUserProject(nowJson.builds);
     }
 
-    this.logHttp(req.url);
+    let reqDest = reqPath;
+
+    if (nowJson.routes) {
+      reqDest = nowJson.routes.reduce((accu: string, curr:RouteConfig) => {
+        return accu.replace(new RegExp('^' + curr.src + '$'), curr.dest);
+      }, reqPath);
+    }
+
+    const {
+      type,
+      zipBuffer,
+      handler,
+      runtime,
+      environment
+    } = matchHandler(assets, reqDest)
+
+    if (type === 'Lambda') {
+      const fn = await createFunction({
+        Code: { zipFile: zipBuffer },
+        Handler: handler,
+        Runtime: runtime,
+        Environment: environment
+      });
+
+      const res = await fn({
+        InvocationType: 'RequestResponse',
+        Payload: JSON.stringify({
+          method: req.method,
+          path: req.url,
+          headers: req.headers,
+          encoding: 'base64',
+          body: 'eyJlaXlvIjp0cnVlfQ=='
+        })
+      })
+
+      console.log(res);
+    }
+
     res.end('TODO: rebuild & invoke lambda.');
     this.setStatusIdle();
   }
@@ -172,7 +209,7 @@ export default class DevServer {
 
   buildLambdas = async (buildsConfig: BuildConfig[]) => {
     const files = await glob('**', this.cwd);
-    const results = [];
+    let results = {};
 
     for (const build of buildsConfig) {
       try {
@@ -189,7 +226,7 @@ export default class DevServer {
             workPath: this.cwd,
             config: build.config
           });
-          results.push(output);
+          results = {...results, ...output};
         }
       } catch (err) {
         throw new NowError({
@@ -202,4 +239,10 @@ export default class DevServer {
 
     return results;
   }
+}
+
+function matchHandler (assets: any, url: string) {
+  return assets[url]
+      || assets[url + "index.js"]
+      || assets[url + "/index.js"];
 }
