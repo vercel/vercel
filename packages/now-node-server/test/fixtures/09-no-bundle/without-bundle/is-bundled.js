@@ -1,3 +1,4 @@
 const path = require('path');
 
-module.exports = () => path.basename(__filename) === 'index.js';
+// eslint-disable-next-line no-eval
+module.exports = () => path.basename(eval('__filename')) === 'index.js';
