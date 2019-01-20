@@ -2,24 +2,7 @@
   "npmClient": "yarn",
   "useWorkspaces": true,
   "packages": [
-    "packages/now-build-utils",
-    "packages/now-node-bridge",
-    "packages/now-php-bridge",
-    "packages/now-bash",
-    "packages/now-cgi",
-    "packages/now-go",
-    "packages/now-html-minifier",
-    "packages/now-lambda",
-    "packages/now-md",
-    "packages/now-mdx-deck",
-    "packages/now-next",
-    "packages/now-node",
-    "packages/now-node-server",
-    "packages/now-optipng",
-    "packages/now-php",
-    "packages/now-python",
-    "packages/now-static-build",
-    "packages/now-wordpress"
+    "packages/*"
   ],
   "command": {
     "publish": {
