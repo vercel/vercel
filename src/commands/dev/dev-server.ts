@@ -32,6 +32,18 @@ interface RouteConfig {
   status?: number
 }
 
+interface BuilderOutput {
+  type?: string,
+  zipBuffer?: any,
+  handler?: string,
+  runtime?: string,
+  environment?: string
+}
+
+interface BuilderOutputs {
+  [key: string]: BuilderOutput
+}
+
 enum DevServerStatus { busy, idle, error }
 
 type HttpHandler = (
@@ -57,7 +69,9 @@ export default class DevServer {
   logInfo (str: string) { console.log(info(str)) }
   logError (str: string) { console.log(error(str)) }
   logSuccess (str: string) { console.log(success(str))}
-  logHttp (msg?: string) { msg && console.log(`\n  >>> ${msg}\n`) }
+  logHttp (msg?: string) {
+    msg && console.log(`\n  ${chalk.green('>>>')} ${msg}\n`);
+  }
 
   start = async (port = 3000) => {
     const nowJson = readLocalConfig(this.cwd);
@@ -110,45 +124,64 @@ export default class DevServer {
       return res.end(`[busy] ${this.statusMessage}...`);
     }
 
-    if (!req.url) return
-
-    const reqPath = req.url.replace(/^\//, '');
-
-    if (reqPath === 'favicon.ico') {
+    if (req.url === '/favicon.ico') {
       return res.end('');
     }
 
     this.logHttp(req.url);
 
-    const nowJson = readLocalConfig(this.cwd);
+    try {
+      const nowJson = readLocalConfig(this.cwd);
 
-    if (nowJson === null) {
-      // serve source as static
-      // TODO: honor gitignore & nowignore
-      const dest = path.join(this.cwd, reqPath);
-
-      if (fs.lstatSync(dest).isFile()) {
-        return send(res, 200, fs.createReadStream(dest));
+      if (nowJson === null) {
+        await this.serveStatics(req, res, this.cwd);
+      } else if (nowJson.builds) {
+        await this.serveBuilds(req, res, this.cwd, nowJson);
       }
+    } catch (err) {
+      this.setStatusError(err.message);
+      console.error(err.stack);
+    }
 
+    if (!res.finished) {
+      send(res, 500, this.statusMessage);
+    }
+
+    this.setStatusIdle();
+  }
+
+  /**
+   * Serve project directory as static
+   */
+  serveStatics = (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    cwd: string
+  ) => {
+    if (req.url === undefined) {
       return send(res, 404);
     }
 
-    // invoke lambda
+    // TODO: honor gitignore & nowignore
+    const dest = path.join(cwd, req.url.replace(/^\//, ''));
 
-    let assets: { [key: string]: any } = {};
-
-    if (nowJson.builds) {
-      assets = await this.buildUserProject(nowJson.builds);
+    if (fs.lstatSync(dest).isFile()) {
+      return send(res, 200, fs.createReadStream(dest));
     }
 
-    let reqDest = reqPath;
+    return send(res, 404);
+  }
 
-    if (nowJson.routes) {
-      reqDest = nowJson.routes.reduce((accu: string, curr:RouteConfig) => {
-        return accu.replace(new RegExp('^' + curr.src + '$'), curr.dest);
-      }, reqPath);
-    }
+  /**
+   * Build & invoke project
+   */
+  serveBuilds = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    cwd: string,
+    nowJson: any
+  ) => {
+    const assets = await this.buildUserProject(nowJson.builds);
 
     const {
       type,
@@ -156,7 +189,9 @@ export default class DevServer {
       handler,
       runtime,
       environment
-    } = matchHandler(assets, reqDest)
+    } = this.route(req, assets, nowJson.routes)
+
+    console.log(999, type, handler, runtime);
 
     if (type === 'Lambda') {
       const fn = await createFunction({
@@ -166,7 +201,7 @@ export default class DevServer {
         Environment: environment
       });
 
-      const res = await fn({
+      const invoked = await fn({
         InvocationType: 'RequestResponse',
         Payload: JSON.stringify({
           method: req.method,
@@ -177,11 +212,37 @@ export default class DevServer {
         })
       })
 
-      console.log(res);
+      console.log(invoked);
+    }
+  }
+
+  /**
+   * Find the handler responsible for the request
+   */
+  route = function (
+    req: http.IncomingMessage,
+    assets: BuilderOutputs,
+    routes?: RouteConfig[]
+  ) {
+    if (req.url === undefined) return {}
+
+    let reqDest = req.url.replace(/^\//, '');
+
+    if (routes) {
+      reqDest = routes.reduce((accu: string, curr:RouteConfig) => {
+        if (curr.dest) {
+          return accu.replace(new RegExp('^' + curr.src + '$'), curr.dest);
+        } else {
+          return accu;
+        }
+      }, reqDest);
     }
 
-    res.end('TODO: rebuild & invoke lambda.');
-    this.setStatusIdle();
+    if (assets[reqDest]) {
+      return assets[reqDest];
+    }
+
+    return {}
   }
 
   buildUserProject = async (buildsConfig: BuildConfig[]) => {
