@@ -6,6 +6,8 @@ import mkdirp from 'mkdirp';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../util/now-error';
 
+import staticBuilder from './static-builder';
+
 export default {
   prepare,
   install,
@@ -65,6 +67,10 @@ async function install (cacheDir: string, name: string) {
  * @param name builder's name
  */
 function get (cacheDir: string, name: string) {
+  if (name === '@now/static') {
+    return staticBuilder;
+  }
+
   const dest = path.join(cacheDir, 'node_modules', name);
   return require(dest);
 }

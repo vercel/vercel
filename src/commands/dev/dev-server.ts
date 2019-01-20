@@ -238,11 +238,9 @@ export default class DevServer {
       }, reqDest);
     }
 
-    if (assets[reqDest]) {
-      return assets[reqDest];
-    }
+    const foundHandler = matchHandler(assets, reqDest)
 
-    return {}
+    return foundHandler || {}
   }
 
   buildUserProject = async (buildsConfig: BuildConfig[]) => {
@@ -280,8 +278,9 @@ export default class DevServer {
     for (const build of buildsConfig) {
       try {
         console.log(`> build ${JSON.stringify(build)}`);
-        const builder = builderCache.get(this.builderDirectory, build.use);
+
         const entries = Object.values(await glob(build.src, this.cwd));
+        const builder = builderCache.get(this.builderDirectory, build.use);
 
         // TODO: hide those build logs from console.
         for (const entry of entries) {
@@ -307,8 +306,9 @@ export default class DevServer {
   }
 }
 
-function matchHandler (assets: any, url: string) {
+function matchHandler (assets: BuilderOutputs, url: string) {
   return assets[url]
       || assets[url + "index.js"]
-      || assets[url + "/index.js"];
+      || assets[url + "/index.js"]
+      || assets[url + "/index.html"];
 }
