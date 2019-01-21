@@ -5,6 +5,6 @@
 // and how they might fix it.
 
 console.log('> Error!', 'Now CLI failed to install correctly.');
-console.log('> Error!', 'Make sure to set `ignore-scripts` to `false` in your npm config while installing now.');
+console.log('> Error!', 'Make sure to set `ignore-scripts` to `false` in your npm config before installing Now CLI.');
 
 process.exit(1);
