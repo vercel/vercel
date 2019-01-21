@@ -6,8 +6,11 @@ interface BuilderParams {
 }
 
 function build (args: BuilderParams) {
-  const { files, entrypoint, workPath, config } = args
-  console.log(files, entrypoint, workPath, config);
+  const { files, entrypoint } = args
+
+  return {
+    [entrypoint]: files[entrypoint]
+  }
 }
 
 export default {

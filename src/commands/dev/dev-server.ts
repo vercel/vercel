@@ -33,13 +33,21 @@ interface RouteConfig {
   status?: number
 }
 
-interface BuilderOutput {
-  type?: string,
-  zipBuffer?: any,
-  handler?: string,
-  runtime?: string,
-  environment?: string
+interface FileFsRef {
+  mode: number,
+  fsPath: string,
+  toStream(): any
 }
+
+interface Lambda {
+  type: string,
+  zipBuffer: any,
+  handler: string,
+  runtime: string,
+  environment: string
+}
+
+type BuilderOutput = FileFsRef | Lambda | any
 
 interface BuilderOutputs {
   [key: string]: BuilderOutput
@@ -50,7 +58,7 @@ enum DevServerStatus { busy, idle, error }
 type HttpHandler = (
   req: http.IncomingMessage,
   res: http.ServerResponse
-) => any;
+) => void;
 
 export default class DevServer {
   private cwd: string;
@@ -184,22 +192,14 @@ export default class DevServer {
   ) => {
     const assets = await this.buildUserProject(nowJson.builds);
 
-    const {
-      type,
-      zipBuffer,
-      handler,
-      runtime,
-      environment
-    } = this.route(req, assets, nowJson.routes)
+    const matched = this.route(req, assets, nowJson.routes)
 
-    console.log(999, type, handler, runtime);
-
-    if (type === 'Lambda') {
+    if (matched.type === 'Lambda') {
       const fn = await createFunction({
-        Code: { zipFile: zipBuffer },
-        Handler: handler,
-        Runtime: runtime,
-        Environment: environment
+        Code: { zipFile: matched.zipBuffer },
+        Handler: matched.handler,
+        Runtime: matched.runtime,
+        Environment: matched.environment
       });
 
       const invoked = await fn({
@@ -213,7 +213,10 @@ export default class DevServer {
         })
       })
 
+      // TODO: go on here after error resolved.
       console.log(invoked);
+    } else if (matched.type === 'Static') {
+      return send(res, 200, matched.toStream());
     }
   }
 
@@ -224,10 +227,10 @@ export default class DevServer {
     req: http.IncomingMessage,
     assets: BuilderOutputs,
     routes?: RouteConfig[]
-  ) {
+  ): BuilderOutput {
     if (req.url === undefined) return {}
 
-    let reqDest = req.url.replace(/^\//, '');
+    let reqDest = req.url;
 
     if (routes) {
       reqDest = routes.reduce((accu: string, curr:RouteConfig) => {
@@ -266,7 +269,7 @@ export default class DevServer {
       .concat('@now/build-utils');
 
     for (const builder of builders) {
-      const stopSpinner = wait(`pulling ${builder}`);
+      const stopSpinner = wait(`installing ${builder}`);
       await builderCache.install(this.builderDirectory, builder);
       stopSpinner();
     }

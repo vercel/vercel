@@ -53,6 +53,10 @@ function prepare () {
  * @param name builder's name
  */
 async function install (cacheDir: string, name: string) {
+  if (name === '@now/statics') {
+    return
+  }
+
   const dest = path.join(cacheDir, 'node_modules', name);
   if (!fs.existsSync(dest)) {
     return execa('npm', ['install', name, '--prefer-offline'], {
