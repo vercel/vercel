@@ -14,22 +14,19 @@ export default async function transferInDomain(
   authCode: string
 ) {
   try {
-    return await client.fetch<Response>(`/v3/domains/transfer-in`, {
-      body: { name, authCode },
-      method: 'POST',
+    return await client.fetch<Response>(`/v4/domains`, {
+      body: { method: 'transfer-in', name, authCode },
+      method: 'POST'
     });
   } catch (error) {
-    if (error.code === 'invalid_domain') {
+    if (error.code === 'invalid_name') {
       return new ERRORS.InvalidDomain(name);
     }
-    if (error.code === 'not_available') {
+    if (error.code === 'domain_already_exists') {
       return new ERRORS.DomainNotAvailable(name);
     }
-    if (error.code === 'service_unavailabe') {
-      return new ERRORS.DomainServiceNotAvailable(name);
-    }
-    if (error.code === 'unexpected_error') {
-      return new ERRORS.UnexpectedDomainPurchaseError(name);
+    if (error.code === 'not_transferable') {
+      return new ERRORS.DomainNotTransferable(name);
     }
     throw error;
   }

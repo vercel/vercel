@@ -157,7 +157,9 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${cmd('now billing add')}.`
+      message: `Not able to purchase. Please add a payment method using ${cmd(
+        'now billing add'
+      )}.`
     });
   }
 }
@@ -291,6 +293,23 @@ export class DomainServiceNotAvailable extends NowError<
       code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
       meta: { domain },
       message: `The domain purchase is unavailable, try again later.`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to purchase a domain but the API returns
+ * an error telling that it is not available.
+ */
+export class DomainNotTransferable extends NowError<
+  'DOMAIN_NOT_TRANSFERABLE',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_TRANSFERABLE',
+      meta: { domain },
+      message: `The domain ${domain} is not available to be transferred.`
     });
   }
 }

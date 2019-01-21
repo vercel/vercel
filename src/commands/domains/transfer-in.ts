@@ -10,7 +10,6 @@ import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import textInput from '../../util/input/text';
-import promptBool from '../../util/input/prompt-bool';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
@@ -100,21 +99,11 @@ export default async function transferIn(
   console.log(
     `${chalk.cyan('> Success!')} Domain ${param(
       domainName
-    )} transferred ${transferStamp()}`
+    )} transfer started ${transferStamp()}`
   );
-  if (!transferInResult.verified) {
-    output.note(
-      `Your domain is not fully configured yet so it may appear as not verified.`
-    );
-    output.print(
-      `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
-    );
-  } else {
-    output.note(
-      `You may now use your domain as an alias to your deployments. Run ${cmd(
-        'now alias --help'
-      )}`
-    );
-  }
+
+  output.print(
+    `We have initiated a transfer for ${domainName}.\nTo finalize the transfer, we are waiting for approval from your current registrar.`
+  );
   return 0;
 }
