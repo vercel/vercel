@@ -10,7 +10,7 @@
     "test-unit": "nyc --reporter=html --reporter=text --all ava test/unit.js --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint .",
-    "prepublishOnly": "yarn build-download && cp /dev/null download/dist/now",
+    "prepublishOnly": "yarn build-download && cp download/default.js download/dist/now",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "postinstall": "node download/install.js",
     "gzip": "ls packed/now* | xargs gzip",
