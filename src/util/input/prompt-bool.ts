@@ -50,12 +50,15 @@ export default async function promptBool(label: string, options: Options = {}) {
         stdout.write(`\n`);
         resolve(true);
       } else if (data[0].toLowerCase() === noChar) {
+        stdout.write(`\n`);
         restore();
         resolve(false);
       } else if (abortSequences.has(data)) {
+        stdout.write(`\n`);
         restore();
         resolve(false);
       } else if (resolveChars.has(data[0])) {
+        stdout.write(`\n`);
         restore();
         resolve(defaultValue);
       } else {

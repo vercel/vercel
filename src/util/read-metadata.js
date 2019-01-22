@@ -1,16 +1,10 @@
-// Native
 import { basename, resolve as resolvePath } from 'path';
-
-// Packages
 import chalk from 'chalk';
-
 import loadJSON from 'load-json-file';
 import loadPackageJSON from 'read-pkg';
 import fs from 'fs';
 import { parse as parseDockerfile } from 'docker-file-parser';
 import determineType from 'deployment-type';
-
-// Utilities
 import getLocalConfigPath from './config/local-path';
 
 export default readMetaData;
@@ -74,7 +68,7 @@ async function readMetaData(
           'Please supply `--npm` or `--docker` to disambiguate.'
       );
 
-      err.code = 'MULTIPLE_MANIFESTS';
+      err.code = 'multiple_manifests';
 
       throw err;
     }
@@ -90,10 +84,6 @@ async function readMetaData(
 
   if (type === 'npm') {
     if (pkg) {
-      if (!name && pkg.now && pkg.now.name) {
-        name = String(pkg.now.name);
-      }
-
       if (!name && pkg.name) {
         name = String(pkg.name);
       }
@@ -103,36 +93,26 @@ async function readMetaData(
   } else if (type === 'docker') {
     if (!dockerfile) {
       const err = new Error('`Dockerfile` missing');
+      err.code = 'dockerfile_missing';
       throw err;
     }
 
     if (strict && dockerfile.length <= 0) {
       const err = new Error('No commands found in `Dockerfile`');
+      err.code = 'no_dockerfile_commands';
       throw err;
     }
 
     const labels = {};
 
     dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
-      for (const key in args) {
-        if (!{}.hasOwnProperty.call(args, key)) {
-          continue;
-        }
-
+      for (const key of Object.keys(args)) {
         // Unescape and convert into string
-        try {
-          labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
-        } catch (err) {
-          const e = new Error(
-            `Error parsing value for LABEL ${key} in \`Dockerfile\``
-          );
-
-          throw e;
-        }
+        labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
       }
     });
 
-    if (!name) {
+    if (!name && labels.name) {
       name = labels.name;
     }
 
@@ -140,7 +120,9 @@ async function readMetaData(
   } else if (type === 'static') {
     // Do nothing
   } else {
-    throw new TypeError(`Unsupported "deploymentType": ${type}`);
+    const err = new TypeError(`Unsupported "deploymentType": ${type}`);
+    err.code = 'unsupported_deployment_type';
+    throw err;
   }
 
   // No name in `package.json` / `now.json`, or "name" label in Dockerfile.

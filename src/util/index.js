@@ -65,6 +65,7 @@ export default class Now extends EventEmitter {
 
       // Latest
       name,
+      project,
       wantsPublic,
       meta,
       regions,
@@ -209,7 +210,6 @@ export default class Now extends EventEmitter {
       );
 
       const queryProps = {};
-
       const requestBody = isBuilds
         ? {
             version: 2,
@@ -217,6 +217,7 @@ export default class Now extends EventEmitter {
             build,
             public: wantsPublic || nowConfig.public,
             name,
+            project,
             files,
             meta,
             regions
@@ -228,6 +229,7 @@ export default class Now extends EventEmitter {
             public: wantsPublic || nowConfig.public,
             forceNew,
             name,
+            project,
             description,
             deploymentType: type,
             registryAuthToken: authToken,
@@ -584,7 +586,9 @@ export default class Now extends EventEmitter {
 
   async findDeployment(hostOrId) {
     const { debug } = this._output;
-    let id = !hostOrId.includes('.') && hostOrId;
+
+    let id = hostOrId && !hostOrId.includes('.');
+    let isBuilds = null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -619,9 +623,10 @@ export default class Now extends EventEmitter {
       );
 
       id = deployment.id;
+      isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/v5/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${isBuilds ? 'v6' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {

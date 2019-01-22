@@ -26,7 +26,20 @@ export default async function inspect(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  const { contextName } = await getScope(client);
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
   const [domainName] = args;
   const inspectStamp = stamp();
 
@@ -66,28 +79,21 @@ export default async function inspect(
 
   output.log(`Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(inspectStamp())}`);
   output.print('\n');
-  output.print(chalk.bold('  Domain Info\n'));
-  output.print(`    ${chalk.dim('name')}\t\t${domain.name}\n`);
-  output.print(`    ${chalk.dim('serviceType')}\t\t${domain.serviceType}\n`);
+  output.print(chalk.bold('  General\n\n'));
+  output.print(`    ${chalk.cyan('name')}\t\t${domain.name}\n`);
+  output.print(`    ${chalk.cyan('serviceType')}\t\t${domain.serviceType}\n`);
+  output.print(`    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`);
+  output.print(`    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`);
+  output.print(`    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`);
+  output.print(`    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`);
+  output.print(`    ${chalk.cyan('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`);
   output.print(
-    `    ${chalk.dim('createdAt')}\t\t${formatDate(domain.createdAt)}\n`
+    `    ${chalk.cyan('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
   );
-  output.print(
-    `    ${chalk.dim('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`
-  );
-  output.print(
-    `    ${chalk.dim('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
-  );
-  output.print(`    ${chalk.dim('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
+  output.print(`    ${chalk.cyan('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
   output.print('\n');
 
-  output.print(chalk.bold('  Nameservers\n'));
+  output.print(chalk.bold('  Nameservers\n\n'));
   output.print(
     `${formatNSTable(domain.intendedNameservers, domain.nameservers, {
       extraSpace: '    '
@@ -95,7 +101,7 @@ export default async function inspect(
   );
   output.print('\n');
 
-  output.print(chalk.bold('  Verification Record\n'));
+  output.print(chalk.bold('  Verification Record\n\n'));
   output.print(
     `${dnsTable([['_now', 'TXT', domain.verificationRecord]], {
       extraSpace: '    '

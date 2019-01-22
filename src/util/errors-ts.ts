@@ -331,6 +331,23 @@ export class UnexpectedDomainPurchaseError extends NowError<
 }
 
 /**
+ * Returned during purchase in alias when the domain was purchased but the
+ * order is pending so the alias can't be completed yet
+ */
+export class DomainPurchasePending extends NowError<
+  'DOMAIN_PURCHASE_PENDING',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PURCHASE_PENDING',
+      meta: { domain },
+      message: `The domain purchase for ${domain} is pending.`
+    });
+  }
+}
+
+/**
  * Returned any time we prompt the user to make sure an action should be performed
  * and the user decides not to continue with the operation
  */
@@ -748,6 +765,16 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
       code: 'INVALID_CERT',
       meta: {},
       message: `The provided custom certificate is invalid and couldn't be added`
+    });
+  }
+}
+
+export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', { domain: string }> {
+  constructor(domain: string) {
+    super({
+      code: 'DNS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to the DNS records of ${domain}.`
     });
   }
 }

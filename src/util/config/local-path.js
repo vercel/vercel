@@ -1,7 +1,4 @@
-// Native
 import path from 'path';
-
-// Packages
 import mri from 'mri';
 
 const getLocalPathConfig = prefix => {

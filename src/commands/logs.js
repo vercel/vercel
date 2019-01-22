@@ -150,7 +150,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
       output.error(err.message);
       return 1;
     }
@@ -211,7 +211,7 @@ export default async function main(ctx) {
   const storage = [];
   const storeEvent = event => storage.push(event);
 
-  await printEvents(now, deployment.uid, currentTeam, {
+  await printEvents(now, deployment.uid || deployment.id, currentTeam, {
     mode: 'logs',
     onEvent: storeEvent,
     quiet: false,
@@ -240,7 +240,7 @@ export default async function main(ctx) {
       since: since2,
       follow: true
     };
-    await printEvents(now, deployment.uid, currentTeam, {
+    await printEvents(now, deployment.uid || deployment.id, currentTeam, {
       mode: 'logs',
       onEvent: printEvent,
       quiet: false,

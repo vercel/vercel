@@ -70,7 +70,9 @@ export default async function assignAlias(
       }
 
       output.log(
-        `Scale rules copied from previous alias ${prevDeployment.url} ${scaleStamp()}`
+        `Scale rules copied from previous alias ${
+          prevDeployment.url
+        } ${scaleStamp()}`
       );
       if (!noVerify) {
         const result = await waitForScale(
@@ -94,14 +96,16 @@ export default async function assignAlias(
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, client, alias, contextName);
     if (
+      result instanceof ERRORS.CDNNeedsUpgrade ||
+      result instanceof ERRORS.DomainAlreadyExists ||
       result instanceof ERRORS.DomainNotAvailable ||
       result instanceof ERRORS.DomainNotFound ||
       result instanceof ERRORS.DomainPermissionDenied ||
+      result instanceof ERRORS.DomainPurchasePending ||
       result instanceof ERRORS.DomainServiceNotAvailable ||
       result instanceof ERRORS.DomainVerificationFailed ||
       result instanceof ERRORS.InvalidDomain ||
-      result instanceof ERRORS.CDNNeedsUpgrade ||
-      result instanceof ERRORS.DomainAlreadyExists ||
+      result instanceof ERRORS.SourceNotFound ||
       result instanceof ERRORS.UnexpectedDomainPurchaseError ||
       result instanceof ERRORS.UnsupportedTLD ||
       result instanceof ERRORS.UserAborted

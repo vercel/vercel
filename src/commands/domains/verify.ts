@@ -21,12 +21,28 @@ export default async function verify(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  const { contextName } = await getScope(client);
+
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
+
   const [domainName] = args;
 
   if (!domainName) {
@@ -67,7 +83,9 @@ export default async function verify(
   if (result instanceof ERRORS.DomainVerificationFailed) {
     const { nsVerification, txtVerification } = result.meta;
     output.error(
-      `The domain ${domain.name} could not be verified due to the following reasons: ${verifyStamp()}\n`
+      `The domain ${
+        domain.name
+      } could not be verified due to the following reasons: ${verifyStamp()}\n`
     );
     output.print(
       `  ${chalk.gray(
@@ -100,7 +118,7 @@ export default async function verify(
     output.print(
       `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
     return 1;
   }
 
@@ -112,7 +130,7 @@ export default async function verify(
     );
     output.print(
       `  You can verify with nameservers too. Run ${cmd(
-        'now domains inspect <domain>'
+        `now domains inspect ${domain.name}`
       )} to find out the intended set.\n`
     );
     return 0;

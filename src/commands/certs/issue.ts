@@ -31,7 +31,10 @@ export default async function issue(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const addStamp = stamp();
@@ -58,7 +61,7 @@ export default async function issue(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
       output.error(err.message);
       return 1;
     }
@@ -142,8 +145,9 @@ export default async function issue(
 
   if (cert instanceof ERRORS.CantSolveChallenge) {
     output.error(
-      `We could not solve the ${cert.meta.type} challenge for domain ${cert.meta
-        .domain}.`
+      `We could not solve the ${cert.meta.type} challenge for domain ${
+        cert.meta.domain
+      }.`
     );
     if (cert.meta.type === 'dns-01') {
       output.log(
@@ -154,13 +158,14 @@ export default async function issue(
       );
     } else {
       output.log(
-        `The certificate provider could not resolve the HTTP queries for ${cert
-          .meta.domain}.`
+        `The certificate provider could not resolve the HTTP queries for ${
+          cert.meta.domain
+        }.`
       );
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
       );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
+      output.print(`  ${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
       output.log(
         `Alternatively, you can solve DNS challenges manually after running:\n`
       );
@@ -168,17 +173,19 @@ export default async function issue(
         `  ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`
       );
       output.print(
-        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n'
+        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n\n'
       );
     }
     return 1;
   }
   if (cert instanceof ERRORS.TooManyRequests) {
     output.error(
-      `Too many requests detected for ${cert.meta
-        .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(
+        cert.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }

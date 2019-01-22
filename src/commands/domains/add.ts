@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { NowContext, Domain } from '../../types';
+import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import addDomain from '../../util/domains/add-domain';
@@ -10,7 +10,6 @@ import cmd from '../../util/output/cmd';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getBooleanOptionValue from '../../util/get-boolean-option-value';
-import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 
@@ -36,7 +35,7 @@ export default async function add(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
       output.error(err.message);
       return 1;
     }
@@ -146,7 +145,7 @@ export default async function add(
         'now domains verify <domain>'
       )}\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
   }
 
   return 0;
