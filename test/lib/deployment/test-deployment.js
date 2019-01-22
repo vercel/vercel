@@ -22,7 +22,7 @@ async function packAndDeploy (builderPath) {
 
 const RANDOMNESS_PLACEHOLDER_STRING = 'RANDOMNESS_PLACEHOLDER';
 
-async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
+async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath, buildDelegate) {
   console.log('testDeployment', fixturePath);
   const globResult = await glob(`${fixturePath}/**`, { nodir: true });
   const bodies = globResult.reduce((b, f) => {
@@ -62,6 +62,10 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath) {
       } else {
         config.useBuildUtils = `https://${buildUtilsUrl}`;
       }
+    }
+
+    if (buildDelegate) {
+      buildDelegate(build);
     }
   }
 
