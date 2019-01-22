@@ -12,12 +12,16 @@ export default {
   prepare,
   install,
   get
-}
+};
+
+const localBuilders: { [key: string]: any } = {
+  '@now/statics': staticBuilder
+};
 
 /**
  * Prepare cache directory for installing now-builders
  */
-function prepare () {
+function prepare() {
   try {
     const designated = cacheDirectory('co.zeit.now-builders');
     const buildersPkg = path.join(designated, 'package.json');
@@ -52,9 +56,9 @@ function prepare () {
  * @param cacheDir directory
  * @param name builder's name
  */
-async function install (cacheDir: string, name: string) {
-  if (name === '@now/statics') {
-    return
+async function install(cacheDir: string, name: string) {
+  if (localBuilders.hasOwnProperty(name)) {
+    return;
   }
 
   const dest = path.join(cacheDir, 'node_modules', name);
@@ -70,9 +74,9 @@ async function install (cacheDir: string, name: string) {
  * @param cacheDir directory
  * @param name builder's name
  */
-function get (cacheDir: string, name: string) {
-  if (name === '@now/static') {
-    return staticBuilder;
+function get(cacheDir: string, name: string) {
+  if (localBuilders.hasOwnProperty(name)) {
+    return localBuilders[name];
   }
 
   const dest = path.join(cacheDir, 'node_modules', name);
