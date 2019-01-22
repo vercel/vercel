@@ -84,8 +84,10 @@ export default async function transferIn(
     )} transfer started ${transferStamp()}`
   );
 
+  output.print(`We have initiated a transfer for ${domainName}.\n`);
   output.print(
-    `We have initiated a transfer for ${domainName}.\nTo finalize the transfer, we are waiting for approval from your current registrar.\nYou will receive an email upon completion.`
+    `To finalize the transfer, we are waiting for approval from your current registrar.\n`
   );
+  output.print(`You will receive an email upon completion.`);
   return 0;
 }
