@@ -2,11 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 
+import chalk from 'chalk';
+import ignore from 'ignore';
+import { send } from 'micro';
+
 // @ts-ignore
 import glob from '@now/build-utils/fs/glob';
-import chalk from 'chalk';
-import { send } from 'micro';
-import ignore from 'ignore';
+// @ts-ignore
+import FileFsRef from '@now/build-utils/file-fs-ref';
+// @ts-ignore
+import Lambda from '@now/build-utils/lambda';
 // @ts-ignore
 import { createFunction } from '../../../../lambdas/lambda-dev';
 
@@ -33,21 +38,7 @@ interface RouteConfig {
   status?: number
 }
 
-interface FileFsRef {
-  mode: number,
-  fsPath: string,
-  toStream(): any
-}
-
-interface Lambda {
-  type: string,
-  zipBuffer: any,
-  handler: string,
-  runtime: string,
-  environment: string
-}
-
-type BuilderOutput = FileFsRef | Lambda | any
+type BuilderOutput = FileFsRef | Lambda
 
 interface BuilderOutputs {
   [key: string]: BuilderOutput
@@ -192,7 +183,8 @@ export default class DevServer {
   ) => {
     const assets = await this.buildUserProject(nowJson.builds);
 
-    const matched = this.route(req, assets, nowJson.routes)
+    const matched = this.route(req, assets, nowJson.routes);
+    console.log(matched);
 
     if (matched.type === 'Lambda') {
       const fn = await createFunction({
