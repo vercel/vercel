@@ -254,6 +254,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/ansi-regex@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/ansi-regex/-/ansi-regex-3.0.0.tgz#9ccce6d4a1eacf24b518ade9e9a953e2de6d6498"
+  integrity sha512-14/HrSApZLbHcIMw66RGOB9d+nkM4e/EHAZC065PWCyzGvdQKaJWvAguak1yprWJ3sp7I+yLv7uJxLVldYgA5w==
+
 "@types/async-retry@1.2.1":
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/@types/async-retry/-/async-retry-1.2.1.tgz#fa9ac165907a8ee78f4924f4e393b656c65b5bb4"
@@ -297,6 +302,11 @@
   version "0.0.29"
   resolved "https://registry.yarnpkg.com/@types/pluralize/-/pluralize-0.0.29.tgz#6ffa33ed1fc8813c469b859681d09707eb40d03c"
   integrity sha512-BYOID+l2Aco2nBik+iYS4SZX0Lf20KPILP5RGmM1IgzdwNdTs0eebiFriOPcej1sX9mLnSoiNte5zcFxssgpGA==
+
+"@types/strip-ansi@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/strip-ansi/-/strip-ansi-3.0.0.tgz#9b63d453a6b54aa849182207711a08be8eea48ae"
+  integrity sha1-m2PUU6a1SqhJGCIHcRoIvo7qSK4=
 
 "@types/text-table@0.2.0":
   version "0.2.0"
