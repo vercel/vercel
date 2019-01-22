@@ -298,6 +298,23 @@ export class DomainServiceNotAvailable extends NowError<
 }
 
 /**
+ * Returned when the user tries to purchase a domain but the API returns
+ * an error telling that it is not available.
+ */
+export class DomainNotTransferable extends NowError<
+  'DOMAIN_NOT_TRANSFERABLE',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_TRANSFERABLE',
+      meta: { domain },
+      message: `The domain ${domain} is not available to be transferred.`
+    });
+  }
+}
+
+/**
  * Returned when there is an expected error during the domain purchase.
  */
 export class UnexpectedDomainPurchaseError extends NowError<
