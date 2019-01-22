@@ -88,7 +88,8 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath, build
       if (!text.includes(probe.mustContain)) {
         await fs.writeFile(path.join(__dirname, 'failed-page.txt'), text);
         throw new Error(
-          `Fetched page ${probeUrl} does not contain ${probe.mustContain}`
+          `Fetched page ${probeUrl} does not contain ${probe.mustContain}.`
+          + ` Instead it contains ${text.slice(0, 60)}`
         );
       }
     } else {
