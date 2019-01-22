@@ -82,7 +82,7 @@ export default function text(
 
     let value: string;
     let caretOffset = 0;
-    let regex: RegExp | string;
+    let regex: RegExp;
     let suggestion = '';
 
     if (valid) {
@@ -103,7 +103,7 @@ export default function text(
         stdout.write(ansiEscapes.cursorBackward(Math.abs(caretOffset)));
       }
 
-      regex = placeholder
+      const regexStr = placeholder
         .split('')
         .reduce((prev: string[], curr) => {
           if (curr !== ' ' && !prev.includes(curr)) {
@@ -116,7 +116,7 @@ export default function text(
           return prev;
         }, [])
         .join('|');
-      regex = new RegExp(`(${regex})`, 'g');
+      regex = new RegExp(`(${regexStr})`, 'g');
     }
 
     if (stdin.setRawMode) {
