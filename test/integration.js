@@ -352,7 +352,35 @@ test('try to purchase a domain', async t => {
   );
 
   t.is(code, 1);
-  t.true(stderr.includes(`> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`));
+  t.true(
+    stderr.includes(
+      `> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
+    )
+  );
+});
+
+test('try to transfer-in a domain with "--code" option', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      'domains',
+      'transfer-in',
+      '--code',
+      'xyz',
+      `${session}-test.org`,
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  t.true(
+    stderr.includes(
+      `> Error! The domain "${session}-test.org" is not transferable.`
+    )
+  );
+  t.is(code, 1);
 });
 
 test('try to set default without existing payment method', async t => {

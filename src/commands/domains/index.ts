@@ -9,6 +9,7 @@ import logo from '../../util/output/logo';
 
 import add from './add';
 import buy from './buy';
+import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
@@ -20,12 +21,13 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls               Show all domains in a list
-    inspect [name]   Displays information related to a domain
-    add     [name]   Add a new domain that you already own
-    rm      [name]   Remove a domain
-    buy     [name]   Buy a domain that you don't yet own
-    verify  [name]   Run a verification for a domain
+    ls                    Show all domains in a list
+    inspect      [name]   Displays information related to a domain
+    add          [name]   Add a new domain that you already own
+    rm           [name]   Remove a domain
+    buy          [name]   Buy a domain that you don't yet own
+    transfer-in  [name]   Transfer in a domain to Zeit
+    verify       [name]   Run a verification for a domain
 
   ${chalk.dim('Options:')}
 
@@ -68,6 +70,7 @@ const COMMAND_CONFIG = {
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
+  transferIn: ['transfer-in'],
   verify: ['verify']
 };
 
@@ -77,6 +80,7 @@ export default async function main(ctx: NowContext) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--cdn': Boolean,
+      '--code': String,
       '--no-cdn': Boolean,
       '--yes': Boolean
     });
@@ -101,6 +105,8 @@ export default async function main(ctx: NowContext) {
       return buy(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
+    case 'transferIn':
+      return transferIn(ctx, argv, args, output);
     case 'verify':
       return verify(ctx, argv, args, output);
     default:
