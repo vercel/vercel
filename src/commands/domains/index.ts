@@ -67,10 +67,10 @@ const help = () => {
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
-  'transfer-in': ['transfer-in'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
+  transferIn: ['transfer-in'],
   verify: ['verify']
 };
 
@@ -80,9 +80,9 @@ export default async function main(ctx: NowContext) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--cdn': Boolean,
+      '--code': String,
       '--no-cdn': Boolean,
-      '--yes': Boolean,
-      '--code': String
+      '--yes': Boolean
     });
   } catch (error) {
     handleError(error);
@@ -103,10 +103,10 @@ export default async function main(ctx: NowContext) {
       return inspect(ctx, argv, args, output);
     case 'buy':
       return buy(ctx, argv, args, output);
-    case 'transfer-in':
-      return transferIn(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
+    case 'transferIn':
+      return transferIn(ctx, argv, args, output);
     case 'verify':
       return verify(ctx, argv, args, output);
     default:

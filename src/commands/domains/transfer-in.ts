@@ -6,15 +6,12 @@ import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
-import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
-import textInput from '../../util/input/text';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
-import wait from '../../util/output/wait';
-
-const isValidAuthCode = (code: string) => !!(code && code.length > 0);
+import getAuthCode from '../../util/domains/get-auth-code';
+import withSpinner from '../../util/with-spinner';
 
 type Options = {
   '--debug': boolean;
@@ -59,18 +56,12 @@ export default async function transferIn(
     return 1;
   }
 
-  const authCode = isValidAuthCode(opts['--code'])
-    ? opts['--code']
-    : await textInput({
-        label: `Transfer auth code: `,
-        validateValue: isValidAuthCode
-      });
+  const authCode = await getAuthCode(opts['--code']);
 
   const transferStamp = stamp();
-  const stopTransferSpinner = wait('Transferring');
-  const transferInResult = await transferInDomain(client, domainName, authCode);
-
-  stopTransferSpinner();
+  const transferInResult = await withSpinner('Initiating transfer', () =>
+    transferInDomain(client, domainName, authCode)
+  );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
     output.error(`The domain ${transferInResult.meta.domain} is not valid.`);
@@ -94,7 +85,7 @@ export default async function transferIn(
   );
 
   output.print(
-    `We have initiated a transfer for ${domainName}.\nTo finalize the transfer, we are waiting for approval from your current registrar.`
+    `We have initiated a transfer for ${domainName}.\nTo finalize the transfer, we are waiting for approval from your current registrar.\nYou will receive an email upon completion.`
   );
   return 0;
 }

@@ -1,11 +1,9 @@
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
+import { Domain } from '../../types';
 
 type Response = {
-  created: number;
-  ns: string[];
-  uid: string;
-  verified: boolean;
+  domain: Domain;
 };
 
 export default async function transferInDomain(
