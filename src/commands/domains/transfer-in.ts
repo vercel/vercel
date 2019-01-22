@@ -77,22 +77,13 @@ export default async function transferIn(
     return 1;
   }
 
-  if (transferInResult instanceof ERRORS.DomainNotAvailable) {
+  if (
+    transferInResult instanceof ERRORS.DomainNotAvailable ||
+    transferInResult instanceof ERRORS.DomainNotTransferable
+  ) {
     output.error(
-      `The domain ${transferInResult.meta.domain} is not transferable.`
+      `The domain "${transferInResult.meta.domain}" is not transferable.`
     );
-    return 1;
-  }
-
-  if (transferInResult instanceof ERRORS.DomainServiceNotAvailable) {
-    output.error(
-      `The domain transfer service is not available. Please try again later.`
-    );
-    return 1;
-  }
-
-  if (transferInResult instanceof ERRORS.UnexpectedDomainPurchaseError) {
-    output.error(`An unexpected error happened while performing the transfer.`);
     return 1;
   }
 

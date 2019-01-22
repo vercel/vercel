@@ -172,30 +172,12 @@ test('try to transfer-in a domain with "--code" option', async t => {
     }
   );
 
-  t.is(code, 1);
   t.true(
     stderr.includes(
       `> Error! The domain "${session}-test.org" is not transferable.`
     )
   );
-});
-
-test('try to transfer-in a domain with prompt input', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    ['domains', 'transfer-in', `${session}-test.org`, ...defaultArgs],
-    {
-      reject: false,
-      input: 'xyz'
-    }
-  );
-
   t.is(code, 1);
-  t.true(
-    stderr.includes(
-      `> Error! The domain "${session}-test.org" is not transferable.`
-    )
-  );
 });
 
 test('try to set default without existing payment method', async t => {
