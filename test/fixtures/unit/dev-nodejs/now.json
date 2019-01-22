@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "name": "nodejs",
+    "builds": [
+        { "src": "*.js", "use": "@now/node" },
+        { "src": "statics/*", "use": "@now/statics" }
+    ],
+    "routes": [
+        { "src": "/api/*", "dest": "api.js" }
+    ]
+}
