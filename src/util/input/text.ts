@@ -13,13 +13,32 @@ const ESCAPES = {
   CARRIAGE: '\r'
 };
 
-const formatCC = data =>
+const formatCC = (data: string) =>
   data
     .replace(/\s/g, '')
     .replace(/(.{4})/g, '$1 ')
     .trim();
 
-export default function(
+declare type TextParams = {
+  label?: string;
+  initialValue?: string;
+  valid?: boolean;
+  mask?: boolean | 'cc' | 'ccv' | 'expDate' | 'date';
+  placeholder?: string;
+  abortSequences?: Set<string>;
+  eraseSequences?: Set<string>;
+  resolveChars?: Set<string>;
+  stdin?: NodeJS.ReadStream;
+  stdout?: NodeJS.WriteStream;
+  trailing?: string;
+  validateKeypress?: (data: any, futureValue: string) => boolean;
+  validateValue?: (data: string) => boolean;
+  autoComplete?: (value: string) => string | false;
+  autoCompleteChars?: Set<string>;
+  forceLowerCase?: boolean;
+};
+
+export default function text(
   {
     label = '',
     initialValue = '',
@@ -47,23 +66,23 @@ export default function(
     validateKeypress = (data, futureValue) => true, // eslint-disable-line no-unused-vars
     // Get's called before the promise is resolved
     // Returning `false` here will prevent the user from submiting the value
-    validateValue = data => true, // eslint-disable-line no-unused-vars
+    validateValue = (data: string) => true, // eslint-disable-line no-unused-vars
     // Receives the value of the input and should return a string
     // Or false if no autocomplion is available
-    autoComplete = value => false, // eslint-disable-line no-unused-vars
+    autoComplete = (value: string) => false, // eslint-disable-line no-unused-vars
     // Tab
     // Right arrow
     autoCompleteChars = new Set(['\t', '\x1b[C']),
     // If true, converts everything the user types to to lowercase
     forceLowerCase = false
-  } = {}
-) {
+  }: TextParams = {}
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const isRaw = process.stdin.isRaw;
+    const isRaw = process.stdin.isRaw || false;
 
-    let value;
+    let value: string;
     let caretOffset = 0;
-    let regex;
+    let regex: RegExp;
     let suggestion = '';
 
     if (valid) {
@@ -84,9 +103,9 @@ export default function(
         stdout.write(ansiEscapes.cursorBackward(Math.abs(caretOffset)));
       }
 
-      regex = placeholder
+      const regexStr = placeholder
         .split('')
-        .reduce((prev, curr) => {
+        .reduce((prev: string[], curr) => {
           if (curr !== ' ' && !prev.includes(curr)) {
             if (curr === '/') {
               prev.push(' / ');
@@ -97,7 +116,7 @@ export default function(
           return prev;
         }, [])
         .join('|');
-      regex = new RegExp(`(${regex})`, 'g');
+      regex = new RegExp(`(${regexStr})`, 'g');
     }
 
     if (stdin.setRawMode) {
@@ -119,7 +138,7 @@ export default function(
       }
     }
 
-    async function onData(buffer) {
+    async function onData(buffer: Buffer) {
       let data = buffer.toString();
 
       value = stripAnsi(value);
