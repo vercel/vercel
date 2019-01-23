@@ -9,10 +9,6 @@ import { send } from 'micro';
 // @ts-ignore
 import glob from '@now/build-utils/fs/glob';
 // @ts-ignore
-import FileFsRef from '@now/build-utils/file-fs-ref';
-// @ts-ignore
-import Lambda from '@now/build-utils/lambda';
-// @ts-ignore
 import { createFunction } from '../../../../lambdas/lambda-dev';
 
 import wait from '../../util/output/wait';
@@ -23,28 +19,19 @@ import { NowError } from '../../util/now-error';
 import { readLocalConfig } from '../../util/config/files';
 
 import builderCache from './builder-cache';
+import devRouter from './dev-router';
 
 interface BuildConfig {
-  src: string,
-  use: string,
-  config?: object
+  src: string;
+  use: string;
+  config?: object;
 }
 
-interface RouteConfig {
-  src: string,
-  dest: string,
-  methods?: string[],
-  headers?: object,
-  status?: number
+enum DevServerStatus {
+  busy,
+  idle,
+  error
 }
-
-type BuilderOutput = FileFsRef | Lambda
-
-interface BuilderOutputs {
-  [key: string]: BuilderOutput
-}
-
-enum DevServerStatus { busy, idle, error }
 
 type HttpHandler = (
   req: http.IncomingMessage,
@@ -58,7 +45,7 @@ export default class DevServer {
   private statusMessage = '';
   private builderDirectory = '';
 
-  constructor (cwd: string, port = 3000) {
+  constructor(cwd: string, port = 3000) {
     this.cwd = cwd;
     this.server = http.createServer(this.devServerHandler);
     this.builderDirectory = builderCache.prepare();
@@ -66,10 +53,16 @@ export default class DevServer {
   }
 
   /* use dev-server as a "console" for logs. */
-  logInfo (str: string) { console.log(info(str)) }
-  logError (str: string) { console.log(error(str)) }
-  logSuccess (str: string) { console.log(success(str))}
-  logHttp (msg?: string) {
+  logInfo(str: string) {
+    console.log(info(str));
+  }
+  logError(str: string) {
+    console.log(error(str));
+  }
+  logSuccess(str: string) {
+    console.log(success(str));
+  }
+  logHttp(msg?: string) {
     msg && console.log(`\n  ${chalk.green('>>>')} ${msg}\n`);
   }
 
@@ -101,25 +94,25 @@ export default class DevServer {
         this.setStatusIdle();
         resolve();
       });
-    })
-  }
+    });
+  };
 
   setStatusIdle = () => {
     this.status = DevServerStatus.idle;
     this.statusMessage = '';
-  }
+  };
 
   setStatusBusy = (msg = '') => {
     this.status = DevServerStatus.busy;
     this.statusMessage = msg;
-  }
+  };
 
   setStatusError = (msg: string) => {
     this.status = DevServerStatus.error;
     this.statusMessage = msg;
-  }
+  };
 
-  devServerHandler:HttpHandler = async (req, res) => {
+  devServerHandler: HttpHandler = async (req, res) => {
     if (this.status === DevServerStatus.busy) {
       return res.end(`[busy] ${this.statusMessage}...`);
     }
@@ -148,7 +141,7 @@ export default class DevServer {
     }
 
     this.setStatusIdle();
-  }
+  };
 
   /**
    * Serve project directory as static
@@ -170,7 +163,7 @@ export default class DevServer {
     }
 
     return send(res, 404);
-  }
+  };
 
   /**
    * Build & invoke project
@@ -183,61 +176,56 @@ export default class DevServer {
   ) => {
     const assets = await this.buildUserProject(nowJson.builds);
 
-    const matched = this.route(req, assets, nowJson.routes);
-    console.log(matched);
+    const matched = devRouter(req, assets, nowJson.routes);
 
-    if (matched.type === 'Lambda') {
-      const fn = await createFunction({
-        Code: { zipFile: matched.zipBuffer },
-        Handler: matched.handler,
-        Runtime: matched.runtime,
-        Environment: matched.environment
-      });
+    if (matched === undefined) {
+      return send(res, 404);
+    }
 
-      const invoked = await fn({
-        InvocationType: 'RequestResponse',
-        Payload: JSON.stringify({
-          method: req.method,
-          path: req.url,
-          headers: req.headers,
-          encoding: 'base64',
-          body: 'eyJlaXlvIjp0cnVlfQ=='
+    const {
+      dest,
+      status,
+      headers,
+      uri_args,
+      matched_route,
+      matched_route_idx
+    } = matched;
+
+    if (typeof dest === 'string') {
+      return send(res, 200, `TODO: proxy_pass to ${dest}`);
+    }
+
+    switch (dest.type) {
+      case 'FileFsRef':
+        return send(res, 200, dest.fsPath); // TODO: send real file
+
+      case 'Lambda':
+        const fn = await createFunction({
+          Code: { zipFile: dest.zipBuffer },
+          Handler: dest.handler,
+          Runtime: dest.runtime,
+          Environment: dest.environment
+        });
+
+        const invoked = await fn({
+          InvocationType: 'RequestResponse',
+          Payload: JSON.stringify({
+            method: req.method,
+            path: req.url,
+            headers: { ...req.headers, ...(headers || {}) },
+            encoding: 'base64',
+            body: 'eyJlaXlvIjp0cnVlfQ=='
+          })
         })
-      })
 
-      // TODO: go on here after error resolved.
-      console.log(invoked);
-    } else if (matched.type === 'Static') {
-      return send(res, 200, matched.toStream());
+        // TODO: go on here after error resolved.
+        console.log(fn);
+        return send(res, 200, `invoked ${fn}`);
+
+      default:
+        return send(res, 500);
     }
-  }
-
-  /**
-   * Find the handler responsible for the request
-   */
-  route = function (
-    req: http.IncomingMessage,
-    assets: BuilderOutputs,
-    routes?: RouteConfig[]
-  ): BuilderOutput {
-    if (req.url === undefined) return {}
-
-    let reqDest = req.url;
-
-    if (routes) {
-      reqDest = routes.reduce((accu: string, curr:RouteConfig) => {
-        if (curr.dest) {
-          return accu.replace(new RegExp('^' + curr.src + '$'), curr.dest);
-        } else {
-          return accu;
-        }
-      }, reqDest);
-    }
-
-    const foundHandler = matchHandler(assets, reqDest)
-
-    return foundHandler || {}
-  }
+  };
 
   buildUserProject = async (buildsConfig: BuildConfig[]) => {
     try {
@@ -252,7 +240,7 @@ export default class DevServer {
     } catch (err) {
       throw new Error('Build failed.');
     }
-  }
+  };
 
   installBuilders = async (buildsConfig: BuildConfig[]) => {
     const builders = buildsConfig
@@ -265,7 +253,7 @@ export default class DevServer {
       await builderCache.install(this.builderDirectory, builder);
       stopSpinner();
     }
-  }
+  };
 
   buildLambdas = async (buildsConfig: BuildConfig[]) => {
     const ignores = createIgnoreList(this.cwd);
@@ -291,7 +279,7 @@ export default class DevServer {
             workPath: this.cwd,
             config: build.config
           });
-          results = {...results, ...output};
+          results = { ...results, ...output };
         }
       } catch (err) {
         throw new NowError({
@@ -303,20 +291,13 @@ export default class DevServer {
     }
 
     return results;
-  }
-}
-
-function matchHandler (assets: BuilderOutputs, url: string) {
-  return assets[url]
-      || assets[url + "index.js"]
-      || assets[url + "/index.js"]
-      || assets[url + "/index.html"];
+  };
 }
 
 /**
  * Concat .gitignore & .nowignore in cwd
  */
-function createIgnoreList (cwd: string) {
+function createIgnoreList(cwd: string) {
   const ig = ignore();
 
   const gitignore = path.join(cwd, '.gitignore');
@@ -341,11 +322,7 @@ function createIgnoreList (cwd: string) {
   return ig;
 }
 
-async function collectProjectFiles (
-  pattern: string,
-  cwd: string,
-  ignore: any
-) {
+async function collectProjectFiles(pattern: string, cwd: string, ignore: any) {
   const files = await glob(pattern, cwd);
   const filteredFiles: { [key: string]: any } = {};
 
