@@ -3,9 +3,10 @@
     "name": "nodejs",
     "builds": [
         { "src": "*.js", "use": "@now/node" },
-        { "src": "statics/*", "use": "@now/statics" }
+        { "src": "statics/*", "use": "@now/static" }
     ],
     "routes": [
-        { "src": "/api/*", "dest": "api.js" }
+        { "src": "/api/*", "dest": "api.js" },
+        { "src": "/help.js", "dest": "index.js" }
     ]
 }

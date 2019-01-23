@@ -15,7 +15,7 @@ export default {
 };
 
 const localBuilders: { [key: string]: any } = {
-  '@now/statics': staticBuilder
+  '@now/static': staticBuilder
 };
 
 /**
