@@ -118,7 +118,8 @@ async function fetchDeploymentUrl (url, opts) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url, opts);
     const text = await resp.text();
-    if (text && !text.includes('Join Free')) {
+    if (text && !text.includes('Join Free')
+        && !text.includes('The page could not be found')) {
       return text;
     }
 
