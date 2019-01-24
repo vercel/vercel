@@ -4,7 +4,6 @@ import http from 'http';
 
 import chalk from 'chalk';
 import ignore from 'ignore';
-import { send } from 'micro';
 // @ts-ignore
 import serve from 'serve-handler';
 
@@ -64,8 +63,8 @@ export default class DevServer {
   logSuccess(str: string) {
     console.log(success(str));
   }
-  logHttp(msg?: string) {
-    msg && console.log(`\n  ${chalk.green('>>>')} ${msg}\n`);
+  logHttp(msg = '') {
+    console.log(`  ${chalk.green('>>>')} ${msg}`);
   }
 
   start = async (port = 3000) => {
@@ -138,7 +137,8 @@ export default class DevServer {
       console.error(err.stack);
 
       if (!res.finished) {
-        send(res, 500, this.statusMessage);
+        res.writeHead(500);
+        res.end(this.statusMessage);
       }
     }
 
@@ -153,18 +153,19 @@ export default class DevServer {
     res: http.ServerResponse,
     cwd: string
   ) => {
-    if (req.url === undefined) {
-      return send(res, 404);
+    const filePath = req.url ? req.url.replace(/^\//, '') : '';
+    const ig = createIgnoreList(cwd);
+
+    if (filePath && ig.ignores(filePath)) {
+      res.writeHead(404);
+      res.end();
+      return;
     }
 
-    // TODO: honor gitignore & nowignore
-    const dest = path.join(cwd, req.url.replace(/^\//, ''));
-
-    if (fs.lstatSync(dest).isFile()) {
-      return send(res, 200, fs.createReadStream(dest));
-    }
-
-    return send(res, 404);
+    return serve(req, res, {
+      public: cwd,
+      cleanUrls: false
+    });
   };
 
   /**
@@ -181,7 +182,9 @@ export default class DevServer {
     const matched = devRouter(req, assets, nowJson.routes);
 
     if (matched === undefined) {
-      return send(res, 404);
+      res.writeHead(404);
+      res.end();
+      return
     }
 
     const {
@@ -194,7 +197,7 @@ export default class DevServer {
     } = matched;
 
     if (typeof dest === 'string') {
-      return send(res, 200, `TODO: proxy_pass to ${dest}`);
+      return res.end(`TODO: proxy_pass to ${dest}`);
     }
 
     switch (dest.type) {
@@ -225,10 +228,11 @@ export default class DevServer {
 
         // TODO: go on here after error resolved.
         console.log(fn);
-        return send(res, 200, `invoked ${fn}`);
+        return res.end(`invoked ${fn}`);
 
       default:
-        return send(res, 500);
+        res.writeHead(500);
+        res.end();
     }
   };
 
