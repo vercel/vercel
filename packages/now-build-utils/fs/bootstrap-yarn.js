@@ -1,3 +1,5 @@
+/* eslint-disable arrow-body-style,no-multi-assign,no-param-reassign */
+
 const MemoryFileSystem = require('memory-fs');
 const fs = require('fs');
 const path = require('path');
@@ -14,12 +16,12 @@ const cachePath = spawnSync(yarnPath, ['cache', 'dir'])
 spawnSync(yarnPath, ['cache', 'clean']);
 const vfs = new MemoryFileSystem();
 
-function isInsideCachePath (filename) {
+function isInsideCachePath(filename) {
   const relative = path.relative(cachePath, filename);
   return !relative.startsWith('..');
 }
 
-function replaceFn (name, newFnFactory) {
+function replaceFn(name, newFnFactory) {
   const prevFn = fs[name];
   fs[name] = newFnFactory(prevFn);
 }
@@ -60,7 +62,7 @@ replaceFn('readFile', (prevFn) => {
         return prevFn.call(fs, ...args);
       }
 
-      callback(error, result);
+      return callback(error, result);
     });
   };
 });
@@ -83,6 +85,7 @@ replaceFn('readdir', (prevFn) => {
           return callback(error2);
         }
 
+        // eslint-disable-next-line no-restricted-syntax
         for (const result2 of results2) {
           if (!results.includes(result2)) {
             results.push(result2);
@@ -109,7 +112,7 @@ replaceFn('stat', (prevFn) => {
       }
 
       result.atime = result.mtime = new Date();
-      callback(error, result);
+      return callback(error, result);
     });
   };
 });
@@ -128,7 +131,7 @@ replaceFn('lstat', (prevFn) => {
       }
 
       result.atime = result.mtime = new Date();
-      callback(error, result);
+      return callback(error, result);
     });
   };
 });
@@ -146,7 +149,7 @@ replaceFn('exists', (prevFn) => {
         return prevFn.call(fs, ...args);
       }
 
-      callback(result);
+      return callback(result);
     });
   };
 });
@@ -195,7 +198,7 @@ replaceFn('mkdir', (prevFn) => {
         return callback(error);
       }
 
-      vfs.mkdirp(dirname, callback);
+      return vfs.mkdirp(dirname, callback);
     });
   };
 });
