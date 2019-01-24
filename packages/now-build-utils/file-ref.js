@@ -49,7 +49,7 @@ class FileRef {
     assert(url);
 
     await semaToDownloadFromS3.acquire();
-    console.time(`downloading ${url}`);
+    // console.time(`downloading ${url}`);
     try {
       return await retry(
         async () => {
@@ -66,7 +66,7 @@ class FileRef {
         { factor: 1, retries: 3 },
       );
     } finally {
-      console.timeEnd(`downloading ${url}`);
+      // console.timeEnd(`downloading ${url}`);
       semaToDownloadFromS3.release();
     }
   }
