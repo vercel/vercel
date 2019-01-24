@@ -5,6 +5,8 @@ import http from 'http';
 import chalk from 'chalk';
 import ignore from 'ignore';
 import { send } from 'micro';
+// @ts-ignore
+import serve from 'serve-handler';
 
 // @ts-ignore
 import glob from '@now/build-utils/fs/glob';
@@ -77,7 +79,7 @@ export default class DevServer {
           `dev server listning on port ${chalk.bold(String(port))}`
         );
 
-        // Initial build, not meant to invoke, but for speed up further builds.
+        // Initial build. Not meant to invoke, but for speed up further builds.
         if (nowJson && nowJson.builds) {
           try {
             this.setStatusBusy('installing builders');
@@ -134,10 +136,10 @@ export default class DevServer {
     } catch (err) {
       this.setStatusError(err.message);
       console.error(err.stack);
-    }
 
-    if (!res.finished) {
-      send(res, 500, this.statusMessage);
+      if (!res.finished) {
+        send(res, 500, this.statusMessage);
+      }
     }
 
     this.setStatusIdle();
@@ -197,7 +199,10 @@ export default class DevServer {
 
     switch (dest.type) {
       case 'FileFsRef':
-        return send(res, 200, dest.fsPath); // TODO: send real file
+        return await serve(req, res, {
+          public: this.cwd,
+          cleanUrls: false
+        });
 
       case 'Lambda':
         const fn = await createFunction({
@@ -207,16 +212,16 @@ export default class DevServer {
           Environment: dest.environment
         });
 
-        const invoked = await fn({
-          InvocationType: 'RequestResponse',
-          Payload: JSON.stringify({
-            method: req.method,
-            path: req.url,
-            headers: { ...req.headers, ...(headers || {}) },
-            encoding: 'base64',
-            body: 'eyJlaXlvIjp0cnVlfQ=='
-          })
-        })
+        // const invoked = await fn({
+        //   InvocationType: 'RequestResponse',
+        //   Payload: JSON.stringify({
+        //     method: req.method,
+        //     path: req.url,
+        //     headers: { ...req.headers, ...(headers || {}) },
+        //     encoding: 'base64',
+        //     body: 'eyJlaXlvIjp0cnVlfQ=='
+        //   })
+        // })
 
         // TODO: go on here after error resolved.
         console.log(fn);
