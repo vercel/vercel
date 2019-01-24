@@ -4,9 +4,7 @@ import http from 'http';
 
 import chalk from 'chalk';
 import ignore from 'ignore';
-// @ts-ignore
 import serve from 'serve-handler';
-
 // @ts-ignore
 import glob from '@now/build-utils/fs/glob';
 // @ts-ignore
