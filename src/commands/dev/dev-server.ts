@@ -20,34 +20,36 @@ import { readLocalConfig } from '../../util/config/files';
 import builderCache from './builder-cache';
 import devRouter from './dev-router';
 
-interface BuildConfig {
-  src: string;
-  use: string;
-  config?: object;
-}
-
 enum DevServerStatus {
   busy,
   idle,
   error
 }
 
-type HttpHandler = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse
-) => void;
+interface BuildConfig {
+  src: string;
+  use: string;
+  config?: object;
+}
+
+interface HttpHandler {
+  (
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): void
+}
 
 export default class DevServer {
   private cwd: string;
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage = '';
-  private builderDirectory = '';
+  private builderCacheDirectory = '';
 
-  constructor(cwd: string, port = 3000) {
+  constructor(cwd: string) {
     this.cwd = cwd;
     this.server = http.createServer(this.devServerHandler);
-    this.builderDirectory = builderCache.prepare();
+    this.builderCacheDirectory = builderCache.prepare();
     this.status = DevServerStatus.busy;
   }
 
@@ -257,7 +259,7 @@ export default class DevServer {
 
     for (const builder of builders) {
       const stopSpinner = wait(`installing ${builder}`);
-      await builderCache.install(this.builderDirectory, builder);
+      await builderCache.install(this.builderCacheDirectory, builder);
       stopSpinner();
     }
   };
@@ -271,7 +273,7 @@ export default class DevServer {
       try {
         console.log(`> build ${JSON.stringify(build)}`);
 
-        const builder = builderCache.get(this.builderDirectory, build.use);
+        const builder = builderCache.get(this.builderCacheDirectory, build.use);
 
         const entries = Object.values(
           await collectProjectFiles(build.src, this.cwd, ignores)
