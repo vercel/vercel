@@ -14,81 +14,214 @@ const cachePath = spawnSync(yarnPath, ['cache', 'dir'])
 spawnSync(yarnPath, ['cache', 'clean']);
 const vfs = new MemoryFileSystem();
 
-function isInsideCachePath(filename) {
+function isInsideCachePath (filename) {
   const relative = path.relative(cachePath, filename);
   return !relative.startsWith('..');
 }
 
-const saveCreateWriteStream = fs.createWriteStream;
-fs.createWriteStream = (...args) => {
-  const filename = args[0];
-  if (!isInsideCachePath(filename)) {
-    return saveCreateWriteStream.call(fs, ...args);
-  }
+function replaceFn (name, newFnFactory) {
+  const prevFn = fs[name];
+  fs[name] = newFnFactory(prevFn);
+}
 
-  vfs.mkdirpSync(path.dirname(filename));
-  fs.writeFileSync(filename, Buffer.alloc(0));
-  const stream = vfs.createWriteStream(...args);
-
-  stream.on('finish', () => {
-    setTimeout(() => {
-      stream.emit('close');
-    });
-  });
-
-  return stream;
-};
-
-const saveReadFile = fs.readFile;
-fs.readFile = (...args) => {
-  const filename = args[0];
-  if (!isInsideCachePath(filename)) {
-    return saveReadFile.call(fs, ...args);
-  }
-
-  const callback = args[args.length - 1];
-  return vfs.readFile(...args.slice(0, -1), (error, result) => {
-    if (error) {
-      saveReadFile.call(fs, ...args);
-      return;
+replaceFn('createWriteStream', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
     }
 
-    callback(error, result);
-  });
-};
+    const stream = vfs.createWriteStream(...args);
 
-const saveCopyFile = fs.copyFile;
-fs.copyFile = (...args) => {
-  const src = args[0];
-  const dest = args[1];
-  const callback = args[args.length - 1];
+    stream.on('finish', () => {
+      setTimeout(() => {
+        stream.emit('close');
+      });
+    });
 
-  if (isInsideCachePath(src) && !isInsideCachePath(dest)) {
-    const buffer = vfs.readFileSync(src);
-    return fs.writeFile(dest, buffer, callback);
-  }
+    setTimeout(() => {
+      stream.emit('open');
+    });
 
-  if (!isInsideCachePath(src) && isInsideCachePath(dest)) {
-    const buffer = fs.readFileSync(src);
+    return stream;
+  };
+});
 
-    vfs.mkdirpSync(path.dirname(dest));
-    fs.writeFileSync(dest, Buffer.alloc(0));
-    return vfs.writeFile(dest, buffer, callback);
-  }
+replaceFn('readFile', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
 
-  return saveCopyFile.call(fs, ...args);
-};
+    const callback = args[args.length - 1];
+    return vfs.readFile(...args.slice(0, -1), (error, result) => {
+      if (error) {
+        return prevFn.call(fs, ...args);
+      }
 
-const saveWriteFile = fs.writeFile;
-fs.writeFile = (...args) => {
-  const filename = args[0];
-  if (!isInsideCachePath(filename)) {
-    return saveWriteFile.call(fs, ...args);
-  }
+      callback(error, result);
+    });
+  };
+});
 
-  vfs.mkdirpSync(path.dirname(filename));
-  fs.writeFileSync(filename, Buffer.alloc(0));
-  return vfs.writeFile(...args);
-};
+replaceFn('readdir', (prevFn) => {
+  return (...args) => {
+    const dirname = args[0];
+    if (!isInsideCachePath(dirname)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return prevFn.call(fs, dirname, (error, results) => {
+      if (error) {
+        results = [];
+      }
+
+      return vfs.readdir(dirname, (error2, results2) => {
+        if (error2) {
+          return callback(error2);
+        }
+
+        for (const result2 of results2) {
+          if (!results.includes(result2)) {
+            results.push(result2);
+          }
+        }
+
+        return callback(error2, results);
+      });
+    });
+  };
+});
+
+replaceFn('stat', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return vfs.stat(...args.slice(0, -1), (error, result) => {
+      if (error) {
+        return prevFn.call(fs, ...args);
+      }
+
+      result.atime = result.mtime = new Date();
+      callback(error, result);
+    });
+  };
+});
+
+replaceFn('lstat', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return vfs.stat(...args.slice(0, -1), (error, result) => {
+      if (error) {
+        return prevFn.call(fs, ...args);
+      }
+
+      result.atime = result.mtime = new Date();
+      callback(error, result);
+    });
+  };
+});
+
+replaceFn('exists', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return vfs.exists(...args.slice(0, -1), (result) => {
+      if (!result) {
+        return prevFn.call(fs, ...args);
+      }
+
+      callback(result);
+    });
+  };
+});
+
+replaceFn('copyFile', (prevFn) => {
+  return (...args) => {
+    const src = args[0];
+    const dest = args[1];
+    const callback = args[args.length - 1];
+
+    if (isInsideCachePath(src) && !isInsideCachePath(dest)) {
+      const buffer = vfs.readFileSync(src);
+      return fs.writeFile(dest, buffer, callback);
+    }
+
+    if (!isInsideCachePath(src) && isInsideCachePath(dest)) {
+      const buffer = fs.readFileSync(src);
+      return vfs.writeFile(dest, buffer, callback);
+    }
+
+    return prevFn.call(fs, ...args);
+  };
+});
+
+replaceFn('writeFile', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    return vfs.writeFile(...args);
+  };
+});
+
+replaceFn('mkdir', (prevFn) => {
+  return (...args) => {
+    const dirname = args[0];
+    if (!isInsideCachePath(dirname)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return prevFn.call(fs, dirname, (error) => {
+      if (error) {
+        return callback(error);
+      }
+
+      vfs.mkdirp(dirname, callback);
+    });
+  };
+});
+
+replaceFn('utimes', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return setTimeout(callback, 0);
+  };
+});
+
+replaceFn('chmod', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return setTimeout(callback, 0);
+  };
+});
 
 require(yarnPath);
