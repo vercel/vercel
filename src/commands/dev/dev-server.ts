@@ -20,24 +20,11 @@ import { readLocalConfig } from '../../util/config/files';
 import builderCache from './builder-cache';
 import devRouter from './dev-router';
 
-enum DevServerStatus {
-  busy,
-  idle,
-  error
-}
-
-interface BuildConfig {
-  src: string;
-  use: string;
-  config?: object;
-}
-
-interface HttpHandler {
-  (
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void
-}
+import {
+  DevServerStatus,
+  BuildConfig,
+  HttpHandler
+} from './types';
 
 export default class DevServer {
   private cwd: string;
@@ -190,7 +177,7 @@ export default class DevServer {
     const {
       dest,
       status,
-      headers,
+      headers = {},
       uri_args,
       matched_route,
       matched_route_idx
@@ -220,15 +207,15 @@ export default class DevServer {
         //   Payload: JSON.stringify({
         //     method: req.method,
         //     path: req.url,
-        //     headers: { ...req.headers, ...(headers || {}) },
+        //     headers: req.headers,
         //     encoding: 'base64',
         //     body: 'eyJlaXlvIjp0cnVlfQ=='
         //   })
-        // })
+        // });
 
         // TODO: go on here after error resolved.
         console.log(fn);
-        return res.end(`invoked ${fn}`);
+        return res.end(`TODO: invoke ${fn}`);
 
       default:
         res.writeHead(500);
