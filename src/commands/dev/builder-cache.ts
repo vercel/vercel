@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import execa from 'execa';
 import mkdirp from 'mkdirp';
-// @ts-ignore
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../util/now-error';
 
@@ -24,6 +23,11 @@ const localBuilders: { [key: string]: any } = {
 function prepare() {
   try {
     const designated = cacheDirectory('co.zeit.now-builders');
+
+    if (designated === null) {
+      throw new Error();
+    }
+
     const buildersPkg = path.join(designated, 'package.json');
 
     if (designated) {
