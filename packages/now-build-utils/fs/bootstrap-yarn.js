@@ -227,4 +227,16 @@ replaceFn('chmod', (prevFn) => {
   };
 });
 
+replaceFn('chown', (prevFn) => {
+  return (...args) => {
+    const filename = args[0];
+    if (!isInsideCachePath(filename)) {
+      return prevFn.call(fs, ...args);
+    }
+
+    const callback = args[args.length - 1];
+    return setTimeout(callback, 0);
+  };
+});
+
 require(yarnPath);
