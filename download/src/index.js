@@ -9,6 +9,7 @@ import fetch from 'node-fetch';
 import retry from 'async-retry';
 import which from 'which-promise';
 import readPkg from 'read-pkg';
+import HttpsProxyAgent from 'https-proxy-agent';
 import plusxSync from './chmod';
 import {
   disableProgress,
@@ -86,7 +87,18 @@ async function download() {
       try {
         const name = platformToName[platform];
         const url = `https://github.com/zeit/now-cli/releases/download/${packageJSON.version}/${name}.gz`;
-        const resp = await fetch(url, { compress: false });
+        // check whether the proxy was set and configure the proxy agent settings
+        let agent = null;
+        let proxy = null;
+        if (process.env.https_proxy) {
+          proxy = `https://${process.env.https_proxy}`;
+        } else if (process.env.http_proxy) {
+          proxy = `http://${process.env.http_proxy}`;
+        }
+        if (proxy) {
+          agent = new HttpsProxyAgent(proxy);
+        }
+        const resp = await fetch(url, { compress: false, agent: agent });
 
         if (resp.status !== 200) {
           throw new Error(resp.statusText + ' ' + url);
