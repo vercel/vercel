@@ -19,11 +19,7 @@ import { readLocalConfig } from '../../util/config/files';
 import builderCache from './builder-cache';
 import devRouter from './dev-router';
 
-import {
-  DevServerStatus,
-  BuildConfig,
-  HttpHandler
-} from './types';
+import { DevServerStatus, BuildConfig, HttpHandler } from './types';
 
 export default class DevServer {
   private cwd: string;
@@ -170,7 +166,7 @@ export default class DevServer {
     if (matched === undefined) {
       res.writeHead(404);
       res.end();
-      return
+      return;
     }
 
     const {
@@ -195,7 +191,7 @@ export default class DevServer {
 
       case 'Lambda':
         const fn = await createFunction({
-          Code: { zipFile: dest.zipBuffer },
+          Code: { ZipFile: dest.zipBuffer },
           Handler: dest.handler,
           Runtime: dest.runtime,
           Environment: dest.environment
