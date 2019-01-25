@@ -72,7 +72,7 @@ export default class DevServer {
             await this.installBuilders(nowJson.builds);
 
             this.setStatusBusy('building lambdas');
-            await this.buildLambdas(nowJson.builds);
+            await this.buildLambdas(nowJson.builds, this.cwd);
           } catch (err) {
             reject(err);
           }
@@ -164,7 +164,7 @@ export default class DevServer {
     cwd: string,
     nowJson: any
   ) => {
-    const assets = await this.buildUserProject(nowJson.builds);
+    const assets = await this.buildUserProject(nowJson.builds, cwd);
 
     const matched = devRouter(req, assets, nowJson.routes);
 
@@ -190,7 +190,7 @@ export default class DevServer {
     switch (dest.type) {
       case 'FileFsRef':
         return await serve(req, res, {
-          public: this.cwd,
+          public: cwd,
           cleanUrls: false
         });
 
@@ -223,13 +223,13 @@ export default class DevServer {
     }
   };
 
-  buildUserProject = async (buildsConfig: BuildConfig[]) => {
+  buildUserProject = async (buildsConfig: BuildConfig[], cwd: string) => {
     try {
       this.setStatusBusy('installing builders');
       await this.installBuilders(buildsConfig);
 
       this.setStatusBusy('building lambdas');
-      const assets = await this.buildLambdas(buildsConfig);
+      const assets = await this.buildLambdas(buildsConfig, cwd);
 
       this.setStatusIdle();
       return assets;
@@ -251,9 +251,9 @@ export default class DevServer {
     }
   };
 
-  buildLambdas = async (buildsConfig: BuildConfig[]) => {
-    const ignores = createIgnoreList(this.cwd);
-    const files = await collectProjectFiles('**', this.cwd, ignores);
+  buildLambdas = async (buildsConfig: BuildConfig[], cwd: string) => {
+    const ignores = createIgnoreList(cwd);
+    const files = await collectProjectFiles('**', cwd, ignores);
     let results = {};
 
     for (const build of buildsConfig) {
@@ -263,7 +263,7 @@ export default class DevServer {
         const builder = builderCache.get(this.builderCacheDirectory, build.use);
 
         const entries = Object.values(
-          await collectProjectFiles(build.src, this.cwd, ignores)
+          await collectProjectFiles(build.src, cwd, ignores)
         );
 
         // TODO: hide those build logs from console.
@@ -271,8 +271,8 @@ export default class DevServer {
           const output = await builder.build({
             files,
             // @ts-ignore: handle this warning later.
-            entrypoint: path.relative(this.cwd, entry.fsPath),
-            workPath: this.cwd,
+            entrypoint: path.relative(cwd, entry.fsPath),
+            workPath: cwd,
             config: build.config
           });
           results = { ...results, ...output };
