@@ -8,6 +8,10 @@ export enum DevServerStatus {
   error
 }
 
+export interface DevServerOptions {
+  debug: boolean;
+}
+
 export interface BuildConfig {
   src: string;
   use: string;

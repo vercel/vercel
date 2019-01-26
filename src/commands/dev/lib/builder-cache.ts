@@ -3,7 +3,7 @@ import path from 'path';
 import execa from 'execa';
 import mkdirp from 'mkdirp';
 import cacheDirectory from 'cache-or-tmp-directory';
-import { NowError } from '../../util/now-error';
+import { NowError } from '../../../util/now-error';
 
 import staticBuilder from './static-builder';
 

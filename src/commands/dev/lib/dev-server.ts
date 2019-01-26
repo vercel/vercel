@@ -8,29 +8,30 @@ import serve from 'serve-handler';
 import glob from '@now/build-utils/fs/glob';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 // @ts-ignore
-import { createFunction } from '../../../../lambdas/lambda-dev';
+import { createFunction } from '../../../../../lambdas/lambda-dev/dist/src';
 
-import wait from '../../util/output/wait';
-import info from '../../util/output/info';
-import error from '../../util/output/error';
-import success from '../../util/output/success';
-import { NowError } from '../../util/now-error';
-import { readLocalConfig } from '../../util/config/files';
+import wait from '../../../util/output/wait';
+import error from '../../../util/output/error';
+import success from '../../../util/output/success';
+import { NowError } from '../../../util/now-error';
+import { readLocalConfig } from '../../../util/config/files';
 
 import builderCache from './builder-cache';
 import devRouter from './dev-router';
 
-import { DevServerStatus, BuildConfig, HttpHandler } from './types';
+import { DevServerStatus, DevServerOptions, BuildConfig, HttpHandler } from './types';
 
 export default class DevServer {
   private cwd: string;
+  private debug: boolean;
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage = '';
-  private builderCacheDirectory = '';
+  private builderCacheDirectory: string;
 
-  constructor(cwd: string) {
+  constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
+    this.debug = options.debug;
     this.server = http.createServer(this.devServerHandler);
     this.builderCacheDirectory = builderCache.prepare();
     this.status = DevServerStatus.busy;
@@ -38,8 +39,10 @@ export default class DevServer {
 
   /* use dev-server as a "console" for logs. */
 
-  logInfo(str: string) {
-    console.log(info(str));
+  logDebug = (...args: any[]) => {
+    if (this.debug) {
+      console.log(chalk.yellowBright('> [debug]'), ...args);
+    }
   }
 
   logError(str: string) {
@@ -87,10 +90,11 @@ export default class DevServer {
 
         // Initial build. Not meant to invoke, but for speed up further builds.
         if (nowJson && nowJson.builds) {
+          this.logDebug(`Initial build`);
           await this.buildUserProject(nowJson.builds, this.cwd);
         }
 
-        this.logSuccess('ready');
+        this.logSuccess('Initial build ready');
         this.setStatusIdle();
         resolve();
       });
@@ -121,7 +125,7 @@ export default class DevServer {
       }
     } catch (err) {
       this.setStatusError(err.message);
-      console.error(err.stack);
+      this.logDebug(err.stack);
 
       if (!res.finished) {
         res.writeHead(500);
@@ -164,7 +168,9 @@ export default class DevServer {
     cwd: string,
     nowJson: any
   ) => {
+    this.logDebug('Start builders', nowJson.builds);
     const assets = await this.buildUserProject(nowJson.builds, cwd);
+    this.logDebug('Built', Object.keys(assets));
 
     const matched = devRouter(req, assets, nowJson.routes);
 
@@ -182,6 +188,8 @@ export default class DevServer {
       matched_route,
       matched_route_idx
     } = matched;
+
+    this.logDebug('Matched', matched.dest);
 
     if (typeof dest === 'string') {
       return res.end(`TODO: proxy_pass to ${dest}`);
@@ -262,7 +270,7 @@ export default class DevServer {
 
     for (const build of buildsConfig) {
       try {
-        console.log(`> build ${JSON.stringify(build)}`);
+        this.logDebug(`Build ${JSON.stringify(build)}`);
 
         const builder = builderCache.get(this.builderCacheDirectory, build.use);
 
