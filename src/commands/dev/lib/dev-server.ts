@@ -1,4 +1,5 @@
 import fs from 'fs';
+import url from 'url';
 import path from 'path';
 import http from 'http';
 
@@ -19,7 +20,14 @@ import { readLocalConfig } from '../../../util/config/files';
 import builderCache from './builder-cache';
 import devRouter from './dev-router';
 
-import { DevServerStatus, DevServerOptions, BuildConfig, HttpHandler } from './types';
+import {
+  DevServerStatus,
+  DevServerOptions,
+  BuildConfig,
+  BuilderOutput,
+  BuilderOutputs,
+  HttpHandler
+} from './types';
 
 export default class DevServer {
   private cwd: string;
@@ -121,7 +129,7 @@ export default class DevServer {
       if (nowJson === null) {
         await this.serveProjectAsStatics(req, res, this.cwd);
       } else if (nowJson.builds) {
-        await this.serveBuilds(req, res, this.cwd, nowJson);
+        await this.serveProjectAsNowV2(req, res, this.cwd, nowJson);
       }
     } catch (err) {
       this.setStatusError(err.message);
@@ -160,42 +168,48 @@ export default class DevServer {
   };
 
   /**
-   * Build & invoke project
+   * Server project directory as now v2 app
    */
-  serveBuilds = async (
+  serveProjectAsNowV2 = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     cwd: string,
     nowJson: any
   ) => {
+    const {
+      dest,
+      status = 200,
+      headers = {},
+      uri_args
+    } = devRouter(req, nowJson.routes);
+
+    res.writeHead(status, headers);
+
+    // no need to run builders in this case
+    if (isURL(dest)) {
+      return res.end(`TODO: proxy_pass to ${dest}`);
+    }
+
+    // neither in this case
+    if (status === 301 || status === 302) {
+      return res.end();
+    }
+
+    // build source files to assets
     this.logDebug('Start builders', nowJson.builds);
     const assets = await this.buildUserProject(nowJson.builds, cwd);
     this.logDebug('Built', Object.keys(assets));
 
-    const matched = devRouter(req, assets, nowJson.routes);
+    // find asset responsible for dest
+    const asset = resolveDest(assets, dest);
 
-    if (matched === undefined) {
+    if (asset === undefined) {
       res.writeHead(404);
-      res.end();
-      return;
+      return res.end();
     }
 
-    const {
-      dest,
-      status,
-      headers = {},
-      uri_args,
-      matched_route,
-      matched_route_idx
-    } = matched;
-
-    this.logDebug('Matched', matched.dest);
-
-    if (typeof dest === 'string') {
-      return res.end(`TODO: proxy_pass to ${dest}`);
-    }
-
-    switch (dest.type) {
+    // invoke asset
+    switch (asset.type) {
       case 'FileFsRef':
         return await serve(req, res, {
           public: cwd,
@@ -204,10 +218,10 @@ export default class DevServer {
 
       case 'Lambda':
         const fn = await createFunction({
-          Code: { ZipFile: dest.zipBuffer },
-          Handler: dest.handler,
-          Runtime: dest.runtime,
-          Environment: dest.environment
+          Code: { ZipFile: asset.zipBuffer },
+          Handler: asset.handler,
+          Runtime: asset.runtime,
+          Environment: asset.environment
         });
 
         // const invoked = await fn({
@@ -227,7 +241,7 @@ export default class DevServer {
 
       default:
         res.writeHead(500);
-        res.end();
+        return res.end();
     }
   };
 
@@ -342,4 +356,24 @@ async function collectProjectFiles(pattern: string, cwd: string, ignore: any) {
   });
 
   return filteredFiles;
+}
+
+/**
+ * A naive isURL
+ */
+function isURL (str: any) : boolean {
+  return typeof str === 'string' && /^https?:\/\//.test(str);
+}
+
+/**
+ * Find the dest handler from assets
+ */
+function resolveDest (assets: BuilderOutputs, dest: string) : BuilderOutput {
+  const assetKey = dest.replace(/^\//, '');
+
+  // TODO: more cases, go, rust, php, etc.
+  return assets[assetKey]
+  || assets[assetKey + "index.js"]
+  || assets[assetKey + "/index.js"]
+  || assets[assetKey + "/index.html"];
 }

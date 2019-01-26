@@ -40,7 +40,7 @@ export interface BuiltLambda {
 }
 
 export interface HttpHeadersConfig {
-  [header: string]: string;
+  [name: string]: string;
 }
 
 export interface RouteConfig {
@@ -52,8 +52,8 @@ export interface RouteConfig {
 }
 
 export interface RouteResult {
-  // "dest": <either lambda or full url for remote>
-  dest: BuilderOutput | string;
+  // "dest": <string of the dest, either file for lambda or full url for remote>
+  dest: string;
   // "status": <integer in case exit code is intended to be changed>
   status?: number;
   // "headers": <object of the added response header values>
