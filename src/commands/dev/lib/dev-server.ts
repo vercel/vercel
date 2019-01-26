@@ -1,11 +1,10 @@
 import fs from 'fs';
-import url from 'url';
 import path from 'path';
 import http from 'http';
 
 import chalk from 'chalk';
 import ignore from 'ignore';
-import serve from 'serve-handler';
+import serveHandler from 'serve-handler';
 import glob from '@now/build-utils/fs/glob';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 // @ts-ignore
@@ -118,7 +117,7 @@ export default class DevServer {
     }
 
     if (req.url === '/favicon.ico') {
-      return res.end('');
+      return serveStaticFile(req, res, this.cwd);
     }
 
     this.logHttp(req.url);
@@ -161,10 +160,7 @@ export default class DevServer {
       return;
     }
 
-    return serve(req, res, {
-      public: cwd,
-      cleanUrls: false
-    });
+    return serveStaticFile(req, res, cwd);
   };
 
   /**
@@ -211,10 +207,7 @@ export default class DevServer {
     // invoke asset
     switch (asset.type) {
       case 'FileFsRef':
-        return await serve(req, res, {
-          public: cwd,
-          cleanUrls: false
-        });
+        return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
         const fn = await createFunction({
@@ -343,6 +336,20 @@ function createIgnoreList(cwd: string) {
 }
 
 /**
+ * Handle requests for static files with serve-handler
+ */
+function serveStaticFile (
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  cwd: string
+) {
+  return serveHandler(req, res, {
+    public: cwd,
+    cleanUrls: false
+  })
+}
+
+/**
  * Collect project files, with .gitignore and .nowignore honored.
  */
 async function collectProjectFiles(pattern: string, cwd: string, ignore: any) {
@@ -359,13 +366,6 @@ async function collectProjectFiles(pattern: string, cwd: string, ignore: any) {
 }
 
 /**
- * A naive isURL
- */
-function isURL (str: any) : boolean {
-  return typeof str === 'string' && /^https?:\/\//.test(str);
-}
-
-/**
  * Find the dest handler from assets
  */
 function resolveDest (assets: BuilderOutputs, dest: string) : BuilderOutput {
@@ -376,4 +376,11 @@ function resolveDest (assets: BuilderOutputs, dest: string) : BuilderOutput {
   || assets[assetKey + "index.js"]
   || assets[assetKey + "/index.js"]
   || assets[assetKey + "/index.html"];
+}
+
+/**
+ * A naive isURL
+ */
+function isURL (str: any) : boolean {
+  return typeof str === 'string' && /^https?:\/\//.test(str);
 }
