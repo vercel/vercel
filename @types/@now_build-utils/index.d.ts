@@ -6,13 +6,11 @@ declare module '@now/build-utils/lambda' {
 }
 
 declare module '@now/build-utils' {
+  type File = BuildUtils.File;
   type Files = BuildUtils.Files;
   type LambdaRuntime = BuildUtils.LambdaRuntime;
 
-  export {
-    Files,
-    LambdaRuntime
-  };
+  export { File, Files, LambdaRuntime };
 }
 
 declare module '@now/build-utils/file-ref' {
@@ -26,12 +24,12 @@ declare module '@now/build-utils/file-fs-ref' {
 }
 
 declare module '@now/build-utils/fs/glob' {
-  function glob (
+  function glob(
     pattern: string,
     workPath: string
-  ) : Promise<BuildUtils.Files>;
+  ): Promise<BuildUtils.FileFsRef>;
 
-  export default glob
+  export default glob;
 }
 
 declare module '@now/build-utils/fs/get-writable-directory' {
@@ -74,7 +72,11 @@ declare namespace BuildUtils {
     type: 'FileFsRef';
     mode: number;
     fsPath: string;
-    fromStream({ mode, stream, fsPath }: {
+    fromStream({
+      mode,
+      stream,
+      fsPath
+    }: {
       mode: number;
       stream: NodeJS.ReadableStream;
       fsPath: string;
@@ -86,7 +88,7 @@ declare namespace BuildUtils {
     files: Files;
     handler: string;
     runtime: LambdaRuntime;
-    environment: {[key: string]: string};
+    environment: { [key: string]: string };
   }
 
   export type LambdaRuntime = string;

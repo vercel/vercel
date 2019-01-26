@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import ignore from 'ignore';
 import serve from 'serve-handler';
 import glob from '@now/build-utils/fs/glob';
+import FileFsRef from '@now/build-utils/file-fs-ref';
 // @ts-ignore
 import { createFunction } from '../../../../lambdas/lambda-dev';
 
@@ -36,49 +37,24 @@ export default class DevServer {
   }
 
   /* use dev-server as a "console" for logs. */
+
   logInfo(str: string) {
     console.log(info(str));
   }
+
   logError(str: string) {
     console.log(error(str));
   }
+
   logSuccess(str: string) {
     console.log(success(str));
   }
+
   logHttp(msg = '') {
     console.log(`  ${chalk.green('>>>')} ${msg}`);
   }
 
-  start = async (port = 3000) => {
-    const nowJson = readLocalConfig(this.cwd);
-
-    return new Promise((resolve, reject) => {
-      this.server.on('error', reject);
-
-      this.server.listen(port, async () => {
-        this.logSuccess(
-          `dev server listning on port ${chalk.bold(String(port))}`
-        );
-
-        // Initial build. Not meant to invoke, but for speed up further builds.
-        if (nowJson && nowJson.builds) {
-          try {
-            this.setStatusBusy('installing builders');
-            await this.installBuilders(nowJson.builds);
-
-            this.setStatusBusy('building lambdas');
-            await this.buildLambdas(nowJson.builds, this.cwd);
-          } catch (err) {
-            reject(err);
-          }
-        }
-
-        this.logSuccess('ready');
-        this.setStatusIdle();
-        resolve();
-      });
-    });
-  };
+  /* set dev-server status */
 
   setStatusIdle = () => {
     this.status = DevServerStatus.idle;
@@ -95,6 +71,35 @@ export default class DevServer {
     this.statusMessage = msg;
   };
 
+  /**
+   * Launch dev-server
+   */
+  start = async (port = 3000) => {
+    const nowJson = readLocalConfig(this.cwd);
+
+    return new Promise((resolve, reject) => {
+      this.server.on('error', reject);
+
+      this.server.listen(port, async () => {
+        this.logSuccess(
+          `dev server listning on port ${chalk.bold(String(port))}`
+        );
+
+        // Initial build. Not meant to invoke, but for speed up further builds.
+        if (nowJson && nowJson.builds) {
+          await this.buildUserProject(nowJson.builds, this.cwd);
+        }
+
+        this.logSuccess('ready');
+        this.setStatusIdle();
+        resolve();
+      });
+    });
+  };
+
+  /**
+   * dev-server http handler
+   */
   devServerHandler: HttpHandler = async (req, res) => {
     if (this.status === DevServerStatus.busy) {
       return res.end(`[busy] ${this.statusMessage}...`);
@@ -110,7 +115,7 @@ export default class DevServer {
       const nowJson = readLocalConfig(this.cwd);
 
       if (nowJson === null) {
-        await this.serveStatics(req, res, this.cwd);
+        await this.serveProjectAsStatics(req, res, this.cwd);
       } else if (nowJson.builds) {
         await this.serveBuilds(req, res, this.cwd, nowJson);
       }
@@ -130,7 +135,7 @@ export default class DevServer {
   /**
    * Serve project directory as static
    */
-  serveStatics = (
+  serveProjectAsStatics = (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     cwd: string
@@ -218,6 +223,9 @@ export default class DevServer {
     }
   };
 
+  /**
+   * Build project to statics & lambdas
+   */
   buildUserProject = async (buildsConfig: BuildConfig[], cwd: string) => {
     try {
       this.setStatusBusy('installing builders');
@@ -229,6 +237,7 @@ export default class DevServer {
       this.setStatusIdle();
       return assets;
     } catch (err) {
+      this.setStatusIdle();
       throw new Error('Build failed.');
     }
   };
@@ -261,11 +270,9 @@ export default class DevServer {
           await collectProjectFiles(build.src, cwd, ignores)
         );
 
-        // TODO: hide those build logs from console.
         for (const entry of entries) {
           const output = await builder.build({
             files,
-            // @ts-ignore: handle this warning later.
             entrypoint: path.relative(cwd, entry.fsPath),
             workPath: cwd,
             config: build.config
@@ -286,7 +293,7 @@ export default class DevServer {
 }
 
 /**
- * Concat .gitignore & .nowignore in cwd
+ * Create ignore list according .gitignore & .nowignore in cwd
  */
 function createIgnoreList(cwd: string) {
   const ig = ignore();
@@ -313,9 +320,12 @@ function createIgnoreList(cwd: string) {
   return ig;
 }
 
+/**
+ * Collect project files, with .gitignore and .nowignore honored.
+ */
 async function collectProjectFiles(pattern: string, cwd: string, ignore: any) {
   const files = await glob(pattern, cwd);
-  const filteredFiles: { [key: string]: any } = {};
+  const filteredFiles: { [key: string]: FileFsRef } = {};
 
   Object.entries(files).forEach(([name, file]) => {
     if (!ignore.ignores(name)) {
