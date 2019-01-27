@@ -1,5 +1,6 @@
 import http from 'http';
 import chalk from 'chalk';
+import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
 // @ts-ignore
 import { createFunction } from '../../../../../lambdas/lambda-dev/dist/src';
@@ -117,7 +118,7 @@ export default class DevServer {
 
       if (nowJson === null) {
         await this.serveProjectAsStatics(req, res, this.cwd);
-      } else if (nowJson.builds) {
+      } else if (nowJson.version === 2) {
         await this.serveProjectAsNowV2(req, res, this.cwd, nowJson);
       }
     } catch (err) {
@@ -171,13 +172,15 @@ export default class DevServer {
 
     res.writeHead(status, headers);
 
-    // no need to run builders in this case
     if (isURL(dest)) {
-      return res.end(`TODO: proxy_pass to ${dest}`);
+      return proxyPass(req, res, dest);
     }
 
-    // neither in this case
-    if (status === 301 || status === 302) {
+    if ([301, 302, 404].includes(status)) {
+      return res.end();
+    }
+
+    if (!nowJson.builds) {
       return res.end();
     }
 
@@ -228,6 +231,23 @@ export default class DevServer {
         return res.end();
     }
   };
+}
+
+/**
+ * Mimic nginx's proxy_pass
+ * for routes using a url as dest.
+ */
+function proxyPass (
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  dest: string
+): void {
+  const proxy = httpProxy.createProxyServer({
+    changeOrigin: true,
+    target: dest
+  });
+
+  return proxy.web(req, res);
 }
 
 /**
