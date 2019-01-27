@@ -41,7 +41,7 @@ export default class DevServer {
     if (this.debug) {
       console.log(chalk.yellowBright('> [debug]'), ...args);
     }
-  }
+  };
 
   logError(str: string) {
     console.log(error(str));
@@ -223,7 +223,7 @@ export default class DevServer {
         // });
 
         // TODO: go on here after error resolved.
-        console.log(fn);
+        console.log(777, uri_args, fn);
         return res.end(`TODO: invoke ${fn}`);
 
       default:
@@ -237,7 +237,7 @@ export default class DevServer {
  * Mimic nginx's proxy_pass
  * for routes using a url as dest.
  */
-function proxyPass (
+function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string
@@ -253,7 +253,7 @@ function proxyPass (
 /**
  * Handle requests for static files with serve-handler
  */
-function serveStaticFile (
+function serveStaticFile(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   cwd: string
@@ -261,25 +261,27 @@ function serveStaticFile (
   return serveHandler(req, res, {
     public: cwd,
     cleanUrls: false
-  })
+  });
 }
 
 /**
  * Find the dest handler from assets
  */
-function resolveDest (assets: BuilderOutputs, dest: string) : BuilderOutput {
+function resolveDest(assets: BuilderOutputs, dest: string): BuilderOutput {
   const assetKey = dest.replace(/^\//, '');
 
   // TODO: more cases, go, rust, php, etc.
-  return assets[assetKey]
-  || assets[assetKey + "index.js"]
-  || assets[assetKey + "/index.js"]
-  || assets[assetKey + "/index.html"];
+  return (
+    assets[assetKey] ||
+    assets[assetKey + 'index.js'] ||
+    assets[assetKey + '/index.js'] ||
+    assets[assetKey + '/index.html']
+  );
 }
 
 /**
  * A naive isURL
  */
-function isURL (str: any) : boolean {
+function isURL(str: any): boolean {
   return typeof str === 'string' && /^https?:\/\//.test(str);
 }

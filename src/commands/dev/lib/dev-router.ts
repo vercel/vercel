@@ -1,36 +1,34 @@
-import http from 'http'
-import url from 'url'
-import qs from 'querystring'
+import http from 'http';
+import url from 'url';
+import qs from 'querystring';
 
-import {
-  RouteConfig,
-  RouteResult
-} from './types';
+import { RouteConfig, RouteResult } from './types';
 
-export default function (
+export default function(
   req: http.IncomingMessage,
   routes?: RouteConfig[]
 ): RouteResult {
-  const { pathname, query } = url.parse(req.url as string);
-  const queryParams = qs.parse(query || '');
-  const pathName = pathname || '';
-
   let found: RouteResult | undefined;
 
   // try route match
   if (routes) {
-    routes.find((routeConfig: RouteConfig, idx:number) => {
+    routes.find((routeConfig: RouteConfig, idx: number) => {
+      const reqPath = req.url || '';
       const matcher = new RegExp('^' + routeConfig.src + '$');
 
-      if (matcher.test(pathName)) {
+      if (matcher.test(reqPath)) {
+        const destPath = reqPath.replace(matcher, routeConfig.dest);
+        const { pathname = '', query } = url.parse(destPath);
+        const queryParams = qs.parse(query || '');
+
         found = {
-          dest: routeConfig.dest,
+          dest: pathname.replace(matcher, routeConfig.dest),
           status: routeConfig.status,
           headers: routeConfig.headers,
           uri_args: queryParams,
           matched_route: routeConfig,
           matched_route_idx: idx
-        }
+        };
         return true;
       }
 
@@ -39,8 +37,11 @@ export default function (
   }
 
   if (found === undefined) {
+    const { query } = url.parse(req.url || '');
+    const queryParams = qs.parse(query || '');
+
     found = {
-      dest: pathname || '',
+      dest: req.url || '',
       uri_args: queryParams
     };
   }
