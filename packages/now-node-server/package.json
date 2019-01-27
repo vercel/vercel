@@ -1,6 +1,6 @@
 {
   "name": "@now/node-server",
-  "version": "0.4.26",
+  "version": "0.4.27-canary.0",
   "license": "MIT",
   "dependencies": {
     "@now/node-bridge": "^0.1.10",
