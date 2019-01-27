@@ -17,6 +17,8 @@ const localBuilders: { [key: string]: any } = {
   '@now/static': staticBuilder
 };
 
+const cacheDir = prepare();
+
 /**
  * Prepare cache directory for installing now-builders
  */
@@ -57,10 +59,8 @@ function prepare() {
 
 /**
  * Install a builder to cache directory
- * @param cacheDir directory
- * @param name builder's name
  */
-async function install(cacheDir: string, name: string) {
+async function install(name: string) {
   if (localBuilders.hasOwnProperty(name)) {
     return;
   }
@@ -75,10 +75,8 @@ async function install(cacheDir: string, name: string) {
 
 /**
  * Get a builder from cache directory
- * @param cacheDir directory
- * @param name builder's name
  */
-function get(cacheDir: string, name: string) {
+function get(name: string) {
   if (localBuilders.hasOwnProperty(name)) {
     return localBuilders[name];
   }

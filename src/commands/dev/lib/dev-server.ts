@@ -34,13 +34,11 @@ export default class DevServer {
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage = '';
-  private builderCacheDirectory: string;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.server = http.createServer(this.devServerHandler);
-    this.builderCacheDirectory = builderCache.prepare();
     this.status = DevServerStatus.busy;
   }
 
@@ -265,7 +263,7 @@ export default class DevServer {
 
     for (const builder of builders) {
       const stopSpinner = wait(`installing ${builder}`);
-      await builderCache.install(this.builderCacheDirectory, builder);
+      await builderCache.install(builder);
       stopSpinner();
     }
   };
@@ -279,7 +277,7 @@ export default class DevServer {
       try {
         this.logDebug(`Build ${JSON.stringify(build)}`);
 
-        const builder = builderCache.get(this.builderCacheDirectory, build.use);
+        const builder = builderCache.get(build.use);
 
         const entries = Object.values(
           await collectProjectFiles(build.src, cwd, ignores)
