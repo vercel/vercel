@@ -47,7 +47,6 @@ export default async function createDeploy(
       if (
         result instanceof ERRORS_TS.WildcardNotAllowed ||
         result instanceof ERRORS_TS.CantSolveChallenge ||
-        result instanceof ERRORS_TS.CDNNeedsUpgrade ||
         result instanceof ERRORS_TS.DomainConfigurationError ||
         result instanceof ERRORS_TS.DomainPermissionDenied ||
         result instanceof ERRORS_TS.DomainsShouldShareRoot ||

@@ -96,7 +96,6 @@ export default async function assignAlias(
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, client, alias, contextName);
     if (
-      result instanceof ERRORS.CDNNeedsUpgrade ||
       result instanceof ERRORS.DomainAlreadyExists ||
       result instanceof ERRORS.DomainNotAvailable ||
       result instanceof ERRORS.DomainNotFound ||
