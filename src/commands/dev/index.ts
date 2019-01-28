@@ -35,7 +35,8 @@ export default async function main(ctx: NowContext) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--port': Number,
-      '-p': Number
+      '-p': Number,
+      '--nodejs-preview': Boolean
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
     output = createOutput({ debug: argv['--debug'] });

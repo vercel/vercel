@@ -1,3 +1,3 @@
 module.exports = (req, res) => {
-  res.end('{ "code": "SUCCESS" }');
+  res.end(`{ "urls": "${req.url}" }`);
 };

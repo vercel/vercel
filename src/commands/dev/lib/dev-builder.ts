@@ -15,7 +15,8 @@ import { NowError } from '../../../util/now-error';
 
 export {
   buildUserProject,
-  createIgnoreList
+  createIgnoreList,
+  collectProjectFiles
 }
 
 /**

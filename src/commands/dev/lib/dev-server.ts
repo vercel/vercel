@@ -1,5 +1,7 @@
+import fs from 'fs';
 import http from 'http';
 import chalk from 'chalk';
+import qs from 'querystring';
 import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
 // @ts-ignore
@@ -10,7 +12,9 @@ import success from '../../../util/output/success';
 import { readLocalConfig } from '../../../util/config/files';
 
 import devRouter from './dev-router';
-import { buildUserProject, createIgnoreList } from './dev-builder';
+import { buildUserProject, createIgnoreList, collectProjectFiles } from './dev-builder';
+
+import FileFsRef from '@now/build-utils/file-fs-ref'
 
 import {
   DevServerStatus,
@@ -24,6 +28,7 @@ export default class DevServer {
   public cwd: string;
 
   private debug: boolean;
+  private nodejsPreview = false;
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage = '';
@@ -31,6 +36,7 @@ export default class DevServer {
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
+    this.nodejsPreview = options.nodejsPreview;
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
   }
@@ -87,12 +93,12 @@ export default class DevServer {
         );
 
         // Initial build. Not meant to invoke, but for speed up further builds.
-        if (nowJson && nowJson.builds) {
+        if (nowJson && nowJson.builds && !this.nodejsPreview) {
           this.logDebug(`Initial build`);
           await buildUserProject(nowJson.builds, this);
+          this.logSuccess('Initial build ready');
         }
 
-        this.logSuccess('Initial build ready');
         this.setStatusIdle();
         resolve();
       });
@@ -182,6 +188,37 @@ export default class DevServer {
 
     if (!nowJson.builds) {
       return res.end();
+    }
+
+    /**
+     * Temp workround for preview now-dev on nodejs projects
+     * TO BE REMOVED IN RELEASE
+     */
+    if (this.nodejsPreview) {
+      try {
+        const files = await collectProjectFiles('**', cwd);
+        const source = resolveDest(files, dest) as FileFsRef;
+
+        if (source && fs.existsSync(source.fsPath)) {
+          if (/\.js$/.test(source.fsPath)) {
+            const query = qs.stringify(uri_args);
+
+            if (query) {
+              req.url = dest + '?' + query;
+            }
+
+            // TODO: need to clear require.cache
+            return require(source.fsPath)(req, res);
+          }
+        }
+        return serveStaticFile(req, res, this.cwd);
+      } catch (err) {
+        this.logError(err.message);
+        this.logDebug(err.stack);
+
+        res.writeHead(500);
+        return res.end();
+      }
     }
 
     // build source files to assets
