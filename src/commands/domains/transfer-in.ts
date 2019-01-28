@@ -12,6 +12,8 @@ import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import withSpinner from '../../util/with-spinner';
+import getDomainPrice from '../../util/domains/get-domain-price';
+import promptBool from '../../util/input/prompt-bool';
 
 type Options = {
   '--debug': boolean;
@@ -58,9 +60,16 @@ export default async function transferIn(
 
   const authCode = await getAuthCode(opts['--code']);
 
+  const shouldTransfer = await promptBool(
+    `Transfer now for ${chalk.bold(`$${price}`)} (includes 1yr extension)?`
+  );
+  if (!shouldTransfer) {
+    return 0;
+  }
+
   const transferStamp = stamp();
   const transferInResult = await withSpinner('Initiating transfer', () =>
-    transferInDomain(client, domainName, authCode)
+    transferInDomain(client, domainName, authCode, price)
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
