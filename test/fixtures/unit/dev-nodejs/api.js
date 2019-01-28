@@ -1,3 +1,3 @@
 module.exports = (req, res) => {
-  res.end(`{ "urls": "${req.url}" }`);
+  res.end(`{ "url": "${req.url}" }`);
 };

@@ -12,9 +12,13 @@ import success from '../../../util/output/success';
 import { readLocalConfig } from '../../../util/config/files';
 
 import devRouter from './dev-router';
-import { buildUserProject, createIgnoreList, collectProjectFiles } from './dev-builder';
+import {
+  buildUserProject,
+  createIgnoreList,
+  collectProjectFiles
+} from './dev-builder';
 
-import FileFsRef from '@now/build-utils/file-fs-ref'
+import FileFsRef from '@now/build-utils/file-fs-ref';
 
 import {
   DevServerStatus,
@@ -169,12 +173,10 @@ export default class DevServer {
     cwd: string,
     nowJson: any
   ) => {
-    const {
-      dest,
-      status = 200,
-      headers = {},
-      uri_args
-    } = devRouter(req, nowJson.routes);
+    const { dest, status = 200, headers = {}, uri_args } = devRouter(
+      req,
+      nowJson.routes
+    );
 
     res.writeHead(status, headers);
 
@@ -207,8 +209,16 @@ export default class DevServer {
               req.url = dest + '?' + query;
             }
 
-            // TODO: need to clear require.cache
-            return require(source.fsPath)(req, res);
+            require(source.fsPath)(req, res);
+
+            // Try clear require.cache
+            Object.values(files).forEach(file => {
+              if (/\.js$/.test(file.fsPath)) {
+                delete require.cache[file.fsPath];
+              }
+            });
+
+            return;
           }
         }
         return serveStaticFile(req, res, this.cwd);
