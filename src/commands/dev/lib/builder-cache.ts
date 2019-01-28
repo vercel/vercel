@@ -33,7 +33,7 @@ function prepare() {
     const buildersPkg = path.join(designated, 'package.json');
 
     if (designated) {
-      if (fs.lstatSync(designated).isDirectory()) {
+      if (fs.existsSync(designated)) {
         return designated;
       }
 
