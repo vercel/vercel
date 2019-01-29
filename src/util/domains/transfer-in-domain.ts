@@ -18,6 +18,7 @@ export default async function transferInDomain(
       method: 'POST'
     });
   } catch (error) {
+    console.error(error.code, error);
     if (error.code === 'invalid_name') {
       return new ERRORS.InvalidDomain(name);
     }

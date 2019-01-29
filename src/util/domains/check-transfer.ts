@@ -1,7 +1,7 @@
 import Client from '../client';
 
 type Response = {
-  transferrable: boolean;
+  transferable: boolean;
   status: string;
   reason: string;
 };
