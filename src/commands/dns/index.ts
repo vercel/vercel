@@ -68,7 +68,7 @@ const help = () => {
   ${chalk.gray('–')} Import a Zone file
 
       ${chalk.cyan(
-        '$ now dns import <DOMAIN> --zone-file <FILE>'
+        '$ now dns import <DOMAIN> <FILE>'
       )}
       ${chalk.cyan(`$ now dns add zeit.rocks '@' SRV 10 0 389 zeit.party`)}
 
@@ -87,9 +87,7 @@ export default async function main(ctx: NowContext) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
-      '--zone-file': String,
-    });
+    argv = getArgs(ctx.argv.slice(2), {});
   } catch (error) {
     handleError(error);
     return 1;

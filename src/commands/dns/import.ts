@@ -9,7 +9,6 @@ import importZonefile from '../../util/dns/import-zonefile';
 
 type Options = {
   '--debug': boolean;
-  '--zone-file': string;
 };
 
 export default async function add(
@@ -36,9 +35,17 @@ export default async function add(
     throw err;
   }
 
+  if (args.length !== 2) {
+    output.error(
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        '`now dns import <domain> <zonefile>`'
+      )}`
+    );
+    return 1;
+  }
+
   const addStamp = stamp();
-  const [domain] = args;
-  const { '--zone-file': zonefilePath } = opts;
+  const [domain, zonefilePath] = args;
 
   const recordIds = await importZonefile(client, contextName, domain, zonefilePath);
   if (recordIds instanceof DomainNotFound) {
