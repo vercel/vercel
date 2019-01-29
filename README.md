@@ -2,7 +2,7 @@
 
 This is the full list of official Builders provided by the ZEIT team.
 
-More details here: http://zeit.co/docs
+More details here: https://zeit.co/docs/v2/deployments/builders/overview/
 
 ### Publishing to npm
 
