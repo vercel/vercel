@@ -1,10 +1,10 @@
 const path = require('path');
 const execa = require('execa');
 const { readFile, writeFile } = require('fs.promised');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
-const download = require('@now/build-utils/fs/download.js');
-const glob = require('@now/build-utils/fs/glob.js');
-const { createLambda } = require('@now/build-utils/lambda.js');
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
 const downloadAndInstallPip = require('./download-and-install-pip');
 
 async function pipInstall(pipPath, srcDir, ...args) {

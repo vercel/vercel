@@ -1,4 +1,4 @@
-const rename = require('@now/build-utils/fs/rename.js');
+const rename = require('@now/build-utils/fs/rename.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 /** @typedef { import('@now/build-utils/file-ref') } FileRef */
 /** @typedef { import('@now/build-utils/file-fs-ref') } FileFsRef */

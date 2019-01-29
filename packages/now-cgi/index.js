@@ -1,10 +1,10 @@
 const path = require('path');
 const { mkdirp, copyFile } = require('fs-extra');
 
-const glob = require('@now/build-utils/fs/glob');
-const download = require('@now/build-utils/fs/download');
-const { createLambda } = require('@now/build-utils/lambda');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory');
+const glob = require('@now/build-utils/fs/glob'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
+const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-line import/no-extraneous-dependencies
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 

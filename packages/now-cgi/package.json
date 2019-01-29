@@ -21,8 +21,5 @@
   "devDependencies": {
     "@zeit/best": "0.4.3",
     "rmfr": "2.0.0"
-  },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
   }
 }

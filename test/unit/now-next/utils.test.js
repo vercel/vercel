@@ -8,7 +8,7 @@ const {
   excludeStaticDirectory,
   onlyStaticDirectory,
 } = require('@now/next/utils');
-const FileRef = require('@now/build-utils/file-ref');
+const FileRef = require('@now/build-utils/file-ref'); // eslint-disable-line import/no-extraneous-dependencies
 
 describe('excludeFiles', () => {
   it('should exclude files', () => {

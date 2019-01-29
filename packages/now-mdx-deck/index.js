@@ -1,10 +1,10 @@
-const download = require('@now/build-utils/fs/download.js');
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
 const fs = require('fs');
 const { promisify } = require('util');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
-const glob = require('@now/build-utils/fs/glob.js');
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
-const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js');
+const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 const writeFile = promisify(fs.writeFile);
 

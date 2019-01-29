@@ -1,11 +1,11 @@
-const download = require('@now/build-utils/fs/download.js');
-const glob = require('@now/build-utils/fs/glob.js');
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const {
   runNpmInstall,
   runPackageJsonScript,
   runShellScript,
-} = require('@now/build-utils/fs/run-user-scripts.js');
+} = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.build = async ({
   files, entrypoint, workPath, config,

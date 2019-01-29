@@ -1,14 +1,14 @@
-const { createLambda } = require('@now/build-utils/lambda.js');
-const download = require('@now/build-utils/fs/download.js');
-const FileBlob = require('@now/build-utils/file-blob.js');
-const FileFsRef = require('@now/build-utils/file-fs-ref.js');
+const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
+const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const fs = require('fs-extra');
-const glob = require('@now/build-utils/fs/glob.js');
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const {
   runNpmInstall,
   runPackageJsonScript,
-} = require('@now/build-utils/fs/run-user-scripts.js');
+} = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 /** @typedef { import('@now/build-utils/file-ref') } FileRef */
 /** @typedef {{[filePath: string]: FileRef}} Files */
@@ -35,7 +35,7 @@ async function downloadInstallAndBundle(
   console.log('downloading user files...');
   const downloadedFiles = await download(files, userPath);
 
-  console.log('installing dependencies for user\'s code...');
+  console.log("installing dependencies for user's code...");
   const entrypointFsDirname = path.join(userPath, path.dirname(entrypoint));
   await runNpmInstall(entrypointFsDirname, npmArguments);
 

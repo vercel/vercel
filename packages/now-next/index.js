@@ -1,14 +1,14 @@
-const { createLambda } = require('@now/build-utils/lambda.js');
-const download = require('@now/build-utils/fs/download.js');
-const FileFsRef = require('@now/build-utils/file-fs-ref.js');
-const FileBlob = require('@now/build-utils/file-blob');
+const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
+const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
+const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const { readFile, writeFile, unlink } = require('fs.promised');
 const {
   runNpmInstall,
   runPackageJsonScript,
-} = require('@now/build-utils/fs/run-user-scripts.js');
-const glob = require('@now/build-utils/fs/glob.js');
+} = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const semver = require('semver');
 const nextLegacyVersions = require('./legacy-versions');
 const {

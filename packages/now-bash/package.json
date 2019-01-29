@@ -20,8 +20,5 @@
   "dependencies": {
     "execa": "^1.0.0",
     "snake-case": "^2.1.0"
-  },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
   }
 }

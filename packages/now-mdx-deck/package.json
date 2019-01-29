@@ -7,9 +7,6 @@
     "url": "https://github.com/zeit/now-builders.git",
     "directory": "packages/now-mdx-deck"
   },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
-  },
   "scripts": {
     "test": "jest"
   }

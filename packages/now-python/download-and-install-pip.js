@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const execa = require('execa');
 const { createWriteStream } = require('fs');
 
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 const url = 'https://bootstrap.pypa.io/get-pip.py';
 

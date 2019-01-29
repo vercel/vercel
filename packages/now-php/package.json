@@ -10,9 +10,6 @@
   "dependencies": {
     "@now/php-bridge": "^0.4.13"
   },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
-  },
   "scripts": {
     "test": "jest"
   }

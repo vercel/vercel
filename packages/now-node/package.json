@@ -11,9 +11,6 @@
     "@now/node-bridge": "^0.1.10",
     "fs-extra": "7.0.1"
   },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
-  },
   "scripts": {
     "test": "jest"
   }

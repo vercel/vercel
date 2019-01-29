@@ -1,4 +1,4 @@
-const FileBlob = require('@now/build-utils/file-blob.js');
+const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const OptiPng = require('optipng');
 const pipe = require('multipipe');
 

@@ -16,9 +16,6 @@
     "unified": "^7.0.0",
     "unified-stream": "^1.0.2"
   },
-  "peerDependencies": {
-    "@now/build-utils": ">=0.0.1"
-  },
   "scripts": {
     "test": "jest"
   }

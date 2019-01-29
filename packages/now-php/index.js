@@ -1,6 +1,6 @@
-const { createLambda } = require('@now/build-utils/lambda.js');
+const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
-const rename = require('@now/build-utils/fs/rename.js');
+const rename = require('@now/build-utils/fs/rename.js'); // eslint-disable-line import/no-extraneous-dependencies
 const { getFiles } = require('@now/php-bridge');
 
 exports.config = {

@@ -1,5 +1,5 @@
-const { Lambda } = require('@now/build-utils/lambda.js');
-const streamToBuffer = require('@now/build-utils/fs/stream-to-buffer.js');
+const { Lambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
+const streamToBuffer = require('@now/build-utils/fs/stream-to-buffer.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.build = async ({ files, entrypoint, config }) => {
   if (!files[entrypoint]) throw new Error('Entrypoint not found in files');

@@ -2,11 +2,11 @@ const path = require('path');
 const { mkdirp, readFile, writeFile } = require('fs-extra');
 
 const execa = require('execa');
-const { createLambda } = require('@now/build-utils/lambda.js');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
-const download = require('@now/build-utils/fs/download.js');
+const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
 const downloadGit = require('lambda-git');
-const glob = require('@now/build-utils/fs/glob.js');
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const downloadGoBin = require('./download-go-bin');
 
 // creates a `$GOPATH` directory tree, as per

@@ -1,4 +1,4 @@
-const FileBlob = require('@now/build-utils/file-blob.js');
+const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const unified = require('unified');
 const unifiedStream = require('unified-stream');
 const markdown = require('remark-parse');

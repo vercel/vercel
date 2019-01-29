@@ -2,7 +2,7 @@ const path = require('path');
 
 const fetch = require('node-fetch');
 const tar = require('tar');
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js');
+const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
 
 const url = 'https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz';
 

@@ -1,4 +1,4 @@
-const FileBlob = require('@now/build-utils/file-blob.js');
+const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const { minify } = require('html-minifier');
 
 const defaultOptions = {
