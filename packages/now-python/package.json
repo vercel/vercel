@@ -3,6 +3,11 @@
   "version": "0.0.40",
   "main": "index.js",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-python"
+  },
   "dependencies": {
     "execa": "^1.0.0",
     "fs.promised": "^3.0.0",

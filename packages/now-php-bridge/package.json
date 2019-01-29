@@ -2,6 +2,11 @@
   "name": "@now/php-bridge",
   "version": "0.4.13",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-php-bridge"
+  },
   "dependencies": {
     "fastcgi-client": "0.0.1"
   },

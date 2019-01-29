@@ -2,6 +2,11 @@
   "name": "@now/build-utils",
   "version": "0.4.33-canary.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-build-utils"
+  },
   "dependencies": {
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",

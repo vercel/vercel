@@ -2,6 +2,11 @@
   "name": "@now/node-server",
   "version": "0.4.27-canary.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-node-server"
+  },
   "dependencies": {
     "@now/node-bridge": "^0.1.10",
     "fs-extra": "7.0.1"

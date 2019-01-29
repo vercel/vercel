@@ -2,6 +2,11 @@
   "name": "@now/cgi",
   "version": "0.0.15",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-cgi"
+  },
   "scripts": {
     "test": "best -I test/*.js",
     "prepublish": "./build.sh"

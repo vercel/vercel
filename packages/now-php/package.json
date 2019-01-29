@@ -2,6 +2,11 @@
   "name": "@now/php",
   "version": "0.4.13",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-php"
+  },
   "dependencies": {
     "@now/php-bridge": "^0.4.13"
   },

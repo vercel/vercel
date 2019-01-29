@@ -2,6 +2,11 @@
   "name": "@now/lambda",
   "version": "0.4.9",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-lambda"
+  },
   "peerDependencies": {
     "@now/build-utils": ">=0.0.1"
   },

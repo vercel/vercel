@@ -2,6 +2,11 @@
   "name": "@now/md",
   "version": "0.4.9",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-md"
+  },
   "dependencies": {
     "rehype-document": "^2.2.0",
     "rehype-format": "^2.3.0",

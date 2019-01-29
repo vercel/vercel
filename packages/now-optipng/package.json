@@ -2,6 +2,11 @@
   "name": "@now/optipng",
   "version": "0.4.8",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-optipng"
+  },
   "dependencies": {
     "multipipe": "2.0.3",
     "optipng": "1.1.0"

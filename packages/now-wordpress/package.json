@@ -2,6 +2,11 @@
   "name": "@now/wordpress",
   "version": "0.4.14",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-wordpress"
+  },
   "dependencies": {
     "@now/php-bridge": "^0.4.13",
     "node-fetch": "2.3.0",

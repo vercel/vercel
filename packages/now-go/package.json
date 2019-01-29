@@ -2,6 +2,11 @@
   "name": "@now/go",
   "version": "0.2.12",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-go"
+  },
   "scripts": {
     "test": "best -I test/*.js",
     "prepublish": "./build.sh"

@@ -5,6 +5,11 @@
   "main": "index.js",
   "author": "Nathan Rajlich <nate@zeit.co>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-bash"
+  },
   "files": [
     "builder.sh",
     "runtime.sh",
