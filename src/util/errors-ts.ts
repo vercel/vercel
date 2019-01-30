@@ -164,6 +164,19 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
   }
 }
 
+export class InvalidTransferAuthCode extends NowError<
+  'INVALID_TRANSFER_AUTH_CODE',
+  { domain: string, authCode: string }
+> {
+  constructor(domain: string, authCode: string) {
+    super({
+      code: 'INVALID_TRANSFER_AUTH_CODE',
+      meta: { domain, authCode },
+      message: `The provided auth code does not match with the one expected by the current registar`
+    })
+  }
+}
+
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
