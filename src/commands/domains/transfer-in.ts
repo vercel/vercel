@@ -62,12 +62,14 @@ export default async function transferIn(
   const availableStamp = stamp();
   const [domainPrice, { transferable }] = await Promise.all([
     getDomainPrice(client, domainName),
-    Promise.resolve({ transferable: true }) // checkTransfer(client, domainName)
+    checkTransfer(client, domainName)
   ]);
+
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {
     output.error(`The TLD for ${param(domainName)} is not supported.`);
     return 1;
   }
+
   if (!transferable) {
     output.error(`The domain ${param(domainName)} is not transferable.`);
     return 1;
