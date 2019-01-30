@@ -9,14 +9,16 @@ type Response = {
 export default async function transferInDomain(
   client: Client,
   name: string,
-  authCode: string
+  authCode: string,
+  expectedPrice: number
 ) {
   try {
     return await client.fetch<Response>(`/v4/domains`, {
-      body: { method: 'transfer-in', name, authCode },
+      body: { method: 'transfer-in', name, authCode, expectedPrice },
       method: 'POST'
     });
   } catch (error) {
+    console.error(error.code, error);
     if (error.code === 'invalid_name') {
       return new ERRORS.InvalidDomain(name);
     }
