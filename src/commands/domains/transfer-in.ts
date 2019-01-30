@@ -12,6 +12,9 @@ import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import withSpinner from '../../util/with-spinner';
+import getDomainPrice from '../../util/domains/get-domain-price';
+import checkTransfer from '../../util/domains/check-transfer';
+import promptBool from '../../util/input/prompt-bool';
 
 type Options = {
   '--debug': boolean;
@@ -56,11 +59,41 @@ export default async function transferIn(
     return 1;
   }
 
+  const availableStamp = stamp();
+  const [domainPrice, { transferable }] = await Promise.all([
+    getDomainPrice(client, domainName),
+    checkTransfer(client, domainName)
+  ]);
+
+  if (domainPrice instanceof ERRORS.UnsupportedTLD) {
+    output.error(`The TLD for ${param(domainName)} is not supported.`);
+    return 1;
+  }
+
+  if (!transferable) {
+    output.error(`The domain ${param(domainName)} is not transferable.`);
+    return 1;
+  }
+
+  const { price } = domainPrice;
+  output.log(
+    `The domain ${param(domainName)} is ${chalk.underline(
+      'available'
+    )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`
+  );
+
   const authCode = await getAuthCode(opts['--code']);
+
+  const shouldTransfer = await promptBool(
+    `Transfer now for ${chalk.bold(`$${price}`)} (includes 1yr extension)?`
+  );
+  if (!shouldTransfer) {
+    return 0;
+  }
 
   const transferStamp = stamp();
   const transferInResult = await withSpinner('Initiating transfer', () =>
-    transferInDomain(client, domainName, authCode)
+    transferInDomain(client, domainName, authCode, price)
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
