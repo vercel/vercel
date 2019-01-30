@@ -174,7 +174,7 @@ export default class DevServer {
     nowJson: any
   ) => {
     const { dest, status = 200, headers = {}, uri_args, matched_route } = devRouter(
-      req,
+      req.url,
       nowJson.routes
     );
 

@@ -1,11 +1,10 @@
-import http from 'http';
 import url from 'url';
 import qs from 'querystring';
 
 import { RouteConfig, RouteResult } from './types';
 
 export default function(
-  req: http.IncomingMessage,
+  reqPath = '',
   routes?: RouteConfig[]
 ): RouteResult {
   let found: RouteResult | undefined;
@@ -13,7 +12,6 @@ export default function(
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
-      const reqPath = req.url || '';
       const matcher = new RegExp('^' + routeConfig.src + '$');
 
       if (matcher.test(reqPath)) {
@@ -37,11 +35,11 @@ export default function(
   }
 
   if (found === undefined) {
-    const { query } = url.parse(req.url || '');
+    const { query } = url.parse(reqPath);
     const queryParams = qs.parse(query || '');
 
     found = {
-      dest: req.url || '',
+      dest: reqPath,
       uri_args: queryParams
     };
   }

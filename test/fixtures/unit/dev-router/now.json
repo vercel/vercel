@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "dev-routes",
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/endpoints/api/$1" },
+    { "src": "/proxy_pass", "dest": "https://zeit.co" },
+    { "src": "/redirect", "status": 301, "headers": { "Location": "https://zeit.co" }},
+    { "src": "/.*", "dest": "https://zeit.co" }
+  ]
+}
