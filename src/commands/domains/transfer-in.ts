@@ -85,7 +85,7 @@ export default async function transferIn(
   const authCode = await getAuthCode(opts['--code']);
 
   const shouldTransfer = await promptBool(
-    `Transfer now for ${chalk.bold(`$${price}`)} (includes 1yr extension)?`
+    `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
   );
   if (!shouldTransfer) {
     return 0;
