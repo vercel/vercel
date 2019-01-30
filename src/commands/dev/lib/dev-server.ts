@@ -173,22 +173,27 @@ export default class DevServer {
     cwd: string,
     nowJson: any
   ) => {
-    const { dest, status = 200, headers = {}, uri_args } = devRouter(
+    const { dest, status = 200, headers = {}, uri_args, matched_route } = devRouter(
       req,
       nowJson.routes
     );
 
-    res.writeHead(status, headers);
+    Object.entries(headers).forEach(([name, value]) => {
+      res.setHeader(name, value);
+    });
 
     if (isURL(dest)) {
+      this.logDebug('ProxyPass', matched_route);
       return proxyPass(req, res, dest);
     }
 
     if ([301, 302, 404].includes(status)) {
+      this.logDebug('Redirect', matched_route);
       return res.end();
     }
 
     if (!nowJson.builds) {
+      this.logDebug('No builds.');
       return res.end();
     }
 
@@ -202,6 +207,7 @@ export default class DevServer {
         const source = resolveDest(files, dest) as FileFsRef;
 
         if (source && fs.existsSync(source.fsPath)) {
+
           if (/\.js$/.test(source.fsPath)) {
             const query = qs.stringify(uri_args);
 
@@ -209,19 +215,23 @@ export default class DevServer {
               req.url = dest + '?' + query;
             }
 
-            require(source.fsPath)(req, res);
-
             // Try clear require.cache
-            Object.values(files).forEach(file => {
-              if (/\.js$/.test(file.fsPath)) {
-                delete require.cache[file.fsPath];
-              }
-            });
+            // Object.values(files).forEach(file => {
+            //   if (/\.js$/.test(file.fsPath)) {
+            //     delete require.cache[file.fsPath];
+            //   }
+            // });
 
-            return;
+            this.logDebug('[nodejs preview] invoke', source.fsPath);
+            return require(source.fsPath)(req, res);
           }
+
+          this.logDebug('[nodejs preview] serve', req.url);
+          return serveStaticFile(req, res, cwd);
         }
-        return serveStaticFile(req, res, this.cwd);
+
+        this.logDebug('[nodejs preview] serve', req.url);
+        return serveStaticFile(req, res, cwd);
       } catch (err) {
         this.logError(err.message);
         this.logDebug(err.stack);

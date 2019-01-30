@@ -18,11 +18,11 @@ export default function(
 
       if (matcher.test(reqPath)) {
         const destPath = reqPath.replace(matcher, routeConfig.dest);
-        const { pathname = '', query } = url.parse(destPath);
+        const { query } = url.parse(destPath);
         const queryParams = qs.parse(query || '');
 
         found = {
-          dest: pathname.replace(matcher, routeConfig.dest),
+          dest: destPath,
           status: routeConfig.status,
           headers: routeConfig.headers,
           uri_args: queryParams,
