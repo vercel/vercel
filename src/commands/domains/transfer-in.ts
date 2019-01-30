@@ -116,16 +116,12 @@ export default async function transferIn(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} transfer started ${transferStamp()}`
-  );
-
-  output.print(`We have initiated a transfer for ${domainName}.\n`);
-  output.print(
-    `To finalize the transfer, we are waiting for approval from your current registrar.\n`
-  );
-  output.print(`You will receive an email upon completion.`);
+  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} transfer started ${transferStamp()}`);
+  output.print(`  To finalize the transfer, we are waiting for approval from your current registrar.\n`);
+  output.print(`  You will receive an email upon completion.\n`);
+  output.warn(`Once transferred, your domain ${param(domainName)} will be using ZEIT DNS.\n`);
+  output.print(`  To transfer with previous DNS records, export the zone file from your previous registrar.\n`)
+  output.print(`  Then import it to ZEIT DNS by using:\n`)
+  output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`)
   return 0;
 }
