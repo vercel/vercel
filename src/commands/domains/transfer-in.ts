@@ -92,7 +92,7 @@ export default async function transferIn(
   }
 
   const transferStamp = stamp();
-  const transferInResult = await withSpinner('Initiating transfer', () =>
+  const transferInResult = await withSpinner(`Initiating transfer for domain ${domainName}`, () =>
     transferInDomain(client, domainName, authCode, price)
   );
 
@@ -108,6 +108,11 @@ export default async function transferIn(
     output.error(
       `The domain "${transferInResult.meta.domain}" is not transferable.`
     );
+    return 1;
+  }
+
+  if (transferInResult instanceof ERRORS.InvalidTransferAuthCode) {
+    output.error(`The provided auth code does not match with the one expected by the current registar`);
     return 1;
   }
 
