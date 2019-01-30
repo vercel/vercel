@@ -18,7 +18,6 @@ export default async function transferInDomain(
       method: 'POST'
     });
   } catch (error) {
-    console.error(error.code, error);
     if (error.code === 'invalid_name') {
       return new ERRORS.InvalidDomain(name);
     }
@@ -27,6 +26,9 @@ export default async function transferInDomain(
     }
     if (error.code === 'not_transferable') {
       return new ERRORS.DomainNotTransferable(name);
+    }
+    if (error.code === 'invalid_auth_code') {
+      return new ERRORS.InvalidTransferAuthCode(name, authCode);
     }
     throw error;
   }
