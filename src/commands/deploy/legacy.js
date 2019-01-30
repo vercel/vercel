@@ -817,7 +817,7 @@ async function sync({
           note(
             `You can use ${cmd(
               'now --public'
-            )} or upgrade your plan (${url}) to skip this prompt`
+            )} or upgrade your plan to skip this prompt. More: ${url}`
           );
 
           if (!proceed) {
