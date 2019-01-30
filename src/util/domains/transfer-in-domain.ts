@@ -15,7 +15,10 @@ export default async function transferInDomain(
   try {
     return await client.fetch<Response>(`/v4/domains`, {
       body: { method: 'transfer-in', name, authCode, expectedPrice },
-      method: 'POST'
+      method: 'POST',
+      retry: {
+        retries: 0
+      }
     });
   } catch (error) {
     if (error.code === 'invalid_name') {
