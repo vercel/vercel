@@ -85,37 +85,6 @@ export class MissingUser extends NowError<'MISSING_USER', {}> {
 }
 
 /**
- * When you're passing two different options in the cli that exclude each
- * other, this error is thrown with the name of the conflicting property.
- */
-export class ConflictingOption extends NowError<
-  'CONFLICTING_OPTION',
-  { name: string }
-> {
-  constructor(name: string) {
-    super({
-      code: 'CONFLICTING_OPTION',
-      message: `You can't use at the same time a positive and negative value for option ${name}`,
-      meta: { name }
-    });
-  }
-}
-
-/**
- * Thrown when the user tries to add a domain forcing the CDN enabled but he's
- * on the OSS plan and we don't allow it.
- */
-export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
-  constructor() {
-    super({
-      code: 'CDN_NEEDS_UPGRADE',
-      meta: {},
-      message: `You can't add domains with CDN enabled from an OSS plan.`
-    });
-  }
-}
-
-/**
  * Thrown when a user tries to add a domain that exists already for a different
  * user under a different context.
  */

@@ -27,7 +27,6 @@ export default async function upsertPathAlias(
   if (!NOW_SH_REGEX.test(alias)) {
     const domainInfo = await setupDomain(output, client, alias, contextName);
     if (
-      domainInfo instanceof ERRORS.CDNNeedsUpgrade ||
       domainInfo instanceof ERRORS.DomainAlreadyExists ||
       domainInfo instanceof ERRORS.DomainNotAvailable ||
       domainInfo instanceof ERRORS.DomainNotFound ||

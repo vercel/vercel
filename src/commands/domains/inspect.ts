@@ -77,20 +77,34 @@ export default async function inspect(
     return 1;
   }
 
-  output.log(`Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(inspectStamp())}`);
+  output.log(
+    `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
+      inspectStamp()
+    )}`
+  );
   output.print('\n');
   output.print(chalk.bold('  General\n\n'));
   output.print(`    ${chalk.cyan('name')}\t\t${domain.name}\n`);
   output.print(`    ${chalk.cyan('serviceType')}\t\t${domain.serviceType}\n`);
-  output.print(`    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`);
-  output.print(`    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`);
-  output.print(`    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`);
-  output.print(`    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`);
-  output.print(`    ${chalk.cyan('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`);
+  output.print(
+    `    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`
+  );
   output.print(
     `    ${chalk.cyan('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
   );
-  output.print(`    ${chalk.cyan('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
+  output.print(`    ${chalk.cyan('cloudfareEnabled')}\t\t${domain.cdnEnabled}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
