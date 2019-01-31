@@ -15,18 +15,32 @@ export default function(
       const matcher = new RegExp('^' + routeConfig.src + '$');
 
       if (matcher.test(reqPath)) {
-        const destPath = reqPath.replace(matcher, routeConfig.dest);
-        const { query } = url.parse(destPath);
-        const queryParams = qs.parse(query || '');
+        const destPath = routeConfig.dest
+          ? reqPath.replace(matcher, routeConfig.dest)
+          : reqPath;
 
-        found = {
-          dest: destPath,
-          status: routeConfig.status,
-          headers: routeConfig.headers,
-          uri_args: queryParams,
-          matched_route: routeConfig,
-          matched_route_idx: idx
-        };
+        if (isURL(destPath)) {
+          found = {
+            dest: destPath,
+            status: routeConfig.status,
+            headers: routeConfig.headers,
+            uri_args: {},
+            matched_route: routeConfig,
+            matched_route_idx: idx
+          }
+        } else {
+          const { pathname, query } = url.parse(destPath);
+          const queryParams = qs.parse(query || '');
+          found = {
+            dest: pathname || '',
+            status: routeConfig.status,
+            headers: routeConfig.headers,
+            uri_args: queryParams,
+            matched_route: routeConfig,
+            matched_route_idx: idx
+          };
+        }
+
         return true;
       }
 
@@ -45,4 +59,8 @@ export default function(
   }
 
   return found;
+}
+
+function isURL (str: string) {
+  return /^https?:\/\//.test(str);
 }
