@@ -284,11 +284,6 @@ function handleSetupDomainError<T>(
     return 1;
   }
 
-  if (error instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan`);
-    return 1;
-  }
-
   if (error instanceof ERRORS.UserAborted) {
     output.error(`User aborted`);
     return 1;
@@ -402,10 +397,6 @@ function handleCreateAliasError<T>(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );
-    return 1;
-  }
-  if (error instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan.`);
     return 1;
   }
   if (error instanceof ERRORS.DomainConfigurationError) {

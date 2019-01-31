@@ -23,7 +23,6 @@ import getProjectName from '../../util/get-project-name';
 import {
   WildcardNotAllowed,
   CantSolveChallenge,
-  CDNNeedsUpgrade,
   DomainConfigurationError,
   DomainNotFound,
   DomainPermissionDenied,
@@ -299,7 +298,6 @@ export default async function main(
     if (
       firstDeployCall instanceof WildcardNotAllowed ||
       firstDeployCall instanceof CantSolveChallenge ||
-      firstDeployCall instanceof CDNNeedsUpgrade ||
       firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
       firstDeployCall instanceof DomainPermissionDenied ||
@@ -375,7 +373,6 @@ export default async function main(
         if (
           secondDeployCall instanceof WildcardNotAllowed ||
           secondDeployCall instanceof CantSolveChallenge ||
-          secondDeployCall instanceof CDNNeedsUpgrade ||
           secondDeployCall instanceof DomainConfigurationError ||
           secondDeployCall instanceof DomainNotFound ||
           secondDeployCall instanceof DomainPermissionDenied ||
@@ -629,10 +626,6 @@ function handleCreateDeployError(output, error) {
         'now.json'
       )}. Only use properties mentioned here: ${link}`
     );
-    return 1;
-  }
-  if (error instanceof CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
   }
   if (error instanceof TooManyCertificates) {
