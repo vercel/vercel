@@ -1,11 +1,6 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-
-import {
-  CDNNeedsUpgrade,
-  DomainAlreadyExists,
-  InvalidDomain
-} from '../errors-ts';
+import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
 import { Domain } from '../../types';
 import Client from '../client';
 import wait from '../output/wait';
@@ -17,14 +12,13 @@ type Response = {
 export default async function addDomain(
   client: Client,
   domain: string,
-  contextName: string,
-  cdnEnabled?: boolean
+  contextName: string
 ) {
   const cancelWait = wait(
     `Adding domain ${domain} under ${chalk.bold(contextName)}`
   );
   try {
-    const addedDomain = await performAddRequest(client, domain, cdnEnabled);
+    const addedDomain = await performAddRequest(client, domain);
     cancelWait();
     return addedDomain;
   } catch (error) {
@@ -35,24 +29,19 @@ export default async function addDomain(
 
 async function performAddRequest(
   client: Client,
-  domainName: string,
-  cdnEnabled?: boolean
+  domainName: string
 ) {
   return retry(
     async () => {
       try {
         const { domain } = await client.fetch<Response>('/v4/domains', {
-          body: { name: domainName, cdnEnabled },
+          body: { name: domainName },
           method: 'POST'
         });
         return domain;
       } catch (error) {
         if (error.code === 'invalid_name') {
           return new InvalidDomain(domainName);
-        }
-
-        if (error.code === 'domain_with_cdn_needs_upgrade') {
-          return new CDNNeedsUpgrade();
         }
 
         if (error.code === 'domain_already_exists') {
