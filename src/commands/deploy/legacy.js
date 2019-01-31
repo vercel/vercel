@@ -1230,10 +1230,6 @@ function handleCreateDeployError(output, error) {
     );
     return 1;
   }
-  if (error instanceof CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan`);
-    return 1;
-  }
   if (error instanceof TooManyCertificates) {
     output.error(
       `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
