@@ -8,12 +8,15 @@ import { promises as fs } from 'fs';
 import inquirer from 'inquirer';
 import mri from 'mri';
 import ms from 'ms';
+import title from 'title';
 import plural from 'pluralize';
 import Progress from 'progress';
 import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
 import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd.ts';
+import code from '../../util/output/code';
+import highlight from '../../util/output/highlight';
 import exit from '../../util/exit';
 import Now from '../../util';
 import uniq from '../../util/unique-strings';
@@ -1192,6 +1195,41 @@ function handleCreateDeployError(output, error) {
       `There is a validation in course for ${chalk.underline(
         error.meta.domain
       )}. Wait until it finishes.`
+    );
+    return 1;
+  }
+  if (error instanceof SchemaValidationFailed) {
+    const { params, keyword, dataPath } = error.meta;
+    if (params && params.additionalProperty) {
+      const prop = params.additionalProperty;
+      output.error(
+        `The property ${code(prop)} is not allowed in ${highlight(
+          'now.json'
+        )} when using Now 1.0 – please remove it.`
+      );
+      if (prop === 'build.env' || prop === 'builds.env') {
+        output.note(
+          `Do you mean ${code('build')} (object) with a property ${code(
+            'env'
+          )} (object) instead of ${code(prop)}?`
+        );
+      }
+      return 1;
+    }
+    if (keyword === 'type') {
+      const prop = dataPath.substr(1, dataPath.length);
+      output.error(
+        `The property ${code(prop)} in ${highlight(
+          'now.json'
+        )} can only be of type ${code(title(params.type))}.`
+      );
+      return 1;
+    }
+    const link = 'https://zeit.co/docs/v1/features/configuration/#settings';
+    output.error(
+      `Failed to validate ${highlight(
+        'now.json'
+      )}. Only use properties mentioned here: ${link}`
     );
     return 1;
   }
