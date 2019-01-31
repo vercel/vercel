@@ -166,7 +166,7 @@ export type Alias = {
     username: string;
     email: string;
   };
-  deploymentId: string;
+  deploymentId?: string;
   rules?: PathAliasRule[];
 };
 
