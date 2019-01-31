@@ -1,8 +1,18 @@
 [package]
 name = "now_lambda"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Antonio Nuno Monteiro <anmonteiro@gmail.com>"]
 edition = "2018"
+description = "Rust bindings for Now.sh Lambdas"
+keywords = ["AWS", "Lambda", "Zeit", "Now", "Rust"]
+license = "MIT"
+homepage = "https://github.com/zeit/now-builders"
+repository = "https://github.com/zeit/now-builders"
+documentation = "https://docs.rs/now_lambda"
+include = [
+    "src/*.rs",
+    "Cargo.toml"
+]
 
 [dependencies]
 serde = "^1"
