@@ -1,6 +1,6 @@
 {
   "name": "@now/php",
-  "version": "0.4.13",
+  "version": "0.4.14-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
     "directory": "packages/now-php"
   },
   "dependencies": {
-    "@now/php-bridge": "^0.4.13"
+    "@now/php-bridge": "^0.4.14-canary.0"
   },
   "scripts": {
     "test": "jest"

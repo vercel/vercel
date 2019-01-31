@@ -1,6 +1,6 @@
 {
   "name": "@now/go",
-  "version": "0.2.12",
+  "version": "0.2.13-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
