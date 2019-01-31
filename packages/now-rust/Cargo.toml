@@ -1,0 +1,15 @@
+[package]
+name = "now_lambda"
+version = "0.1.0"
+authors = ["Antonio Nuno Monteiro <anmonteiro@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+serde = "^1"
+serde_json = "^1"
+serde_derive = "^1"
+http = "0.1"
+tokio = "^0.1"
+base64 = "0.10"
+log = "^0.4"
+lambda_runtime = "0.2.0"
