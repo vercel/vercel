@@ -1,6 +1,8 @@
 import url from 'url';
 import qs from 'querystring';
 
+import isURL from './is-url';
+
 import { RouteConfig, RouteResult } from './types';
 
 export default function(
@@ -59,8 +61,4 @@ export default function(
   }
 
   return found;
-}
-
-function isURL (str: string) {
-  return /^https?:\/\//.test(str);
 }

@@ -11,6 +11,7 @@ import error from '../../../util/output/error';
 import success from '../../../util/output/success';
 import { readLocalConfig } from '../../../util/config/files';
 
+import isURL from './is-url';
 import devRouter from './dev-router';
 import {
   buildUserProject,
@@ -324,21 +325,15 @@ function serveStaticFile(
 /**
  * Find the dest handler from assets
  */
-function resolveDest(assets: BuilderOutputs, dest: string): BuilderOutput {
+function resolveDest(assets: BuilderOutputs, dest: string): BuilderOutput | undefined {
   const assetKey = dest.replace(/^\//, '');
 
-  // TODO: more cases, go, rust, php, etc.
-  return (
-    assets[assetKey] ||
-    assets[assetKey + 'index.js'] ||
-    assets[assetKey + '/index.js'] ||
-    assets[assetKey + '/index.html']
-  );
-}
+  if (assets[assetKey]) return assets[assetKey];
 
-/**
- * A naive isURL
- */
-function isURL(str: any): boolean {
-  return typeof str === 'string' && /^https?:\/\//.test(str);
+  // find `${assetKey}/index.*` for indexes
+  const foundIndex = Object.keys(assets).find(name => {
+    return name.replace(/\/?index\.\w+$/, '') === assetKey.replace(/\/$/, '');
+  });
+
+  if (foundIndex) return assets[foundIndex];
 }
