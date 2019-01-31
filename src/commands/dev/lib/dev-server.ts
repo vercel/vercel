@@ -129,7 +129,9 @@ export default class DevServer {
 
       if (nowJson === null) {
         await this.serveProjectAsStatics(req, res, this.cwd);
-      } else if (nowJson.version === 2) {
+      } else if (nowJson.version !== 2) {
+        throw new Error('now-dev only support Now V2.');
+      } else {
         await this.serveProjectAsNowV2(req, res, this.cwd, nowJson);
       }
     } catch (err) {
@@ -174,11 +176,15 @@ export default class DevServer {
     cwd: string,
     nowJson: any
   ) => {
-    const { dest, status = 200, headers = {}, uri_args, matched_route } = devRouter(
-      req.url,
-      nowJson.routes
-    );
+    const {
+      dest,
+      status = 200,
+      headers = {},
+      uri_args,
+      matched_route
+    } = devRouter(req.url, nowJson.routes);
 
+    // set headers
     Object.entries(headers).forEach(([name, value]) => {
       res.setHeader(name, value);
     });
@@ -194,7 +200,7 @@ export default class DevServer {
     }
 
     if (!nowJson.builds) {
-      this.logDebug('No builds.');
+      this.logDebug('No matched route and no build config.');
       return res.end();
     }
 
@@ -208,7 +214,6 @@ export default class DevServer {
         const source = resolveDest(files, dest) as FileFsRef;
 
         if (source && fs.existsSync(source.fsPath)) {
-
           if (/\.js$/.test(source.fsPath)) {
             const query = qs.stringify(uri_args);
 
@@ -325,7 +330,10 @@ function serveStaticFile(
 /**
  * Find the dest handler from assets
  */
-function resolveDest(assets: BuilderOutputs, dest: string): BuilderOutput | undefined {
+function resolveDest(
+  assets: BuilderOutputs,
+  dest: string
+): BuilderOutput | undefined {
   const assetKey = dest.replace(/^\//, '');
 
   if (assets[assetKey]) return assets[assetKey];
