@@ -68,6 +68,11 @@ export default async function add(
     return 1;
   }
 
+  if (record instanceof Error) {
+    output.error(record.message);
+    return 1;
+  }
+
   console.log(
     `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
       domain
