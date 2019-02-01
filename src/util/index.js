@@ -299,6 +299,14 @@ export default class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
+        if (body.error && body.error.code === 'builds_rate_limited') {
+          const err = new Error(body.error.message);
+          err.status = res.status;
+          err.retryAfter = 'never';
+
+          return bail(err);
+        }
+
         let msg = 'You have been creating deployments at a very fast pace. ';
 
         if (body.error && body.error.limit && body.error.limit.reset) {
