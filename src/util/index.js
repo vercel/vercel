@@ -477,7 +477,6 @@ export default class Now extends EventEmitter {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
                   'x-now-digest': sha,
                   'x-now-size': data.length,
                   ...additionalHeaders
