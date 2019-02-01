@@ -135,14 +135,14 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
 
 export class InvalidTransferAuthCode extends NowError<
   'INVALID_TRANSFER_AUTH_CODE',
-  { domain: string, authCode: string }
+  { domain: string; authCode: string }
 > {
   constructor(domain: string, authCode: string) {
     super({
       code: 'INVALID_TRANSFER_AUTH_CODE',
       meta: { domain, authCode },
       message: `The provided auth code does not match with the one expected by the current registar`
-    })
+    });
   }
 }
 
@@ -751,12 +751,39 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
   }
 }
 
-export class DNSPermissionDenied extends NowError<'DNS_PERMISSION_DENIED', { domain: string }> {
+export class DNSPermissionDenied extends NowError<
+  'DNS_PERMISSION_DENIED',
+  { domain: string }
+> {
   constructor(domain: string) {
     super({
       code: 'DNS_PERMISSION_DENIED',
       meta: { domain },
       message: `You don't have access to the DNS records of ${domain}.`
+    });
+  }
+}
+
+type DomainConflictCode =
+  | 'CONFLICT_ALIASES'
+  | 'CONFLICT_CERTS'
+  | 'CONFLICT_SUFFIX'
+  | 'CONFLICT_TRANSFER';
+
+export class DomainConflict extends NowError<
+  DomainConflictCode,
+  { domain: string; context: string }
+> {
+  constructor(
+    code: DomainConflictCode,
+    domain: string,
+    context: string,
+    message: string
+  ) {
+    super({
+      code,
+      meta: { domain, context },
+      message
     });
   }
 }

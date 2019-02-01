@@ -16,6 +16,7 @@ import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
+import * as ERRORS from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
@@ -28,7 +29,10 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -82,7 +86,10 @@ export default async function rm(
 
   const aliases = await getDomainAliases(client, domain.name);
   const certs = await getCertsForDomain(output, client, domain.name);
-  if (!opts['--yes'] && !await confirmDomainRemove(output, domain, aliases, certs)) {
+  if (
+    !opts['--yes'] &&
+    !(await confirmDomainRemove(output, domain, aliases, certs))
+  ) {
     output.log('Aborted');
     return 0;
   }
@@ -99,7 +106,33 @@ export default async function rm(
   }
 
   output.debug(`Removing domain`);
-  await removeDomainByName(client, domain.name);
+  const removeResult = await removeDomainByName(
+    client,
+    contextName,
+    domain.name
+  );
+  if (removeResult instanceof ERRORS.DomainNotFound) {
+    output.error(
+      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
+    );
+    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    return 1;
+  }
+  if (removeResult instanceof ERRORS.DomainPermissionDenied) {
+    output.error(
+      `You don't have permissions over domain ${chalk.underline(
+        removeResult.meta.domain
+      )} under ${chalk.bold(removeResult.meta.context)}.`
+    );
+    return 1;
+  }
+  if (removeResult instanceof ERRORS.DomainConflict) {
+    output.error(
+      `Under ${chalk.bold(removeResult.meta.context)}: ${removeResult.message}.`
+    );
+    return 1;
+  }
+
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domain.name
@@ -108,7 +141,12 @@ export default async function rm(
   return 0;
 }
 
-async function confirmDomainRemove(output: Output, domain: Domain, aliases: Alias[], certs: Cert[]) {
+async function confirmDomainRemove(
+  output: Output,
+  domain: Domain,
+  aliases: Alias[],
+  certs: Cert[]
+) {
   return new Promise(resolve => {
     const time = chalk.gray(`${ms(Date.now() - domain.createdAt)} ago`);
     const tbl = table([[chalk.bold(domain.name), time]], {
