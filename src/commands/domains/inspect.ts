@@ -21,7 +21,10 @@ export default async function inspect(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -90,10 +93,18 @@ export default async function inspect(
     `    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`
   );
   output.print(
+    `    ${chalk.cyan('transferStartedAt')}\t${formatDate(
+      domain.transferStartedAt
+    )}\n`
+  );
+  output.print(
     `    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`
   );
   output.print(
     `    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('transferredAt')}\t${formatDate(domain.transferredAt)}\n`
   );
   output.print(
     `    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
@@ -104,7 +115,7 @@ export default async function inspect(
   output.print(
     `    ${chalk.cyan('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
   );
-  output.print(`    ${chalk.cyan('cloudfareEnabled')}\t\t${domain.cdnEnabled}\n`);
+  output.print(`    ${chalk.cyan('cloudfareEnabled')}\t${domain.cdnEnabled}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
