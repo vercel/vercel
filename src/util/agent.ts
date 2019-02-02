@@ -155,8 +155,6 @@ export default class NowAgent {
       return res;
     };
 
-    // We have to set the `host` manually when using http2
-    opts.headers.host = this._url.replace(/^https?:\/\//, '');
     return currentContext
       .fetch(this._url + path, { ...opts, body })
       .then(res => handleCompleted(res))

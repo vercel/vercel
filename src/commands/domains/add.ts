@@ -9,7 +9,6 @@ import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
-import getBooleanOptionValue from '../../util/get-boolean-option-value';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 
@@ -43,11 +42,8 @@ export default async function add(
     throw err;
   }
 
-  const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
-  if (cdnEnabled instanceof ERRORS.ConflictingOption) {
-    output.error(
-      `You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`
-    );
+  if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
+    output.error(`Toggling CF from Now CLI is deprecated.`)
     return 1;
   }
 
@@ -77,13 +73,8 @@ export default async function add(
   const addedDomain = await addDomain(
     client,
     domainName,
-    contextName,
-    cdnEnabled
+    contextName
   );
-  if (addedDomain instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan.`);
-    return 1;
-  }
 
   if (addedDomain instanceof ERRORS.InvalidDomain) {
     output.error(

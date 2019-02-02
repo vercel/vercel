@@ -122,13 +122,15 @@ test('log in', async t => {
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [target, '--public', '--name', session, ...defaultArgs],
     {
       reject: false
     }
   );
+
+  console.log(stderr)
 
   // Ensure the exit code is right
   t.is(code, 0);

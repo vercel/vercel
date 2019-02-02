@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "13.1.2-canary.3",
+  "version": "13.2.0-canary.4",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -174,7 +174,7 @@
     "eslint-plugin-typescript": "0.14.0",
     "esm": "3.0.84",
     "execa": "0.9.0",
-    "fetch-h2": "1.0.2",
+    "fetch-h2": "2.0.3",
     "glob": "7.1.2",
     "http-proxy": "1.17.0",
     "ignore": "5.0.4",

@@ -8,7 +8,7 @@ import responseError from './response-error';
 import ua from './ua';
 
 export type FetchOptions = {
-  body?: NodeJS.ReadableStream | object;
+  body?: NodeJS.ReadableStream | object | string;
   headers?: { [key: string]: string };
   json?: boolean;
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';

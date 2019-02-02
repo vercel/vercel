@@ -69,6 +69,8 @@ export type Domain = {
   boughtAt: number;
   createdAt: number;
   expiresAt: number;
+  transferStartedAt?: number;
+  transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
   cdnEnabled: boolean;
@@ -166,7 +168,7 @@ export type Alias = {
     username: string;
     email: string;
   };
-  deploymentId: string;
+  deploymentId?: string;
   rules?: PathAliasRule[];
 };
 

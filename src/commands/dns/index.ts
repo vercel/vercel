@@ -8,6 +8,7 @@ import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
 import add from './add';
+import importZone from './import';
 import ls from './ls';
 import rm from './rm';
 
@@ -63,11 +64,21 @@ const help = () => {
         `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
       ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
+
+  ${chalk.gray('–')} Import a Zone file
+
+      ${chalk.cyan(
+        '$ now dns import <DOMAIN> <FILE>'
+      )}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' SRV 10 0 389 zeit.party`)}
+
+
 `);
 };
 
 const COMMAND_CONFIG = {
   add: ['add'],
+  import: ['import'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove']
 };
@@ -92,6 +103,8 @@ export default async function main(ctx: NowContext) {
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
+    case 'import':
+      return importZone(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
     default:
