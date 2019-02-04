@@ -87,35 +87,35 @@ export default async function inspect(
   );
   output.print('\n');
   output.print(chalk.bold('  General\n\n'));
-  output.print(`    ${chalk.cyan('name')}\t\t${domain.name}\n`);
-  output.print(`    ${chalk.cyan('serviceType')}\t\t${domain.serviceType}\n`);
+  output.print(`    ${chalk.cyan('Name')}\t\t\t${domain.name}\n`);
+  output.print(`    ${chalk.cyan('Service Type')}\t\t${domain.serviceType}\n`);
   output.print(
-    `    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`
+    `    ${chalk.cyan('Ordered At')}\t\t\t${formatDate(domain.orderedAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('transferStartedAt')}\t${formatDate(
+    `    ${chalk.cyan('Transfer Started At')}\t\t${formatDate(
       domain.transferStartedAt
     )}\n`
   );
   output.print(
-    `    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`
+    `    ${chalk.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`
+    `    ${chalk.cyan('Bought At')}\t\t\t${formatDate(domain.boughtAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('transferredAt')}\t${formatDate(domain.transferredAt)}\n`
+    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(domain.transferredAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`
+    `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`
+    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(domain.nsVerifiedAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
+    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
   );
-  output.print(`    ${chalk.cyan('cloudfareEnabled')}\t${domain.cdnEnabled}\n`);
+  output.print(`    ${chalk.cyan('Cloudfare Enabled')}\t\t${domain.cdnEnabled}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
