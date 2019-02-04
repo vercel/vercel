@@ -37,7 +37,7 @@ export default async function login(
     }
 
     if (error.code === 'invalid_email') {
-      throw new InvalidEmail(email);
+      throw new InvalidEmail(email, error.message);
     }
 
     throw new Error(`Unexpected error: ${error.message}`)

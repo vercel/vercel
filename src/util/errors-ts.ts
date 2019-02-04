@@ -789,10 +789,10 @@ export class DomainConflict extends NowError<
 }
 
 export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
-  constructor(email: string) {
+  constructor(email: string, message: string = 'Invalid Email') {
     super({
       code: 'INVALID_EMAIL',
-      message: 'Your email address is invalid. Please try a different email provider or GitHub sign up.',
+      message,
       meta: { email },
     });
   }
