@@ -787,3 +787,13 @@ export class DomainConflict extends NowError<
     });
   }
 }
+
+export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
+  constructor(email: string, message: string = 'Invalid Email') {
+    super({
+      code: 'INVALID_EMAIL',
+      message,
+      meta: { email },
+    });
+  }
+}
