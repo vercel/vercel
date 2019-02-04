@@ -787,3 +787,13 @@ export class DomainConflict extends NowError<
     });
   }
 }
+
+export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
+  constructor(email: string) {
+    super({
+      code: 'INVALID_EMAIL',
+      message: 'Your email address is invalid. Please try a different email provider or GitHub sign up.',
+      meta: { email },
+    });
+  }
+}
