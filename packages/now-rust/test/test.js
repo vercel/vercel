@@ -1,26 +1,21 @@
-/* global afterAll, beforeAll, describe, expect, it, jest */
-const fs = require('fs');
-const inferCargoBinaries = require('../inferCargoBinaries');
+/* global beforeEach, describe, expect, it, jest */
 
-const { exists, readdir, stat } = fs;
-const isDir = fs.Stats.prototype.isDirectory;
+let inferCargoBinaries;
 
-beforeAll(() => {
-  fs.exists = jest.fn((p, cb) => cb(null, false));
-});
-
-afterAll(() => {
-  fs.readdir = readdir;
-  fs.stat = stat;
-  fs.Stats.prototype.isDirectory = isDir;
-  fs.exists = exists;
+beforeEach(() => {
+  jest.resetAllMocks();
+  jest.resetModules();
 });
 
 // src/
 // |- main.rs
 describe('one binary, src/main.rs', async () => {
-  beforeAll(() => {
-    fs.readdir = jest.fn((p, cb) => cb(null, ['main.rs']));
+  beforeEach(() => {
+    jest.mock('fs-extra', () => Object.assign(jest.genMockFromModule('fs-extra'), {
+      readdir: jest.fn(async () => ['main.rs']),
+      exists: jest.fn(async p => p.endsWith('main.rs')),
+    }));
+    inferCargoBinaries = require('../inferCargoBinaries');
   });
 
   it('infers only one binary', async () => {
@@ -29,7 +24,9 @@ describe('one binary, src/main.rs', async () => {
         name: 'foo',
       },
     };
-    expect(inferCargoBinaries(toml, '/path/to/src')).resolves.toEqual(['foo']);
+    return expect(inferCargoBinaries(toml, '/path/to/src')).resolves.toEqual([
+      'foo',
+    ]);
   });
 });
 
@@ -40,8 +37,12 @@ describe('one binary, src/main.rs', async () => {
 // |- bar.rs
 // |- main.rs
 describe('two binaries, src/main.rs, src/bar.rs', async () => {
-  beforeAll(() => {
-    fs.readdir = jest.fn((p, cb) => cb(null, ['main.rs', 'bar.rs']));
+  beforeEach(() => {
+    jest.mock('fs-extra', () => Object.assign(jest.genMockFromModule('fs-extra'), {
+      readdir: jest.fn(async () => ['main.rs', 'bar.rs']),
+      exists: jest.fn(async p => p.endsWith('main.rs')),
+    }));
+    inferCargoBinaries = require('../inferCargoBinaries');
   });
 
   it('infers two binaries', async () => {
@@ -51,10 +52,9 @@ describe('two binaries, src/main.rs, src/bar.rs', async () => {
       },
       bin: [{ name: 'bar', path: 'src/bar.rs' }],
     };
-    expect((await inferCargoBinaries(toml, '/path/to/src')).sort()).toEqual([
-      'bar',
-      'foo',
-    ]);
+    return expect(
+      (await inferCargoBinaries(toml, '/path/to/src')).sort(),
+    ).toEqual(['bar', 'foo']);
   });
 });
 
@@ -62,8 +62,11 @@ describe('two binaries, src/main.rs, src/bar.rs', async () => {
 // src/
 // |- foo.rs
 describe('one named binary, no main.rs', async () => {
-  beforeAll(() => {
-    fs.readdir = jest.fn((p, cb) => cb(null, ['bar.rs']));
+  beforeEach(() => {
+    jest.mock('fs-extra', () => Object.assign(jest.genMockFromModule('fs-extra'), {
+      readdir: jest.fn(async () => ['bar.rs']),
+    }));
+    inferCargoBinaries = require('../inferCargoBinaries');
   });
 
   it('infers only one binary', async () => {
@@ -73,9 +76,9 @@ describe('one named binary, no main.rs', async () => {
       },
       bin: [{ name: 'bar', path: 'src/bar.rs' }],
     };
-    expect((await inferCargoBinaries(toml, '/path/to/src')).sort()).toEqual([
-      'bar',
-    ]);
+    return expect(
+      (await inferCargoBinaries(toml, '/path/to/src')).sort(),
+    ).toEqual(['bar']);
   });
 });
 
@@ -86,20 +89,24 @@ describe('one named binary, no main.rs', async () => {
 // |  |- baz.rs
 // |- main.rs
 describe('multiple binaries in bin/, no [[bin]] section', async () => {
-  beforeAll(() => {
-    fs.readdir = jest.fn((p, cb) => {
-      if (p === '/path/to/src') {
-        return cb(null, ['bin', 'main.rs']);
-      }
-      if (p === '/path/to/src/bin') {
-        return cb(null, ['bar.rs', 'baz.rs']);
-      }
+  beforeEach(() => {
+    jest.mock('fs-extra', () => Object.assign(jest.genMockFromModule('fs-extra'), {
+      readdir: jest.fn(async (p) => {
+        if (p === '/path/to/src') {
+          return ['bin', 'main.rs'];
+        }
+        if (p === '/path/to/src/bin') {
+          return ['bar.rs', 'baz.rs'];
+        }
 
-      return cb('some error');
-    });
-    fs.exists = jest.fn((p, cb) => cb(null, p.endsWith('bin')));
-    fs.stat = jest.fn((_, cb) => cb(null, new fs.Stats()));
-    fs.Stats.prototype.isDirectory = jest.fn(() => true);
+        throw new Error('some error');
+      }),
+      exists: jest.fn(async p => p.endsWith('bin') || p.endsWith('main.rs')),
+      stat: jest.fn(async () => ({
+        isDirectory: () => true,
+      })),
+    }));
+    inferCargoBinaries = require('../inferCargoBinaries');
   });
 
   it('infers three binaries', async () => {
@@ -123,20 +130,24 @@ describe('multiple binaries in bin/, no [[bin]] section', async () => {
 // |  |- baz.rs
 // |- main.rs
 describe('src/bin exists but one binary is ignored', async () => {
-  beforeAll(() => {
-    fs.readdir = jest.fn((p, cb) => {
-      if (p === '/path/to/src') {
-        return cb(null, ['bin', 'main.rs']);
-      }
-      if (p === '/path/to/src/bin') {
-        return cb(null, ['bar.rs', 'baz.rs']);
-      }
+  beforeEach(() => {
+    jest.mock('fs-extra', () => Object.assign(jest.genMockFromModule('fs-extra'), {
+      readdir: jest.fn(async (p) => {
+        if (p === '/path/to/src') {
+          return ['bin', 'main.rs'];
+        }
+        if (p === '/path/to/src/bin') {
+          return ['bar.rs', 'baz.rs'];
+        }
 
-      return cb('some error');
-    });
-    fs.exists = jest.fn((p, cb) => cb(null, p.endsWith('bin')));
-    fs.stat = jest.fn((_, cb) => cb(null, new fs.Stats()));
-    fs.Stats.prototype.isDirectory = jest.fn(() => true);
+        throw new Error('some error');
+      }),
+      exists: jest.fn(async p => p.endsWith('bin') || p.endsWith('main.rs')),
+      stat: jest.fn(async () => ({
+        isDirectory: () => true,
+      })),
+    }));
+    inferCargoBinaries = require('../inferCargoBinaries');
   });
 
   it('infers only one binary', async () => {

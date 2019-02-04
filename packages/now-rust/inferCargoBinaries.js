@@ -1,46 +1,10 @@
-const fs = require('fs');
+const { exists, readdir, stat } = require('fs-extra');
 const path = require('path');
-
-function readdir(dir) {
-  return new Promise((resolve, reject) => {
-    fs.readdir(dir, (err, files) => {
-      if (err != null) {
-        return reject(err);
-      }
-
-      return resolve(files);
-    });
-  });
-}
-
-function exists(p) {
-  return new Promise((resolve, reject) => {
-    fs.exists(p, (err, res) => {
-      if (err != null) {
-        return reject(err);
-      }
-
-      return resolve(res);
-    });
-  });
-}
-
-function stat(p) {
-  return new Promise((resolve, reject) => {
-    fs.stat(p, (err, stats) => {
-      if (err != null) {
-        return reject(err);
-      }
-
-      return resolve(stats);
-    });
-  });
-}
 
 async function inferCargoBinaries(cargoToml, srcDir) {
   const { package: pkg, bin } = cargoToml;
   const binaries = [];
-  const hasMain = (await readdir(srcDir)).includes('main.rs');
+  const hasMain = await exists(path.join(srcDir, 'main.rs'));
 
   if (hasMain) {
     binaries.push(pkg.name);

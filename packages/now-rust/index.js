@@ -1,9 +1,8 @@
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const concat = require('concat-stream');
 const execa = require('execa');
 const toml = require('toml');
-const rimraf = require('rimraf');
 const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
 const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
 const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
@@ -54,10 +53,10 @@ exports.build = async ({ files, entrypoint, workPath }) => {
     throw err;
   }
 
-  const targetPath = path.join(workPath, 'target', 'release');
+  const targetPath = path.join(entrypointDirname, 'target', 'release');
   const binaries = await inferCargoBinaries(
     cargoToml,
-    path.join(workPath, 'src'),
+    path.join(entrypointDirname, 'src'),
   );
 
   const lambdas = {};
@@ -79,12 +78,21 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   return lambdas;
 };
 
-exports.prepareCache = async ({ cachePath, workPath }) => {
+exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
   console.log('preparing cache...');
-  rimraf.sync(path.join(cachePath, 'target'));
-  fs.renameSync(path.join(workPath, 'target'), path.join(cachePath, 'target'));
+  const entrypointDirname = path.dirname(path.join(workPath, entrypoint));
+  const cacheEntrypointDirname = path.dirname(path.join(cachePath, entrypoint));
+
+  // Remove the target folder to avoid 'directory already exists' errors
+  fs.removeSync(path.join(cacheEntrypointDirname, 'target'));
+  fs.mkdirpSync(cacheEntrypointDirname);
+  // Move the target folder to the cache location
+  fs.renameSync(
+    path.join(entrypointDirname, 'target'),
+    path.join(cacheEntrypointDirname, 'target'),
+  );
 
   return {
-    ...(await glob('target/**', path.join(cachePath))),
+    ...(await glob('**/**', path.join(cachePath))),
   };
 };

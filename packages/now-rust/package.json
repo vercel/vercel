@@ -15,8 +15,8 @@
   "dependencies": {
     "concat-stream": "^2.0.0",
     "execa": "^1.0.0",
+    "fs-extra": "^7.0.1",
     "node-fetch": "^2.3.0",
-    "rimraf": "^2.6.3",
     "tar": "^4.4.8",
     "toml": "^2.3.3"
   }
