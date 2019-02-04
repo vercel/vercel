@@ -18,9 +18,10 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    add   [details]    Add a new DNS entry (see below for examples)
-    rm    [id]         Remove a DNS entry using its ID
-    ls    [domain]     List all DNS entries for a domain
+    add     [details]             Add a new DNS entry (see below for examples)
+    import  [domain] [zonefile]   Import a DNS zone file (see below for examples)
+    rm      [id]                  Remove a DNS entry using its ID
+    ls      [domain]              List all DNS entries for a domain
 
   ${chalk.dim('Options:')}
 
@@ -67,10 +68,8 @@ const help = () => {
 
   ${chalk.gray('–')} Import a Zone file
 
-      ${chalk.cyan(
-        '$ now dns import <DOMAIN> <FILE>'
-      )}
-      ${chalk.cyan(`$ now dns add zeit.rocks '@' SRV 10 0 389 zeit.party`)}
+      ${chalk.cyan('$ now dns import <DOMAIN> <FILE>')}
+      ${chalk.cyan(`$ now dns import zeit.rocks ./zonefile.txt`)}
 
 
 `);
