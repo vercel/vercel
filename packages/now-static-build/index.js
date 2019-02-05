@@ -12,7 +12,7 @@ function validateDistDir(distDir) {
   const distDirName = path.basename(distDir);
   if (!existsSync(distDir)) {
     const message = `Build was unable to create the distDir: ${distDirName}.`
-      + 'Make sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#configuring-the-dist-directory';
+      + '\nMake sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#configuring-the-dist-directory';
     throw new Error(message);
   }
 }
