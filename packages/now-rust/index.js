@@ -60,6 +60,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   );
 
   const lambdas = {};
+  const lambdaPath = path.dirname(entrypoint);
   await Promise.all(
     binaries.map(async (binary) => {
       const fsPath = path.join(targetPath, binary);
@@ -71,7 +72,7 @@ exports.build = async ({ files, entrypoint, workPath }) => {
         runtime: 'provided',
       });
 
-      lambdas[binary] = lambda;
+      lambdas[path.join(lambdaPath, binary)] = lambda;
     }),
   );
 
