@@ -1,6 +1,6 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@now/static-build@0.4.18-canary.1", "config": {"distDir": "out"} }
+    { "src": "package.json", "use": "@now/static-build", "config": {"distDir": "out"} }
   ]
 }
