@@ -18,8 +18,8 @@ async function nowDeploy (bodies, randomness) {
 
   const nowDeployPayload = {
     version: 2,
-    env: Object.assign({}, nowJson.env, { RANDOMNESS_ENV_VAR: randomness }),
-    build: { env: Object.assign({}, (nowJson.build || {}).env, { RANDOMNESS_BUILD_ENV_VAR: randomness }) },
+    env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
+    build: { env: { ...(nowJson.build || {}).env, RANDOMNESS_BUILD_ENV_VAR: randomness } },
     name: 'test',
     files,
     builds: nowJson.builds,
