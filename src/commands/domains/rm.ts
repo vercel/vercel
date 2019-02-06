@@ -17,6 +17,8 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
 import * as ERRORS from '../../util/errors-ts';
+import checkTransfer from '../../util/domains/check-transfer';
+import param from '../../util/output/param';
 
 type Options = {
   '--debug': boolean;
@@ -81,6 +83,16 @@ export default async function rm(
       )}`
     );
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    return 1;
+  }
+
+  const { status } = await checkTransfer(client, domain.name);
+  if (status === 'pending_registry' || status === 'pending_admin') {
+    output.error(
+      `${param(
+        domain.name
+      )} transfer should be declined or approved before removing.`
+    );
     return 1;
   }
 
