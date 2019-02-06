@@ -116,6 +116,13 @@ export default async function transferIn(
     return 1;
   }
 
+  if (transferInResult instanceof ERRORS.SourceNotFound) {
+    output.error(
+      `Could not purchase domain. Please add a payment method using ${cmd('now billing add')}.`
+    );
+    return 1;
+  }
+
   console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} transfer started ${transferStamp()}`);
   output.print(`  To finalize the transfer, we are waiting for approval from your current registrar.\n`);
   output.print(`  You will receive an email upon completion.\n`);
