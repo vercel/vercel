@@ -1,8 +1,17 @@
 import Client from '../client';
 
+type Status =
+  | 'pending_owner'
+  | 'pending_admin'
+  | 'pending_registry'
+  | 'completed'
+  | 'cancelled'
+  | 'undef'
+  | 'unknown';
+
 type Response = {
   transferable: boolean;
-  status: string;
+  status: Status;
   reason: string;
 };
 
