@@ -431,10 +431,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.3.tgz#b50071e6d37848205e5cf81b4ca2c347ae6ec8ca"
   integrity sha512-tO000RCJxEbRBhQpWEaTF+aAIkMRSuQVnC1g7Y1l/duhxjp6CotepHcUerQBFa5lgjVesh/zlblq2t1GvfAEbQ==
 
-"@zeit/fun@0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.0.3.tgz#69404ef8a27aa4d9ca11e8b067d776ae831be1fb"
-  integrity sha512-bAwW8kUNy2osSIHejLYyAPsqTFwrRGMNGOMRzu9dKgjyi4k05GCx9wr1kHx7pxqeTca+3mJDah2wOqq0awST7A==
+"@zeit/fun@0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.0.4.tgz#2cab42c90601adec9e3a65e7f693e24de51ce02e"
+  integrity sha512-FyciZTJcb95qDhSwh4FYR+9ZbfOJx1knJ5CPydtl5qV7gdzg757NdHBC0w4FXpECwGnNEENrSc58rNl2LJ1DgA==
   dependencies:
     adm-zip "0.4.13"
     async-listen "1.0.0"
