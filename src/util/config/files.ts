@@ -68,8 +68,8 @@ export function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-export function readLocalConfig(prefix: string) {
-  const target = getLocalPathConfig(prefix || process.cwd());
+export function readLocalConfig(prefix: string = process.cwd()) {
+  const target = getLocalPathConfig(prefix);
   let localConfigExists;
 
   try {

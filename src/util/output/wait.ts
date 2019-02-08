@@ -2,7 +2,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import eraseLines from './erase-lines';
 
-export default function wait(msg: string, timeout: number = 300, _ora = ora) {
+export default function wait(msg: string, timeout: number = 300) {
   let spinner: ReturnType<typeof ora>;
   let running = false;
   let stopped = false;
@@ -12,7 +12,7 @@ export default function wait(msg: string, timeout: number = 300, _ora = ora) {
       return null;
     }
 
-    spinner = _ora(chalk.gray(msg));
+    spinner = ora(chalk.gray(msg));
     spinner.color = 'gray';
     spinner.start();
     running = true;

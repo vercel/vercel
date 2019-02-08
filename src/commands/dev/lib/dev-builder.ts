@@ -27,17 +27,17 @@ const buildUserProject = async (
   devServer: DevServer
 ) => {
   try {
-    devServer.setStatusBusy('installing builders');
+    devServer.setStatusBusy('Installing builders');
     await installBuilders(buildsConfig);
 
-    devServer.setStatusBusy('building lambdas');
+    devServer.setStatusBusy('Building lambdas');
     const assets = await buildLambdas(buildsConfig, devServer);
 
     devServer.setStatusIdle();
     return assets;
   } catch (err) {
     devServer.setStatusIdle();
-    throw new Error('Build failed.');
+    throw err;
   }
 };
 
@@ -54,11 +54,11 @@ const installBuilders = async (buildsConfig: BuildConfig[]) => {
   }
 };
 
-const buildLambdas = async (
+async function buildLambdas(
   buildsConfig: BuildConfig[],
   devServer: DevServer
-) => {
-  const cwd = devServer.cwd;
+) {
+  const {cwd} = devServer;
   const files = await collectProjectFiles('**', cwd);
   let results = {};
 
@@ -77,16 +77,19 @@ const buildLambdas = async (
           files,
           entrypoint: path.relative(cwd, entry.fsPath),
           workPath: cwd,
-          config: build.config
+          config: build.config || {}
         });
         results = { ...results, ...output };
       }
     } catch (err) {
+      throw err;
+      /*
       throw new NowError({
         code: 'NOW_BUILDER_FAILURE',
         message: `Failed building ${chalk.bold(build.src)} with ${build.use}`,
         meta: err.stack
       });
+       */
     }
   }
 

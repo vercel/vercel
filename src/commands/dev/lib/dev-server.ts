@@ -3,9 +3,9 @@ import http from 'http';
 import chalk from 'chalk';
 import qs from 'querystring';
 import httpProxy from 'http-proxy';
+import * as listen from 'async-listen';
 import serveHandler from 'serve-handler';
-// @ts-ignore
-import { createFunction } from '../../../../../lambdas/lambda-dev/dist/src';
+import { createFunction } from '@zeit/fun';
 
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
@@ -33,7 +33,6 @@ export default class DevServer {
   public cwd: string;
 
   private debug: boolean;
-  private nodejsPreview = false;
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage = '';
@@ -41,52 +40,50 @@ export default class DevServer {
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
-    this.nodejsPreview = options.nodejsPreview;
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
   }
 
   /* use dev-server as a "console" for logs. */
-
-  logDebug = (...args: any[]) => {
+  logDebug(...args: any[]): void {
     if (this.debug) {
       console.log(chalk.yellowBright('> [debug]'), ...args);
     }
-  };
+  }
 
-  logError(str: string) {
+  logError(str: string): void {
     console.log(error(str));
   }
 
-  logSuccess(str: string) {
+  logSuccess(str: string): void {
     console.log(success(str));
   }
 
-  logHttp(msg = '') {
+  logHttp(msg: string): void {
     console.log(`  ${chalk.green('>>>')} ${msg}`);
   }
 
   /* set dev-server status */
 
-  setStatusIdle = () => {
+  setStatusIdle(): void {
     this.status = DevServerStatus.idle;
     this.statusMessage = '';
-  };
+  }
 
-  setStatusBusy = (msg = '') => {
+  setStatusBusy(msg: string): void {
     this.status = DevServerStatus.busy;
     this.statusMessage = msg;
-  };
+  }
 
-  setStatusError = (msg: string) => {
+  setStatusError(msg: string): void {
     this.status = DevServerStatus.error;
     this.statusMessage = msg;
-  };
+  }
 
   /**
    * Launch dev-server
    */
-  start = async (port = 3000) => {
+  async start(port = 3000) {
     const nowJson = readLocalConfig(this.cwd);
 
     return new Promise((resolve, reject) => {
@@ -94,21 +91,21 @@ export default class DevServer {
 
       this.server.listen(port, async () => {
         this.logSuccess(
-          `dev server listning on port ${chalk.bold(String(port))}`
+          `Dev server listening on port ${chalk.bold(String(port))}`
         );
 
         // Initial build. Not meant to invoke, but for speed up further builds.
-        if (nowJson && nowJson.builds && !this.nodejsPreview) {
-          this.logDebug(`Initial build`);
-          await buildUserProject(nowJson.builds, this);
-          this.logSuccess('Initial build ready');
-        }
+        //if (nowJson && Array.isArray(nowJson.builds)) {
+        //  this.logDebug('Initial build');
+        //  await buildUserProject(nowJson.builds, this);
+        //  this.logSuccess('Initial build ready');
+        //}
 
         this.setStatusIdle();
         resolve();
       });
     });
-  };
+  }
 
   /**
    * dev-server http handler
@@ -118,11 +115,7 @@ export default class DevServer {
       return res.end(`[busy] ${this.statusMessage}...`);
     }
 
-    if (req.url === '/favicon.ico') {
-      return serveStaticFile(req, res, this.cwd);
-    }
-
-    this.logHttp(req.url);
+    this.logHttp(`${req.method} ${req.url}`);
 
     try {
       const nowJson = readLocalConfig(this.cwd);
@@ -200,8 +193,7 @@ export default class DevServer {
     }
 
     if (!nowJson.builds) {
-      this.logDebug('No matched route and no build config.');
-      return res.end();
+      return serveStaticFile(req, res, cwd);
     }
 
     /**
@@ -256,7 +248,7 @@ export default class DevServer {
     // find asset responsible for dest
     const asset = resolveDest(assets, dest);
 
-    if (asset === undefined) {
+    if (!asset) {
       res.writeHead(404);
       return res.end();
     }
@@ -267,27 +259,28 @@ export default class DevServer {
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
+        console.error('lambda', { asset });
+
         const fn = await createFunction({
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
-          Environment: asset.environment
+          Environment: {
+            Variables: { ...asset.environment }
+          }
         });
 
-        // const invoked = await fn({
-        //   InvocationType: 'RequestResponse',
-        //   Payload: JSON.stringify({
-        //     method: req.method,
-        //     path: req.url,
-        //     headers: req.headers,
-        //     encoding: 'base64',
-        //     body: 'eyJlaXlvIjp0cnVlfQ=='
-        //   })
-        // });
+        const invoked = await fn({
+          method: req.method,
+          path: req.url,
+          headers: req.headers,
+          encoding: 'base64',
+          body: 'eyJlaXlvIjp0cnVlfQ=='
+        });
 
         // TODO: go on here after error resolved.
-        console.log(777, uri_args, fn);
-        return res.end(`TODO: invoke ${fn}`);
+        console.log({ invoked });
+        return res.end(`TODO: send invoke ${asset.handler} result`);
 
       default:
         res.writeHead(500);

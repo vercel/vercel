@@ -52,13 +52,13 @@ export default async function main(ctx: NowContext) {
 
   if (argv._.length > 3) {
     output.error('Too much arguments.');
-    return 1;
+    return 2;
   }
 
   try {
     return await dev(ctx, argv, args, output);
   } catch (err) {
-    console.log(error(err.message));
+    console.error(error(err.message));
     output.debug(stringifyError(err));
     return 1;
   }
