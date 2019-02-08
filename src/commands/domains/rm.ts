@@ -153,7 +153,7 @@ async function removeDomain(
     }
 
     output.log(
-      `We found conflicts when attempting to delete ${param(domain.name)}.`
+      `We found conflicts when attempting to remove ${param(domain.name)}.`
     );
 
     if (aliases.length > 0) {
