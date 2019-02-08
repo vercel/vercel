@@ -8,7 +8,6 @@
     "lib": ["esnext"],
     "resolveJsonModule": true,
     "sourceMap": true,
-    "declaration": true,
     "typeRoots": [
       "./@types"
     ]
