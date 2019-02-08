@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import ignore from 'ignore';
+import ignore, { Ignore } from '@zeit/dockerignore';
 
 import wait from '../../../util/output/wait';
 import glob from '@now/build-utils/fs/glob';
@@ -117,7 +117,7 @@ async function collectProjectFiles(pattern: string, cwd: string) {
 /**
  * Create ignore list according .gitignore & .nowignore in cwd
  */
-function createIgnoreList(cwd: string) {
+function createIgnoreList(cwd: string): Ignore {
   const ig = ignore();
 
   const gitignore = path.join(cwd, '.gitignore');
