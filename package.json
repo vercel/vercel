@@ -136,7 +136,7 @@
     "@types/text-table": "0.2.0",
     "@typescript-eslint/parser": "1.1.0",
     "@zeit/dockerignore": "0.0.4",
-    "@zeit/fun": "0.0.4",
+    "@zeit/fun": "http://zeit-fun-0.0.5.zeit.sh",
     "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.8.1",
     "@zeit/source-map-support": "0.6.2",
