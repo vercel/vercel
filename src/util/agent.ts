@@ -6,7 +6,6 @@ import { JsonBody, StreamBody, context } from 'fetch-h2';
 import { parse } from 'url';
 import Sema from 'async-sema';
 import createOutput, { Output } from './output/create-output';
-import isAbsoluteURL from './is-absolute-url';
 
 const MAX_REQUESTS_PER_CONNECTION = 1000;
 
@@ -110,14 +109,12 @@ export default class NowAgent {
     currentContext = this._currContext;
 
     debug(
-      `Total requests made on socket #${this._contexts.length}: ${
-        this._currContext.fetchesMade
-      }`
+      `Total requests made on socket #${this._contexts.length}: ${this
+        ._currContext.fetchesMade}`
     );
     debug(
-      `Concurrent requests on socket #${this._contexts.length}: ${
-        this._currContext.ongoingFetches
-      }`
+      `Concurrent requests on socket #${this._contexts.length}: ${this
+        ._currContext.ongoingFetches}`
     );
 
     if (!this._agent) {
@@ -158,9 +155,8 @@ export default class NowAgent {
       return res;
     };
 
-    const url = isAbsoluteURL(path) ? path : this._url + path;
     return currentContext
-      .fetch(url, { ...opts, body })
+      .fetch(this._url + path, { ...opts, body })
       .then(res => handleCompleted(res))
       .catch((err: Error) => {
         handleCompleted(null);

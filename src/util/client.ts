@@ -6,7 +6,6 @@ import createOutput, { Output } from './output/create-output';
 import Agent, { AgentFetchOptions } from './agent';
 import responseError from './response-error';
 import ua from './ua';
-import isAbsoluteURL from './is-absolute-url';
 
 export type FetchOptions = {
   body?: NodeJS.ReadableStream | object | string;
@@ -89,9 +88,9 @@ export default class Client extends EventEmitter {
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
-      `${opts.method || 'GET'} ${
-        isAbsoluteURL(_url) ? _url : `${this._apiUrl}${_url}`
-      } ${JSON.stringify(opts.body) || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
+        opts.body
+      ) || ''}`,
       this._agent.fetch(_url, opts as AgentFetchOptions)
     );
   }
