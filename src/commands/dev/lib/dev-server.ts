@@ -196,49 +196,6 @@ export default class DevServer {
       return serveStaticFile(req, res, cwd);
     }
 
-    /**
-     * Temp workround for preview now-dev on nodejs projects
-     * TO BE REMOVED IN RELEASE
-     */
-    if (this.nodejsPreview) {
-      try {
-        const files = await collectProjectFiles('**', cwd);
-        const source = resolveDest(files, dest) as FileFsRef;
-
-        if (source && fs.existsSync(source.fsPath)) {
-          if (/\.js$/.test(source.fsPath)) {
-            const query = qs.stringify(uri_args);
-
-            if (query) {
-              req.url = dest + '?' + query;
-            }
-
-            // Try clear require.cache
-            // Object.values(files).forEach(file => {
-            //   if (/\.js$/.test(file.fsPath)) {
-            //     delete require.cache[file.fsPath];
-            //   }
-            // });
-
-            this.logDebug('[nodejs preview] invoke', source.fsPath);
-            return require(source.fsPath)(req, res);
-          }
-
-          this.logDebug('[nodejs preview] serve', req.url);
-          return serveStaticFile(req, res, cwd);
-        }
-
-        this.logDebug('[nodejs preview] serve', req.url);
-        return serveStaticFile(req, res, cwd);
-      } catch (err) {
-        this.logError(err.message);
-        this.logDebug(err.stack);
-
-        res.writeHead(500);
-        return res.end();
-      }
-    }
-
     // build source files to assets
     this.logDebug('Start builders', nowJson.builds);
     const assets = await buildUserProject(nowJson.builds, this);
