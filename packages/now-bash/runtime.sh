@@ -52,7 +52,7 @@ _lambda_runtime_next() {
 	# Need to use a fifo here instead of bash <() because Lambda
 	# errors with "/dev/fd/63 not found" for some reason :/
 	local stdin
-	stdin="$(mktemp --dry-run)"
+	stdin="$(mktemp -u)"
 	mkfifo "$stdin"
 	_lambda_runtime_body "$event" > "$stdin" &
 
