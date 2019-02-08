@@ -8,7 +8,7 @@ export default async function setCustomSuffix(
   suffix: string | null
 ) {
   try {
-    return await client.fetch(`https://api-custom-suffix.zeit.sh/v1`, {
+    return await client.fetch(`/v1/custom-suffix`, {
       method: 'PATCH',
       body: {
         suffix
