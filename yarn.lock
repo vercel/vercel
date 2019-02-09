@@ -409,6 +409,22 @@
   resolved "https://registry.yarnpkg.com/@types/write-json-file/-/write-json-file-2.2.1.tgz#74155aaccbb0d532be21f9d66bebc4ea875a5a62"
   integrity sha512-JdO/UpPm9RrtQBNVcZdt3M7j3mHO/kXaea9LBGx3UgWJd1f9BkIWP7jObLBG6ZtRyqp7KzLFEsaPhWcidVittA==
 
+"@types/yauzl-promise@2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@types/yauzl-promise/-/yauzl-promise-2.1.0.tgz#a813ca317cd897f286fdfefb9b202463d315313a"
+  integrity sha512-7PkQ5UtElDsanzjdUQzXnstCqxx6KAOTMURuHwOuqC6YO2WaYQ6ItLnLy3TiEVNQMO/pD+QSOcfnAkeSX4hsTA==
+  dependencies:
+    "@types/events" "*"
+    "@types/node" "*"
+    "@types/yauzl" "*"
+
+"@types/yauzl@*":
+  version "2.9.1"
+  resolved "https://registry.yarnpkg.com/@types/yauzl/-/yauzl-2.9.1.tgz#d10f69f9f522eef3cf98e30afb684a1e1ec923af"
+  integrity sha512-A1b8SU4D10uoPjwb0lnHmmu8wZhR9d+9o2PKBQT2jU5YPTKsxac6M2qGAdY7VcL+dHHhARVUDmeg0rOrcd9EjA==
+  dependencies:
+    "@types/node" "*"
+
 "@typescript-eslint/parser@1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/parser/-/parser-1.1.0.tgz#cce0e0951e6543d6ab7ef87a3e020335bf8c5999"
@@ -431,11 +447,11 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@http://zeit-fun-0.0.5.zeit.sh":
-  version "0.0.5"
-  resolved "http://zeit-fun-0.0.5.zeit.sh#1e42ef74143703c310739d7d208f087c3c28896c"
+"@zeit/fun@http://zeit-fun-0.0.6.zeit.sh":
+  version "0.0.6"
+  resolved "http://zeit-fun-0.0.6.zeit.sh#1d3e314bacd9ce830cd43838fe4248ba3045893b"
   dependencies:
-    adm-zip "0.4.13"
+    "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
     cachedir "2.1.0"
     debug "4.1.1"
@@ -445,10 +461,14 @@
     micro "9.3.3"
     node-fetch "2.3.0"
     path-match "1.2.4"
+    promisepipe "3.0.0"
+    stat-mode "0.2.2"
+    stream-to-promise "2.2.0"
     tar "4.4.8"
     uid-promise "1.0.0"
     util.promisify "1.0.0"
     uuid "3.3.2"
+    yauzl-promise "2.1.3"
 
 "@zeit/git-hooks@0.1.4":
   version "0.1.4"
@@ -481,11 +501,6 @@ acorn@^6.0.2:
   version "6.1.0"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-6.1.0.tgz#b0a3be31752c97a0f7013c5f4903b71a05db6818"
   integrity sha512-MW/FjM+IvU9CgBzjO3UIPCE2pyEwUsoFl+VGdczOPEdxfGFjuKny/gN54mOuX7Qxmb9Rg9MCn2oKiSUeW+pjrw==
-
-adm-zip@0.4.13:
-  version "0.4.13"
-  resolved "https://registry.yarnpkg.com/adm-zip/-/adm-zip-0.4.13.tgz#597e2f8cc3672151e1307d3e95cddbc75672314a"
-  integrity sha512-fERNJX8sOXfel6qCBCMPvZLzENBEhZTzKqg6vrOW5pvoEaQuJhRU4ndTAh6lHOxn1I6jnz2NHra56ZODM751uw==
 
 agent-base@^4.1.0:
   version "4.2.1"
@@ -569,6 +584,11 @@ ansi-styles@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-1.0.0.tgz#cb102df1c56f5123eab8b67cd7b98027a0279178"
   integrity sha1-yxAt8cVvUSPquLZ817mAJ6AnkXg=
+
+any-promise@^1.1.0, any-promise@~1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
+  integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
 anymatch@^1.3.0:
   version "1.3.2"
@@ -2302,6 +2322,13 @@ end-of-stream@^1.0.0, end-of-stream@^1.1.0, end-of-stream@^1.4.1:
   dependencies:
     once "^1.4.0"
 
+end-of-stream@~1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.1.0.tgz#e9353258baa9108965efc41cb0ef8ade2f3cfb07"
+  integrity sha1-6TUyWLqpEIll78QcsO+K3i88+wc=
+  dependencies:
+    once "~1.3.0"
+
 epipebomb@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/epipebomb/-/epipebomb-1.0.0.tgz#57d1deda1d6bc81622b118a75fe6b5a7d34f6d88"
@@ -2616,6 +2643,11 @@ eventemitter3@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-3.1.0.tgz#090b4d6cdbd645ed10bf750d4b5407942d7ba163"
   integrity sha512-ivIvhpq/Y0uSjcHDcOIccjmYjGLcP09MFGE7ysAwkAvkXfpZlC985pH2/ui64DKazbTW/4kN3yqozUxlXzI6cA==
+
+events-intercept@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/events-intercept/-/events-intercept-2.0.0.tgz#adbf38681c5a4b2011c41ee41f61a34cba448897"
+  integrity sha1-rb84aBxaSyARxB7kH2GjTLpEiJc=
 
 execa@0.9.0:
   version "0.9.0"
@@ -5049,6 +5081,13 @@ once@^1.3.0, once@^1.3.1, once@^1.4.0:
   dependencies:
     wrappy "1"
 
+once@~1.3.0:
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/once/-/once-1.3.3.tgz#b2e261557ce4c314ec8304f3fa82663e4297ca20"
+  integrity sha1-suJhVXzkwxTsgwTz+oJmPkKXyiA=
+  dependencies:
+    wrappy "1"
+
 onetime@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/onetime/-/onetime-2.0.1.tgz#067428230fd67443b2794b22bba528b6867962d4"
@@ -5541,6 +5580,11 @@ progress@2.0.3, progress@^2.0.0, progress@~2.0.0:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
+
+promisepipe@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/promisepipe/-/promisepipe-3.0.0.tgz#c9b6e5aa861ef5fcce6134f6f75e14f8f30bd3b2"
+  integrity sha512-V6TbZDJ/ZswevgkDNpGt/YqNCiZP9ASfgU+p83uJE6NrGtvSGoOcHLiDCqkMs2+yg7F5qHdLV8d0aS8O26G/KA==
 
 prop-types@^15.6.2:
   version "15.6.2"
@@ -6337,6 +6381,11 @@ stack-utils@^1.0.1:
   resolved "https://registry.yarnpkg.com/stack-utils/-/stack-utils-1.0.2.tgz#33eba3897788558bebfc2db059dc158ec36cebb8"
   integrity sha512-MTX+MeG5U994cazkjd/9KNAapsHnibjMLnfXodlkXw76JEea0UiNzrqidzo1emMwk7w5Qhc9jd4Bn9TBb1MFwA==
 
+stat-mode@0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/stat-mode/-/stat-mode-0.2.2.tgz#e6c80b623123d7d80cf132ce538f346289072502"
+  integrity sha1-5sgLYjEj19gM8TLOU480YokHJQI=
+
 static-extend@^0.1.1:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/static-extend/-/static-extend-0.1.2.tgz#60809c39cbff55337226fd5e0b520f341f1fb5c6"
@@ -6356,6 +6405,22 @@ stream-meter@1.0.4:
   integrity sha1-Uq+Vql6nYKJJFxZwTb/5D3Ov3R0=
   dependencies:
     readable-stream "^2.1.4"
+
+stream-to-array@~2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/stream-to-array/-/stream-to-array-2.3.0.tgz#bbf6b39f5f43ec30bc71babcb37557acecf34353"
+  integrity sha1-u/azn19D7DC8cbq8s3VXrOzzQ1M=
+  dependencies:
+    any-promise "^1.1.0"
+
+stream-to-promise@2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/stream-to-promise/-/stream-to-promise-2.2.0.tgz#b1edb2e1c8cb11289d1b503c08d3f2aef51e650f"
+  integrity sha1-se2y4cjLESidG1A8CNPyrvUeZQ8=
+  dependencies:
+    any-promise "~1.3.0"
+    end-of-stream "~1.1.0"
+    stream-to-array "~2.3.0"
 
 string-width@^1.0.1:
   version "1.0.2"
@@ -7200,7 +7265,22 @@ yarn@1.13.0:
   resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.13.0.tgz#affa9c956739548024068532a902cf18c9cb523f"
   integrity sha512-Unfw2eefv8imt4ZMPhvFVP44WCz38huDxkHs+Yqrx4wBTK75Tr0mh3V4rh+2Nw5iQq0rcM/VafotCZo9qTb5DA==
 
-yauzl@^2.4.2:
+yauzl-clone@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/yauzl-clone/-/yauzl-clone-1.0.4.tgz#8bc6d293b17cc98802bbbed2e289d18e7697c96c"
+  integrity sha1-i8bSk7F8yYgCu77S4onRjnaXyWw=
+  dependencies:
+    events-intercept "^2.0.0"
+
+yauzl-promise@2.1.3:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/yauzl-promise/-/yauzl-promise-2.1.3.tgz#17467845db89fc6592ca987ca2ecfee8c381ae3d"
+  integrity sha1-F0Z4RduJ/GWSyph8ouz+6MOBrj0=
+  dependencies:
+    yauzl "^2.9.1"
+    yauzl-clone "^1.0.4"
+
+yauzl@^2.4.2, yauzl@^2.9.1:
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/yauzl/-/yauzl-2.10.0.tgz#c7eb17c93e112cb1086fa6d8e51fb0667b79a5f9"
   integrity sha1-x+sXyT4RLLEIb6bY5R+wZnt5pfk=
