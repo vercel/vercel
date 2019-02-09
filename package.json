@@ -15,7 +15,7 @@
     "publish-stable": "lerna version",
     "publish-canary": "lerna version prerelease --preid canary",
     "lint": "tsc && eslint .",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --verbose",
     "lint-staged": "lint-staged"
   },
   "pre-commit": "lint-staged",
