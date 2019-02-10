@@ -2,6 +2,7 @@ import fs from 'fs';
 import http from 'http';
 import chalk from 'chalk';
 import qs from 'querystring';
+import rawBody from 'raw-body';
 import httpProxy from 'http-proxy';
 import * as listen from 'async-listen';
 import serveHandler from 'serve-handler';
@@ -26,7 +27,9 @@ import {
   DevServerOptions,
   BuilderOutput,
   BuilderOutputs,
-  HttpHandler
+  HttpHandler,
+  InvokePayload,
+  InvokeResult
 } from './types';
 
 export default class DevServer {
@@ -216,29 +219,40 @@ export default class DevServer {
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
-        console.error('lambda', { asset });
+        // console.error('lambda', { asset });
+        const [fn, body] = await Promise.all([
+          createFunction({
+            Code: { ZipFile: asset.zipBuffer },
+            Handler: asset.handler,
+            Runtime: asset.runtime,
+            Environment: {
+              Variables: { ...asset.environment }
+            }
+          }),
+          rawBody(req)
+        ]);
 
-        const fn = await createFunction({
-          Code: { ZipFile: asset.zipBuffer },
-          Handler: asset.handler,
-          Runtime: asset.runtime,
-          Environment: {
-            Variables: { ...asset.environment }
-          }
-        });
-
-        const invoked = await fn({
-          method: req.method,
-          path: req.url,
+        const payload: InvokePayload = {
+          method: req.method || 'GET',
+          path: req.url || '/',
           headers: req.headers,
           encoding: 'base64',
-          body: 'eyJlaXlvIjp0cnVlfQ=='
-        });
+          body: body.toString('base64')
+        };
+        // console.error({ payload });
 
-        // TODO: go on here after error resolved.
-        console.log({ invoked });
-        return res.end(`TODO: send invoke ${asset.handler} result`);
-
+        const result = await fn(payload) as InvokeResult;
+        res.statusCode = result.statusCode;
+        for (const [name, value] of Object.entries(result.headers)) {
+          res.setHeader(name, value);
+        }
+        let resBody: Buffer | string | undefined;
+        if (result.encoding === 'base64' && typeof result.body === 'string') {
+          resBody = Buffer.from(result.body, 'base64');
+        } else {
+          resBody = result.body;
+        }
+        return res.end(resBody);
       default:
         res.writeHead(500);
         return res.end();

@@ -66,3 +66,18 @@ export interface RouteResult {
   // "matched_route_idx": <integer of the index of the route matched>
   matched_route_idx?: number;
 }
+
+export interface InvokePayload {
+  method: string;
+  path: string;
+  headers: http.IncomingHttpHeaders;
+  encoding?: string;
+  body?: string;
+}
+
+export interface InvokeResult {
+  statusCode: number;
+  headers: HttpHeadersConfig;
+  encoding?: string;
+  body?: string;
+}
