@@ -120,7 +120,7 @@ export default async function set(
   }
 
   if (targets instanceof ERRORS.NoAliasInConfig) {
-    output.error(`Couldn't find a an alias in config`);
+    output.error(`Couldn't find an alias in config`);
     return 1;
   }
 
