@@ -22,7 +22,7 @@ export default async function setCustomSuffix(
       return new ERRORS.DomainExternal(domain);
     }
     if (error.code === 'domain_invalid') {
-      return new ERRORS.DomainInvalid(domain);
+      return new ERRORS.InvalidDomain(domain);
     }
     if (error.code === 'domain_not_found') {
       return new ERRORS.DomainNotFound(domain);

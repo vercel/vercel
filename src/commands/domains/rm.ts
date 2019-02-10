@@ -108,18 +108,18 @@ async function removeDomain(
   const removeStamp = stamp();
   output.debug(`Removing domain`);
 
-  output.debug(`Removing aliases`);
   for (const id of aliasIds) {
+    output.debug(`Removing alias ${id}`);
     await removeAliasById(client, id);
   }
 
-  output.debug(`Removing certs`);
   for (const id of certIds) {
+    output.debug(`Removing cert ${id}`);
     await deleteCertById(output, client, id);
   }
 
-  output.debug(`Removing custom suffix`);
   if (suffix) {
+    output.debug(`Removing custom suffix`);
     await setCustomSuffix(client, contextName, domain.name, null);
   }
 
@@ -128,11 +128,13 @@ async function removeDomain(
     contextName,
     domain.name
   );
+
   if (removeResult instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
+
   if (removeResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -141,6 +143,7 @@ async function removeDomain(
     );
     return 1;
   }
+
   if (removeResult instanceof ERRORS.DomainRemovalConflict) {
     const { aliases, certs, suffix, transferring } = removeResult.meta;
     if (transferring) {
@@ -163,6 +166,7 @@ async function removeDomain(
         )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
       );
     }
+
     if (certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
@@ -170,6 +174,7 @@ async function removeDomain(
         )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
       );
     }
+
     if (suffix) {
       output.warn(
         `The ${chalk.bold(`custom suffix`)} associated with this domain.`

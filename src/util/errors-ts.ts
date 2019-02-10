@@ -131,19 +131,6 @@ export class DomainExternal extends NowError<
   }
 }
 
-export class DomainInvalid extends NowError<
-  'DOMAIN_INVALID',
-  { domain: string }
-> {
-  constructor(domain: string) {
-    super({
-      code: 'DOMAIN_INVALID',
-      meta: { domain },
-      message: `The domain ${domain} is invalid.`
-    });
-  }
-}
-
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
