@@ -274,7 +274,7 @@ const main = async argv_ => {
       console.error(
         error(
           `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
-            'No `token` property found inside'
+            'No `token` property found inside. Run `now login` to authorize.'
         )
       );
       return 1;
