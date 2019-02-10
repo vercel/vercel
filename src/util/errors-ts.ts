@@ -118,6 +118,19 @@ export class DomainPermissionDenied extends NowError<
   }
 }
 
+export class DomainExternal extends NowError<
+  'DOMAIN_EXTERNAL',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_EXTERNAL',
+      meta: { domain },
+      message: `The domain ${domain} must point to zeit.world.`
+    });
+  }
+}
+
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
@@ -158,6 +171,19 @@ export class DomainNotFound extends NowError<
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
       message: `The domain ${domain} can't be found.`
+    });
+  }
+}
+
+export class DomainNotVerified extends NowError<
+  'DOMAIN_NOT_VERIFIED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_VERIFIED',
+      meta: { domain },
+      message: `The domain ${domain} is not verified.`
     });
   }
 }
@@ -764,26 +790,42 @@ export class DNSPermissionDenied extends NowError<
   }
 }
 
-type DomainConflictCode =
-  | 'CONFLICT_ALIASES'
-  | 'CONFLICT_CERTS'
-  | 'CONFLICT_SUFFIX'
-  | 'CONFLICT_TRANSFER';
-
-export class DomainConflict extends NowError<
-  DomainConflictCode,
-  { domain: string; context: string }
+export class DomainRemovalConflict extends NowError<
+  'domain_removal_conflict',
+  { aliases: string[]; certs: string[]; suffix: boolean; transferring: boolean }
 > {
-  constructor(
-    code: DomainConflictCode,
-    domain: string,
-    context: string,
-    message: string
-  ) {
+  constructor({
+    aliases,
+    certs,
+    domain,
+    suffix,
+    transferring
+  }: {
+    aliases: string[];
+    certs: string[];
+    domain: string;
+    suffix: boolean;
+    transferring: boolean;
+  }) {
     super({
-      code,
-      meta: { domain, context },
-      message
+      code: 'domain_removal_conflict',
+      meta: {
+        aliases,
+        certs,
+        suffix,
+        transferring
+      },
+      message: `Conflicts should be resolved before attempting to remove ${domain}`
+    });
+  }
+}
+
+export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
+  constructor(email: string, message: string = 'Invalid Email') {
+    super({
+      code: 'INVALID_EMAIL',
+      message,
+      meta: { email }
     });
   }
 }
