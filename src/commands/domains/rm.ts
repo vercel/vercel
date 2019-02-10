@@ -1,15 +1,11 @@
-import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
-import table from 'text-table';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { NowContext, Domain, Alias, Cert } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
-import getDomainAliases from '../../util/alias/get-domain-aliases';
-import getCertsForDomain from '../../util/certs/get-certs-for-domain';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
@@ -17,8 +13,9 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
 import * as ERRORS from '../../util/errors-ts';
-import checkTransfer from '../../util/domains/check-transfer';
 import param from '../../util/output/param';
+import promptBool from '../../util/input/prompt-bool';
+import setCustomSuffix from '../../util/domains/set-custom-suffix';
 
 type Options = {
   '--debug': boolean;
@@ -86,50 +83,58 @@ export default async function rm(
     return 1;
   }
 
-  const { status } = await checkTransfer(client, domain.name);
-  if (status === 'pending_registry' || status === 'pending_admin') {
-    output.error(
-      `${param(
-        domain.name
-      )} transfer should be declined or approved before removing.`
-    );
-    return 1;
-  }
-
-  const aliases = await getDomainAliases(client, domain.name);
-  const certs = await getCertsForDomain(output, client, domain.name);
+  const skipConfirmation = opts['--yes'];
   if (
-    !opts['--yes'] &&
-    !(await confirmDomainRemove(output, domain, aliases, certs))
+    !skipConfirmation &&
+    !(await promptBool(`Are you sure you want to remove ${param(domainName)}?`))
   ) {
     output.log('Aborted');
     return 0;
   }
 
+  return removeDomain(output, client, contextName, skipConfirmation, domain);
+}
+
+async function removeDomain(
+  output: Output,
+  client: Client,
+  contextName: string,
+  skipConfirmation: boolean,
+  domain: Domain,
+  aliasIds: string[] = [],
+  certIds: string[] = [],
+  suffix: boolean = false
+): Promise<number> {
   const removeStamp = stamp();
-  output.debug(`Removing aliases`);
-  for (const alias of aliases) {
-    await removeAliasById(client, alias.uid);
-  }
-
-  output.debug(`Removing certs`);
-  for (const cert of certs) {
-    await deleteCertById(output, client, cert.uid);
-  }
-
   output.debug(`Removing domain`);
+
+  for (const id of aliasIds) {
+    output.debug(`Removing alias ${id}`);
+    await removeAliasById(client, id);
+  }
+
+  for (const id of certIds) {
+    output.debug(`Removing cert ${id}`);
+    await deleteCertById(output, client, id);
+  }
+
+  if (suffix) {
+    output.debug(`Removing custom suffix`);
+    await setCustomSuffix(client, contextName, domain.name, null);
+  }
+
   const removeResult = await removeDomainByName(
     client,
     contextName,
     domain.name
   );
+
   if (removeResult instanceof ERRORS.DomainNotFound) {
-    output.error(
-      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
-    );
+    output.error(`Domain not found under ${chalk.bold(contextName)}`);
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
+
   if (removeResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -138,36 +143,21 @@ export default async function rm(
     );
     return 1;
   }
-  if (removeResult instanceof ERRORS.DomainConflict) {
-    output.error(
-      `Under ${chalk.bold(removeResult.meta.context)}: ${removeResult.message}.`
+
+  if (removeResult instanceof ERRORS.DomainRemovalConflict) {
+    const { aliases, certs, suffix, transferring } = removeResult.meta;
+    if (transferring) {
+      output.error(
+        `${param(
+          domain.name
+        )} transfer should be declined or approved before removing.`
+      );
+      return 1;
+    }
+
+    output.log(
+      `We found conflicts when attempting to remove ${param(domain.name)}.`
     );
-    return 1;
-  }
-
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domain.name
-    )} removed ${removeStamp()}`
-  );
-  return 0;
-}
-
-async function confirmDomainRemove(
-  output: Output,
-  domain: Domain,
-  aliases: Alias[],
-  certs: Cert[]
-) {
-  return new Promise(resolve => {
-    const time = chalk.gray(`${ms(Date.now() - domain.createdAt)} ago`);
-    const tbl = table([[chalk.bold(domain.name), time]], {
-      align: ['r', 'l'],
-      hsep: ' '.repeat(6)
-    });
-
-    output.log(`The following domain will be removed permanently`);
-    output.print(`  ${tbl}\n`);
 
     if (aliases.length > 0) {
       output.warn(
@@ -185,19 +175,36 @@ async function confirmDomainRemove(
       );
     }
 
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    if (suffix) {
+      output.warn(
+        `The ${chalk.bold(`custom suffix`)} associated with this domain.`
+      );
+    }
+
+    if (
+      !skipConfirmation &&
+      !(await promptBool(`Remove conflicts associated with domain?`))
+    ) {
+      output.log('Aborted');
+      return 0;
+    }
+
+    return removeDomain(
+      output,
+      client,
+      contextName,
+      skipConfirmation,
+      domain,
+      aliases,
+      certs,
+      suffix
     );
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
-      })
-      .resume();
-  });
+  }
+
+  console.log(
+    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
+      domain.name
+    )} removed ${removeStamp()}`
+  );
+  return 0;
 }
