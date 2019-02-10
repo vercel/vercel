@@ -18,6 +18,10 @@ export default async function addDNSRecord(
     });
     return record;
   } catch (error) {
+    if (error.status === 400) {
+      return error;
+    }
+
     if (error.status === 403) {
       return new DNSPermissionDenied(domain);
     }
