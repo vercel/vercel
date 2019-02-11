@@ -241,7 +241,11 @@ export default class DevServer {
         };
         // console.error({ payload });
 
-        const result = await fn(payload) as InvokeResult;
+        const result = await fn({
+          Action: 'Invoke',
+          body: JSON.stringify(payload)
+        }) as InvokeResult;
+
         res.statusCode = result.statusCode;
         for (const [name, value] of Object.entries(result.headers)) {
           res.setHeader(name, value);
