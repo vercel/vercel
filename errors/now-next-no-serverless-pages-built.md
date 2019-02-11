@@ -8,10 +8,10 @@ This error occurs when you have your application is not configured for Serverles
 
 In order to create the smallest possible lambdas Next.js has to be configured to build for the `serverless` target.
 
-1. Serverless Next.js requires Next.js 8 or later, currently this version is out on the `canary` release channel: 
+1. Serverless Next.js requires Next.js 8 or later, to upgrade you can install the `latest` version:
 
 ```
-npm install next@canary
+npm install next --save
 ```
 
 2. Add the `now-build` script to your `package.json`
