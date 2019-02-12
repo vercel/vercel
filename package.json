@@ -18,8 +18,8 @@
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build-dev && cd link && npm link",
-    "build": "ncc build -m -s ./src",
-    "build-dev": "ncc build ./src",
+    "build": "./build.sh",
+    "build-dev": "DEV=1 ./build.sh",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
