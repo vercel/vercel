@@ -1,3 +1,4 @@
+use http;
 use lambda_runtime::error::LambdaErrorExt;
 use std::{error::Error, fmt};
 
@@ -19,9 +20,17 @@ impl fmt::Display for NowError {
         write!(f, "{}", self.msg)
     }
 }
+
 impl Error for NowError {}
+
 impl From<std::num::ParseIntError> for NowError {
     fn from(i: std::num::ParseIntError) -> Self {
+        NowError::new(&format!("{}", i))
+    }
+}
+
+impl From<http::Error> for NowError {
+    fn from(i: http::Error) -> Self {
         NowError::new(&format!("{}", i))
     }
 }

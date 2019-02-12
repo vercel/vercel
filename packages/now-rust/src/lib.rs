@@ -21,16 +21,16 @@ use crate::{
 pub type Request = http::Request<Body>;
 
 /// Functions acting as Now Lambda handlers must conform to this type.
-pub trait Handler<R> {
+pub trait Handler<R, B, E> {
     /// Method to execute the handler function
-    fn run(&mut self, event: Request) -> Result<R, NowError>;
+    fn run(&mut self, event: http::Request<B>) -> Result<R, E>;
 }
 
-impl<Function, R> Handler<R> for Function
+impl<Function, R, B, E> Handler<R, B, E> for Function
 where
-    Function: FnMut(Request) -> Result<R, NowError>,
+    Function: FnMut(http::Request<B>) -> Result<R, E>,
 {
-    fn run(&mut self, event: Request) -> Result<R, NowError> {
+    fn run(&mut self, event: http::Request<B>) -> Result<R, E> {
         (*self)(event)
     }
 }
@@ -43,8 +43,10 @@ where
 ///
 /// # Panics
 /// The function panics if the Lambda environment variables are not set.
-pub fn start<R>(f: impl Handler<R>, runtime: Option<TokioRuntime>)
+pub fn start<R, B, E>(f: impl Handler<R, B, E>, runtime: Option<TokioRuntime>)
 where
+    B: From<Body>,
+    E: Into<NowError>,
     R: IntoResponse,
 {
     // handler requires a mutable ref
@@ -56,8 +58,10 @@ where
             match parse_result {
                 Ok(req) => {
                     debug!("Deserialized Now proxy request successfully");
-                    func.run(req.into())
+                    let request: http::Request<Body> = req.into();
+                    func.run(request.map(|b| b.into()))
                         .map(|resp| NowResponse::from(resp.into_response()))
+                        .map_err(|e| e.into())
                 }
                 Err(e) => {
                     error!("Could not deserialize event body to NowRequest {}", e);

@@ -1,6 +1,6 @@
 //! Provides a Now Lambda oriented request and response body entity interface
 
-use std::{borrow::Cow, ops::Deref};
+use std::{borrow::Cow, ops::Deref, str};
 
 use base64::display::Base64Display;
 use serde::ser::{Error as SerError, Serialize, Serializer};
@@ -76,6 +76,12 @@ impl From<()> for Body {
     }
 }
 
+impl From<Body> for () {
+    fn from(_: Body) -> Self {
+        ()
+    }
+}
+
 impl<'a> From<&'a str> for Body {
     fn from(s: &'a str) -> Self {
         Body::Text(s.into())
@@ -85,6 +91,15 @@ impl<'a> From<&'a str> for Body {
 impl From<String> for Body {
     fn from(b: String) -> Self {
         Body::Text(b)
+    }
+}
+impl From<Body> for String {
+    fn from(b: Body) -> String {
+        match b {
+            Body::Empty => String::from(""),
+            Body::Text(t) => t,
+            Body::Binary(b) => str::from_utf8(&b).unwrap().to_owned(),
+        }
     }
 }
 
@@ -98,6 +113,13 @@ impl From<Cow<'static, str>> for Body {
     }
 }
 
+impl From<Body> for Cow<'static, str> {
+    #[inline]
+    fn from(b: Body) -> Cow<'static, str> {
+        Cow::Owned(String::from(b))
+    }
+}
+
 impl From<Cow<'static, [u8]>> for Body {
     #[inline]
     fn from(cow: Cow<'static, [u8]>) -> Body {
@@ -108,9 +130,26 @@ impl From<Cow<'static, [u8]>> for Body {
     }
 }
 
+impl From<Body> for Cow<'static, [u8]> {
+    #[inline]
+    fn from(b: Body) -> Self {
+        Cow::Owned(b.as_ref().to_owned())
+    }
+}
+
 impl From<Vec<u8>> for Body {
     fn from(b: Vec<u8>) -> Self {
         Body::Binary(b)
+    }
+}
+
+impl From<Body> for Vec<u8> {
+    fn from(b: Body) -> Self {
+        match b {
+            Body::Empty => "".as_bytes().to_owned(),
+            Body::Text(t) => t.into_bytes(),
+            Body::Binary(b) => b.to_owned(),
+        }
     }
 }
 

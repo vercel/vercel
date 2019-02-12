@@ -1,10 +1,8 @@
 use std::{borrow::Cow, fmt, mem};
 
 use http::{self, header::HeaderValue, HeaderMap, Method, Request as HttpRequest};
-use serde::de::{Deserialize, Deserializer, Error as DeError, MapAccess, Visitor};
+use serde::de::{Deserializer, Error as DeError, MapAccess, Visitor};
 use serde_derive::Deserialize;
-#[allow(unused_imports)]
-use serde_json::Value;
 
 use crate::body::Body;
 
@@ -87,18 +85,6 @@ where
     }
 
     deserializer.deserialize_map(HeaderVisitor)
-}
-
-/// deserializes (json) null values to their default values
-// https://github.com/serde-rs/serde/issues/1098
-#[allow(dead_code)]
-fn nullable_default<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Default + Deserialize<'de>,
-{
-    let opt = Option::deserialize(deserializer)?;
-    Ok(opt.unwrap_or_else(T::default))
 }
 
 impl<'a> From<NowRequest<'a>> for HttpRequest<Body> {
