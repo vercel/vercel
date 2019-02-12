@@ -475,10 +475,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/git-hooks/-/git-hooks-0.1.4.tgz#70583db5dd69726a62c7963520e67f2c3a33cc5f"
   integrity sha512-NvgZgoYJ/n27Ly7lKxKttMIKSS8P4dr1EURgTmqihHVdTAEqVtkAYPT5XykZIR+GKz8WRGyEQVJekwSgvjYQLg==
 
-"@zeit/ncc@0.8.1":
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.8.1.tgz#f24982591fe0e2a0f2c53e59e533837eddb8b891"
-  integrity sha512-AFgYOmh8gVRd8Bzkvygvbhdq6DayCc+O++bcGr+TFQcsHLWa6Lx9L55VVGU8sVEJibX/6BkDgcrJFZ3vYbh/ww==
+"@zeit/ncc@0.15.0":
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.15.0.tgz#0f91f7ba5886044081d543ead2ad4ea0c6e45115"
+  integrity sha512-t64mbGZyC5QXqT3ws4NYzg+CX1DSNVelCgJgBithoKrkCVVKoHJ9dMDeGfeIrbvAwEwax0sP/ay+Pndl+T8o7g==
 
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
