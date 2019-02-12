@@ -4,10 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use serde::{
-    de::{MapAccess, Visitor},
-    Deserialize, Deserializer,
-};
+use serde::de::{Deserialize, Deserializer, MapAccess, Visitor};
 
 /// A read-only view into a map of string data
 #[derive(Default, Debug, PartialEq)]

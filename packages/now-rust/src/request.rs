@@ -1,10 +1,7 @@
 use std::{borrow::Cow, fmt, mem};
 
 use http::{self, header::HeaderValue, HeaderMap, Method, Request as HttpRequest};
-use serde::{
-    de::{Error as DeError, MapAccess, Visitor},
-    Deserialize, Deserializer,
-};
+use serde::de::{Deserialize, Deserializer, Error as DeError, MapAccess, Visitor};
 use serde_derive::Deserialize;
 #[allow(unused_imports)]
 use serde_json::Value;

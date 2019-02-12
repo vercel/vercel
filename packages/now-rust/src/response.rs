@@ -4,10 +4,7 @@ use http::{
     header::{HeaderMap, HeaderValue},
     Response,
 };
-use serde::{
-    ser::{Error as SerError, SerializeMap},
-    Serializer,
-};
+use serde::ser::{Error as SerError, SerializeMap, Serializer};
 use serde_derive::Serialize;
 
 use crate::body::Body;
