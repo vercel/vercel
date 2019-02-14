@@ -12,7 +12,7 @@ ncc build $NCC_OPTS ./src
 # `ncc` isn't copying over permissions of the emitted assets.
 # PR exists, but has not been merged.
 # https://github.com/zeit/ncc/pull/182
-find dist/runtimes -name bootstrap -print0 | xargs -0 chmod --changes +x
+find dist/runtimes -name bootstrap -print0 | xargs -0 chmod -vv +x
 
 # `ncc` doesn't seem to copy over assets with `.js` file extension.
 # https://github.com/zeit/ncc/issues/278
