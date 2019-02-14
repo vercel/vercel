@@ -265,8 +265,7 @@ export default class DevServer {
 }
 
 /**
- * Mimic nginx's proxy_pass
- * for routes using a url as dest.
+ * Mimic nginx's `proxy_pass` for routes using a URL as `dest`.
  */
 function proxyPass(
   req: http.IncomingMessage,
@@ -282,7 +281,7 @@ function proxyPass(
 }
 
 /**
- * Handle requests for static files with serve-handler
+ * Handle requests for static files with serve-handler.
  */
 function serveStaticFile(
   req: http.IncomingMessage,
@@ -296,7 +295,7 @@ function serveStaticFile(
 }
 
 /**
- * Find the dest handler from assets
+ * Find the dest handler from assets.
  */
 function resolveDest(
   assets: BuilderOutputs,
