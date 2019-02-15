@@ -1,79 +1,52 @@
-const path = require('path');
-const { mkdirp, readFile, writeFile } = require('fs-extra');
+const { join, dirname } = require('path');
+const { readFile, writeFile } = require('fs-extra');
 
-const execa = require('execa');
+const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
 const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
 const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
-const downloadGit = require('lambda-git');
-const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
-const downloadGoBin = require('./download-go-bin');
+const { createGo, getExportedFunctionName } = require('./go-helpers');
 
-// creates a `$GOPATH` directory tree, as per
-// `go help gopath`'s instructions.
-// without this, Go won't recognize the `$GOPATH`
-async function createGoPathTree(goPath) {
-  await mkdirp(path.join(goPath, 'bin'));
-  await mkdirp(path.join(goPath, 'pkg', 'linux_amd64'));
-}
-
-exports.config = {
+const config = {
   maxLambdaSize: '10mb',
 };
 
-exports.build = async ({ files, entrypoint }) => {
-  console.log('downloading files...');
+async function build({ files, entrypoint }) {
+  console.log('Downloading user files...');
 
-  const gitPath = await getWritableDirectory();
-  const goPath = await getWritableDirectory();
-  const srcPath = path.join(goPath, 'src', 'lambda');
-  const outDir = await getWritableDirectory();
+  const [goPath, outDir] = await Promise.all([
+    getWritableDirectory(),
+    getWritableDirectory(),
+  ]);
 
-  await createGoPathTree(goPath);
-
+  const srcPath = join(goPath, 'src', 'lambda');
   const downloadedFiles = await download(files, srcPath);
 
-  console.log('downloading go binary...');
-  const goBin = await downloadGoBin();
-
-  console.log('downloading git binary...');
-  // downloads a git binary that works on Amazon Linux and sets
-  // `process.env.GIT_EXEC_PATH` so `go(1)` can see it
-  await downloadGit({ targetDirectory: gitPath });
-
-  const goEnv = {
-    ...process.env,
-    GOOS: 'linux',
-    GOARCH: 'amd64',
-    GOPATH: goPath,
-  };
-
-  console.log(`parsing AST for "${entrypoint}"`);
-  let handlerFunctionName = '';
+  console.log(`Parsing AST for "${entrypoint}"`);
+  let handlerFunctionName;
   try {
-    handlerFunctionName = await execa.stdout(
-      path.join(__dirname, 'bin', 'get-exported-function-name'),
-      [downloadedFiles[entrypoint].fsPath],
+    handlerFunctionName = await getExportedFunctionName(
+      downloadedFiles[entrypoint].fsPath,
     );
   } catch (err) {
-    console.log(`failed to parse AST for "${entrypoint}"`);
+    console.log(`Failed to parse AST for "${entrypoint}"`);
     throw err;
   }
 
-  if (handlerFunctionName === '') {
-    const e = new Error(
-      `Could not find an exported function on "${entrypoint}"`,
+  if (!handlerFunctionName) {
+    const err = new Error(
+      `Could not find an exported function in "${entrypoint}"`,
     );
-    console.log(e.message);
-    throw e;
+    console.log(err.message);
+    throw err;
   }
 
   console.log(
-    `Found exported function "${handlerFunctionName}" on "${entrypoint}"`,
+    `Found exported function "${handlerFunctionName}" in "${entrypoint}"`,
   );
 
   const origianlMainGoContents = await readFile(
-    path.join(__dirname, 'main.go'),
+    join(__dirname, 'main.go'),
     'utf8',
   );
   const mainGoContents = origianlMainGoContents.replace(
@@ -85,39 +58,33 @@ exports.build = async ({ files, entrypoint }) => {
 
   // we need `main.go` in the same dir as the entrypoint,
   // otherwise `go build` will refuse to build
-  const entrypointDirname = path.dirname(downloadedFiles[entrypoint].fsPath);
+  const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
 
   // Go doesn't like to build files in different directories,
   // so now we place `main.go` together with the user code
-  await writeFile(path.join(entrypointDirname, mainGoFileName), mainGoContents);
+  await writeFile(join(entrypointDirname, mainGoFileName), mainGoContents);
 
-  console.log('installing dependencies');
-  // `go get` will look at `*.go` (note we set `cwd`), parse
-  // the `import`s and download any packages that aren't part of the stdlib
+  const go = await createGo(goPath, process.platform, process.arch, {
+    cwd: entrypointDirname,
+  });
+
+  // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
+  // and download any packages that aren't part of the stdlib
   try {
-    await execa(goBin, ['get'], {
-      env: goEnv,
-      cwd: entrypointDirname,
-      stdio: 'inherit',
-    });
+    await go.get();
   } catch (err) {
     console.log('failed to `go get`');
     throw err;
   }
 
-  console.log('running go build...');
+  console.log('Running `go build`...');
+  const destPath = join(outDir, 'handler');
   try {
-    await execa(
-      goBin,
-      [
-        'build',
-        '-o',
-        path.join(outDir, 'handler'),
-        path.join(entrypointDirname, mainGoFileName),
-        downloadedFiles[entrypoint].fsPath,
-      ],
-      { env: goEnv, cwd: entrypointDirname, stdio: 'inherit' },
-    );
+    const src = [
+      join(entrypointDirname, mainGoFileName),
+      downloadedFiles[entrypoint].fsPath,
+    ];
+    await go.build({ src, dest: destPath });
   } catch (err) {
     console.log('failed to `go build`');
     throw err;
@@ -133,4 +100,6 @@ exports.build = async ({ files, entrypoint }) => {
   return {
     [entrypoint]: lambda,
   };
-};
+}
+
+module.exports = { config, build };

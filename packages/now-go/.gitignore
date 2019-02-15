@@ -1,4 +1,5 @@
 node_modules
 *.log
-launcher
-bin
+/?.js
+/go
+/get-exported-function-name

@@ -8,25 +8,19 @@
     "directory": "packages/now-go"
   },
   "scripts": {
-    "test": "best -I test/*.js",
-    "prepublish": "./build.sh"
+    "postinstall": "node ./util/install"
   },
   "files": [
-    "bin",
-    "download-go-bin.js",
-    "index.js",
-    "main.go"
+    "*.js",
+    "main.go",
+    "util"
   ],
   "dependencies": {
+    "debug": "^4.1.1",
     "execa": "^1.0.0",
     "fs-extra": "^7.0.0",
-    "lambda-git": "^0.1.2",
     "mkdirp-promise": "5.0.1",
     "node-fetch": "^2.2.1",
     "tar": "4.4.6"
-  },
-  "devDependencies": {
-    "@zeit/best": "0.4.3",
-    "rmfr": "2.0.0"
   }
 }

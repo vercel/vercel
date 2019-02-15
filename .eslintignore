@@ -1,3 +1,4 @@
 /tmp/*
 /node_modules/*
 /**/node_modules/*
+/packages/now-go/go/*
