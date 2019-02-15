@@ -66,12 +66,16 @@ const deploymentErrorMsg = `Your deployment failed. Please retry later. More: ht
 
 const printDeploymentStatus = (
   output,
-  { url, readyState },
+  { url, readyState, givenAlias },
   deployStamp,
   builds
 ) => {
   if (readyState === 'READY') {
-    output.success(`Deployment ready ${deployStamp()}`);
+    if (givenAlias) {
+      output.success(`Deployment ready at ${givenAlias} ${deployStamp()}`);
+    } else {
+      output.success(`Deployment ready ${deployStamp()}`);
+    }
     return 0;
   }
 
