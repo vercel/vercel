@@ -226,7 +226,12 @@ export default class DevServer {
             Handler: asset.handler,
             Runtime: asset.runtime,
             Environment: {
-              Variables: { ...asset.environment }
+              Variables: {
+                // TODO: resolve secret env vars
+                ...nowJson.env,
+                ...asset.environment,
+                NOW_REGION: 'dev1'
+              }
             }
           }),
           rawBody(req)
