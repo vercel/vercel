@@ -447,9 +447,9 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@https://zeit-fun-0.0.12.zeit.sh":
-  version "0.0.12"
-  resolved "https://zeit-fun-0.0.12.zeit.sh#21f192cc66118f85ec1044f8b3af9340c06b6997"
+"@zeit/fun@https://zeit-fun-0.0.13.zeit.sh":
+  version "0.0.13"
+  resolved "https://zeit-fun-0.0.13.zeit.sh#2516ee6a53ad2943a1a88c6d9869e963359adfa1"
   dependencies:
     "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
@@ -466,7 +466,6 @@
     stream-to-promise "2.2.0"
     tar "4.4.8"
     uid-promise "1.0.0"
-    util.promisify "1.0.0"
     uuid "3.3.2"
     yauzl-promise "2.1.3"
 
@@ -2353,7 +2352,7 @@ error-ex@^1.2.0, error-ex@^1.3.1:
   dependencies:
     is-arrayish "^0.2.1"
 
-es-abstract@^1.10.0, es-abstract@^1.12.0, es-abstract@^1.5.1, es-abstract@^1.7.0:
+es-abstract@^1.10.0, es-abstract@^1.12.0, es-abstract@^1.7.0:
   version "1.13.0"
   resolved "https://registry.yarnpkg.com/es-abstract/-/es-abstract-1.13.0.tgz#ac86145fdd5099d8dd49558ccba2eaf9b88e24e9"
   integrity sha512-vDZfg/ykNxQVwup/8E1BZhVzFfBxs9NqMzGcvIJrqg5k2/5Za2bWo40dK2J1pgLngZ7c+Shh8lwYtLGyrwPutg==
@@ -5043,14 +5042,6 @@ object.entries@^1.0.4:
     function-bind "^1.1.1"
     has "^1.0.3"
 
-object.getownpropertydescriptors@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/object.getownpropertydescriptors/-/object.getownpropertydescriptors-2.0.3.tgz#8758c846f5b407adab0f236e0986f14b051caa16"
-  integrity sha1-h1jIRvW0B62rDyNuCYbxSwUcqhY=
-  dependencies:
-    define-properties "^1.1.2"
-    es-abstract "^1.5.1"
-
 object.omit@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/object.omit/-/object.omit-2.0.1.tgz#1a9c744829f39dbb858c76ca3579ae2a54ebd1fa"
@@ -7046,14 +7037,6 @@ util-deprecate@^1.0.1, util-deprecate@~1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8=
-
-util.promisify@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/util.promisify/-/util.promisify-1.0.0.tgz#440f7165a459c9a16dc145eb8e72f35687097030"
-  integrity sha512-i+6qA2MPhvoKLuxnJNpXAGhg7HphQOSUq2LKMZD0m15EiskXUkMvKdF4Uui0WYeCUGea+o2cw/ZuwehtfsrNkA==
-  dependencies:
-    define-properties "^1.1.2"
-    object.getownpropertydescriptors "^2.0.3"
 
 utility-types@2.1.0:
   version "2.1.0"
