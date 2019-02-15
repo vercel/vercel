@@ -10,14 +10,13 @@
   "files": [
     "index.js",
     "download-install-rust-toolchain.js",
-    "inferCargoBinaries.js"
+    "launcher.rs"
   ],
   "dependencies": {
-    "concat-stream": "^2.0.0",
+    "@iarna/toml": "^2.2.1",
     "execa": "^1.0.0",
     "fs-extra": "^7.0.1",
     "node-fetch": "^2.3.0",
-    "tar": "^4.4.8",
-    "toml": "^2.3.3"
+    "tar": "^4.4.8"
   }
 }
