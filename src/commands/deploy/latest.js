@@ -281,7 +281,8 @@ export default async function main(
         meta
       },
       {
-        name: project
+        name: project,
+        target: argv['--target']
       }
     );
 

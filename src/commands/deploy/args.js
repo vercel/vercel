@@ -61,6 +61,9 @@ export const latestHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -T, --team                     Set a custom team scope
     --regions                      Set default regions to enable the deployment on
+    --target production            Deploy and set the given alias from the ${
+      chalk.underline('now.json')
+    } file
   ${note(
     `To view the usage information for Now 1.0, run ${code(
       'now help deploy-v1'
@@ -90,6 +93,7 @@ export const latestArgs = {
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,
+  '--target': String,
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',

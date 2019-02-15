@@ -20,6 +20,7 @@ import hash from './hash';
 import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
+import getTargetAlias from './get-target-alias';
 import { responseError } from './error';
 
 // How many concurrent HTTP/2 stream uploads
@@ -73,7 +74,8 @@ export default class Now extends EventEmitter {
       env,
       build,
       followSymlinks = true,
-      forceNew = false
+      forceNew = false,
+      target = null
     }
   ) {
     const { log, warn, time } = this._output;
@@ -165,6 +167,12 @@ export default class Now extends EventEmitter {
 
     this._files = hashes;
 
+    if (target && target !== 'production') {
+
+    }
+
+    const targetAlias = getTargetAlias(target, nowConfig);
+
     const deployment = await this.retry(async bail => {
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
@@ -220,7 +228,8 @@ export default class Now extends EventEmitter {
             project,
             files,
             meta,
-            regions
+            regions,
+            targetAlias
           }
         : {
             env,
