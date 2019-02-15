@@ -27,6 +27,18 @@ class FileFsRef {
   }
 
   /**
+   * Creates a `FileFsRef` with the correct `mode` from the file system.
+   *
+   * @argument {Object} options
+   * @argument {string} options.fsPath
+   * @returns {Promise<FileFsRef>}
+   */
+  static async fromFsPath({ fsPath }) {
+    const { mode } = await fs.lstat(fsPath);
+    return new FileFsRef({ mode, fsPath });
+  }
+
+  /**
    * @argument {Object} options
    * @argument {number} [options.mode=0o100644]
    * @argument {NodeJS.ReadableStream} options.stream
