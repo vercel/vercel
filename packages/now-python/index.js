@@ -40,8 +40,16 @@ exports.build = async ({ files, entrypoint }) => {
 
   await pipInstall(pipPath, srcDir, 'requests');
 
-  if (files['requirements.txt']) {
-    console.log('found "requirements.txt"');
+  const entryDirectory = path.dirname(entrypoint);
+  const requirementsTxt = path.join(entryDirectory, 'requirements.txt');
+
+  if (files[requirementsTxt]) {
+    console.log('found local "requirements.txt"');
+
+    const requirementsTxtPath = files[requirementsTxt].fsPath;
+    await pipInstall(pipPath, srcDir, '-r', requirementsTxtPath);
+  } else if (files['requirements.txt']) {
+    console.log('found global "requirements.txt"');
 
     const requirementsTxtPath = files['requirements.txt'].fsPath;
     await pipInstall(pipPath, srcDir, '-r', requirementsTxtPath);
