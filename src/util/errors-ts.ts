@@ -829,3 +829,29 @@ export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
     });
   }
 }
+
+export class InvalidMoveDestination extends NowError<
+  'INVALID_MOVE_DESTINATION',
+  { destination: string }
+> {
+  constructor(destination: string) {
+    super({
+      code: 'INVALID_MOVE_DESTINATION',
+      message: `Invalid move destination "${destination}"`,
+      meta: { destination }
+    });
+  }
+}
+
+export class InvalidMoveToken extends NowError<
+  'INVALID_MOVE_TOKEN',
+  { token: string }
+> {
+  constructor(token: string) {
+    super({
+      code: 'INVALID_MOVE_TOKEN',
+      message: `Invalid move token "${token}"`,
+      meta: { token }
+    });
+  }
+}
