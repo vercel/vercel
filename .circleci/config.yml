@@ -24,6 +24,9 @@ jobs:
           name: Linting
           command: yarn lint
       - run:
+          name: Building
+          command: ./.circleci/build.sh
+      - run:
           name: Tests
           command: yarn test
       - run:

@@ -15,7 +15,7 @@
     "publish-stable": "lerna version",
     "publish-canary": "lerna version prerelease --preid canary",
     "lint": "tsc && eslint .",
-    "test": "(cd packages/now-node-bridge && npm run build) && jest --runInBand --verbose",
+    "test": "jest --runInBand --verbose",
     "lint-staged": "lint-staged"
   },
   "pre-commit": "lint-staged",
