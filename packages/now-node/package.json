@@ -13,7 +13,7 @@
     "fs-extra": "7.0.1"
   },
   "scripts": {
-    "build": "cp node_modules/@now/node-bridge/bridge.d.ts src && tsc",
+    "build": "./build.sh",
     "test": "jest"
   },
   "files": [
