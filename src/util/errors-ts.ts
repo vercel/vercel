@@ -567,13 +567,13 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
 
 export class ForbiddenScaleMinInstances extends NowError<
   'FORBIDDEN_SCALE_MIN_INSTANCES',
-  { url: string; min: number }
+  { url: string; max: number }
 > {
-  constructor(url: string, min: number) {
+  constructor(url: string, max: number) {
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
-      meta: { url, min },
-      message: `You can't scale to more than ${min} min instances with your current plan.`
+      meta: { url, max },
+      message: `You can't scale to more than ${max} min instances with your current plan.`
     });
   }
 }
