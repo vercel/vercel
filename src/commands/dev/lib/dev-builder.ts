@@ -13,19 +13,13 @@ import DevServer from './dev-server';
 import { BuildConfig } from './types';
 import { NowError } from '../../../util/now-error';
 
-export {
-  buildUserProject,
-  createIgnoreList,
-  collectProjectFiles
-}
-
 /**
  * Build project to statics & lambdas
  */
-const buildUserProject = async (
+export async function buildUserProject(
   buildsConfig: BuildConfig[],
   devServer: DevServer
-) => {
+) {
   try {
     devServer.setStatusBusy('Installing builders');
     await installBuilders(buildsConfig);
@@ -39,20 +33,20 @@ const buildUserProject = async (
     devServer.setStatusIdle();
     throw err;
   }
-};
+}
 
-const installBuilders = async (buildsConfig: BuildConfig[]) => {
+async function installBuilders(buildsConfig: BuildConfig[]) {
   const builders = buildsConfig
     .map(build => build.use)
     .filter(pkg => pkg !== '@now/static')
     .concat('@now/build-utils');
 
   for (const builder of builders) {
-    const stopSpinner = wait(`installing ${builder}`);
+    const stopSpinner = wait(`Installing ${builder}`);
     await builderCache.install(builder);
     stopSpinner();
   }
-};
+}
 
 async function buildLambdas(
   buildsConfig: BuildConfig[],
@@ -94,13 +88,13 @@ async function buildLambdas(
   }
 
   return results;
-};
+}
 
 
 /**
  * Collect project files, with .gitignore and .nowignore honored.
  */
-async function collectProjectFiles(pattern: string, cwd: string) {
+export async function collectProjectFiles(pattern: string, cwd: string) {
   const ignore = createIgnoreList(cwd);
   const files = await glob(pattern, cwd);
   const filteredFiles: { [key: string]: FileFsRef } = {};
@@ -117,7 +111,7 @@ async function collectProjectFiles(pattern: string, cwd: string) {
 /**
  * Create ignore list according .gitignore & .nowignore in cwd
  */
-function createIgnoreList(cwd: string): Ignore {
+export function createIgnoreList(cwd: string): Ignore {
   const ig = ignore();
 
   const gitignore = path.join(cwd, '.gitignore');
