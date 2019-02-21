@@ -7,7 +7,7 @@ if [ ! -e ~/.npmrc ]; then
 fi
 
 npm_tag=""
-tag="$(git describe --exact-match 2> /dev/null || :)"
+tag="$(git describe --tags --exact-match 2> /dev/null || :)"
 
 if [ -z "$tag" ]; then
   echo "Not a tagged commit, skipping publish"
