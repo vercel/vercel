@@ -733,11 +733,6 @@
   resolved "https://registry.yarnpkg.com/@now/node-bridge/-/node-bridge-0.1.4.tgz#59a555e090f16f5e02d289bd1fd6c47f4274304b"
   integrity sha512-UXlDWyrPU1bB9nsh11MGfGo81GfLij1X4Dew+9fplThRzEGbrTey8aDTjNvmsTV+jxnyktLYzet2uaI9yXXiEw==
 
-"@now/node-bridge@1.0.0-canary.2":
-  version "1.0.0-canary.2"
-  resolved "https://registry.yarnpkg.com/@now/node-bridge/-/node-bridge-1.0.0-canary.2.tgz#665accdddf68b7a5757d6d07f38f29b365a652d1"
-  integrity sha512-QZGNx4d04vsGaEI68kNS7Ln02BagE5cKu3Ni95mF3Ew74O7tnYdN6iaL30dvSMRu0ENzdeqfDa1vWQckKQA5wg==
-
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@samverschueren/stream-to-observable/-/stream-to-observable-0.3.0.tgz#ecdf48d532c58ea477acfcab80348424f8d0662f"
