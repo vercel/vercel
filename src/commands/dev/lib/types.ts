@@ -10,7 +10,6 @@ export enum DevServerStatus {
 
 export interface DevServerOptions {
   debug: boolean;
-  nodejsPreview: boolean;
 }
 
 export interface BuildConfig {

@@ -9,7 +9,6 @@ type Options = {
   '--debug': boolean;
   '--port': number;
   '-p': number;
-  '--nodejs-preview': boolean;
 };
 
 export default async function dev(
@@ -22,11 +21,9 @@ export default async function dev(
   const cwd = path.join(process.cwd(), dir);
   const port = opts['-p'] || opts['--port'];
   const debug = opts['--debug'];
-  const nodejsPreview = opts['--nodejs-preview'];
 
   const devServer = new DevServer(cwd, {
-    debug,
-    nodejsPreview
+    debug
   });
 
   await devServer.start(port);
