@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-bridge="node_modules/@now/node-bridge/bridge.d.ts"
-if [ ! -e "$bridge" ]; then
+bridge_entrypoint="$(node -p 'require.resolve("@now/node-bridge")')"
+bridge_defs="$(dirname "$bridge_entrypoint")/bridge.d.ts"
+
+if [ ! -e "$bridge_defs" ]; then
   yarn install
 fi
 
-cp node_modules/@now/node-bridge/bridge.d.ts src
-
+cp -v "$bridge_defs" src
 tsc
