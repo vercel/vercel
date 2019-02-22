@@ -1,8 +1,9 @@
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
+import { Domain } from '../../types';
 
 type Response = {
-  token: string;
+  domain: Domain & { moveToken: string };
 };
 
 export default async function getMoveDomainToken(

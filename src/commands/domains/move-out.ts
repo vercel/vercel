@@ -51,23 +51,23 @@ export default async function moveOut(
   }
 
   const context = contextName;
-  const moveToken = await withSpinner('Generating token', () => {
+  const moveTokenResult = await withSpinner('Generating token', () => {
     return getMoveDomainToken(client, context, domainName, destination);
   });
-  if (moveToken instanceof ERRORS.DomainNotFound) {
+  if (moveTokenResult instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
   }
-  if (moveToken instanceof ERRORS.DomainPermissionDenied) {
+  if (moveTokenResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
-        moveToken.meta.domain
-      )} under ${chalk.bold(moveToken.meta.context)}.`
+        moveTokenResult.meta.domain
+      )} under ${chalk.bold(moveTokenResult.meta.context)}.`
     );
     return 1;
   }
-  if (moveToken instanceof ERRORS.InvalidMoveDestination) {
+  if (moveTokenResult instanceof ERRORS.InvalidMoveDestination) {
     output.error(
       `Destination ${chalk.bold(
         destination
@@ -76,7 +76,8 @@ export default async function moveOut(
     return 1;
   }
 
-  console.log(`${chalk.cyan('> Token')} ${moveToken}}`);
+  const { domain } = moveTokenResult;
+  console.log(`${chalk.cyan('> Token')} ${domain.moveToken}}`);
   return 0;
 }
 

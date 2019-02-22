@@ -12,8 +12,8 @@ export default async function moveDomain(
   token: string
 ) {
   try {
-    return await client.fetch<Response>(`/v4/domains/${name}/move`, {
-      body: { token },
+    return await client.fetch<Response>(`/v4/domains`, {
+      body: { method: 'move', name, token },
       method: 'POST'
     });
   } catch (error) {
@@ -22,6 +22,10 @@ export default async function moveDomain(
     }
     if (error.code === 'invalid_move_token') {
       return new ERRORS.InvalidMoveToken(token);
+    }
+    if (error.code === 'domain_move_conflict') {
+      const { aliases, suffix } = error;
+      return new ERRORS.DomainMoveConflict({ domain: name, aliases, suffix });
     }
     throw error;
   }

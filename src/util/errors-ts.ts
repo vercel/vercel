@@ -820,6 +820,30 @@ export class DomainRemovalConflict extends NowError<
   }
 }
 
+export class DomainMoveConflict extends NowError<
+  'domain_move_conflict',
+  { aliases: string[]; suffix: boolean }
+> {
+  constructor({
+    aliases,
+    domain,
+    suffix
+  }: {
+    aliases: string[];
+    domain: string;
+    suffix: boolean;
+  }) {
+    super({
+      code: 'domain_move_conflict',
+      meta: {
+        aliases,
+        suffix
+      },
+      message: `Conflicts should be resolved before attempting to move ${domain}`
+    });
+  }
+}
+
 export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
   constructor(email: string, message: string = 'Invalid Email') {
     super({
