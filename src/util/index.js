@@ -20,7 +20,6 @@ import hash from './hash';
 import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
-import getTargetAlias from './get-target-alias';
 import { responseError } from './error';
 
 // How many concurrent HTTP/2 stream uploads
@@ -167,12 +166,6 @@ export default class Now extends EventEmitter {
 
     this._files = hashes;
 
-    if (target && target !== 'production') {
-
-    }
-
-    const targetAlias = getTargetAlias(target, nowConfig);
-
     const deployment = await this.retry(async bail => {
       // Flatten the array to contain files to sync where each nested input
       // array has a group of files with the same sha but different path
@@ -228,8 +221,7 @@ export default class Now extends EventEmitter {
             project,
             files,
             meta,
-            regions,
-            targetAlias
+            regions
           }
         : {
             env,
@@ -254,7 +246,11 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = ['alias', 'github'];
+          const exclude = ['github'];
+
+          if (target !== 'production') {
+            exclude.push('alias');
+          }
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set

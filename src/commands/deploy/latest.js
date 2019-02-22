@@ -64,15 +64,28 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
+const parseFinalAliases = (aliasFinal) => {
+  const last = aliasFinal.length - 1;
+
+  if (last === 0) {
+    // Only one item
+    return aliasFinal[0];
+  }
+
+  return `${aliasFinal.slice(0, last).join(', ')} and ${aliasFinal[last]}`;
+};
+
 const printDeploymentStatus = (
   output,
-  { url, readyState, givenAlias },
+  { url, readyState, aliasFinal },
   deployStamp,
   builds
 ) => {
   if (readyState === 'READY') {
-    if (givenAlias) {
-      output.success(`Deployment ready at ${givenAlias} ${deployStamp()}`);
+    if (aliasFinal && Array.isArray(aliasFinal)) {
+      output.success(`Your deployment is now available on ${
+        parseFinalAliases(aliasFinal)
+      } ${deployStamp()}`);
     } else {
       output.success(`Deployment ready ${deployStamp()}`);
     }
@@ -290,6 +303,13 @@ export default async function main(
       }
     );
 
+    if (createArgs.target && createArgs.target !== 'production') {
+      error(`The specified ${highlight('target')} ${
+        code(createArgs.target)
+      } is not valid`);
+      return 1;
+    }
+
     deployStamp = stamp();
 
     const firstDeployCall = await createDeploy(
@@ -450,7 +470,7 @@ export default async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v6/now/deployments/${deployment.id}`;
+  const deploymentUrl = `/v8/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
