@@ -7,7 +7,7 @@ import wait from '../../../util/output/wait';
 import glob from '@now/build-utils/fs/glob';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
-import builderCache from './builder-cache';
+import { installBuilder, getBuilder } from './builder-cache';
 
 import DevServer from './dev-server';
 import { BuildConfig } from './types';
@@ -43,7 +43,7 @@ async function installBuilders(buildsConfig: BuildConfig[]) {
 
   for (const builder of builders) {
     const stopSpinner = wait(`Installing ${builder}`);
-    await builderCache.install(builder);
+    await installBuilder(builder);
     stopSpinner();
   }
 }
@@ -60,7 +60,7 @@ async function buildLambdas(
     try {
       devServer.logDebug(`Build ${JSON.stringify(build)}`);
 
-      const builder = builderCache.get(build.use);
+      const builder = getBuilder(build.use);
 
       const entries = Object.values(
         await collectProjectFiles(build.src, cwd)

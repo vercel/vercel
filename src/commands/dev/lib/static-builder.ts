@@ -5,14 +5,10 @@ interface BuilderParams {
   config: any
 }
 
-function build (args: BuilderParams) {
+export function build (args: BuilderParams) {
   const { files, entrypoint } = args
 
   return {
     [entrypoint]: files[entrypoint]
   }
-}
-
-export default {
-  build
 }

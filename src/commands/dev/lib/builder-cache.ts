@@ -6,13 +6,7 @@ import npa from 'npm-package-arg';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../../util/now-error';
 
-import staticBuilder from './static-builder';
-
-export default {
-  prepare,
-  install,
-  get
-};
+import * as staticBuilder from './static-builder';
 
 const localBuilders: { [key: string]: any } = {
   '@now/static': staticBuilder
@@ -23,12 +17,12 @@ const cacheDir = prepare();
 /**
  * Prepare cache directory for installing now-builders
  */
-function prepare() {
+export function prepare() {
   try {
     const designated = cacheDirectory('co.zeit.now-builders');
 
-    if (designated === null) {
-      throw new Error();
+    if (!designated) {
+      throw new Error('Could not determine location of cache directory');
     }
 
     const buildersPkg = path.join(designated, 'package.json');
@@ -61,7 +55,7 @@ function prepare() {
 /**
  * Install a builder to cache directory
  */
-async function install(name: string) {
+export async function installBuilder(name: string) {
   if (localBuilders.hasOwnProperty(name)) {
     return;
   }
@@ -77,7 +71,7 @@ async function install(name: string) {
 /**
  * Get a builder from cache directory
  */
-function get(builderPkg: string) {
+export function getBuilder(builderPkg: string) {
   if (localBuilders.hasOwnProperty(builderPkg)) {
     return localBuilders[builderPkg];
   }
