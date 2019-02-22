@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import execa from 'execa';
 import mkdirp from 'mkdirp';
+import npa from 'npm-package-arg';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../../util/now-error';
 
@@ -76,11 +77,12 @@ async function install(name: string) {
 /**
  * Get a builder from cache directory
  */
-function get(name: string) {
-  if (localBuilders.hasOwnProperty(name)) {
-    return localBuilders[name];
+function get(builderPkg: string) {
+  if (localBuilders.hasOwnProperty(builderPkg)) {
+    return localBuilders[builderPkg];
   }
 
-  const dest = path.join(cacheDir, 'node_modules', name);
+  const parsed = npa(builderPkg);
+  const dest = path.join(cacheDir, 'node_modules', parsed.name || builderPkg);
   return require(dest);
 }
