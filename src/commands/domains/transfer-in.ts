@@ -27,7 +27,10 @@ export default async function transferIn(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -51,7 +54,13 @@ export default async function transferIn(
     return 1;
   }
 
-  const { domain: rootDomain, subdomain } = psl.parse(domainName);
+  const parsedDomain = psl.parse(domainName);
+  if (parsedDomain.error) {
+    output.error(`The provided domain name "${param(domainName)}" is invalid`);
+    return 1;
+  }
+
+  const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
     output.error(
       `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
@@ -92,8 +101,9 @@ export default async function transferIn(
   }
 
   const transferStamp = stamp();
-  const transferInResult = await withSpinner(`Initiating transfer for domain ${domainName}`, () =>
-    transferInDomain(client, domainName, authCode, price)
+  const transferInResult = await withSpinner(
+    `Initiating transfer for domain ${domainName}`,
+    () => transferInDomain(client, domainName, authCode, price)
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
@@ -112,23 +122,39 @@ export default async function transferIn(
   }
 
   if (transferInResult instanceof ERRORS.InvalidTransferAuthCode) {
-    output.error(`The provided auth code does not match with the one expected by the current registar`);
+    output.error(
+      `The provided auth code does not match with the one expected by the current registar`
+    );
     return 1;
   }
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${cmd('now billing add')}.`
+      `Could not purchase domain. Please add a payment method using ${cmd(
+        'now billing add'
+      )}.`
     );
     return 1;
   }
 
-  console.log(`${chalk.cyan('> Success!')} Domain ${param(domainName)} transfer started ${transferStamp()}`);
-  output.print(`  To finalize the transfer, we are waiting for approval from your current registrar.\n`);
+  console.log(
+    `${chalk.cyan('> Success!')} Domain ${param(
+      domainName
+    )} transfer started ${transferStamp()}`
+  );
+  output.print(
+    `  To finalize the transfer, we are waiting for approval from your current registrar.\n`
+  );
   output.print(`  You will receive an email upon completion.\n`);
-  output.warn(`Once transferred, your domain ${param(domainName)} will be using ZEIT DNS.\n`);
-  output.print(`  To transfer with previous DNS records, export the zone file from your previous registrar.\n`)
-  output.print(`  Then import it to ZEIT DNS by using:\n`)
-  output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`)
+  output.warn(
+    `Once transferred, your domain ${param(
+      domainName
+    )} will be using ZEIT DNS.\n`
+  );
+  output.print(
+    `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
+  );
+  output.print(`  Then import it to ZEIT DNS by using:\n`);
+  output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`);
   return 0;
 }

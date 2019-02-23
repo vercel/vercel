@@ -280,13 +280,19 @@ async function runStartOrder(
     `  Add the following TXT records with your registrar to be able to the solve the DNS challenge:\n\n`
   );
   const [header, ...rows] = dnsTable(
-    pendingChallenges.map(challenge => [
-      parse(challenge.domain).subdomain
-        ? `_acme-challenge.${parse(challenge.domain).subdomain}`
-        : `_acme-challenge`,
-      'TXT',
-      challenge.value
-    ])
+    pendingChallenges.map(challenge => {
+      const parsedDomain = parse(challenge.domain);
+      if (parsedDomain.error) {
+        throw new ERRORS.InvalidDomain(challenge.domain);
+      }
+      return [
+        parsedDomain.subdomain
+          ? `_acme-challenge.${parsedDomain.subdomain}`
+          : `_acme-challenge`,
+        'TXT',
+        challenge.value
+      ];
+    })
   ).split('\n');
 
   output.print(`${header}\n`);
