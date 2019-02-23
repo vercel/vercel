@@ -35,7 +35,7 @@ export default function(
           const { pathname, query } = url.parse(destPath);
           const queryParams = qs.parse(query || '');
           found = {
-            dest: pathname || '',
+            dest: pathname || '/',
             status: routeConfig.status,
             headers: routeConfig.headers,
             uri_args: queryParams,

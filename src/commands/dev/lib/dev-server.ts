@@ -246,10 +246,10 @@ export default class DevServer {
         };
         // console.error({ payload });
 
-        const result = await fn({
+        const result = await fn<InvokeResult>({
           Action: 'Invoke',
           body: JSON.stringify(payload)
-        }) as InvokeResult;
+        });
 
         res.statusCode = result.statusCode;
         for (const [name, value] of Object.entries(result.headers)) {
