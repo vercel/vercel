@@ -10,16 +10,17 @@ export default function(
   routes?: RouteConfig[]
 ): RouteResult {
   let found: RouteResult | undefined;
+  const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
       const matcher = new RegExp('^' + routeConfig.src + '$');
 
-      if (matcher.test(reqPath)) {
+      if (matcher.test(reqPathname)) {
         const destPath = routeConfig.dest
-          ? reqPath.replace(matcher, routeConfig.dest)
-          : reqPath;
+          ? reqPathname.replace(matcher, routeConfig.dest)
+          : reqPathname;
 
         if (isURL(destPath)) {
           found = {
@@ -50,7 +51,7 @@ export default function(
     });
   }
 
-  if (found === undefined) {
+  if (!found) {
     const { query } = url.parse(reqPath);
     const queryParams = qs.parse(query || '');
 

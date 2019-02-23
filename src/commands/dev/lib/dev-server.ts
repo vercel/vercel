@@ -308,12 +308,16 @@ function resolveDest(
 ): BuilderOutput | undefined {
   const assetKey = dest.replace(/^\//, '');
 
-  if (assets[assetKey]) return assets[assetKey];
+  if (assets[assetKey]) {
+    return assets[assetKey];
+  }
 
   // find `${assetKey}/index.*` for indexes
   const foundIndex = Object.keys(assets).find(name => {
     return name.replace(/\/?index\.\w+$/, '') === assetKey.replace(/\/$/, '');
   });
 
-  if (foundIndex) return assets[foundIndex];
+  if (foundIndex) {
+    return assets[foundIndex];
+  }
 }
