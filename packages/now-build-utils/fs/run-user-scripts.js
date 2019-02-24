@@ -13,9 +13,18 @@ function spawnAsync(command, args, cwd) {
   });
 }
 
+async function chmodPlusX(file) {
+  const s = await fs.stat(file);
+  const newMode = s.mode | 64 | 8 | 1;
+  if (s.mode === newMode) return;
+  const base8 = newMode.toString(8).slice(-3);
+  await fs.chmod(file, base8);
+}
+
 async function runShellScript(fsPath) {
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
+  await chmodPlusX(fsPath);
   await spawnAsync(`./${path.basename(fsPath)}`, [], destPath);
   return true;
 }
