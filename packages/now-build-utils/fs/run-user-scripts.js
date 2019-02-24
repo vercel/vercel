@@ -13,12 +13,12 @@ function spawnAsync(command, args, cwd) {
   });
 }
 
-async function chmodPlusX(file) {
-  const s = await fs.stat(file);
-  const newMode = s.mode | 64 | 8 | 1;
+async function chmodPlusX(fsPath) {
+  const s = await fs.stat(fsPath);
+  const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
   if (s.mode === newMode) return;
   const base8 = newMode.toString(8).slice(-3);
-  await fs.chmod(file, base8);
+  await fs.chmod(fsPath, base8);
 }
 
 async function runShellScript(fsPath) {
