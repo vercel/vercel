@@ -36,7 +36,7 @@ export default async function setScale(
   } catch (error) {
     cancelWait();
     if (error.code === 'forbidden_min_instances') {
-      return new ERRORS.ForbiddenScaleMinInstances(url, error.min);
+      return new ERRORS.ForbiddenScaleMinInstances(url, error.max);
     }
     if (error.code === 'forbidden_max_instances') {
       return new ERRORS.ForbiddenScaleMaxInstances(url, error.max);
