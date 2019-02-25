@@ -1,9 +1,15 @@
 import psl from 'psl';
+import { InvalidDomain } from '../errors-ts';
 
 export default function getWildcardCNSForDomain(rawDomain: string) {
-  const { domain, subdomain } = psl.parse(rawDomain);
+  const parsedDomain = psl.parse(rawDomain);
+  if (parsedDomain.error) {
+    throw new InvalidDomain(rawDomain);
+  }
+
+  const { domain, subdomain } = parsedDomain;
   if (!domain) {
-    throw new Error(`Can't get wildcard cns for ${rawDomain}. Invalid domain.`);
+    throw new InvalidDomain(rawDomain);
   }
 
   const secondLevel =

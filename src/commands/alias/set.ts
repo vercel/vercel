@@ -550,5 +550,12 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
+  if (error instanceof ERRORS.InvalidDomain) {
+    output.error(
+      `The domain ${error.meta.domain} used for the alias is not valid.`
+    );
+    return 1;
+  }
+
   return error;
 }
