@@ -518,18 +518,7 @@ function handleCreateAliasError<T>(
     return 1;
   }
   if (error instanceof ERRORS.ForbiddenScaleMinInstances) {
-    output.error(
-      `Scale rules from previous aliased deployment ${chalk.dim(
-        error.meta.url
-      )} could not be copied since the given number of min instances (${
-        error.meta.min
-      }) is not allowed.`
-    );
-    output.log(
-      `Update the scale settings on ${chalk.dim(
-        error.meta.url
-      )} with \`now scale\` and try again`
-    );
+    output.error(`You can't scale to more than ${error.meta.max} min instances with your current plan.`);
     return 1;
   }
 
