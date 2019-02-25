@@ -21,10 +21,19 @@ export default async function createCertForCns(
   } catch (error) {
     cancelWait();
     if (error.code === 'configuration_error') {
-      const { domain, subdomain } = psl.parse(error.domain);
+      const parsedDomain = psl.parse(error.domain);
+      if (parsedDomain.error) {
+        throw new ERRORS.DomainConfigurationError(
+          error.domain,
+          null,
+          Boolean(error.external)
+        );
+      }
+
+      const { domain, subdomain } = parsedDomain;
       return new ERRORS.DomainConfigurationError(
-        domain as string,
-        subdomain as string,
+        domain || error.domain,
+        subdomain,
         Boolean(error.external)
       );
     }

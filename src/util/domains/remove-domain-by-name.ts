@@ -15,37 +15,15 @@ export default async function removeDomainByName(
     if (error.code === 'forbidden') {
       return new ERRORS.DomainPermissionDenied(domain, contextName);
     }
-    if (error.code === 'conflict_certs') {
-      return new ERRORS.DomainConflict(
-        'CONFLICT_CERTS',
+    if (error.code === 'domain_removal_conflict') {
+      const { aliases, certs, suffix, transferring } = error;
+      return new ERRORS.DomainRemovalConflict({
+        aliases,
+        certs,
         domain,
-        contextName,
-        error.message
-      );
-    }
-    if (error.code === 'conflict_aliases') {
-      return new ERRORS.DomainConflict(
-        'CONFLICT_ALIASES',
-        domain,
-        contextName,
-        error.message
-      );
-    }
-    if (error.code === 'conflict_suffix') {
-      return new ERRORS.DomainConflict(
-        'CONFLICT_SUFFIX',
-        domain,
-        contextName,
-        error.message
-      );
-    }
-    if (error.code === 'conflict_transfer') {
-      return new ERRORS.DomainConflict(
-        'CONFLICT_TRANSFER',
-        domain,
-        contextName,
-        error.message
-      );
+        suffix,
+        transferring
+      });
     }
     throw error;
   }

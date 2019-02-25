@@ -30,9 +30,18 @@ export default async function startCertOrder(
       return new Errors.CertOrderNotFound(cns);
     }
     if (error.code === 'configuration_error') {
-      const { domain, subdomain } = psl.parse(error.domain);
+      const parsedDomain = psl.parse(error.domain);
+      if (parsedDomain.error) {
+        throw new Errors.DomainConfigurationError(
+          error.domain,
+          null,
+          Boolean(error.external)
+        );
+      }
+
+      const { domain, subdomain } = parsedDomain;
       return new Errors.DomainConfigurationError(
-        domain as string,
+        domain || error.domain,
         subdomain as string,
         error.external
       );

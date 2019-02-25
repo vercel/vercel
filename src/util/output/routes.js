@@ -8,6 +8,10 @@ const longestProperty = (routes, name) => {
     return secondItem - firstItem
   })[0];
 
+  if (!longestItem[name]) {
+    return null;
+  }
+
   return longestItem[name].length;
 };
 
@@ -19,7 +23,7 @@ export default routes => {
 
   const padding = 6;
   const space = ' '.repeat(padding);
-  const destSpace = ' '.repeat(longestDest);
+  const destSpace = ' '.repeat(longestDest || 10);
   const arrow = chalk.grey('->')
 
   for (const item of routes) {

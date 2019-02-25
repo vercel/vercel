@@ -30,6 +30,9 @@ export default async function transferInDomain(
     if (error.code === 'invalid_auth_code') {
       return new ERRORS.InvalidTransferAuthCode(name, authCode);
     }
+    if (error.code === 'source_not_found') {
+      return new ERRORS.SourceNotFound();
+    }
     throw error;
   }
 }

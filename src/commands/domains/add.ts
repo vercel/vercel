@@ -11,6 +11,7 @@ import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import param from '../../util/output/param';
 
 type Options = {
   '--cdn': boolean;
@@ -24,7 +25,10 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -43,7 +47,7 @@ export default async function add(
   }
 
   if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
-    output.error(`Toggling CF from Now CLI is deprecated.`)
+    output.error(`Toggling CF from Now CLI is deprecated.`);
     return 1;
   }
 
@@ -53,9 +57,15 @@ export default async function add(
   }
 
   const domainName = String(args[0]);
-  const { domain, subdomain } = psl.parse(domainName);
+  const parsedDomain = psl.parse(domainName);
+  if (parsedDomain.error) {
+    output.error(`The provided domain name "${param(domainName)}" is invalid`);
+    return 1;
+  }
+
+  const { domain, subdomain } = parsedDomain;
   if (!domain) {
-    output.error(`The domain '${domainName}' is not valid.`);
+    output.error(`The provided domain '${param(domainName)}' is not valid.`);
     return 1;
   }
 
@@ -70,11 +80,7 @@ export default async function add(
   }
 
   const addStamp = stamp();
-  const addedDomain = await addDomain(
-    client,
-    domainName,
-    contextName
-  );
+  const addedDomain = await addDomain(client, domainName, contextName);
 
   if (addedDomain instanceof ERRORS.InvalidDomain) {
     output.error(

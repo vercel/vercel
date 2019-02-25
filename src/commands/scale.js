@@ -254,10 +254,7 @@ export default async function main(ctx) {
     deployment.url
   );
   if (result instanceof ForbiddenScaleMinInstances) {
-    output.error(
-      `You can't scale to more than ${result.meta
-        .min} min instances with your current plan.`
-    );
+    output.error(`You can't scale to more than ${result.meta.max} min instances with your current plan.`);
     now.close();
     return 1;
   }
