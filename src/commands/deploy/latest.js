@@ -30,7 +30,8 @@ import {
   DomainValidationRunning,
   DomainVerificationFailed,
   TooManyCertificates,
-  TooManyRequests
+  TooManyRequests,
+  InvalidDomain
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 
@@ -306,7 +307,8 @@ export default async function main(
       firstDeployCall instanceof DomainVerificationFailed ||
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
-      firstDeployCall instanceof TooManyRequests
+      firstDeployCall instanceof TooManyRequests ||
+      firstDeployCall instanceof InvalidDomain
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -511,6 +513,10 @@ export default async function main(
 };
 
 function handleCreateDeployError(output, error) {
+  if (error instanceof InvalidDomain) {
+    output.error(`The domain ${error.meta.domain} is not valid`);
+    return 1;
+  }
   if (error instanceof WildcardNotAllowed) {
     output.error(
       `Custom suffixes are only allowed for domains in ${chalk.underline(

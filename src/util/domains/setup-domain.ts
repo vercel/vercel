@@ -15,7 +15,15 @@ export default async function setupDomain(
   alias: string,
   contextName: string
 ) {
-  const domain = psl.parse(alias).domain as string;
+  const parsedDomain = psl.parse(alias);
+  if (parsedDomain.error) {
+    throw new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
+  }
+  if (!parsedDomain.domain) {
+    throw new ERRORS.InvalidDomain(alias);
+  }
+
+  const { domain } = parsedDomain;
   output.debug(`Trying to fetch domain ${domain} by name`);
   const info = await maybeGetDomainByName(client, contextName, domain);
   if (info instanceof ERRORS.DomainPermissionDenied) {

@@ -135,7 +135,8 @@ export default async function assignAlias(
     record instanceof ERRORS.DomainValidationRunning ||
     record instanceof ERRORS.InvalidAlias ||
     record instanceof ERRORS.TooManyCertificates ||
-    record instanceof ERRORS.TooManyRequests
+    record instanceof ERRORS.TooManyRequests ||
+    record instanceof ERRORS.InvalidDomain
   ) {
     return record;
   }

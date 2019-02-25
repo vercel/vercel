@@ -245,11 +245,11 @@ export class InvalidDomain extends NowError<
   'INVALID_DOMAIN',
   { domain: string }
 > {
-  constructor(domain: string) {
+  constructor(domain: string, message?: string | null) {
     super({
       code: 'INVALID_DOMAIN',
       meta: { domain },
-      message: `The domain ${domain} is not valid.`
+      message: message || `The domain ${domain} is not valid.`
     });
   }
 }
@@ -376,9 +376,9 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
  */
 export class DomainConfigurationError extends NowError<
   'DOMAIN_CONFIGURATION_ERROR',
-  { domain: string; subdomain: string; external: boolean }
+  { domain: string; subdomain: string | null; external: boolean }
 > {
-  constructor(domain: string, subdomain: string, external: boolean) {
+  constructor(domain: string, subdomain: string | null, external: boolean) {
     super({
       code: 'DOMAIN_CONFIGURATION_ERROR',
       meta: { domain, subdomain, external },

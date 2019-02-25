@@ -53,7 +53,8 @@ export default async function createDeploy(
         result instanceof ERRORS_TS.DomainValidationRunning ||
         result instanceof ERRORS_TS.DomainVerificationFailed ||
         result instanceof ERRORS_TS.TooManyCertificates ||
-        result instanceof ERRORS_TS.TooManyRequests
+        result instanceof ERRORS_TS.TooManyRequests ||
+        result instanceof ERRORS_TS.InvalidDomain
       ) {
         return result;
       }
