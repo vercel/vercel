@@ -8,6 +8,7 @@ import DevServer from './lib/dev-server';
 type Options = {
   '--debug': boolean;
   '--port': number;
+  '-d': boolean;
   '-p': number;
 };
 
@@ -20,7 +21,7 @@ export default async function dev(
   const [dir = '.'] = args;
   const cwd = path.join(process.cwd(), dir);
   const port = opts['-p'] || opts['--port'];
-  const debug = opts['--debug'];
+  const debug = Boolean(opts['-d'] || opts['--debug']);
 
   const devServer = new DevServer(cwd, {
     debug

@@ -86,7 +86,7 @@ export default class DevServer {
   /**
    * Launch dev-server
    */
-  async start(port = 3000) {
+  async start(port: number = 3000): Promise<void> {
     const nowJson = readLocalConfig(this.cwd);
 
     return new Promise((resolve, reject) => {
