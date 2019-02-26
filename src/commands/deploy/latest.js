@@ -83,7 +83,7 @@ const printDeploymentStatus = (
   builds
 ) => {
   if (readyState === 'READY') {
-    if (aliasFinal && Array.isArray(aliasFinal)) {
+    if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
       output.success(`Your deployment is now available on ${
         parseFinalAliases(aliasFinal)
       } ${deployStamp()}`);
