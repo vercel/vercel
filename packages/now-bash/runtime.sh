@@ -76,7 +76,7 @@ _lambda_runtime_next() {
 _lambda_runtime_body() {
 	if [ "$(jq --raw-output '.body | type' < "$1")" = "string" ]; then
 		if [ "$(jq --raw-output '.encoding' < "$1")" = "base64" ]; then
-			jq --raw-output '.body' < "$1" | base64 -d
+			jq --raw-output '.body' < "$1" | base64 --decode
 		else
 			# assume plain-text body
 			jq --raw-output '.body' < "$1"
