@@ -18,6 +18,7 @@ import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
+import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
 import {
@@ -304,7 +305,7 @@ export default async function main(
     );
 
     if (createArgs.target && createArgs.target !== 'production') {
-      error(`The specified ${highlight('target')} ${
+      error(`The specified ${param('--target')} ${
         code(createArgs.target)
       } is not valid`);
       return 1;
