@@ -285,6 +285,18 @@ exports.build = async ({ files, workPath, entrypoint }) => {
       );
     }
 
+    // An optional assets folder that is placed alongside every page entrypoint
+    const assets = await glob(
+      'assets/**',
+      path.join(entryPath, '.next', 'serverless'),
+    );
+
+    const assetKeys = Object.keys(assets);
+    if (assetKeys.length > 0) {
+      console.log('detected assets to be bundled with lambda:');
+      assetKeys.forEach(assetFile => console.log(`\t${assetFile}`));
+    }
+
     await Promise.all(
       pageKeys.map(async (page) => {
         // These default pages don't have to be handled as they'd always 404
@@ -298,6 +310,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
             ...launcherFiles,
+            ...assets,
             'page.js': pages[page],
           },
           handler: 'now__launcher.launcher',
@@ -315,7 +328,9 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[file],
+      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[
+        file
+      ],
     }),
     {},
   );
