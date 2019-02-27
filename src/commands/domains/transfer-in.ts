@@ -56,7 +56,7 @@ export default async function transferIn(
 
   if (!isRootDomain(domainName)) {
     output.error(
-      `Invalid domain name "${param(domainName)}". Run ${cmd(
+      `Invalid domain name ${param(domainName)}. Run ${cmd(
         'now domains --help'
       )}`
     );

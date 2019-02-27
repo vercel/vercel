@@ -10,6 +10,7 @@ import withSpinner from '../../util/with-spinner';
 import moveDomain from '../../util/domains/move-domain';
 import textInput from '../../util/input/text';
 import isRootDomain from '../../util/is-root-domain';
+import param from '../../util/output/param';
 
 type Options = {
   '--debug': boolean;
@@ -55,8 +56,7 @@ export default async function moveIn(
     return moveDomain(client, domainName, moveToken);
   });
   if (domain instanceof ERRORS.DomainNotFound) {
-    output.error(`Domain not found under ${chalk.bold(contextName)}`);
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.error(`Domain ${param(domainName)} not found.`);
     return 1;
   }
   if (domain instanceof ERRORS.InvalidMoveToken) {
