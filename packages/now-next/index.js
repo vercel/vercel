@@ -3,13 +3,19 @@ const download = require('@now/build-utils/fs/download.js'); // eslint-disable-l
 const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
-const { readFile, writeFile, unlink } = require('fs.promised');
 const {
   runNpmInstall,
   runPackageJsonScript,
 } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
-const fs = require('fs-extra');
+const {
+  readFile,
+  writeFile,
+  unlink: unlinkFile,
+  remove: removePath,
+  mkdirp,
+  rename: renamePath,
+} = require('fs-extra');
 const semver = require('semver');
 const nextLegacyVersions = require('./legacy-versions');
 const {
@@ -131,13 +137,13 @@ exports.build = async ({ files, workPath, entrypoint }) => {
 
   if (isLegacy) {
     try {
-      await unlink(path.join(entryPath, 'yarn.lock'));
+      await unlinkFile(path.join(entryPath, 'yarn.lock'));
     } catch (err) {
       console.log('no yarn.lock removed');
     }
 
     try {
-      await unlink(path.join(entryPath, 'package-lock.json'));
+      await unlinkFile(path.join(entryPath, 'package-lock.json'));
     } catch (err) {
       console.log('no package-lock.json removed');
     }
@@ -178,7 +184,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
-    await unlink(path.join(entryPath, '.npmrc'));
+    await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
   const lambdas = {};
@@ -373,11 +379,11 @@ exports.prepareCache = async ({ cachePath, workPath, entrypoint }) => {
   }
 
   console.log('clearing old cache ...');
-  fs.removeSync(cacheEntryPath);
-  fs.mkdirpSync(cacheEntryPath);
+  await removePath(cacheEntryPath);
+  await mkdirp(cacheEntryPath);
 
   console.log('copying build files for cache ...');
-  fs.renameSync(entryPath, cacheEntryPath);
+  await renamePath(entryPath, cacheEntryPath);
 
   console.log('producing cache file manifest ...');
 
