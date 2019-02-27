@@ -73,7 +73,8 @@ export default class Now extends EventEmitter {
       env,
       build,
       followSymlinks = true,
-      forceNew = false
+      forceNew = false,
+      target = null
     }
   ) {
     const { log, warn, time } = this._output;
@@ -252,10 +253,13 @@ export default class Now extends EventEmitter {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
           const exclude = [
-            'alias',
             'github',
             'scope'
           ];
+
+          if (target !== 'production') {
+            exclude.push('alias');
+          }
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
