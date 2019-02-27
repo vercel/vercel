@@ -77,7 +77,7 @@ export default async function moveOut(
   }
 
   const { domain } = moveTokenResult;
-  console.log(`${chalk.cyan('> Token')} ${domain.moveToken}}`);
+  console.log(`${chalk.cyan('> Token')} ${domain.moveToken}`);
   return 0;
 }
 

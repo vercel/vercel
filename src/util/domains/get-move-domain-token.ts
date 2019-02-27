@@ -14,7 +14,7 @@ export default async function getMoveDomainToken(
 ) {
   try {
     return await client.fetch<Response>(
-      `/v4/domains/${name}/move?destination=${destination}`
+      `/v4/domains/${name}?moveTo=${destination}`
     );
   } catch (error) {
     if (error.code === 'not_found') {
