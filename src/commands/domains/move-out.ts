@@ -85,6 +85,7 @@ export default async function moveOut(
 
   const { domain } = moveTokenResult;
   console.log(`${chalk.cyan('> Token')} ${domain.moveToken}`);
+  output.warn(`Your token will expire in 30 minutes`);
   return 0;
 }
 
