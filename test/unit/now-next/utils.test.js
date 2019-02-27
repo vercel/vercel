@@ -1,10 +1,32 @@
+const path = require('path');
 const {
   excludeFiles,
   validateEntrypoint,
   includeOnlyEntryDirectory,
   normalizePackageJson,
+  getNextConfig,
 } = require('@now/next/utils');
 const FileRef = require('@now/build-utils/file-ref'); // eslint-disable-line import/no-extraneous-dependencies
+
+describe('getNextConfig', () => {
+  const workPath = path.join(__dirname, 'fixtures');
+  const entryPath = path.join(__dirname, 'fixtures', 'entry');
+
+  it('should find entry file', async () => {
+    const file = await getNextConfig(workPath, entryPath);
+    expect(file).toMatchSnapshot();
+  });
+
+  it('should find work file second', async () => {
+    const file = await getNextConfig(workPath, '/');
+    expect(file).toMatchSnapshot();
+  });
+
+  it('return null on nothing', async () => {
+    const file = await getNextConfig('/', '/');
+    expect(file).toMatchSnapshot();
+  });
+});
 
 describe('excludeFiles', () => {
   it('should exclude files', () => {

@@ -1,3 +1,6 @@
+const fs = require('fs-extra');
+const path = require('path');
+
 /** @typedef { import('@now/build-utils/file-ref') } FileRef */
 /** @typedef { import('@now/build-utils/file-fs-ref') } FileFsRef */
 /** @typedef {{[filePath: string]: FileRef|FileFsRef}} Files */
@@ -136,6 +139,20 @@ function normalizePackageJson(defaultPackageJson = {}) {
   };
 }
 
+async function getNextConfig(workPath, entryPath) {
+  const entryConfig = path.join(entryPath, './next.config.js');
+  if (await fs.pathExists(entryConfig)) {
+    return fs.readFile(entryConfig, 'utf8');
+  }
+
+  const workConfig = path.join(workPath, './next.config.js');
+  if (await fs.pathExists(workConfig)) {
+    return fs.readFile(workConfig, 'utf8');
+  }
+
+  return null;
+}
+
 module.exports = {
   excludeFiles,
   validateEntrypoint,
@@ -143,4 +160,5 @@ module.exports = {
   excludeLockFiles,
   normalizePackageJson,
   onlyStaticDirectory,
+  getNextConfig,
 };

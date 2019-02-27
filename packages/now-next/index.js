@@ -18,6 +18,7 @@ const {
   includeOnlyEntryDirectory,
   normalizePackageJson,
   onlyStaticDirectory,
+  getNextConfig,
 } = require('./utils');
 
 /** @typedef { import('@now/build-utils/file-ref').Files } Files */
@@ -280,6 +281,14 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     const pageKeys = Object.keys(pages);
 
     if (pageKeys.length === 0) {
+      const nextConfig = await getNextConfig(workPath, entryPath);
+
+      if (nextConfig != null) {
+        console.info('Found next.config.js:');
+        console.info(nextConfig);
+        console.info();
+      }
+
       throw new Error(
         'No serverless pages were built. https://err.sh/zeit/now-builders/now-next-no-serverless-pages-built',
       );
@@ -328,9 +337,7 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[
-        file
-      ],
+      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[file],
     }),
     {},
   );
