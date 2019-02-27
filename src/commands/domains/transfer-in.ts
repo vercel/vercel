@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
@@ -15,6 +14,7 @@ import withSpinner from '../../util/with-spinner';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
+import isRootDomain from '../../util/is-root-domain';
 
 type Options = {
   '--debug': boolean;
@@ -54,16 +54,11 @@ export default async function transferIn(
     return 1;
   }
 
-  const parsedDomain = psl.parse(domainName);
-  if (parsedDomain.error) {
-    output.error(`The provided domain name "${param(domainName)}" is invalid`);
-    return 1;
-  }
-
-  const { domain: rootDomain, subdomain } = parsedDomain;
-  if (subdomain || !rootDomain) {
+  if (!isRootDomain(domainName)) {
     output.error(
-      `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
+      `Invalid domain name ${param(domainName)}. Run ${cmd(
+        'now domains --help'
+      )}`
     );
     return 1;
   }
