@@ -5,6 +5,7 @@ import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import wait from '../output/wait';
+import { InvalidDomain } from '../errors-ts';
 
 export default async function generateCertForDeploy(
   output: Output,
@@ -12,7 +13,16 @@ export default async function generateCertForDeploy(
   contextName: string,
   deployURL: string
 ) {
-  const domain = psl.parse(deployURL).domain as string;
+  const parsedDomain = psl.parse(deployURL);
+  if (parsedDomain.error) {
+    throw new InvalidDomain(deployURL, parsedDomain.error.message);
+  }
+
+  const { domain } = parsedDomain;
+  if (!domain) {
+    throw new InvalidDomain(deployURL);
+  }
+
   const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`);
   const result = await setupDomain(output, client, domain, contextName);
   cancelSetupWait();

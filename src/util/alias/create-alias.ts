@@ -44,7 +44,8 @@ export default async function createAlias(
       cert instanceof ERRORS.DomainsShouldShareRoot ||
       cert instanceof ERRORS.DomainValidationRunning ||
       cert instanceof ERRORS.TooManyCertificates ||
-      cert instanceof ERRORS.TooManyRequests
+      cert instanceof ERRORS.TooManyRequests ||
+      cert instanceof ERRORS.InvalidDomain
     ) {
       return cert;
     }
@@ -70,12 +71,13 @@ async function performCreateAlias(
   alias: string
 ) {
   try {
-    return await client.fetch<
-      AliasRecord
-    >(`/now/deployments/${deployment.uid}/aliases`, {
-      method: 'POST',
-      body: { alias }
-    });
+    return await client.fetch<AliasRecord>(
+      `/now/deployments/${deployment.uid}/aliases`,
+      {
+        method: 'POST',
+        body: { alias }
+      }
+    );
   } catch (error) {
     if (error.code === 'cert_missing' || error.code === 'cert_expired') {
       return new ERRORS.CertMissing(alias);

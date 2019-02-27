@@ -52,7 +52,13 @@ export default async function buy(
     return 1;
   }
 
-  const { domain: rootDomain, subdomain } = psl.parse(domainName);
+  const parsedDomain = psl.parse(domainName);
+  if (parsedDomain.error) {
+    output.error(`The provided domain name "${param(domainName)}" is invalid`);
+    return 1;
+  }
+
+  const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
     output.error(
       `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
