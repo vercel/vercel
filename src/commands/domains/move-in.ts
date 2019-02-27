@@ -49,7 +49,6 @@ export default async function moveIn(
       `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
     );
     return 1;
-    ``;
   }
 
   const domain = await withSpinner('Moving domain', () => {
