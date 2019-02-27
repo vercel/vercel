@@ -24,8 +24,8 @@ export default async function moveDomain(
       return new ERRORS.InvalidMoveToken(token);
     }
     if (error.code === 'domain_move_conflict') {
-      const { aliases, suffix } = error;
-      return new ERRORS.DomainMoveConflict({ domain: name, aliases, suffix });
+      const { suffix } = error;
+      return new ERRORS.DomainMoveConflict({ domain: name, suffix });
     }
     throw error;
   }

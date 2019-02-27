@@ -10,6 +10,7 @@ import withSpinner from '../../util/with-spinner';
 import getMoveDomainToken from '../../util/domains/get-move-domain-token';
 import isRootDomain from '../../util/is-root-domain';
 import textInput from '../../util/input/text';
+import param from '../../util/output/param';
 
 type Options = {
   '--debug': boolean;
@@ -54,6 +55,12 @@ export default async function moveOut(
   const moveTokenResult = await withSpinner('Generating token', () => {
     return getMoveDomainToken(client, context, domainName, destination);
   });
+  if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
+    output.error(
+      `Please remove custom suffix for ${param(domainName)} before moving out`
+    );
+    return 1;
+  }
   if (moveTokenResult instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);

@@ -55,6 +55,12 @@ export default async function moveIn(
   const domain = await withSpinner('Moving domain', () => {
     return moveDomain(client, domainName, moveToken);
   });
+  if (domain instanceof ERRORS.DomainMoveConflict) {
+    output.error(
+      `Domain cannot be moved because it is being used as a custom suffix.`
+    );
+    return 1;
+  }
   if (domain instanceof ERRORS.DomainNotFound) {
     output.error(`Domain ${param(domainName)} not found.`);
     return 1;

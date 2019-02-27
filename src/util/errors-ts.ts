@@ -822,21 +822,12 @@ export class DomainRemovalConflict extends NowError<
 
 export class DomainMoveConflict extends NowError<
   'domain_move_conflict',
-  { aliases: string[]; suffix: boolean }
+  { suffix: boolean }
 > {
-  constructor({
-    aliases,
-    domain,
-    suffix
-  }: {
-    aliases: string[];
-    domain: string;
-    suffix: boolean;
-  }) {
+  constructor({ domain, suffix }: { domain: string; suffix: boolean }) {
     super({
       code: 'domain_move_conflict',
       meta: {
-        aliases,
         suffix
       },
       message: `Conflicts should be resolved before attempting to move ${domain}`

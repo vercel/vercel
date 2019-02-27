@@ -17,6 +17,10 @@ export default async function getMoveDomainToken(
       `/v4/domains/${name}?moveTo=${destination}`
     );
   } catch (error) {
+    if (error.code === 'domain_move_conflict') {
+      const { suffix } = error;
+      return new ERRORS.DomainMoveConflict({ domain: name, suffix });
+    }
     if (error.code === 'not_found') {
       return new ERRORS.DomainNotFound(name);
     }
