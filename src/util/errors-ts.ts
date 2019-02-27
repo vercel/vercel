@@ -820,12 +820,53 @@ export class DomainRemovalConflict extends NowError<
   }
 }
 
+export class DomainMoveConflict extends NowError<
+  'domain_move_conflict',
+  { suffix: boolean }
+> {
+  constructor({ domain, suffix }: { domain: string; suffix: boolean }) {
+    super({
+      code: 'domain_move_conflict',
+      meta: {
+        suffix
+      },
+      message: `Conflicts should be resolved before attempting to move ${domain}`
+    });
+  }
+}
+
 export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
   constructor(email: string, message: string = 'Invalid Email') {
     super({
       code: 'INVALID_EMAIL',
       message,
       meta: { email }
+    });
+  }
+}
+
+export class InvalidMoveDestination extends NowError<
+  'INVALID_MOVE_DESTINATION',
+  { destination: string }
+> {
+  constructor(destination: string) {
+    super({
+      code: 'INVALID_MOVE_DESTINATION',
+      message: `Invalid move destination "${destination}"`,
+      meta: { destination }
+    });
+  }
+}
+
+export class InvalidMoveToken extends NowError<
+  'INVALID_MOVE_TOKEN',
+  { token: string }
+> {
+  constructor(token: string) {
+    super({
+      code: 'INVALID_MOVE_TOKEN',
+      message: `Invalid move token "${token}"`,
+      meta: { token }
     });
   }
 }

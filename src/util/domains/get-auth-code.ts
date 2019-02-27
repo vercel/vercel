@@ -5,7 +5,7 @@ export default async function getAuthCode(code?: string) {
     return code;
   }
   return textInput({
-    label: `Transfer auth code: `,
+    label: `- Transfer auth code: `,
     validateValue: isValidAuthCode
   });
 }
