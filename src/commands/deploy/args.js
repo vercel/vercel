@@ -87,6 +87,7 @@ export const latestArgs = {
   '--env': [String],
   '--build-env': [String],
   '--meta': [String],
+  '--no-scale': Boolean,
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,
@@ -122,6 +123,7 @@ export const legacyArgsMri = {
     'npm',
     'static',
     'public',
+    'no-scale',
     'no-verify',
     'dotenv'
   ],
@@ -231,6 +233,7 @@ export const legacyHelp = () => `
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
     -T, --team                     Set a custom team scope
     --regions                      Set default regions or DCs to enable the deployment on
+    --no-scale                     Skip scaling rules deploying with the default presets
     --no-verify                    Skip step of waiting until instance count meets given constraints
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
     --npm                          Node.js application
