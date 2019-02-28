@@ -181,7 +181,7 @@ export default async function main(
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
-  const { log, debug, error, print } = output;
+  const { log, debug, error, print, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
@@ -214,6 +214,9 @@ export default async function main(
   let deployStamp = stamp();
   let deployment = null;
 
+  if (argv['--no-scale']) {
+    warn(`The option --no-scale is only supported on Now 1.0 deployments`);
+  }
 
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
