@@ -215,7 +215,7 @@ export default async function main(
   let deployment = null;
 
   if (argv['--no-scale']) {
-    warn(`The option --no-scale is only considered for Now 1.0 deployments`);
+    warn(`The option --no-scale is only supported on Now 1.0 deployments`);
   }
 
   const isObject = item =>
