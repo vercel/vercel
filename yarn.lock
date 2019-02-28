@@ -457,13 +457,13 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@https://zeit-fun-0-1-1.zeit.sh":
-  version "0.1.1"
-  resolved "https://zeit-fun-0-1-1.zeit.sh#32751f033665de8cd3541e4c64a973a8934c036d"
+"@zeit/fun@https://zeit-fun-0-2-0.zeit.sh":
+  version "0.2.0"
+  resolved "https://zeit-fun-0-2-0.zeit.sh#5ce12af4391f9b058a188424ded6534d13163969"
   dependencies:
     "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
-    cachedir "2.1.0"
+    cache-or-tmp-directory "1.0.0"
     debug "4.1.1"
     execa "1.0.0"
     fs-extra "7.0.1"
@@ -1448,11 +1448,6 @@ cache-or-tmp-directory@1.0.0:
   integrity sha512-EuGx1xcSEpPSI2YgivZNvbCgCepc4hyAAFgDO1FRuZ/BYrgnZR4NIQFrcHhawyXxXv/yAtk9ck47qB0Pfhzg8Q==
   dependencies:
     cache-directory "^2.0.0"
-
-cachedir@2.1.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/cachedir/-/cachedir-2.1.0.tgz#b448c32b44cd9c0cd6ce4c419fa5b3c112c02191"
-  integrity sha512-xGBpPqoBvn3unBW7oxgb8aJn42K0m9m1/wyjmazah10Fq7bROGG3kRAE6OIyr3U3PIJUqGuebhCEdMk9OKJG0A==
 
 caching-transform@^1.0.0:
   version "1.0.1"
