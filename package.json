@@ -44,6 +44,9 @@
     "scripts": [
       "dist/*.js"
     ],
+    "assets": [
+      "dist/runtimes"
+    ],
     "targets": [
       "node10-alpine-x64",
       "node10-linux-x64",
