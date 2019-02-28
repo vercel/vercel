@@ -59,7 +59,7 @@ export default async function add(
   const domainName = String(args[0]);
   const parsedDomain = psl.parse(domainName);
   if (parsedDomain.error) {
-    output.error(`The provided domain name "${param(domainName)}" is invalid`);
+    output.error(`The provided domain name ${param(domainName)} is invalid`);
     return 1;
   }
 

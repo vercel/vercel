@@ -14,6 +14,8 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import verify from './verify';
+import moveOut from './move-out';
+import moveIn from './move-in';
 
 const help = () => {
   console.log(`
@@ -21,13 +23,15 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls                    Show all domains in a list
-    inspect      [name]   Displays information related to a domain
-    add          [name]   Add a new domain that you already own
-    rm           [name]   Remove a domain
-    buy          [name]   Buy a domain that you don't yet own
-    transfer-in  [name]   Transfer in a domain to Zeit
-    verify       [name]   Run a verification for a domain
+    ls                                  Show all domains in a list
+    inspect      [name]                 Displays information related to a domain
+    add          [name]                 Add a new domain that you already own
+    rm           [name]                 Remove a domain
+    buy          [name]                 Buy a domain that you don't yet own
+    move-out     [name] [destination]   Generate a token to move a domain out of your account.
+    move-in      [name] [token]         Move a domain into your account from another ZEIT account.
+    transfer-in  [name]                 Transfer in a domain to Zeit
+    verify       [name]                 Run a verification for a domain
 
   ${chalk.dim('Options:')}
 
@@ -67,6 +71,8 @@ const COMMAND_CONFIG = {
   buy: ['buy'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
+  moveIn: ['move-in'],
+  moveOut: ['move-out'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
   verify: ['verify']
@@ -99,6 +105,10 @@ export default async function main(ctx: NowContext) {
       return add(ctx, argv, args, output);
     case 'inspect':
       return inspect(ctx, argv, args, output);
+    case 'moveIn':
+      return moveIn(ctx, argv, args, output);
+    case 'moveOut':
+      return moveOut(ctx, argv, args, output);
     case 'buy':
       return buy(ctx, argv, args, output);
     case 'rm':

@@ -25,7 +25,7 @@ export default async function* verifyDeploymentScale(
   scale: DeploymentScale,
   options: Options = {}
 ) {
-  const { timeout = ms('3m') } = options;
+  const { timeout = ms('5m') } = options;
   const { pollingInterval = 2000 } = options;
   const getPollDeploymentInstances = createPollingFn(
     () => getDeploymentInstances(client, deploymentId, uuid()),

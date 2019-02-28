@@ -78,6 +78,7 @@ let forwardNpm;
 let followSymlinks;
 let wantsPublic;
 let regions;
+let noScale;
 let noVerify;
 let apiUrl;
 let isTTY;
@@ -211,6 +212,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
     .map(s => s.trim())
     .filter(Boolean);
   noVerify = argv.verify === false;
+  noScale = argv.scale === false;
   apiUrl = ctx.apiUrl;
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
@@ -479,6 +481,9 @@ async function sync({
         (result, dcId) => ({ ...result, [dcId]: { min: 0, max: 1 } }),
         {}
       );
+    } else if (noScale) {
+      debug(`Option --no-scale was set. Skipping scale parameters`)
+      scale = {}
     } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.

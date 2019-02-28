@@ -1,5 +1,5 @@
 import chalk from 'chalk';
 
-const highlight = (text: string) => chalk.bold.underline(text);
-
-export default highlight;
+export default function highlight(text: string): string {
+  return chalk.bold.underline(text);
+}

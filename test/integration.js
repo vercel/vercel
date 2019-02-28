@@ -70,11 +70,11 @@ test.before(async () => {
   }
 });
 
-const execute = (args, options) => execa(
-  binaryPath,
-  [...defaultArgs, ...args],
-  {...defaultOptions, ...options}
-);
+const execute = (args, options) =>
+  execa(binaryPath, [...defaultArgs, ...args], {
+    ...defaultOptions,
+    ...options
+  });
 
 test('print the deploy help message', async t => {
   const { stderr, code } = await execa(binaryPath, ['help', ...defaultArgs], {
@@ -130,7 +130,7 @@ test('deploy a node microservice', async t => {
     }
   );
 
-  console.log(stderr)
+  console.log(stderr);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -382,6 +382,45 @@ test('try to transfer-in a domain with "--code" option', async t => {
       `> Error! The domain "${session}-test.org" is not transferable.`
     )
   );
+  t.is(code, 1);
+});
+
+test('try to move-out an invalid domain', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      'domains',
+      'move-out',
+      `${session}-invalid-test.org`,
+      `${session}-invalid-user`,
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  t.true(stderr.includes(`> Error! Domain not found under `));
+  t.is(code, 1);
+});
+
+test('try to move-in an invalid domain', async t => {
+  const domainName = `${session}-invalid-test.org`;
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      'domains',
+      'move-in',
+      domainName,
+      `${session}-invalid-user`,
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  t.true(stderr.includes(`> Error! Domain "${domainName}" not found.`));
   t.is(code, 1);
 });
 
@@ -920,7 +959,7 @@ test('deploy a dockerfile project', async t => {
     }
   );
 
-	// Ensure the exit code is right
+  // Ensure the exit code is right
   t.is(code, 0);
 
   // Test if the output is really a URL
@@ -1010,13 +1049,12 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-const createFile = (dest) => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = (dest) => fs.mkdirSync(dest);
-const verifyExampleApollo = (cwd, dir) => (
-  fs.existsSync(path.join(cwd, dir, 'package.json'))
-    && fs.existsSync(path.join(cwd, dir, 'now.json'))
-    && fs.existsSync(path.join(cwd, dir, 'index.js'))
-);
+const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
+const createDirectory = dest => fs.mkdirSync(dest);
+const verifyExampleApollo = (cwd, dir) =>
+  fs.existsSync(path.join(cwd, dir, 'package.json')) &&
+  fs.existsSync(path.join(cwd, dir, 'now.json')) &&
+  fs.existsSync(path.join(cwd, dir, 'index.js'));
 
 test('initialize example "apollo"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
@@ -1071,11 +1109,15 @@ test('initialize example to existing directory with "-f"', async t => {
 test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Error! Destination path "apollo" already exists and is not an empty directory.';
+  const goal =
+    '> Error! Destination path "apollo" already exists and is not an empty directory.';
 
   createDirectory(path.join(cwd, 'apollo'));
   createFile(path.join(cwd, 'apollo', '.gitignore'));
-  const { stdout, code } = await execute(['init', 'apollo'], { cwd, input: '\n' });
+  const { stdout, code } = await execute(['init', 'apollo'], {
+    cwd,
+    input: '\n'
+  });
 
   t.is(code, 1);
   t.true(stdout.includes(goal));
