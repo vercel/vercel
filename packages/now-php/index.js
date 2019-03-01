@@ -20,6 +20,9 @@ exports.build = async ({ files, entrypoint }) => {
     files: { ...userFiles, ...bridgeFiles },
     handler: 'launcher.launcher',
     runtime: 'nodejs8.10',
+    environment: {
+      NOW_ENTRYPOINT: entrypoint,
+    },
   });
 
   return { [entrypoint]: lambda };

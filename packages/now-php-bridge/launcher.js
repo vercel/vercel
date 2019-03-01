@@ -64,7 +64,8 @@ async function transformFromAwsRequest({
   const { pathname, search, query: queryString } = parseUrl(path);
   let requestUri = pathname + (search || '');
 
-  let filename = pathJoin('/var/task/user', pathname);
+  let filename = pathJoin('/var/task/user',
+    process.env.NOW_ENTRYPOINT || pathname);
   if (await isDirectory(filename)) {
     if (!filename.endsWith('/')) {
       filename += '/';
