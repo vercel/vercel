@@ -7,6 +7,7 @@
     { "src": "/(.*)", "dest": "index.php" }
   ],
   "probes": [
-    { "path": "/any", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/any", "mustContain": "cow:RANDOMNESS_PLACEHOLDER:/any" },
+    { "path": "/any?type=some", "mustContain": "cow:RANDOMNESS_PLACEHOLDER:/any?type=some" }
   ]
 }
