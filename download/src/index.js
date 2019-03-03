@@ -160,6 +160,16 @@ async function main() {
         gitBashFile,
         modifyGitBashFile(fs.readFileSync(gitBashFile, 'utf8'))
       );
+
+      let npmCmdFile = path.join(globalPath, 'now.cmd');
+      if (!fs.existsSync(npmCmdFile)) {
+        npmCmdFile = path.join(process.env.APPDATA, 'npm/now.cmd');
+      }
+
+      fs.writeFileSync(
+        npmCmdFile,
+        '@%~dp0\\node_modules\\now\\download\\dist\\now.exe %*'
+      );
     } catch (err) {
       if (err.code !== 'ENOENT') {
         // Not a problem. only git cmd will not work
