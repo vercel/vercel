@@ -90,7 +90,7 @@ async function createGo(
 
 async function downloadGo(
   dir = GO_DIR,
-  version = '1.11.5',
+  version = '1.12',
   platform = process.platform,
   arch = process.arch,
 ) {
