@@ -43,7 +43,7 @@ export default async function moveIn(
     throw err;
   }
 
-  const { domainName, moveToken } = await getArgs(args);
+  const { domainName, moveToken } = await getArgs(args, output);
   if (!isRootDomain(domainName)) {
     output.error(
       `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
@@ -77,10 +77,18 @@ export default async function moveIn(
   return 0;
 }
 
-async function getArgs(args: string[]) {
+async function getArgs(args: string[], output: Output) {
   let [domainName, moveToken] = args;
 
-  if (!domainName) {
+  if (domainName && !isRootDomain(domainName)) {
+    output.error(
+      `${param(
+        domainName
+      )} is an invalid domain name. Please provide a valid domain name below:`
+    );
+  }
+
+  if (!domainName || !isRootDomain(domainName)) {
     domainName = await textInput({
       label: `- Domain name: `,
       validateValue: isRootDomain
