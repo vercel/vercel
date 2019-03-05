@@ -38,12 +38,14 @@ export default class DevServer {
 
   private debug: boolean;
   private server: http.Server;
+  private assets: BuilderOutputs;
   private status: DevServerStatus;
-  private statusMessage = '';
+  private statusMessage: string = '';
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
+    this.assets = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
   }
@@ -99,11 +101,12 @@ export default class DevServer {
         );
 
         // Initial build. Not meant to invoke, but for speed up further builds.
-        //if (nowJson && Array.isArray(nowJson.builds)) {
-        //  this.logDebug('Initial build');
-        //  await buildUserProject(nowJson.builds, this);
-        //  this.logSuccess('Initial build ready');
-        //}
+        if (nowJson && Array.isArray(nowJson.builds)) {
+          this.logDebug('Initial build');
+          this.assets = await buildUserProject(nowJson.builds, this);
+          this.logSuccess('Initial build ready');
+          this.logDebug('Built', Object.keys(this.assets));
+        }
 
         this.setStatusIdle();
         resolve();
@@ -201,13 +204,12 @@ export default class DevServer {
     }
 
     // build source files to assets
-    this.logDebug('Start builders', nowJson.builds);
-    const assets = await buildUserProject(nowJson.builds, this);
-
-    this.logDebug('Built', Object.keys(assets));
+    //this.logDebug('Start builders', nowJson.builds);
+    //const assets = await buildUserProject(nowJson.builds, this);
+    //this.logDebug('Built', Object.keys(assets));
 
     // find asset responsible for dest
-    const asset = resolveDest(assets, dest);
+    const asset = resolveDest(this.assets, dest);
 
     if (!asset) {
       res.writeHead(404);
@@ -223,7 +225,6 @@ export default class DevServer {
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
-        // console.error('lambda', { asset });
         const [fn, body] = await Promise.all([
           createFunction({
             Code: { ZipFile: asset.zipBuffer },
@@ -248,7 +249,6 @@ export default class DevServer {
           encoding: 'base64',
           body: body.toString('base64')
         };
-        // console.error({ payload });
 
         const result = await fn<InvokeResult>({
           Action: 'Invoke',
