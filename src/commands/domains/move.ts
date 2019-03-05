@@ -83,11 +83,20 @@ export default async function move(
     return 1;
   }
 
-  output.log(
-    `${chalk.cyan('> Success!')} Sent ${param(
-      destination
-    )} an email to approve the ${param(domainName)} move request.`
-  );
+  const { moved } = moveTokenResult;
+  if (moved) {
+    output.log(
+      `${chalk.cyan('> Success!')} ${param(domainName)} was moved to ${param(
+        destination
+      )}.`
+    );
+  } else {
+    output.log(
+      `${chalk.cyan('> Success!')} Sent ${param(
+        destination
+      )} an email to approve the ${param(domainName)} move request.`
+    );
+  }
   return 0;
 }
 

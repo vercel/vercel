@@ -3,7 +3,8 @@ import * as ERRORS from '../errors-ts';
 import Client from '../client';
 
 type Response = {
-  token: string;
+  moved: boolean;
+  token?: string;
 };
 
 export default async function moveOutDomain(
