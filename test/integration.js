@@ -327,7 +327,7 @@ test('list the scopes', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.includes(`✔ ${email}     ${email}`));
+  t.true(stdout.includes(`✔ now-cli-${session}     ${email}`));
 });
 
 test('list the payment methods', async t => {
