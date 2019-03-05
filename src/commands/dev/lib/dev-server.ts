@@ -3,6 +3,7 @@ import http from 'http';
 import chalk from 'chalk';
 import qs from 'querystring';
 import rawBody from 'raw-body';
+import { relative } from 'path';
 import httpProxy from 'http-proxy';
 import * as listen from 'async-listen';
 import serveHandler from 'serve-handler';
@@ -216,6 +217,9 @@ export default class DevServer {
     // invoke asset
     switch (asset.type) {
       case 'FileFsRef':
+        const origUrl = req.url;
+        req.url = `/${relative(cwd, asset.fsPath)}`;
+        this.logDebug(`Rewrote request URL: ${origUrl} -> ${req.url}`);
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
