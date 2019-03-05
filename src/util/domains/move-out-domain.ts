@@ -3,25 +3,29 @@ import * as ERRORS from '../errors-ts';
 import Client from '../client';
 
 type Response = {
-  domain: Domain;
+  token: string;
 };
 
-export default async function moveDomain(
+export default async function moveOutDomain(
   client: Client,
+  contextName: string,
   name: string,
-  token: string
+  destination: string
 ) {
   try {
-    return await client.fetch<Response>(`/v4/domains`, {
-      body: { method: 'move', name, token },
-      method: 'POST'
+    return await client.fetch<Response>(`/v4/domains/${name}`, {
+      body: { op: 'move-out', destination },
+      method: 'PATCH'
     });
   } catch (error) {
+    if (error.code === 'forbidden') {
+      return new ERRORS.DomainPermissionDenied(name, contextName);
+    }
     if (error.code === 'not_found') {
       return new ERRORS.DomainNotFound(name);
     }
-    if (error.code === 'invalid_move_token') {
-      return new ERRORS.InvalidMoveToken(token);
+    if (error.code === 'invalid_move_destination') {
+      return new ERRORS.InvalidMoveDestination(destination);
     }
     if (error.code === 'domain_move_conflict') {
       const { suffix } = error;
