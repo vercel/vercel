@@ -49,6 +49,7 @@ const context = {};
 const defaultOptions = { reject: false };
 const defaultArgs = [];
 const email = `now-cli-${session}@zeit.pub`;
+const contextName = `now-cli-${session}`;
 
 let tmpDir;
 
@@ -327,7 +328,7 @@ test('list the scopes', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.includes(`✔ now-cli-${session}     ${email}`));
+  t.true(stdout.includes(`✔ ${contextName}     ${email}`));
 });
 
 test('list the payment methods', async t => {
@@ -340,7 +341,7 @@ test('list the payment methods', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.startsWith(`> 0 cards found under ${email}`));
+  t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
 test('try to purchase a domain', async t => {
@@ -429,7 +430,7 @@ test('try to remove a non-existing payment method', async t => {
   t.is(code, 0);
   t.true(
     stderr.includes(
-      `You have no credit cards to choose from to delete under ${email}`
+      `You have no credit cards to choose from to delete under ${contextName}`
     )
   );
 });
