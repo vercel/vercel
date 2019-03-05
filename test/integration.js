@@ -385,12 +385,12 @@ test('try to transfer-in a domain with "--code" option', async t => {
   t.is(code, 1);
 });
 
-test('try to move-out an invalid domain', async t => {
+test('try to move an invalid domain', async t => {
   const { stderr, code } = await execa(
     binaryPath,
     [
       'domains',
-      'move-out',
+      'move',
       `${session}-invalid-test.org`,
       `${session}-invalid-user`,
       ...defaultArgs
@@ -401,26 +401,6 @@ test('try to move-out an invalid domain', async t => {
   );
 
   t.true(stderr.includes(`> Error! Domain not found under `));
-  t.is(code, 1);
-});
-
-test('try to move-in an invalid domain', async t => {
-  const domainName = `${session}-invalid-test.org`;
-  const { stderr, code } = await execa(
-    binaryPath,
-    [
-      'domains',
-      'move-in',
-      domainName,
-      `${session}-invalid-user`,
-      ...defaultArgs
-    ],
-    {
-      reject: false
-    }
-  );
-
-  t.true(stderr.includes(`> Error! Domain "${domainName}" not found.`));
   t.is(code, 1);
 });
 
