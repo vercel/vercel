@@ -194,7 +194,7 @@ export default class DevServer {
       return proxyPass(req, res, dest);
     }
 
-    if ([301, 302, 404].includes(status)) {
+    if ([301, 302, 303].includes(status)) {
       this.logDebug('Redirect', matched_route);
       return res.end();
     }
