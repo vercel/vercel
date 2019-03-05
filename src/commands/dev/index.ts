@@ -7,7 +7,7 @@ import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
-import error from '../../util/output/error';
+import cmd from '../../util/output/cmd';
 import dev from './dev';
 
 const COMMAND_CONFIG = {
@@ -49,15 +49,15 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  if (argv._.length > 3) {
-    output.error('Too much arguments.');
-    return 2;
+  if (argv._.length > 2) {
+    output.error(`${cmd('now dev [dir]')} accepts at most one argument`);
+    return 1;
   }
 
   try {
     return await dev(ctx, argv, args, output);
   } catch (err) {
-    console.error(error(err.message));
+    output.error(err.message);
     output.debug(stringifyError(err));
     return 1;
   }
