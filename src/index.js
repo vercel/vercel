@@ -385,12 +385,15 @@ const main = async argv_ => {
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`));
 
-      subcommand = 'login';
-      ctx.argv[2] = 'login';
-
-      // Ensure that subcommands lead to login as well, if
-      // no credentials are defined
-      ctx.argv = ctx.argv.splice(0, 3);
+      const exitCode = await runCommand({
+        subcommand: 'login',
+        ctx: {
+          ...ctx,
+          argv: [ctx.argv[0], ctx.argv[1], 'login']
+        },
+        output
+      });
+      if (exitCode !== 0) return exitCode;
     } else {
       console.error(
         error({
@@ -519,6 +522,12 @@ const main = async argv_ => {
     }
   }
 
+  return runCommand({ subcommand, ctx, output });
+};
+
+debug('start');
+
+const runCommand = async ({ subcommand, ctx, output }) => {
   const targetCommand = commands[subcommand];
 
   if (!targetCommand) {
@@ -565,8 +574,6 @@ const main = async argv_ => {
 
   return exitCode;
 };
-
-debug('start');
 
 const handleRejection = async err => {
   debug('handling rejection');
