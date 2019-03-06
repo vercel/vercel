@@ -255,7 +255,7 @@ const login = async ctx => {
     )
   );
 
-  return ctx;
+  return 0;
 };
 
 export default login;
