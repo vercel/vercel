@@ -14,8 +14,7 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import verify from './verify';
-import moveOut from './move-out';
-import moveIn from './move-in';
+import move from './move';
 
 const help = () => {
   console.log(`
@@ -28,8 +27,7 @@ const help = () => {
     add          [name]                 Add a new domain that you already own
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
-    move-out     [name] [destination]   Generate a token to move a domain out of your account.
-    move-in      [name] [token]         Move a domain into your account from another ZEIT account.
+    move         [name] [destination]   Move a domain to another user or team.
     transfer-in  [name]                 Transfer in a domain to Zeit
     verify       [name]                 Run a verification for a domain
 
@@ -71,8 +69,7 @@ const COMMAND_CONFIG = {
   buy: ['buy'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
-  moveIn: ['move-in'],
-  moveOut: ['move-out'],
+  move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
   verify: ['verify']
@@ -105,10 +102,8 @@ export default async function main(ctx: NowContext) {
       return add(ctx, argv, args, output);
     case 'inspect':
       return inspect(ctx, argv, args, output);
-    case 'moveIn':
-      return moveIn(ctx, argv, args, output);
-    case 'moveOut':
-      return moveOut(ctx, argv, args, output);
+    case 'move':
+      return move(ctx, argv, args, output);
     case 'buy':
       return buy(ctx, argv, args, output);
     case 'rm':

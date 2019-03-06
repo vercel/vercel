@@ -49,6 +49,7 @@ const context = {};
 const defaultOptions = { reject: false };
 const defaultArgs = [];
 const email = `now-cli-${session}@zeit.pub`;
+const contextName = `now-cli-${session}`;
 
 let tmpDir;
 
@@ -327,7 +328,7 @@ test('list the scopes', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.includes(`✔ ${email}     ${email}`));
+  t.true(stdout.includes(`✔ ${contextName}     ${email}`));
 });
 
 test('list the payment methods', async t => {
@@ -340,7 +341,7 @@ test('list the payment methods', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.startsWith(`> 0 cards found under ${email}`));
+  t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
 test('try to purchase a domain', async t => {
@@ -385,12 +386,12 @@ test('try to transfer-in a domain with "--code" option', async t => {
   t.is(code, 1);
 });
 
-test('try to move-out an invalid domain', async t => {
+test('try to move an invalid domain', async t => {
   const { stderr, code } = await execa(
     binaryPath,
     [
       'domains',
-      'move-out',
+      'move',
       `${session}-invalid-test.org`,
       `${session}-invalid-user`,
       ...defaultArgs
@@ -401,26 +402,6 @@ test('try to move-out an invalid domain', async t => {
   );
 
   t.true(stderr.includes(`> Error! Domain not found under `));
-  t.is(code, 1);
-});
-
-test('try to move-in an invalid domain', async t => {
-  const domainName = `${session}-invalid-test.org`;
-  const { stderr, code } = await execa(
-    binaryPath,
-    [
-      'domains',
-      'move-in',
-      domainName,
-      `${session}-invalid-user`,
-      ...defaultArgs
-    ],
-    {
-      reject: false
-    }
-  );
-
-  t.true(stderr.includes(`> Error! Domain "${domainName}" not found.`));
   t.is(code, 1);
 });
 
@@ -449,7 +430,7 @@ test('try to remove a non-existing payment method', async t => {
   t.is(code, 0);
   t.true(
     stderr.includes(
-      `You have no credit cards to choose from to delete under ${email}`
+      `You have no credit cards to choose from to delete under ${contextName}`
     )
   );
 });
