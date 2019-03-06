@@ -7,7 +7,7 @@ import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import withSpinner from '../../util/with-spinner';
-import getMoveDomainToken from '../../util/domains/get-move-domain-token';
+import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
 import textInput from '../../util/input/text';
 import param from '../../util/output/param';
@@ -16,7 +16,7 @@ type Options = {
   '--debug': boolean;
 };
 
-export default async function moveOut(
+export default async function move(
   ctx: NowContext,
   opts: Options,
   args: string[],
@@ -52,8 +52,8 @@ export default async function moveOut(
   }
 
   const context = contextName;
-  const moveTokenResult = await withSpinner('Generating token', () => {
-    return getMoveDomainToken(client, context, domainName, destination);
+  const moveTokenResult = await withSpinner('Requesting move', () => {
+    return moveOutDomain(client, context, domainName, destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     output.error(
@@ -83,9 +83,20 @@ export default async function moveOut(
     return 1;
   }
 
-  const { domain } = moveTokenResult;
-  console.log(`${chalk.cyan('> Token')} ${domain.moveToken}`);
-  output.warn(`Your token will expire in 30 minutes`);
+  const { moved } = moveTokenResult;
+  if (moved) {
+    output.log(
+      `${chalk.cyan('> Success!')} ${param(domainName)} was moved to ${param(
+        destination
+      )}.`
+    );
+  } else {
+    output.log(
+      `${chalk.cyan('> Success!')} Sent ${param(
+        destination
+      )} an email to approve the ${param(domainName)} move request.`
+    );
+  }
   return 0;
 }
 
