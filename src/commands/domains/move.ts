@@ -85,16 +85,12 @@ export default async function move(
 
   const { moved } = moveTokenResult;
   if (moved) {
-    console.log(
-      `${chalk.cyan('> Success!')} ${param(domainName)} was moved to ${param(
-        destination
-      )}.`
-    );
+    output.success(`${param(domainName)} was moved to ${param(destination)}.`);
   } else {
-    console.log(
-      `${chalk.cyan('> Success!')} Sent ${param(
-        destination
-      )} an email to approve the ${param(domainName)} move request.`
+    output.success(
+      `Sent ${param(destination)} an email to approve the ${param(
+        domainName
+      )} move request.`
     );
   }
   return 0;
