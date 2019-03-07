@@ -1,17 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import glob from '@now/build-utils/fs/glob';
+import FileFsRef from '@now/build-utils/file-fs-ref';
 import ignore, { Ignore } from '@zeit/dockerignore';
 
 import wait from '../../../util/output/wait';
-import glob from '@now/build-utils/fs/glob';
-import FileFsRef from '@now/build-utils/file-fs-ref';
-
-import { installBuilder, getBuilder } from './builder-cache';
-
 import DevServer from './dev-server';
 import { BuildConfig } from './types';
 import { NowError } from '../../../util/now-error';
+import { installBuilder, getBuilder } from './builder-cache';
 
 /**
  * Build project to statics & lambdas
@@ -74,7 +72,7 @@ async function executeBuilds(
           config: build.config || {},
           isDev: true
         });
-        results = { ...results, ...output };
+        Object.assign(results, output);
       }
     } catch (err) {
       throw err;
