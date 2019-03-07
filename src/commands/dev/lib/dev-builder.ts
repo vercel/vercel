@@ -1,15 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import { createFunction } from '@zeit/fun';
 import glob from '@now/build-utils/fs/glob';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 import ignore, { Ignore } from '@zeit/dockerignore';
 
 import wait from '../../../util/output/wait';
 import DevServer from './dev-server';
-import { BuildConfig } from './types';
 import { NowError } from '../../../util/now-error';
 import { installBuilder, getBuilder } from './builder-cache';
+import {
+  BuildConfig,
+  BuilderOutput,
+  BuilderOutputs,
+  BuiltLambda
+} from './types';
 
 /**
  * Build project to statics & lambdas
@@ -52,7 +58,7 @@ async function executeBuilds(
 ) {
   const { cwd } = devServer;
   const files = await collectProjectFiles('**', cwd);
-  let results = {};
+  let results: BuilderOutputs = {};
 
   for (const build of buildsConfig) {
     try {
@@ -60,9 +66,7 @@ async function executeBuilds(
 
       const builder = getBuilder(build.use);
 
-      const entries = Object.values(
-        await collectProjectFiles(build.src, cwd)
-      );
+      const entries = Object.values(await collectProjectFiles(build.src, cwd));
 
       for (const entry of entries) {
         const output = await builder.build({
@@ -86,9 +90,27 @@ async function executeBuilds(
     }
   }
 
+  await Promise.all(
+    Object.values(results).map(async (asset: BuilderOutput) => {
+      if (asset.type !== 'Lambda') return;
+      asset.fn = await createFunction({
+        Code: { ZipFile: asset.zipBuffer },
+        Handler: asset.handler,
+        Runtime: asset.runtime,
+        Environment: {
+          Variables: {
+            // TODO: resolve secret env vars
+            //...nowJson.env,
+            ...asset.environment,
+            NOW_REGION: 'dev1'
+          }
+        }
+      });
+    })
+  );
+
   return results;
 }
-
 
 /**
  * Collect project files, with .gitignore and .nowignore honored.

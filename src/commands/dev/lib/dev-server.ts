@@ -7,7 +7,6 @@ import { relative } from 'path';
 import listen from 'async-listen';
 import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
-import { createFunction } from '@zeit/fun';
 
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
@@ -90,9 +89,7 @@ export default class DevServer {
 
     await listen(this.server, port);
 
-    this.logSuccess(
-      `Dev server listening on port ${chalk.bold(String(port))}`
-    );
+    this.logSuccess(`Dev server listening on port ${chalk.bold(String(port))}`);
 
     // Initial build. Not meant to invoke, but to speed up future builds
     if (nowJson && Array.isArray(nowJson.builds)) {
@@ -227,22 +224,13 @@ export default class DevServer {
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
-        const [fn, body] = await Promise.all([
-          createFunction({
-            Code: { ZipFile: asset.zipBuffer },
-            Handler: asset.handler,
-            Runtime: asset.runtime,
-            Environment: {
-              Variables: {
-                // TODO: resolve secret env vars
-                ...nowJson.env,
-                ...asset.environment,
-                NOW_REGION: 'dev1'
-              }
-            }
-          }),
-          rawBody(req)
-        ]);
+        if (!asset.fn) {
+          res.statusCode = 500;
+          res.end('Lambda function has not been built');
+          return;
+        }
+
+        const body = await rawBody(req);
 
         const payload: InvokePayload = {
           method: req.method || 'GET',
@@ -252,7 +240,7 @@ export default class DevServer {
           body: body.toString('base64')
         };
 
-        const result = await fn<InvokeResult>({
+        const result = await asset.fn<InvokeResult>({
           Action: 'Invoke',
           body: JSON.stringify(payload)
         });
