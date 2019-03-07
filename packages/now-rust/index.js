@@ -5,6 +5,7 @@ const toml = require('@iarna/toml');
 const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
 const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
 const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { runShellScript } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const installRustAndGCC = require('./download-install-rust-toolchain.js');
 
@@ -83,6 +84,16 @@ async function buildWholeProject({
   );
 
   return lambdas;
+}
+
+async function runUserScripts(entrypoint) {
+  const buildScriptPath = path.join(entrypoint, 'build.sh');
+  const buildScriptExists = await fs.exists(buildScriptPath);
+
+  if (buildScriptExists) {
+    console.log('running `build.sh`...');
+    await runShellScript(buildScriptPath);
+  }
 }
 
 async function cargoLocateProject(config) {
@@ -215,6 +226,8 @@ exports.build = async (m) => {
     ...otherEnv,
     PATH: `${path.join(HOME, '.cargo/bin')}:${toolchainPath}:${PATH}`,
   };
+
+  await runUserScripts(entrypoint);
 
   const newM = Object.assign(m, { downloadedFiles, rustEnv });
   if (path.extname(entrypoint) === '.toml') {

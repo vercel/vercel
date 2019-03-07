@@ -109,7 +109,7 @@ impl<'a> From<NowRequest<'a>> for HttpRequest<Body> {
                     // todo: document failure behavior
                     Body::from(::base64::decode(b.as_ref()).unwrap_or_default())
                 }
-                (Some(b), Some(_)) => Body::from(b.into_owned()),
+                (Some(b), _) => Body::from(b.into_owned()),
                 _ => Body::from(()),
             })
             .expect("failed to build request");
