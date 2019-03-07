@@ -104,11 +104,12 @@ export default class DevServer {
 
   async stop(): Promise<void> {
     this.logDebug('Stopping `now dev` server');
-    this.server.close();
-    for (const build of Object.values(this.assets)) {
-      if (build.type !== 'Lambda' || !build.fn) continue;
-      build.fn.destroy();
-    }
+    const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
+      if (asset.type !== 'Lambda' || !asset.fn) return;
+      return asset.fn.destroy();
+    });
+    ops.push(close(this.server));
+    await Promise.all(ops);
   }
 
   /**
@@ -314,4 +315,16 @@ function resolveDest(
   if (foundIndex) {
     return assets[foundIndex];
   }
+}
+
+function close(server: http.Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((err: Error) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
 }
