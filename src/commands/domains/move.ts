@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import plural from 'pluralize';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
@@ -11,9 +12,13 @@ import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
 import textInput from '../../util/input/text';
 import param from '../../util/output/param';
+import getDomainAliases from '../../util/alias/get-domain-aliases';
+import getDomainByName from '../../util/domains/get-domain-by-name';
+import promptBool from '../../util/input/prompt-bool';
 
 type Options = {
   '--debug': boolean;
+  '--yes': boolean;
 };
 
 export default async function move(
@@ -51,8 +56,42 @@ export default async function move(
     return 1;
   }
 
+  const domain = await getDomainByName(client, contextName, domainName);
+  if (domain instanceof ERRORS.DomainNotFound) {
+    output.error(`Domain not found under ${chalk.bold(contextName)}`);
+    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    return 1;
+  }
+  if (domain instanceof ERRORS.DomainPermissionDenied) {
+    output.error(
+      `You don't have permissions over domain ${chalk.underline(
+        domain.meta.domain
+      )} under ${chalk.bold(domain.meta.context)}.`
+    );
+    return 1;
+  }
+
+  if (!opts['--yes']) {
+    const aliases = await getDomainAliases(client, domainName);
+    if (aliases.length > 0) {
+      output.warn(
+        `This domain's ${chalk.bold(
+          plural('alias', aliases.length, true)
+        )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
+      );
+      if (
+        !(await promptBool(
+          `Are you sure you want to move ${param(domainName)}?`
+        ))
+      ) {
+        output.log('Aborted');
+        return 0;
+      }
+    }
+  }
+
   const context = contextName;
-  const moveTokenResult = await withSpinner('Requesting move', () => {
+  const moveTokenResult = await withSpinner('Moving', () => {
     return moveOutDomain(client, context, domainName, destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
@@ -85,16 +124,12 @@ export default async function move(
 
   const { moved } = moveTokenResult;
   if (moved) {
-    output.log(
-      `${chalk.cyan('> Success!')} ${param(domainName)} was moved to ${param(
-        destination
-      )}.`
-    );
+    output.success(`${param(domainName)} was moved to ${param(destination)}.`);
   } else {
-    output.log(
-      `${chalk.cyan('> Success!')} Sent ${param(
-        destination
-      )} an email to approve the ${param(domainName)} move request.`
+    output.success(
+      `Sent ${param(destination)} an email to approve the ${param(
+        domainName
+      )} move request.`
     );
   }
   return 0;
