@@ -15,11 +15,7 @@ import { readLocalConfig } from '../../../util/config/files';
 
 import isURL from './is-url';
 import devRouter from './dev-router';
-import {
-  buildUserProject,
-  createIgnoreList,
-  collectProjectFiles
-} from './dev-builder';
+import { buildUserProject, createIgnoreList } from './dev-builder';
 
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
@@ -122,11 +118,11 @@ export default class DevServer {
    * dev-server http handler
    */
   devServerHandler: HttpHandler = async (req, res) => {
+    this.logHttp(`${req.method} ${req.url}`);
+
     if (this.status === DevServerStatus.busy) {
       return res.end(`[busy] ${this.statusMessage}...`);
     }
-
-    this.logHttp(`${req.method} ${req.url}`);
 
     try {
       const nowJson = readLocalConfig(this.cwd);
@@ -134,7 +130,7 @@ export default class DevServer {
       if (nowJson === null) {
         await this.serveProjectAsStatics(req, res, this.cwd);
       } else if (nowJson.version !== 2) {
-        throw new Error('now-dev only support Now V2.');
+        throw new Error('`now dev` only supports Now v2');
       } else {
         await this.serveProjectAsNowV2(req, res, this.cwd, nowJson);
       }
@@ -225,7 +221,9 @@ export default class DevServer {
       case 'FileFsRef':
         const origUrl = req.url;
         req.url = `/${relative(cwd, asset.fsPath)}`;
-        this.logDebug(`Rewrote request URL: ${origUrl} -> ${req.url}`);
+        if (origUrl !== req.url) {
+          this.logDebug(`Mapped request URL: ${origUrl} -> ${req.url}`);
+        }
         return serveStaticFile(req, res, cwd);
 
       case 'Lambda':
@@ -289,7 +287,6 @@ function proxyPass(
     changeOrigin: true,
     target: dest
   });
-
   return proxy.web(req, res);
 }
 
