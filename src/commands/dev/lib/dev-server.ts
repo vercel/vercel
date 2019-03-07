@@ -113,8 +113,8 @@ export default class DevServer {
     this.logDebug('Stopping `now dev` server');
     this.server.close();
     for (const build of Object.values(this.assets)) {
-      if (build.type !== 'Lambda' || !build.lambda) continue;
-      build.lambda.destroy();
+      if (build.type !== 'Lambda' || !build.fn) continue;
+      build.fn.destroy();
     }
   }
 

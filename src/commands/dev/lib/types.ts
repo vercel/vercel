@@ -34,11 +34,11 @@ export interface BuilderOutputs {
 
 export interface BuiltLambda {
   type: 'Lambda';
+  fn?: Lambda;
   zipBuffer: Buffer;
   handler: string;
   runtime: LambdaRuntime;
   environment: { [name: string]: string };
-  lambda?: Lambda;
 }
 
 export interface HttpHeadersConfig {
