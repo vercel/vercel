@@ -139,7 +139,7 @@ export default class DevServer {
       this.logDebug(err.stack);
 
       if (!res.finished) {
-        res.writeHead(500);
+        res.statusCode = 500;
         res.end(this.statusMessage);
       }
     }
@@ -159,7 +159,7 @@ export default class DevServer {
     const ignore = createIgnoreList(cwd);
 
     if (filePath && ignore.ignores(filePath)) {
-      res.writeHead(404);
+      res.statusCode = 404;
       res.end();
       return;
     }
@@ -212,7 +212,7 @@ export default class DevServer {
     const asset = resolveDest(this.assets, dest);
 
     if (!asset) {
-      res.writeHead(404);
+      res.statusCode = 404;
       return res.end();
     }
 
@@ -269,7 +269,7 @@ export default class DevServer {
         }
         return res.end(resBody);
       default:
-        res.writeHead(500);
+        res.statusCode = 500;
         return res.end();
     }
   };
