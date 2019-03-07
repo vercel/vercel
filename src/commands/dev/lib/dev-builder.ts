@@ -25,7 +25,7 @@ export async function buildUserProject(
     await installBuilders(buildsConfig);
 
     devServer.setStatusBusy('Building lambdas');
-    const assets = await buildLambdas(buildsConfig, devServer);
+    const assets = await executeBuilds(buildsConfig, devServer);
 
     devServer.setStatusIdle();
     return assets;
@@ -48,11 +48,11 @@ async function installBuilders(buildsConfig: BuildConfig[]) {
   }
 }
 
-async function buildLambdas(
+async function executeBuilds(
   buildsConfig: BuildConfig[],
   devServer: DevServer
 ) {
-  const {cwd} = devServer;
+  const { cwd } = devServer;
   const files = await collectProjectFiles('**', cwd);
   let results = {};
 
