@@ -4,8 +4,8 @@ import chalk from 'chalk';
 import qs from 'querystring';
 import rawBody from 'raw-body';
 import { relative } from 'path';
+import listen from 'async-listen';
 import httpProxy from 'http-proxy';
-import * as listen from 'async-listen';
 import serveHandler from 'serve-handler';
 import { createFunction } from '@zeit/fun';
 
@@ -92,26 +92,21 @@ export default class DevServer {
   async start(port: number = 3000): Promise<void> {
     const nowJson = readLocalConfig(this.cwd);
 
-    return new Promise((resolve, reject) => {
-      this.server.on('error', reject);
+    await listen(this.server, port);
 
-      this.server.listen(port, async () => {
-        this.logSuccess(
-          `Dev server listening on port ${chalk.bold(String(port))}`
-        );
+    this.logSuccess(
+      `Dev server listening on port ${chalk.bold(String(port))}`
+    );
 
-        // Initial build. Not meant to invoke, but for speed up further builds.
-        if (nowJson && Array.isArray(nowJson.builds)) {
-          this.logDebug('Initial build');
-          this.assets = await buildUserProject(nowJson.builds, this);
-          this.logSuccess('Initial build ready');
-          this.logDebug('Built', Object.keys(this.assets));
-        }
+    // Initial build. Not meant to invoke, but to speed up future builds
+    if (nowJson && Array.isArray(nowJson.builds)) {
+      this.logDebug('Initial build');
+      this.assets = await buildUserProject(nowJson.builds, this);
+      this.logSuccess('Initial build ready');
+      this.logDebug('Built', Object.keys(this.assets));
+    }
 
-        this.setStatusIdle();
-        resolve();
-      });
-    });
+    this.setStatusIdle();
   }
 
   /**
