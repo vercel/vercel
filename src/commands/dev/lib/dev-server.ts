@@ -316,9 +316,10 @@ function resolveDest(
     return assets[assetKey];
   }
 
-  // find `${assetKey}/index.*` for indexes
+  // Find `${assetKey}/index.*` for indexes
   const foundIndex = Object.keys(assets).find(name => {
-    return name.replace(/\/?index\.\w+$/, '') === assetKey.replace(/\/$/, '');
+    const withoutIndex = name.replace(/\/?index(\.\w+)?$/, '');
+    return withoutIndex === assetKey.replace(/\/$/, '');
   });
 
   if (foundIndex) {
