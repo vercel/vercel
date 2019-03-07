@@ -22,7 +22,11 @@ async function packAndDeploy (builderPath) {
 
 const RANDOMNESS_PLACEHOLDER_STRING = 'RANDOMNESS_PLACEHOLDER';
 
-async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath, buildDelegate) {
+async function testDeployment (
+  { builderUrl, buildUtilsUrl },
+  fixturePath,
+  buildDelegate
+) {
   console.log('testDeployment', fixturePath);
   const globResult = await glob(`${fixturePath}/**`, { nodir: true });
   const bodies = globResult.reduce((b, f) => {
@@ -77,7 +81,7 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath, build
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
-    const text = await fetchDeploymentUrl(probeUrl, {
+    const { text, resp } = await fetchDeploymentUrl(probeUrl, {
       method: probe.method,
       body: probe.body ? JSON.stringify(probe.body) : undefined,
       headers: {
@@ -87,9 +91,13 @@ async function testDeployment ({ builderUrl, buildUtilsUrl }, fixturePath, build
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
         await fs.writeFile(path.join(__dirname, 'failed-page.txt'), text);
+        const headers = Array.from(resp.headers.entries())
+          .map(([ k, v ]) => `  ${k}=${v}`)
+          .join('\n');
         throw new Error(
           `Fetched page ${probeUrl} does not contain ${probe.mustContain}.`
-          + ` Instead it contains ${text.slice(0, 60)}`
+            + ` Instead it contains ${text.slice(0, 60)}`
+            + ` Response headers:\n ${headers}`
         );
       }
     } else {
@@ -118,9 +126,12 @@ async function fetchDeploymentUrl (url, opts) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url, opts);
     const text = await resp.text();
-    if (text && !text.includes('Join Free')
-        && !text.includes('The page could not be found')) {
-      return text;
+    if (
+      text
+      && !text.includes('Join Free')
+      && !text.includes('The page could not be found')
+    ) {
+      return { resp, text };
     }
 
     await new Promise((r) => setTimeout(r, 1000));
