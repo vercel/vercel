@@ -71,7 +71,8 @@ async function executeBuilds(
           files,
           entrypoint: path.relative(cwd, entry.fsPath),
           workPath: cwd,
-          config: build.config || {}
+          config: build.config || {},
+          isDev: true
         });
         results = { ...results, ...output };
       }
