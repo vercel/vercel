@@ -109,6 +109,15 @@ export default class DevServer {
     this.setStatusIdle();
   }
 
+  async stop(): Promise<void> {
+    this.logDebug('Stopping `now dev` server');
+    this.server.close();
+    for (const build of Object.values(this.assets)) {
+      if (build.type !== 'Lambda' || !build.lambda) continue;
+      build.lambda.destroy();
+    }
+  }
+
   /**
    * dev-server http handler
    */

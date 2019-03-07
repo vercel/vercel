@@ -27,5 +27,7 @@ export default async function dev(
     debug
   });
 
+  process.once('SIGINT', devServer.stop.bind(devServer));
+
   await devServer.start(port);
 }

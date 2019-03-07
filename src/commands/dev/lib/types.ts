@@ -1,6 +1,7 @@
 import http from 'http'
-import FileFsRef from '@now/build-utils/file-fs-ref';
+import { Lambda } from '@zeit/fun';
 import { LambdaRuntime } from '@now/build-utils';
+import FileFsRef from '@now/build-utils/file-fs-ref';
 
 export enum DevServerStatus {
   busy,
@@ -32,11 +33,12 @@ export interface BuilderOutputs {
 }
 
 export interface BuiltLambda {
-  type: 'Lambda',
+  type: 'Lambda';
   zipBuffer: Buffer;
   handler: string;
   runtime: LambdaRuntime;
-  environment: { [name: string]: string }
+  environment: { [name: string]: string };
+  lambda?: Lambda;
 }
 
 export interface HttpHeadersConfig {
