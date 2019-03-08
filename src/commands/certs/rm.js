@@ -9,7 +9,6 @@ import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
-import type { Certificate } from '../../util/types';
 
 async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
@@ -88,8 +87,8 @@ async function getCertsToDelete(output, now, idOrCn) {
   return matchedById ? [cert] : await getCerts(output, now, [idOrCn]).then(filterMatchingCert(idOrCn));
 }
 
-function filterMatchingCert(idOrCn: string) {
-  return (certs: Certificate[]) => certs.filter(cert => cert.cns.some(cn => cn === idOrCn));
+function filterMatchingCert(idOrCn) {
+  return (certs) => certs.filter(cert => cert.cns.some(cn => cn === idOrCn));
 }
 
 function readConfirmation(output, msg, certs) {
