@@ -55,7 +55,7 @@ async function installBuilders(buildsConfig: BuildConfig[]) {
 async function executeBuilds(
   buildsConfig: BuildConfig[],
   devServer: DevServer
-) {
+): Promise<BuilderOutputs> {
   const { cwd } = devServer;
   const files = await collectProjectFiles('**', cwd);
   let results: BuilderOutputs = {};
@@ -63,8 +63,8 @@ async function executeBuilds(
   for (const build of buildsConfig) {
     try {
       devServer.logDebug(`Build ${JSON.stringify(build)}`);
-
-      const builder = getBuilder(build.use);
+      const builder = await getBuilder(build.use);
+      build.builder = builder;
 
       const entries = Object.values(await collectProjectFiles(build.src, cwd));
 
@@ -76,6 +76,11 @@ async function executeBuilds(
           config: build.config || {},
           isDev: true
         });
+
+        for (const asset of Object.values(output)) {
+          asset.buildConfig = build;
+        }
+
         Object.assign(results, output);
       }
     } catch (err) {

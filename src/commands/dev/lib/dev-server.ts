@@ -16,8 +16,6 @@ import isURL from './is-url';
 import devRouter from './dev-router';
 import { buildUserProject, createIgnoreList } from './dev-builder';
 
-import FileFsRef from '@now/build-utils/file-fs-ref';
-
 import {
   DevServerStatus,
   DevServerOptions,
@@ -95,6 +93,7 @@ export default class DevServer {
     if (nowJson && Array.isArray(nowJson.builds)) {
       this.logDebug('Initial build');
       this.assets = await buildUserProject(nowJson.builds, this);
+      console.log(this.assets);
       this.logSuccess('Initial build ready');
       this.logDebug('Built', Object.keys(this.assets));
     }

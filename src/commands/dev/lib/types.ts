@@ -17,6 +17,7 @@ export interface BuildConfig {
   src: string;
   use: string;
   config?: object;
+  builder?: Builder;
 }
 
 export interface HttpHandler {
@@ -27,27 +28,41 @@ export interface BuilderInputs {
   [path: string]: FileFsRef;
 }
 
-export type BuilderOutput = BuiltLambda | FileFsRef;
+export interface BuiltFileFsRef extends FileFsRef {
+  buildConfig?: BuildConfig;
+}
+
+export type BuilderOutput = BuiltLambda | BuiltFileFsRef;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
 }
 
-export interface BuilderParams {
+export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
-  workPath: string;
-  config: any;
+  config: object;
   isDev?: boolean;
 }
 
+export interface BuilderParams extends BuilderParamsBase {
+  workPath: string;
+}
+
+export interface PrepareCacheParams extends BuilderParamsBase {
+  cachePath: string;
+}
+
 export interface Builder {
+  config?: object;
   build(params: BuilderParams): BuilderOutputs;
+  prepareCache?(params: PrepareCacheParams): BuilderOutputs;
 }
 
 export interface BuiltLambda {
   type: 'Lambda';
   fn?: Lambda;
+  buildConfig?: BuildConfig;
   zipBuffer: Buffer;
   handler: string;
   runtime: LambdaRuntime;
