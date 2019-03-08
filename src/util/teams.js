@@ -1,6 +1,6 @@
-const Now = require('.');
+import Now from '.';
 
-module.exports = class Teams extends Now {
+export default class Teams extends Now {
   async create({ slug }) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
@@ -28,7 +28,8 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      }
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -71,7 +72,8 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      }
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
@@ -86,6 +88,10 @@ module.exports = class Teams extends Now {
       if (this._debug) {
         console.time(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
       }
+
+      const publicRes = await this._fetch(`/www/user/public?email=${email}`);
+      const { name, username } = await publicRes.json();
+
       const res = await this._fetch(`/teams/${teamId}/members`, {
         method: 'POST',
         body: {
@@ -107,13 +113,15 @@ module.exports = class Teams extends Now {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         return bail(e);
-      } else if (res.status !== 200) {
+      }
+
+      if (res.status !== 200) {
         const e = new Error(body.error.message);
         e.code = body.error.code;
         throw e;
       }
 
-      return body;
+      return { ...body, name, username };
     });
   }
 
@@ -138,4 +146,4 @@ module.exports = class Teams extends Now {
       return res.json();
     });
   }
-};
+}

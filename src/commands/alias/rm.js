@@ -1,36 +1,39 @@
-// @flow
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
-import getScope from '../../util/get-scope';
+import cmd from '../../util/output/cmd.ts';
+import Client from '../../util/client.ts';
+import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
-import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
-import { CLIContext, Output } from '../../util/types';
-import type { CLIAliasOptions, Alias } from '../../util/types';
+import stamp from '../../util/output/stamp.ts';
+import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
+import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
-import findAliasByAliasOrId from './find-alias-by-alias-or-id';
-
-export default async function rm(
-  ctx: CLIContext,
-  opts: CLIAliasOptions,
-  args: string[],
-  output: Output
-): Promise<number> {
+export default async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { ['--debug']: debugEnabled } = opts;
-  const { contextName } = await getScope({
+  const { '--debug': debugEnabled } = opts;
+  const client = new Client({
     apiUrl,
     token,
-    debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    debug: debugEnabled
   });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
@@ -50,11 +53,7 @@ export default async function rm(
     return 1;
   }
 
-  const alias: Alias | void = await findAliasByAliasOrId(
-    output,
-    now,
-    aliasOrId
-  );
+  const alias = await findAliasByAliasOrId(output, now, aliasOrId);
   if (!alias) {
     output.error(
       `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
@@ -78,7 +77,7 @@ export default async function rm(
   return 0;
 }
 
-async function confirmAliasRemove(output: Output, alias: Alias) {
+async function confirmAliasRemove(output, alias) {
   const srcUrl = alias.deployment
     ? chalk.underline(alias.deployment.url)
     : null;
@@ -87,7 +86,7 @@ async function confirmAliasRemove(output: Output, alias: Alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(ms(new Date() - new Date(alias.created)) + ' ago')
+        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`)
       ]
     ],
     {

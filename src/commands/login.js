@@ -1,37 +1,31 @@
-// Native
-const { stringify: stringifyQuery } = require('querystring');
-const { hostname } = require('os');
+import { stringify as stringifyQuery } from 'querystring';
+import fetch from 'node-fetch';
+import debugFactory from 'debug';
+import promptEmail from 'email-prompt';
+import ms from 'ms';
+import { validate as validateEmail } from 'email-validator';
+import chalk from 'chalk';
+import mri from 'mri';
+import ua from '../util/ua.ts';
+import error from '../util/output/error';
+import aborted from '../util/output/aborted';
+import wait from '../util/output/wait';
+import highlight from '../util/output/highlight';
+import info from '../util/output/info';
+import ok from '../util/output/ok';
+import cmd from '../util/output/cmd.ts';
+import ready from '../util/output/ready';
+import param from '../util/output/param.ts';
+import eraseLines from '../util/output/erase-lines';
+import sleep from '../util/sleep';
+import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
+import getNowDir from '../util/config/global-path';
+import hp from '../util/humanize-path';
+import logo from '../util/output/logo';
+import exit from '../util/exit';
+import loginOrSignup from '../util/login/login-or-signup.ts'
 
-// Packaages
-const fetch = require('node-fetch');
-const debug = require('debug')('now:sh:login');
-const promptEmail = require('email-prompt');
-const ms = require('ms');
-const { validate: validateEmail } = require('email-validator');
-const chalk = require('chalk');
-const mri = require('mri');
-
-// Utilities
-const ua = require('../util/ua');
-const error = require('../util/output/error');
-const aborted = require('../util/output/aborted');
-const wait = require('../util/output/wait');
-const highlight = require('../util/output/highlight');
-const info = require('../util/output/info');
-const ok = require('../util/output/ok');
-const cmd = require('../util/output/cmd');
-const ready = require('../util/output/ready');
-const param = require('../util/output/param');
-const eraseLines = require('../util/output/erase-lines');
-const sleep = require('../util/sleep');
-const {
-  writeToAuthConfigFile,
-  writeToConfigFile
-} = require('../util/config/files');
-const getNowDir = require('../util/config/global-path');
-const hp = require('../util/humanize-path');
-const logo = require('../util/output/logo');
-const exit = require('../util/exit');
+const debug = debugFactory('now:sh:login');
 
 const help = () => {
   console.log(`
@@ -57,75 +51,6 @@ const help = () => {
 
     ${chalk.cyan('$ now login john@doe.com')}
 `);
-};
-
-// POSTs to /now/registration – either creates an account or performs a login
-// returns {token, securityCode}
-// token: should be used to verify the status of the login process
-// securityCode: will be sent to the user in the email body
-const getVerificationData = async ({ apiUrl, email }) => {
-  const hyphens = new RegExp('-', 'g');
-  const host = hostname()
-    .replace(hyphens, ' ')
-    .replace('.local', '');
-  const tokenName = `Now CLI on ${host}`;
-
-  const data = JSON.stringify({ email, tokenName });
-  debug('POST /now/registration');
-
-  let res;
-
-  try {
-    res = await fetch(`${apiUrl}/now/registration`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
-        'User-Agent': ua
-      },
-      body: data
-    });
-  } catch (err) {
-    debug('error fetching /now/registration: %O', err.stack);
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to login: ${err.message}`
-      )
-    );
-  }
-
-  debug('parsing response from POST /now/registration');
-
-  let body;
-  try {
-    body = await res.json();
-  } catch (err) {
-    debug(
-      `error parsing the response from /now/registration as JSON – got %O`,
-      err.stack
-    );
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to log in: ${err.message}`
-      )
-    );
-  }
-
-  if (!res.ok) {
-    debug(
-      'error response from POST /now/registration: %d %j',
-      res.status,
-      body
-    );
-    const { error = {} } = body;
-    const message =
-      error.code === 'invalid_email'
-        ? 'Invalid email address'
-        : `Unexpected error: ${error.message}`;
-    throw new Error(message);
-  }
-
-  return body;
 };
 
 const verify = async ({ apiUrl, email, verificationToken }) => {
@@ -264,12 +189,12 @@ const login = async ctx => {
   stopSpinner = wait('Sending you an email');
 
   try {
-    const data = await getVerificationData({ apiUrl, email });
+    const data = await loginOrSignup(apiUrl, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(err.message);
+    console.log(error(err.message))
     return 1;
   }
 
@@ -333,4 +258,4 @@ const login = async ctx => {
   return ctx;
 };
 
-module.exports = login;
+export default login;

@@ -1,22 +1,19 @@
-// @flow
-
-// Packages
-const chalk = require('chalk');
-const table = require('text-table');
-
-// Utilities
-const cmd = require('../util/output/cmd');
-const createOutput = require('../util/output');
-const Now = require('../util/');
-const logo = require('../util/output/logo');
-const elapsed = require('../util/output/elapsed');
-const wait = require('../util/output/wait');
-const { handleError } = require('../util/error');
-const strlen = require('../util/strlen');
-const getScope = require('../util/get-scope');
-
+import chalk from 'chalk';
+import table from 'text-table';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
+import routesList from '../util/output/routes';
+import indent from '../util/output/indent';
+import cmd from '../util/output/cmd.ts';
+import createOutput from '../util/output';
+import Now from '../util';
+import logo from '../util/output/logo';
+import elapsed from '../util/output/elapsed.ts';
+import wait from '../util/output/wait';
+import { handleError } from '../util/error';
+import strlen from '../util/strlen.ts';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
 
 const STATIC = 'STATIC';
 
@@ -47,11 +44,11 @@ const help = () => {
 
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
-    ${chalk.cyan('$ now scale my-deployment.now.sh')}
+    ${chalk.cyan('$ now inspect my-deployment.now.sh')}
   `);
 };
 
-module.exports = async function main(ctx: any): Promise<number> {
+export default async function main(ctx) {
   let id;
   let deployment;
   let argv;
@@ -84,12 +81,24 @@ module.exports = async function main(ctx: any): Promise<number> {
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
-  const { contextName } = await getScope({
+  const client = new Client({
     apiUrl,
     token,
-    debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    debug: debugEnabled
   });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
@@ -106,17 +115,17 @@ module.exports = async function main(ctx: any): Promise<number> {
     if (err.status === 404) {
       error(`Failed to find deployment "${id}" in ${chalk.bold(contextName)}`);
       return 1;
-    } else if (err.status === 403) {
+    }
+    if (err.status === 403) {
       error(
         `No permission to access deployment "${id}" in ${chalk.bold(
           contextName
         )}`
       );
       return 1;
-    } else {
-      // unexpected
-      throw err;
     }
+    // unexpected
+    throw err;
   }
 
   const {
@@ -129,13 +138,15 @@ module.exports = async function main(ctx: any): Promise<number> {
     url,
     created,
     limits,
-    version
+    version,
+    routes,
+    readyState
   } = deployment;
 
   const isBuilds = version === 2;
   const buildsUrl = `/v1/now/deployments/${finalId}/builds`;
 
-  const [scale, events, {builds}] = await Promise.all([
+  const [scale, events, { builds }] = await Promise.all([
     caught(
       now.fetch(`/v3/now/deployments/${encodeURIComponent(finalId)}/instances`)
     ),
@@ -143,10 +154,12 @@ module.exports = async function main(ctx: any): Promise<number> {
       ? null
       : caught(
           now.fetch(
-            `/v1/now/deployments/${encodeURIComponent(finalId)}/events?types=event`
+            `/v1/now/deployments/${encodeURIComponent(
+              finalId
+            )}/events?types=event`
           )
-      ),
-    isBuilds ? now.fetch(buildsUrl): { builds: [] }
+        ),
+    isBuilds ? now.fetch(buildsUrl) : { builds: [] }
   ]);
 
   cancelWait();
@@ -157,42 +170,52 @@ module.exports = async function main(ctx: any): Promise<number> {
   );
 
   print('\n');
-  print(chalk.bold('  Meta\n'));
-  print(`    ${chalk.dim('version')}\t${version}\n`);
-  print(`    ${chalk.dim('id')}\t\t${finalId}\n`);
-  print(`    ${chalk.dim('name')}\t${name}\n`);
-  print(`    ${chalk.dim('readyState')}\t${stateString(state)}\n`);
+  print(chalk.bold('  General\n\n'));
+  print(`    ${chalk.cyan('version')}\t${version}\n`);
+  print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
+  print(`    ${chalk.cyan('name')}\t${name}\n`);
+  print(`    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`);
   if (!isBuilds) {
-    print(`    ${chalk.dim('type')}\t${type}\n`);
+    print(`    ${chalk.cyan('type')}\t${type}\n`);
   }
   if (slot) {
-    print(`    ${chalk.dim('slot')}\t${slot}\n`);
+    print(`    ${chalk.cyan('slot')}\t${slot}\n`);
   }
   if (sessionAffinity) {
-    print(`    ${chalk.dim('affinity')}\t${sessionAffinity}\n`);
+    print(`    ${chalk.cyan('affinity')}\t${sessionAffinity}\n`);
   }
-  print(`    ${chalk.dim('url')}\t\t${url}\n`);
-  print(
-    `    ${chalk.dim('createdAt')}\t${new Date(created)} ${elapsed(
-      Date.now() - created, true)}\n`
-  );
-  print('\n');
+  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
+  if (created) {
+    print(
+      `    ${chalk.cyan('createdAt')}\t${new Date(created)} ${elapsed(
+        Date.now() - created,
+        true
+      )}\n`
+    );
+  }
+  print('\n\n');
 
   if (builds.length > 0) {
     const times = {};
 
     for (const build of builds) {
-      const {id, createdAt, readyStateAt} = build;
+      const { id, createdAt, readyStateAt } = build;
       times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
-    print(chalk.bold('  Builds\n'));
-    print(buildsList(builds, times, true).toPrint);
-    print('\n');
+    print(chalk.bold('  Builds\n\n'));
+    print(indent(buildsList(builds, times).toPrint, 4));
+    print('\n\n');
+  }
+
+  if (Array.isArray(routes) && routes.length > 0) {
+    print(chalk.bold('  Routes\n\n'));
+    print(indent(routesList(routes), 4));
+    print(`\n\n`);
   }
 
   if (limits) {
-    print(chalk.bold('  Limits\n'));
+    print(chalk.bold('  Limits\n\n'));
     print(
       `    ${chalk.dim('duration')}\t\t${limits.duration} ${elapsed(
         limits.duration
@@ -213,7 +236,7 @@ module.exports = async function main(ctx: any): Promise<number> {
     return 0;
   }
 
-  print(chalk.bold('  Scale\n'));
+  print(chalk.bold('  Scale\n\n'));
 
   let exitCode = 0;
 
@@ -229,16 +252,16 @@ module.exports = async function main(ctx: any): Promise<number> {
       t.push([dc, cfg.min || 0, cfg.max || 0, instances.length]);
     }
     print(
-      table(t, {
+      `${table(t, {
         align: ['l', 'c', 'c', 'c'],
         hsep: ' '.repeat(8),
         stringLength: strlen
-      }).replace(/^(.*)/gm, '    $1') + '\n'
+      }).replace(/^(.*)/gm, '    $1')}\n`
     );
     print('\n');
   }
 
-  print(chalk.bold('  Events\n'));
+  print(chalk.bold('  Events\n\n'));
   if (events instanceof Error) {
     error(`Events unavailable: ${scale}`);
     exitCode = 1;
@@ -255,18 +278,12 @@ module.exports = async function main(ctx: any): Promise<number> {
   }
 
   return exitCode;
-};
+}
 
 // gets the metadata that should be printed next to
 // each event
 
-type Event = {
-  event: string,
-  payload: any,
-  created: number
-};
-
-function getEventMetadata({ event, payload }: Event): string {
+function getEventMetadata({ event, payload }) {
   if (event === 'state') {
     return chalk.bold(payload.value);
   }
@@ -282,14 +299,14 @@ function getEventMetadata({ event, payload }: Event): string {
 
 // makes sure the promise never rejects, exposing the error
 // as the resolved value instead
-function caught(p): Promise<any> {
+function caught(p) {
   return new Promise(r => {
     p.then(r).catch(r);
   });
 }
 
 // renders the state string
-function stateString(s: string): string {
+function stateString(s) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

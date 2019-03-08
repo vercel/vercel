@@ -1,28 +1,22 @@
-#!/usr/bin/env node
-//@flow
-
-// Packages
-const chalk = require('chalk');
-const ms = require('ms');
-const plural = require('pluralize');
-const table = require('text-table');
-
-// Utilities
-const Now = require('../util');
-const createOutput = require('../util/output');
-const { handleError } = require('../util/error');
-const cmd = require('../util/output/cmd');
-const logo = require('../util/output/logo');
-const elapsed = require('../util/output/elapsed');
-const wait = require('../util/output/wait');
-const strlen = require('../util/strlen');
-const getScope = require('../util/get-scope');
-const toHost = require('../util/to-host');
-const parseMeta = require('../util/parse-meta');
-
+import chalk from 'chalk';
+import ms from 'ms';
+import plural from 'pluralize';
+import table from 'text-table';
+import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import getArgs from '../util/get-args';
 import getDeploymentInstances from '../util/deploy/get-deployment-instances';
+import createOutput from '../util/output';
+import { handleError } from '../util/error';
+import cmd from '../util/output/cmd.ts';
+import logo from '../util/output/logo';
+import elapsed from '../util/output/elapsed.ts';
+import wait from '../util/output/wait';
+import strlen from '../util/strlen.ts';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
+import toHost from '../util/to-host';
+import parseMeta from '../util/parse-meta';
 
 const help = () => {
   console.log(`
@@ -63,7 +57,7 @@ const help = () => {
 
     ${chalk.cyan('$ now ls my-app --all')}
 
-  ${chalk.gray('–')} Filter deployments by metadata 
+  ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
 `);
@@ -71,7 +65,7 @@ const help = () => {
 
 // Options
 // $FlowFixMe
-module.exports = async function main(ctx) {
+export default async function main(ctx) {
   let argv;
 
   try {
@@ -87,6 +81,7 @@ module.exports = async function main(ctx) {
   }
 
   const debugEnabled = argv['--debug'];
+
   const { print, log, error, note, debug } = createOutput({
     debug: debugEnabled
   });
@@ -109,12 +104,24 @@ module.exports = async function main(ctx) {
   const meta = parseMeta(argv['--meta']);
   const { authConfig: { token }, config } = ctx;
   const { currentTeam, includeScheme } = config;
-  const { contextName } = await getScope({
+  const client = new Client({
     apiUrl,
     token,
-    debug: debugEnabled,
-    currentTeam
+    currentTeam,
+    debug: debugEnabled
   });
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`
@@ -218,9 +225,7 @@ module.exports = async function main(ctx) {
   }
 
   if (host) {
-    deployments = deployments.filter(deployment => {
-      return deployment.url === host;
-    });
+    deployments = deployments.filter(deployment => deployment.url === host);
   }
 
   stopSpinner();
@@ -247,16 +252,18 @@ module.exports = async function main(ctx) {
   print('\n');
 
   console.log(
-    table(
+    `${table(
       [
-        ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
             [
-              dep.name,
+              getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-              dep.instanceCount == null ? chalk.gray('-') : dep.instanceCount,
+              dep.instanceCount == null || dep.type === 'LAMBDAS'
+                ? chalk.gray('-')
+                : dep.instanceCount,
               dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
               chalk.gray(ms(Date.now() - new Date(dep.created)))
@@ -287,12 +294,21 @@ module.exports = async function main(ctx) {
         hsep: ' '.repeat(4),
         stringLength: strlen
       }
-    ).replace(/^/gm, '  ') + '\n\n'
+    ).replace(/^/gm, '  ')}\n\n`
   );
-};
+}
+
+function getProjectName(d) {
+  // We group both file and files into a single project
+  if (d.name === 'file') {
+    return 'files';
+  }
+
+  return d.name
+}
 
 // renders the state string
-function stateString(s: string) {
+function stateString(s) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);
@@ -323,9 +339,8 @@ function filterUniqueApps() {
   return function uniqueAppFilter([appName]) {
     if (uniqueApps.has(appName)) {
       return false;
-    } else {
-      uniqueApps.add(appName);
-      return true;
     }
+    uniqueApps.add(appName);
+    return true;
   };
 }

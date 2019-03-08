@@ -1,19 +1,16 @@
-#!/usr/bin/env node
-
-// Packages
-const chalk = require('chalk');
-const table = require('text-table');
-const mri = require('mri');
-const ms = require('ms');
-const plural = require('pluralize');
-
-// Utilities
-const strlen = require('../util/strlen');
-const { handleError, error } = require('../util/error');
-const NowSecrets = require('../util/secrets');
-const exit = require('../util/exit');
-const logo = require('../util/output/logo');
-const getScope = require('../util/get-scope');
+import chalk from 'chalk';
+import table from 'text-table';
+import mri from 'mri';
+import ms from 'ms';
+import plural from 'pluralize';
+import strlen from '../util/strlen.ts';
+import { handleError, error } from '../util/error';
+import NowSecrets from '../util/secrets';
+import exit from '../util/exit';
+import logo from '../util/output/logo';
+import Client from '../util/client.ts';
+import getScope from '../util/get-scope.ts';
+import createOutput from '../util/output';
 
 const help = () => {
   console.log(`
@@ -91,14 +88,21 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config: { currentTeam }} = ctx;
+  const { authConfig: { token }, config: { currentTeam } } = ctx;
+  const output = createOutput({ debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug });
+  let contextName = null;
 
-  const { contextName } = await getScope({
-    apiUrl,
-    token,
-    debug,
-    currentTeam
-  });
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   try {
     await run({ token, contextName, currentTeam });
@@ -108,7 +112,7 @@ const main = async ctx => {
   }
 };
 
-module.exports = async ctx => {
+export default async ctx => {
   try {
     await main(ctx);
   } catch (err) {
@@ -136,7 +140,9 @@ async function run({ token, contextName, currentTeam }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('secret', list.length, true)} found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -144,13 +150,11 @@ async function run({ token, contextName, currentTeam }) {
       const header = [['', 'name', 'created'].map(s => chalk.dim(s))];
       const out = table(
         header.concat(
-          list.map(secret => {
-            return [
-              '',
-              chalk.bold(secret.name),
-              chalk.gray(ms(cur - new Date(secret.created)) + ' ago')
-            ];
-          })
+          list.map(secret => [
+            '',
+            chalk.bold(secret.name),
+            chalk.gray(`${ms(cur - new Date(secret.created))} ago`)
+          ])
         ),
         {
           align: ['l', 'l', 'l'],
@@ -160,7 +164,7 @@ async function run({ token, contextName, currentTeam }) {
       );
 
       if (out) {
-        console.log('\n' + out + '\n');
+        console.log(`\n${out}\n`);
       }
     }
     return secrets.close();
@@ -268,7 +272,7 @@ process.on('uncaughtException', err => {
 
 function readConfirmation(secret) {
   return new Promise(resolve => {
-    const time = chalk.gray(ms(new Date() - new Date(secret.created)) + ' ago');
+    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
     const tbl = table([[chalk.bold(secret.name), time]], {
       align: ['r', 'l'],
       hsep: ' '.repeat(6)
@@ -277,7 +281,7 @@ function readConfirmation(secret) {
     process.stdout.write(
       '> The following secret will be removed permanently\n'
     );
-    process.stdout.write('  ' + tbl + '\n');
+    process.stdout.write(`  ${tbl}\n`);
 
     process.stdout.write(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`

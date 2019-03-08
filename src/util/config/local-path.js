@@ -1,8 +1,5 @@
-// Native
-const path = require('path');
-
-// Packages
-const mri = require('mri');
+import path from 'path';
+import mri from 'mri';
 
 const getLocalPathConfig = prefix => {
   const args = mri(process.argv.slice(2), {
@@ -21,4 +18,4 @@ const getLocalPathConfig = prefix => {
   return path.resolve(prefix, customPath);
 };
 
-module.exports = getLocalPathConfig;
+export default getLocalPathConfig;

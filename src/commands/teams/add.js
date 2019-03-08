@@ -1,26 +1,22 @@
-// Packages
-const chalk = require('chalk');
+import chalk from 'chalk';
+import stamp from '../../util/output/stamp.ts';
+import info from '../../util/output/info';
+import error from '../../util/output/error';
+import wait from '../../util/output/wait';
+import rightPad from '../../util/output/right-pad';
+import eraseLines from '../../util/output/erase-lines';
+import chars from '../../util/output/chars';
+import success from '../../util/output/success';
+import cmd from '../../util/output/cmd.ts';
+import note from '../../util/output/note';
+import textInput from '../../util/input/text';
+import invite from './invite';
+import { writeToConfigFile } from '../../util/config/files';
 
-// Utilities
-const stamp = require('../../util/output/stamp');
-const info = require('../../util/output/info');
-const error = require('../../util/output/error');
-const wait = require('../../util/output/wait');
-const rightPad = require('../../util/output/right-pad');
-const eraseLines = require('../../util/output/erase-lines');
-const { tick } = require('../../util/output/chars');
-const success = require('../../util/output/success');
-const cmd = require('../../util/output/cmd');
-const note = require('../../util/output/note');
-const textInput = require('../../util/input/text');
-const invite = require('./invite');
-const { writeToConfigFile } = require('../../util/config/files');
-
-const validateSlugKeypress = (data, value) => {
+const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
-  return /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
-};
+  /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
 
 const validateNameKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -40,7 +36,7 @@ const gracefulExit = () => {
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/');
 const teamNamePrefix = rightPad('Team Name', 14);
 
-module.exports = async function({ teams, config }) {
+export default async function({ apiUrl, token, teams, config }) {
   let slug;
   let team;
   let elapsed;
@@ -68,8 +64,10 @@ module.exports = async function({ teams, config }) {
         console.log(info('Aborted'));
         return 0;
       }
+
       throw err;
     }
+
     elapsed = stamp();
     stopSpinner = wait(teamUrlPrefix + slug);
 
@@ -87,11 +85,13 @@ module.exports = async function({ teams, config }) {
   } while (!team);
 
   process.stdout.write(eraseLines(2));
-  console.log(success(`Team created ${elapsed()}`));
-  console.log(chalk.cyan(`${tick} `) + teamUrlPrefix + slug + '\n');
 
+  console.log(success(`Team created ${elapsed()}`));
+  console.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
   console.log(info('Pick a display name for your team'));
+
   let name;
+
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
@@ -101,19 +101,24 @@ module.exports = async function({ teams, config }) {
     if (err.message === 'USER_ABORT') {
       console.log(info('No name specified'));
       return gracefulExit();
-    } else {
-      throw err;
     }
+
+    throw err;
   }
+
   elapsed = stamp();
   stopSpinner = wait(teamNamePrefix + name);
+
   const res = await teams.edit({ id: team.id, name });
+
   stopSpinner();
 
   process.stdout.write(eraseLines(2));
+
   if (res.error) {
     console.error(error(res.error.message));
     console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
+
     return 1;
     // TODO: maybe we want to ask the user to retry? not sure if
     // there's a scenario where that would be wanted
@@ -122,13 +127,19 @@ module.exports = async function({ teams, config }) {
   team = Object.assign(team, res);
 
   console.log(success(`Team name saved ${elapsed()}`));
-  console.log(chalk.cyan(`${tick} `) + teamNamePrefix + team.name + '\n');
+  console.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
 
   stopSpinner = wait('Saving');
 
   // Update config file
   const configCopy = Object.assign({}, config);
-  configCopy.sh.currentTeam = team;
+
+  if (configCopy.sh) {
+    configCopy.sh.currentTeam = team;
+  } else {
+    configCopy.currentTeam = team.id;
+  }
+
   writeToConfigFile(configCopy);
 
   stopSpinner();
@@ -136,6 +147,8 @@ module.exports = async function({ teams, config }) {
   await invite({
     teams,
     args: [],
+    token,
+    apiUrl,
     config,
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${cmd(
@@ -144,4 +157,4 @@ module.exports = async function({ teams, config }) {
   });
 
   gracefulExit();
-};
+}

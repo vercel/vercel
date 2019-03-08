@@ -1,7 +1,7 @@
-const error = require('./output/error');
-const exit = require('./exit');
+import error from './output/error';
+import exit from './exit';
 
-module.exports = (msg, code = 1) => {
-  error(msg);
+export default (msg, code = 1) => {
+  console.log(error(msg));
   exit(code);
 };
