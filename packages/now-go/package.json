@@ -13,6 +13,7 @@
   "files": [
     "*.js",
     "main.go",
+    "main__mod__.go",
     "util"
   ],
   "dependencies": {

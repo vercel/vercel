@@ -68,6 +68,7 @@ async function createGo(
   platform = process.platform,
   arch = process.arch,
   opts = {},
+  goMod = false,
 ) {
   const env = {
     ...process.env,
@@ -75,6 +76,10 @@ async function createGo(
     GOPATH: goPath,
     ...opts.env,
   };
+
+  if (goMod) {
+    env.GO111MODULE = 'on';
+  }
 
   function go(...args) {
     debug('Exec %o', `go ${args.join(' ')}`);
