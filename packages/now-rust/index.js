@@ -283,7 +283,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
   };
 };
 
-function findCargoToml (files, entrypoint) {
+function findCargoToml(files, entrypoint) {
   let currentPath = path.dirname(entrypoint);
   let cargoTomlPath;
 
