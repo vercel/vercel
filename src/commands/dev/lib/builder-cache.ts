@@ -1,7 +1,7 @@
 import fs from 'fs';
-import path from 'path';
 import execa from 'execa';
 import mkdirp from 'mkdirp';
+import { join } from 'path';
 import npa from 'npm-package-arg';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../../util/now-error';
@@ -25,7 +25,7 @@ export function prepare() {
       throw new Error('Could not determine location of cache directory');
     }
 
-    const buildersPkg = path.join(designated, 'package.json');
+    const buildersPkg = join(designated, 'package.json');
 
     if (designated) {
       if (fs.existsSync(designated)) {
@@ -60,7 +60,7 @@ export async function installBuilder(name: string) {
     return;
   }
 
-  const dest = path.join(cacheDir, 'node_modules', name);
+  const dest = join(cacheDir, 'node_modules', name);
   if (!fs.existsSync(dest)) {
     return execa('npm', ['install', name, '--prefer-offline'], {
       cwd: cacheDir
@@ -77,6 +77,6 @@ export function getBuilder(builderPkg: string) {
   }
 
   const parsed = npa(builderPkg);
-  const dest = path.join(cacheDir, 'node_modules', parsed.name || builderPkg);
+  const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
   return require(dest);
 }
