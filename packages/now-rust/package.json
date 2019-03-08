@@ -9,7 +9,7 @@
   },
   "files": [
     "index.js",
-    "download-install-rust-toolchain.js",
+    "install-rust.js",
     "launcher.rs"
   ],
   "dependencies": {

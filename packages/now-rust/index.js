@@ -8,7 +8,7 @@ const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line impo
 const { runShellScript } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileRef = require('@now/build-utils/file-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
-const installRustAndGCC = require('./download-install-rust-toolchain.js');
+const installRust = require('./install-rust.js');
 
 exports.config = {
   maxLambdaSize: '25mb',
@@ -220,12 +220,11 @@ exports.build = async (m) => {
   console.log('downloading files');
   const downloadedFiles = await download(files, workPath);
 
-  const { PATH: toolchainPath, ...otherEnv } = await installRustAndGCC();
+  await installRust();
   const { PATH, HOME } = process.env;
   const rustEnv = {
     ...process.env,
-    ...otherEnv,
-    PATH: `${path.join(HOME, '.cargo/bin')}:${toolchainPath}:${PATH}`,
+    PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
   };
 
   await runUserScripts(entrypoint);
@@ -312,6 +311,6 @@ exports.getDefaultCache = ({ files, entrypoint }) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);
   if (!cargoTomlPath) return undefined;
   const targetFolderDir = path.dirname(cargoTomlPath);
-  const defaultCacheRef = new FileRef({ digest: 'sha:80de34ac1a5710f03cb1dbd578219738253ece4bdea3e7c72dd775867031294a' });
+  const defaultCacheRef = new FileRef({ digest: 'sha:abea95ad7456b2fb8f9e19bdfec2bfc124602c380c87c7d7162788d388831d35' });
   return { [targetFolderDir]: defaultCacheRef };
 };
