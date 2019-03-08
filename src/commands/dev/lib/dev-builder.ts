@@ -3,11 +3,11 @@ import path from 'path';
 import chalk from 'chalk';
 import { createFunction } from '@zeit/fun';
 import glob from '@now/build-utils/fs/glob';
-import FileFsRef from '@now/build-utils/file-fs-ref';
 import ignore, { Ignore } from '@zeit/dockerignore';
+import FileFsRef from '@now/build-utils/file-fs-ref';
 
-import wait from '../../../util/output/wait';
 import DevServer from './dev-server';
+import wait from '../../../util/output/wait';
 import { NowError } from '../../../util/now-error';
 import { installBuilder, getBuilder } from './builder-cache';
 import {
@@ -23,7 +23,7 @@ import {
 export async function buildUserProject(
   buildsConfig: BuildConfig[],
   devServer: DevServer
-) {
+): Promise<BuilderOutputs> {
   try {
     devServer.setStatusBusy('Installing builders');
     await installBuilders(buildsConfig);

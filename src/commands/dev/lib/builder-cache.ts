@@ -5,10 +5,11 @@ import { join } from 'path';
 import npa from 'npm-package-arg';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { NowError } from '../../../util/now-error';
+import { Builder } from './types';
 
 import * as staticBuilder from './static-builder';
 
-const localBuilders: { [key: string]: any } = {
+const localBuilders: { [key: string]: Builder } = {
   '@now/static': staticBuilder
 };
 
@@ -71,7 +72,7 @@ export async function installBuilder(name: string) {
 /**
  * Get a builder from cache directory
  */
-export function getBuilder(builderPkg: string) {
+export function getBuilder(builderPkg: string): Builder {
   if (localBuilders.hasOwnProperty(builderPkg)) {
     return localBuilders[builderPkg];
   }

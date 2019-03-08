@@ -1,4 +1,4 @@
-import http from 'http'
+import http from 'http';
 import { Lambda } from '@zeit/fun';
 import { LambdaRuntime } from '@now/build-utils';
 import FileFsRef from '@now/build-utils/file-fs-ref';
@@ -20,16 +20,29 @@ export interface BuildConfig {
 }
 
 export interface HttpHandler {
-  (
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void;
+  (req: http.IncomingMessage, res: http.ServerResponse): void;
+}
+
+export interface BuilderInputs {
+  [path: string]: FileFsRef;
 }
 
 export type BuilderOutput = BuiltLambda | FileFsRef;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
+}
+
+export interface BuilderParams {
+  files: BuilderInputs;
+  entrypoint: string;
+  workPath: string;
+  config: any;
+  isDev?: boolean;
+}
+
+export interface Builder {
+  build(params: BuilderParams): BuilderOutputs;
 }
 
 export interface BuiltLambda {
@@ -61,7 +74,7 @@ export interface RouteResult {
   // "headers": <object of the added response header values>
   headers?: HttpHeadersConfig;
   // "uri_args": <object (key=value) list of new uri args to be passed along to dest >
-  uri_args?: {[key: string]: any};
+  uri_args?: { [key: string]: any };
   // "matched_route": <object of the route spec that matched>
   matched_route?: RouteConfig;
   // "matched_route_idx": <integer of the index of the route matched>

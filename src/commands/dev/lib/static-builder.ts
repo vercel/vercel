@@ -1,14 +1,7 @@
-interface BuilderParams {
-  files: any,
-  entrypoint: any,
-  workPath: any,
-  config: any
-}
+import { BuilderParams, BuilderOutputs } from './types';
 
-export function build (args: BuilderParams) {
-  const { files, entrypoint } = args
-
+export function build({ files, entrypoint }: BuilderParams): BuilderOutputs {
   return {
     [entrypoint]: files[entrypoint]
-  }
+  };
 }
