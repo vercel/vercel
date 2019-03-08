@@ -7,6 +7,7 @@ const download = require('@now/build-utils/fs/download.js'); // eslint-disable-l
 const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const { runShellScript } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
+const FileRef = require('@now/build-utils/file-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const installRustAndGCC = require('./download-install-rust-toolchain.js');
 
 exports.config = {
@@ -280,4 +281,37 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
   return {
     ...(await glob('**/**', path.join(cachePath))),
   };
+};
+
+function findCargoToml (files, entrypoint) {
+  let currentPath = path.dirname(entrypoint);
+  let cargoTomlPath;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    cargoTomlPath = path.join(currentPath, 'Cargo.toml');
+    // eslint-disable-next-line no-await-in-loop
+    if (files[cargoTomlPath]) break;
+    const newPath = path.dirname(currentPath);
+    if (currentPath === newPath) break;
+    currentPath = newPath;
+  }
+
+  return cargoTomlPath;
+}
+
+/*
+console.log(findCargoToml({
+  'rust/src/main.rs': true,
+  'rust/Cargo.toml': true,
+  'Cargo.toml': true
+}, 'rust/src/main.rs'));
+*/
+
+exports.getDefaultCache = ({ files, entrypoint }) => {
+  const cargoTomlPath = findCargoToml(files, entrypoint);
+  if (!cargoTomlPath) return undefined;
+  const targetFolderDir = path.dirname(cargoTomlPath);
+  const defaultCacheRef = new FileRef({ digest: 'sha:80de34ac1a5710f03cb1dbd578219738253ece4bdea3e7c72dd775867031294a' });
+  return { [targetFolderDir]: defaultCacheRef };
 };
