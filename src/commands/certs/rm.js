@@ -84,7 +84,7 @@ async function getCertsToDelete(output, now, idOrCn) {
   // the result returned by getCertById() represents a cert *uniquely matched* by ID.
   const matchedById = cert && cert.uid === idOrCn;
 
-  return matchedById ? [cert] : await getCerts(output, now, [idOrCn]).then(filterMatchingCert(idOrCn));
+  return matchedById ? [cert] : getCerts(output, now, [idOrCn]).then(filterMatchingCert(idOrCn));
 }
 
 function filterMatchingCert(idOrCn) {
