@@ -93,7 +93,6 @@ export default class DevServer {
     if (nowJson && Array.isArray(nowJson.builds)) {
       this.logDebug('Initial build');
       this.assets = await buildUserProject(nowJson.builds, this);
-      console.log(this.assets);
       this.logSuccess('Initial build ready');
       this.logDebug('Built', Object.keys(this.assets));
     }
