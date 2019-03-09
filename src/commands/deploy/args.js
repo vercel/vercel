@@ -29,7 +29,7 @@ export const latestHelp = () => `
       switch               [scope]     Switches between teams and your personal account
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      whoami                           Displays the current scope
+      whoami                           Shows the username of the currently logged in user
   ${chalk.dim('Options:')}
     -h, --help                     Output usage information
     -v, --version                  Output the version number
@@ -199,7 +199,7 @@ export const legacyHelp = () => `
       switch               [scope]     Switches between teams and your account
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      whoami                           Displays the currently logged in username
+      whoami                           Shows the username of the currently logged in user
   ${chalk.dim('Options:')}
     -h, --help                     Output usage information
     -v, --version                  Output the version number
