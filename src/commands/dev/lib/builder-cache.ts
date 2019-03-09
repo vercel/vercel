@@ -2,9 +2,11 @@ import execa from 'execa';
 import { join } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
-import { promises as fs } from 'fs';
+import { readJSON, writeJSON } from 'fs-extra';
 import cacheDirectory from 'cache-or-tmp-directory';
+import wait from '../../../util/output/wait';
 import { NowError } from '../../../util/now-error';
+import { devDependencies as nowCliDeps } from '../../../../package.json';
 import { Builder } from './types';
 
 import * as staticBuilder from './static-builder';
@@ -14,19 +16,6 @@ const localBuilders: { [key: string]: Builder } = {
 };
 
 const cacheDirPromise = prepare();
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await fs.lstat(path);
-    return true;
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return false;
-    } else {
-      throw err;
-    }
-  }
-}
 
 /**
  * Prepare cache directory for installing now-builders
@@ -46,35 +35,73 @@ export async function prepare() {
     const cacheDir = join(designated, 'dev/builders');
     await mkdirp(cacheDir);
 
-    const buildersPkg = join(cacheDir, 'package.json');
-    if (!(await exists(buildersPkg))) {
-      await fs.writeFile(buildersPkg, '{"private":true}');
+    // Create an empty private `package.json`,
+    // but only if one does not already exist
+    try {
+      const buildersPkg = join(cacheDir, 'package.json');
+      await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
+    } catch (err) {
+      if (err.code !== 'EEXIST') {
+        throw err;
+      }
     }
 
     return cacheDir;
   } catch (error) {
     throw new NowError({
       code: 'BUILDER_CACHE_CREATION_FAILURE',
-      message: 'Could not create cache directory for now-builders.',
+      message: `Could not create cache directory for now-builders: ${error.message}`,
       meta: error.stack
     });
   }
 }
 
+export async function cleanCache(): Promise<void> {
+}
+
 /**
- * Install a builder to cache directory
+ * Install a list of builders to the cache directory.
  */
-export async function installBuilder(name: string) {
-  if (localBuilders.hasOwnProperty(name)) {
-    return;
+export async function installBuilders(packages: string[]): Promise<void> {
+  const cacheDir = await cacheDirPromise;
+  const buildersPkg = join(cacheDir, 'package.json');
+  const pkg = await readJSON(buildersPkg);
+  const updatedPackages: string[] = [];
+
+  if (!pkg.devDependencies) {
+    pkg.devDependencies = {};
+  }
+  const deps = pkg.devDependencies;
+
+  for (const builderPkg of packages) {
+    const parsed = npa(builderPkg);
+    const name = parsed.name || builderPkg;
+    const spec = parsed.rawSpec || parsed.fetchSpec || 'latest';
+    const currentVersion = deps[name];
+    if (currentVersion !== spec) {
+      updatedPackages.push(builderPkg);
+      deps[name] = spec;
+    }
   }
 
-  const cacheDir = await cacheDirPromise;
-  const dest = join(cacheDir, 'node_modules', name);
-  if (!(await exists(dest))) {
-    return execa('npm', ['install', name, '--prefer-offline'], {
-      cwd: cacheDir
-    });
+  // Pull the same version of `@now/build-utils` that now-cli is using
+  const buildUtils = '@now/build-utils';
+  const buildUtilsVersion = nowCliDeps[buildUtils];
+  if (deps[buildUtils] !== buildUtilsVersion) {
+    updatedPackages.push(`${buildUtils}@${buildUtilsVersion}`);
+    deps[buildUtils] = buildUtilsVersion;
+  }
+
+  if (updatedPackages.length > 0) {
+    const stopSpinner = wait(`Installing builders: ${updatedPackages.join(', ')}`);
+    try {
+      await writeJSON(buildersPkg, pkg);
+      await execa('npm', ['install', '--prefer-offline'], {
+        cwd: cacheDir
+      });
+    } finally {
+      stopSpinner();
+    }
   }
 }
 

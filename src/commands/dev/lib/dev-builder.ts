@@ -10,7 +10,7 @@ import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { NowError } from '../../../util/now-error';
-import { installBuilder, getBuilder } from './builder-cache';
+import { installBuilders, getBuilder } from './builder-cache';
 import {
   NowConfig,
   BuildConfig,
@@ -29,7 +29,8 @@ export async function buildUserProject(
 ): Promise<BuilderOutputs> {
   try {
     devServer.setStatusBusy('Installing builders');
-    await installBuilders(nowJson.builds || []);
+    const builds = nowJson.builds || [];
+    await installBuilders(builds.map(build => build.use));
 
     devServer.setStatusBusy('Building lambdas');
     const assets = await executeBuilds(nowJson, devServer);
@@ -39,19 +40,6 @@ export async function buildUserProject(
   } catch (err) {
     devServer.setStatusIdle();
     throw err;
-  }
-}
-
-async function installBuilders(buildsConfig: BuildConfig[]) {
-  const builders = buildsConfig
-    .map(build => build.use)
-    .filter(pkg => pkg !== '@now/static')
-    .concat('@now/build-utils');
-
-  for (const builder of builders) {
-    const stopSpinner = wait(`Installing ${builder}`);
-    await installBuilder(builder);
-    stopSpinner();
   }
 }
 
