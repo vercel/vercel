@@ -1020,7 +1020,7 @@ test('try to deploy with non-existing team', async t => {
 
   const { stderr, code } = await execa(
     binaryPath,
-    [target, '--team', session, ...defaultArgs],
+    [target, '--scope', session, ...defaultArgs],
     {
       reject: false
     }

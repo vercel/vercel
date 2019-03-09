@@ -410,7 +410,7 @@ const main = async argv_ => {
       error({
         message: `This command doesn't work with ${param(
           '--token'
-        )}. Please use ${param('--team')}.`,
+        )}. Please use ${param('--scope')}.`,
         slug: 'no-token-allowed'
       })
     );
@@ -440,14 +440,14 @@ const main = async argv_ => {
     }
   }
 
-  if (typeof argv['--team'] === 'string' && subcommand !== 'login') {
-    const team = argv['--team'];
+  if (typeof argv['--scope'] === 'string' && subcommand !== 'login') {
+    const scope = argv['--scope'];
 
-    if (team.length === 0) {
+    if (scope.length === 0) {
       console.error(
         error({
-          message: `You defined ${param('--team')}, but it's missing a value`,
-          slug: 'missing-team-value'
+          message: `You defined ${param('--scope')}, but it's missing a value`,
+          slug: 'missing-scope-value'
         })
       );
 
@@ -465,8 +465,8 @@ const main = async argv_ => {
       if (err.code === 'not_authorized') {
         console.error(
           error({
-            message: `You do not have access to the specified team`,
-            slug: 'team-not-accessible'
+            message: `You do not have access to the specified account`,
+            slug: 'scope-not-accessible'
           })
         );
 
@@ -477,7 +477,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    if (user.uid === team || user.email === team || user.username === team) {
+    if (user.uid === scope || user.email === scope || user.username === scope) {
       delete ctx.config.currentTeam;
     } else {
       let list = [];
@@ -490,7 +490,7 @@ const main = async argv_ => {
           console.error(
             error({
               message: `You do not have access to the specified team`,
-              slug: 'team-not-accessible'
+              slug: 'scope-not-accessible'
             })
           );
 
@@ -502,13 +502,13 @@ const main = async argv_ => {
       }
 
       const related =
-        list && list.find(item => item.id === team || item.slug === team);
+        list && list.find(item => item.id === scope || item.slug === scope);
 
       if (!related) {
         console.error(
           error({
-            message: 'The specified team does not exist',
-            slug: 'team-not-existent'
+            message: 'The specified scope does not exist',
+            slug: 'scope-not-existent'
           })
         );
 
