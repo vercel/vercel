@@ -25,7 +25,7 @@ export const latestHelp = () => `
     ${chalk.dim('Administrative')}
       billing | cc         [cmd]       Manages your credit cards and billing methods
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
+      teams                            Manages your teams
       switch               [scope]     Switches between teams and your personal account
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
@@ -59,7 +59,7 @@ export const latestHelp = () => `
       '`-m KEY=value`'
     )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --target production            Deploy and set the given alias from the ${
       chalk.underline('now.json')
@@ -195,9 +195,9 @@ export const legacyHelp = () => `
     ${chalk.dim('Administrative')}
       billing | cc         [cmd]       Manages your credit cards and billing methods
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
-      switch                           Switches between teams and your account
-      login                            Logs into your account or creates a new one
+      teams                            Manages your teams
+      switch               [scope]     Switches between teams and your account
+      login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       whoami                           Displays the currently logged in username
   ${chalk.dim('Options:')}
@@ -235,7 +235,7 @@ export const legacyHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     --regions                      Set default regions or DCs to enable the deployment on
     --no-scale                     Skip scaling rules deploying with the default presets
     --no-verify                    Skip step of waiting until instance count meets given constraints

@@ -49,7 +49,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     -n, --no-verify                Skip step of waiting until instance count meets given constraints
     -t, --verify-timeout           How long to wait for verification to complete [5m]
 
