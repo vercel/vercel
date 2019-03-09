@@ -13,11 +13,34 @@ export interface DevServerOptions {
   debug: boolean;
 }
 
+export interface EnvConfig {
+  [name: string]: string;
+}
+
 export interface BuildConfig {
   src: string;
   use: string;
   config?: object;
   builder?: Builder;
+}
+
+export interface RouteConfig {
+  src: string;
+  dest: string;
+  methods?: string[];
+  headers?: HttpHeadersConfig;
+  status?: number;
+}
+
+export interface NowConfig {
+  name?: string;
+  version?: number;
+  env?: EnvConfig;
+  build?: {
+    env?: EnvConfig;
+  };
+  builds?: BuildConfig[];
+  routes?: RouteConfig[];
 }
 
 export interface HttpHandler {
@@ -66,19 +89,11 @@ export interface BuiltLambda {
   zipBuffer: Buffer;
   handler: string;
   runtime: LambdaRuntime;
-  environment: { [name: string]: string };
+  environment: EnvConfig;
 }
 
 export interface HttpHeadersConfig {
   [name: string]: string;
-}
-
-export interface RouteConfig {
-  src: string;
-  dest: string;
-  methods?: string[];
-  headers?: HttpHeadersConfig;
-  status?: number;
 }
 
 export interface RouteResult {

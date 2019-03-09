@@ -1,5 +1,5 @@
-import fs from 'fs';
 import http from 'http';
+import fs from 'fs-extra';
 import chalk from 'chalk';
 import qs from 'querystring';
 import rawBody from 'raw-body';
@@ -10,13 +10,14 @@ import serveHandler from 'serve-handler';
 
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
-import { readLocalConfig } from '../../../util/config/files';
+import getNowJsonPath from '../../../util/config/local-path';
 
 import isURL from './is-url';
 import devRouter from './dev-router';
 import { buildUserProject, createIgnoreList } from './dev-builder';
 
 import {
+  NowConfig,
   DevServerStatus,
   DevServerOptions,
   BuilderOutput,
@@ -79,11 +80,27 @@ export default class DevServer {
     this.statusMessage = msg;
   }
 
+  async getNowJson(): Promise<NowConfig | null> {
+    const nowJsonPath = getNowJsonPath(this.cwd);
+    console.error({ nowJsonPath });
+
+    try {
+      return JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return null;
+      } else {
+        throw err;
+      }
+    }
+  }
+
   /**
    * Launch dev-server
    */
   async start(port: number = 3000): Promise<void> {
-    const nowJson = readLocalConfig(this.cwd);
+    const nowJson = await this.getNowJson();
+    console.error({ nowJson });
 
     await listen(this.server, port);
 
@@ -92,7 +109,7 @@ export default class DevServer {
     // Initial build. Not meant to invoke, but to speed up future builds
     if (nowJson && Array.isArray(nowJson.builds)) {
       this.logDebug('Initial build');
-      this.assets = await buildUserProject(nowJson.builds, this);
+      this.assets = await buildUserProject(nowJson, this);
       this.logSuccess('Initial build ready');
       this.logDebug('Built', Object.keys(this.assets));
     }
@@ -121,12 +138,10 @@ export default class DevServer {
     }
 
     try {
-      const nowJson = readLocalConfig(this.cwd);
+      const nowJson = await this.getNowJson();
 
-      if (nowJson === null) {
+      if (!nowJson) {
         await this.serveProjectAsStatics(req, res, this.cwd);
-      } else if (nowJson.version !== 2) {
-        throw new Error('`now dev` only supports Now v2');
       } else {
         await this.serveProjectAsNowV2(req, res, this.cwd, nowJson);
       }
@@ -146,13 +161,13 @@ export default class DevServer {
   /**
    * Serve project directory as static
    */
-  serveProjectAsStatics = (
+  serveProjectAsStatics = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     cwd: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
-    const ignore = createIgnoreList(cwd);
+    const ignore = await createIgnoreList(cwd);
 
     if (filePath && ignore.ignores(filePath)) {
       res.statusCode = 404;
@@ -170,7 +185,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     cwd: string,
-    nowJson: any
+    nowJson: NowConfig
   ) => {
     const {
       dest,

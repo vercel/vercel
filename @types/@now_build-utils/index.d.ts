@@ -19,8 +19,7 @@ declare module '@now/build-utils/file-ref' {
 }
 
 declare module '@now/build-utils/file-fs-ref' {
-  type FileFsRef = BuildUtils.FileFsRef;
-  export default FileFsRef;
+  export = BuildUtils.FileFsRef;
 }
 
 declare module '@now/build-utils/fs/glob' {
@@ -68,7 +67,8 @@ declare namespace BuildUtils {
     toStream(): NodeJS.ReadableStream;
   }
 
-  export interface FileFsRef {
+  export declare class FileFsRef {
+    constructor({ mode, fsPath }: { mode: number, fsPath: string });
     type: 'FileFsRef';
     mode: number;
     fsPath: string;
@@ -85,6 +85,7 @@ declare namespace BuildUtils {
   }
 
   export interface Lambda {
+    type: 'Lambda';
     files: Files;
     handler: string;
     runtime: LambdaRuntime;
