@@ -231,7 +231,7 @@ exports.build = async (m) => {
   const rustEnv = {
     ...process.env,
     PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
-    RUSTFLAGS: [ process.env.RUSTFLAGS, ...codegenFlags ].filter(Boolean).join(' '),
+    RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags].filter(Boolean).join(' '),
   };
 
   await runUserScripts(downloadedFiles[entrypoint].fsPath);
@@ -254,7 +254,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     const rustEnv = {
       ...process.env,
       PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
-      RUSTFLAGS: [ process.env.RUSTFLAGS, ...codegenFlags ].filter(Boolean).join(' '),
+      RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags].filter(Boolean).join(' '),
     };
     const entrypointDirname = path.dirname(path.join(workPath, entrypoint));
     const cargoTomlFile = await cargoLocateProject({
@@ -285,7 +285,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     path.join(cacheEntrypointDirname, 'target'),
   );
 
-  return await glob('**/**', cachePath);
+  return glob('**/**', cachePath);
 };
 
 function findCargoToml(files, entrypoint) {
