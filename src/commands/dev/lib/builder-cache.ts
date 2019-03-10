@@ -106,15 +106,15 @@ export async function installBuilders(packages: string[]): Promise<void> {
 }
 
 /**
- * Get a builder from cache directory
+ * Get a builder from the cache directory.
  */
 export async function getBuilder(builderPkg: string): Promise<Builder> {
-  if (localBuilders.hasOwnProperty(builderPkg)) {
-    return localBuilders[builderPkg];
+  let builder: Builder = localBuilders[builderPkg];
+  if (!builder) {
+    const cacheDir = await cacheDirPromise;
+    const parsed = npa(builderPkg);
+    const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
+    builder = require(dest);
   }
-
-  const cacheDir = await cacheDirPromise;
-  const parsed = npa(builderPkg);
-  const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
-  return require(dest);
+  return builder;
 }

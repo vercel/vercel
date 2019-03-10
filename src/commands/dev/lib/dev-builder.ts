@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import ignore from 'ignore';
 import { createFunction } from '@zeit/fun';
-import ignore, { Ignore } from '@zeit/dockerignore';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
 import { glob } from './glob';
@@ -124,7 +124,7 @@ export async function collectProjectFiles(pattern: string, cwd: string): Promise
 /**
  * Create ignore list according .gitignore & .nowignore in cwd
  */
-export async function createIgnoreList(cwd: string): Promise<Ignore> {
+export async function createIgnoreList(cwd: string): Promise<any> {
   const ig = ignore();
 
   // Add the default ignored files
