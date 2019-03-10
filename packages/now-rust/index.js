@@ -14,6 +14,11 @@ exports.config = {
   maxLambdaSize: '25mb',
 };
 
+const codegenFlags = [
+  '-C', 'target-cpu=ivybridge',
+  '-C', 'target-feature=-aes,-avx,+fxsr,-popcnt,+sse,+sse2,-sse3,-sse4.1,-sse4.2,-ssse3,-xsave,-xsaveopt',
+];
+
 async function inferCargoBinaries(config) {
   try {
     const { stdout: manifestStr } = await execa(
@@ -47,7 +52,7 @@ async function buildWholeProject({
   const { debug } = config;
   console.log('running `cargo build`...');
   try {
-    await execa('cargo', ['build'].concat(debug ? [] : ['--release']), {
+    await execa('cargo', ['build', '--verbose'].concat(debug ? [] : ['--release']), {
       env: rustEnv,
       cwd: entrypointDirname,
       stdio: 'inherit',
@@ -184,7 +189,7 @@ async function buildSingleFile({
   try {
     await execa(
       'cargo',
-      ['build', '--bin', binName].concat(debug ? [] : ['--release']),
+      ['build', '--bin', binName, '--verbose'].concat(debug ? [] : ['--release']),
       {
         env: rustEnv,
         cwd: entrypointDirname,
@@ -226,6 +231,7 @@ exports.build = async (m) => {
   const rustEnv = {
     ...process.env,
     PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+    RUSTFLAGS: [ process.env.RUSTFLAGS, ...codegenFlags ].filter(Boolean).join(' '),
   };
 
   await runUserScripts(downloadedFiles[entrypoint].fsPath);
@@ -248,6 +254,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     const rustEnv = {
       ...process.env,
       PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+      RUSTFLAGS: [ process.env.RUSTFLAGS, ...codegenFlags ].filter(Boolean).join(' '),
     };
     const entrypointDirname = path.dirname(path.join(workPath, entrypoint));
     const cargoTomlFile = await cargoLocateProject({
@@ -278,9 +285,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     path.join(cacheEntrypointDirname, 'target'),
   );
 
-  return {
-    ...(await glob('**/**', path.join(cachePath))),
-  };
+  return await glob('**/**', cachePath);
 };
 
 function findCargoToml(files, entrypoint) {
@@ -312,6 +317,6 @@ exports.getDefaultCache = ({ files, entrypoint }) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);
   if (!cargoTomlPath) return undefined;
   const targetFolderDir = path.dirname(cargoTomlPath);
-  const defaultCacheRef = new FileRef({ digest: 'sha:abea95ad7456b2fb8f9e19bdfec2bfc124602c380c87c7d7162788d388831d35' });
+  const defaultCacheRef = new FileRef({ digest: 'sha:204e0c840c43473bbd130d7bc704fe5588b4eab43cda9bc940f10b2a0ae14b12' });
   return { [targetFolderDir]: defaultCacheRef };
 };
