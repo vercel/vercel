@@ -88,7 +88,8 @@ async function buildWholeProject({
 }
 
 async function runUserScripts(entrypoint) {
-  const buildScriptPath = path.join(entrypoint, 'build.sh');
+  const entryDir = path.dirname(entrypoint);
+  const buildScriptPath = path.join(entryDir, 'build.sh');
   const buildScriptExists = await fs.exists(buildScriptPath);
 
   if (buildScriptExists) {
@@ -227,7 +228,7 @@ exports.build = async (m) => {
     PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
   };
 
-  await runUserScripts(entrypoint);
+  await runUserScripts(downloadedFiles[entrypoint].fsPath);
 
   const newM = Object.assign(m, { downloadedFiles, rustEnv });
   if (path.extname(entrypoint) === '.toml') {
