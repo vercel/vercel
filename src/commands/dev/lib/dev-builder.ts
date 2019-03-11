@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import chalk from 'chalk';
+import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
+import { readFile, stat, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
@@ -10,7 +10,7 @@ import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { NowError } from '../../../util/now-error';
-import { installBuilders, getBuilder } from './builder-cache';
+import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
 import {
   NowConfig,
   BuildConfig,
@@ -55,6 +55,8 @@ async function executeBuilds(
     return results;
   }
 
+  const cacheDir = await cacheDirPromise;
+
   for (const build of nowJson.builds) {
     try {
       devServer.logDebug(`Build ${JSON.stringify(build)}`);
@@ -64,11 +66,17 @@ async function executeBuilds(
       const entries = Object.values(await collectProjectFiles(build.src, cwd));
 
       for (const entry of entries) {
+        const config = build.config || {};
+        const entrypoint = relative(cwd, entry.fsPath);
+        const { dev, ino } = await stat(entrypoint);
+        const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+        devServer.logDebug(`Building ${entry.fsPath} (workPath = ${workPath})`);
+        await mkdirp(workPath);
         const output = await builder.build({
           files,
-          entrypoint: path.relative(cwd, entry.fsPath),
-          workPath: cwd,
-          config: build.config || {},
+          entrypoint,
+          workPath,
+          config,
           isDev: true
         });
 
@@ -142,8 +150,8 @@ export async function createIgnoreList(cwd: string): Promise<Ignore> {
   ig.add('user');
 
   try {
-    const gitignore = path.join(cwd, '.gitignore');
-    ig.add(fs.readFileSync(gitignore, 'utf8'));
+    const gitignore = join(cwd, '.gitignore');
+    ig.add(await readFile(gitignore, 'utf8'));
   } catch (err) {
     if (err.code !== 'ENOENT') {
       throw err;
@@ -151,8 +159,8 @@ export async function createIgnoreList(cwd: string): Promise<Ignore> {
   }
 
   try {
-    const nowignore = path.join(cwd, '.nowignore');
-    ig.add(fs.readFileSync(nowignore, 'utf8'));
+    const nowignore = join(cwd, '.nowignore');
+    ig.add(await readFile(nowignore, 'utf8'));
   } catch (err) {
     if (err.code !== 'ENOENT') {
       throw err;

@@ -15,47 +15,44 @@ const localBuilders: { [key: string]: Builder } = {
   '@now/static': staticBuilder
 };
 
-const cacheDirPromise = prepare();
+export const cacheDirPromise = prepareCacheDir();
+export const builderDirPromise = prepareBuilderDir();
 
 /**
  * Prepare cache directory for installing now-builders
  */
-export async function prepare() {
-  try {
-    const designated = cacheDirectory('co.zeit.now');
+export async function prepareCacheDir() {
+  const designated = cacheDirectory('co.zeit.now');
 
-    if (!designated) {
-      throw new NowError({
-        code: 'NO_BUILDER_CACHE_DIR',
-        message: 'Could not find cache directory for now-builders.',
-        meta: {}
-      });
-    }
-
-    const cacheDir = join(designated, 'dev/builders');
-    await mkdirp(cacheDir);
-
-    // Create an empty private `package.json`,
-    // but only if one does not already exist
-    try {
-      const buildersPkg = join(cacheDir, 'package.json');
-      await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-    } catch (err) {
-      if (err.code !== 'EEXIST') {
-        throw err;
-      }
-    }
-
-    return cacheDir;
-  } catch (error) {
+  if (!designated) {
     throw new NowError({
-      code: 'BUILDER_CACHE_CREATION_FAILURE',
-      message: `Could not create cache directory for now-builders: ${
-        error.message
-      }`,
-      meta: error.stack
+      code: 'NO_BUILDER_CACHE_DIR',
+      message: 'Could not find cache directory for now-builders.',
+      meta: {}
     });
   }
+
+  const cacheDir = join(designated, 'dev');
+  await mkdirp(cacheDir);
+  return cacheDir;
+}
+
+export async function prepareBuilderDir() {
+  const builderDir = join(await cacheDirPromise, 'builders');
+  await mkdirp(builderDir);
+
+  // Create an empty private `package.json`,
+  // but only if one does not already exist
+  try {
+    const buildersPkg = join(builderDir, 'package.json');
+    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
+  }
+
+  return builderDir;
 }
 
 export async function cleanCache(): Promise<void> {}
@@ -64,7 +61,7 @@ export async function cleanCache(): Promise<void> {}
  * Install a list of builders to the cache directory.
  */
 export async function installBuilders(packages: string[]): Promise<void> {
-  const cacheDir = await cacheDirPromise;
+  const cacheDir = await builderDirPromise;
   const buildersPkg = join(cacheDir, 'package.json');
   const pkg = await readJSON(buildersPkg);
   const updatedPackages: string[] = [];
@@ -117,7 +114,7 @@ export async function installBuilders(packages: string[]): Promise<void> {
 export async function getBuilder(builderPkg: string): Promise<Builder> {
   let builder: Builder = localBuilders[builderPkg];
   if (!builder) {
-    const cacheDir = await cacheDirPromise;
+    const cacheDir = await builderDirPromise;
     const parsed = npa(builderPkg);
     const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
     builder = require(dest);
