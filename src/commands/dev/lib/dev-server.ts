@@ -84,13 +84,29 @@ export default class DevServer {
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
-      return JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
+      const config: NowConfig = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
+      this.validateNowConfig(config);
+      return config;
     } catch (err) {
-      if (err.code === 'ENOENT') {
-        return null;
-      } else {
+      if (err.code !== 'ENOENT') {
         throw err;
       }
+    }
+
+    return null;
+  }
+
+  validateNowConfig(config: NowConfig): void {
+    if (config.version !== 2) {
+      throw new Error('Only `version: 2` is supported by `now dev`');
+    }
+    const buildConfig = config.build || {};
+    const hasSecretEnv = [
+      ...Object.values(config.env || {}),
+      ...Object.values(buildConfig.env || {})
+    ].some(val => val[0] === '@');
+    if (hasSecretEnv) {
+      throw new Error('Secret env vars are not yet supported by `now dev`');
     }
   }
 
