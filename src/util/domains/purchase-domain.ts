@@ -35,6 +35,9 @@ export default async function purchaseDomain(
     if (error.code === 'source_not_found') {
       return new ERRORS.SourceNotFound();
     }
+    if (error.code === 'payment_error') {
+      return new ERRORS.DomainPaymentError();
+    }
     throw error;
   }
 }

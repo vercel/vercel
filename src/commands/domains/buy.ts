@@ -135,6 +135,11 @@ export default async function buy(
     return 1;
   }
 
+  if (buyResult instanceof ERRORS.DomainPaymentError) {
+    output.error(`Your card was declined.`);
+    return 1;
+  }
+
   if (buyResult.pending) {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${param(

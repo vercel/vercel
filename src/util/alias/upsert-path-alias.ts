@@ -37,6 +37,7 @@ export default async function upsertPathAlias(
       domainInfo instanceof ERRORS.InvalidDomain ||
       domainInfo instanceof ERRORS.SourceNotFound ||
       domainInfo instanceof ERRORS.UnexpectedDomainPurchaseError ||
+      domainInfo instanceof ERRORS.DomainPaymentError ||
       domainInfo instanceof ERRORS.UnsupportedTLD ||
       domainInfo instanceof ERRORS.UserAborted
     ) {

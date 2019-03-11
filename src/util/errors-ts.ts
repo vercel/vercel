@@ -339,6 +339,19 @@ export class UnexpectedDomainPurchaseError extends NowError<
 }
 
 /**
+ * Returned when there is an expected error charging the card.
+ */
+export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
+  constructor() {
+    super({
+      code: 'DOMAIN_PAYMENT_ERROR',
+      meta: {},
+      message: `Your card was declined.`
+    });
+  }
+}
+
+/**
  * Returned during purchase in alias when the domain was purchased but the
  * order is pending so the alias can't be completed yet
  */
