@@ -50,14 +50,15 @@ export async function prepare() {
   } catch (error) {
     throw new NowError({
       code: 'BUILDER_CACHE_CREATION_FAILURE',
-      message: `Could not create cache directory for now-builders: ${error.message}`,
+      message: `Could not create cache directory for now-builders: ${
+        error.message
+      }`,
       meta: error.stack
     });
   }
 }
 
-export async function cleanCache(): Promise<void> {
-}
+export async function cleanCache(): Promise<void> {}
 
 /**
  * Install a list of builders to the cache directory.
@@ -93,7 +94,9 @@ export async function installBuilders(packages: string[]): Promise<void> {
   }
 
   if (updatedPackages.length > 0) {
-    const stopSpinner = wait(`Installing builders: ${updatedPackages.join(', ')}`);
+    const stopSpinner = wait(
+      `Installing builders: ${updatedPackages.join(', ')}`
+    );
     try {
       await writeJSON(buildersPkg, pkg);
       await execa('npm', ['install', '--prefer-offline'], {

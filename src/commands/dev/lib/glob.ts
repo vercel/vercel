@@ -13,38 +13,40 @@ import FileFsRef from '@now/build-utils/file-fs-ref';
 import { BuilderInputs } from './types';
 
 export interface GlobIgnoreOptions extends minimatch.IOptions {
-    cwd?: string;
-    root?: string;
-    dot?: boolean;
-    nomount?: boolean;
-    mark?: boolean;
-    nosort?: boolean;
-    stat?: boolean;
-    silent?: boolean;
-    strict?: boolean;
-    cache?: { [path: string]: boolean | 'DIR' | 'FILE' | ReadonlyArray<string> };
-    statCache?: { [path: string]: false | fs.Stats | undefined };
-    symlinks?: { [path: string]: boolean | undefined };
-    realpathCache?: { [path: string]: string };
-    sync?: boolean;
-    nounique?: boolean;
-    nonull?: boolean;
-    debug?: boolean;
-    nobrace?: boolean;
-    noglobstar?: boolean;
-    noext?: boolean;
-    nocase?: boolean;
-    matchBase?: any;
-    nodir?: boolean;
-    ignore?: Ignore;
-    follow?: boolean;
-    realpath?: boolean;
-    nonegate?: boolean;
-    nocomment?: boolean;
-    absolute?: boolean;
+  cwd?: string;
+  root?: string;
+  dot?: boolean;
+  nomount?: boolean;
+  mark?: boolean;
+  nosort?: boolean;
+  stat?: boolean;
+  silent?: boolean;
+  strict?: boolean;
+  cache?: { [path: string]: boolean | 'DIR' | 'FILE' | ReadonlyArray<string> };
+  statCache?: { [path: string]: false | fs.Stats | undefined };
+  symlinks?: { [path: string]: boolean | undefined };
+  realpathCache?: { [path: string]: string };
+  sync?: boolean;
+  nounique?: boolean;
+  nonull?: boolean;
+  debug?: boolean;
+  nobrace?: boolean;
+  noglobstar?: boolean;
+  noext?: boolean;
+  nocase?: boolean;
+  matchBase?: any;
+  nodir?: boolean;
+  ignore?: Ignore;
+  follow?: boolean;
+  realpath?: boolean;
+  nonegate?: boolean;
+  nocomment?: boolean;
+  absolute?: boolean;
 }
 
-interface GlobCallback { (err: Error | null, results?: string[]): void }
+interface GlobCallback {
+  (err: Error | null, results?: string[]): void;
+}
 
 /**
  * This `Glob` subclass extends the internal `_readdir()` function to
@@ -54,7 +56,7 @@ interface GlobCallback { (err: Error | null, results?: string[]): void }
  */
 const IGNORE = Symbol('GlobIgnore');
 
-export function GlobIgnore (
+export function GlobIgnore(
   pattern: string,
   options: IOptions,
   callback: GlobCallback,
@@ -68,7 +70,11 @@ export function GlobIgnore (
 
 inherits(GlobIgnore, Glob);
 
-GlobIgnore.prototype._readdir = function _readdir (abs: string, inGlobStar: boolean, cb: GlobCallback) {
+GlobIgnore.prototype._readdir = function _readdir(
+  abs: string,
+  inGlobStar: boolean,
+  cb: GlobCallback
+) {
   const marked = this._mark(abs);
   const rel = relative(this.cwd, marked);
 
@@ -77,29 +83,51 @@ GlobIgnore.prototype._readdir = function _readdir (abs: string, inGlobStar: bool
   }
 
   // @ts-ignore
-  Glob.prototype._readdir.call(this, abs, inGlobStar, (err: Error, results?: string[]): void => {
-    if (err) return cb(err);
-    cb(null, results && results.filter(r => !(this[IGNORE] && this[IGNORE](r))));
-  });
-}
+  Glob.prototype._readdir.call(
+    this,
+    abs,
+    inGlobStar,
+    (err: Error, results?: string[]): void => {
+      if (err) return cb(err);
+      cb(
+        null,
+        results && results.filter(r => !(this[IGNORE] && this[IGNORE](r)))
+      );
+    }
+  );
+};
 
-export async function glob(pattern: string, opts: GlobIgnoreOptions = {}): Promise<string[]> {
+export async function glob(
+  pattern: string,
+  opts: GlobIgnoreOptions = {}
+): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const ignore = opts.ignore;
-    const shouldIgnore = ignore ? (val: string): boolean => ignore.ignores(val) : () => false;
+    const shouldIgnore = ignore
+      ? (val: string): boolean => ignore.ignores(val)
+      : () => false;
     delete opts.ignore;
     // @ts-ignore
-    new GlobIgnore(pattern, opts as IOptions, (err: Error | null, results?: string[]) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    }, shouldIgnore);
+    new GlobIgnore(
+      pattern,
+      opts as IOptions,
+      (err: Error | null, results?: string[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(results);
+        }
+      },
+      shouldIgnore
+    );
   });
 }
 
-export async function globBuilderInputs(pattern: string, opts: GlobIgnoreOptions = {}, mountpoint?: string): Promise<BuilderInputs> {
+export async function globBuilderInputs(
+  pattern: string,
+  opts: GlobIgnoreOptions = {},
+  mountpoint?: string
+): Promise<BuilderInputs> {
   let options: GlobIgnoreOptions;
   if (typeof opts === 'string') {
     options = { cwd: opts };
@@ -124,9 +152,12 @@ export async function globBuilderInputs(pattern: string, opts: GlobIgnoreOptions
 
   return files.reduce((files2: BuilderInputs, relativePath: string) => {
     const fsPath = join(options.cwd || '/', relativePath);
-    const stat: fs.Stats | false | undefined = options.statCache && options.statCache[fsPath];
+    const stat: fs.Stats | false | undefined =
+      options.statCache && options.statCache[fsPath];
     if (!stat) {
-      throw new Error(`statCache does not contain value for ${relativePath} (resolved to ${fsPath})`);
+      throw new Error(
+        `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
+      );
     }
     if (!stat.isDirectory()) {
       let finalPath = relativePath;

@@ -5,10 +5,7 @@ import isURL from './is-url';
 
 import { RouteConfig, RouteResult } from './types';
 
-export default function(
-  reqPath = '',
-  routes?: RouteConfig[]
-): RouteResult {
+export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
@@ -30,7 +27,7 @@ export default function(
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
-          }
+          };
         } else {
           const { pathname, query } = url.parse(destPath);
           const queryParams = qs.parse(query || '');

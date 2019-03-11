@@ -115,7 +115,10 @@ async function executeBuilds(
 /**
  * Collect project files, with .gitignore and .nowignore honored.
  */
-export async function collectProjectFiles(pattern: string, cwd: string): Promise<BuilderInputs> {
+export async function collectProjectFiles(
+  pattern: string,
+  cwd: string
+): Promise<BuilderInputs> {
   const ignore = await createIgnoreList(cwd);
   const files = await globBuilderInputs(pattern, { cwd, ignore });
   return files;

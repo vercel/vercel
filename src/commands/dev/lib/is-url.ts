@@ -1,4 +1,3 @@
-
 /**
  * A naive isURL
  */
