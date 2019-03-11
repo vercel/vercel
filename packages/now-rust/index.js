@@ -285,7 +285,22 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     path.join(cacheEntrypointDirname, 'target'),
   );
 
-  return glob('**/**', cachePath);
+  const cacheFiles = await glob('**/**', cachePath);
+
+  // eslint-disable-next-line no-restricted-syntax
+  for (const f of Object.keys(cacheFiles)) {
+    const accept = (/(?:^|\/)target\/release\/\.fingerprint\//.test(f))
+      || (/(?:^|\/)target\/release\/build\//.test(f))
+      || (/(?:^|\/)target\/release\/deps\//.test(f))
+      || (/(?:^|\/)target\/debug\/\.fingerprint\//.test(f))
+      || (/(?:^|\/)target\/debug\/build\//.test(f))
+      || (/(?:^|\/)target\/debug\/deps\//.test(f));
+    if (!accept) {
+      delete cacheFiles[f];
+    }
+  }
+
+  return cacheFiles;
 };
 
 function findCargoToml(files, entrypoint) {
@@ -295,7 +310,6 @@ function findCargoToml(files, entrypoint) {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     cargoTomlPath = path.join(currentPath, 'Cargo.toml');
-    // eslint-disable-next-line no-await-in-loop
     if (files[cargoTomlPath]) break;
     const newPath = path.dirname(currentPath);
     if (currentPath === newPath) break;
@@ -317,6 +331,6 @@ exports.getDefaultCache = ({ files, entrypoint }) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);
   if (!cargoTomlPath) return undefined;
   const targetFolderDir = path.dirname(cargoTomlPath);
-  const defaultCacheRef = new FileRef({ digest: 'sha:204e0c840c43473bbd130d7bc704fe5588b4eab43cda9bc940f10b2a0ae14b12' });
+  const defaultCacheRef = new FileRef({ digest: 'sha:204e0c840c43473bbd130d7bc704fe5588b4eab43cda9bc940f10b2a0ae14b16' });
   return { [targetFolderDir]: defaultCacheRef };
 };
