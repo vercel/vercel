@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import ignore from 'ignore';
 import { createFunction } from '@zeit/fun';
+import ignore, { Ignore } from '@zeit/dockerignore';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
-import { glob } from './glob';
+import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
@@ -117,14 +117,14 @@ async function executeBuilds(
  */
 export async function collectProjectFiles(pattern: string, cwd: string): Promise<BuilderInputs> {
   const ignore = await createIgnoreList(cwd);
-  const files = await glob(pattern, { cwd, ignore });
+  const files = await globBuilderInputs(pattern, { cwd, ignore });
   return files;
 }
 
 /**
  * Create ignore list according .gitignore & .nowignore in cwd
  */
-export async function createIgnoreList(cwd: string): Promise<any> {
+export async function createIgnoreList(cwd: string): Promise<Ignore> {
   const ig = ignore();
 
   // Add the default ignored files

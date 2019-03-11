@@ -332,7 +332,7 @@ function resolveDest(
 
 function close(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
-    server.close((err: Error) => {
+    server.close((err?: Error) => {
       if (err) {
         reject(err);
       } else {
