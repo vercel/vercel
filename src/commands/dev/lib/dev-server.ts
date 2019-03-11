@@ -82,7 +82,6 @@ export default class DevServer {
 
   async getNowJson(): Promise<NowConfig | null> {
     const nowJsonPath = getNowJsonPath(this.cwd);
-    console.error({ nowJsonPath });
 
     try {
       return JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
@@ -96,13 +95,13 @@ export default class DevServer {
   }
 
   /**
-   * Launch dev-server
+   * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
-    const nowJson = await this.getNowJson();
-    console.error({ nowJson });
-
-    await listen(this.server, port);
+    const [ nowJson ] = await Promise.all([
+      this.getNowJson(),
+      listen(this.server, port)
+    ]);
 
     this.logSuccess(`Dev server listening on port ${chalk.bold(String(port))}`);
 
