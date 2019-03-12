@@ -68,9 +68,7 @@ export const latestHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
-    --target production            Deploy and set the given alias from the ${
-      chalk.underline('now.json')
-    } file
+    --target                       Deploy to either 'staging' or 'production' aliases
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
