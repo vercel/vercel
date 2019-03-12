@@ -308,11 +308,16 @@ export default async function main(
       }
     );
 
-    if (createArgs.target && createArgs.target !== 'production') {
-      error(`The specified ${param('--target')} ${
-        code(createArgs.target)
-      } is not valid`);
-      return 1;
+    if (createArgs.target) {
+      const allowedValues = [
+        'staging',
+        'production'
+      ];
+
+      if (!allowedValues.includes(createArgs.target)) {
+        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+        return 1;
+      }
     }
 
     deployStamp = stamp();
