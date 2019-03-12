@@ -106,6 +106,7 @@ export default async function assignAlias(
       result instanceof ERRORS.InvalidDomain ||
       result instanceof ERRORS.SourceNotFound ||
       result instanceof ERRORS.UnexpectedDomainPurchaseError ||
+      result instanceof ERRORS.DomainPaymentError ||
       result instanceof ERRORS.UnsupportedTLD ||
       result instanceof ERRORS.UserAborted
     ) {

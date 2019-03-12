@@ -343,6 +343,14 @@ export default class Now extends EventEmitter {
         return body;
       }
 
+      if (
+        res.status === 404 &&
+        body.error &&
+        body.error.code === 'not_found'
+      ) {
+        return body;
+      }
+
       if (res.status >= 400 && res.status < 500) {
         const err = new Error();
 

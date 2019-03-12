@@ -28,7 +28,7 @@ export default async function add(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED') {
       output.error(err.message);
       return 1;
     }

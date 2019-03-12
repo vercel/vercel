@@ -462,7 +462,7 @@ const main = async argv_ => {
     try {
       user = await getUser(client);
     } catch (err) {
-      if (err.code === 'not_authorized') {
+      if (err.code === 'NOT_AUTHORIZED') {
         console.error(
           error({
             message: `You do not have access to the specified team`,
