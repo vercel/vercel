@@ -30,7 +30,6 @@ import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
-import { NowError } from './util/now-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -85,11 +84,6 @@ const main = async argv_ => {
   debug = output.debug;
 
   const localConfig = await getConfig(output, argv['--local-config']);
-
-  if (localConfig instanceof NowError) {
-    output.error(`Failed to load local config file: ${localConfig.message}`);
-    return 1;
-  }
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
