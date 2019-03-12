@@ -114,10 +114,9 @@ export default class DevServer {
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
-    const [ nowJson ] = await Promise.all([
-      this.getNowJson(),
-      listen(this.server, port)
-    ]);
+    const nowJson = await this.getNowJson();
+
+    await listen(this.server, port);
 
     this.logSuccess(`Dev server listening on port ${chalk.bold(String(port))}`);
 
