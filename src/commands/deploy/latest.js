@@ -66,7 +66,7 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const printDeploymentStatus = (
+const printDeploymentStatus = async (
   output,
   { url, readyState, aliasFinal },
   deployStamp,

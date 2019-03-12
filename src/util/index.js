@@ -221,8 +221,7 @@ export default class Now extends EventEmitter {
             project,
             files,
             meta,
-            regions,
-            target
+            regions
           }
         : {
             env,
@@ -268,6 +267,10 @@ export default class Now extends EventEmitter {
       if (isBuilds) {
         if (forceNew) {
           queryProps.forceNew = 1;
+        }
+
+        if (target) {
+          requestBody.target = target;
         }
 
         if (isFile) {
