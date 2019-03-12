@@ -132,6 +132,9 @@ export default class DevServer {
     this.setStatusIdle();
   }
 
+  /**
+   * Shuts down the `now dev` server, and cleans up any temporary resources.
+   */
   async stop(): Promise<void> {
     this.logDebug('Stopping `now dev` server');
     const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
