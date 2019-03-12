@@ -101,7 +101,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  if (localConfig instanceof NowError) {
+  if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
     output.error(`Failed to load local config file: ${localConfig.message}`);
     return 1;
   }
