@@ -468,7 +468,7 @@ const main = async argv_ => {
 
   const scope = localConfig.scope || argv['--scope'];
 
-  if (typeof scope === 'string' && subcommand !== 'login') {
+  if (typeof scope === 'string' && subcommand !== 'login' && subcommand !== 'switch') {
     if (scope.length === 0) {
       console.error(
         error({
