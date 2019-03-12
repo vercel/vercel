@@ -28,6 +28,9 @@ import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
+import getConfig from './util/get-config';
+import * as ERRORS from './util/errors-ts';
+import { NowError } from './util/now-error';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -80,6 +83,28 @@ const main = async argv_ => {
   const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
+
+  const localConfigPath = argv['--local-config'];
+  const localConfig = await getConfig(output, localConfigPath);
+
+  if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
+    output.error(
+      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
+        ' or\n    '
+      )}`
+    );
+    return 1;
+  }
+
+  if (localConfig instanceof ERRORS.CantParseJSONFile) {
+    output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
+    return 1;
+  }
+
+  if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
+    output.error(`Failed to load local config file: ${localConfig.message}`);
+    return 1;
+  }
 
   let update = null;
 
@@ -314,6 +339,7 @@ const main = async argv_ => {
   const ctx = {
     config,
     authConfig,
+    localConfig,
     argv: argv_
   };
 
@@ -410,7 +436,7 @@ const main = async argv_ => {
       error({
         message: `This command doesn't work with ${param(
           '--token'
-        )}. Please use ${param('--team')}.`,
+        )}. Please use ${param('--scope')}.`,
         slug: 'no-token-allowed'
       })
     );
@@ -440,14 +466,15 @@ const main = async argv_ => {
     }
   }
 
-  if (typeof argv['--team'] === 'string' && subcommand !== 'login') {
-    const team = argv['--team'];
+  const scope = localConfig.scope || argv['--scope'];
+  const targetCommand = commands[subcommand];
 
-    if (team.length === 0) {
+  if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'teams') {
+    if (scope.length === 0) {
       console.error(
         error({
-          message: `You defined ${param('--team')}, but it's missing a value`,
-          slug: 'missing-team-value'
+          message: `You defined ${param(argv['--scope'] ? '--scope' : 'scope')}, but it's missing a value`,
+          slug: 'missing-scope-value'
         })
       );
 
@@ -465,8 +492,8 @@ const main = async argv_ => {
       if (err.code === 'NOT_AUTHORIZED') {
         console.error(
           error({
-            message: `You do not have access to the specified team`,
-            slug: 'team-not-accessible'
+            message: `You do not have access to the specified account`,
+            slug: 'scope-not-accessible'
           })
         );
 
@@ -477,7 +504,7 @@ const main = async argv_ => {
       return 1;
     }
 
-    if (user.uid === team || user.email === team || user.username === team) {
+    if (user.uid === scope || user.email === scope || user.username === scope) {
       delete ctx.config.currentTeam;
     } else {
       let list = [];
@@ -490,7 +517,7 @@ const main = async argv_ => {
           console.error(
             error({
               message: `You do not have access to the specified team`,
-              slug: 'team-not-accessible'
+              slug: 'scope-not-accessible'
             })
           );
 
@@ -502,13 +529,13 @@ const main = async argv_ => {
       }
 
       const related =
-        list && list.find(item => item.id === team || item.slug === team);
+        list && list.find(item => item.id === scope || item.slug === scope);
 
       if (!related) {
         console.error(
           error({
-            message: 'The specified team does not exist',
-            slug: 'team-not-existent'
+            message: 'The specified scope does not exist',
+            slug: 'scope-not-existent'
           })
         );
 
@@ -518,8 +545,6 @@ const main = async argv_ => {
       ctx.config.currentTeam = related.id;
     }
   }
-
-  const targetCommand = commands[subcommand];
 
   if (!targetCommand) {
     const cmd = param(subcommand);

@@ -41,7 +41,7 @@ const help = () => {
     --until=${chalk.bold.underline(
       'UNTIL'
     )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
     'MODE'
   )}         Specify the output format (${Object.keys(logPrinters).join(

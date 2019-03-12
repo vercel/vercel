@@ -1,20 +1,11 @@
 import { Output } from '../output';
 import * as ERRORS from '../../util/errors-ts';
-import getConfig from '../../util/get-config';
+import { Config } from '../../types';
 
 export default async function getInferredTargets(
   output: Output,
-  localConfigPath: string
+  config: Config
 ) {
-  // Read the configuration file from the best guessed location
-  const config = await getConfig(output, localConfigPath);
-  if (
-    config instanceof ERRORS.CantParseJSONFile ||
-    config instanceof ERRORS.CantFindConfig
-  ) {
-    return config;
-  }
-
   // This field is deprecated, warn about it
   if (config.aliases) {
     output.warn('The `aliases` field has been deprecated in favor of `alias`');
