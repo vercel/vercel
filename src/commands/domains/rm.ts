@@ -103,7 +103,8 @@ async function removeDomain(
   domain: Domain,
   aliasIds: string[] = [],
   certIds: string[] = [],
-  suffix: boolean = false
+  suffix: boolean = false,
+  attempt: number = 1
 ): Promise<number> {
   const removeStamp = stamp();
   output.debug(`Removing domain`);
@@ -145,6 +146,11 @@ async function removeDomain(
   }
 
   if (removeResult instanceof ERRORS.DomainRemovalConflict) {
+    if (attempt >= 2) {
+      output.error(removeResult.message);
+      return 1;
+    }
+
     const {
       aliases,
       certs,
@@ -218,14 +224,11 @@ async function removeDomain(
       domain,
       aliases,
       certs,
-      suffix
+      suffix,
+      attempt + 1
     );
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domain.name
-    )} removed ${removeStamp()}`
-  );
+  output.success(`Domain ${chalk.bold(domain.name)} removed ${removeStamp()}`);
   return 0;
 }
