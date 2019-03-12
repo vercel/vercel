@@ -11,9 +11,9 @@ import toHumanPath from '../../util/humanize-path';
 import wait from '../../util/output/wait';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
-// @ts-ignore
 import success from '../../util/output/success';
 import info from '../../util/output/info';
+import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 
 type Options = {
@@ -128,9 +128,13 @@ async function extractExample(name: string, dir: string, force?: boolean) {
         resp.body.pipe(extractor);
       });
 
-      console.log(success(
-        `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`
-      ));
+      const successLog = `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`;
+      const folderRel = path.relative(process.cwd(), folder);
+      const deployHint = folderRel === ''
+        ? `To deploy, run ${cmd('now')}.`
+        : `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`;
+      console.log(success(`${successLog} ${deployHint}`));
+
       return 0;
     })
     .catch(e => {
