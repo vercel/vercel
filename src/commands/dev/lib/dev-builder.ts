@@ -1,3 +1,4 @@
+import bytes from 'bytes';
 import chalk from 'chalk';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
@@ -68,10 +69,12 @@ async function executeBuilds(
       for (const entry of entries) {
         const config = build.config || {};
         const entrypoint = relative(cwd, entry.fsPath);
+
         const { dev, ino } = await stat(entrypoint);
         const workPath = join(cacheDir, 'workPaths', String(dev + ino));
-        devServer.logDebug(`Building ${entry.fsPath} (workPath = ${workPath})`);
         await mkdirp(workPath);
+
+        devServer.logDebug(`Building ${entry.fsPath} (workPath = ${workPath})`);
         const output = await builder.build({
           files,
           entrypoint,
@@ -80,7 +83,23 @@ async function executeBuilds(
           isDev: true
         });
 
+        // enforce the lambda zip size soft watermark
+        let { maxLambdaSize = '5mb' } = { ...builder.config, ...config };
+        let maxLambdaBytes: number;
+        if (typeof maxLambdaSize === 'string') {
+          maxLambdaBytes = bytes(maxLambdaSize);
+        } else {
+          maxLambdaBytes = maxLambdaSize;
+        }
+
         for (const asset of Object.values(output)) {
+          if (asset.type === 'Lambda') {
+            const size = asset.zipBuffer.length;
+            if (size > maxLambdaBytes) {
+              throw new Error(`The lambda function size (${bytes(size).toLowerCase()}) exceeds the configured limit (${bytes(maxLambdaBytes).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``);
+            }
+          }
+
           asset.buildConfig = build;
         }
 

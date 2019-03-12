@@ -77,7 +77,9 @@ export interface PrepareCacheParams extends BuilderParamsBase {
 }
 
 export interface Builder {
-  config?: object;
+  config?: {
+    maxLambdaSize: string | number;
+  };
   build(params: BuilderParams): BuilderOutputs;
   prepareCache?(params: PrepareCacheParams): BuilderOutputs;
 }
