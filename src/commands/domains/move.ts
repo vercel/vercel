@@ -95,9 +95,24 @@ export default async function move(
     return moveOutDomain(client, context, domainName, destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
-    output.error(
-      `Please remove custom suffix for ${param(domainName)} before moving out`
-    );
+    const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
+    if (suffix) {
+      output.error(
+        `Please remove custom suffix for ${param(domainName)} before moving out`
+      );
+      return 1;
+    }
+
+    if (pendingAsyncPurchase) {
+      output.error(
+        `Cannot remove ${param(
+          domain.name
+        )} because it is still in the process of being purchased.`
+      );
+      return 1;
+    }
+
+    output.error(moveTokenResult.message);
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.DomainNotFound) {
