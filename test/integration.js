@@ -734,6 +734,39 @@ test('ensure the `alias` property is not sent to the API', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
+test('ensure the `scope` property works', async t => {
+  const directory = fixture('config-scope-property');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure we're deploying under the right scope
+  t.true(stderr.includes(`now-cli-${session}`));
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
 
