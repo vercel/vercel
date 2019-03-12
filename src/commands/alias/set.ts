@@ -215,6 +215,8 @@ export default async function set(
     );
     if (handleResult === 1) {
       return 1;
+    } else if (handleResult instanceof Error) {
+      throw handleResult;
     } else {
       console.log(
         `${chalk.cyan('> Success!')} ${
@@ -367,7 +369,7 @@ type RemainingAssignAliasErrors = SetDifference<
 function handleCreateAliasError<T>(
   output: Output,
   error: RemainingAssignAliasErrors | T
-): 1 | T {
+): 1 | Error | T {
   if (error instanceof ERRORS.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(
