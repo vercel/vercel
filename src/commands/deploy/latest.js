@@ -308,8 +308,10 @@ export default async function main(
     // $FlowFixMe
     const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
     log(`Using project ${chalk.bold(project)}`);
-    const createArgs = Object.assign(
-      {
+
+    const createArgs = {
+        name: project,
+        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -320,12 +322,7 @@ export default async function main(
         nowConfig: localConfig,
         regions,
         meta
-      },
-      {
-        name: project,
-        target: argv['--target']
-      }
-    );
+    };
 
     if (createArgs.target) {
       const allowedValues = [

@@ -221,7 +221,8 @@ export default class Now extends EventEmitter {
             project,
             files,
             meta,
-            regions
+            regions,
+            target
           }
         : {
             env,
@@ -247,10 +248,6 @@ export default class Now extends EventEmitter {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
           const exclude = ['github'];
-
-          if (target !== 'production') {
-            exclude.push('alias');
-          }
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
