@@ -29,6 +29,7 @@ import highlight from './util/output/highlight';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
+import * as ERRORS from './util/errors-ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -82,12 +83,19 @@ const main = async argv_ => {
 
   debug = output.debug;
 
-  let localConfig = {};
+  const localConfig = await getConfig(output, argv['--local-config']);
 
-  try {
-    localConfig = await getConfig(output, argv['--local-config']);
-  } catch (err) {
-    handleError(err);
+  if (localConfig instanceof ERRORS.CantParseJSONFile) {
+    output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
+    return 1;
+  }
+
+  if (localConfig instanceof ERRORS.CantFindConfig) {
+    output.error(
+      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
+        ' or\n    '
+      )}`
+    );
     return 1;
   }
 
