@@ -145,13 +145,34 @@ async function removeDomain(
   }
 
   if (removeResult instanceof ERRORS.DomainRemovalConflict) {
-    const { aliases, certs, suffix, transferring } = removeResult.meta;
+    const {
+      aliases,
+      certs,
+      suffix,
+      transferring,
+      pendingAsyncPurchase,
+      resolvable
+    } = removeResult.meta;
     if (transferring) {
       output.error(
         `${param(
           domain.name
         )} transfer should be declined or approved before removing.`
       );
+      return 1;
+    }
+
+    if (pendingAsyncPurchase) {
+      output.error(
+        `Cannot remove ${param(
+          domain.name
+        )} because it is still in the process of being purchased.`
+      );
+      return 1;
+    }
+
+    if (!resolvable) {
+      output.error(removeResult.message);
       return 1;
     }
 
