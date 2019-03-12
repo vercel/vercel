@@ -248,10 +248,6 @@ export default class Now extends EventEmitter {
           // are not supported on the API.
           const exclude = ['github'];
 
-          if (target !== 'production') {
-            exclude.push('alias');
-          }
-
           // Request properties that are made of a combination of
           // command flags and config properties were already set
           // earlier. Here, we are setting request properties that
@@ -271,6 +267,10 @@ export default class Now extends EventEmitter {
       if (isBuilds) {
         if (forceNew) {
           queryProps.forceNew = 1;
+        }
+
+        if (target) {
+          requestBody.target = target;
         }
 
         if (isFile) {
