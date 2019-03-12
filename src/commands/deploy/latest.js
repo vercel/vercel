@@ -66,17 +66,6 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 
-const parseFinalAliases = (aliasFinal) => {
-  const last = aliasFinal.length - 1;
-
-  if (last === 0) {
-    // Only one item
-    return aliasFinal[0];
-  }
-
-  return `${aliasFinal.slice(0, last).join(', ')} and ${aliasFinal[last]}`;
-};
-
 const printDeploymentStatus = (
   output,
   { url, readyState, aliasFinal },
@@ -85,12 +74,19 @@ const printDeploymentStatus = (
 ) => {
   if (readyState === 'READY') {
     if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
-      output.success(`Your deployment is now available on ${
-        parseFinalAliases(aliasFinal)
-      } ${deployStamp()}`);
+      if (aliasFinal.length === 1) {
+        output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${deployStamp()}`);
+      } else {
+        output.success(`Aliases assigned ${deployStamp()}`);
+
+        for (const alias of aliasFinal) {
+          output.print(`- ${chalk.bold(chalk.cyan(alias))}\n`);
+        }
+      }
     } else {
       output.success(`Deployment ready ${deployStamp()}`);
     }
+
     return 0;
   }
 
@@ -454,18 +450,18 @@ export default async function main(
       try {
         await copy(url);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
+          `${url} ${chalk.gray(`[v2]`)} ${chalk.gray(
             '[in clipboard]'
           )} ${deployStamp()}`
         );
       } catch (err) {
         debug(`Error copying to clipboard: ${err}`);
         log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${deployStamp()}`
+          `${url} ${chalk.gray(`[v2]`)} ${deployStamp()}`
         );
       }
     } else {
-      log(`${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
+      log(`${url} ${deployStamp()}`);
     }
   } else {
     process.stdout.write(url);
