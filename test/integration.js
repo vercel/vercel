@@ -816,6 +816,38 @@ test('deploy multiple static files', async t => {
   t.is(content.files.length, 3);
 });
 
+test('deploy multiple static files with custom scope', async t => {
+  const directory = fixture('static-multiple-files');
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--scope', email, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+
+  const content = await response.json();
+  t.is(content.files.length, 3);
+});
+
 test('deploy single static file', async t => {
   const file = fixture('static-single-file/first.png');
 
