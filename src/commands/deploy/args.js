@@ -69,6 +69,7 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --target                       Deploy to either 'staging' or 'production' aliases
+
   ${note(
     `To view the usage information for Now 1.0, run ${code(
       'now help deploy-v1'
