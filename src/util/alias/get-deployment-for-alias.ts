@@ -31,7 +31,7 @@ export default async function getDeploymentForAlias(
       deploymentId
     );
   } else {
-    const appName = await getAppName(output, localConfigPath, localConfig);
+    const appName = await getAppName(output, localConfig, localConfigPath);
     deployment = await getAppLastDeployment(
       output,
       client,

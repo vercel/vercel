@@ -4,7 +4,7 @@ import { Output } from '../output';
 import { Config } from '../../types';
 import readPackage from '../read-package';
 
-export default async function getAppName(output: Output, localConfigPath?: string, localConfig: Config) {
+export default async function getAppName(output: Output, config: Config, localConfigPath?: string) {
   // If the name is in the configuration, return it
   if (config.name) {
     return config.name;
