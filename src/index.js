@@ -28,6 +28,7 @@ import NowTeams from './util/teams';
 import highlight from './util/output/highlight';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
+import getConfig from './util/get-config';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -80,6 +81,15 @@ const main = async argv_ => {
   const output = createOutput({ debug: isDebugging });
 
   debug = output.debug;
+
+  let localConfig = {};
+
+  try {
+    localConfig = await getConfig(output, argv['--local-config']);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   let update = null;
 
@@ -314,6 +324,7 @@ const main = async argv_ => {
   const ctx = {
     config,
     authConfig,
+    localConfig,
     argv: argv_
   };
 
