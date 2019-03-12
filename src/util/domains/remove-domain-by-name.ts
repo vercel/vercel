@@ -16,13 +16,14 @@ export default async function removeDomainByName(
       return new ERRORS.DomainPermissionDenied(domain, contextName);
     }
     if (error.code === 'domain_removal_conflict') {
-      const { aliases, certs, suffix, transferring } = error;
       return new ERRORS.DomainRemovalConflict({
-        aliases,
-        certs,
-        domain,
-        suffix,
-        transferring
+        aliases: error.aliases,
+        certs: error.certs,
+        message: error.message,
+        pendingAsyncPurchase: error.pendingAsyncPurchase,
+        resolvable: error.resolvable,
+        suffix: error.suffix,
+        transferring: error.transferring
       });
     }
     throw error;

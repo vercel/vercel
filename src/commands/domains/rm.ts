@@ -103,7 +103,8 @@ async function removeDomain(
   domain: Domain,
   aliasIds: string[] = [],
   certIds: string[] = [],
-  suffix: boolean = false
+  suffix: boolean = false,
+  attempt: number = 1
 ): Promise<number> {
   const removeStamp = stamp();
   output.debug(`Removing domain`);
@@ -145,13 +146,39 @@ async function removeDomain(
   }
 
   if (removeResult instanceof ERRORS.DomainRemovalConflict) {
-    const { aliases, certs, suffix, transferring } = removeResult.meta;
+    if (attempt >= 2) {
+      output.error(removeResult.message);
+      return 1;
+    }
+
+    const {
+      aliases,
+      certs,
+      suffix,
+      transferring,
+      pendingAsyncPurchase,
+      resolvable
+    } = removeResult.meta;
     if (transferring) {
       output.error(
         `${param(
           domain.name
         )} transfer should be declined or approved before removing.`
       );
+      return 1;
+    }
+
+    if (pendingAsyncPurchase) {
+      output.error(
+        `Cannot remove ${param(
+          domain.name
+        )} because it is still in the process of being purchased.`
+      );
+      return 1;
+    }
+
+    if (!resolvable) {
+      output.error(removeResult.message);
       return 1;
     }
 
@@ -197,14 +224,11 @@ async function removeDomain(
       domain,
       aliases,
       certs,
-      suffix
+      suffix,
+      attempt + 1
     );
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domain.name
-    )} removed ${removeStamp()}`
-  );
+  output.success(`Domain ${chalk.bold(domain.name)} removed ${removeStamp()}`);
   return 0;
 }
