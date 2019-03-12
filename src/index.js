@@ -84,10 +84,15 @@ const main = async argv_ => {
 
   debug = output.debug;
 
-  const localConfig = await getConfig(output, argv['--local-config']);
+  const localConfigPath = argv['--local-config'];
+  const localConfig = await getConfig(output, localConfigPath);
 
-  if (localConfig instanceof NowError) {
-    output.error(`Failed to load local config file: ${localConfig.message}`);
+  if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
+    output.error(
+      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
+        ' or\n    '
+      )}`
+    );
     return 1;
   }
 
@@ -96,12 +101,8 @@ const main = async argv_ => {
     return 1;
   }
 
-  if (localConfig instanceof ERRORS.CantFindConfig) {
-    output.error(
-      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
-        ' or\n    '
-      )}`
-    );
+  if (localConfig instanceof NowError) {
+    output.error(`Failed to load local config file: ${localConfig.message}`);
     return 1;
   }
 
