@@ -62,7 +62,8 @@ export default async function purchaseDomainIfAvailable(
       result instanceof ERRORS.DomainNotAvailable ||
       result instanceof ERRORS.DomainServiceNotAvailable ||
       result instanceof ERRORS.InvalidDomain ||
-      result instanceof ERRORS.UnexpectedDomainPurchaseError
+      result instanceof ERRORS.UnexpectedDomainPurchaseError ||
+      result instanceof ERRORS.DomainPaymentError
     ) {
       return result;
     }
