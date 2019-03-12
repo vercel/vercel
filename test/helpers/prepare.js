@@ -109,10 +109,15 @@ module.exports = async session => {
         '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
       'index.html': '<span>test alias</span'
     },
-    'config-scope-property': {
+    'config-scope-property-email': {
       'now.json':
         `{ "scope": "now-cli-${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
-      'index.html': '<span>test scope</span'
+      'index.html': '<span>test scope email</span'
+    },
+    'config-scope-property-username': {
+      'now.json':
+        `{ "scope": "now-cli-${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'index.html': '<span>test scope username</span'
     },
     'builds-wrong': {
       'now.json': '{"builder": 1, "type": "static"}',
