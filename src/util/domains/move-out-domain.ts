@@ -29,8 +29,13 @@ export default async function moveOutDomain(
       return new ERRORS.InvalidMoveDestination(destination);
     }
     if (error.code === 'domain_move_conflict') {
-      const { suffix } = error;
-      return new ERRORS.DomainMoveConflict({ domain: name, suffix });
+      const { pendingAsyncPurchase, resolvable, suffix, message } = error;
+      return new ERRORS.DomainMoveConflict({
+        message,
+        pendingAsyncPurchase,
+        resolvable,
+        suffix
+      });
     }
     throw error;
   }
