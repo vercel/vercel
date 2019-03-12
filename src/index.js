@@ -451,13 +451,13 @@ const main = async argv_ => {
     }
   }
 
-  if (typeof argv['--scope'] === 'string' && subcommand !== 'login') {
-    const scope = argv['--scope'];
+  const scope = localConfig.scope || argv['--scope'];
 
+  if (typeof scope === 'string' && subcommand !== 'login') {
     if (scope.length === 0) {
       console.error(
         error({
-          message: `You defined ${param('--scope')}, but it's missing a value`,
+          message: `You defined ${param(argv['--scope'] ? '--scope' : 'scope')}, but it's missing a value`,
           slug: 'missing-scope-value'
         })
       );
