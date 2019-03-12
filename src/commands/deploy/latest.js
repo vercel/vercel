@@ -70,16 +70,39 @@ const printDeploymentStatus = (
   output,
   { url, readyState, aliasFinal },
   deployStamp,
+  clipboardEnabled,
   builds
 ) => {
   if (readyState === 'READY') {
     if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
       if (aliasFinal.length === 1) {
-        output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${deployStamp()}`);
+        if (clipboardEnabled) {
+          try {
+            await copy(aliasFinal[0]);
+            output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+          } catch (err) {
+            output.debug(`Error copying to clipboard: ${err}`);
+            output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${deployStamp()}`);
+          }
+        }
       } else {
         output.success(`Aliases assigned ${deployStamp()}`);
 
         for (const alias of aliasFinal) {
+          const index = aliasFinal.indexOf(alias);
+          const last = index === (aliasFinal.length - 1);
+
+          if (last && clipboardEnabled) {
+            try {
+              await copy(alias);
+              output.print(`- ${chalk.bold(chalk.cyan(alias))} ${chalk.gray('[in clipboard]')}\n`);
+
+              return 0;
+            } catch (err) {
+              output.debug(`Error copying to clipboard: ${err}`);
+            }
+          }
+
           output.print(`- ${chalk.bold(chalk.cyan(alias))}\n`);
         }
       }
@@ -446,23 +469,7 @@ export default async function main(
   const { url } = now;
 
   if (isTTY) {
-    if (!argv['--no-clipboard']) {
-      try {
-        await copy(url);
-        log(
-          `${url} ${chalk.gray(`[v2]`)} ${chalk.gray(
-            '[in clipboard]'
-          )} ${deployStamp()}`
-        );
-      } catch (err) {
-        debug(`Error copying to clipboard: ${err}`);
-        log(
-          `${url} ${chalk.gray(`[v2]`)} ${deployStamp()}`
-        );
-      }
-    } else {
-      log(`${url} ${deployStamp()}`);
-    }
+    log(`${url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
   } else {
     process.stdout.write(url);
   }
@@ -470,7 +477,7 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp);
+    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard']);
   }
 
   const sleepingTime = ms('1.5s');
@@ -539,7 +546,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, builds);
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], builds);
 };
 
 function handleCreateDeployError(output, error) {
