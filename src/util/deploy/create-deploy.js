@@ -62,8 +62,7 @@ export default async function createDeploy(
     }
 
     if (error.code === 'not_found') {
-      // The first argument is the deployment id, which is not available here
-      return new ERRORS_TS.DeploymentNotFound('', contextName)
+      return new ERRORS_TS.DeploymentNotFound({ context: contextName })
     }
 
     // If the error is unknown, we just throw
