@@ -62,7 +62,7 @@ export default async function set(
   try {
     ({ contextName, user } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -339,7 +339,15 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.SourceNotFound) {
     output.error(
-      `You can't purchase the domain your aliasing to since you have no valid payment method.`
+      `You can't purchase the domain you're aliasing to since you have no valid payment method.`
+    );
+    output.print(`  Please add a valid payment method and retry.\n`);
+    return 1;
+  }
+
+  if (error instanceof ERRORS.DomainPaymentError) {
+    output.error(
+      `You can't purchase the domain you're aliasing to since your card was declined.`
     );
     output.print(`  Please add a valid payment method and retry.\n`);
     return 1;

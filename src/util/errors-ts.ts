@@ -339,6 +339,19 @@ export class UnexpectedDomainPurchaseError extends NowError<
 }
 
 /**
+ * Returned when there is an expected error charging the card.
+ */
+export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
+  constructor() {
+    super({
+      code: 'DOMAIN_PAYMENT_ERROR',
+      meta: {},
+      message: `Your card was declined.`
+    });
+  }
+}
+
+/**
  * Returned during purchase in alias when the domain was purchased but the
  * order is pending so the alias can't be completed yet
  */
@@ -496,7 +509,7 @@ export class DeploymentNotFound extends NowError<
   'DEPLOYMENT_NOT_FOUND',
   { id: string; context: string }
 > {
-  constructor(id: string, context: string) {
+  constructor({ context, id = '' }: { context: string, id: string }) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
@@ -792,18 +805,29 @@ export class DNSPermissionDenied extends NowError<
 
 export class DomainRemovalConflict extends NowError<
   'domain_removal_conflict',
-  { aliases: string[]; certs: string[]; suffix: boolean; transferring: boolean }
+  {
+    aliases: string[];
+    certs: string[];
+    pendingAsyncPurchase: boolean;
+    suffix: boolean;
+    transferring: boolean;
+    resolvable: boolean;
+  }
 > {
   constructor({
     aliases,
     certs,
-    domain,
+    message,
+    pendingAsyncPurchase,
+    resolvable,
     suffix,
     transferring
   }: {
     aliases: string[];
     certs: string[];
-    domain: string;
+    message: string;
+    pendingAsyncPurchase: boolean;
+    resolvable: boolean;
     suffix: boolean;
     transferring: boolean;
   }) {
@@ -812,25 +836,39 @@ export class DomainRemovalConflict extends NowError<
       meta: {
         aliases,
         certs,
+        pendingAsyncPurchase,
         suffix,
-        transferring
+        transferring,
+        resolvable
       },
-      message: `Conflicts should be resolved before attempting to remove ${domain}`
+      message: message
     });
   }
 }
 
 export class DomainMoveConflict extends NowError<
   'domain_move_conflict',
-  { suffix: boolean }
+  { pendingAsyncPurchase: boolean; suffix: boolean; resolvable: boolean }
 > {
-  constructor({ domain, suffix }: { domain: string; suffix: boolean }) {
+  constructor({
+    message,
+    pendingAsyncPurchase,
+    resolvable,
+    suffix
+  }: {
+    message: string;
+    pendingAsyncPurchase: boolean;
+    resolvable: boolean;
+    suffix: boolean;
+  }) {
     super({
       code: 'domain_move_conflict',
       meta: {
+        pendingAsyncPurchase,
+        resolvable,
         suffix
       },
-      message: `Conflicts should be resolved before attempting to move ${domain}`
+      message: message
     });
   }
 }
