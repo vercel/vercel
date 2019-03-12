@@ -8,10 +8,7 @@ export default async function getInferredTargets(
 ) {
   // Read the configuration file from the best guessed location
   const config = await getConfig(output, localConfigPath);
-  if (
-    config instanceof ERRORS.CantParseJSONFile ||
-    config instanceof ERRORS.CantFindConfig
-  ) {
+  if (config instanceof Error) {
     return config;
   }
 
