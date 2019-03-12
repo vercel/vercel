@@ -3,10 +3,10 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import qs from 'querystring';
 import rawBody from 'raw-body';
-import { relative } from 'path';
 import listen from 'async-listen';
 import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
+import { basename, dirname } from 'path';
 
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
@@ -245,12 +245,8 @@ export default class DevServer {
     // invoke asset
     switch (asset.type) {
       case 'FileFsRef':
-        const origUrl = req.url;
-        req.url = `/${relative(cwd, asset.fsPath)}`;
-        if (origUrl !== req.url) {
-          this.logDebug(`Mapped request URL: ${origUrl} -> ${req.url}`);
-        }
-        return serveStaticFile(req, res, cwd);
+        req.url = `/${basename(asset.fsPath)}`;
+        return serveStaticFile(req, res, dirname(asset.fsPath));
 
       case 'Lambda':
         if (!asset.fn) {
