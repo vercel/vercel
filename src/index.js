@@ -467,8 +467,9 @@ const main = async argv_ => {
   }
 
   const scope = localConfig.scope || argv['--scope'];
+  const targetCommand = commands[subcommand];
 
-  if (typeof scope === 'string' && subcommand !== 'login' && subcommand !== 'switch') {
+  if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'teams') {
     if (scope.length === 0) {
       console.error(
         error({
@@ -544,8 +545,6 @@ const main = async argv_ => {
       ctx.config.currentTeam = related.id;
     }
   }
-
-  const targetCommand = commands[subcommand];
 
   if (!targetCommand) {
     const cmd = param(subcommand);
