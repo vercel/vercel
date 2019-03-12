@@ -246,7 +246,10 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = ['github'];
+          const exclude = [
+            'github',
+            'scope'
+          ];
 
           if (target !== 'production') {
             exclude.push('alias');
