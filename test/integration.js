@@ -734,6 +734,71 @@ test('ensure the `alias` property is not sent to the API', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
+test('ensure the `scope` property works with email', async t => {
+  const directory = fixture('config-scope-property-email');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure we're deploying under the right scope
+  t.true(stderr.includes(`now-cli-${session}`));
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('ensure the `scope` property works with username', async t => {
+  const directory = fixture('config-scope-property-username');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure we're deploying under the right scope
+  t.true(stderr.includes(`now-cli-${session}`));
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Ensure the listing includes the necessary parts
+  const wanted = [session, 'index.html'];
+
+  t.true(wanted.every(item => stderr.includes(item)));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
 
@@ -790,6 +855,38 @@ test('deploy multiple static files', async t => {
   const { stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+
+  const content = await response.json();
+  t.is(content.files.length, 3);
+});
+
+test('deploy multiple static files with custom scope', async t => {
+  const directory = fixture('static-multiple-files');
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--scope', email, ...defaultArgs],
     {
       reject: false
     }
@@ -1016,11 +1113,11 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
-  const goal = `> Error! The specified team does not exist`;
+  const goal = `> Error! The specified scope does not exist`;
 
   const { stderr, code } = await execa(
     binaryPath,
-    [target, '--team', session, ...defaultArgs],
+    [target, '--scope', session, ...defaultArgs],
     {
       reject: false
     }

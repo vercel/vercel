@@ -26,7 +26,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Shows the currently logged in username
+  ${chalk.gray('–')} Shows the username of the currently logged in user
 
     ${chalk.cyan('$ now whoami')}
 `);

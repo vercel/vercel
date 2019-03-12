@@ -33,7 +33,7 @@ const help = () => {
   )}        Login token
     -y, --yes                      Skip confirmation
     -s, --safe                     Skip deployments with an active alias
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 

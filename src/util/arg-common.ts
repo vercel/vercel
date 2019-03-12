@@ -11,8 +11,8 @@ const ARG_COMMON = {
   '--token': String,
   '-t': '--token',
 
-  '--team': String,
-  '-T': '--team',
+  '--scope': String,
+  '-s': '--scope',
 
   '--local-config': String,
   '-A': '--local-config',

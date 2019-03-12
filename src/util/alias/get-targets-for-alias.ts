@@ -2,13 +2,14 @@ import { NowError } from '../now-error';
 import { Output } from '../output';
 import getInferredTargets from './get-inferred-targets';
 import toHost from '../../util/to-host';
+import { Config } from '../../types';
 
 export default async function getTargetsForAlias(
   output: Output,
   args: string[],
-  localConfigPath: string
+  localConfig: Config
 ) {
-  const targets = await getTargets(output, args, localConfigPath);
+  const targets = await getTargets(output, args, localConfig);
   return targets instanceof NowError ? targets : targetsToHosts(targets);
 }
 
@@ -23,9 +24,9 @@ function targetToHost(target: string) {
 async function getTargets(
   output: Output,
   args: string[],
-  localConfigPath: string
+  localConfig: Config
 ) {
   return args.length === 0
-    ? getInferredTargets(output, localConfigPath)
+    ? getInferredTargets(output, localConfig)
     : [args[args.length - 1]];
 }

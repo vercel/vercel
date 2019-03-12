@@ -5,8 +5,11 @@ import note from '../../util/output/note';
 
 export const latestHelp = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
+
   ${chalk.dim('Commands:')}
+
     ${chalk.dim('Cloud')}
+
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
@@ -22,15 +25,19 @@ export const latestHelp = () => `
       scale                [args]      Scales the instance count of a deployment
       init                 [example]   Initialize an example project
       help                 [cmd]       Displays complete help for [cmd]
+
     ${chalk.dim('Administrative')}
+
       billing | cc         [cmd]       Manages your credit cards and billing methods
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
+      teams                            Manages your teams
       switch               [scope]     Switches between teams and your personal account
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      whoami                           Displays the current scope
+      whoami                           Shows the username of the currently logged in user
+
   ${chalk.dim('Options:')}
+
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
@@ -59,24 +66,35 @@ export const latestHelp = () => `
       '`-m KEY=value`'
     )}). Can appear many times.
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
+
   ${note(
     `To view the usage information for Now 1.0, run ${code(
       'now help deploy-v1'
     )}`
   )}
+
   ${chalk.dim('Examples:')}
+
   ${chalk.gray('–')} Deploy the current directory
+
     ${chalk.cyan('$ now')}
+
   ${chalk.gray('–')} Deploy a custom path
+
     ${chalk.cyan('$ now /usr/src/project')}
+
   ${chalk.gray('–')} Deploy with environment variables
+
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
+
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
   '`list`'
 )}
+
     ${chalk.cyan('$ now help list')}
+
 `;
 
 export const latestArgs = {
@@ -171,8 +189,11 @@ export const legacyArgs = argList;
 
 export const legacyHelp = () => `
   ${chalk.bold(`${logo} now`)} [options] <command | path>
+
   ${chalk.dim('Commands:')}
+
     ${chalk.dim('Cloud')}
+
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
@@ -188,15 +209,19 @@ export const legacyHelp = () => `
       scale                [args]      Scales the instance count of a deployment
       init                 [example]   Initialize an example project
       help                 [cmd]       Displays complete help for [cmd]
+
     ${chalk.dim('Administrative')}
+
       billing | cc         [cmd]       Manages your credit cards and billing methods
       upgrade | downgrade  [plan]      Upgrades or downgrades your plan
-      teams                [team]      Manages your teams
-      switch                           Switches between teams and your account
-      login                            Logs into your account or creates a new one
+      teams                            Manages your teams
+      switch               [scope]     Switches between teams and your account
+      login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      whoami                           Displays the currently logged in username
+      whoami                           Shows the username of the currently logged in user
+
   ${chalk.dim('Options:')}
+
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
@@ -231,25 +256,39 @@ export const legacyHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -N, --forward-npm              Forward login information to install private npm modules
     --session-affinity             Session affinity, \`ip\` or \`random\` (default) to control session affinity
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     --regions                      Set default regions or DCs to enable the deployment on
     --no-scale                     Skip scaling rules deploying with the default presets
     --no-verify                    Skip step of waiting until instance count meets given constraints
+
   ${chalk.dim(`Enforceable Types (by default, it's detected automatically):`)}
+
     --npm                          Node.js application
     --docker                       Docker container
     --static                       Static file hosting
+
   ${chalk.dim('Examples:')}
+
   ${chalk.gray('–')} Deploy the current directory
+
     ${chalk.cyan('$ now')}
+
   ${chalk.gray('–')} Deploy a custom path
+
     ${chalk.cyan('$ now /usr/src/project')}
+
   ${chalk.gray('–')} Deploy a GitHub repository
+
     ${chalk.cyan('$ now user/repo#ref')}
+
   ${chalk.gray('–')} Deploy with environment variables
+
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
+
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
   '`list`'
 )}
+
     ${chalk.cyan('$ now help list')}
+
 `;
