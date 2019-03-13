@@ -803,6 +803,16 @@ export class DNSPermissionDenied extends NowError<
   }
 }
 
+export class DNSInvalidPort extends NowError<'DNS_INVALID_PORT', {}> {
+  constructor() {
+    super({
+      code: 'DNS_INVALID_PORT',
+      meta: {},
+      message: `Invalid <port> parameter. A number was expected`
+    });
+  }
+}
+
 export class DomainRemovalConflict extends NowError<
   'domain_removal_conflict',
   {
