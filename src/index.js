@@ -474,19 +474,6 @@ const main = async argv_ => {
   }
 
   if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'teams') {
-    if (scope.length === 0) {
-      const flag = argv['--scope'] ? '--scope' : (argv['--team'] ? '--team' : 'scope');
-
-      console.error(
-        error({
-          message: `You defined ${param(flag)}, but it's missing a value`,
-          slug: 'missing-scope-value'
-        })
-      );
-
-      return 1;
-    }
-
     const { authConfig: { token } } = ctx;
     const client = new Client({ apiUrl, token });
 
