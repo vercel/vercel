@@ -9,7 +9,7 @@
     "directory": "packages/now-node"
   },
   "dependencies": {
-    "@now/node-bridge": "1.0.0-canary.2",
+    "@now/node-bridge": "1.0.0",
     "fs-extra": "7.0.1"
   },
   "scripts": {
