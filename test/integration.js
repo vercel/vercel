@@ -704,6 +704,34 @@ test('set platform version using `--platform-version` to `2`', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
+test('ensure we render a warning for deployments with no files', async t => {
+  const directory = fixture('single-dotfile');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the warning is printed
+  t.true(stderr.includes('> WARN! There are no files (or only files starting with a dot) inside your deployment.'));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/plain; charset=utf-8');
+});
+
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 
