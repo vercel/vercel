@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { DomainNotFound, DNSPermissionDenied, DNSInvalidPort } from '../../util/errors-ts';
+import { DomainNotFound, DNSPermissionDenied, DNSInvalidPort, DNSInvalidType } from '../../util/errors-ts';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';
@@ -71,6 +71,17 @@ export default async function add(
   if (record instanceof DNSInvalidPort) {
     output.error(
       `Invalid <port> parameter. A number was expected ${chalk.gray(addStamp())}`
+    );
+    return 1;
+  }
+
+  if (record instanceof DNSInvalidType) {
+    output.error(
+      `Invalid <type> parameter "${
+        record.meta.type
+      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${
+        chalk.gray(addStamp())
+      }`
     );
     return 1;
   }
