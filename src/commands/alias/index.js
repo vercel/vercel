@@ -38,7 +38,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}             Login token
-    -T, --team                          Set a custom team scope
+    -S, --scope                         Set a custom scope
     -n, --no-verify                     Don't wait until instance count meets the previous alias constraints
 
   ${chalk.dim('Examples:')}

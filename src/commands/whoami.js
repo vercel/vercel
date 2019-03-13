@@ -26,7 +26,7 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Shows the currently logged in username
+  ${chalk.gray('–')} Shows the username of the currently logged in user
 
     ${chalk.cyan('$ now whoami')}
 `);
@@ -60,7 +60,7 @@ const main = async ctx => {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }

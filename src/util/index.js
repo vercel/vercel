@@ -246,11 +246,10 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = ['github'];
-
-          if (target !== 'production') {
-            exclude.push('alias');
-          }
+          const exclude = [
+            'github',
+            'scope'
+          ];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -271,6 +270,10 @@ export default class Now extends EventEmitter {
       if (isBuilds) {
         if (forceNew) {
           queryProps.forceNew = 1;
+        }
+
+        if (target) {
+          requestBody.target = target;
         }
 
         if (isFile) {
@@ -344,6 +347,14 @@ export default class Now extends EventEmitter {
         res.status === 400 &&
         body.error &&
         body.error.code === 'missing_files'
+      ) {
+        return body;
+      }
+
+      if (
+        res.status === 404 &&
+        body.error &&
+        body.error.code === 'not_found'
       ) {
         return body;
       }

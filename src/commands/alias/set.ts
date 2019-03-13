@@ -36,8 +36,10 @@ export default async function set(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
+    localConfig
   } = ctx;
+
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const setStamp = stamp();
@@ -60,7 +62,7 @@ export default async function set(
   try {
     ({ contextName, user } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -108,16 +110,8 @@ export default async function set(
   const targets = await getTargetsForAlias(
     output,
     args,
-    opts['--local-config']
+    localConfig
   );
-  if (targets instanceof ERRORS.CantFindConfig) {
-    output.error(
-      `Couldn't find a project configuration file at \n    ${targets.meta.paths.join(
-        ' or\n    '
-      )}`
-    );
-    return 1;
-  }
 
   if (targets instanceof ERRORS.NoAliasInConfig) {
     output.error(`Couldn't find an alias in config`);
@@ -128,11 +122,6 @@ export default async function set(
     output.error(
       `Wrong value for alias found in config. It must be a string or array of string.`
     );
-    return 1;
-  }
-
-  if (targets instanceof ERRORS.CantParseJSONFile) {
-    output.error(`Couldn't parse JSON file ${targets.meta.file}.`);
     return 1;
   }
 
@@ -171,8 +160,10 @@ export default async function set(
     args,
     opts['--local-config'],
     user,
-    contextName
+    contextName,
+    localConfig
   );
+
   if (deployment instanceof ERRORS.DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(
@@ -348,7 +339,15 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.SourceNotFound) {
     output.error(
-      `You can't purchase the domain your aliasing to since you have no valid payment method.`
+      `You can't purchase the domain you're aliasing to since you have no valid payment method.`
+    );
+    output.print(`  Please add a valid payment method and retry.\n`);
+    return 1;
+  }
+
+  if (error instanceof ERRORS.DomainPaymentError) {
+    output.error(
+      `You can't purchase the domain you're aliasing to since your card was declined.`
     );
     output.print(`  Please add a valid payment method and retry.\n`);
     return 1;

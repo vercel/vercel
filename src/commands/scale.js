@@ -49,7 +49,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     -n, --no-verify                Skip step of waiting until instance count meets given constraints
     -t, --verify-timeout           How long to wait for verification to complete [5m]
 
@@ -113,7 +113,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
