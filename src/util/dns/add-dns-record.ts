@@ -1,5 +1,5 @@
 import Client from '../client';
-import { DomainNotFound, DNSPermissionDenied } from '../errors-ts';
+import { DomainNotFound, DNSPermissionDenied, DNSInvalidPort, DNSInvalidType } from '../errors-ts';
 import { DNSRecordData } from '../../types';
 
 type Response = {
@@ -18,6 +18,14 @@ export default async function addDNSRecord(
     });
     return record;
   } catch (error) {
+    if (error.status === 400 && error.code === 'invalid_type') {
+      return new DNSInvalidType(recordData.type);
+    }
+
+    if (error.status === 400 && error.message.includes('port')) {
+      return new DNSInvalidPort();
+    }
+
     if (error.status === 400) {
       return error;
     }

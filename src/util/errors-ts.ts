@@ -803,6 +803,29 @@ export class DNSPermissionDenied extends NowError<
   }
 }
 
+export class DNSInvalidPort extends NowError<'DNS_INVALID_PORT', {}> {
+  constructor() {
+    super({
+      code: 'DNS_INVALID_PORT',
+      meta: {},
+      message: `Invalid <port> parameter. A number was expected`
+    });
+  }
+}
+
+export class DNSInvalidType extends NowError<
+  'DNS_INVALID_TYPE',
+  { type: string }
+> {
+  constructor(type: string) {
+    super({
+      code: 'DNS_INVALID_TYPE',
+      meta: { type },
+      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`
+    });
+  }
+}
+
 export class DomainRemovalConflict extends NowError<
   'domain_removal_conflict',
   {
