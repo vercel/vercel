@@ -729,7 +729,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
-  t.is(contentType, 'text/html; charset=utf-8');
+  t.is(contentType, 'text/plain; charset=utf-8');
 });
 
 test('ensure the `alias` property is not sent to the API', async t => {
