@@ -210,6 +210,12 @@ export default class Now extends EventEmitter {
         )
       );
 
+      // This is a useful warning because it prevents people
+      // from getting confused about a deployment that renders 404.
+      if (files.length === 0 || files.every(item => item.file.startsWith('.'))) {
+        warn('There are no files (or only files starting with a dot) inside your deployment.');
+      }
+
       const queryProps = {};
       const requestBody = isBuilds
         ? {
