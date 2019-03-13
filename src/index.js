@@ -466,14 +466,20 @@ const main = async argv_ => {
     }
   }
 
-  const scope = localConfig.scope || argv['--scope'];
+  const scope = localConfig.scope || argv['--scope'] || argv['--team'];
   const targetCommand = commands[subcommand];
+
+  if (argv['--team']) {
+    output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
+  }
 
   if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'teams') {
     if (scope.length === 0) {
+      const flag = argv['--scope'] ? '--scope' : (argv['--team'] ? '--team' : 'scope');
+
       console.error(
         error({
-          message: `You defined ${param(argv['--scope'] ? '--scope' : 'scope')}, but it's missing a value`,
+          message: `You defined ${param(flag)}, but it's missing a value`,
           slug: 'missing-scope-value'
         })
       );
