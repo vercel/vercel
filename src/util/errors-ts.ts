@@ -931,3 +931,13 @@ export class InvalidMoveToken extends NowError<
     });
   }
 }
+
+export class FileSizeLimitExceeded extends NowError<'FILE_SIZE_LIMIT_EXCEEDED', {}> {
+  constructor() {
+    super({
+      code: 'FILE_SIZE_LIMIT_EXCEEDED',
+      meta: {},
+      message :'File size limit exceeded'
+    })
+  }
+}

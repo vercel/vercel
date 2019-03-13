@@ -32,7 +32,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  InvalidDomain
+  InvalidDomain,
+  FileSizeLimitExceeded
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 
@@ -358,7 +359,8 @@ export default async function main(
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
-      firstDeployCall instanceof InvalidDomain
+      firstDeployCall instanceof InvalidDomain ||
+      firstDeployCall instanceof FileSizeLimitExceeded
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -433,7 +435,8 @@ export default async function main(
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
           secondDeployCall instanceof TooManyCertificates ||
-          secondDeployCall instanceof TooManyRequests
+          secondDeployCall instanceof TooManyRequests ||
+          secondDeployCall instanceof FileSizeLimitExceeded
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -691,6 +694,10 @@ function handleCreateDeployError(output, error) {
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
     );
+    return 1;
+  }
+  if (error instanceof FileSizeLimitExceeded) {
+    output.error(`File size limit exceeded.`);
     return 1;
   }
 
