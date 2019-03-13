@@ -14,6 +14,9 @@ const ARG_COMMON = {
   '--scope': String,
   '-s': '--scope',
 
+  '--team': String,
+  '-T': '--team',
+
   '--local-config': String,
   '-A': '--local-config',
 
