@@ -325,7 +325,20 @@ export default async function main(
       createArgs
     );
 
-    if (firstDeployCall instanceof Error) {
+    if (
+      firstDeployCall instanceof WildcardNotAllowed ||
+      firstDeployCall instanceof CantSolveChallenge ||
+      firstDeployCall instanceof DomainConfigurationError ||
+      firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainPermissionDenied ||
+      firstDeployCall instanceof DomainsShouldShareRoot ||
+      firstDeployCall instanceof DomainValidationRunning ||
+      firstDeployCall instanceof DomainVerificationFailed ||
+      firstDeployCall instanceof SchemaValidationFailed ||
+      firstDeployCall instanceof TooManyCertificates ||
+      firstDeployCall instanceof TooManyRequests ||
+      firstDeployCall instanceof InvalidDomain
+    ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
     }
@@ -388,7 +401,19 @@ export default async function main(
           paths,
           createArgs
         );
-        if (secondDeployCall instanceof Error) {
+        if (
+          secondDeployCall instanceof WildcardNotAllowed ||
+          secondDeployCall instanceof CantSolveChallenge ||
+          secondDeployCall instanceof DomainConfigurationError ||
+          secondDeployCall instanceof DomainNotFound ||
+          secondDeployCall instanceof DomainPermissionDenied ||
+          secondDeployCall instanceof DomainsShouldShareRoot ||
+          secondDeployCall instanceof DomainValidationRunning ||
+          secondDeployCall instanceof DomainVerificationFailed ||
+          secondDeployCall instanceof SchemaValidationFailed ||
+          secondDeployCall instanceof TooManyCertificates ||
+          secondDeployCall instanceof TooManyRequests
+        ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
         }
