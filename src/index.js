@@ -50,7 +50,7 @@ if (!insidePkg) {
 
 // Configure the error reporting system
 Sentry.init({
-  dsn: 'https://417d8c347b324670b668aca646256352@sentry.io/1323225',
+  dsn: 'https://26a24e59ba954011919a524b341b6ab5@sentry.io/1323225',
   release: `now-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });

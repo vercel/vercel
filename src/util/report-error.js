@@ -43,7 +43,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
         scope.setTag('currentTeam', team.id);
       }
 
-      scope.setExtra('argv', process.argv);
+      // Disable sending `argv` until we properly remove sensitive data
+      // scope.setExtra('argv', process.argv);
 
       sentry.captureException(error);
     });
