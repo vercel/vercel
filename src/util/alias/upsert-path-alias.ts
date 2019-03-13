@@ -26,21 +26,7 @@ export default async function upsertPathAlias(
 
   if (!NOW_SH_REGEX.test(alias)) {
     const domainInfo = await setupDomain(output, client, alias, contextName);
-    if (
-      domainInfo instanceof ERRORS.DomainAlreadyExists ||
-      domainInfo instanceof ERRORS.DomainNotAvailable ||
-      domainInfo instanceof ERRORS.DomainNotFound ||
-      domainInfo instanceof ERRORS.DomainPermissionDenied ||
-      domainInfo instanceof ERRORS.DomainPurchasePending ||
-      domainInfo instanceof ERRORS.DomainServiceNotAvailable ||
-      domainInfo instanceof ERRORS.DomainVerificationFailed ||
-      domainInfo instanceof ERRORS.InvalidDomain ||
-      domainInfo instanceof ERRORS.SourceNotFound ||
-      domainInfo instanceof ERRORS.UnexpectedDomainPurchaseError ||
-      domainInfo instanceof ERRORS.DomainPaymentError ||
-      domainInfo instanceof ERRORS.UnsupportedTLD ||
-      domainInfo instanceof ERRORS.UserAborted
-    ) {
+    if (domainInfo instanceof Error) {
       return domainInfo;
     }
 
@@ -61,15 +47,7 @@ export default async function upsertPathAlias(
       alias,
       !externalDomain
     );
-    if (
-      cert instanceof ERRORS.CantSolveChallenge ||
-      cert instanceof ERRORS.DomainConfigurationError ||
-      cert instanceof ERRORS.DomainPermissionDenied ||
-      cert instanceof ERRORS.DomainsShouldShareRoot ||
-      cert instanceof ERRORS.DomainValidationRunning ||
-      cert instanceof ERRORS.TooManyCertificates ||
-      cert instanceof ERRORS.TooManyRequests
-    ) {
+    if (cert instanceof Error) {
       return cert;
     }
 

@@ -37,16 +37,7 @@ export default async function createAlias(
       alias,
       !externalDomain
     );
-    if (
-      cert instanceof ERRORS.CantSolveChallenge ||
-      cert instanceof ERRORS.DomainConfigurationError ||
-      cert instanceof ERRORS.DomainPermissionDenied ||
-      cert instanceof ERRORS.DomainsShouldShareRoot ||
-      cert instanceof ERRORS.DomainValidationRunning ||
-      cert instanceof ERRORS.TooManyCertificates ||
-      cert instanceof ERRORS.TooManyRequests ||
-      cert instanceof ERRORS.InvalidDomain
-    ) {
+    if (cert instanceof Error) {
       return cert;
     }
 
