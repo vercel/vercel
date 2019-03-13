@@ -104,6 +104,9 @@ module.exports = async session => {
     builds: ['index.html', 'now.json-builds'],
     'static-single-file': ['first.png', 'now.json'],
     'static-multiple-files': ['first.png', 'second.png', 'now.json'],
+    'single-dotfile': {
+      '.testing': 'i am a dotfile'
+    },
     'config-alias-property': {
       'now.json':
         '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
