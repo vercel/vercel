@@ -881,6 +881,41 @@ test('deploy multiple static files', async t => {
   t.is(content.files.length, 3);
 });
 
+test('ensure we are getting a warning for the old team flag', async t => {
+  const directory = fixture('static-multiple-files');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--team', email, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the warning is printed
+  t.true(stderr.includes('WARN! The "--team" flag is deprecated. Please use "--scope" instead.'));
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+
+  const content = await response.json();
+  t.is(content.files.length, 3);
+});
+
 test('deploy multiple static files with custom scope', async t => {
   const directory = fixture('static-multiple-files');
 
