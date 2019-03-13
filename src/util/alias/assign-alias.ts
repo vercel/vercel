@@ -60,12 +60,7 @@ export default async function assignAlias(
         prevDeployment.scale,
         deployment.url
       );
-      if (
-        result instanceof ERRORS.NotSupportedMinScaleSlots ||
-        result instanceof ERRORS.ForbiddenScaleMinInstances ||
-        result instanceof ERRORS.ForbiddenScaleMaxInstances ||
-        result instanceof ERRORS.InvalidScaleMinMaxRelation
-      ) {
+      if (result instanceof Error) {
         return result;
       }
 
@@ -95,21 +90,7 @@ export default async function assignAlias(
   if (alias.indexOf('.') !== -1 && !NOW_SH_REGEX.test(alias)) {
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, client, alias, contextName);
-    if (
-      result instanceof ERRORS.DomainAlreadyExists ||
-      result instanceof ERRORS.DomainNotAvailable ||
-      result instanceof ERRORS.DomainNotFound ||
-      result instanceof ERRORS.DomainPermissionDenied ||
-      result instanceof ERRORS.DomainPurchasePending ||
-      result instanceof ERRORS.DomainServiceNotAvailable ||
-      result instanceof ERRORS.DomainVerificationFailed ||
-      result instanceof ERRORS.InvalidDomain ||
-      result instanceof ERRORS.SourceNotFound ||
-      result instanceof ERRORS.UnexpectedDomainPurchaseError ||
-      result instanceof ERRORS.DomainPaymentError ||
-      result instanceof ERRORS.UnsupportedTLD ||
-      result instanceof ERRORS.UserAborted
-    ) {
+    if (result instanceof Error) {
       return result;
     }
 
@@ -126,19 +107,7 @@ export default async function assignAlias(
     alias,
     externalDomain
   );
-  if (
-    record instanceof ERRORS.AliasInUse ||
-    record instanceof ERRORS.CantSolveChallenge ||
-    record instanceof ERRORS.DeploymentNotFound ||
-    record instanceof ERRORS.DomainConfigurationError ||
-    record instanceof ERRORS.DomainPermissionDenied ||
-    record instanceof ERRORS.DomainsShouldShareRoot ||
-    record instanceof ERRORS.DomainValidationRunning ||
-    record instanceof ERRORS.InvalidAlias ||
-    record instanceof ERRORS.TooManyCertificates ||
-    record instanceof ERRORS.TooManyRequests ||
-    record instanceof ERRORS.InvalidDomain
-  ) {
+  if (record instanceof Error) {
     return record;
   }
 

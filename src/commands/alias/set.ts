@@ -556,5 +556,14 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
+  if (error instanceof ERRORS.WildcardNotAllowed) {
+    output.error(
+      `Custom suffixes are only allowed for domains in ${chalk.underline(
+        'zeit.world'
+      )}`
+    );
+    return 1;
+  }
+
   return error;
 }

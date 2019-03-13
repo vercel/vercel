@@ -57,14 +57,7 @@ export default async function purchaseDomainIfAvailable(
 
     output.print(eraseLines(1));
     const result = await purchaseDomain(client, domain, price);
-    if (
-      result instanceof ERRORS.SourceNotFound ||
-      result instanceof ERRORS.DomainNotAvailable ||
-      result instanceof ERRORS.DomainServiceNotAvailable ||
-      result instanceof ERRORS.InvalidDomain ||
-      result instanceof ERRORS.UnexpectedDomainPurchaseError ||
-      result instanceof ERRORS.DomainPaymentError
-    ) {
+    if (result instanceof Error) {
       return result;
     }
 
