@@ -36,10 +36,6 @@ export default async function createDeploy(
       );
     }
 
-    if (error.code === 'size_limit_exceeded') {
-      return new ERRORS_TS.FileSizeLimitExceeded()
-    }
-
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(
