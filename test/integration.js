@@ -262,6 +262,30 @@ test('create alias for deployment', async t => {
   context.alias = hosts.alias;
 });
 
+test('try to transfer-in a domain with "--code" option', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    [
+      'domains',
+      'transfer-in',
+      `${session}-xyz-test.com`,
+      '--code',
+      'xyz',
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  t.true(
+    stderr.includes(
+      `> Error! The domain "${session}-xyz-test.com" is not transferable.`
+    )
+  );
+  t.is(code, 1);
+});
+
 test('list the aliases', async t => {
   const { stdout, code } = await execa(
     binaryPath,
