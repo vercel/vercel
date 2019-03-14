@@ -370,7 +370,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
       'transfer-in',
       '--code',
       'xyz',
-      `${session}-test.org`,
+      `${session}-xyz-test.org`,
       ...defaultArgs
     ],
     {
@@ -380,7 +380,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `> Error! The domain "${session}-test.org" is not transferable.`
+      `> Error! The domain "${session}-xyz-test.org" is not transferable.`
     )
   );
   t.is(code, 1);

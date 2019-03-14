@@ -64,10 +64,14 @@ export default async function transferIn(
   }
 
   const availableStamp = stamp();
-  const [domainPrice, { transferable }] = await Promise.all([
-    getDomainPrice(client, domainName),
-    checkTransfer(client, domainName)
-  ]);
+  const [domainPrice, { transferable }] = await withSpinner(
+    'Checking registry',
+    () =>
+      Promise.all([
+        getDomainPrice(client, domainName),
+        checkTransfer(client, domainName)
+      ])
+  );
 
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {
     output.error(`The TLD for ${param(domainName)} is not supported.`);
@@ -132,10 +136,8 @@ export default async function transferIn(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} transfer started ${transferStamp()}`
+  output.success(
+    `Domain ${param(domainName)} transfer started ${transferStamp()}`
   );
   output.print(
     `  To finalize the transfer, we are waiting for approval from your current registrar.\n`
