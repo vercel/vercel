@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { NowContext } from '../../types';
+import { NowContext, User, Team } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -15,6 +15,7 @@ import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import promptBool from '../../util/input/prompt-bool';
+import getTeams from '../../util/get-teams';
 
 type Options = {
   '--debug': boolean;
@@ -36,9 +37,10 @@ export default async function move(
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
+  let user = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName, user } = await getScope(client));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED') {
       output.error(err.message);
@@ -54,6 +56,27 @@ export default async function move(
       `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
     );
     return 1;
+  }
+
+  const teams = await getTeams(client);
+  const matchId = await findDestinationMatch(destination, user, teams);
+  if (!matchId && !opts['--yes']) {
+    output.warn(
+      `You're not a member of ${param(destination)}. ` +
+        `${param(
+          destination
+        )} will have 24 hours to accept your move request before it expires.`
+    );
+    if (
+      !(await promptBool(
+        `Are you sure you want to move ${param(domainName)} to ${param(
+          destination
+        )}?`
+      ))
+    ) {
+      output.log('Aborted');
+      return 0;
+    }
   }
 
   const domain = await getDomainByName(client, contextName, domainName);
@@ -92,7 +115,12 @@ export default async function move(
 
   const context = contextName;
   const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(client, context, domainName, destination);
+    return moveOutDomain(
+      client,
+      context,
+      domainName,
+      matchId ? matchId : destination
+    );
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
@@ -168,4 +196,22 @@ async function getArgs(args: string[]) {
   }
 
   return { domainName, destination };
+}
+
+async function findDestinationMatch(
+  destination: string,
+  user: User,
+  teams: Team[]
+) {
+  if (user.uid === destination || user.username === destination) {
+    return user.uid;
+  }
+
+  for (const team of teams) {
+    if (team.id === destination || team.slug === destination) {
+      return team.id;
+    }
+  }
+
+  return null;
 }
