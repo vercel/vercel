@@ -386,30 +386,6 @@ test('try to purchase a domain', async t => {
   );
 });
 
-test('try to transfer-in a domain with "--code" option', async t => {
-  const { stderr, code } = await execa(
-    binaryPath,
-    [
-      'domains',
-      'transfer-in',
-      '--code',
-      'xyz',
-      `${session}-xyz-test.org`,
-      ...defaultArgs
-    ],
-    {
-      reject: false
-    }
-  );
-
-  t.true(
-    stderr.includes(
-      `> Error! The domain "${session}-xyz-test.org" is not transferable.`
-    )
-  );
-  t.is(code, 1);
-});
-
 test('try to move an invalid domain', async t => {
   const { stderr, code } = await execa(
     binaryPath,
