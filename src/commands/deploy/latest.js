@@ -65,6 +65,7 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
+const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
@@ -79,10 +80,10 @@ const printDeploymentStatus = async (
         if (clipboardEnabled) {
           try {
             await copy(aliasFinal[0]);
-            output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+            output.success(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.success(`Aliased to ${chalk.bold(chalk.cyan(aliasFinal[0]))} ${deployStamp()}`);
+            output.success(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
           }
         }
       } else {
@@ -95,7 +96,7 @@ const printDeploymentStatus = async (
           if (last && clipboardEnabled) {
             try {
               await copy(alias);
-              output.print(`- ${chalk.bold(chalk.cyan(alias))} ${chalk.gray('[in clipboard]')}\n`);
+              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
 
               return 0;
             } catch (err) {
