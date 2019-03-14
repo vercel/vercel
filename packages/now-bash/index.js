@@ -12,9 +12,10 @@ exports.config = {
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
-exports.build = async ({ files, entrypoint, config }) => {
+exports.build = async ({
+  workPath, files, entrypoint, config,
+}) => {
   const srcDir = await getWritableDirectory();
-  const workDir = await getWritableDirectory();
 
   console.log('downloading files...');
   await download(files, srcDir);
@@ -24,7 +25,7 @@ exports.build = async ({ files, entrypoint, config }) => {
     return o;
   }, {});
 
-  const IMPORT_CACHE = `${workDir}/.import-cache`;
+  const IMPORT_CACHE = `${workPath}/.import-cache`;
   const env = Object.assign({}, process.env, configEnv, {
     PATH: `${IMPORT_CACHE}/bin:${process.env.PATH}`,
     IMPORT_CACHE,
@@ -37,12 +38,12 @@ exports.build = async ({ files, entrypoint, config }) => {
 
   await execa(builderPath, [entrypoint], {
     env,
-    cwd: workDir,
+    cwd: workPath,
     stdio: 'inherit',
   });
 
   const lambda = await createLambda({
-    files: await glob('**', workDir),
+    files: await glob('**', workPath),
     handler: entrypoint, // not actually used in `bootstrap`
     runtime: 'provided',
     environment: Object.assign({}, configEnv, {
