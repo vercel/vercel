@@ -58,6 +58,21 @@ export default async function move(
     return 1;
   }
 
+  const domain = await getDomainByName(client, contextName, domainName);
+  if (domain instanceof ERRORS.DomainNotFound) {
+    output.error(`Domain not found under ${chalk.bold(contextName)}`);
+    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    return 1;
+  }
+  if (domain instanceof ERRORS.DomainPermissionDenied) {
+    output.error(
+      `You don't have permissions over domain ${chalk.underline(
+        domain.meta.domain
+      )} under ${chalk.bold(domain.meta.context)}.`
+    );
+    return 1;
+  }
+
   const teams = await getTeams(client);
   const matchId = await findDestinationMatch(destination, user, teams);
   if (!matchId && !opts['--yes']) {
@@ -77,21 +92,6 @@ export default async function move(
       output.log('Aborted');
       return 0;
     }
-  }
-
-  const domain = await getDomainByName(client, contextName, domainName);
-  if (domain instanceof ERRORS.DomainNotFound) {
-    output.error(`Domain not found under ${chalk.bold(contextName)}`);
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
-    return 1;
-  }
-  if (domain instanceof ERRORS.DomainPermissionDenied) {
-    output.error(
-      `You don't have permissions over domain ${chalk.underline(
-        domain.meta.domain
-      )} under ${chalk.bold(domain.meta.context)}.`
-    );
-    return 1;
   }
 
   if (!opts['--yes']) {
