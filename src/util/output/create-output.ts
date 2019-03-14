@@ -76,6 +76,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     log,
     warn,
     error,
+    ready,
     success,
     debug,
     time,
