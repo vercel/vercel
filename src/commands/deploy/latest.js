@@ -80,14 +80,14 @@ const printDeploymentStatus = async (
         if (clipboardEnabled) {
           try {
             await copy(aliasFinal[0]);
-            output.success(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.success(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
           }
         }
       } else {
-        output.success(`Aliases assigned ${deployStamp()}`);
+        output.ready(`Aliases assigned ${deployStamp()}`);
 
         for (const alias of aliasFinal) {
           const index = aliasFinal.indexOf(alias);
