@@ -53,6 +53,7 @@ export interface BuilderInputs {
 
 export interface BuiltFileFsRef extends FileFsRef {
   buildConfig?: BuildConfig;
+  buildEntry?: FileFsRef;
 }
 
 export type BuilderOutput = BuiltLambda | BuiltFileFsRef;
@@ -88,6 +89,7 @@ export interface BuiltLambda {
   type: 'Lambda';
   fn?: Lambda;
   buildConfig?: BuildConfig;
+  buildEntry?: FileFsRef;
   zipBuffer: Buffer;
   handler: string;
   runtime: LambdaRuntime;

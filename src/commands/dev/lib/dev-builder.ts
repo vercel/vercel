@@ -27,33 +27,109 @@ import {
 export async function buildUserProject(
   nowJson: NowConfig,
   devServer: DevServer
-): Promise<BuilderOutputs> {
+): Promise<void> {
   try {
     devServer.setStatusBusy('Installing builders');
     const builds = nowJson.builds || [];
     await installBuilders(builds.map(build => build.use));
 
     devServer.setStatusBusy('Building lambdas');
-    const assets = await executeBuilds(nowJson, devServer);
+    await executeBuilds(nowJson, devServer);
 
     devServer.setStatusIdle();
-    return assets;
   } catch (err) {
     devServer.setStatusIdle();
     throw err;
   }
 }
 
+export async function executeBuild(
+  nowJson: NowConfig,
+  devServer: DevServer,
+  asset: BuilderOutput
+): Promise<void> {
+  console.error('rebuilding', { asset });
+  if (!asset.buildConfig || !asset.buildEntry) {
+    throw new Error('Asset has not been built yet, can\'t rebuild');
+  }
+  const { cwd } = devServer;
+  const entrypoint = relative(cwd, asset.buildEntry.fsPath);
+
+  const cacheDir = await cacheDirPromise;
+  const { dev, ino } = await stat(entrypoint);
+  const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+  await mkdirp(workPath);
+
+  devServer.logDebug(`Building ${asset.buildEntry.fsPath} (workPath = ${workPath})`);
+  const { builder } = asset.buildConfig;
+  if (!builder) {
+    throw new Error('No builder');
+  }
+  const builderConfig = builder.config || {};
+  const files = await collectProjectFiles('**', cwd);
+  const config = asset.buildConfig.config || {};
+  const output = await builder.build({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    isDev: true
+  });
+
+  // enforce the lambda zip size soft watermark
+  const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
+  let maxLambdaBytes: number;
+  if (typeof maxLambdaSize === 'string') {
+    maxLambdaBytes = bytes(maxLambdaSize);
+  } else {
+    maxLambdaBytes = maxLambdaSize;
+  }
+  console.error(output);
+
+  for (const asset of Object.values(output)) {
+    if (asset.type === 'Lambda') {
+      const size = asset.zipBuffer.length;
+      if (size > maxLambdaBytes) {
+        throw new Error(`The lambda function size (${bytes(size).toLowerCase()}) exceeds the configured limit (${bytes(maxLambdaBytes).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``);
+      }
+    }
+  }
+
+  await Promise.all(
+    Object.values(output).map(async (asset: BuilderOutput) => {
+      if (asset.type !== 'Lambda') return;
+      if (asset.fn) {
+        await asset.fn.destroy();
+      }
+      asset.fn = await createFunction({
+        Code: { ZipFile: asset.zipBuffer },
+        Handler: asset.handler,
+        Runtime: asset.runtime,
+        Environment: {
+          Variables: {
+            // TODO: resolve secret env vars
+            ...nowJson.env,
+            ...asset.environment,
+            NOW_REGION: 'dev1'
+          }
+        }
+      });
+    })
+  );
+
+  // TODO: remove previous assets
+  Object.assign(devServer.assets, output);
+}
+
 async function executeBuilds(
   nowJson: NowConfig,
   devServer: DevServer
-): Promise<BuilderOutputs> {
+): Promise<void> {
   const { cwd } = devServer;
   const files = await collectProjectFiles('**', cwd);
-  let results: BuilderOutputs = {};
 
   if (!nowJson.builds) {
-    return results;
+    return;
   }
 
   const cacheDir = await cacheDirPromise;
@@ -84,7 +160,8 @@ async function executeBuilds(
         });
 
         // enforce the lambda zip size soft watermark
-        let { maxLambdaSize = '5mb' } = { ...builder.config, ...config };
+        const builderConfig = builder.config || {};
+        const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
         let maxLambdaBytes: number;
         if (typeof maxLambdaSize === 'string') {
           maxLambdaBytes = bytes(maxLambdaSize);
@@ -101,9 +178,10 @@ async function executeBuilds(
           }
 
           asset.buildConfig = build;
+          asset.buildEntry = entry;
         }
 
-        Object.assign(results, output);
+        Object.assign(devServer.assets, output);
       }
     } catch (err) {
       throw err;
@@ -113,12 +191,12 @@ async function executeBuilds(
         message: `Failed building ${chalk.bold(build.src)} with ${build.use}`,
         meta: err.stack
       });
-       */
+      */
     }
   }
 
   await Promise.all(
-    Object.values(results).map(async (asset: BuilderOutput) => {
+    Object.values(devServer.assets).map(async (asset: BuilderOutput) => {
       if (asset.type !== 'Lambda') return;
       asset.fn = await createFunction({
         Code: { ZipFile: asset.zipBuffer },
@@ -135,8 +213,6 @@ async function executeBuilds(
       });
     })
   );
-
-  return results;
 }
 
 /**
