@@ -48,7 +48,7 @@ export async function executeBuild(
   devServer: DevServer,
   asset: BuilderOutput
 ): Promise<void> {
-  console.error('rebuilding', { asset });
+  //console.error('rebuilding', { asset });
   if (!asset.buildConfig || !asset.buildEntry) {
     throw new Error('Asset has not been built yet, can\'t rebuild');
   }
@@ -84,7 +84,7 @@ export async function executeBuild(
   } else {
     maxLambdaBytes = maxLambdaSize;
   }
-  console.error(output);
+  //console.error(output);
 
   for (const asset of Object.values(output)) {
     if (asset.type === 'Lambda') {
