@@ -31,6 +31,10 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
+  function ready(str: string) {
+    print(`${chalk.cyan('> Ready!')} ${str}\n`);
+  }
+
   function success(str: string) {
     print(`${chalk.cyan('> Success!')} ${str}\n`);
   }
@@ -72,6 +76,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     log,
     warn,
     error,
+    ready,
     success,
     debug,
     time,
