@@ -241,7 +241,7 @@ export default class DevServer {
     }
 
     // find asset responsible for dest
-    const asset = resolveDest(this.assets, dest);
+    let asset = resolveDest(this.assets, dest);
 
     if (!asset) {
       res.statusCode = 404;
@@ -256,6 +256,15 @@ export default class DevServer {
       const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
       this.logDebug('Rebuilding asset:', entrypoint);
       await executeBuild(nowJson, this, asset);
+
+      // Since the `asset` was re-built, resolve it again to get the new asset
+      // object
+      asset = resolveDest(this.assets, dest);
+
+      if (!asset) {
+        res.statusCode = 404;
+        return res.end();
+      }
     }
 
     // invoke asset
