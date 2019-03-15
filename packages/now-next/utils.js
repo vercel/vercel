@@ -82,13 +82,13 @@ function excludeLockFiles(files) {
 }
 
 /**
- * Exclude the static directory from files
+ * Include the static directory from files
  * @param {Files} files
  * @returns {Files}
  */
-function onlyStaticDirectory(files) {
+function onlyStaticDirectory(files, entryDir) {
   function matcher(filePath) {
-    return !filePath.startsWith('static');
+    return !filePath.startsWith(path.join(entryDir, 'static'));
   }
 
   return excludeFiles(files, matcher);

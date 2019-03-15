@@ -27,6 +27,7 @@ it(
       path.join(__dirname, 'monorepo'),
     );
     expect(buildResult['www/index']).toBeDefined();
+    expect(buildResult['www/static/test.txt']).toBeDefined();
     const filePaths = Object.keys(buildResult);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
@@ -75,10 +76,21 @@ it('Should throw when package.json or next.config.js is not the "src"', async ()
 });
 
 it(
-  'Should build the static-files test',
+  'Should build the static-files test on legacy',
   async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, 'legacy-static-files'),
+    );
+    expect(buildResult['static/test.txt']).toBeDefined();
+  },
+  FOUR_MINUTES,
+);
+
+it(
+  'Should build the static-files test',
+  async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, 'static-files'),
     );
     expect(buildResult['static/test.txt']).toBeDefined();
   },

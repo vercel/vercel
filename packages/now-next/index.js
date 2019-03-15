@@ -355,15 +355,9 @@ exports.build = async ({ files, workPath, entrypoint }) => {
     {},
   );
 
-  const nextStaticDirectory = onlyStaticDirectory(
+  const staticDirectoryFiles = onlyStaticDirectory(
     includeOnlyEntryDirectory(files, entryDirectory),
-  );
-  const staticDirectoryFiles = Object.keys(nextStaticDirectory).reduce(
-    (mappedFiles, file) => ({
-      ...mappedFiles,
-      [path.join(entryDirectory, file)]: nextStaticDirectory[file],
-    }),
-    {},
+    entryDirectory,
   );
 
   return { ...lambdas, ...staticFiles, ...staticDirectoryFiles };
