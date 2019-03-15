@@ -460,7 +460,8 @@ export default async function main(
     }
 
     if (err.code === 'size_limit_exceeded') {
-      const message = `File size limit exceeded (${bytes(err.sizeLimit)})`;
+      const { sizeLimit = 0 } = err;
+      const message = `File size limit exceeded (${bytes(sizeLimit)})`;
       error(message);
       return 1;
     }
