@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "0.1.1",
+  "version": "0.1.2-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
     "directory": "packages/now-next"
   },
   "dependencies": {
-    "@now/node-bridge": "1.0.0",
+    "@now/node-bridge": "^1.0.1-canary.0",
     "execa": "^1.0.0",
     "fs-extra": "^7.0.0",
     "semver": "^5.6.0"
