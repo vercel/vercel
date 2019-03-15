@@ -104,7 +104,7 @@ const printDeploymentStatus = async (
             }
           }
 
-          output.print(`- ${chalk.bold(chalk.cyan(alias))}\n`);
+          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
         }
       }
     } else {
