@@ -31,7 +31,6 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import code from './util/output/code';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -104,12 +103,6 @@ const main = async argv_ => {
 
   if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
     output.error(`Failed to load local config file: ${localConfig.message}`);
-    return 1;
-  }
-
-  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
-    const flag = param('--target production');
-    output.warn(`You specified ${flag} but didn't configure a value for ${code('alias')}.`);
     return 1;
   }
 
