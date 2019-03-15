@@ -18,7 +18,7 @@ import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
 import { handleError } from '../util/error';
-import { VerifyScaleTimeout } from '../util/errors-ts';
+import { VerifyScaleTimeout, DeploymentTypeUnsupported } from '../util/errors-ts';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -276,6 +276,11 @@ export default async function main(ctx) {
       `Cloud v2 does not yet support setting a non-zero min number of instances.`
     );
     output.log('Read more: https://err.sh/now-cli/v2-no-min');
+    now.close();
+    return 1;
+  }
+  if (result instanceof DeploymentTypeUnsupported) {
+    output.error(`This region only accepts Serverless Docker Deployments.`);
     now.close();
     return 1;
   }
