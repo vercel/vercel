@@ -72,6 +72,7 @@ const printDeploymentStatus = async (
   { url, readyState, aliasFinal },
   deployStamp,
   clipboardEnabled,
+  localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
@@ -89,11 +90,16 @@ const printDeploymentStatus = async (
       } else {
         output.ready(`Aliases assigned ${deployStamp()}`);
 
+        // If `alias` is defined in the config, we need to
+        // copy the first one to the clipboard.
+        const matching = (localConfig.alias || [])[0];
+
         for (const alias of aliasFinal) {
           const index = aliasFinal.indexOf(alias);
-          const last = index === (aliasFinal.length - 1);
+          const isLast = index === (aliasFinal.length - 1);
+          const shouldCopy = matching ? alias === matching : isLast;
 
-          if (last && clipboardEnabled) {
+          if (shouldCopy && clipboardEnabled) {
             try {
               await copy(alias);
               output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
@@ -104,7 +110,7 @@ const printDeploymentStatus = async (
             }
           }
 
-          output.print(`- ${chalk.bold(chalk.cyan(alias))}\n`);
+          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
         }
       }
     } else {
@@ -205,6 +211,10 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
+  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
+    const flag = param('--target production');
+    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
+  }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
@@ -482,7 +492,7 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard']);
+    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
   }
 
   const sleepingTime = ms('1.5s');
@@ -551,7 +561,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], builds);
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {
