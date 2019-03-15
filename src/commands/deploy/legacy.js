@@ -421,7 +421,7 @@ async function sync({
           'multiple_manifests'
         ];
 
-        if (err.code && print.includes(err.code)) {
+        if (err.code && print.includes(err.code) || err.name === 'JSONError') {
           error(err.message);
           return 1;
         }
