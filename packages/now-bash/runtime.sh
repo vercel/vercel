@@ -54,9 +54,10 @@ _lambda_runtime_next() {
 	local stdin
 	stdin="$(mktemp -u)"
 	mkfifo "$stdin"
-	_lambda_runtime_body "$event" > "$stdin" &
+	_lambda_runtime_body < "$event" > "$stdin" &
 
 	handler "$event" < "$stdin" > "$body" || exit_code="$?"
+
 	rm -f "$event" "$stdin"
 
 	if [ "$exit_code" -eq 0 ]; then
@@ -74,12 +75,14 @@ _lambda_runtime_next() {
 }
 
 _lambda_runtime_body() {
-	if [ "$(jq --raw-output '.body | type' < "$1")" = "string" ]; then
-		if [ "$(jq --raw-output '.encoding' < "$1")" = "base64" ]; then
-			jq --raw-output '.body' < "$1" | base64 --decode
+	local event
+	event="$(cat)"
+	if [ "$(jq --raw-output '.body | type' <<< "$event")" = "string" ]; then
+		if [ "$(jq --raw-output '.encoding' <<< "$event")" = "base64" ]; then
+			jq --raw-output '.body' <<< "$event" | base64 --decode
 		else
 			# assume plain-text body
-			jq --raw-output '.body' < "$1"
+			jq --raw-output '.body' <<< "$event"
 		fi
 	fi
 }
