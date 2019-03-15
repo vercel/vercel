@@ -1,5 +1,6 @@
 import Client from './client';
 import getScope from './get-scope.ts';
+import getArgs from './get-args';
 
 export default async (sentry, error, apiUrl, configFiles) => {
   // Do not report errors in development
@@ -44,28 +45,21 @@ export default async (sentry, error, apiUrl, configFiles) => {
       }
 
       // Report process.argv without sensitive data
-      let argv = [...process.argv];
-      if (argv[2] === 'secrets' && argv[3] === 'add' && argv[5]) {
-        argv[5] = 'REDACTED';
-      }
-      if (argv[2] === 'teams' && argv[3] === 'invite' && argv[4]) {
-        argv[4] = 'REDACTED';
-      }
-      for (let i = 0; i < argv.length; i++) {
-        if ([
-          '-e',
-          '--env',
-          '-b',
-          '--build-env',
-          '-t',
-          '--token',
-          '-m',
-          '--meta'
-        ].includes(argv[i])) {
-          argv[i + 1] = 'REDACTED';
+      let args
+      try {
+        args = getArgs(process.argv.slice(2), {});
+      } catch (_) {}
+
+      if (args) {
+        const flags = ['--env', '--build-env', '--token']
+        for (const flag of flags) {
+          if (args[flag]) args[flag] = 'REDACTED';
         }
+        if (args._.join(' ').beginsWith('secrets add') && args._[3]) {
+          args._[3] = 'REDACTED';
+        }
+        scope.setExtra('args', args);
       }
-      scope.setExtra('argv', argv);
 
       sentry.captureException(error);
     });
