@@ -43,8 +43,29 @@ export default async (sentry, error, apiUrl, configFiles) => {
         scope.setTag('currentTeam', team.id);
       }
 
-      // Disable sending `argv` until we properly remove sensitive data
-      // scope.setExtra('argv', process.argv);
+      // Report process.argv without sensitive data
+      let argv = [...process.argv];
+      if (argv[2] === 'secrets' && argv[3] === 'add' && argv[5]) {
+        argv[5] = 'REDACTED';
+      }
+      if (argv[2] === 'teams' && argv[3] === 'invite' && argv[4]) {
+        argv[4] = 'REDACTED';
+      }
+      for (let i = 0; i < argv.length; i++) {
+        if ([
+          '-e',
+          '--env',
+          '-b',
+          '--build-env',
+          '-t',
+          '--token',
+          '-m',
+          '--meta'
+        ].includes(argv[i])) {
+          argv[i + 1] = 'REDACTED';
+        }
+      }
+      scope.setExtra('argv', argv);
 
       sentry.captureException(error);
     });
