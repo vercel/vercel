@@ -488,9 +488,9 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@https://zeit-fun-0-2-2.zeit.sh":
-  version "0.2.2"
-  resolved "https://zeit-fun-0-2-2.zeit.sh#3c0166191952117309a0148aea21a3164294b8aa"
+"@zeit/fun@https://zeit-fun-0-3-0.zeit.sh":
+  version "0.3.0"
+  resolved "https://zeit-fun-0-3-0.zeit.sh#9256739e959aff44756a0edf751a3da763a6261b"
   dependencies:
     "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
