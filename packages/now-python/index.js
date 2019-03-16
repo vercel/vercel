@@ -38,6 +38,21 @@ exports.build = async ({ files, entrypoint }) => {
 
   const pipPath = await downloadAndInstallPip();
 
+  try {
+    // See: https://stackoverflow.com/a/44728772/376773
+    //
+    // The `setup.cfg` is required for `now dev` on MacOS, where without
+    // this file being present in the src dir then this error happens:
+    //
+    // distutils.errors.DistutilsOptionError: must supply either home
+    // or prefix/exec-prefix -- not both
+    const setupCfg = path.join(srcDir, 'setup.cfg');
+    await writeFile(setupCfg, '[install]\nprefix=\n');
+  } catch (err) {
+    console.log('failed to create "setup.cfg" file');
+    throw err;
+  }
+
   await pipInstall(pipPath, srcDir, 'requests');
 
   const entryDirectory = path.dirname(entrypoint);
