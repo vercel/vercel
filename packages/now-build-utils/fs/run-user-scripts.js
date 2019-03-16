@@ -3,9 +3,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
 
-function spawnAsync(command, args, cwd) {
+function spawnAsync(command, args, cwd, opts = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', cwd });
+    const child = spawn(command, args, { stdio: 'inherit', cwd, ...opts });
     child.on('error', reject);
     child.on('close', (code, signal) => (code !== 0
       ? reject(new Error(`Exited with ${code || signal}`))
@@ -68,13 +68,27 @@ async function installDependencies(destPath, args = []) {
   console.log(`installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
+  const opts = {
+    env: {
+      ...process.env,
+      // This is a little hack to force `node-gyp` to build for the
+      // Node.js version that `@now/node` and `@now/node-server` use
+      npm_config_target: '8.10.0',
+    },
+  };
+
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
-    await spawnAsync('npm', ['install'].concat(commandArgs), destPath);
-    await spawnAsync('npm', ['cache', 'clean', '--force'], destPath);
+    await spawnAsync('npm', ['install'].concat(commandArgs), destPath, opts);
+    await spawnAsync('npm', ['cache', 'clean', '--force'], destPath, opts);
   } else {
-    await spawnAsync('yarn', ['--cwd', destPath].concat(commandArgs), destPath);
-    await spawnAsync('yarn', ['cache', 'clean'], destPath);
+    await spawnAsync(
+      'yarn',
+      ['--cwd', destPath].concat(commandArgs),
+      destPath,
+      opts,
+    );
+    await spawnAsync('yarn', ['cache', 'clean'], destPath, opts);
   }
 }
 
