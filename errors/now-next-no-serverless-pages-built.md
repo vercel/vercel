@@ -29,11 +29,13 @@ npm install next --save
 ```js
 module.exports = {
   target: 'serverless'
-  // Other options are still valid
+  // Other options
 }
 ```
 
-4. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
+4. Remove `distDir` from `next.config.js` as `@now/next` can't parse this file and expects your build output at `/.next`
+
+5. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
 
 ```js
 {
