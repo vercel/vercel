@@ -26,6 +26,7 @@ import {
   CantSolveChallenge,
   DomainConfigurationError,
   DomainNotFound,
+  DomainNotVerified,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
@@ -362,6 +363,7 @@ export default async function main(
       firstDeployCall instanceof CantSolveChallenge ||
       firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainNotVerified ||
       firstDeployCall instanceof DomainPermissionDenied ||
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
@@ -708,6 +710,14 @@ function handleCreateDeployError(output, error) {
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
+    );
+    return 1;
+  }
+  if (error instanceof DomainNotVerified) {
+    output.error(
+      `The domain used as an alias ${
+        chalk.underline(error.meta.domain)
+      } is not verified yet. Please verify it.`
     );
     return 1;
   }
