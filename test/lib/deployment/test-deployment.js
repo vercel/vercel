@@ -8,11 +8,12 @@ const fetch = require('./fetch-retry.js');
 const { nowDeploy } = require('./now-deploy.js');
 
 async function packAndDeploy (builderPath) {
-  const tgzName = (await spawnAsync('npm', [ '--loglevel', 'warn', 'pack' ], {
-    stdio: [ 'ignore', 'pipe', 'inherit' ],
+  await spawnAsync('npm', [ '--loglevel', 'warn', 'pack' ], {
+    stdio: 'inherit',
     cwd: builderPath
-  })).trim();
-  const tgzPath = path.join(builderPath, tgzName);
+  });
+  const tarballs = await glob('*.tgz', { cwd: builderPath });
+  const tgzPath = path.join(builderPath, tarballs[0]);
   console.log('tgzPath', tgzPath);
   const url = await nowDeployIndexTgz(tgzPath);
   await fetchTgzUrl(`https://${url}`);
