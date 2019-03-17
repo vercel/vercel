@@ -157,7 +157,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
       throw new Error(
-        `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory.`
+        `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory. You may use ${cmd('--force')} or ${cmd('--f')} to override it.`
       );
     }
   } else {
