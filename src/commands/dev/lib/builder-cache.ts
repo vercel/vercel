@@ -2,7 +2,7 @@ import execa from 'execa';
 import { join } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
-import { readJSON, writeJSON } from 'fs-extra';
+import { readJSON, writeJSON, remove } from 'fs-extra';
 import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { NowError } from '../../../util/now-error';
@@ -17,6 +17,7 @@ const localBuilders: { [key: string]: Builder } = {
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
+export const cleanCacheDirPromise = cleanCacheDir();
 
 /**
  * Prepare cache directory for installing now-builders
@@ -55,7 +56,19 @@ export async function prepareBuilderDir() {
   return builderDir;
 }
 
-export async function cleanCache(): Promise<void> {}
+// Is responsible for cleaning the cache
+export async function cleanCacheDir(): Promise<void> {
+  try {
+    const deleteCache = await cacheDirPromise;
+    await remove(deleteCache);
+  } catch (err) {
+    throw new NowError({
+      code: 'NO_CLEAN_CACHE',
+      message: 'Error clearing the cache',
+      meta: {}
+    });
+  }
+}
 
 /**
  * Install a list of builders to the cache directory.
