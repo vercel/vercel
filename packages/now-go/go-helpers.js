@@ -21,12 +21,12 @@ const getGoUrl = (version, platform, arch) => {
   return `https://dl.google.com/go/go${version}.${goPlatform}-${goArch}.${ext}`;
 };
 
-function getExportedFunctionName(filePath) {
+async function getExportedFunctionName(filePath) {
   debug('Detecting handler name for %o', filePath);
   const bin = join(__dirname, 'get-exported-function-name');
   const args = [filePath];
-  const name = execa.stdout(bin, args);
-  debug('Detected exported name %o', filePath);
+  const name = await execa.stdout(bin, args);
+  debug('Detected exported name %o', name);
   return name;
 }
 
