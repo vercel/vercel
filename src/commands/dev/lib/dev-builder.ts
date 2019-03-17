@@ -49,25 +49,26 @@ export async function executeBuild(
   asset: BuilderOutput
 ): Promise<void> {
   //console.error('rebuilding', { asset });
-  if (!asset.buildConfig || !asset.buildEntry) {
-    throw new Error('Asset has not been built yet, can\'t rebuild');
+  const { buildConfig, buildEntry } = asset;
+  if (!buildConfig || !buildEntry) {
+    throw new Error("Asset has not been built yet, can't rebuild");
   }
   const { cwd } = devServer;
-  const entrypoint = relative(cwd, asset.buildEntry.fsPath);
+  const entrypoint = relative(cwd, buildEntry.fsPath);
 
   const cacheDir = await cacheDirPromise;
   const { dev, ino } = await stat(entrypoint);
   const workPath = join(cacheDir, 'workPaths', String(dev + ino));
   await mkdirp(workPath);
 
-  devServer.logDebug(`Building ${asset.buildEntry.fsPath} (workPath = ${workPath})`);
-  const { builder } = asset.buildConfig;
+  devServer.logDebug(`Building ${buildEntry.fsPath} (workPath = ${workPath})`);
+  const { builder } = buildConfig;
   if (!builder) {
     throw new Error('No builder');
   }
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
-  const config = asset.buildConfig.config || {};
+  const config = buildConfig.config || {};
   const output = await builder.build({
     files,
     entrypoint,
@@ -84,23 +85,37 @@ export async function executeBuild(
   } else {
     maxLambdaBytes = maxLambdaSize;
   }
-  //console.error(output);
 
   for (const asset of Object.values(output)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
-        throw new Error(`The lambda function size (${bytes(size).toLowerCase()}) exceeds the configured limit (${bytes(maxLambdaBytes).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``);
+        throw new Error(
+          `The lambda function size (${bytes(
+            size
+          ).toLowerCase()}) exceeds the configured limit (${bytes(
+            maxLambdaBytes
+          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``
+        );
       }
     }
+
+    asset.buildConfig = buildConfig;
+    asset.buildEntry = buildEntry;
   }
 
   await Promise.all(
-    Object.values(output).map(async (asset: BuilderOutput) => {
+    Object.entries(output).map(async e => {
+      const path: string = e[0];
+      const asset: BuilderOutput = e[1];
       if (asset.type !== 'Lambda') return;
-      if (asset.fn) {
-        await asset.fn.destroy();
+
+      // Tear down the previous `fun` Lambda instance for this asset
+      const oldAsset = devServer.assets[path];
+      if (oldAsset && oldAsset.type === 'Lambda' && oldAsset.fn) {
+        await oldAsset.fn.destroy();
       }
+
       asset.fn = await createFunction({
         Code: { ZipFile: asset.zipBuffer },
         Handler: asset.handler,
@@ -117,7 +132,9 @@ export async function executeBuild(
     })
   );
 
-  // TODO: remove previous assets
+  // TODO: remove previous assets, i.e. if the rebuild has different outputs that
+  // don't include some of the previous ones. For example, deleting a page in
+  // a Next.js build
   Object.assign(devServer.assets, output);
 }
 
@@ -173,7 +190,13 @@ async function executeBuilds(
           if (asset.type === 'Lambda') {
             const size = asset.zipBuffer.length;
             if (size > maxLambdaBytes) {
-              throw new Error(`The lambda function size (${bytes(size).toLowerCase()}) exceeds the configured limit (${bytes(maxLambdaBytes).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``);
+              throw new Error(
+                `The lambda function size (${bytes(
+                  size
+                ).toLowerCase()}) exceeds the configured limit (${bytes(
+                  maxLambdaBytes
+                ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``
+              );
             }
           }
 

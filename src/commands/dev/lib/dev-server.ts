@@ -248,8 +248,6 @@ export default class DevServer {
       return res.end();
     }
 
-    //console.error({ asset, url: req.url });
-
     // If the user did a hard-refresh in the browser,
     // then re-run the build that generated this asset
     if (this.shouldRebuild(req) && asset.buildEntry) {
