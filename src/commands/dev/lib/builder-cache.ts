@@ -17,7 +17,6 @@ const localBuilders: { [key: string]: Builder } = {
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
-export const cleanCacheDirPromise = cleanCacheDir();
 
 /**
  * Prepare cache directory for installing now-builders
