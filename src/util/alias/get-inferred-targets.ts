@@ -1,19 +1,13 @@
 import { Output } from '../output';
 import * as ERRORS from '../../util/errors-ts';
-import getConfig from '../../util/get-config';
+import { Config } from '../../types';
+import cmd from '../../util/output/cmd';
 
 export default async function getInferredTargets(
   output: Output,
-  localConfigPath: string
+  config: Config
 ) {
-  // Read the configuration file from the best guessed location
-  const config = await getConfig(output, localConfigPath);
-  if (
-    config instanceof ERRORS.CantParseJSONFile ||
-    config instanceof ERRORS.CantFindConfig
-  ) {
-    return config;
-  }
+  output.warn(`The ${cmd('now alias')} command (no arguments) was deprecated in favour of ${cmd('now --target production')}.`);
 
   // This field is deprecated, warn about it
   if (config.aliases) {

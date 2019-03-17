@@ -37,16 +37,7 @@ export default async function createAlias(
       alias,
       !externalDomain
     );
-    if (
-      cert instanceof ERRORS.CantSolveChallenge ||
-      cert instanceof ERRORS.DomainConfigurationError ||
-      cert instanceof ERRORS.DomainPermissionDenied ||
-      cert instanceof ERRORS.DomainsShouldShareRoot ||
-      cert instanceof ERRORS.DomainValidationRunning ||
-      cert instanceof ERRORS.TooManyCertificates ||
-      cert instanceof ERRORS.TooManyRequests ||
-      cert instanceof ERRORS.InvalidDomain
-    ) {
+    if (cert instanceof Error) {
       return cert;
     }
 
@@ -86,7 +77,7 @@ async function performCreateAlias(
       return { uid: error.uid, alias: error.alias } as AliasRecord;
     }
     if (error.code === 'deployment_not_found') {
-      return new ERRORS.DeploymentNotFound(deployment.uid, contextName);
+      return new ERRORS.DeploymentNotFound({ context: contextName, id: deployment.uid });
     }
     if (error.code === 'invalid_alias') {
       return new ERRORS.InvalidAlias(alias);

@@ -34,7 +34,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
@@ -92,7 +92,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }

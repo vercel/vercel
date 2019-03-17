@@ -17,8 +17,14 @@ export default async function createDeploy(
       return new ERRORS_TS.DomainNotFound(error.value);
     }
 
+    // This error occures when a domain used in the `alias`
+    // is not yet verified
+    if (error.code === 'domain_not_verified' && error.domain) {
+      return new ERRORS_TS.DomainNotVerified(error.domain);
+    }
+
     // If the domain used as a suffix is not verified, we fail
-    if (error.code === 'domain_not_verified') {
+    if (error.code === 'domain_not_verified' && error.value) {
       return new ERRORS_TS.DomainVerificationFailed(error.value);
     }
 
@@ -59,6 +65,10 @@ export default async function createDeploy(
         return result;
       }
       return createDeploy(output, now, contextName, paths, createArgs);
+    }
+
+    if (error.code === 'not_found') {
+      return new ERRORS_TS.DeploymentNotFound({ context: contextName })
     }
 
     // If the error is unknown, we just throw

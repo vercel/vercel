@@ -26,6 +26,7 @@ import {
   CantSolveChallenge,
   DomainConfigurationError,
   DomainNotFound,
+  DomainNotVerified,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
@@ -65,32 +66,58 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
+const prepareAlias = input => `https://${input}`;
 
-const parseFinalAliases = (aliasFinal) => {
-  const last = aliasFinal.length - 1;
-
-  if (last === 0) {
-    // Only one item
-    return aliasFinal[0];
-  }
-
-  return `${aliasFinal.slice(0, last).join(', ')} and ${aliasFinal[last]}`;
-};
-
-const printDeploymentStatus = (
+const printDeploymentStatus = async (
   output,
   { url, readyState, aliasFinal },
   deployStamp,
+  clipboardEnabled,
+  localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
     if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
-      output.success(`Your deployment is now available on ${
-        parseFinalAliases(aliasFinal)
-      } ${deployStamp()}`);
+      if (aliasFinal.length === 1) {
+        if (clipboardEnabled) {
+          try {
+            await copy(aliasFinal[0]);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+          } catch (err) {
+            output.debug(`Error copying to clipboard: ${err}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
+          }
+        }
+      } else {
+        output.ready(`Aliases assigned ${deployStamp()}`);
+
+        // If `alias` is defined in the config, we need to
+        // copy the first one to the clipboard.
+        const matching = (localConfig.alias || [])[0];
+
+        for (const alias of aliasFinal) {
+          const index = aliasFinal.indexOf(alias);
+          const isLast = index === (aliasFinal.length - 1);
+          const shouldCopy = matching ? alias === matching : isLast;
+
+          if (shouldCopy && clipboardEnabled) {
+            try {
+              await copy(alias);
+              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
+
+              return 0;
+            } catch (err) {
+              output.debug(`Error copying to clipboard: ${err}`);
+            }
+          }
+
+          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
+        }
+      }
     } else {
       output.success(`Deployment ready ${deployStamp()}`);
     }
+
     return 0;
   }
 
@@ -185,6 +212,10 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
+  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
+    const flag = param('--target production');
+    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
+  }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
@@ -289,8 +320,10 @@ export default async function main(
     // $FlowFixMe
     const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
     log(`Using project ${chalk.bold(project)}`);
-    const createArgs = Object.assign(
-      {
+
+    const createArgs = {
+        name: project,
+        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -301,18 +334,18 @@ export default async function main(
         nowConfig: localConfig,
         regions,
         meta
-      },
-      {
-        name: project,
-        target: argv['--target']
-      }
-    );
+    };
 
-    if (createArgs.target && createArgs.target !== 'production') {
-      error(`The specified ${param('--target')} ${
-        code(createArgs.target)
-      } is not valid`);
-      return 1;
+    if (createArgs.target) {
+      const allowedValues = [
+        'staging',
+        'production'
+      ];
+
+      if (!allowedValues.includes(createArgs.target)) {
+        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+        return 1;
+      }
     }
 
     deployStamp = stamp();
@@ -330,6 +363,7 @@ export default async function main(
       firstDeployCall instanceof CantSolveChallenge ||
       firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainNotVerified ||
       firstDeployCall instanceof DomainPermissionDenied ||
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
@@ -438,6 +472,13 @@ export default async function main(
       error(message);
     }
 
+    if (err.code === 'size_limit_exceeded') {
+      const { sizeLimit = 0 } = err;
+      const message = `File size limit exceeded (${bytes(sizeLimit)})`;
+      error(message);
+      return 1;
+    }
+
     handleError(err);
     return 1;
   }
@@ -445,23 +486,7 @@ export default async function main(
   const { url } = now;
 
   if (isTTY) {
-    if (!argv['--no-clipboard']) {
-      try {
-        await copy(url);
-        log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
-            '[in clipboard]'
-          )} ${deployStamp()}`
-        );
-      } catch (err) {
-        debug(`Error copying to clipboard: ${err}`);
-        log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${deployStamp()}`
-        );
-      }
-    } else {
-      log(`${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
-    }
+    log(`${url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
   } else {
     process.stdout.write(url);
   }
@@ -469,7 +494,7 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp);
+    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
   }
 
   const sleepingTime = ms('1.5s');
@@ -538,7 +563,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, builds);
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {
@@ -685,6 +710,14 @@ function handleCreateDeployError(output, error) {
       `The domain used as a suffix ${chalk.underline(
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
+    );
+    return 1;
+  }
+  if (error instanceof DomainNotVerified) {
+    output.error(
+      `The domain used as an alias ${
+        chalk.underline(error.meta.domain)
+      } is not verified yet. Please verify it.`
     );
     return 1;
   }

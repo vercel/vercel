@@ -16,7 +16,7 @@ export default async function getDeploymentByIdOrHost(
     return deployment;
   } catch (error) {
     if (error.status === 404) {
-      return new DeploymentNotFound(idOrHost, contextName);
+      return new DeploymentNotFound({ id: idOrHost, context: contextName });
     }
     if (error.status === 403) {
       return new DeploymentPermissionDenied(idOrHost, contextName);
