@@ -165,10 +165,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/build-utils@0.4.37-canary.0":
-  version "0.4.37-canary.0"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.4.37-canary.0.tgz#59e7e64cb7c211413c9e3452fde04912e79e9617"
-  integrity sha512-WCuPf14RfLbT/SgLOPHmtvdj87+PX6WoeORXrUvSjnf0rYkXj/NzbTg8X+GP6+ZDMMCs+i/xl4/PuIpIoqwe4g==
+"@now/build-utils@0.4.37-canary.1":
+  version "0.4.37-canary.1"
+  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.4.37-canary.1.tgz#619e9fefec6013304ce3ae22cd3aef23496ed592"
+  integrity sha512-1RDv/gC0RKRn6szwo4mzlONN3UCs5YaCOL2J0vFkaDlUy0xMSePeJqWnL6hCAl+T6n9OkYaruedaslwxlCmjcQ==
   dependencies:
     async-retry "1.2.3"
     async-sema "2.1.4"
