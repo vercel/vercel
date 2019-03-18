@@ -535,16 +535,6 @@ export class DeploymentPermissionDenied extends NowError<
   }
 }
 
-export class DeploymentTypeUnsupported extends NowError<'DEPLOYMENT_TYPE_UNSUPPORTED', {}> {
-  constructor() {
-    super({
-      code: 'DEPLOYMENT_TYPE_UNSUPPORTED',
-      meta: {},
-      message: `This region only accepts Serverless Docker Deployments`
-    });
-  }
-}
-
 /**
  * Returned when we try to create an alias but the API returns an error telling
  * that the given alias is not valid.

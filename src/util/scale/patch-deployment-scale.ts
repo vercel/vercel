@@ -46,9 +46,6 @@ export default async function patchDeploymentScale(
     if (error.code === 'not_supported_min_scale_slots') {
       return new Errors.NotSupportedMinScaleSlots(url);
     }
-    if (error.code === 'deployment_type_unsupported') {
-      return new Errors.DeploymentTypeUnsupported();
-    }
 
     throw error;
   }
