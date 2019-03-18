@@ -1,6 +1,5 @@
 import Client from './client';
 import getScope from './get-scope.ts';
-import getArgs from './get-args';
 
 export default async (sentry, error, apiUrl, configFiles) => {
   // Do not report errors in development
@@ -44,22 +43,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
         scope.setTag('currentTeam', team.id);
       }
 
-      // Report process.argv without sensitive data
-      let args
-      try {
-        args = getArgs(process.argv.slice(2), {});
-      } catch (_) {}
-
-      if (args) {
-        const flags = ['--env', '--build-env', '--token']
-        for (const flag of flags) {
-          if (args[flag]) args[flag] = 'REDACTED';
-        }
-        if (args._[0].startsWith('secret') && args._[1] === 'add' && args._[3]) {
-          args._[3] = 'REDACTED';
-        }
-        scope.setExtra('args', args);
-      }
+      // Disable sending `argv` until we properly remove sensitive data
+      // scope.setExtra('argv', process.argv);
 
       sentry.captureException(error);
     });
