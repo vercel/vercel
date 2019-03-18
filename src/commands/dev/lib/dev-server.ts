@@ -175,7 +175,6 @@ export default class DevServer {
         await this.serveProjectAsNowV2(req, res, nowJson);
       }
     } catch (err) {
-      console.error({ err });
       this.setStatusError(err.message);
       this.logDebug(err.stack);
 
