@@ -53,7 +53,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
     const queryParams = qs.parse(query || '');
 
     found = {
-      dest: reqPath,
+      dest: reqPathname,
       uri_args: queryParams
     };
   }
