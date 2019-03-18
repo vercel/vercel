@@ -21,51 +21,47 @@ export default async (sentry, error, apiUrl, configFiles) => {
     // reporting works even without this metadata attached.
   }
 
-  if (user || team) {
-    sentry.withScope(scope => {
-      if (user) {
-        const spec = {
-          email: user.email,
-          id: user.uid
-        };
+  sentry.withScope(scope => {
+    if (user) {
+      const spec = {
+        email: user.email,
+        id: user.uid
+      };
 
-        if (user.username) {
-          spec.username = user.username;
-        }
-
-        if (user.name) {
-          spec.name = user.name;
-        }
-
-        scope.setUser(spec);
+      if (user.username) {
+        spec.username = user.username;
       }
 
-      if (team) {
-        scope.setTag('currentTeam', team.id);
+      if (user.name) {
+        spec.name = user.name;
       }
 
-      // Report process.argv without sensitive data
-      let args
-      try {
-        args = getArgs(process.argv.slice(2), {});
-      } catch (_) {}
+      scope.setUser(spec);
+    }
 
-      if (args) {
-        const flags = ['--env', '--build-env', '--token']
-        for (const flag of flags) {
-          if (args[flag]) args[flag] = 'REDACTED';
-        }
-        if (args._.length >= 4 && args._[0].startsWith('secret') && args._[1] === 'add') {
-          args._[3] = 'REDACTED';
-        }
-        scope.setExtra('args', args);
+    if (team) {
+      scope.setTag('currentTeam', team.id);
+    }
+
+    // Report process.argv without sensitive data
+    let args
+    try {
+      args = getArgs(process.argv.slice(2), {});
+    } catch (_) {}
+
+    if (args) {
+      const flags = ['--env', '--build-env', '--token']
+      for (const flag of flags) {
+        if (args[flag]) args[flag] = 'REDACTED';
       }
+      if (args._.length >= 4 && args._[0].startsWith('secret') && args._[1] === 'add') {
+        args._[3] = 'REDACTED';
+      }
+      scope.setExtra('args', args);
+    }
 
-      sentry.captureException(error);
-    });
-  } else {
     sentry.captureException(error);
-  }
+  });
 
   const client = sentry.getCurrentHub().getClient();
 
