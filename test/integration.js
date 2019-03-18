@@ -1251,7 +1251,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! Destination path "apollo" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    '> Error! Destination path "apollo" already exists and is not an empty directory.';
 
   createDirectory(path.join(cwd, 'apollo'));
   createFile(path.join(cwd, 'apollo', '.gitignore'));
