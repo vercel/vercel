@@ -15,12 +15,12 @@ export default async function generateCertForDeploy(
 ) {
   const parsedDomain = psl.parse(deployURL);
   if (parsedDomain.error) {
-    throw new InvalidDomain(deployURL, parsedDomain.error.message);
+    return new InvalidDomain(deployURL, parsedDomain.error.message);
   }
 
   const { domain } = parsedDomain;
   if (!domain) {
-    throw new InvalidDomain(deployURL);
+    return new InvalidDomain(deployURL);
   }
 
   const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`);
