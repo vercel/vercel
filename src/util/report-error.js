@@ -55,7 +55,7 @@ export default async (sentry, error, apiUrl, configFiles) => {
         for (const flag of flags) {
           if (args[flag]) args[flag] = 'REDACTED';
         }
-        if (args._[0].startsWith('secret') && args._[1] === 'add' && args._[3]) {
+        if (args._.length >= 4 && args._[0].startsWith('secret') && args._[1] === 'add') {
           args._[3] = 'REDACTED';
         }
         scope.setExtra('args', args);
