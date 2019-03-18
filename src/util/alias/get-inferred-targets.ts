@@ -1,14 +1,11 @@
 import { Output } from '../output';
 import * as ERRORS from '../../util/errors-ts';
 import { Config } from '../../types';
-import cmd from '../../util/output/cmd';
 
 export default async function getInferredTargets(
   output: Output,
   config: Config
 ) {
-  output.warn(`The ${cmd('now alias')} command (no arguments) was deprecated in favour of ${cmd('now --target production')}.`);
-
   // This field is deprecated, warn about it
   if (config.aliases) {
     output.warn('The `aliases` field has been deprecated in favor of `alias`');
