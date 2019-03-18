@@ -7,6 +7,7 @@ import listen from 'async-listen';
 import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
 import { basename, dirname, relative } from 'path';
+import { lookup as lookupMimeType } from 'mime-types';
 
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
@@ -174,6 +175,7 @@ export default class DevServer {
         await this.serveProjectAsNowV2(req, res, nowJson);
       }
     } catch (err) {
+      console.error({ err });
       this.setStatusError(err.message);
       this.logDebug(err.stack);
 
@@ -271,6 +273,19 @@ export default class DevServer {
         req.url = `/${basename(asset.fsPath)}`;
         return serveStaticFile(req, res, dirname(asset.fsPath));
 
+      case 'FileBlob':
+        let contentType: string | false = false;
+        const fsPath = asset.buildEntry && asset.buildEntry.fsPath;
+        if (fsPath) {
+          contentType = lookupMimeType(fsPath);
+        }
+        if (contentType) {
+          res.setHeader('Content-Type', contentType);
+        }
+        res.setHeader('Content-Length', asset.data.length);
+        res.end(asset.data);
+        return;
+
       case 'Lambda':
         if (!asset.fn) {
           res.statusCode = 500;
@@ -306,7 +321,8 @@ export default class DevServer {
         return res.end(resBody);
       default:
         res.statusCode = 500;
-        return res.end();
+        // This shouldn't really ever happen...
+        return res.end(`Don't know how to handle asset type: ${(asset as any).type}`);
     }
   };
 }

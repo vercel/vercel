@@ -22,6 +22,10 @@ declare module '@now/build-utils/file-fs-ref' {
   export = BuildUtils.FileFsRef;
 }
 
+declare module '@now/build-utils/file-blob' {
+  export = BuildUtils.FileBlob;
+}
+
 declare module '@now/build-utils/fs/glob' {
   function glob(
     pattern: string,
@@ -58,12 +62,19 @@ declare namespace BuildUtils {
     [filePath: string]: File;
   }
 
-  export type File = FileRef | FileFsRef | Lambda;
+  export type File = FileRef | FileFsRef | FileBlob | Lambda;
 
   export interface FileRef {
     type: 'FileRef';
     mode: number;
     digest: string;
+    toStream(): NodeJS.ReadableStream;
+  }
+
+  export interface FileBlob {
+    type: 'FileBlob';
+    mode: number;
+    data: Buffer;
     toStream(): NodeJS.ReadableStream;
   }
 

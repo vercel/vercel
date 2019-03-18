@@ -1,6 +1,7 @@
 import http from 'http';
 import { Lambda } from '@zeit/fun';
 import { LambdaRuntime } from '@now/build-utils';
+import FileBlob from '@now/build-utils/file-blob';
 import FileFsRef from '@now/build-utils/file-fs-ref';
 
 export enum DevServerStatus {
@@ -56,7 +57,12 @@ export interface BuiltFileFsRef extends FileFsRef {
   buildEntry?: FileFsRef;
 }
 
-export type BuilderOutput = BuiltLambda | BuiltFileFsRef;
+export interface BuiltFileBlob extends FileBlob {
+  buildConfig?: BuildConfig;
+  buildEntry?: FileFsRef;
+}
+
+export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
