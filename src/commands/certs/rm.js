@@ -111,7 +111,9 @@ function formatCertRow(cert) {
   return [
     cert.uid,
     chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
-    chalk.gray(`${ms(new Date() - new Date(cert.created))} ago`)
+    ...cert.created
+      ? [chalk.gray(`${ms(new Date() - new Date(cert.created))} ago`)]
+      : []
   ];
 }
 
