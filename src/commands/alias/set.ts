@@ -566,9 +566,7 @@ function handleCreateAliasError<T>(
   }
 
   if (error instanceof ERRORS.DomainPermissionDenied) {
-    output.error(
-      `You don't have access to the domain ${error.meta.domain} under ${error.meta.context}.`
-    );
+    output.error(error.message);
     return 1;
   }
 
