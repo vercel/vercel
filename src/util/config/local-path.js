@@ -1,5 +1,6 @@
 import path from 'path';
 import mri from 'mri';
+import { InvalidLocalConfig } from '../errors';
 
 const getLocalPathConfig = prefix => {
   const args = mri(process.argv.slice(2), {
@@ -10,6 +11,10 @@ const getLocalPathConfig = prefix => {
   });
 
   const customPath = args['local-config'];
+
+  if (Array.isArray(customPath)) {
+    throw new InvalidLocalConfig(customPath);
+  }
 
   if (!customPath) {
     return path.join(prefix, 'now.json');
