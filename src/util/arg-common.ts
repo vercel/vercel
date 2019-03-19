@@ -12,7 +12,7 @@ const ARG_COMMON = {
   '-t': '--token',
 
   '--scope': String,
-  '-s': '--scope',
+  '-S': '--scope',
 
   '--team': String,
   '-T': '--team',
