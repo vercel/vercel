@@ -77,8 +77,8 @@ const printDeploymentStatus = async (
   localConfig,
   builds
 ) => {
-  if (readyState === 'READY') {
-    if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
+  if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
+    if (readyState === 'READY') {
       if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
