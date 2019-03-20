@@ -9,21 +9,32 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
+import { cleanCacheDir } from './lib/builder-cache';
 
 const COMMAND_CONFIG = {
   dev: ['dev']
 };
 
 const help = () => {
-  // TODO: help message
   console.log(`
-  ${chalk.bold(`${logo} now dev`)} [dir] [-p | --port]
+  ${chalk.bold(`${logo} now dev`)} [options] <command | dir>
+
+  ${chalk.dim('Commands:')}
+
+    start          [dir]     Starts the \`now dev\` server [default]
+    cache clean              Deletes the local cache directories used by \`now dev\`
 
   ${chalk.dim('Options:')}
 
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
     -p, --port        Port [3000]
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Start the \`now dev\` server on port 8080
+
+      ${chalk.cyan('$ now dev --port 8080')}
   `);
 };
 
@@ -47,6 +58,11 @@ export default async function main(ctx: NowContext) {
   if (argv['--help']) {
     help();
     return 2;
+  }
+
+  if (args[0] === 'cache' && args[1] === 'clean') {
+    await cleanCacheDir(output);
+    return 0;
   }
 
   if (argv._.length > 2) {

@@ -1,10 +1,13 @@
+import chalk from 'chalk';
 import execa from 'execa';
 import { join } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
+import { funCacheDir } from '@zeit/fun';
 import { readJSON, writeJSON, remove } from 'fs-extra';
 import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
+import { Output } from '../../../util/output';
 import { NowError } from '../../../util/now-error';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
 import { Builder } from './types';
@@ -56,10 +59,22 @@ export async function prepareBuilderDir() {
 }
 
 // Is responsible for cleaning the cache
-export async function cleanCacheDir(): Promise<void> {
+export async function cleanCacheDir(output: Output): Promise<void> {
   try {
-    const deleteCache = await cacheDirPromise;
-    await remove(deleteCache);
+    const cacheDir = await cacheDirPromise;
+    output.log(chalk`{magenta Deleting} ${cacheDir}`);
+    await remove(cacheDir);
+  } catch (err) {
+    throw new NowError({
+      code: 'NO_CLEAN_CACHE',
+      message: 'Error clearing the cache',
+      meta: {}
+    });
+  }
+
+  try {
+    await remove(funCacheDir);
+    output.log(chalk`{magenta Deleting} ${funCacheDir}`);
   } catch (err) {
     throw new NowError({
       code: 'NO_CLEAN_CACHE',
