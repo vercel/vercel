@@ -10,6 +10,10 @@ import {
   runPackageJsonScript
 } from '@now/build-utils/fs/run-user-scripts.js';
 
+interface CompilerConfig {
+  includeFiles?: string[]
+}
+
 /** @typedef { import('@now/build-utils/file-ref') } FileRef */
 /** @typedef {{[filePath: string]: FileRef}} Files */
 
@@ -59,10 +63,28 @@ async function downloadInstallAndBundle(
   return [downloadedFiles, nccPath, entrypointFsDirname];
 }
 
-async function compile(workNccPath: string, downloadedFiles, entrypoint: string) {
+async function compile(workNccPath: string, downloadedFiles, entrypoint: string, config: CompilerConfig) {
   const input = downloadedFiles[entrypoint].fsPath;
+  const inputDir = dirname(input);
   const ncc = require(join(workNccPath, 'node_modules/@zeit/ncc'));
   const { code, assets } = await ncc(input);
+
+  if (config && config.includeFiles) {
+    for (const pattern of config.includeFiles) {
+      const files = await glob(pattern, inputDir);
+
+      for (const assetName of Object.keys(files)) {
+        const stream = files[assetName].toStream();
+        const { mode } = files[assetName];
+        const { data } = await FileBlob.fromStream({ stream });
+
+        assets[assetName] = {
+          'source': data,
+          'permissions': mode
+        };
+      }
+    }
+  }
 
   const preparedFiles = {};
   const blob = new FileBlob({ data: code });
@@ -86,7 +108,7 @@ export const config = {
  * @param {BuildParamsType} buildParams
  * @returns {Promise<Files>}
  */
-export async function build({ files, entrypoint, workPath }) {
+export async function build({ files, entrypoint, workPath, config }) {
   const [
     downloadedFiles,
     workNccPath,
@@ -100,7 +122,7 @@ export async function build({ files, entrypoint, workPath }) {
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
 
   console.log('compiling entrypoint with ncc...');
-  const preparedFiles = await compile(workNccPath, downloadedFiles, entrypoint);
+  const preparedFiles = await compile(workNccPath, downloadedFiles, entrypoint, config);
   const launcherPath = join(__dirname, 'launcher.js');
   let launcherData = await readFile(launcherPath, 'utf8');
 
