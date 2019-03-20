@@ -11,7 +11,6 @@ const defaultOptions = {
   removeRedundantAttributes: true,
   useShortDoctype: true,
   collapseWhitespace: true,
-  collapseInlineTagWhitespace: true,
   collapseBooleanAttributes: true,
   caseSensitive: true,
 };
