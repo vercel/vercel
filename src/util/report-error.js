@@ -58,6 +58,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
         args._[3] = 'REDACTED';
       }
       scope.setExtra('args', args);
+    } else {
+      scope.setExtra('args', 'Unable to parse args');
     }
 
     sentry.captureException(error);
