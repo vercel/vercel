@@ -33,7 +33,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  InvalidDomain
+  InvalidDomain,
+  DeploymentNotFound
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 
@@ -371,7 +372,8 @@ export default async function main(
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
-      firstDeployCall instanceof InvalidDomain
+      firstDeployCall instanceof InvalidDomain ||
+      firstDeployCall instanceof DeploymentNotFound
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -446,7 +448,8 @@ export default async function main(
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
           secondDeployCall instanceof TooManyCertificates ||
-          secondDeployCall instanceof TooManyRequests
+          secondDeployCall instanceof TooManyRequests ||
+          secondDeployCall instanceof DeploymentNotFound
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -719,6 +722,10 @@ function handleCreateDeployError(output, error) {
         chalk.underline(error.meta.domain)
       } is not verified yet. Please verify it.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
     return 1;
   }
 
