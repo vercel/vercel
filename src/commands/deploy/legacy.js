@@ -1055,10 +1055,14 @@ async function readMeta(
         )}] to deploy or re-run with --flag`
       );
 
-      deploymentType = await promptOptions([
-        ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
-        ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
-      ]);
+      try {
+        deploymentType = await promptOptions([
+          ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+        ]);
+      } catch (_) {
+        throw err;
+      }
 
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
