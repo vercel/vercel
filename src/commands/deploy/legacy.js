@@ -52,7 +52,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  VerifyScaleTimeout
+  VerifyScaleTimeout,
+  DeploymentNotFound
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -701,7 +702,8 @@ async function sync({
         firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof SchemaValidationFailed ||
         firstDeployCall instanceof TooManyCertificates ||
-        firstDeployCall instanceof TooManyRequests
+        firstDeployCall instanceof TooManyRequests ||
+        firstDeployCall instanceof DeploymentNotFound
       ) {
         handleCreateDeployError(output, firstDeployCall);
         await exit(1);
@@ -778,7 +780,8 @@ async function sync({
             secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyCertificates ||
-            secondDeployCall instanceof TooManyRequests
+            secondDeployCall instanceof TooManyRequests ||
+            secondDeployCall instanceof DeploymentNotFound
           ) {
             handleCreateDeployError(output, secondDeployCall);
             await exit(1);
@@ -1050,10 +1053,14 @@ async function readMeta(
         )}] to deploy or re-run with --flag`
       );
 
-      deploymentType = await promptOptions([
-        ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
-        ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
-      ]);
+      try {
+        deploymentType = await promptOptions([
+          ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+        ]);
+      } catch (_) {
+        throw err;
+      }
 
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
@@ -1256,6 +1263,10 @@ function handleCreateDeployError(output, error) {
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
     return 1;
   }
 

@@ -4,6 +4,7 @@ import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
 import getNowDir from './global-path';
 import getLocalPathConfig from './local-path';
+import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
 
@@ -87,7 +88,19 @@ export function getAuthConfigFilePath() {
 }
 
 export function readLocalConfig(prefix) {
-  const target = getLocalPathConfig(prefix || process.cwd());
+  let target;
+
+  try {
+    target = getLocalPathConfig(prefix || process.cwd());
+  } catch (err) {
+    if (err instanceof NowError) {
+      console.error(error(err.message));
+      process.exit(1);
+    } else {
+      throw err;
+    }
+  }
+
   let localConfigExists;
 
   try {

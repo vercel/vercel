@@ -88,13 +88,24 @@ export default async function issue(
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(
-      client,
-      keyPath,
-      crtPath,
-      caPath,
-      contextName
-    );
+    try {
+      cert = await createCertFromFile(
+        client,
+        keyPath,
+        crtPath,
+        caPath,
+        contextName
+      );
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        output.error(
+          `The specified file "${err.path}" doesn't exist.`
+        );
+        return 1;
+      }
+      throw err;
+    }
+
     if (cert instanceof ERRORS.InvalidCert) {
       output.error(
         `The provided certificate is not valid and cannot be added.`
