@@ -242,9 +242,9 @@ export default class DevServer {
     }
 
     // find asset responsible for dest
-    let asset = resolveDest(this.assets, dest);
+    let { asset, assetKey } = resolveDest(this.assets, dest);
 
-    if (!asset) {
+    if (!asset || !assetKey) {
       res.statusCode = 404;
       return res.end();
     }
@@ -258,9 +258,9 @@ export default class DevServer {
 
       // Since the `asset` was re-built, resolve it again to get the new asset
       // object
-      asset = resolveDest(this.assets, dest);
+      ({ asset, assetKey } = resolveDest(this.assets, dest));
 
-      if (!asset) {
+      if (!asset || !assetKey) {
         res.statusCode = 404;
         return res.end();
       }
@@ -273,11 +273,7 @@ export default class DevServer {
         return serveStaticFile(req, res, dirname(asset.fsPath));
 
       case 'FileBlob':
-        let contentType: string | false = false;
-        const fsPath = asset.buildEntry && asset.buildEntry.fsPath;
-        if (fsPath) {
-          contentType = lookupMimeType(fsPath);
-        }
+        const contentType = lookupMimeType(assetKey);
         if (contentType) {
           res.setHeader('Content-Type', contentType);
         }
@@ -361,22 +357,24 @@ function serveStaticFile(
 function resolveDest(
   assets: BuilderOutputs,
   dest: string
-): BuilderOutput | undefined {
-  const assetKey = dest.replace(/^\//, '');
+): { asset: BuilderOutput | null, assetKey: string | undefined } {
+  let assetKey = dest.replace(/^\//, '');
+  let asset: BuilderOutput | undefined = assets[assetKey];
 
-  if (assets[assetKey]) {
-    return assets[assetKey];
+  if (!asset) {
+    // Find `${assetKey}/index.*` for indexes
+    const indexKey = Object.keys(assets).find(name => {
+      const withoutIndex = name.replace(/\/?index(\.\w+)?$/, '');
+      return withoutIndex === assetKey.replace(/\/$/, '');
+    });
+
+    if (indexKey) {
+      assetKey = indexKey;
+      asset = assets[assetKey];
+    }
   }
 
-  // Find `${assetKey}/index.*` for indexes
-  const foundIndex = Object.keys(assets).find(name => {
-    const withoutIndex = name.replace(/\/?index(\.\w+)?$/, '');
-    return withoutIndex === assetKey.replace(/\/$/, '');
-  });
-
-  if (foundIndex) {
-    return assets[foundIndex];
-  }
+  return { asset, assetKey };
 }
 
 function close(server: http.Server): Promise<void> {
