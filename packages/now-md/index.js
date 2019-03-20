@@ -34,8 +34,6 @@ exports.build = async ({ files, entrypoint, config }) => {
     stream: stream.pipe(unifiedStream(processor)),
   });
 
-  console.log(result.data.toString());
-
   const replacedEntrypoint = entrypoint.replace(/\.[^.]+$/, '.html');
 
   return { [replacedEntrypoint]: result };
