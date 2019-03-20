@@ -68,6 +68,7 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 const prepareAlias = input => `https://${input}`;
+const isAliasReady = ({ aliasFinal }) => aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length > 0;
 
 const printDeploymentStatus = async (
   output,
@@ -78,7 +79,7 @@ const printDeploymentStatus = async (
   builds
 ) => {
   if (readyState === 'READY') {
-    if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
+    if (isAliasReady({ aliasFinal })) {
       if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
@@ -549,7 +550,7 @@ export default async function main(
     if (buildsCompleted) {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if (isDone(deploymentResponse)) {
+      if (isDone(deploymentResponse) && isAliasReady(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {
