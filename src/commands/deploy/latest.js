@@ -77,46 +77,42 @@ const printDeploymentStatus = async (
   localConfig,
   builds
 ) => {
-  if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
-    if (readyState === 'READY') {
-      if (aliasFinal.length === 1) {
-        if (clipboardEnabled) {
-          try {
-            await copy(aliasFinal[0]);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
-          } catch (err) {
-            output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
-          }
-        }
-      } else {
-        output.ready(`Aliases assigned ${deployStamp()}`);
-
-        // If `alias` is defined in the config, we need to
-        // copy the first one to the clipboard.
-        const matching = (localConfig.alias || [])[0];
-
-        for (const alias of aliasFinal) {
-          const index = aliasFinal.indexOf(alias);
-          const isLast = index === (aliasFinal.length - 1);
-          const shouldCopy = matching ? alias === matching : isLast;
-
-          if (shouldCopy && clipboardEnabled) {
-            try {
-              await copy(alias);
-              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
-
-              return 0;
-            } catch (err) {
-              output.debug(`Error copying to clipboard: ${err}`);
-            }
-          }
-
-          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
+  if (readyState === 'READY' && aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
+    if (aliasFinal.length === 1) {
+      if (clipboardEnabled) {
+        try {
+          await copy(aliasFinal[0]);
+          output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+        } catch (err) {
+          output.debug(`Error copying to clipboard: ${err}`);
+           output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
         }
       }
     } else {
-      output.success(`Deployment ready ${deployStamp()}`);
+      output.ready(`Aliases assigned ${deployStamp()}`);
+
+      // If `alias` is defined in the config, we need to
+      // copy the first one to the clipboard.
+      const matching = (localConfig.alias || [])[0];
+
+      for (const alias of aliasFinal) {
+        const index = aliasFinal.indexOf(alias);
+        const isLast = index === (aliasFinal.length - 1);
+        const shouldCopy = matching ? alias === matching : isLast;
+
+        if (shouldCopy && clipboardEnabled) {
+          try {
+            await copy(alias);
+            output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
+
+            return 0;
+          } catch (err) {
+            output.debug(`Error copying to clipboard: ${err}`);
+          }
+        }
+
+        output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
+      }
     }
 
     return 0;
