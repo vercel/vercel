@@ -157,7 +157,14 @@ async function executeBuilds(
       const builder = await getBuilder(build.use);
       build.builder = builder;
 
-      const entries = Object.values(await collectProjectFiles(build.src, cwd));
+      let { src } = build;
+      if (src[0] === '/') {
+        // Remove a leading slash so that the globbing is relative to `cwd`
+        // instead of the root of the filesystem. This matches the behavior
+        // of Now deployments.
+        src = src.substring(1);
+      }
+      const entries = Object.values(await collectProjectFiles(src, cwd));
 
       for (const entry of entries) {
         const config = build.config || {};
