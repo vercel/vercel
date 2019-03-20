@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@now/node-server",
+      "config": {
+        "includeFiles": [
+          "templates/**"
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hello Now!"
+    }
+  ]
+}
