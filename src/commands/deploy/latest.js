@@ -547,7 +547,7 @@ export default async function main(
     if (buildsCompleted) {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if (isDone(deploymentResponse) && isAliasReady(deploymentResponse)) {
+      if ((isReady(deploymentResponse) && isAliasReady(deploymentResponse)) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {
