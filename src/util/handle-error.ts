@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
+import bytes from 'bytes';
 
 export default function handleError(
   error: string | Error | APIError,
@@ -39,6 +40,11 @@ export default function handleError(
         )
       );
     }
+  } else if ((<APIError>error).code === 'size_limit_exceeded') {
+    const { sizeLimit = 0 } = <APIError>error;
+    console.error(
+      errorOutput(`File size limit exceeded (${bytes(sizeLimit)})`)
+    );
   } else if (error.message) {
     console.error(errorOutput(error.message));
   } else if ((<APIError>error).status === 500) {
