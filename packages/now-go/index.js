@@ -68,9 +68,11 @@ async function build({ files, entrypoint }) {
     );
     if (!isGoModExist) {
       try {
-        go('mod', 'init', packageName);
+        const defaultGoModContent = `module ${packageName}`;
+
+        await writeFile(join(entrypointDirname, 'go.mod'), defaultGoModContent);
       } catch (err) {
-        console.log(`failed to \`go mod init ${packageName}\``);
+        console.log(`failed to create default go.mod for ${packageName}`);
         throw err;
       }
     }
