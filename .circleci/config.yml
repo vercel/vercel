@@ -21,11 +21,11 @@ jobs:
           name: Bootstrapping
           command: yarn bootstrap
       - run:
-          name: Linting
-          command: yarn lint
-      - run:
           name: Building
           command: ./.circleci/build.sh
+      - run:
+          name: Linting
+          command: yarn lint
       - run:
           name: Tests
           command: yarn test

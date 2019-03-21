@@ -2,3 +2,6 @@
 /node_modules/*
 /**/node_modules/*
 /packages/now-go/go/*
+/packages/now-build-utils/dist/*
+/packages/now-node/dist/*
+/packages/now-node-bridge/*

@@ -1,13 +1,13 @@
-const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
-const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-line import/no-extraneous-dependencies
+const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
+const FileFsRef = require('@now/build-utils/file-fs-ref'); // eslint-disable-line import/no-extraneous-dependencies
 const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const {
   runNpmInstall,
   runPackageJsonScript,
-} = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
-const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
+} = require('@now/build-utils/fs/run-user-scripts'); // eslint-disable-line import/no-extraneous-dependencies
+const glob = require('@now/build-utils/fs/glob'); // eslint-disable-line import/no-extraneous-dependencies
 const {
   readFile,
   writeFile,
@@ -391,7 +391,10 @@ exports.prepareCache = async ({ cachePath, workPath, entrypoint }) => {
   const cacheEntrypoint = path.relative(cachePath, cacheEntryPath);
   return {
     ...(await glob(
-      path.join(cacheEntrypoint, 'node_modules/{**,!.*,.yarn*,.cache/next-minifier/**}'),
+      path.join(
+        cacheEntrypoint,
+        'node_modules/{**,!.*,.yarn*,.cache/next-minifier/**}',
+      ),
       cachePath,
     )),
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), cachePath)),
