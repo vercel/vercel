@@ -12,7 +12,10 @@ export default async function getCerts(
   client: Client,
   domain?: string
 ) {
-  const query = domain ? stringify({ domain }) : '';
+  const query = stringify({
+    ...domain ? { domain } : {},
+    limit: 20
+  });
   const { certs } = await client.fetch<Response>(`/v3/now/certs?${query}`);
   return certs;
 }
