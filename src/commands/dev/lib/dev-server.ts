@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import qs from 'querystring';
 import rawBody from 'raw-body';
+import { inspect } from 'util';
 import listen from 'async-listen';
 import httpProxy from 'http-proxy';
 import serveHandler from 'serve-handler';
@@ -298,10 +299,17 @@ export default class DevServer {
           body: body.toString('base64')
         };
 
-        const result = await asset.fn<InvokeResult>({
-          Action: 'Invoke',
-          body: JSON.stringify(payload)
-        });
+        let result: InvokeResult;
+        try {
+          result = await asset.fn<InvokeResult>({
+            Action: 'Invoke',
+            body: JSON.stringify(payload)
+          });
+        } catch (err) {
+          res.statusCode = 500;
+          res.end(inspect(err));
+          return;
+        }
 
         res.statusCode = result.statusCode;
         for (const [name, value] of Object.entries(result.headers)) {
