@@ -340,7 +340,8 @@ export default async function main(
     if (createArgs.target) {
       const allowedValues = [
         'staging',
-        'production'
+        'production',
+        'none'
       ];
 
       if (!allowedValues.includes(createArgs.target)) {
