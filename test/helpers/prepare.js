@@ -126,7 +126,7 @@ module.exports = async session => {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span'
     },
-    'builds-no-builds': {
+    'builds-no-list': {
       'now.json': `{
   "version": 2,
   "routes": [

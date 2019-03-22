@@ -848,7 +848,7 @@ test('try to create a builds deployments with wrong config', async t => {
 });
 
 test('create a builds deployments with no actual builds', async t => {
-  const directory = fixture('builds-no-builds');
+  const directory = fixture('builds-no-list');
 
   const { stdout, code } = await execa(
     binaryPath,
