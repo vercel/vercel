@@ -1,6 +1,6 @@
 {
   "name": "@now/node-server",
-  "version": "0.5.2-canary.2",
+  "version": "0.5.2-canary.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
     "directory": "packages/now-node-server"
   },
   "dependencies": {
-    "@now/node-bridge": "^1.0.1-canary.0",
+    "@now/node-bridge": "^1.0.1-canary.1",
     "fs-extra": "7.0.1"
   },
   "scripts": {
