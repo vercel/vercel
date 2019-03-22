@@ -20,7 +20,12 @@ async function nowDeploy (bodies, randomness) {
     version: 2,
     public: true,
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
-    build: { env: { ...(nowJson.build || {}).env, RANDOMNESS_BUILD_ENV_VAR: randomness } },
+    build: {
+      env: {
+        ...(nowJson.build || {}).env,
+        RANDOMNESS_BUILD_ENV_VAR: randomness
+      }
+    },
     name: 'test',
     files,
     builds: nowJson.builds,
@@ -31,10 +36,7 @@ async function nowDeploy (bodies, randomness) {
   console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
-    await filePost(
-      bodies[filename],
-      digestOfFile(bodies[filename])
-    );
+    await filePost(bodies[filename], digestOfFile(bodies[filename]));
   }
 
   let deploymentId;
@@ -119,8 +121,7 @@ async function fetchWithAuth (url, opts = {}) {
 
       if (NOW_TOKEN) {
         token = NOW_TOKEN;
-      } else
-      if (NOW_TOKEN_FACTORY_URL) {
+      } else if (NOW_TOKEN_FACTORY_URL) {
         const resp = await fetch(NOW_TOKEN_FACTORY_URL);
         token = (await resp.json()).token;
       } else {
@@ -150,6 +151,8 @@ async function fetchApi (url, opts = {}) {
   if (!opts.headers.Accept) {
     opts.headers.Accept = 'application/json';
   }
+
+  opts.headers['x-now-trace-priority'] = '1';
 
   return await fetch(urlWithHost, opts);
 }
