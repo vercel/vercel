@@ -9,7 +9,7 @@ interface FsFiles {
   [filePath: string]: FileFsRef
 }
 
-export default function glob(pattern: string, opts: GlobOptions | string, mountpoint: string): Promise<FsFiles> {
+export default function glob(pattern: string, opts: GlobOptions | string, mountpoint?: string): Promise<FsFiles> {
   return new Promise<FsFiles>((resolve, reject) => {
     let options: GlobOptions;
     if (typeof opts === 'string') {

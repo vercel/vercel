@@ -1,38 +1,35 @@
 import { join, dirname } from 'path';
 import { remove, readFile } from 'fs-extra';
-import * as glob from '@now/build-utils/fs/glob.js';
-import * as download from '@now/build-utils/fs/download.js';
-import * as FileBlob from '@now/build-utils/file-blob.js';
-import * as FileFsRef from '@now/build-utils/file-fs-ref.js';
-import { createLambda } from '@now/build-utils/lambda.js';
 import {
+  glob,
+  download,
+  FileBlob,
+  FileFsRef,
+  Files,
+  createLambda,
   runNpmInstall,
-  runPackageJsonScript
-} from '@now/build-utils/fs/run-user-scripts.js';
+  runPackageJsonScript,
+  PrepareCacheOptions,
+  BuildOptions,
+} from '@now/build-utils';
 
 interface CompilerConfig {
   includeFiles?: string[]
 }
 
-/** @typedef { import('@now/build-utils/file-ref') } FileRef */
-/** @typedef {{[filePath: string]: FileRef}} Files */
+interface DownloadOptions {
+  files: Files,
+  entrypoint: string;
+  workPath: string;
+  npmArguments?: string[];
+}
 
-/**
- * @typedef {Object} BuildParamsType
- * @property {Files} files - Files object
- * @property {string} entrypoint - Entrypoint specified for the builder
- * @property {string} workPath - Working directory for this build
- */
-
-/**
- * @param {BuildParamsType} buildParams
- * @param {Object} [options]
- * @param {string[]} [options.npmArguments]
- */
-async function downloadInstallAndBundle(
-  { files, entrypoint, workPath },
-  { npmArguments = [] } = {}
-) {
+async function downloadInstallAndBundle({
+  files,
+  entrypoint,
+  workPath,
+  npmArguments = []
+}: DownloadOptions) {
   const userPath = join(workPath, 'user');
   const nccPath = join(workPath, 'ncc');
 
@@ -60,11 +57,12 @@ async function downloadInstallAndBundle(
 
   console.log('installing dependencies for ncc...');
   await runNpmInstall(nccPath, npmArguments);
-  return [downloadedFiles, nccPath, entrypointFsDirname];
+  const entrypointPath = downloadedFiles[entrypoint].fsPath;
+  return { entrypointPath, workNccPath: nccPath, entrypointFsDirname };
 }
 
-async function compile(workNccPath: string, downloadedFiles, entrypoint: string, config: CompilerConfig) {
-  const input = downloadedFiles[entrypoint].fsPath;
+async function compile(workNccPath: string, entrypointPath: string, entrypoint: string, config: CompilerConfig) {
+  const input = entrypointPath;
   const inputDir = dirname(input);
   const ncc = require(join(workNccPath, 'node_modules/@zeit/ncc'));
   const { code, assets } = await ncc(input);
@@ -104,25 +102,20 @@ export const config = {
   maxLambdaSize: '5mb'
 };
 
-/**
- * @param {BuildParamsType} buildParams
- * @returns {Promise<Files>}
- */
-export async function build({ files, entrypoint, workPath, config }) {
-  const [
-    downloadedFiles,
+export async function build({ files, entrypoint, workPath, config }: BuildOptions) {
+  const {
+    entrypointPath,
     workNccPath,
     entrypointFsDirname
-  ] = await downloadInstallAndBundle(
-    { files, entrypoint, workPath },
-    { npmArguments: ['--prefer-offline'] }
+ } = await downloadInstallAndBundle(
+    { files, entrypoint, workPath, npmArguments: ['--prefer-offline'] }
   );
 
   console.log('running user script...');
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
 
   console.log('compiling entrypoint with ncc...');
-  const preparedFiles = await compile(workNccPath, downloadedFiles, entrypoint, config);
+  const preparedFiles = await compile(workNccPath, entrypointPath, entrypoint, config);
   const launcherPath = join(__dirname, 'launcher.js');
   let launcherData = await readFile(launcherPath, 'utf8');
 
@@ -149,7 +142,7 @@ export async function build({ files, entrypoint, workPath, config }) {
   return { [entrypoint]: lambda };
 }
 
-export async function prepareCache({ files, entrypoint, workPath, cachePath }) {
+export async function prepareCache({ files, entrypoint, workPath, cachePath }: PrepareCacheOptions) {
   await remove(workPath);
   await downloadInstallAndBundle({ files, entrypoint, workPath: cachePath });
 
