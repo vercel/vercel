@@ -70,7 +70,7 @@ export function getAuthConfigFilePath() {
 }
 
 export function readLocalConfig(prefix: string = process.cwd()) {
-  let target;
+  let target: string = '';
 
   try {
     target = getLocalPathConfig(prefix || process.cwd());
@@ -81,6 +81,10 @@ export function readLocalConfig(prefix: string = process.cwd()) {
     } else {
       throw err;
     }
+  }
+
+  if (!target) {
+    return null;
   }
 
   let localConfigExists;
