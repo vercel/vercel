@@ -33,7 +33,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  InvalidDomain
+  InvalidDomain,
+  DeploymentNotFound
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 
@@ -67,6 +68,7 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 const prepareAlias = input => `https://${input}`;
+const isAliasReady = ({ aliasFinal }) => aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length > 0;
 
 const printDeploymentStatus = async (
   output,
@@ -77,7 +79,7 @@ const printDeploymentStatus = async (
   builds
 ) => {
   if (readyState === 'READY') {
-    if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
+    if (isAliasReady({ aliasFinal })) {
       if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
@@ -371,7 +373,8 @@ export default async function main(
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
-      firstDeployCall instanceof InvalidDomain
+      firstDeployCall instanceof InvalidDomain ||
+      firstDeployCall instanceof DeploymentNotFound
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -446,7 +449,8 @@ export default async function main(
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
           secondDeployCall instanceof TooManyCertificates ||
-          secondDeployCall instanceof TooManyRequests
+          secondDeployCall instanceof TooManyRequests ||
+          secondDeployCall instanceof DeploymentNotFound
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -514,39 +518,42 @@ export default async function main(
     if (!buildsCompleted) {
       const { builds: freshBuilds } = await now.fetch(buildsUrl);
 
-      for (const build of freshBuilds) {
-        const id = build.id;
-        const done = isDone(build);
+      // If there are no builds, we need to exit.
+      if (freshBuilds.length === 0) {
+        buildsCompleted = true;
+      } else {
+        for (const build of freshBuilds) {
+          const id = build.id;
+          const done = isDone(build);
 
-        if (times[id]) {
-          if (done && typeof times[id] === 'function') {
-            times[id] = times[id]();
+          if (times[id]) {
+            if (done && typeof times[id] === 'function') {
+              times[id] = times[id]();
+            }
+          } else {
+            times[id] = done ? allBuildsTime() : stamp();
+          }
+        }
+
+        if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
+          builds = freshBuilds;
+
+          debug(`Re-rendering builds, because their state changed.`);
+
+          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
+          buildsCompleted = builds.every(isDone);
+
+          if (builds.some(isFailed)) {
+            break;
           }
         } else {
-          times[id] = done ? allBuildsTime() : stamp();
+          debug(`Not re-rendering, as the build states did not change.`);
         }
       }
-
-      if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
-        builds = freshBuilds;
-
-        debug(`Re-rendering builds, because their state changed.`);
-
-        linesPrinted = renderBuilds(print, builds, times, linesPrinted);
-        buildsCompleted = builds.every(isDone);
-
-        if (builds.some(isFailed)) {
-          break;
-        }
-      } else {
-        debug(`Not re-rendering, as the build states did not change.`);
-      }
-    }
-
-    if (buildsCompleted) {
+    } else {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if (isDone(deploymentResponse)) {
+      if ((isReady(deploymentResponse) && isAliasReady(deploymentResponse)) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {
@@ -719,6 +726,10 @@ function handleCreateDeployError(output, error) {
         chalk.underline(error.meta.domain)
       } is not verified yet. Please verify it.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
     return 1;
   }
 

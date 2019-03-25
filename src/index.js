@@ -466,7 +466,7 @@ const main = async argv_ => {
     }
   }
 
-  const scope = localConfig.scope || argv['--scope'] || argv['--team'];
+  const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
   const targetCommand = commands[subcommand];
 
   if (argv['--team']) {

@@ -847,6 +847,25 @@ test('try to create a builds deployments with wrong config', async t => {
   );
 });
 
+test('create a builds deployments with no actual builds', async t => {
+  const directory = fixture('builds-no-list');
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+});
+
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 

@@ -29,3 +29,15 @@ export class InvalidRegionOrDCForScale extends NowError {
     });
   }
 }
+
+export class InvalidLocalConfig extends NowError {
+  constructor(value) {
+    super({
+      code: 'INVALID_LOCAL_CONFIG',
+      meta: { value },
+      message: `Invalid local config parameter [${
+        value.map(localConfig => `"${localConfig}"`).join(', ')
+      }]. A string was expected.`
+    })
+  }
+}
