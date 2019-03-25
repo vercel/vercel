@@ -154,7 +154,8 @@ export default class DevServer {
   }
 
   shouldRebuild(req: http.IncomingMessage): boolean {
-    return req.headers.pragma === 'no-cache';
+    return req.headers.pragma === 'no-cache' ||
+      req.headers['cache-control'] === 'no-cache';
   }
 
   /**
