@@ -1,15 +1,92 @@
 import chalk from 'chalk';
 import title from 'title';
 import bytes from 'bytes';
+import { parse as parsePath } from 'path';
 import { isReady, isFailed } from '../build-state';
-
-const prepareState = state => title(state.replace('_', ' '));
 
 // That's how long the word "Initializing" is
 const longestState = 12;
 
 // That's the spacing between the source, state and time
 const padding = 8;
+
+// That's the max numbers of builds and outputs that will be displayed
+const MAX_BUILD_GROUPS = 5;
+// TODO - const MAX_OUTPUTS_PER_GROUP = 5;
+
+const prepareState = state => title(state.replace('_', ' '));
+
+// Check if two paths can be groupd together
+const canGroup = (path1, path2, level) => {
+  const group1 = parsePath(path1).dir.split("/");
+  const group2 = parsePath(path2).dir.split("/");
+
+  const shortGroup = group1.length > group2.length ? group2 : group1;
+  const longGroup = group1.length > group2.length ? group1 : group2;
+
+  // If the length differs on level 0 they should not be grouped
+  if (level === 0 && shortGroup.length !== longGroup.length) {
+    return false;
+  }
+
+  // Remove the "level" from the shorter path
+  const longPath = longGroup.join("/");
+  const shortPath = shortGroup.slice(0, level ? -level : undefined).join("/");
+
+  // Since /^/ will just match everything we need to
+  // make this one manually
+  if (shortPath === "" && longPath !== "") {
+    return false;
+  }
+
+  return new RegExp(`^${shortPath}`).test(longPath);
+};
+
+// Group two builds together
+const groupPaths = (groups, level = 0) => {
+  let nextGroups = [];
+  let hasChange = false;
+
+  for (let i = 0; i < groups.length; i++) {
+    if (!groups[i + 1]) {
+      nextGroups.push(groups[i]);
+      continue;
+    }
+
+    const prev = groups[i][0].entrypoint;
+    const next = groups[i + 1][0].entrypoint;
+
+    if (canGroup(prev, next, level)) {
+      hasChange = true;
+      nextGroups.push(groups[i].concat(groups[i + 1]));
+      nextGroups = nextGroups.concat(groups.slice(i + 2));
+      break;
+    } else {
+      nextGroups.push(groups[i]);
+    }
+  }
+
+  // Sort the groups, otherwise there might be
+  // some groups with different paths which
+  // would actually better fit into the "next" group
+  nextGroups = nextGroups.sort((a, b) => {
+    if (a[0].path > b[0].path) {
+      return -1;
+    }
+
+    if (b[0].path > a[0].path) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  if (hasChange === false) {
+    return groupPaths(nextGroups, level + 1);
+  }
+
+  return nextGroups;
+};
 
 const styleBuild = (build, times, longestSource) => {
   const { entrypoint, readyState, id, hasOutput } = build;
@@ -63,6 +140,33 @@ const styleOutput = (output) => {
 };
 
 export default (builds, times) => {
+  // Sort the builds by path
+  // so that the grouping will be easier
+  let path = builds
+    .sort((a, b) => {
+      if (a.entrypoint > b.entrypoint) {
+        return 1;
+      }
+
+      if (b.entrypoint > a.entrypoint) {
+        return -1;
+      }
+
+      return 0;
+    })
+    .map(build => [build]);
+
+  // Group builds together
+  while (path.length > MAX_BUILD_GROUPS) {
+    path = groupPaths(path);
+  }
+
+  // Reverse the paths so that the larger chunks come last
+  // including the / directory
+  path = path.reverse();
+
+  // TODO - use `path` to create the output
+
   const buildsAndOutput = [];
 
   for (const build of builds) {
