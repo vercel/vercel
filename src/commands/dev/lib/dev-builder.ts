@@ -135,14 +135,15 @@ async function executeBuilds(
   nowJson: NowConfig,
   devServer: DevServer
 ): Promise<void> {
-  const { cwd } = devServer;
-  const files = await collectProjectFiles('**', cwd);
-
   if (!nowJson.builds) {
     return;
   }
 
-  const cacheDir = await cacheDirPromise;
+  const { cwd } = devServer;
+  const [files, cacheDir] = await Promise.all([
+    collectProjectFiles('**', cwd),
+    cacheDirPromise
+  ]);
 
   for (const build of nowJson.builds) {
     try {
