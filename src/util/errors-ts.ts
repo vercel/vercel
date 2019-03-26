@@ -518,6 +518,19 @@ export class DeploymentNotFound extends NowError<
   }
 }
 
+export class DeploymentFailedAliasImpossible extends NowError<
+  'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
+      meta: {},
+      message: `The deployment build has failed and cannot be aliased`
+    });
+  }
+}
+
 /**
  * Returned when the user tries to fetch explicitly a deployment but she
  * has no permissions under the given context.

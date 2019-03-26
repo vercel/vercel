@@ -228,7 +228,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   const { authConfig: { token }, config } = ctx;
 
   try {
-    return sync({
+    return await sync({
       contextName,
       output,
       token,
@@ -847,7 +847,7 @@ async function sync({
 
         wantsPublic = true;
 
-        sync({
+        return sync({
           contextName,
           output,
           token,
@@ -857,8 +857,6 @@ async function sync({
           firstRun: false,
           deploymentType
         });
-
-        return;
       }
 
       debug(`Error: ${err}\n${err.stack}`);
