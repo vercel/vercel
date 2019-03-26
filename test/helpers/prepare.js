@@ -126,6 +126,20 @@ module.exports = async session => {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span'
     },
+    'builds-no-list': {
+      'now.json': `{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "status": 301,
+      "headers": {
+        "Location": "https://google.com"
+      }
+    }
+  ]
+}`,
+    },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
       Dockerfile: `
