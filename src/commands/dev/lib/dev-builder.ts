@@ -10,6 +10,7 @@ import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
+import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
 import {
   NowConfig,
@@ -88,13 +89,7 @@ export async function executeBuild(
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
-        throw new Error(
-          `The lambda function size (${bytes(
-            size
-          ).toLowerCase()}) exceeds the configured limit (${bytes(
-            maxLambdaBytes
-          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``
-        );
+        throw new LambdaSizeExceededError(size, maxLambdaBytes);
       }
     }
 
@@ -195,13 +190,7 @@ async function executeBuilds(
           if (asset.type === 'Lambda') {
             const size = asset.zipBuffer.length;
             if (size > maxLambdaBytes) {
-              throw new Error(
-                `The lambda function size (${bytes(
-                  size
-                ).toLowerCase()}) exceeds the configured limit (${bytes(
-                  maxLambdaBytes
-                ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``
-              );
+              throw new LambdaSizeExceededError(size, maxLambdaBytes);
             }
           }
 

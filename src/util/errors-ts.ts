@@ -1,3 +1,4 @@
+import bytes from 'bytes';
 import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
@@ -980,6 +981,23 @@ export class BuilderCacheCleanError extends NowError<
       code: 'BUILDER_CACHE_CLEAN_FAILED',
       message: `Error cleaning builder cache: ${message}`,
       meta: { path }
+    });
+  }
+}
+
+export class LambdaSizeExceededError extends NowError<
+  'MAX_LAMBDA_SIZE_EXCEEDED',
+  { size: number, maxLambdaSize: number }
+> {
+  constructor(size: number, maxLambdaSize: number) {
+    super({
+      code: 'MAX_LAMBDA_SIZE_EXCEEDED',
+      message: `The lambda function size (${bytes(
+            size
+          ).toLowerCase()}) exceeds the configured limit (${bytes(
+            maxLambdaSize
+          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+      meta: { size, maxLambdaSize }
     });
   }
 }
