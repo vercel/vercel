@@ -1,3 +1,4 @@
+import bytes from 'bytes';
 import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
@@ -522,7 +523,7 @@ export class DeploymentNotFound extends NowError<
   'DEPLOYMENT_NOT_FOUND',
   { id: string; context: string }
 > {
-  constructor({ context, id = '' }: { context: string, id: string }) {
+  constructor({ context, id = '' }: { context: string; id: string }) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
@@ -561,7 +562,10 @@ export class DeploymentPermissionDenied extends NowError<
   }
 }
 
-export class DeploymentTypeUnsupported extends NowError<'DEPLOYMENT_TYPE_UNSUPPORTED', {}> {
+export class DeploymentTypeUnsupported extends NowError<
+  'DEPLOYMENT_TYPE_UNSUPPORTED',
+  {}
+> {
   constructor() {
     super({
       code: 'DEPLOYMENT_TYPE_UNSUPPORTED',
@@ -977,6 +981,49 @@ export class InvalidMoveToken extends NowError<
       code: 'INVALID_MOVE_TOKEN',
       message: `Invalid move token "${token}"`,
       meta: { token }
+    });
+  }
+}
+
+export class NoBuilderCacheError extends NowError<
+  'NO_BUILDER_CACHE',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'NO_BUILDER_CACHE',
+      message: 'Could not find cache directory for now-builders.',
+      meta: {}
+    });
+  }
+}
+
+export class BuilderCacheCleanError extends NowError<
+  'BUILDER_CACHE_CLEAN_FAILED',
+  { path: string }
+> {
+  constructor(path: string, message: string) {
+    super({
+      code: 'BUILDER_CACHE_CLEAN_FAILED',
+      message: `Error cleaning builder cache: ${message}`,
+      meta: { path }
+    });
+  }
+}
+
+export class LambdaSizeExceededError extends NowError<
+  'MAX_LAMBDA_SIZE_EXCEEDED',
+  { size: number, maxLambdaSize: number }
+> {
+  constructor(size: number, maxLambdaSize: number) {
+    super({
+      code: 'MAX_LAMBDA_SIZE_EXCEEDED',
+      message: `The lambda function size (${bytes(
+            size
+          ).toLowerCase()}) exceeds the configured limit (${bytes(
+            maxLambdaSize
+          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+      meta: { size, maxLambdaSize }
     });
   }
 }
