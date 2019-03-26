@@ -565,7 +565,10 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
-  if (error instanceof ERRORS.DomainPermissionDenied) {
+  if (
+    error instanceof ERRORS.DomainPermissionDenied ||
+    error instanceof ERRORS.DeploymentFailedAliasImpossible
+  ) {
     output.error(error.message);
     return 1;
   }
