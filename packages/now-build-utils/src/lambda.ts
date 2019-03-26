@@ -23,7 +23,7 @@ interface CreateLambdaOptions {
 }
 
 export class Lambda {
-  public type: string;
+  public type: 'Lambda';
   public zipBuffer: Buffer;
   public handler: string;
   public runtime: string;

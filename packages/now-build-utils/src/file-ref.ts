@@ -22,7 +22,7 @@ class BailableError extends Error {
 }
 
 export default class FileRef implements File {
-  public type: string;
+  public type: 'FileRef';
   public mode: number;
   public digest: string;
 

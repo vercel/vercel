@@ -23,7 +23,7 @@ interface FromStreamOptions {
 }
 
 class FileFsRef implements File {
-  public type: string;
+  public type: 'FileFsRef';
   public mode: number;
   public fsPath: string;
 
