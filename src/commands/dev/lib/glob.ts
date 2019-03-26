@@ -8,8 +8,8 @@ import { inherits } from 'util';
 import * as minimatch from 'minimatch';
 import { Glob, IOptions } from 'glob';
 import { Ignore } from '@zeit/dockerignore';
+import { FileFsRef } from '@now/build-utils';
 import { isAbsolute, join, relative } from 'path';
-import FileFsRef from '@now/build-utils/file-fs-ref';
 import { BuilderInputs } from './types';
 
 export interface GlobIgnoreOptions extends minimatch.IOptions {

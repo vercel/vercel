@@ -1,8 +1,6 @@
 import http from 'http';
-import { Lambda } from '@zeit/fun';
-import { LambdaRuntime } from '@now/build-utils';
-import FileBlob from '@now/build-utils/file-blob';
-import FileFsRef from '@now/build-utils/file-fs-ref';
+import { Lambda as FunLambda } from '@zeit/fun';
+import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 
 export enum DevServerStatus {
   busy,
@@ -91,15 +89,10 @@ export interface Builder {
   prepareCache?(params: PrepareCacheParams): BuilderOutputs;
 }
 
-export interface BuiltLambda {
-  type: 'Lambda';
-  fn?: Lambda;
+export interface BuiltLambda extends Lambda {
+  fn?: FunLambda;
   buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
-  zipBuffer: Buffer;
-  handler: string;
-  runtime: LambdaRuntime;
-  environment: EnvConfig;
 }
 
 export interface HttpHeadersConfig {

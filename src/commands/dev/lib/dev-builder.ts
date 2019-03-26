@@ -1,10 +1,10 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
+import { FileFsRef } from '@now/build-utils';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
-import { readFile, stat, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import FileFsRef from '@now/build-utils/file-fs-ref';
+import { readFile, stat, mkdirp } from 'fs-extra';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
