@@ -48,7 +48,6 @@ export async function executeBuild(
   devServer: DevServer,
   asset: BuilderOutput
 ): Promise<void> {
-  //console.error('rebuilding', { asset });
   const { buildConfig, buildEntry } = asset;
   if (!buildConfig || !buildEntry) {
     throw new Error("Asset has not been built yet, can't rebuild");
