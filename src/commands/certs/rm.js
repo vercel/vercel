@@ -43,12 +43,12 @@ async function rm(ctx, opts, args, output) {
     return 1;
   }
 
-  const idOrCn = args[0];
-  const certs = await getCertsToDelete(output, now, idOrCn);
+  const id = args[0];
+  const certs = await getCertsToDelete(output, now, id);
 
   if (certs.length === 0) {
     output.error(
-      `No certificates found by id or cn "${idOrCn}" under ${chalk.bold(
+      `No certificates found by id "${id}" under ${chalk.bold(
         contextName
       )}`
     );
@@ -76,9 +76,9 @@ async function rm(ctx, opts, args, output) {
   return 0;
 }
 
-async function getCertsToDelete(output, now, idOrCn) {
-  const cert = await getCertById(output, now, idOrCn);
-  return !cert ? getCerts(output, now, [idOrCn]) : [cert];
+async function getCertsToDelete(output, now, id) {
+  const cert = await getCertById(output, now, id);
+  return !cert ? getCerts(output, now, id) : [cert];
 }
 
 function readConfirmation(output, msg, certs) {
