@@ -7,7 +7,9 @@ export IMPORT_CACHE="$LAMBDA_TASK_ROOT/.import-cache"
 export PATH="$IMPORT_CACHE/bin:$PATH"
 
 # Load `import` and runtime
+# shellcheck disable=SC1090
 . "$(which import)"
+# shellcheck disable=SC1090
 . "$IMPORT_CACHE/runtime.sh"
 
 # Load user code and process events in a loop forever
