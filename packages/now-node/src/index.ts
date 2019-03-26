@@ -47,7 +47,7 @@ async function downloadInstallAndBundle({
         data: JSON.stringify({
           license: 'UNLICENSED',
           dependencies: {
-            '@zeit/ncc': '0.16.1',
+            '@zeit/ncc': '0.17.0',
           }
         })
       })
