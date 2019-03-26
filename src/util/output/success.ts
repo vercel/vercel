@@ -1,5 +1,5 @@
 import chalk from 'chalk';
 
-const success = (msg:string) => `${chalk.cyan('> Success!')} ${msg}`;
-
-export default success;
+export default function success (msg: string): string {
+  return `${chalk.cyan('> Success!')} ${msg}`;
+}

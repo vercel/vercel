@@ -16,7 +16,7 @@ const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json');
 export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
 
 // writes whatever's in `stuff` to `CONFIG_FILE_PATH`, atomically
-export const writeToConfigFile = stuff => {
+export const writeToConfigFile = (stuff: object) => {
   try {
     return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err) {
@@ -48,7 +48,7 @@ export const writeToConfigFile = stuff => {
 export const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
 
 // writes whatever's in `stuff` to `AUTH_CONFIG_FILE_PATH`, atomically
-export const writeToAuthConfigFile = stuff => {
+export const writeToAuthConfigFile = (stuff: object) => {
   try {
     return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
       indent: 2,
@@ -87,8 +87,8 @@ export function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-export function readLocalConfig(prefix) {
-  let target;
+export function readLocalConfig(prefix: string = process.cwd()) {
+  let target: string = '';
 
   try {
     target = getLocalPathConfig(prefix || process.cwd());
@@ -99,6 +99,10 @@ export function readLocalConfig(prefix) {
     } else {
       throw err;
     }
+  }
+
+  if (!target) {
+    return null;
   }
 
   let localConfigExists;
