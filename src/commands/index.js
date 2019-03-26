@@ -2,6 +2,7 @@ export default {
   deploy: 'deploy',
   help: 'help',
   init: 'init',
+  dev: 'dev',
   list: 'list',
   remove: 'remove',
   alias: 'alias',
