@@ -79,6 +79,9 @@ async function performCreateAlias(
     if (error.code === 'deployment_not_found') {
       return new ERRORS.DeploymentNotFound({ context: contextName, id: deployment.uid });
     }
+    if (error.code === 'gone') {
+      return new ERRORS.DeploymentFailedAliasImpossible();
+    }
     if (error.code === 'invalid_alias') {
       return new ERRORS.InvalidAlias(alias);
     }
