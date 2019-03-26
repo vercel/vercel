@@ -3,7 +3,9 @@ const next = require('next-server');
 const url = require('url');
 const { Bridge } = require('./now__bridge');
 
-process.env.NODE_ENV = 'production';
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+}
 
 const app = next({});
 
