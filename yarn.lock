@@ -271,6 +271,11 @@
   resolved "https://registry.yarnpkg.com/@types/async-retry/-/async-retry-1.2.1.tgz#fa9ac165907a8ee78f4924f4e393b656c65b5bb4"
   integrity sha512-yMQ6CVgICWtyFNBqJT3zqOc+TnqqEPLo4nKJNPFwcialiylil38Ie6q1ENeFTjvaLOkVim9K5LisHgAKJWidGQ==
 
+"@types/bytes@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/bytes/-/bytes-3.0.0.tgz#549eeacd0a8fecfaa459334583a4edcee738e6db"
+  integrity sha512-ZF43+CIIlzngQe8/Zo7L1kpY9W8O6rO006VDz3c5iM21ddtXWxCEyOXyft+q4pVF2tGqvrVuVrEDH1+gJEi1fQ==
+
 "@types/debug@0.0.31":
   version "0.0.31"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-0.0.31.tgz#bac8d8aab6a823e91deb7f79083b2a35fa638f33"
