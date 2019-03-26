@@ -7,6 +7,9 @@
     "url": "https://github.com/zeit/now-builders.git",
     "directory": "packages/now-rust"
   },
+  "scripts": {
+    "test": "jest"
+  },
   "files": [
     "index.js",
     "install-rust.js",

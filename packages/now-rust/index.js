@@ -15,8 +15,10 @@ exports.config = {
 };
 
 const codegenFlags = [
-  '-C', 'target-cpu=ivybridge',
-  '-C', 'target-feature=-aes,-avx,+fxsr,-popcnt,+sse,+sse2,-sse3,-sse4.1,-sse4.2,-ssse3,-xsave,-xsaveopt',
+  '-C',
+  'target-cpu=ivybridge',
+  '-C',
+  'target-feature=-aes,-avx,+fxsr,-popcnt,+sse,+sse2,-sse3,-sse4.1,-sse4.2,-ssse3,-xsave,-xsaveopt',
 ];
 
 async function inferCargoBinaries(config) {
@@ -45,6 +47,7 @@ async function parseTOMLStream(stream) {
 async function buildWholeProject({
   entrypoint,
   downloadedFiles,
+  extraFiles,
   rustEnv,
   config,
 }) {
@@ -52,11 +55,15 @@ async function buildWholeProject({
   const { debug } = config;
   console.log('running `cargo build`...');
   try {
-    await execa('cargo', ['build', '--verbose'].concat(debug ? [] : ['--release']), {
-      env: rustEnv,
-      cwd: entrypointDirname,
-      stdio: 'inherit',
-    });
+    await execa(
+      'cargo',
+      ['build', '--verbose'].concat(debug ? [] : ['--release']),
+      {
+        env: rustEnv,
+        cwd: entrypointDirname,
+        stdio: 'inherit',
+      },
+    );
   } catch (err) {
     console.error('failed to `cargo build`');
     throw err;
@@ -79,6 +86,7 @@ async function buildWholeProject({
       const fsPath = path.join(targetPath, binary);
       const lambda = await createLambda({
         files: {
+          ...extraFiles,
           bootstrap: new FileFsRef({ mode: 0o755, fsPath }),
         },
         handler: 'bootstrap',
@@ -90,6 +98,16 @@ async function buildWholeProject({
   );
 
   return lambdas;
+}
+
+function gatherExtraFiles(globMatcher, entrypoint) {
+  if (!globMatcher) return {};
+
+  console.log('gathering extra files for the fs...');
+
+  const entryDir = path.dirname(entrypoint);
+
+  return glob(globMatcher, entryDir);
 }
 
 async function runUserScripts(entrypoint) {
@@ -128,6 +146,7 @@ async function buildSingleFile({
   workPath,
   entrypoint,
   downloadedFiles,
+  extraFiles,
   rustEnv,
   config,
 }) {
@@ -189,7 +208,9 @@ async function buildSingleFile({
   try {
     await execa(
       'cargo',
-      ['build', '--bin', binName, '--verbose'].concat(debug ? [] : ['--release']),
+      ['build', '--bin', binName, '--verbose'].concat(
+        debug ? [] : ['--release'],
+      ),
       {
         env: rustEnv,
         cwd: entrypointDirname,
@@ -210,6 +231,7 @@ async function buildSingleFile({
 
   const lambda = await createLambda({
     files: {
+      ...extraFiles,
       bootstrap: new FileFsRef({ mode: 0o755, fsPath: bin }),
     },
     handler: 'bootstrap',
@@ -222,21 +244,27 @@ async function buildSingleFile({
 }
 
 exports.build = async (m) => {
-  const { files, entrypoint, workPath } = m;
+  const {
+    files, entrypoint, workPath, config,
+  } = m;
   console.log('downloading files');
   const downloadedFiles = await download(files, workPath);
+  const entryPath = downloadedFiles[entrypoint].fsPath;
 
   await installRust();
   const { PATH, HOME } = process.env;
   const rustEnv = {
     ...process.env,
     PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
-    RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags].filter(Boolean).join(' '),
+    RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags]
+      .filter(Boolean)
+      .join(' '),
   };
 
-  await runUserScripts(downloadedFiles[entrypoint].fsPath);
+  await runUserScripts(entryPath);
+  const extraFiles = await gatherExtraFiles(config.includeFiles, entryPath);
 
-  const newM = Object.assign(m, { downloadedFiles, rustEnv });
+  const newM = Object.assign(m, { downloadedFiles, extraFiles, rustEnv });
   if (path.extname(entrypoint) === '.toml') {
     return buildWholeProject(newM);
   }
@@ -254,7 +282,9 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
     const rustEnv = {
       ...process.env,
       PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
-      RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags].filter(Boolean).join(' '),
+      RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags]
+        .filter(Boolean)
+        .join(' '),
     };
     const entrypointDirname = path.dirname(path.join(workPath, entrypoint));
     const cargoTomlFile = await cargoLocateProject({
@@ -289,12 +319,12 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const f of Object.keys(cacheFiles)) {
-    const accept = (/(?:^|\/)target\/release\/\.fingerprint\//.test(f))
-      || (/(?:^|\/)target\/release\/build\//.test(f))
-      || (/(?:^|\/)target\/release\/deps\//.test(f))
-      || (/(?:^|\/)target\/debug\/\.fingerprint\//.test(f))
-      || (/(?:^|\/)target\/debug\/build\//.test(f))
-      || (/(?:^|\/)target\/debug\/deps\//.test(f));
+    const accept = /(?:^|\/)target\/release\/\.fingerprint\//.test(f)
+      || /(?:^|\/)target\/release\/build\//.test(f)
+      || /(?:^|\/)target\/release\/deps\//.test(f)
+      || /(?:^|\/)target\/debug\/\.fingerprint\//.test(f)
+      || /(?:^|\/)target\/debug\/build\//.test(f)
+      || /(?:^|\/)target\/debug\/deps\//.test(f);
     if (!accept) {
       delete cacheFiles[f];
     }
@@ -320,17 +350,23 @@ function findCargoToml(files, entrypoint) {
 }
 
 /*
-console.log(findCargoToml({
-  'rust/src/main.rs': true,
-  'rust/Cargo.toml': true,
-  'Cargo.toml': true
-}, 'rust/src/main.rs'));
+console.log(findCargoToml(
+  {
+    'rust/src/main.rs': true,
+    'rust/Cargo.toml': true,
+    'Cargo.toml': true,
+  },
+  'rust/src/main.rs',
+));
 */
 
 exports.getDefaultCache = ({ files, entrypoint }) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);
   if (!cargoTomlPath) return undefined;
   const targetFolderDir = path.dirname(cargoTomlPath);
-  const defaultCacheRef = new FileRef({ digest: 'sha:204e0c840c43473bbd130d7bc704fe5588b4eab43cda9bc940f10b2a0ae14b16' });
+  const defaultCacheRef = new FileRef({
+    digest:
+      'sha:204e0c840c43473bbd130d7bc704fe5588b4eab43cda9bc940f10b2a0ae14b16',
+  });
   return { [targetFolderDir]: defaultCacheRef };
 };

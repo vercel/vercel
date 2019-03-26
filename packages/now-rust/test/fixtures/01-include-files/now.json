@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "Cargo.toml",
+      "use": "@now/rust",
+      "config": {
+        "includeFiles": "static/**"
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Include me in the lambda fs!"
+    }
+  ]
+}
