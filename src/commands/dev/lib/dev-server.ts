@@ -154,8 +154,10 @@ export default class DevServer {
   }
 
   shouldRebuild(req: http.IncomingMessage): boolean {
-    return req.headers.pragma === 'no-cache' ||
-      req.headers['cache-control'] === 'no-cache';
+    return (
+      req.headers.pragma === 'no-cache' ||
+      req.headers['cache-control'] === 'no-cache'
+    );
   }
 
   /**
@@ -326,7 +328,9 @@ export default class DevServer {
       default:
         res.statusCode = 500;
         // This shouldn't really ever happen...
-        return res.end(`Don't know how to handle asset type: ${(asset as any).type}`);
+        return res.end(
+          `Don't know how to handle asset type: ${(asset as any).type}`
+        );
     }
   };
 }
@@ -366,7 +370,7 @@ function serveStaticFile(
 function resolveDest(
   assets: BuilderOutputs,
   dest: string
-): { asset: BuilderOutput | null, assetKey: string | undefined } {
+): { asset: BuilderOutput | null; assetKey: string | undefined } {
   let assetKey = dest.replace(/^\//, '');
   let asset: BuilderOutput | undefined = assets[assetKey];
 

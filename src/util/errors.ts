@@ -5,10 +5,18 @@ interface SchemaValidationFailedMeta {
   keyword: string;
   dataPath: string;
   params: object;
-};
+}
 
-export class SchemaValidationFailed extends NowError<'SCHEMA_VALIDATION_FAILED', SchemaValidationFailedMeta> {
-  constructor(message: string, keyword: string, dataPath: string, params: object) {
+export class SchemaValidationFailed extends NowError<
+  'SCHEMA_VALIDATION_FAILED',
+  SchemaValidationFailedMeta
+> {
+  constructor(
+    message: string,
+    keyword: string,
+    dataPath: string,
+    params: object
+  ) {
     super({
       code: 'SCHEMA_VALIDATION_FAILED',
       meta: { message, keyword, dataPath, params },
@@ -17,10 +25,12 @@ export class SchemaValidationFailed extends NowError<'SCHEMA_VALIDATION_FAILED',
   }
 }
 
-interface InvalidAllForScaleMeta {
-};
+interface InvalidAllForScaleMeta {}
 
-export class InvalidAllForScale extends NowError<'INVALID_ALL_FOR_SCALE', InvalidAllForScaleMeta> {
+export class InvalidAllForScale extends NowError<
+  'INVALID_ALL_FOR_SCALE',
+  InvalidAllForScaleMeta
+> {
   constructor() {
     super({
       code: 'INVALID_ALL_FOR_SCALE',
@@ -32,9 +42,12 @@ export class InvalidAllForScale extends NowError<'INVALID_ALL_FOR_SCALE', Invali
 
 interface InvalidRegionOrDCForScaleMeta {
   regionOrDC: string;
-};
+}
 
-export class InvalidRegionOrDCForScale extends NowError<'INVALID_REGION_OR_DC_FOR_SCALE', InvalidRegionOrDCForScaleMeta> {
+export class InvalidRegionOrDCForScale extends NowError<
+  'INVALID_REGION_OR_DC_FOR_SCALE',
+  InvalidRegionOrDCForScaleMeta
+> {
   constructor(regionOrDC: string) {
     super({
       code: 'INVALID_REGION_OR_DC_FOR_SCALE',
@@ -46,16 +59,19 @@ export class InvalidRegionOrDCForScale extends NowError<'INVALID_REGION_OR_DC_FO
 
 interface InvalidLocalConfigMeta {
   value: string[];
-};
+}
 
-export class InvalidLocalConfig extends NowError<'INVALID_LOCAL_CONFIG', InvalidLocalConfigMeta> {
+export class InvalidLocalConfig extends NowError<
+  'INVALID_LOCAL_CONFIG',
+  InvalidLocalConfigMeta
+> {
   constructor(value: string[]) {
     super({
       code: 'INVALID_LOCAL_CONFIG',
       meta: { value },
-      message: `Invalid local config parameter [${
-        value.map(localConfig => `"${localConfig}"`).join(', ')
-      }]. A string was expected.`
-    })
+      message: `Invalid local config parameter [${value
+        .map(localConfig => `"${localConfig}"`)
+        .join(', ')}]. A string was expected.`
+    });
   }
 }
