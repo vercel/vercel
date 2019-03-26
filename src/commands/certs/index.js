@@ -59,7 +59,7 @@ const help = () => {
 
   ${chalk.gray('–')} Remove a certificate
 
-      ${chalk.cyan('$ now certs rm acme.com')}
+      ${chalk.cyan('$ now certs rm id')}
   `);
 };
 
