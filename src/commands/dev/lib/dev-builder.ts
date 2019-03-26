@@ -10,7 +10,6 @@ import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
-import { NowError } from '../../../util/now-error';
 import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
 import {
   NowConfig,
@@ -104,9 +103,9 @@ export async function executeBuild(
   }
 
   await Promise.all(
-    Object.entries(output).map(async e => {
-      const path: string = e[0];
-      const asset: BuilderOutput = e[1];
+    Object.entries(output).map(async entry => {
+      const path: string = entry[0];
+      const asset: BuilderOutput = entry[1];
       if (asset.type !== 'Lambda') return;
 
       // Tear down the previous `fun` Lambda instance for this asset
@@ -214,13 +213,6 @@ async function executeBuilds(
       }
     } catch (err) {
       throw err;
-      /*
-      throw new NowError({
-        code: 'NOW_BUILDER_FAILURE',
-        message: `Failed building ${chalk.bold(build.src)} with ${build.use}`,
-        meta: err.stack
-      });
-      */
     }
   }
 

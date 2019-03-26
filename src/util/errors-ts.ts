@@ -957,3 +957,29 @@ export class InvalidMoveToken extends NowError<
     });
   }
 }
+
+export class NoBuilderCacheError extends NowError<
+  'NO_BUILDER_CACHE',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'NO_BUILDER_CACHE',
+      message: 'Could not find cache directory for now-builders.',
+      meta: {}
+    });
+  }
+}
+
+export class BuilderCacheCleanError extends NowError<
+  'BUILDER_CACHE_CLEAN_FAILED',
+  { path: string }
+> {
+  constructor(path: string, message: string) {
+    super({
+      code: 'BUILDER_CACHE_CLEAN_FAILED',
+      message: `Error cleaning builder cache: ${message}`,
+      meta: { path }
+    });
+  }
+}

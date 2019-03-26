@@ -8,9 +8,12 @@ import { readJSON, writeJSON, remove } from 'fs-extra';
 import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
-import { NowError } from '../../../util/now-error';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
 import { Builder } from './types';
+import {
+  NoBuilderCacheError,
+  BuilderCacheCleanError
+} from '../../../util/errors-ts';
 
 import * as staticBuilder from './static-builder';
 
@@ -28,11 +31,7 @@ export async function prepareCacheDir() {
   const designated = cacheDirectory('co.zeit.now');
 
   if (!designated) {
-    throw new NowError({
-      code: 'NO_BUILDER_CACHE_DIR',
-      message: 'Could not find cache directory for now-builders.',
-      meta: {}
-    });
+    throw new NoBuilderCacheError();
   }
 
   const cacheDir = join(designated, 'dev');
@@ -60,27 +59,19 @@ export async function prepareBuilderDir() {
 
 // Is responsible for cleaning the cache
 export async function cleanCacheDir(output: Output): Promise<void> {
+  const cacheDir = await cacheDirPromise;
   try {
-    const cacheDir = await cacheDirPromise;
     output.log(chalk`{magenta Deleting} ${cacheDir}`);
     await remove(cacheDir);
   } catch (err) {
-    throw new NowError({
-      code: 'NO_CLEAN_CACHE',
-      message: 'Error clearing the cache',
-      meta: {}
-    });
+    throw new BuilderCacheCleanError(cacheDir, err.message);
   }
 
   try {
     await remove(funCacheDir);
     output.log(chalk`{magenta Deleting} ${funCacheDir}`);
   } catch (err) {
-    throw new NowError({
-      code: 'NO_CLEAN_CACHE',
-      message: 'Error clearing the cache',
-      meta: {}
-    });
+    throw new BuilderCacheCleanError(funCacheDir, err.message);
   }
 }
 
