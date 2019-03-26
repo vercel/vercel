@@ -4,7 +4,7 @@ import { Bridge } from './bridge';
 let listener;
 
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+  process.env.NODE_ENV = 'production';
 }
 
 try {
