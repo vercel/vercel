@@ -255,6 +255,19 @@ export class InvalidDomain extends NowError<
   }
 }
 
+export class InvalidDeploymentId extends NowError<
+  'INVALID_DEPLOYMENT_ID',
+  { id: string }
+> {
+  constructor(id: string) {
+    super({
+      code: 'INVALID_DEPLOYMENT_ID',
+      meta: { id },
+      message: `The deployment id "${id}" is not valid.`
+    });
+  }
+}
+
 /**
  * Returned when the user checks the price of a domain but the TLD
  * of the given name is not supported.
@@ -850,6 +863,19 @@ export class DNSInvalidType extends NowError<
       meta: { type },
       message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`
     });
+  }
+}
+
+export class DNSConflictingRecord extends NowError<
+  'DNS_CONFLICTING_RECORD',
+  { record: string }
+> {
+  constructor(record: string) {
+    super({
+      code: 'DNS_CONFLICTING_RECORD',
+      meta: { record },
+      message: ` A conflicting record exists "${record}".`
+    })
   }
 }
 

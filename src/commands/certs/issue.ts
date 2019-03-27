@@ -237,6 +237,10 @@ export default async function issue(
     );
     return 1;
   }
+  if (cert instanceof ERRORS.DomainNotFound) {
+    output.error(cert.message);
+    return 1;
+  }
 
   output.success(
     `Certificate entry for ${chalk.bold(

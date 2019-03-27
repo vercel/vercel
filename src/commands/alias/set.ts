@@ -182,6 +182,11 @@ export default async function set(
     return 1;
   }
 
+  if (deployment instanceof ERRORS.InvalidDeploymentId) {
+    output.error(deployment.message);
+    return 1;
+  }
+
   if (deployment === null) {
     output.error(
       `Couldn't find a deployment to alias. Please provide one as an argument.`
@@ -567,7 +572,8 @@ function handleCreateAliasError<T>(
 
   if (
     error instanceof ERRORS.DomainPermissionDenied ||
-    error instanceof ERRORS.DeploymentFailedAliasImpossible
+    error instanceof ERRORS.DeploymentFailedAliasImpossible ||
+    error instanceof ERRORS.InvalidDeploymentId
   ) {
     output.error(error.message);
     return 1;

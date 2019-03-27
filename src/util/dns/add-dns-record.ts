@@ -1,5 +1,11 @@
 import Client from '../client';
-import { DomainNotFound, DNSPermissionDenied, DNSInvalidPort, DNSInvalidType } from '../errors-ts';
+import {
+  DomainNotFound,
+  DNSPermissionDenied,
+  DNSInvalidPort,
+  DNSInvalidType,
+  DNSConflictingRecord
+} from '../errors-ts';
 import { DNSRecordData } from '../../types';
 
 type Response = {
@@ -36,6 +42,11 @@ export default async function addDNSRecord(
 
     if (error.status === 404) {
       return new DomainNotFound(domain);
+    }
+
+    if (error.status === 409) {
+      const { oldId = '' } = error;
+      return new DNSConflictingRecord(oldId);
     }
 
     throw error;
