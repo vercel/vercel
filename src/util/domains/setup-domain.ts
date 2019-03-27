@@ -17,10 +17,10 @@ export default async function setupDomain(
 ) {
   const parsedDomain = psl.parse(alias);
   if (parsedDomain.error) {
-    throw new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
+    return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
   }
   if (!parsedDomain.domain) {
-    throw new ERRORS.InvalidDomain(alias);
+    return new ERRORS.InvalidDomain(alias);
   }
 
   const { domain } = parsedDomain;
