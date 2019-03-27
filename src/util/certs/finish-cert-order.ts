@@ -64,6 +64,9 @@ export default async function startCertOrder(
     if (error.code === 'cant_solve_challenge') {
       return new Errors.CantSolveChallenge(error.domain, error.type);
     }
+    if (error.code === 'not_found') {
+      return new Errors.DomainNotFound(error.domain);
+    }
 
     throw error;
   }
