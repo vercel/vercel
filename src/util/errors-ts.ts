@@ -853,6 +853,19 @@ export class DNSInvalidType extends NowError<
   }
 }
 
+export class DNSConflictingRecord extends NowError<
+  'DNS_CONFLICTING_RECORD',
+  { record: string }
+> {
+  constructor(record: string) {
+    super({
+      code: 'DNS_CONFLICTING_RECORD',
+      meta: { record },
+      message: ` A conflicting record exists "${record}".`
+    })
+  }
+}
+
 export class DomainRemovalConflict extends NowError<
   'domain_removal_conflict',
   {
