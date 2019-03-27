@@ -255,6 +255,19 @@ export class InvalidDomain extends NowError<
   }
 }
 
+export class InvalidDeploymentId extends NowError<
+  'INVALID_DEPLOYMENT_ID',
+  { id: string }
+> {
+  constructor(id: string) {
+    super({
+      code: 'INVALID_DEPLOYMENT_ID',
+      meta: { id },
+      message: `The deployment id "${id}" is not valid.`
+    });
+  }
+}
+
 /**
  * Returned when the user checks the price of a domain but the TLD
  * of the given name is not supported.
