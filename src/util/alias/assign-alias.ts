@@ -41,7 +41,7 @@ export default async function assignAlias(
     prevDeployment = null;
   }
 
-  if (prevDeployment instanceof ERRORS.DeploymentPermissionDenied) {
+  if (prevDeployment instanceof Error) {
     return prevDeployment;
   }
 

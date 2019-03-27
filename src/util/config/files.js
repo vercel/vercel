@@ -28,6 +28,15 @@ export const writeToConfigFile = stuff => {
         )
       );
       process.exit(1);
+    } else if (err.code === 'EBADF') {
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            CONFIG_FILE_PATH
+          )} (bad file descriptor).`
+        )
+      );
+      process.exit(1);
     }
 
     throw err;
@@ -51,6 +60,15 @@ export const writeToAuthConfigFile = stuff => {
           `Not able to create ${highlight(
             AUTH_CONFIG_FILE_PATH
           )} (operation not permitted).`
+        )
+      );
+      process.exit(1);
+    } else if (err.code === 'EBADF') {
+      console.error(
+        error(
+          `Not able to create ${highlight(
+            AUTH_CONFIG_FILE_PATH
+          )} (bad file descriptor).`
         )
       );
       process.exit(1);
