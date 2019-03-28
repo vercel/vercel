@@ -38,7 +38,8 @@
       "html"
     ],
     "sourceMap": true,
-    "instrument": true
+    "instrument": true,
+    "all": true
   },
   "git": {
     "pre-commit": [
