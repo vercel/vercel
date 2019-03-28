@@ -160,10 +160,33 @@ export default class DevServer {
     );
   }
 
+  async send404(res: http.ServerResponse): Promise<void> {
+    return this.sendError(
+      res,
+      'FILE_NOT_FOUND',
+      'The page could not be found',
+      404
+    );
+  }
+
+  async sendError(
+    res: http.ServerResponse,
+    code: string,
+    message: string,
+    statusCode: number = 500
+  ): Promise<void> {
+    // TODO: render an HTML page similar to Now's router
+    res.statusCode = statusCode;
+    res.end(`${statusCode}: ${message}\nCode: ${code}\n`);
+  }
+
   /**
    * dev-server http handler
    */
-  devServerHandler: HttpHandler = async (req, res) => {
+  devServerHandler: HttpHandler = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) => {
     this.logHttp(`${req.method} ${req.url}`);
 
     if (this.status === DevServerStatus.busy) {
@@ -202,8 +225,7 @@ export default class DevServer {
     const ignore = await createIgnoreList(this.cwd);
 
     if (filePath && ignore.ignores(filePath)) {
-      res.statusCode = 404;
-      res.end();
+      await this.send404(res);
       return;
     }
 
@@ -238,7 +260,8 @@ export default class DevServer {
 
     if ([301, 302, 303].includes(status)) {
       this.logDebug('Redirect', matched_route);
-      return res.end();
+      res.statusCode = status;
+      return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
     }
 
     if (!nowJson.builds) {
@@ -249,8 +272,8 @@ export default class DevServer {
     let { asset, assetKey } = resolveDest(this.assets, dest);
 
     if (!asset || !assetKey) {
-      res.statusCode = 404;
-      return res.end();
+      await this.send404(res);
+      return;
     }
 
     // If the user did a hard-refresh in the browser,
@@ -265,8 +288,8 @@ export default class DevServer {
       ({ asset, assetKey } = resolveDest(this.assets, dest));
 
       if (!asset || !assetKey) {
-        res.statusCode = 404;
-        return res.end();
+        await this.send404(res);
+        return;
       }
     }
 
@@ -326,11 +349,13 @@ export default class DevServer {
         }
         return res.end(resBody);
       default:
-        res.statusCode = 500;
         // This shouldn't really ever happen...
-        return res.end(
+        await this.sendError(
+          res,
+          'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
+        return;
     }
   };
 }
