@@ -1,7 +1,6 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
-
 import { AliasRecord } from '../../util/alias/create-alias';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
@@ -196,7 +195,8 @@ export default async function set(
 
   // Assign the alias for each of the targets in the array
   for (const target of targets) {
-    output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
+    output.log(`Assigning alias https://${target} to deployment https://${deployment.url}`);
+
     const record = await assignAlias(
       output,
       client,
