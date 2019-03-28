@@ -36,7 +36,7 @@ test('[dev-router] captured groups', t => {
 
 test('[dev-router] named groups', t => {
   const routesConfig = [
-    { src: '/user/(?<id>.+)', dest: '/user.js?id=$<id>' }
+    { src: '/user/(?<id>.+)', dest: '/user.js?id=$id' }
   ];
   const result = devRouter('/user/123', routesConfig);
 
