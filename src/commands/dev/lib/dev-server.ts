@@ -10,6 +10,7 @@ import serveHandler from 'serve-handler';
 import { basename, dirname, relative } from 'path';
 import { lookup as lookupMimeType } from 'mime-types';
 
+import { Output } from '../../../util/output';
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
 import getNowJsonPath from '../../../util/config/local-path';
@@ -37,6 +38,7 @@ export default class DevServer {
   public cwd: string;
   public assets: BuilderOutputs;
 
+  private output: Output;
   private debug: boolean;
   private server: http.Server;
   private status: DevServerStatus;
@@ -45,6 +47,7 @@ export default class DevServer {
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
+    this.output = options.output;
     this.assets = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
@@ -132,6 +135,7 @@ export default class DevServer {
         this.logDebug(`Got listen error: ${err.code}`);
         if (err.code === 'EADDRINUSE') {
           // Increase port and try again
+          this.output.note(`Requested port ${port} is already in use`);
           port++;
         } else {
           throw err;
@@ -142,7 +146,7 @@ export default class DevServer {
     this.logSuccess(
       `${chalk.bold(
         '`now dev`'
-      )} server listening at ${chalk.blue.bold.underline(
+      )} server listening at ${chalk.blue.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
