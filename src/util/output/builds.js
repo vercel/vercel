@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import title from 'title';
 import bytes from 'bytes';
-import { parse as parsePath } from 'path';
 import { isReady, isFailed } from '../build-state';
 
 // That's how long the word "Initializing" is
@@ -12,80 +11,31 @@ const padding = 8;
 
 // That's the max numbers of builds and outputs that will be displayed
 const MAX_BUILD_GROUPS = 5;
-// TODO - const MAX_OUTPUTS_PER_GROUP = 5;
+const MAX_OUTPUTS_PER_GROUP = 5;
 
 const prepareState = state => title(state.replace('_', ' '));
 
-// Check if two paths can be groupd together
-const canGroup = (path1, path2, level) => {
-  const group1 = parsePath(path1).dir.split("/");
-  const group2 = parsePath(path2).dir.split("/");
+// Get the common path out of multiple builds
+const getCommonPath = (buildGroup) => {
+  const commonPath = [];
+  const splits = buildGroup.map((build) => getDirPath(build.entrypoint).split('/'));
+  const shortest = splits.reduce((prevValue, currentValue) =>
+    prevValue.length < currentValue.length
+      ? prevValue.length
+      : currentValue.length
+  );
 
-  const shortGroup = group1.length > group2.length ? group2 : group1;
-  const longGroup = group1.length > group2.length ? group1 : group2;
-
-  // If the length differs on level 0 they should not be grouped
-  if (level === 0 && shortGroup.length !== longGroup.length) {
-    return false;
-  }
-
-  // Remove the "level" from the shorter path
-  const longPath = longGroup.join("/");
-  const shortPath = shortGroup.slice(0, level ? -level : undefined).join("/");
-
-  // Since /^/ will just match everything we need to
-  // make this one manually
-  if (shortPath === "" && longPath !== "") {
-    return false;
-  }
-
-  return new RegExp(`^${shortPath}`).test(longPath);
-};
-
-// Group two builds together
-const groupPaths = (groups, level = 0) => {
-  let nextGroups = [];
-  let hasChange = false;
-
-  for (let i = 0; i < groups.length; i++) {
-    if (!groups[i + 1]) {
-      nextGroups.push(groups[i]);
+  for (let i = 0; i <= shortest; i++) {
+    const first = splits[0][i];
+    if (splits.every((pathParts) => pathParts[i] === first)) {
+      commonPath.push(first);
       continue;
     }
 
-    const prev = groups[i][0].entrypoint;
-    const next = groups[i + 1][0].entrypoint;
-
-    if (canGroup(prev, next, level)) {
-      hasChange = true;
-      nextGroups.push(groups[i].concat(groups[i + 1]));
-      nextGroups = nextGroups.concat(groups.slice(i + 2));
-      break;
-    } else {
-      nextGroups.push(groups[i]);
-    }
+    break;
   }
 
-  // Sort the groups, otherwise there might be
-  // some groups with different paths which
-  // would actually better fit into the "next" group
-  nextGroups = nextGroups.sort((a, b) => {
-    if (a[0].path > b[0].path) {
-      return -1;
-    }
-
-    if (b[0].path > a[0].path) {
-      return 1;
-    }
-
-    return 0;
-  });
-
-  if (hasChange === false) {
-    return groupPaths(nextGroups, level + 1);
-  }
-
-  return nextGroups;
+  return commonPath.join('/') || '/';
 };
 
 const styleBuild = (build, times, longestSource) => {
@@ -106,9 +56,56 @@ const styleBuild = (build, times, longestSource) => {
   const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput ? '┌' : '╶';
 
-  return `${chalk.grey(prefix)} ${pathColor(
-    entry
-  )}${stateColor(state)}${time}`;
+  return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
+};
+
+const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidden = false) => {
+  const { id } = buildGroup[0];
+  const entry = commonPath.padEnd(longestSource + padding);
+  const time = typeof times[id] === 'string' ? times[id] : '';
+  const prefix = isHidden === false && buildGroup.some((build) => build.hasOutput) ? '┌' : '╶';
+
+  // Set the defaults so that they will be sorted
+  const stateMap = {
+    READY: 0,
+    ERROR: 0,
+    BUILDING: 0
+  };
+
+  buildGroup.map(({ readyState }) => {
+    stateMap[readyState] = stateMap[readyState]
+      ? stateMap[readyState] + 1
+      : 1;
+
+    return readyState;
+  });
+
+  const state = Object.keys(stateMap).map((readyState) => {
+    const counter = stateMap[readyState];
+    const name = prepareState(readyState);
+
+    if (!counter) {
+      return null;
+    }
+
+    return `${counter > 9 ? '+9' : counter} ${name}`;
+  }).filter(s => s).join(' ').padEnd(longestState + padding);
+
+  let pathColor = chalk.cyan;
+  let stateColor = chalk.grey;
+
+  if (buildGroup.every(isReady)) {
+    stateColor = item => item;
+  } else if (buildGroup.every(isFailed)) {
+    stateColor = chalk.red;
+    pathColor = chalk.red;
+  }
+
+  if (isHidden) {
+    pathColor = chalk.grey;
+  }
+
+  return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
 };
 
 const styleOutput = (output) => {
@@ -139,76 +136,196 @@ const styleOutput = (output) => {
   return `${chalk.grey(corner)} ${color(main)}`;
 };
 
+const getDirPath = (path, level = 0, highestLevel = null) => {
+  const parts = path.split('/').slice(0, -1);
+
+  if (highestLevel === null || level === 0) {
+    return parts.join('/');
+  }
+
+  const reverseLevel = highestLevel - level;
+  return parts.slice(0, reverseLevel).join('/');
+};
+
+const sortByEntrypoint = (a, b) => {
+  const aPath = getDirPath(a.entrypoint);
+  const bPath = getDirPath(b.entrypoint);
+
+  if (aPath === '') {
+    return 1;
+  }
+
+  if (bPath === '') {
+    return -1;
+  }
+
+  if (aPath > bPath) {
+    return 1;
+  }
+
+  if (bPath > aPath) {
+    return -1;
+  }
+
+  return 0;
+};
+
+const groupBuilds = (buildList, highestLevel, counter) => {
+  const currentIndex = counter % (buildList.length);
+  const __level = Math.ceil(counter / buildList.length);
+  const _level = (__level === 0 ? 1 : __level) - 1;
+  const level = _level > highestLevel ? highestLevel : _level;
+  const currentPath = getDirPath(buildList[currentIndex][0].entrypoint, level, highestLevel);
+
+  const nextList = [];
+  let currentGroup = [];
+
+  for (let i = 0; i < buildList.length; i++) {
+    const group = buildList[i];
+    const path = getDirPath(group[0].entrypoint, level, highestLevel);
+
+    if (path === currentPath) {
+      currentGroup = currentGroup.concat(group);
+    } else {
+      nextList.push(group);
+    }
+  }
+
+  if (currentIndex === 0) {
+    nextList.unshift(currentGroup);
+  } else {
+    nextList.splice(currentIndex, 0, currentGroup);
+  }
+
+  return nextList;
+};
+
+const prepareBuild = (build) => {
+   build.hasOutput = Array.isArray(build.output) && build.output.length > 0;
+
+   if (build.hasOutput) {
+     build.output = build.output.map((item) => {
+       item.readyState = build.readyState;
+       return item;
+     });
+   }
+
+   return build;
+};
+
 export default (builds, times) => {
   // Sort the builds by path
   // so that the grouping will be easier
   let path = builds
-    .sort((a, b) => {
-      if (a.entrypoint > b.entrypoint) {
-        return 1;
-      }
-
-      if (b.entrypoint > a.entrypoint) {
-        return -1;
-      }
-
-      return 0;
-    })
+    .map(prepareBuild)
+    .sort(sortByEntrypoint)
     .map(build => [build]);
 
+  const highestLevel = builds.reduce((prev, curr) => {
+    const partCounter = curr.entrypoint.split('/').length - 1;
+    return partCounter > prev ? partCounter : prev;
+  }, 0);
+
   // Group builds together
+  let counter = 0;
+
   while (path.length > MAX_BUILD_GROUPS) {
-    path = groupPaths(path);
+    path = groupBuilds(path, highestLevel, counter);
+    counter++;
   }
 
   // Reverse the paths so that the larger chunks come last
   // including the / directory
   path = path.reverse();
 
-  // TODO - use `path` to create the output
-
-  const buildsAndOutput = [];
-
-  for (const build of builds) {
-    buildsAndOutput.push(build);
-    const { output, copiedFrom } = build;
-
-    if (!copiedFrom && output && output.length > 0) {
-      build.hasOutput = true;
-
-      for (const item of output) {
-        item.isOutput = true;
-        item.readyState = build.readyState;
-
-        if (output.indexOf(item) === output.length - 1) {
-          item.isLast = true;
-        }
-
-        buildsAndOutput.push(item);
-      }
-    }
-  }
-
   const longestSource = builds.reduce((final, current) => {
     const { length } = current.entrypoint;
     return length > final ? length : final;
   }, 0);
 
-  const final = buildsAndOutput.map((item, index) => {
-    let log = null;
+  const final = [];
+  let finalBuildsLength = path.length;
+  let lengthWithoutRootPaths = path.length;
+  let hiddenBuildGroup = [];
 
-    if (item.isOutput) {
-      log = styleOutput(item);
-    } else {
-      log = styleBuild(item, times, longestSource);
+  // Ungroup the root files
+  path = (() => {
+    const nextList = [];
+    const rootList = [];
+
+    for (const group of path) {
+      if (getCommonPath(group) === '/') {
+        group.map((item) => rootList.push([item]));
+      } else {
+        nextList.push(group);
+      }
     }
 
-    const newline = index === buildsAndOutput.length - 1 ? '' : '\n';
-    return log + newline;
+    lengthWithoutRootPaths = nextList.length;
+    rootList.map((group) => nextList.push(group));
+
+    return nextList;
+  })();
+
+  path.map((buildGroup) => {
+    const commonPath = getCommonPath(buildGroup);
+
+    // All items with the common path / are a single group
+    if (commonPath === '/') {
+      if (
+        lengthWithoutRootPaths <= MAX_BUILD_GROUPS &&
+        finalBuildsLength <= MAX_BUILD_GROUPS
+      ) {
+        const item = buildGroup[0];
+        final.push(`${styleBuild(item, times, longestSource)}\n`);
+        finalBuildsLength++;
+      } else {
+        hiddenBuildGroup.push(buildGroup[0]);
+        return buildGroup;
+      }
+    } else if (buildGroup.length === 1) {
+      const item = buildGroup[0];
+      final.push(`${styleBuild(item, times, longestSource)}\n`);
+      finalBuildsLength++;
+    } else {
+      final.push(`${styleHiddenBuilds(`${commonPath}/*`, buildGroup, times, longestSource)}\n`);
+      finalBuildsLength++;
+    }
+
+    // Get the first five outputs when the deployment is ready
+    const outputs = buildGroup.reduce((prevValue, currentValue) => (
+      prevValue.concat(Array.isArray(currentValue.output)
+        ? currentValue.output
+        : []
+      )
+    ), []);
+
+    outputs.slice(0, MAX_OUTPUTS_PER_GROUP).map((output, index) => (
+      final.push(`${styleOutput({
+        ...output,
+        isLast: outputs.length === (index + 1)
+      })}\n`)
+    ));
+
+    if (outputs.length > MAX_OUTPUTS_PER_GROUP) {
+      final.push(chalk.grey(`└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} hidden\n`));
+    }
+
+    return buildGroup;
   });
+
+  if (hiddenBuildGroup.length) {
+    final.push(`${styleHiddenBuilds(
+      `${hiddenBuildGroup.length} hidden`,
+      hiddenBuildGroup,
+      times,
+      longestSource,
+      true
+    )}\n`);
+  }
 
   return {
     lines: final.length + 1,
-    toPrint: `${final.join('')}\n`
+    toPrint: `${final.join('')}`
   };
 };
