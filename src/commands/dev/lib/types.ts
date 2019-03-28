@@ -1,4 +1,5 @@
 import http from 'http';
+import { Output } from '../../../util/output';
 import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 
@@ -10,6 +11,7 @@ export enum DevServerStatus {
 
 export interface DevServerOptions {
   debug: boolean;
+  output: Output;
 }
 
 export interface EnvConfig {
