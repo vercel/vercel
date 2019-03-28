@@ -316,10 +316,14 @@ export default class DevServer {
         }
 
         const body = await rawBody(req);
+        let path: string = dest;
+        if (Object.keys(uri_args || {}).length > 0) {
+          path += `?${qs.stringify(uri_args)}`;
+        }
 
         const payload: InvokePayload = {
           method: req.method || 'GET',
-          path: req.url || '/',
+          path,
           headers: req.headers,
           encoding: 'base64',
           body: body.toString('base64')
