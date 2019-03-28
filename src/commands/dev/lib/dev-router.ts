@@ -25,7 +25,6 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
-
       const match = matcher.exec(reqPathname);
 
       if (match) {
