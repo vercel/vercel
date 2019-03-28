@@ -195,7 +195,7 @@ export default async function set(
 
   // Assign the alias for each of the targets in the array
   for (const target of targets) {
-    output.log(`Assigning alias https://${target} to deployment https://${deployment.url}`);
+    output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
     const record = await assignAlias(
       output,
@@ -213,9 +213,9 @@ export default async function set(
       return 1;
     } else {
       console.log(
-        `${chalk.cyan('> Success!')} ${
+        `${chalk.cyan('> Success!')} https://${
           handleResult.alias
-        } now points to ${chalk.bold(deployment.url)} ${setStamp()}`
+        } now points to https://${chalk.bold(deployment.url)} ${setStamp()}`
       );
     }
   }
