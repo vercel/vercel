@@ -814,10 +814,10 @@ async-listen@1.0.0:
   resolved "https://registry.yarnpkg.com/async-listen/-/async-listen-1.0.0.tgz#7596c057d867448c408d82afdced842e7772217e"
   integrity sha1-dZbAV9hnRIxAjYKv3O2ELndyIX4=
 
-async-listen@1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/async-listen/-/async-listen-1.1.1.tgz#1b9d534e669a15e432100dcaffcfaa042a7f4241"
-  integrity sha512-7KvWRI5oVl2OcYxrvAzlgBYmto40C5Hx0Ruh7ECil6n6SzXvBsHVKsyyJqOb3o6TbPF4GVjYASCfp+tC6qhuIA==
+async-listen@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/async-listen/-/async-listen-1.2.0.tgz#861ab6f92e1703ba54498b10ddb9b5da7b69f363"
+  integrity sha512-CcEtRh/oc9Jc4uWeUwdpG/+Mb2YUHKmdaTf0gUr7Wa+bfp4xx70HOb3RuSTJMvqKNB1TkdTfjLdrcz2X4rkkZA==
 
 async-retry@1.1.3:
   version "1.1.3"
