@@ -246,7 +246,7 @@ test('create alias for deployment', async t => {
     }
   );
 
-  const goal = `> Success! ${hosts.alias} now points to ${hosts.deployment}`;
+  const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
