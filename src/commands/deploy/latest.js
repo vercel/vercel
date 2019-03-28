@@ -83,7 +83,7 @@ const printDeploymentStatus = async (
       if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
-            await copy(aliasFinal[0]);
+            await copy(`https://${aliasFinal[0]}`);
             output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
@@ -104,7 +104,7 @@ const printDeploymentStatus = async (
 
           if (shouldCopy && clipboardEnabled) {
             try {
-              await copy(alias);
+              await copy(`https://${alias}`);
               output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
 
               return 0;
