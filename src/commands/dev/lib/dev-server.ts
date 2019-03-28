@@ -1,3 +1,4 @@
+import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -338,11 +339,15 @@ export default class DevServer {
           return;
         }
 
+        // Mix the `routes` result dest query params into the req path
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        const path = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query
+        });
+
         const body = await rawBody(req);
-        let path: string = dest;
-        if (Object.keys(uri_args || {}).length > 0) {
-          path += `?${qs.stringify(uri_args)}`;
-        }
 
         const payload: InvokePayload = {
           method: req.method || 'GET',
