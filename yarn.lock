@@ -5448,6 +5448,11 @@ path-type@^3.0.0:
   dependencies:
     pify "^3.0.0"
 
+pcre-to-regexp@0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/pcre-to-regexp/-/pcre-to-regexp-0.0.4.tgz#a19c3fc6af540349f915367a4776c75c651dae05"
+  integrity sha1-oZw/xq9UA0n5FTZ6R3bHXGUdrgU=
+
 pend@~1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/pend/-/pend-1.2.0.tgz#7a57eb550a6783f9115331fcf4663d5c8e007a50"
