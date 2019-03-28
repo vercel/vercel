@@ -122,11 +122,30 @@ export default class DevServer {
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
+    let address: string | null = null;
     const nowJson = await this.getNowJson();
 
-    await listen(this.server, port);
+    while (typeof address !== 'string') {
+      try {
+        address = await listen(this.server, port);
+      } catch (err) {
+        this.logDebug(`Got listen error: ${err.code}`);
+        if (err.code === 'EADDRINUSE') {
+          // Increase port and try again
+          port++;
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    this.logSuccess(`Dev server listening on port ${chalk.bold(String(port))}`);
+    this.logSuccess(
+      `${chalk.bold(
+        '`now dev`'
+      )} server listening at ${chalk.blue.bold.underline(
+        address.replace('[::]', 'localhost')
+      )}`
+    );
 
     // Initial build. Not meant to invoke, but to speed up future builds
     if (nowJson && Array.isArray(nowJson.builds)) {
