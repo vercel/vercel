@@ -111,14 +111,17 @@ async function deploymentGet (deploymentId) {
 }
 
 let token;
+let currentCount = 0;
+const MAX_COUNT = 10;
 
 async function fetchWithAuth (url, opts = {}) {
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
-    if (!token) {
-      const { NOW_TOKEN, NOW_TOKEN_FACTORY_URL } = process.env;
-
+    const { NOW_TOKEN, NOW_TOKEN_FACTORY_URL } = process.env;
+    currentCount += 1;
+    if (!token || currentCount === MAX_COUNT) {
+      currentCount = 0;
       if (NOW_TOKEN) {
         token = NOW_TOKEN;
       } else if (NOW_TOKEN_FACTORY_URL) {
