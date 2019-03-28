@@ -24,7 +24,8 @@ export default async function dev(
   const debug = Boolean(opts['-d'] || opts['--debug']);
 
   const devServer = new DevServer(cwd, {
-    debug
+    debug,
+    output
   });
 
   process.once('SIGINT', devServer.stop.bind(devServer));
