@@ -387,7 +387,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.InvalidAlias) {
     output.error(
-      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: Nested domains are not supported.`
+      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`now.sh\`, only sub and sub-sub domains are supported.`
     );
     return 1;
   }
