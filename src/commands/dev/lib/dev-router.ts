@@ -1,5 +1,6 @@
 import url from 'url';
 import qs from 'querystring';
+import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
 
@@ -12,12 +13,39 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
-      const matcher = new RegExp('^' + routeConfig.src + '$');
+      let { src } = routeConfig;
 
-      if (matcher.test(reqPathname)) {
-        const destPath = routeConfig.dest
-          ? reqPathname.replace(matcher, routeConfig.dest)
-          : reqPathname;
+      if (!src.startsWith('^')) {
+        src = `^${src}`;
+      }
+
+      if (!src.endsWith('$')) {
+        src = `${src}$`;
+      }
+
+      const keys: string[] = [];
+      const matcher = PCRE(`%${src}%i`, keys);
+      const match = matcher.exec(reqPathname);
+
+      if (match) {
+        let destPath: string = reqPathname;
+        if (routeConfig.dest) {
+          destPath = routeConfig.dest.replace(
+            /\$([1-9a-zA-Z]+)/g,
+            (_, param) => {
+              let matchIndex: number = keys.indexOf(param);
+              if (matchIndex === -1) {
+                // It's a number match, not a named capture
+                matchIndex = parseInt(param, 10);
+              } else {
+                // For named captures, add one to the `keys` index to
+                // match up with the RegExp group matches
+                matchIndex++;
+              }
+              return match[matchIndex];
+            }
+          );
+        }
 
         if (isURL(destPath)) {
           found = {
