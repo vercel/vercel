@@ -364,8 +364,13 @@ export default class DevServer {
             body: JSON.stringify(payload)
           });
         } catch (err) {
-          res.statusCode = 500;
-          res.end(inspect(err));
+          console.error(err);
+          await this.sendError(
+            res,
+            'NO_STATUS_CODE_FROM_LAMBDA',
+            'An error occurred with your deployment',
+            502
+          );
           return;
         }
 
