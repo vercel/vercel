@@ -80,7 +80,7 @@ const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidd
     return readyState;
   });
 
-  const state = Object.keys(stateMap).map((readyState) => {
+  let state = Object.keys(stateMap).map((readyState) => {
     const counter = stateMap[readyState];
     const name = prepareState(readyState);
 
@@ -89,7 +89,12 @@ const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidd
     }
 
     return `${counter > 9 ? '+9' : counter} ${name}`;
-  }).filter(s => s).join(' ').padEnd(longestState + padding);
+  }).filter(s => s).join(' ')
+
+  // Since the longestState might still be shorter
+  // than multiple states we still want to ensure
+  // a space between the states and the time
+  state = `${state} `.padEnd(longestState + padding);
 
   let pathColor = chalk.cyan;
   let stateColor = chalk.grey;
