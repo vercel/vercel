@@ -313,7 +313,7 @@ export default (builds, times) => {
     ));
 
     if (outputs.length > MAX_OUTPUTS_PER_GROUP) {
-      final.push(chalk.grey(`└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} builds hidden\n`));
+      final.push(chalk.grey(`└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`));
     }
 
     return buildGroup;
@@ -321,7 +321,7 @@ export default (builds, times) => {
 
   if (hiddenBuildGroup.length) {
     final.push(`${styleHiddenBuilds(
-      `${hiddenBuildGroup.length} output items hidden`,
+      `${hiddenBuildGroup.length} builds hidden`,
       hiddenBuildGroup,
       times,
       longestSource,
