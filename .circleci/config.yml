@@ -88,10 +88,6 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .nyc_output
 
   coverage:
     docker:
