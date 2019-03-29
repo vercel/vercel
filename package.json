@@ -16,7 +16,9 @@
     "publish-canary": "lerna version prerelease --preid canary",
     "build": "./.circleci/build.sh",
     "lint": "eslint .",
+    "codecov": "codecov",
     "test": "jest --runInBand --verbose",
+    "test-coverage": "jest --runInBand --verbose --coverage --globals \"{\\\"coverage\\\":true}\" && codecov",
     "lint-staged": "lint-staged"
   },
   "pre-commit": "lint-staged",
@@ -34,6 +36,7 @@
     "@types/node": "^10.12.8",
     "async-retry": "1.2.3",
     "buffer-replace": "^1.0.0",
+    "codecov": "^3.2.0",
     "eslint": "^5.9.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^3.1.0",

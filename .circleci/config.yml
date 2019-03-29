@@ -27,8 +27,8 @@ jobs:
           name: Linting
           command: yarn lint
       - run:
-          name: Tests
-          command: yarn test
+          name: Tests and Coverage
+          command: yarn test-coverage
       - run:
           name: Potentially save npm token
           command: "([[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc) || echo \"Did not write npm token\""
