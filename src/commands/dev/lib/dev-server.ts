@@ -253,6 +253,7 @@ export default class DevServer {
       'X-Forwarded-Host': host,
       'X-Forwarded-Proto': 'http',
       'X-Forwarded-For': ip,
+      'X-Real-IP': ip,
       Connection: 'close',
       'x-now-trace': 'dev1',
       'x-now-deployment-url': host,
