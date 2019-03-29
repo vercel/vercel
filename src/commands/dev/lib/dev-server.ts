@@ -7,6 +7,7 @@ import rawBody from 'raw-body';
 import { inspect } from 'util';
 import listen from 'async-listen';
 import httpProxy from 'http-proxy';
+import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { basename, dirname, relative } from 'path';
 import { lookup as lookupMimeType } from 'mime-types';
@@ -145,14 +146,14 @@ export default class DevServer {
     }
 
     this.logSuccess(
-      `${chalk.bold(
-        '`now dev`'
-      )} server listening at ${chalk.blue.underline(
+      `${chalk.bold('`now dev`')} server listening at ${chalk.blue.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
 
-    // Initial build. Not meant to invoke, but to speed up future builds
+    // Perform the initial build of assets so that we know what assets exist.
+    // Even though the server is running, it won't respond to any requests until
+    // this is complete.
     if (nowJson && Array.isArray(nowJson.builds)) {
       this.logDebug('Initial build');
       await buildUserProject(nowJson, this);
@@ -184,9 +185,15 @@ export default class DevServer {
     );
   }
 
-  async send404(res: http.ServerResponse): Promise<void> {
+  async send404(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string
+  ): Promise<void> {
     return this.sendError(
+      req,
       res,
+      nowRequestId,
       'FILE_NOT_FOUND',
       'The page could not be found',
       404
@@ -194,14 +201,65 @@ export default class DevServer {
   }
 
   async sendError(
+    req: http.IncomingMessage,
     res: http.ServerResponse,
+    nowRequestId: string,
     code: string,
     message: string,
     statusCode: number = 500
   ): Promise<void> {
-    // TODO: render an HTML page similar to Now's router
     res.statusCode = statusCode;
+    this.writeResponseHeaders(res, nowRequestId);
+    // TODO: render an HTML page similar to Now's router
     res.end(`${statusCode}: ${message}\nCode: ${code}\n`);
+  }
+
+  getRequestIp(req: http.IncomingMessage): string {
+    // TODO: respect the `x-forwarded-for` headers
+    return req.connection.remoteAddress || '127.0.0.1';
+  }
+
+  /**
+   * Sets the response `headers` including the Now headers to `res`.
+   */
+  writeResponseHeaders(
+    res: http.ServerResponse,
+    nowRequestId: string,
+    headers: http.OutgoingHttpHeaders = {}
+  ): void {
+    const allHeaders = {
+      ...headers,
+      'x-now-trace': 'dev1',
+      'x-now-id': nowRequestId,
+      'x-now-cache': 'MISS'
+    };
+    for (const [name, value] of Object.entries(allHeaders)) {
+      res.setHeader(name, value);
+    }
+  }
+
+  /**
+   * Returns the request `headers` that will be sent to the Lambda.
+   */
+  getNowProxyHeaders(
+    req: http.IncomingMessage,
+    nowRequestId: string,
+    headers: http.IncomingHttpHeaders
+  ): http.IncomingHttpHeaders {
+    const ip = this.getRequestIp(req);
+    const { host } = req.headers;
+    return {
+      ...headers,
+      'X-Forwarded-Host': host,
+      'X-Forwarded-Proto': 'http',
+      'X-Forwarded-For': ip,
+      Connection: 'close',
+      'x-now-trace': 'dev1',
+      'x-now-deployment-url': host,
+      'x-now-id': nowRequestId,
+      'x-now-log-id': nowRequestId.split('-')[2],
+      'x-zeit-co-forwarded-for': ip
+    };
   }
 
   /**
@@ -218,12 +276,12 @@ export default class DevServer {
     }
 
     try {
+      const nowRequestId = generateRequestId();
       const nowJson = await this.getNowJson();
-
       if (!nowJson) {
-        await this.serveProjectAsStatic(req, res);
+        await this.serveProjectAsStatic(req, res, nowRequestId);
       } else {
-        await this.serveProjectAsNowV2(req, res, nowJson);
+        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
       }
     } catch (err) {
       this.setStatusError(err.message);
@@ -243,16 +301,18 @@ export default class DevServer {
    */
   serveProjectAsStatic = async (
     req: http.IncomingMessage,
-    res: http.ServerResponse
+    res: http.ServerResponse,
+    nowRequestId: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
     const ignore = await createIgnoreList(this.cwd);
 
     if (filePath && ignore.ignores(filePath)) {
-      await this.send404(res);
+      await this.send404(req, res, nowRequestId);
       return;
     }
 
+    this.writeResponseHeaders(res, nowRequestId);
     return serveStaticFile(req, res, this.cwd);
   };
 
@@ -262,6 +322,7 @@ export default class DevServer {
   serveProjectAsNowV2 = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
+    nowRequestId: string,
     nowJson: NowConfig
   ) => {
     const {
@@ -271,11 +332,6 @@ export default class DevServer {
       uri_args,
       matched_route
     } = devRouter(req.url, nowJson.routes);
-
-    // set headers
-    Object.entries(headers).forEach(([name, value]) => {
-      res.setHeader(name, value);
-    });
 
     if (isURL(dest)) {
       this.logDebug('ProxyPass', matched_route);
@@ -289,14 +345,14 @@ export default class DevServer {
     }
 
     if (!nowJson.builds) {
-      return serveStaticFile(req, res, this.cwd);
+      return this.serveProjectAsStatic(req, res, nowRequestId);
     }
 
     // find asset responsible for dest
     let { asset, assetKey } = resolveDest(this.assets, dest);
 
     if (!asset || !assetKey) {
-      await this.send404(res);
+      await this.send404(req, res, nowRequestId);
       return;
     }
 
@@ -308,27 +364,29 @@ export default class DevServer {
       await executeBuild(nowJson, this, asset);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
-      // object
       ({ asset, assetKey } = resolveDest(this.assets, dest));
 
       if (!asset || !assetKey) {
-        await this.send404(res);
+        await this.send404(req, res, nowRequestId);
         return;
       }
     }
 
-    // invoke asset
     switch (asset.type) {
       case 'FileFsRef':
+        this.writeResponseHeaders(res, nowRequestId);
         req.url = `/${basename(asset.fsPath)}`;
         return serveStaticFile(req, res, dirname(asset.fsPath));
 
       case 'FileBlob':
         const contentType = lookupMimeType(assetKey);
+        const headers: http.OutgoingHttpHeaders = {
+          'Content-Length': asset.data.length
+        };
         if (contentType) {
-          res.setHeader('Content-Type', contentType);
+          headers['Content-Type'] = contentType;
         }
-        res.setHeader('Content-Length', asset.data.length);
+        this.writeResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
         return;
 
@@ -348,11 +406,10 @@ export default class DevServer {
         });
 
         const body = await rawBody(req);
-
         const payload: InvokePayload = {
           method: req.method || 'GET',
           path,
-          headers: req.headers,
+          headers: this.getNowProxyHeaders(req, nowRequestId, req.headers),
           encoding: 'base64',
           body: body.toString('base64')
         };
@@ -366,7 +423,9 @@ export default class DevServer {
         } catch (err) {
           console.error(err);
           await this.sendError(
+            req,
             res,
+            nowRequestId,
             'NO_STATUS_CODE_FROM_LAMBDA',
             'An error occurred with your deployment',
             502
@@ -375,9 +434,8 @@ export default class DevServer {
         }
 
         res.statusCode = result.statusCode;
-        for (const [name, value] of Object.entries(result.headers)) {
-          res.setHeader(name, value);
-        }
+        this.writeResponseHeaders(res, nowRequestId, result.headers);
+
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {
           resBody = Buffer.from(result.body, 'base64');
@@ -385,10 +443,13 @@ export default class DevServer {
           resBody = result.body;
         }
         return res.end(resBody);
+
       default:
         // This shouldn't really ever happen...
         await this.sendError(
+          req,
           res,
+          nowRequestId,
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
@@ -462,4 +523,19 @@ function close(server: http.Server): Promise<void> {
       }
     });
   });
+}
+
+/**
+ * Generates a (fake) Now tracing ID for an HTTP request.
+ *
+ * Example: lx24t-1553895116335-784edbc9ef03e2b5534f3dc6f14c90d4
+ */
+function generateRequestId(): string {
+  return [
+    Math.random()
+      .toString(32)
+      .slice(-5),
+    Date.now(),
+    randomBytes(16).toString('hex')
+  ].join('-');
 }
