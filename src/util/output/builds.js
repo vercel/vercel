@@ -89,7 +89,7 @@ const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidd
     }
 
     return `${counter > 9 ? '9+' : counter} ${name}`;
-  }).filter(s => s).join(' ')
+  }).filter(s => s).join(', ')
 
   // Since the longestState might still be shorter
   // than multiple states we still want to ensure
