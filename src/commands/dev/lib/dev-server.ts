@@ -334,6 +334,11 @@ export default class DevServer {
       matched_route
     } = devRouter(req.url, nowJson.routes);
 
+    // Set any headers defined in the matched `route` config
+    Object.entries(headers).forEach(([name, value]) => {
+      res.setHeader(name, value);
+    });
+
     if (isURL(dest)) {
       this.logDebug('ProxyPass', matched_route);
       return proxyPass(req, res, dest);
