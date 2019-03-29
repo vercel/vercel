@@ -203,6 +203,7 @@ export default class DevServer {
         await this.serveProjectAsNowV2(req, res, nowJson);
       }
     } catch (err) {
+      this.setStatusError(err.message);
       this.output.debug(err.stack);
 
       if (!res.finished) {
