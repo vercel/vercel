@@ -187,7 +187,7 @@ export default class DevServer {
     statusCode: number = 500
   ): Promise<void> {
     res.statusCode = statusCode;
-    this.writeResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, nowRequestId);
     // TODO: render an HTML page similar to Now's router
     res.end(`${statusCode}: ${message}\nCode: ${code}\n`);
   }
@@ -200,7 +200,7 @@ export default class DevServer {
   /**
    * Sets the response `headers` including the Now headers to `res`.
    */
-  writeResponseHeaders(
+  setResponseHeaders(
     res: http.ServerResponse,
     nowRequestId: string,
     headers: http.OutgoingHttpHeaders = {}
@@ -221,13 +221,12 @@ export default class DevServer {
    */
   getNowProxyHeaders(
     req: http.IncomingMessage,
-    nowRequestId: string,
-    headers: http.IncomingHttpHeaders
+    nowRequestId: string
   ): http.IncomingHttpHeaders {
     const ip = this.getRequestIp(req);
     const { host } = req.headers;
     return {
-      ...headers,
+      ...req.headers,
       'X-Forwarded-Host': host,
       'X-Forwarded-Proto': 'http',
       'X-Forwarded-For': ip,
@@ -292,7 +291,7 @@ export default class DevServer {
       return;
     }
 
-    this.writeResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, nowRequestId);
     return serveStaticFile(req, res, this.cwd);
   };
 
@@ -359,7 +358,7 @@ export default class DevServer {
 
     switch (asset.type) {
       case 'FileFsRef':
-        this.writeResponseHeaders(res, nowRequestId);
+        this.setResponseHeaders(res, nowRequestId);
         req.url = `/${basename(asset.fsPath)}`;
         return serveStaticFile(req, res, dirname(asset.fsPath));
 
@@ -371,7 +370,7 @@ export default class DevServer {
         if (contentType) {
           headers['Content-Type'] = contentType;
         }
-        this.writeResponseHeaders(res, nowRequestId, headers);
+        this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
         return;
 
@@ -381,7 +380,9 @@ export default class DevServer {
           // but this shouldn't really ever happen since we run the builds before
           // responding to HTTP requests.
           await this.sendError(
+            req,
             res,
+            nowRequestId,
             'INTERNAL_LAMBDA_NOT_FOUND',
             'Lambda function has not been built'
           );
@@ -400,7 +401,7 @@ export default class DevServer {
         const payload: InvokePayload = {
           method: req.method || 'GET',
           path,
-          headers: this.getNowProxyHeaders(req, nowRequestId, req.headers),
+          headers: this.getNowProxyHeaders(req, nowRequestId),
           encoding: 'base64',
           body: body.toString('base64')
         };
@@ -425,7 +426,7 @@ export default class DevServer {
         }
 
         res.statusCode = result.statusCode;
-        this.writeResponseHeaders(res, nowRequestId, result.headers);
+        this.setResponseHeaders(res, nowRequestId, result.headers);
 
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {
