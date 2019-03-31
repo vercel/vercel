@@ -1,3 +1,4 @@
+import ms from 'ms';
 import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -44,6 +45,7 @@ export default class DevServer {
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage: string = '';
+  private inProgressBuilds: Map<string, Promise<void>>;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -51,6 +53,7 @@ export default class DevServer {
     this.assets = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
+    this.inProgressBuilds = new Map();
   }
 
   /* set dev-server status */
@@ -344,8 +347,28 @@ export default class DevServer {
     // then re-run the build that generated this asset
     if (this.shouldRebuild(req) && asset.buildEntry) {
       const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
-      this.output.debug(`Rebuilding asset: ${entrypoint}`);
-      await executeBuild(nowJson, this, asset);
+      const buildTimestamp: number = asset.buildTimestamp || 0;
+      let buildPromise = this.inProgressBuilds.get(entrypoint);
+      if (buildPromise) {
+        // A build for `entrypoint` is already in progress, so don't trigger
+        // another rebuild for this request - just wait on the existing one.
+        this.output.debug(`De-duping build "${entrypoint}" for "${req.method} ${req.url}"`);
+      } else if (Date.now() - buildTimestamp < ms('2s')) {
+        // If the built asset was created less than 2s ago, then don't trigger
+        // a rebuild. The purpose of this threshold is because once an HTML page
+        // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
+        // with a `no-cache` header, so this avoids *two* rebuilds for that case.
+        this.output.debug(`Skipping rebuild for "${entrypoint}" (not older than 2s) for "${req.method} ${req.url}"`);
+      } else {
+        this.output.debug(`Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`);
+        buildPromise = executeBuild(nowJson, this, asset);
+        this.inProgressBuilds.set(entrypoint, buildPromise)
+      }
+      try {
+        await buildPromise;
+      } finally {
+        this.inProgressBuilds.delete(entrypoint);
+      }
 
       // Since the `asset` was re-built, resolve it again to get the new asset
       ({ asset, assetKey } = resolveDest(this.assets, dest));
