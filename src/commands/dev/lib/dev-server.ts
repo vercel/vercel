@@ -311,8 +311,14 @@ export default class DevServer {
 
       case 'Lambda':
         if (!asset.fn) {
-          res.statusCode = 500;
-          res.end('Lambda function has not been built');
+          // This is mostly to appease TypeScript since `fn` is an optional prop,
+          // but this shouldn't really ever happen since we run the builds before
+          // responding to HTTP requests.
+          await this.sendError(
+            res,
+            'INTERNAL_LAMBDA_NOT_FOUND',
+            'Lambda function has not been built'
+          );
           return;
         }
 
