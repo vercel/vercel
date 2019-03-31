@@ -54,11 +54,13 @@ export interface BuilderInputs {
 export interface BuiltFileFsRef extends FileFsRef {
   buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
+  buildTimestamp?: number;
 }
 
 export interface BuiltFileBlob extends FileBlob {
   buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
+  buildTimestamp?: number;
 }
 
 export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
@@ -94,6 +96,7 @@ export interface BuiltLambda extends Lambda {
   fn?: FunLambda;
   buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
+  buildTimestamp?: number;
 }
 
 export interface HttpHeadersConfig {
