@@ -103,27 +103,30 @@ export async function executeBuild(
     Object.entries(output).map(async entry => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
-      if (asset.type !== 'Lambda') return;
 
-      // Tear down the previous `fun` Lambda instance for this asset
-      const oldAsset = devServer.assets[path];
-      if (oldAsset && oldAsset.type === 'Lambda' && oldAsset.fn) {
-        await oldAsset.fn.destroy();
+      if (asset.type === 'Lambda') {
+        // Tear down the previous `fun` Lambda instance for this asset
+        const oldAsset = devServer.assets[path];
+        if (oldAsset && oldAsset.type === 'Lambda' && oldAsset.fn) {
+          await oldAsset.fn.destroy();
+        }
+
+        asset.fn = await createFunction({
+          Code: { ZipFile: asset.zipBuffer },
+          Handler: asset.handler,
+          Runtime: asset.runtime,
+          Environment: {
+            Variables: {
+              // TODO: resolve secret env vars
+              ...nowJson.env,
+              ...asset.environment,
+              NOW_REGION: 'dev1'
+            }
+          }
+        });
       }
 
-      asset.fn = await createFunction({
-        Code: { ZipFile: asset.zipBuffer },
-        Handler: asset.handler,
-        Runtime: asset.runtime,
-        Environment: {
-          Variables: {
-            // TODO: resolve secret env vars
-            ...nowJson.env,
-            ...asset.environment,
-            NOW_REGION: 'dev1'
-          }
-        }
-      });
+      asset.buildTimestamp = Date.now();
     })
   );
 
@@ -212,20 +215,23 @@ async function executeBuilds(
 
   await Promise.all(
     Object.values(devServer.assets).map(async (asset: BuilderOutput) => {
-      if (asset.type !== 'Lambda') return;
-      asset.fn = await createFunction({
-        Code: { ZipFile: asset.zipBuffer },
-        Handler: asset.handler,
-        Runtime: asset.runtime,
-        Environment: {
-          Variables: {
-            // TODO: resolve secret env vars
-            ...nowJson.env,
-            ...asset.environment,
-            NOW_REGION: 'dev1'
+      if (asset.type === 'Lambda') {
+        asset.fn = await createFunction({
+          Code: { ZipFile: asset.zipBuffer },
+          Handler: asset.handler,
+          Runtime: asset.runtime,
+          Environment: {
+            Variables: {
+              // TODO: resolve secret env vars
+              ...nowJson.env,
+              ...asset.environment,
+              NOW_REGION: 'dev1'
+            }
           }
-        }
-      });
+        });
+      }
+
+      asset.buildTimestamp = Date.now();
     })
   );
 }
