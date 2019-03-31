@@ -127,7 +127,7 @@ export default class DevServer {
     }
 
     this.output.ready(
-      `${chalk.bold('`now dev`')} server listening at ${chalk.blue.underline(
+      `${chalk.bold('`now dev`')} server listening at ${chalk.cyan.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
