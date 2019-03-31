@@ -60,7 +60,9 @@ export async function executeBuild(
   const workPath = join(cacheDir, 'workPaths', String(dev + ino));
   await mkdirp(workPath);
 
-  devServer.logDebug(`Building ${buildEntry.fsPath} (workPath = ${workPath})`);
+  devServer.output.debug(
+    `Building ${buildEntry.fsPath} (workPath = ${workPath})`
+  );
   const { builder } = buildConfig;
   if (!builder) {
     throw new Error('No builder');
@@ -147,7 +149,7 @@ async function executeBuilds(
 
   for (const build of nowJson.builds) {
     try {
-      devServer.logDebug(`Build ${JSON.stringify(build)}`);
+      devServer.output.debug(`Build ${JSON.stringify(build)}`);
       const builder = await getBuilder(build.use);
       build.builder = builder;
 
@@ -168,7 +170,9 @@ async function executeBuilds(
         const workPath = join(cacheDir, 'workPaths', String(dev + ino));
         await mkdirp(workPath);
 
-        devServer.logDebug(`Building ${entry.fsPath} (workPath = ${workPath})`);
+        devServer.output.debug(
+          `Building ${entry.fsPath} (workPath = ${workPath})`
+        );
         const output = await builder.build({
           files,
           entrypoint,
