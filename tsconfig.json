@@ -9,7 +9,8 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "typeRoots": [
-      "./@types"
+      "./@types",
+      "./node_modules/@types"
     ]
   }
 }

@@ -68,7 +68,11 @@ jobs:
           at: .
       - run:
           name: Running Unit Tests
-          command: yarn test-unit && yarn coverage
+          command: yarn test-unit --clean false
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .nyc_output
 
   test-integration:
     macos:
@@ -83,7 +87,19 @@ jobs:
           command: node --version
       - run:
           name: Running Integration Tests
-          command: yarn test-integration
+          command: yarn test-integration --clean false
+
+  coverage:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run coverage report
+          command: yarn coverage
 
   compress:
     docker:
@@ -208,6 +224,13 @@ workflows:
       - test-integration:
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
+      - coverage:
+          requires:
+            - test-unit
+            - test-integration
           filters:
             tags:
               only: /.*/

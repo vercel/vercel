@@ -83,9 +83,7 @@ export default async function main(ctx: NowContext) {
 function stringifyError(err: any) {
   if (err instanceof NowError) {
     const errMeta = JSON.stringify(err.meta, null, 2).replace(/\\n/g, '\n');
-
     return `${chalk.red(err.code)} ${err.message}\n${errMeta}`;
   }
-
   return err.stack;
 }
