@@ -38,43 +38,21 @@ import {
 export default class DevServer {
   public cwd: string;
   public assets: BuilderOutputs;
+  public output: Output;
 
-  private output: Output;
-  private debug: boolean;
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage: string = '';
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
-    this.debug = options.debug;
     this.output = options.output;
     this.assets = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
   }
 
-  /* use dev-server as a "console" for logs. */
-  logDebug(...args: any[]): void {
-    if (this.debug) {
-      console.log(chalk.yellowBright('> [debug]'), ...args);
-    }
-  }
-
-  logError(str: string): void {
-    console.log(error(str));
-  }
-
-  logSuccess(str: string): void {
-    console.log(success(str));
-  }
-
-  logHttp(msg: string): void {
-    console.log(`  ${chalk.green('>>>')} ${msg}`);
-  }
-
   /* set dev-server status */
-
   setStatusIdle(): void {
     this.status = DevServerStatus.idle;
     this.statusMessage = '';
@@ -133,7 +111,7 @@ export default class DevServer {
       try {
         address = await listen(this.server, port);
       } catch (err) {
-        this.logDebug(`Got listen error: ${err.code}`);
+        this.output.debug(`Got listen error: ${err.code}`);
         if (err.code === 'EADDRINUSE') {
           // Increase port and try again
           this.output.note(`Requested port ${port} is already in use`);
@@ -144,20 +122,18 @@ export default class DevServer {
       }
     }
 
-    this.logSuccess(
-      `${chalk.bold(
-        '`now dev`'
-      )} server listening at ${chalk.blue.underline(
+    this.output.ready(
+      `${chalk.bold('`now dev`')} server listening at ${chalk.blue.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
 
     // Initial build. Not meant to invoke, but to speed up future builds
     if (nowJson && Array.isArray(nowJson.builds)) {
-      this.logDebug('Initial build');
+      this.output.log('Running initial builds');
       await buildUserProject(nowJson, this);
-      this.logSuccess('Initial build ready');
-      this.logDebug('Built', Object.keys(this.assets));
+      this.output.success('Initial builds ready');
+      this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
     }
 
     this.setStatusIdle();
@@ -167,7 +143,7 @@ export default class DevServer {
    * Shuts down the `now dev` server, and cleans up any temporary resources.
    */
   async stop(): Promise<void> {
-    this.logDebug('Stopping `now dev` server');
+    this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
     const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
       if (asset.type === 'Lambda' && asset.fn) {
         return asset.fn.destroy();
@@ -205,13 +181,14 @@ export default class DevServer {
   }
 
   /**
-   * dev-server http handler
+   * DevServer HTTP handler
    */
   devServerHandler: HttpHandler = async (
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    this.logHttp(`${req.method} ${req.url}`);
+    const method = req.method || 'GET';
+    this.output.log(`${chalk.bold(method)} ${req.url}`);
 
     if (this.status === DevServerStatus.busy) {
       return res.end(`[busy] ${this.statusMessage}...`);
@@ -227,7 +204,7 @@ export default class DevServer {
       }
     } catch (err) {
       this.setStatusError(err.message);
-      this.logDebug(err.stack);
+      this.output.debug(err.stack);
 
       if (!res.finished) {
         res.statusCode = 500;
@@ -278,12 +255,12 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.logDebug('ProxyPass', matched_route);
+      this.output.debug(`ProxyPass: ${matched_route}`);
       return proxyPass(req, res, dest);
     }
 
     if ([301, 302, 303].includes(status)) {
-      this.logDebug('Redirect', matched_route);
+      this.output.debug(`Redirect: ${matched_route}`);
       res.statusCode = status;
       return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
     }
@@ -304,7 +281,7 @@ export default class DevServer {
     // then re-run the build that generated this asset
     if (this.shouldRebuild(req) && asset.buildEntry) {
       const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
-      this.logDebug('Rebuilding asset:', entrypoint);
+      this.output.debug(`Rebuilding asset: ${entrypoint}`);
       await executeBuild(nowJson, this, asset);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
