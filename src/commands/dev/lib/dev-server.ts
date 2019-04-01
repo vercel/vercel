@@ -130,7 +130,10 @@ export default class DevServer {
     localEnv: EnvConfig = {}
   ): void {
     const missing: string[] = Object.entries(env)
-      .filter(([name, value]) => value.startsWith('@') && !(name in localEnv))
+      .filter(
+        ([name, value]) =>
+          value.startsWith('@') && !hasOwnProperty(localEnv, name)
+      )
       .map(([name, value]) => name);
     if (missing.length >= 1) {
       throw new MissingDotenvVarsError(type, missing);
@@ -600,4 +603,8 @@ function generateRequestId(): string {
     Date.now(),
     randomBytes(16).toString('hex')
   ].join('-');
+}
+
+function hasOwnProperty(obj: any, prop: string) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
 }
