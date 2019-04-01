@@ -3,6 +3,7 @@ import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
 import cmd from './output/cmd';
+import code from './output/code';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -1035,10 +1036,10 @@ export class MissingDotenvVarsError extends NowError<
   constructor(type: string, missing: string[]) {
     let message: string;
     if (missing.length === 1) {
-      message = `Env var ${JSON.stringify(missing[0])} is not defined in \`${type}\``;
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)}`;
     } else {
       message = [
-        `The following env vars are not defined in \`${type}\`:`,
+        `The following env vars are not defined in ${code(type)}:`,
         ...missing.map(name => ` - ${JSON.stringify(name)}`)
       ].join('\n');
     }
