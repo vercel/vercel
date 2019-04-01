@@ -195,7 +195,7 @@ export default class DevServer {
     }
 
     this.output.ready(
-      `${chalk.bold('`now dev`')} server listening at ${chalk.cyan.underline(
+      `Development server running at ${chalk.cyan.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
