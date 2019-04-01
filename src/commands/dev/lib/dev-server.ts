@@ -51,6 +51,7 @@ export default class DevServer {
   private status: DevServerStatus;
   private statusMessage: string = '';
   private inProgressBuilds: Map<string, Promise<void>>;
+  private originalEnv: EnvConfig;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -61,6 +62,7 @@ export default class DevServer {
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
     this.inProgressBuilds = new Map();
+    this.originalEnv = { ...process.env };
   }
 
   /* set dev-server status */
@@ -132,12 +134,36 @@ export default class DevServer {
     const missing: string[] = Object.entries(env)
       .filter(
         ([name, value]) =>
-          value.startsWith('@') && !hasOwnProperty(localEnv, name)
+          typeof value === 'string' &&
+          value.startsWith('@') &&
+          !hasOwnProperty(localEnv, name)
       )
       .map(([name, value]) => name);
     if (missing.length >= 1) {
       throw new MissingDotenvVarsError(type, missing);
     }
+  }
+
+  /**
+   * Sets the `build.env` vars onto `process.env`, since the builders are
+   * executed in the now-cli process.
+   */
+  applyBuildEnv(nowJson: NowConfig): void {
+    const buildEnv = nowJson.build && nowJson.build.env;
+    Object.assign(process.env, buildEnv, this.buildEnv);
+  }
+
+  /**
+   * Restores the original `process.env`, deleting any new env vars that
+   * a builder might have set and then applying the original env vars.
+   */
+  restoreOriginalEnv(): void {
+    for (const key of Object.keys(process.env)) {
+      if (!hasOwnProperty(this.originalEnv, key)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, this.originalEnv);
   }
 
   /**

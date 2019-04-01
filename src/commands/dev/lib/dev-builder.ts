@@ -70,13 +70,19 @@ export async function executeBuild(
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
   const config = buildConfig.config || {};
-  const output = await builder.build({
-    files,
-    entrypoint,
-    workPath,
-    config,
-    isDev: true
-  });
+  let output: BuilderOutputs;
+  try {
+    devServer.applyBuildEnv(nowJson);
+    output = await builder.build({
+      files,
+      entrypoint,
+      workPath,
+      config,
+      isDev: true
+    });
+  } finally {
+    devServer.restoreOriginalEnv();
+  }
 
   // enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
@@ -176,13 +182,19 @@ async function executeBuilds(
         devServer.output.debug(
           `Building ${entry.fsPath} (workPath = ${workPath})`
         );
-        const output = await builder.build({
-          files,
-          entrypoint,
-          workPath,
-          config,
-          isDev: true
-        });
+        let output: BuilderOutputs;
+        try {
+          devServer.applyBuildEnv(nowJson);
+          output = await builder.build({
+            files,
+            entrypoint,
+            workPath,
+            config,
+            isDev: true
+          });
+        } finally {
+          devServer.restoreOriginalEnv();
+        }
 
         // enforce the lambda zip size soft watermark
         const builderConfig = builder.config || {};
