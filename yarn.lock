@@ -493,10 +493,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@0.5.1":
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.5.1.tgz#d552517e4740e28ab843b2d2f6e7316a271d0e77"
-  integrity sha512-ki9Ult3PjGd1mK4x8bXwrKI9kqhUrJ29DaQF9qEuyMDv29FpuHh4hSP+Ppsk0I1meVXjJzc0mr/ctKEPsj0JHw==
+"@zeit/fun@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.6.0.tgz#73181b559e7325f64503f04b730b2689cbe50026"
+  integrity sha512-SP9K+nu22V6NqVJhgNs40wQLUduN8qrpRtYy/bmf90VMNm1KB2scb2JjRlZ3Iu95T4ozMJZkR1qI6RzbXaRidQ==
   dependencies:
     "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
