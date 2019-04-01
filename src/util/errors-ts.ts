@@ -1036,10 +1036,10 @@ export class MissingDotenvVarsError extends NowError<
   constructor(type: string, missing: string[]) {
     let message: string;
     if (missing.length === 1) {
-      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)}`;
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)} file`;
     } else {
       message = [
-        `The following env vars are not defined in ${code(type)}:`,
+        `The following env vars are not defined in ${code(type)} file:`,
         ...missing.map(name => ` - ${JSON.stringify(name)}`)
       ].join('\n');
     }
