@@ -14,7 +14,7 @@ export interface DevServerOptions {
 }
 
 export interface EnvConfig {
-  [name: string]: string;
+  [name: string]: string | undefined;
 }
 
 export interface BuildConfig {

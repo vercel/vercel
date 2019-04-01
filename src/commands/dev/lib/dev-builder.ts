@@ -52,7 +52,7 @@ export async function executeBuild(
   if (!buildConfig || !buildEntry) {
     throw new Error("Asset has not been built yet, can't rebuild");
   }
-  const { cwd } = devServer;
+  const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);
 
   const cacheDir = await cacheDirPromise;
@@ -70,13 +70,19 @@ export async function executeBuild(
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
   const config = buildConfig.config || {};
-  const output = await builder.build({
-    files,
-    entrypoint,
-    workPath,
-    config,
-    isDev: true
-  });
+  let output: BuilderOutputs;
+  try {
+    devServer.applyBuildEnv(nowJson);
+    output = await builder.build({
+      files,
+      entrypoint,
+      workPath,
+      config,
+      isDev: true
+    });
+  } finally {
+    devServer.restoreOriginalEnv();
+  }
 
   // enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
@@ -117,9 +123,9 @@ export async function executeBuild(
           Runtime: asset.runtime,
           Environment: {
             Variables: {
-              // TODO: resolve secret env vars
               ...nowJson.env,
               ...asset.environment,
+              ...env,
               NOW_REGION: 'dev1'
             }
           }
@@ -144,7 +150,7 @@ async function executeBuilds(
     return;
   }
 
-  const { cwd } = devServer;
+  const { cwd, env } = devServer;
   const [files, cacheDir] = await Promise.all([
     collectProjectFiles('**', cwd),
     cacheDirPromise
@@ -176,13 +182,19 @@ async function executeBuilds(
         devServer.output.debug(
           `Building ${entry.fsPath} (workPath = ${workPath})`
         );
-        const output = await builder.build({
-          files,
-          entrypoint,
-          workPath,
-          config,
-          isDev: true
-        });
+        let output: BuilderOutputs;
+        try {
+          devServer.applyBuildEnv(nowJson);
+          output = await builder.build({
+            files,
+            entrypoint,
+            workPath,
+            config,
+            isDev: true
+          });
+        } finally {
+          devServer.restoreOriginalEnv();
+        }
 
         // enforce the lambda zip size soft watermark
         const builderConfig = builder.config || {};
@@ -222,9 +234,9 @@ async function executeBuilds(
           Runtime: asset.runtime,
           Environment: {
             Variables: {
-              // TODO: resolve secret env vars
               ...nowJson.env,
               ...asset.environment,
+              ...env,
               NOW_REGION: 'dev1'
             }
           }
