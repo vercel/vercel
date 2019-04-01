@@ -26,9 +26,7 @@ import {
   createIgnoreList
 } from './dev-builder';
 
-import {
-  MissingDotenvVarsError
-} from '../../../util/errors-ts';
+import { MissingDotenvVarsError } from '../../../util/errors-ts';
 
 import {
   EnvConfig,
@@ -119,10 +117,18 @@ export default class DevServer {
       throw new Error('Only `version: 2` is supported by `now dev`');
     }
     this.validateEnvConfig('.env', config.env, this.env);
-    this.validateEnvConfig('.env.build', config.build && config.build.env, this.buildEnv);
+    this.validateEnvConfig(
+      '.env.build',
+      config.build && config.build.env,
+      this.buildEnv
+    );
   }
 
-  validateEnvConfig(type: string, env: EnvConfig = {}, localEnv: EnvConfig = {}): void {
+  validateEnvConfig(
+    type: string,
+    env: EnvConfig = {},
+    localEnv: EnvConfig = {}
+  ): void {
     const missing: string[] = Object.entries(env)
       .filter(([name, value]) => value.startsWith('@') && !(name in localEnv))
       .map(([name, value]) => name);
@@ -136,7 +142,7 @@ export default class DevServer {
    */
   async start(port: number = 3000): Promise<void> {
     let address: string | null = null;
-    const [ env, buildEnv ] = await Promise.all([
+    const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env'),
       this.getLocalEnv('.env.build')
     ]);
@@ -385,17 +391,25 @@ export default class DevServer {
       if (buildPromise) {
         // A build for `entrypoint` is already in progress, so don't trigger
         // another rebuild for this request - just wait on the existing one.
-        this.output.debug(`De-duping build "${entrypoint}" for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
+        );
       } else if (Date.now() - buildTimestamp < ms('2s')) {
         // If the built asset was created less than 2s ago, then don't trigger
         // a rebuild. The purpose of this threshold is because once an HTML page
         // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
         // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-        this.output.debug(`Skipping rebuild for "${entrypoint}" (not older than 2s) for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
+            req.method
+          } ${req.url}"`
+        );
       } else {
-        this.output.debug(`Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
+        );
         buildPromise = executeBuild(nowJson, this, asset);
-        this.inProgressBuilds.set(entrypoint, buildPromise)
+        this.inProgressBuilds.set(entrypoint, buildPromise);
       }
       try {
         await buildPromise;
