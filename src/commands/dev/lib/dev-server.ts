@@ -195,7 +195,7 @@ export default class DevServer {
     }
 
     this.output.ready(
-      `Listening on ${chalk.cyan.bold(address.replace('[::]', 'localhost'))}`
+      `Running at ${chalk.cyan.bold(address.replace('[::]', 'localhost'))}`
     );
 
     // Perform the initial build of assets so that we know what assets exist.
