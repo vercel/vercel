@@ -10,14 +10,14 @@ import listen from 'async-listen';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
-import { basename, dirname, relative } from 'path';
+import { parse as parseDotenv } from 'dotenv';
 import { lookup as lookupMimeType } from 'mime-types';
+import { basename, dirname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
 import error from '../../../util/output/error';
 import success from '../../../util/output/success';
 import getNowJsonPath from '../../../util/config/local-path';
-
 import isURL from './is-url';
 import devRouter from './dev-router';
 import {
@@ -26,7 +26,10 @@ import {
   createIgnoreList
 } from './dev-builder';
 
+import { MissingDotenvVarsError } from '../../../util/errors-ts';
+
 import {
+  EnvConfig,
   NowConfig,
   DevServerStatus,
   DevServerOptions,
@@ -39,21 +42,27 @@ import {
 
 export default class DevServer {
   public cwd: string;
-  public assets: BuilderOutputs;
   public output: Output;
+  public env: EnvConfig;
+  public buildEnv: EnvConfig;
+  public assets: BuilderOutputs;
 
   private server: http.Server;
   private status: DevServerStatus;
   private statusMessage: string = '';
   private inProgressBuilds: Map<string, Promise<void>>;
+  private originalEnv: EnvConfig;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.assets = {};
+    this.env = {};
+    this.buildEnv = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
     this.inProgressBuilds = new Map();
+    this.originalEnv = { ...process.env };
   }
 
   /* set dev-server status */
@@ -90,18 +99,71 @@ export default class DevServer {
     return null;
   }
 
+  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+    const filePath = join(this.cwd, fileName);
+    this.output.debug(`Reading local env: ${filePath}`);
+    let env: EnvConfig = {};
+    try {
+      const dotenv = await fs.readFile(filePath, 'utf8');
+      env = parseDotenv(dotenv);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+    return env;
+  }
+
   validateNowConfig(config: NowConfig): void {
     if (config.version !== 2) {
       throw new Error('Only `version: 2` is supported by `now dev`');
     }
-    const buildConfig = config.build || {};
-    const hasSecretEnv = [
-      ...Object.values(config.env || {}),
-      ...Object.values(buildConfig.env || {})
-    ].some(val => val[0] === '@');
-    if (hasSecretEnv) {
-      throw new Error('Secret env vars are not yet supported by `now dev`');
+    this.validateEnvConfig('.env', config.env, this.env);
+    this.validateEnvConfig(
+      '.env.build',
+      config.build && config.build.env,
+      this.buildEnv
+    );
+  }
+
+  validateEnvConfig(
+    type: string,
+    env: EnvConfig = {},
+    localEnv: EnvConfig = {}
+  ): void {
+    const missing: string[] = Object.entries(env)
+      .filter(
+        ([name, value]) =>
+          typeof value === 'string' &&
+          value.startsWith('@') &&
+          !hasOwnProperty(localEnv, name)
+      )
+      .map(([name, value]) => name);
+    if (missing.length >= 1) {
+      throw new MissingDotenvVarsError(type, missing);
     }
+  }
+
+  /**
+   * Sets the `build.env` vars onto `process.env`, since the builders are
+   * executed in the now-cli process.
+   */
+  applyBuildEnv(nowJson: NowConfig): void {
+    const buildEnv = nowJson.build && nowJson.build.env;
+    Object.assign(process.env, buildEnv, this.buildEnv);
+  }
+
+  /**
+   * Restores the original `process.env`, deleting any new env vars that
+   * a builder might have set and then applying the original env vars.
+   */
+  restoreOriginalEnv(): void {
+    for (const key of Object.keys(process.env)) {
+      if (!hasOwnProperty(this.originalEnv, key)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, this.originalEnv);
   }
 
   /**
@@ -109,6 +171,12 @@ export default class DevServer {
    */
   async start(port: number = 3000): Promise<void> {
     let address: string | null = null;
+    const [env, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env'),
+      this.getLocalEnv('.env.build')
+    ]);
+    this.env = env;
+    this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
     while (typeof address !== 'string') {
@@ -352,17 +420,25 @@ export default class DevServer {
       if (buildPromise) {
         // A build for `entrypoint` is already in progress, so don't trigger
         // another rebuild for this request - just wait on the existing one.
-        this.output.debug(`De-duping build "${entrypoint}" for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
+        );
       } else if (Date.now() - buildTimestamp < ms('2s')) {
         // If the built asset was created less than 2s ago, then don't trigger
         // a rebuild. The purpose of this threshold is because once an HTML page
         // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
         // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-        this.output.debug(`Skipping rebuild for "${entrypoint}" (not older than 2s) for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
+            req.method
+          } ${req.url}"`
+        );
       } else {
-        this.output.debug(`Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`);
+        this.output.debug(
+          `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
+        );
         buildPromise = executeBuild(nowJson, this, asset);
-        this.inProgressBuilds.set(entrypoint, buildPromise)
+        this.inProgressBuilds.set(entrypoint, buildPromise);
       }
       try {
         await buildPromise;
@@ -553,4 +629,8 @@ function generateRequestId(): string {
     Date.now(),
     randomBytes(16).toString('hex')
   ].join('-');
+}
+
+function hasOwnProperty(obj: any, prop: string) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
 }
