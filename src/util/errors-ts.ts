@@ -3,6 +3,7 @@ import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
 import cmd from './output/cmd';
+import code from './output/code';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -1024,6 +1025,28 @@ export class LambdaSizeExceededError extends NowError<
             maxLambdaSize
           ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
       meta: { size, maxLambdaSize }
+    });
+  }
+}
+
+export class MissingDotenvVarsError extends NowError<
+  'MISSING_DOTENV_VARS',
+  { type: string, missing: string[] }
+> {
+  constructor(type: string, missing: string[]) {
+    let message: string;
+    if (missing.length === 1) {
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)} file`;
+    } else {
+      message = [
+        `The following env vars are not defined in ${code(type)} file:`,
+        ...missing.map(name => ` - ${JSON.stringify(name)}`)
+      ].join('\n');
+    }
+    super({
+      code: 'MISSING_DOTENV_VARS',
+      message,
+      meta: { type, missing }
     });
   }
 }

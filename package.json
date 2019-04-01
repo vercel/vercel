@@ -140,6 +140,7 @@
     "@types/async-retry": "1.2.1",
     "@types/bytes": "3.0.0",
     "@types/debug": "0.0.31",
+    "@types/dotenv": "6.1.1",
     "@types/execa": "0.9.0",
     "@types/fs-extra": "5.0.5",
     "@types/glob": "7.1.1",
