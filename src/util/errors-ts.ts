@@ -1038,8 +1038,8 @@ export class MissingDotenvVarsError extends NowError<
       message = `Env var ${JSON.stringify(missing[0])} is not defined in \`${type}\``;
     } else {
       message = [
-        `The following env vars are not defined in \`${type}\``,
-        ...missing.map(name => ` - "${JSON.stringify(name)}`)
+        `The following env vars are not defined in \`${type}\`:`,
+        ...missing.map(name => ` - ${JSON.stringify(name)}`)
       ].join('\n');
     }
     super({
