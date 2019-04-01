@@ -1027,3 +1027,25 @@ export class LambdaSizeExceededError extends NowError<
     });
   }
 }
+
+export class MissingDotenvVarsError extends NowError<
+  'MISSING_DOTENV_VARS',
+  { type: string, missing: string[] }
+> {
+  constructor(type: string, missing: string[]) {
+    let message: string;
+    if (missing.length === 1) {
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in \`${type}\``;
+    } else {
+      message = [
+        `The following env vars are not defined in \`${type}\``,
+        ...missing.map(name => ` - "${JSON.stringify(name)}`)
+      ].join('\n');
+    }
+    super({
+      code: 'MISSING_DOTENV_VARS',
+      message,
+      meta: { type, missing }
+    });
+  }
+}

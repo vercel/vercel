@@ -52,7 +52,7 @@ export async function executeBuild(
   if (!buildConfig || !buildEntry) {
     throw new Error("Asset has not been built yet, can't rebuild");
   }
-  const { cwd } = devServer;
+  const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);
 
   const cacheDir = await cacheDirPromise;
@@ -117,9 +117,9 @@ export async function executeBuild(
           Runtime: asset.runtime,
           Environment: {
             Variables: {
-              // TODO: resolve secret env vars
               ...nowJson.env,
               ...asset.environment,
+              ...env,
               NOW_REGION: 'dev1'
             }
           }
@@ -144,7 +144,7 @@ async function executeBuilds(
     return;
   }
 
-  const { cwd } = devServer;
+  const { cwd, env } = devServer;
   const [files, cacheDir] = await Promise.all([
     collectProjectFiles('**', cwd),
     cacheDirPromise
@@ -222,9 +222,9 @@ async function executeBuilds(
           Runtime: asset.runtime,
           Environment: {
             Variables: {
-              // TODO: resolve secret env vars
               ...nowJson.env,
               ...asset.environment,
+              ...env,
               NOW_REGION: 'dev1'
             }
           }
