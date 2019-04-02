@@ -5455,10 +5455,10 @@ path-type@^3.0.0:
   dependencies:
     pify "^3.0.0"
 
-pcre-to-regexp@0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/pcre-to-regexp/-/pcre-to-regexp-0.0.4.tgz#a19c3fc6af540349f915367a4776c75c651dae05"
-  integrity sha1-oZw/xq9UA0n5FTZ6R3bHXGUdrgU=
+pcre-to-regexp@0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/pcre-to-regexp/-/pcre-to-regexp-0.0.5.tgz#95ba2462c12aeb375c7f8de1168c85c6eef61cdd"
+  integrity sha512-0FCWn56OoWhaEeekT+C8z+vYBgZdGj05Auu3KeKkzj+CWQ6jTtHGdffaoU7WH/f37ZyHAHnRmFvKYZwR31DByg==
 
 pend@~1.2.0:
   version "1.2.0"
