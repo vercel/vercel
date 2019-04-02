@@ -14,6 +14,10 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
       let { src } = routeConfig;
+      if (!src) {
+        // ignore { "handler" } routes for now
+        return false;
+      }
 
       if (!src.startsWith('^')) {
         src = `^${src}`;
