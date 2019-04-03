@@ -437,7 +437,7 @@ export default class DevServer {
         this.output.debug(
           `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
         );
-        buildPromise = executeBuild(nowJson, this, asset);
+        buildPromise = executeBuild(nowJson, this, asset, req.url);
         this.inProgressBuilds.set(entrypoint, buildPromise);
       }
       try {

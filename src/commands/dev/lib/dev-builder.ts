@@ -46,7 +46,8 @@ export async function buildUserProject(
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
-  asset: BuilderOutput
+  asset: BuilderOutput,
+  requestPath: string | null = null
 ): Promise<void> {
   const { buildConfig, buildEntry } = asset;
   if (!buildConfig || !buildEntry) {
@@ -78,7 +79,7 @@ export async function executeBuild(
       entrypoint,
       workPath,
       config,
-      isDev: true
+      meta: { isDev: true, requestPath }
     });
   } finally {
     devServer.restoreOriginalEnv();
@@ -190,7 +191,7 @@ async function executeBuilds(
             entrypoint,
             workPath,
             config,
-            isDev: true
+            meta: { isDev: true, requestPath: null }
           });
         } finally {
           devServer.restoreOriginalEnv();

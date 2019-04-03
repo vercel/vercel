@@ -73,7 +73,10 @@ export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
   config: object;
-  isDev?: boolean;
+  meta?: {
+    isDev?: boolean;
+    requestPath?: string | null;
+  };
 }
 
 export interface BuilderParams extends BuilderParamsBase {
