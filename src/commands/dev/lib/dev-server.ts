@@ -656,16 +656,22 @@ function resolveSubscription(
   subscriptions: BuildSubscription[],
   dest: string
 ): {
-  subscription: BuildSubscription | void;
-  subscriptionKey: string | undefined;
+  subscription?: BuildSubscription;
+  subscriptionKey?: string;
 } {
   let subscriptionKey = dest.replace(/^\//, '');
   const subscription = subscriptions.find(subscription => {
     return subscription.patterns.some(pattern => {
       let match = minimatch(subscriptionKey, pattern);
       if (!match) {
-        const withoutIndex = pattern.replace(/\/?index(\.\w+)?$/, '');
-        match = minimatch(subscriptionKey, withoutIndex);
+        const indexMatch = pattern.match(/\/?index(\.\w+)?$/);
+        if (indexMatch) {
+          const withoutIndex = pattern.replace(/\/?index(\.\w+)?$/, '');
+          match = minimatch(subscriptionKey, withoutIndex);
+          if (match) {
+            subscriptionKey += indexMatch[0];
+          }
+        }
       }
       return match;
     });
