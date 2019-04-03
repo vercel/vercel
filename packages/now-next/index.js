@@ -190,13 +190,19 @@ exports.build = async ({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  if (
-    (meta.isDev || meta.requestPath)
-    && !(
-      semver.satisfies(nextVersion, '>=8.0.5-canary.2')
-      || nextVersion === 'canary'
-    )
-  ) {
+  const isUpdated = (v) => {
+    if (v === 'canary') return true;
+
+    try {
+      return semver.satisfies(v, '>=8.0.5-canary.2', {
+        includePrerelease: true,
+      });
+    } catch (e) {
+      return false;
+    }
+  };
+
+  if ((meta.isDev || meta.requestPath) && !isUpdated(nextVersion)) {
     throw new Error(
       '`now dev` can only be used with Next.js >=8.0.5-canary.2!',
     );
@@ -208,9 +214,7 @@ exports.build = async ({
   }
   if (meta.requestPath) {
     const { pathname } = url.parse(meta.requestPath);
-    const assetPath = pathname.match(
-      /^\/_next\/static\/[^/]+\/pages\/(.+)\.js$/,
-    );
+    const assetPath = pathname.match(/^_next\/static\/[^/]+\/pages\/(.+)\.js$/);
     // eslint-disable-next-line no-underscore-dangle
     process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = assetPath
       ? assetPath[1]
@@ -450,6 +454,7 @@ exports.subscribe = async ({ entrypoint, files }) => {
     path.join(entryDirectory, '_next/**'),
     // List all pages without their extensions
     ...Object.keys(pageFiles).map(page => page
+      .replace(/^pages\//i, '')
       .split('.')
       .slice(0, -1)
       .join('.')),
