@@ -51,19 +51,28 @@ export interface BuilderInputs {
   [path: string]: FileFsRef;
 }
 
-export interface BuiltFileFsRef extends FileFsRef {
+export interface BuiltAsset {
   buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
   buildTimestamp?: number;
 }
 
-export interface BuiltFileBlob extends FileBlob {
-  buildConfig?: BuildConfig;
-  buildEntry?: FileFsRef;
-  buildTimestamp?: number;
-}
+export type BuildSubscription = BuiltAsset & {
+  type: 'Subscription';
+  patterns: string[];
+};
 
-export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
+export type BuiltFileFsRef = FileFsRef & BuiltAsset;
+export type BuiltFileBlob = FileBlob & BuiltAsset;
+export type BuiltLambda = Lambda &
+  BuiltAsset & {
+    fn?: FunLambda;
+  };
+export type BuilderOutput =
+  | BuildSubscription
+  | BuiltLambda
+  | BuiltFileFsRef
+  | BuiltFileBlob;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
@@ -92,14 +101,8 @@ export interface Builder {
     maxLambdaSize?: string | number;
   };
   build(params: BuilderParams): BuilderOutputs;
+  subscribe?(params: BuilderParamsBase): Promise<string[]>;
   prepareCache?(params: PrepareCacheParams): BuilderOutputs;
-}
-
-export interface BuiltLambda extends Lambda {
-  fn?: FunLambda;
-  buildConfig?: BuildConfig;
-  buildEntry?: FileFsRef;
-  buildTimestamp?: number;
 }
 
 export interface HttpHeadersConfig {
