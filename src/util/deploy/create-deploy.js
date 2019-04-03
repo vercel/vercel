@@ -28,6 +28,10 @@ export default async function createDeploy(
       return new ERRORS_TS.DomainVerificationFailed(error.value);
     }
 
+    if (error.code === 'alias_missing') {
+      return new ERRORS_TS.AliasMissing();
+    }
+
     // If the user doesn't have permissions over the domain used as a suffix we fail
     if (error.code === 'forbidden') {
       return new ERRORS_TS.DomainPermissionDenied(error.value, contextName);

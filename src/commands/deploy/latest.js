@@ -34,7 +34,8 @@ import {
   TooManyCertificates,
   TooManyRequests,
   InvalidDomain,
-  DeploymentNotFound
+  DeploymentNotFound,
+  AliasMissing
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 
@@ -216,7 +217,8 @@ export default async function main(
 
   if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
     const flag = param('--target production');
-    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
+    error(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
+    return 1;
   }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
@@ -374,7 +376,8 @@ export default async function main(
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
       firstDeployCall instanceof InvalidDomain ||
-      firstDeployCall instanceof DeploymentNotFound
+      firstDeployCall instanceof DeploymentNotFound ||
+      firstDeployCall instanceof AliasMissing
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -729,6 +732,10 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
+    return 1;
+  }
+  if (error instanceof AliasMissing) {
     output.error(error.message);
     return 1;
   }

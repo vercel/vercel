@@ -1050,3 +1050,16 @@ export class MissingDotenvVarsError extends NowError<
     });
   }
 }
+
+export class AliasMissing extends NowError<
+  'ALIAS_MISSING',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'ALIAS_MISSING',
+      message: 'When using `--target production`, you need to define at least one alias in `now.json',
+      meta: {}
+    });
+  }
+}
