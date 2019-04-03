@@ -7,6 +7,7 @@ import qs from 'querystring';
 import rawBody from 'raw-body';
 import { inspect } from 'util';
 import listen from 'async-listen';
+import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -22,7 +23,7 @@ import isURL from './is-url';
 import devRouter from './dev-router';
 import {
   executeBuild,
-  buildUserProject,
+  executeInitialBuilds,
   createIgnoreList
 } from './dev-builder';
 
@@ -33,6 +34,7 @@ import {
   NowConfig,
   DevServerStatus,
   DevServerOptions,
+  BuildSubscription,
   BuilderOutput,
   BuilderOutputs,
   HttpHandler,
@@ -46,6 +48,7 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public assets: BuilderOutputs;
+  public subscriptions: BuildSubscription[];
 
   private server: http.Server;
   private status: DevServerStatus;
@@ -63,6 +66,7 @@ export default class DevServer {
     this.status = DevServerStatus.busy;
     this.inProgressBuilds = new Map();
     this.originalEnv = { ...process.env };
+    this.subscriptions = [];
   }
 
   /* set dev-server status */
@@ -205,7 +209,7 @@ export default class DevServer {
     // this is complete.
     if (nowJson && Array.isArray(nowJson.builds)) {
       this.output.log('Running initial builds');
-      await buildUserProject(nowJson, this);
+      await executeInitialBuilds(nowJson, this);
       this.output.success('Initial builds ready');
       this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
     }
@@ -407,8 +411,28 @@ export default class DevServer {
     let { asset, assetKey } = resolveDest(this.assets, dest);
 
     if (!asset || !assetKey) {
-      await this.send404(req, res, nowRequestId);
-      return;
+      const subscription = resolveSubscription(this.subscriptions, dest);
+      if (subscription && subscription.buildEntry) {
+        const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
+        this.output.debug(
+          `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
+        );
+        let buildPromise = executeBuild(nowJson, this, subscription, req.url);
+        this.inProgressBuilds.set(entrypoint, buildPromise);
+        try {
+          await buildPromise;
+        } finally {
+          this.inProgressBuilds.delete(entrypoint);
+        }
+
+        // Since the `asset` was just built, resolve the built asset
+        ({ asset, assetKey } = resolveDest(this.assets, dest));
+      }
+
+      if (!asset || !assetKey) {
+        await this.send404(req, res, nowRequestId);
+        return;
+      }
     }
 
     // If the user did a hard-refresh in the browser,
@@ -602,6 +626,20 @@ function resolveDest(
   }
 
   return { asset, assetKey };
+}
+
+/**
+ * Find a matching subscription object from `dest`
+ */
+function resolveSubscription(
+  subscriptions: BuildSubscription[],
+  dest: string
+): BuildSubscription | void {
+  return subscriptions.find(subscription => {
+    return subscription.patterns.some(path => {
+      return minimatch(dest, path);
+    });
+  });
 }
 
 function close(server: http.Server): Promise<void> {

@@ -15,6 +15,8 @@ import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
 import {
   NowConfig,
   BuildConfig,
+  BuildSubscription,
+  BuilderParamsBase,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
@@ -24,7 +26,7 @@ import {
 /**
  * Build project to statics & lambdas
  */
-export async function buildUserProject(
+export async function executeInitialBuilds(
   nowJson: NowConfig,
   devServer: DevServer
 ): Promise<void> {
@@ -46,7 +48,7 @@ export async function buildUserProject(
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
-  asset: BuilderOutput,
+  asset: BuilderOutput | BuildSubscription,
   requestPath: string | null = null
 ): Promise<void> {
   const { buildConfig, buildEntry } = asset;
@@ -180,19 +182,37 @@ async function executeBuilds(
         const workPath = join(cacheDir, 'workPaths', String(dev + ino));
         await mkdirp(workPath);
 
-        devServer.output.debug(
-          `Building ${entry.fsPath} (workPath = ${workPath})`
-        );
         let output: BuilderOutputs;
         try {
           devServer.applyBuildEnv(nowJson);
-          output = await builder.build({
+          const buildConfig: BuilderParamsBase = {
             files,
             entrypoint,
-            workPath,
             config,
             meta: { isDev: true, requestPath: null }
-          });
+          };
+          if (typeof builder.subscribe === 'function') {
+            // If the builder has a `subscribe()` function, then the initial
+            // builds are not run and instead an array of "subscriptions" is
+            // created. When an HTTP request comes in that matches one of the
+            // subscription patterns, then this builder will be actually be
+            // executed.
+            devServer.output.debug(`Getting subscriptions for ${entry.fsPath}`);
+            const subscription = await builder.subscribe(buildConfig);
+            devServer.subscriptions.push({
+              type: 'Subscription',
+              patterns: subscription,
+              buildConfig: build,
+              buildEntry: entry,
+              buildTimestamp: Date.now()
+            });
+            continue;
+          } else {
+            devServer.output.debug(
+              `Building ${entry.fsPath} (workPath = ${workPath})`
+            );
+            output = await builder.build({ ...buildConfig, workPath });
+          }
         } finally {
           devServer.restoreOriginalEnv();
         }
