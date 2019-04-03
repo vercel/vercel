@@ -3,6 +3,7 @@ const download = require('@now/build-utils/fs/download'); // eslint-disable-line
 const FileFsRef = require('@now/build-utils/file-fs-ref'); // eslint-disable-line import/no-extraneous-dependencies
 const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
+const url = require('url');
 const {
   runNpmInstall,
   runPackageJsonScript,
@@ -32,10 +33,17 @@ const {
 /** @typedef { import('@now/build-utils/fs/download').DownloadedFiles } DownloadedFiles */
 
 /**
+ * @typedef {Object} BuildParamsMeta
+ * @property {boolean} [isDev] - Files object
+ * @property {?string} [requestPath] - Entrypoint specified for the builder
+ */
+
+/**
  * @typedef {Object} BuildParamsType
  * @property {Files} files - Files object
  * @property {string} entrypoint - Entrypoint specified for the builder
  * @property {string} workPath - Working directory for this build
+ * @property {BuildParamsMeta} [meta] - Various meta settings
  */
 
 /**
@@ -115,7 +123,9 @@ exports.config = {
  * @param {BuildParamsType} buildParams
  * @returns {Promise<Files>}
  */
-exports.build = async ({ files, workPath, entrypoint }) => {
+exports.build = async ({
+  files, workPath, entrypoint, meta = {},
+}) => {
   validateEntrypoint(entrypoint);
 
   console.log('downloading user files...');
@@ -178,6 +188,33 @@ exports.build = async ({ files, workPath, entrypoint }) => {
   if (process.env.NPM_AUTH_TOKEN) {
     console.log('found NPM_AUTH_TOKEN in environment, creating .npmrc');
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
+  }
+
+  if (
+    (meta.isDev || meta.requestPath)
+    && !(
+      semver.satisfies(nextVersion, '>=8.0.5-canary.2')
+      || nextVersion === 'canary'
+    )
+  ) {
+    throw new Error(
+      '`now dev` can only be used with Next.js >=8.0.5-canary.2!',
+    );
+  }
+
+  if (meta.isDev) {
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
+  }
+  if (meta.requestPath) {
+    const { pathname } = url.parse(meta.requestPath);
+    const assetPath = pathname.match(
+      /^\/_next\/static\/[^/]+\/pages\/(.+)\.js$/,
+    );
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = assetPath
+      ? assetPath[1]
+      : pathname;
   }
 
   console.log('installing dependencies...');
@@ -400,4 +437,21 @@ exports.prepareCache = async ({ cachePath, workPath, entrypoint }) => {
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), cachePath)),
     ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), cachePath)),
   };
+};
+
+exports.subscribe = async ({ entrypoint, files }) => {
+  const entryDirectory = path.dirname(entrypoint);
+  const pageFiles = includeOnlyEntryDirectory(
+    files,
+    path.join(entryDirectory, 'pages'),
+  );
+
+  return [
+    path.join(entryDirectory, '_next/**'),
+    // List all pages without their extensions
+    ...Object.keys(pageFiles).map(page => page
+      .split('.')
+      .slice(0, -1)
+      .join('.')),
+  ];
 };
