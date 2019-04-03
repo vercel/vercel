@@ -52,6 +52,7 @@ export default class DevServer {
 
   private server: http.Server;
   private status: DevServerStatus;
+  private stopping: boolean;
   private statusMessage: string = '';
   private inProgressBuilds: Map<string, Promise<void>>;
   private originalEnv: EnvConfig;
@@ -64,6 +65,7 @@ export default class DevServer {
     this.buildEnv = {};
     this.server = http.createServer(this.devServerHandler);
     this.status = DevServerStatus.busy;
+    this.stopping = false;
     this.inProgressBuilds = new Map();
     this.originalEnv = { ...process.env };
     this.subscriptions = [];
@@ -219,6 +221,8 @@ export default class DevServer {
    * Shuts down the `now dev` server, and cleans up any temporary resources.
    */
   async stop(): Promise<void> {
+    if (this.stopping) return;
+    this.stopping = true;
     this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
     const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
       if (asset.type === 'Lambda' && asset.fn) {
@@ -320,6 +324,14 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
+    const nowRequestId = generateRequestId();
+
+    if (this.stopping) {
+      res.setHeader('Connection', 'close');
+      await this.send404(req, res, nowRequestId);
+      return;
+    }
+
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
@@ -328,7 +340,6 @@ export default class DevServer {
     }
 
     try {
-      const nowRequestId = generateRequestId();
       const nowJson = await this.getNowJson();
       if (!nowJson) {
         await this.serveProjectAsStatic(req, res, nowRequestId);
