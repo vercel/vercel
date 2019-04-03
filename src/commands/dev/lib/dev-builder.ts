@@ -1,13 +1,13 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
-import chalk from 'chalk';
 import { tmpdir } from 'os';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { FileFsRef, download } from '@now/build-utils';
+import intercept from 'intercept-stdout';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
@@ -104,6 +104,7 @@ export async function executeBuild(
   let result: BuildResult;
   try {
     devServer.applyBuildEnv(nowJson);
+    const unhookIntercept = intercept(() => '');
     const r = await builder.build({
       files,
       entrypoint,
@@ -111,6 +112,7 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
+    unhookIntercept();
     if (r.output) {
       result = r as BuildResult;
     } else {
