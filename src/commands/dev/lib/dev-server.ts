@@ -422,13 +422,23 @@ export default class DevServer {
     let { asset, assetKey } = resolveDest(this.assets, dest);
 
     if (!asset || !assetKey) {
-      const subscription = resolveSubscription(this.subscriptions, dest);
+      const { subscription, subscriptionKey } = resolveSubscription(
+        this.subscriptions,
+        dest
+      );
       if (subscription && subscription.buildEntry) {
         const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
         this.output.debug(
-          `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
+          `Building initial asset "${entrypoint}" for "${req.method} ${
+            req.url
+          }"`
         );
-        let buildPromise = executeBuild(nowJson, this, subscription, req.url);
+        let buildPromise = executeBuild(
+          nowJson,
+          this,
+          subscription,
+          subscriptionKey
+        );
         this.inProgressBuilds.set(entrypoint, buildPromise);
         try {
           await buildPromise;
@@ -645,12 +655,22 @@ function resolveDest(
 function resolveSubscription(
   subscriptions: BuildSubscription[],
   dest: string
-): BuildSubscription | void {
-  return subscriptions.find(subscription => {
-    return subscription.patterns.some(path => {
-      return minimatch(dest, path);
+): {
+  subscription: BuildSubscription | void;
+  subscriptionKey: string | undefined;
+} {
+  let subscriptionKey = dest.replace(/^\//, '');
+  const subscription = subscriptions.find(subscription => {
+    return subscription.patterns.some(pattern => {
+      let match = minimatch(subscriptionKey, pattern);
+      if (!match) {
+        const withoutIndex = pattern.replace(/\/?index(\.\w+)?$/, '');
+        match = minimatch(subscriptionKey, withoutIndex);
+      }
+      return match;
     });
   });
+  return { subscription, subscriptionKey };
 }
 
 function close(server: http.Server): Promise<void> {
