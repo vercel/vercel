@@ -10,7 +10,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
-  const resolveRouteParameters = (str: string, dict: {keys: any, match: any}) => {
+  const resolveRouteParameters = (str: string, dict: {keys: string[], match: string[]}) => {
     return str.replace(
       /\$([1-9a-zA-Z]+)/g,
       (_, param) => {
