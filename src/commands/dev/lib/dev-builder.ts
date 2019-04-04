@@ -124,6 +124,7 @@ export async function executeBuild(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
+          MemorySize: 3008,
           Environment: {
             Variables: {
               ...nowJson.env,
@@ -253,6 +254,7 @@ async function executeBuilds(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
+          MemorySize: 3008,
           Environment: {
             Variables: {
               ...nowJson.env,
