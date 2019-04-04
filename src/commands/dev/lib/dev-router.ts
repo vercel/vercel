@@ -33,8 +33,29 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       if (match) {
         let destPath: string = reqPathname;
+        let headerLocation: string = "";
+
         if (routeConfig.dest) {
           destPath = routeConfig.dest.replace(
+            /\$([1-9a-zA-Z]+)/g,
+            (_, param) => {
+              let matchIndex: number = keys.indexOf(param);
+              if (matchIndex === -1) {
+                // It's a number match, not a named capture
+                matchIndex = parseInt(param, 10);
+              } else {
+                // For named captures, add one to the `keys` index to
+                // match up with the RegExp group matches
+                matchIndex++;
+              }
+              return match[matchIndex];
+            }
+          );
+        }
+        
+        if (routeConfig.headers && routeConfig.headers.Location) {
+
+          headerLocation = routeConfig.headers.Location.replace(
             /\$([1-9a-zA-Z]+)/g,
             (_, param) => {
               let matchIndex: number = keys.indexOf(param);
@@ -55,7 +76,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
           found = {
             dest: destPath,
             status: routeConfig.status,
-            headers: routeConfig.headers,
+            headers: (headerLocation === "") ? routeConfig.headers : Object.assign({},routeConfig.headers,{Location: headerLocation}),
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
@@ -66,7 +87,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
           found = {
             dest: pathname || '/',
             status: routeConfig.status,
-            headers: routeConfig.headers,
+            headers: (headerLocation === "") ? routeConfig.headers : Object.assign({},routeConfig.headers,{Location: headerLocation}),
             uri_args: queryParams,
             matched_route: routeConfig,
             matched_route_idx: idx
