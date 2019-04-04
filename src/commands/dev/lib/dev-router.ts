@@ -52,14 +52,12 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       if (match) {
         let destPath: string = reqPathname;
-        let { headers } = routeConfig;
+        let { headers } = {headers: {}, ...routeConfig};
 
-        if (headers) {
-          Object.keys(headers).map((key)=>{
-            if (headers)
-              headers = { ...headers, [key]: resolveRouteParameters(headers[key], {match, keys})};
-          });
-        }
+        Object.keys(headers).map((key)=>{
+          headers = { ...headers, [key]: resolveRouteParameters(headers[key], {match, keys})};
+        });
+        
         
 
         if (routeConfig.dest) {
