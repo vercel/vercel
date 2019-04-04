@@ -1,38 +1,37 @@
 import url from 'url';
-import qs from 'querystring';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
 
 import { RouteConfig, RouteResult } from './types';
 
+export function resolveRouteParameters(
+  str: string,
+  match: string[],
+  keys: string[]
+): string {
+  return str.replace(/\$([1-9a-zA-Z]+)/g, (_, param) => {
+    let matchIndex: number = keys.indexOf(param);
+    if (matchIndex === -1) {
+      // It's a number match, not a named capture
+      matchIndex = parseInt(param, 10);
+    } else {
+      // For named captures, add one to the `keys` index to
+      // match up with the RegExp group matches
+      matchIndex++;
+    }
+    return match[matchIndex];
+  });
+}
+
 export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
-  const { pathname: reqPathname = '/' } = url.parse(reqPath);
-
-  const resolveRouteParameters = (str: string, dict: {keys: string[], match: string[]}) => {
-    return str.replace(
-      /\$([1-9a-zA-Z]+)/g,
-      (_, param) => {
-        let matchIndex: number = dict.keys.indexOf(param);
-        if (matchIndex === -1) {
-          // It's a number match, not a named capture
-          matchIndex = parseInt(param, 10);
-        } else {
-          // For named captures, add one to the `keys` index to
-          // match up with the RegExp group matches
-          matchIndex++;
-        }
-        return dict.match[matchIndex];
-      }
-    );
-
-  }
+  const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
 
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
-      let { src } = routeConfig;
+      let { src, headers } = routeConfig;
       if (!src) {
         // ignore { "handler" } routes for now
         return false;
@@ -52,21 +51,18 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       if (match) {
         let destPath: string = reqPathname;
-        let { headers } = routeConfig;
-
-        if (headers) {
-          Object.keys(headers).map((key)=>{
-            if (headers)
-              headers = { ...headers, [key]: resolveRouteParameters(headers[key], {match, keys})};
-          });
-        }
-        
 
         if (routeConfig.dest) {
-          destPath = resolveRouteParameters(routeConfig.dest, {match, keys})
+          destPath = resolveRouteParameters(routeConfig.dest, match, keys);
         }
-        
-        
+
+        if (headers) {
+          // Create a clone of the `headers` object to not mutate the original one
+          headers = { ...headers };
+          for (const key of Object.keys(headers)) {
+            headers[key] = resolveRouteParameters(headers[key], match, keys);
+          }
+        }
 
         if (isURL(destPath)) {
           found = {
@@ -78,13 +74,12 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
             matched_route_idx: idx
           };
         } else {
-          const { pathname, query } = url.parse(destPath);
-          const queryParams = qs.parse(query || '');
+          const { pathname, query } = url.parse(destPath, true);
           found = {
             dest: pathname || '/',
             status: routeConfig.status,
             headers,
-            uri_args: queryParams,
+            uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
           };
@@ -98,12 +93,9 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   }
 
   if (!found) {
-    const { query } = url.parse(reqPath);
-    const queryParams = qs.parse(query || '');
-
     found = {
       dest: reqPathname,
-      uri_args: queryParams
+      uri_args: query
     };
   }
 
