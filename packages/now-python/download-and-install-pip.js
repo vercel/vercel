@@ -1,9 +1,9 @@
-const path = require('path');
+const { join } = require('path');
 const fetch = require('node-fetch');
 const execa = require('execa');
 const { createWriteStream } = require('fs');
-
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies
+const { getWriteableDirectory } = require('@now/build-utils');
 
 const url = 'https://bootstrap.pypa.io/get-pip.py';
 
@@ -16,8 +16,8 @@ async function downloadGetPipScript() {
     throw new Error(`Could not download "get-pip.py" from "${url}"`);
   }
 
-  const dir = await getWritableDirectory();
-  const filePath = path.join(dir, 'get-pip.py');
+  const dir = await getWriteableDirectory();
+  const filePath = join(dir, 'get-pip.py');
   const writeStream = createWriteStream(filePath);
 
   return new Promise((resolve, reject) => {
@@ -32,7 +32,8 @@ async function downloadGetPipScript() {
 // process.env.PYTHONUSERBASE), and returns
 // the absolute path to it
 async function downloadAndInstallPip() {
-  if (!process.env.PYTHONUSERBASE) {
+  const { PYTHONUSERBASE } = process.env;
+  if (!PYTHONUSERBASE) {
     // this is the directory in which `pip` will be
     // installed to. `--user` will assume `~` if this
     // is not set, and `~` is not writeable on AWS Lambda.
@@ -51,7 +52,7 @@ async function downloadAndInstallPip() {
     throw err;
   }
 
-  return path.join(process.env.PYTHONUSERBASE, 'bin', 'pip');
+  return join(PYTHONUSERBASE, 'bin', 'pip');
 }
 
 module.exports = downloadAndInstallPip;
