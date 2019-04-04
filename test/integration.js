@@ -214,24 +214,6 @@ test('find deployment in list with mixed args', async t => {
   }
 });
 
-test('output logs of a 1.0 deployment', async t => {
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.true(stdout.includes('yarn install'));
-  t.true(stdout.includes('Snapshotting deployment'));
-  t.true(stdout.includes('Saving deployment image'));
-  t.true(stdout.includes('npm start'));
-  t.true(stdout.includes('> micro'));
-  t.true(stdout.includes('micro: Accepting connections on port 3000'));
-  t.is(code, 0);
-});
-
 test('create alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
