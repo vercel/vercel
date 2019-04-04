@@ -10,7 +10,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
-  const resolveRouteParameters = (str: string, dict: {keys: any, match: any}) => {
+  const resolveRouteParameters = (str: string, dict: {keys: string[], match: string[]}) => {
     return str.replace(
       /\$([1-9a-zA-Z]+)/g,
       (_, param) => {
@@ -52,22 +52,25 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       if (match) {
         let destPath: string = reqPathname;
-        let headerLocation: string = "";
+        let { headers } = routeConfig;
+
+        if (headers && headers.Location) {
+          const Location = resolveRouteParameters(headers.Location, {match, keys})
+          headers = { ...headers, Location };
+        }
+        
 
         if (routeConfig.dest) {
           destPath = resolveRouteParameters(routeConfig.dest, {match, keys})
         }
         
-        if (routeConfig.headers && routeConfig.headers.Location) {
-
-          headerLocation = resolveRouteParameters(routeConfig.headers.Location, {match, keys});
-        }
+        
 
         if (isURL(destPath)) {
           found = {
             dest: destPath,
             status: routeConfig.status,
-            headers: (headerLocation === "") ? routeConfig.headers : Object.assign({},routeConfig.headers,{Location: headerLocation}),
+            headers,
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
@@ -78,7 +81,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
           found = {
             dest: pathname || '/',
             status: routeConfig.status,
-            headers: (headerLocation === "") ? routeConfig.headers : Object.assign({},routeConfig.headers,{Location: headerLocation}),
+            headers,
             uri_args: queryParams,
             matched_route: routeConfig,
             matched_route_idx: idx
