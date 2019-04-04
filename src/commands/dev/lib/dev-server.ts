@@ -431,7 +431,7 @@ export default class DevServer {
         this.output.debug(
           `Building initial asset "${entrypoint}" for "${req.method} ${
             req.url
-          }"`
+          }" (${subscriptionKey})`
         );
         let buildPromise = executeBuild(
           nowJson,
@@ -480,9 +480,11 @@ export default class DevServer {
         );
       } else {
         this.output.debug(
-          `Rebuilding asset "${entrypoint}" for "${req.method} ${req.url}"`
+          `Rebuilding asset "${entrypoint}" for "${req.method} ${
+            req.url
+          }" (${assetKey})`
         );
-        buildPromise = executeBuild(nowJson, this, asset, req.url);
+        buildPromise = executeBuild(nowJson, this, asset, assetKey);
         this.inProgressBuilds.set(entrypoint, buildPromise);
       }
       try {
