@@ -1,5 +1,4 @@
 import url from 'url';
-import qs from 'querystring';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
