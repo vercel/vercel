@@ -10,6 +10,25 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
+  const resolveRouteParameters = (str: string, dict: {keys: any, match: any}) => {
+    return str.replace(
+      /\$([1-9a-zA-Z]+)/g,
+      (_, param) => {
+        let matchIndex: number = dict.keys.indexOf(param);
+        if (matchIndex === -1) {
+          // It's a number match, not a named capture
+          matchIndex = parseInt(param, 10);
+        } else {
+          // For named captures, add one to the `keys` index to
+          // match up with the RegExp group matches
+          matchIndex++;
+        }
+        return dict.match[matchIndex];
+      }
+    );
+
+  }
+
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
@@ -36,40 +55,12 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
         let headerLocation: string = "";
 
         if (routeConfig.dest) {
-          destPath = routeConfig.dest.replace(
-            /\$([1-9a-zA-Z]+)/g,
-            (_, param) => {
-              let matchIndex: number = keys.indexOf(param);
-              if (matchIndex === -1) {
-                // It's a number match, not a named capture
-                matchIndex = parseInt(param, 10);
-              } else {
-                // For named captures, add one to the `keys` index to
-                // match up with the RegExp group matches
-                matchIndex++;
-              }
-              return match[matchIndex];
-            }
-          );
+          destPath = resolveRouteParameters(routeConfig.dest, {match, keys})
         }
         
         if (routeConfig.headers && routeConfig.headers.Location) {
 
-          headerLocation = routeConfig.headers.Location.replace(
-            /\$([1-9a-zA-Z]+)/g,
-            (_, param) => {
-              let matchIndex: number = keys.indexOf(param);
-              if (matchIndex === -1) {
-                // It's a number match, not a named capture
-                matchIndex = parseInt(param, 10);
-              } else {
-                // For named captures, add one to the `keys` index to
-                // match up with the RegExp group matches
-                matchIndex++;
-              }
-              return match[matchIndex];
-            }
-          );
+          headerLocation = resolveRouteParameters(routeConfig.headers.Location, {match, keys});
         }
 
         if (isURL(destPath)) {
