@@ -54,9 +54,11 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
         let destPath: string = reqPathname;
         let { headers } = routeConfig;
 
-        if (headers && headers.Location) {
-          const Location = resolveRouteParameters(headers.Location, {match, keys})
-          headers = { ...headers, Location };
+        if (headers) {
+          Object.keys(headers).map((key)=>{
+            if (headers)
+              headers = { ...headers, [key]: resolveRouteParameters(headers[key], {match, keys})};
+          });
         }
         
 
