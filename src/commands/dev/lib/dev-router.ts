@@ -10,6 +10,25 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/' } = url.parse(reqPath);
 
+  const resolveRouteParameters = (str: string, dict: {keys: string[], match: string[]}) => {
+    return str.replace(
+      /\$([1-9a-zA-Z]+)/g,
+      (_, param) => {
+        let matchIndex: number = dict.keys.indexOf(param);
+        if (matchIndex === -1) {
+          // It's a number match, not a named capture
+          matchIndex = parseInt(param, 10);
+        } else {
+          // For named captures, add one to the `keys` index to
+          // match up with the RegExp group matches
+          matchIndex++;
+        }
+        return dict.match[matchIndex];
+      }
+    );
+
+  }
+
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
@@ -33,29 +52,27 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
 
       if (match) {
         let destPath: string = reqPathname;
-        if (routeConfig.dest) {
-          destPath = routeConfig.dest.replace(
-            /\$([1-9a-zA-Z]+)/g,
-            (_, param) => {
-              let matchIndex: number = keys.indexOf(param);
-              if (matchIndex === -1) {
-                // It's a number match, not a named capture
-                matchIndex = parseInt(param, 10);
-              } else {
-                // For named captures, add one to the `keys` index to
-                // match up with the RegExp group matches
-                matchIndex++;
-              }
-              return match[matchIndex];
-            }
-          );
+        let { headers } = routeConfig;
+
+        if (headers) {
+          Object.keys(headers).map((key)=>{
+            if (headers)
+              headers = { ...headers, [key]: resolveRouteParameters(headers[key], {match, keys})};
+          });
         }
+        
+
+        if (routeConfig.dest) {
+          destPath = resolveRouteParameters(routeConfig.dest, {match, keys})
+        }
+        
+        
 
         if (isURL(destPath)) {
           found = {
             dest: destPath,
             status: routeConfig.status,
-            headers: routeConfig.headers,
+            headers,
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
@@ -66,7 +83,7 @@ export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
           found = {
             dest: pathname || '/',
             status: routeConfig.status,
-            headers: routeConfig.headers,
+            headers,
             uri_args: queryParams,
             matched_route: routeConfig,
             matched_route_idx: idx
