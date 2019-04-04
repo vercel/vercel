@@ -11,6 +11,8 @@ export default `.hg
 .DS_Store
 .wafpicke-*
 .lock-wscript
+.env
+.env.build
 npm-debug.log
 config.gypi
 node_modules
