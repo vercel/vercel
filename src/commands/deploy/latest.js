@@ -84,7 +84,10 @@ const printDeploymentStatus = async (
         const hasCustomAlias = (Array.isArray(alias) && alias.length > 0) || alias;
         const hasMultiple = Array.isArray(alias) && alias.length > 1;
         output.error(`Failed to assign default alias${hasCustomAlias ? ` and custom alias${hasMultiple ? 'es' : ''}` : ''}`);
-      } else if (aliasFinal.length === 1) {
+        return 1;
+      }
+
+      if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
             await copy(`https://${aliasFinal[0]}`);
