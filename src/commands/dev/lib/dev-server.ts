@@ -3,7 +3,6 @@ import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
-import qs from 'querystring';
 import rawBody from 'raw-body';
 import { inspect } from 'util';
 import listen from 'async-listen';

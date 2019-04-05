@@ -1,17 +1,18 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
+import { tmpdir } from 'os';
 import { FileFsRef } from '@now/build-utils';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { readFile, stat, mkdirp } from 'fs-extra';
+import { readFile, mkdirp } from 'fs-extra';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
-import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
+import { installBuilders, getBuilder } from './builder-cache';
 import {
   NowConfig,
   BuildConfig,
@@ -22,6 +23,18 @@ import {
   BuilderOutputs,
   BuiltLambda
 } from './types';
+
+const tmpDir = tmpdir();
+const getWorkPath = () =>
+  join(
+    tmpDir,
+    'co.zeit.now',
+    'dev',
+    'workPaths',
+    Math.random()
+      .toString(32)
+      .slice(-8)
+  );
 
 /**
  * Build project to statics & lambdas
@@ -58,9 +71,7 @@ export async function executeBuild(
   const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);
 
-  const cacheDir = await cacheDirPromise;
-  const { dev, ino } = await stat(entrypoint);
-  const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+  const workPath = getWorkPath();
   await mkdirp(workPath);
 
   devServer.output.debug(
@@ -155,10 +166,7 @@ async function executeBuilds(
   }
 
   const { cwd, env } = devServer;
-  const [files, cacheDir] = await Promise.all([
-    collectProjectFiles('**', cwd),
-    cacheDirPromise
-  ]);
+  const files = await collectProjectFiles('**', cwd);
 
   for (const build of nowJson.builds) {
     try {
@@ -179,8 +187,7 @@ async function executeBuilds(
         const config = build.config || {};
         const entrypoint = relative(cwd, entry.fsPath);
 
-        const { dev, ino } = await stat(entrypoint);
-        const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+        const workPath = getWorkPath();
         await mkdirp(workPath);
 
         let output: BuilderOutputs;
