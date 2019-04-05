@@ -204,6 +204,8 @@ exports.build = async ({
   nextVersion = resolveFrom(entryPath, 'next/package.json').version;
 
   const isUpdated = (v) => {
+    if (v === 'canary') return true;
+
     try {
       return semver.satisfies(v, '>=8.0.5-canary.14', {
         includePrerelease: true,
