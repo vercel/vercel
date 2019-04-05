@@ -10,7 +10,7 @@ interface FileRefOptions {
   digest: string;
 }
 
-const semaToDownloadFromS3 = new Sema(10);
+const semaToDownloadFromS3 = new Sema(5);
 
 class BailableError extends Error {
   public bail: boolean;

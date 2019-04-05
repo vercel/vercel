@@ -5,7 +5,7 @@ import path from 'path';
 import Sema from 'async-sema';
 import { File } from './types';
 
-const semaToPreventEMFILE = new Sema(30);
+const semaToPreventEMFILE = new Sema(20);
 
 interface FileFsRefOptions {
   mode?: number;
