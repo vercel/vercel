@@ -68,18 +68,25 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 const prepareAlias = input => `https://${input}`;
-const isAliasReady = ({ aliasFinal }) => aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length > 0;
+const isAliasDone = ({ aliasFinal }) => Array.isArray(aliasFinal);
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, aliasFinal },
+  { url, readyState, aliasFinal, alias },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
-    if (isAliasReady({ aliasFinal })) {
+    if (isAliasDone({ aliasFinal })) {
+      if (aliasFinal.length === 0) {
+        const hasCustomAlias = (Array.isArray(alias) && alias.length > 0) || alias;
+        const hasMultiple = Array.isArray(alias) && alias.length > 1;
+        output.error(`Failed to assign default alias${hasCustomAlias ? ` and custom alias${hasMultiple ? 'es' : ''}` : ''}`);
+        return 1;
+      }
+
       if (aliasFinal.length === 1) {
         if (clipboardEnabled) {
           try {
@@ -553,7 +560,7 @@ export default async function main(
     } else {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if ((isReady(deploymentResponse) && isAliasReady(deploymentResponse)) || isFailed(deploymentResponse)) {
+      if ((isReady(deploymentResponse) && isAliasDone(deploymentResponse)) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {
