@@ -9,6 +9,7 @@ import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
+import param from '../../util/output/param';
 
 async function rm(ctx, opts, args, output) {
   const { authConfig: { token }, config } = ctx;
@@ -44,7 +45,16 @@ async function rm(ctx, opts, args, output) {
   }
 
   const id = args[0];
-  const certs = await getCertsToDelete(output, now, id);
+  let certs;
+  try {
+    certs = await getCertsToDelete(output, now, id);
+  } catch (error) {
+    if (error.code === 'cert_not_found') {
+      output.error(`Cert not found by ${param(id)}`);
+      process.exit(1);
+    }
+    throw error;
+  }
 
   if (certs.length === 0) {
     output.error(

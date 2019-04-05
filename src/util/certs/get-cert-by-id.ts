@@ -14,7 +14,5 @@ export default async function getCertById(
   id: string
 ) {
   const cert = await client.fetch<CertDetails>(`/v3/now/certs/${id}?limit=1`);
-  // If `id` isn't a valid id the API responds with a set of certificates instead
-  if (!cert || !cert.key) return null;
-  return cert;
+  return cert || null;
 }
