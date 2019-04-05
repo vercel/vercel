@@ -2,6 +2,7 @@ const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-l
 const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
 const FileFsRef = require('@now/build-utils/file-fs-ref'); // eslint-disable-line import/no-extraneous-dependencies
 const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
+const resolveFrom = require('resolve-from');
 const path = require('path');
 const url = require('url');
 const {
@@ -148,7 +149,7 @@ exports.build = async ({
 
   const pkg = await readPackageJson(entryPath);
 
-  const nextVersion = getNextVersion(pkg);
+  let nextVersion = getNextVersion(pkg);
   if (!nextVersion) {
     throw new Error(
       'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
@@ -197,9 +198,12 @@ exports.build = async ({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  const isUpdated = (v) => {
-    if (v === 'canary') return true;
+  console.log('installing dependencies...');
+  await runNpmInstall(entryPath, ['--prefer-offline']);
 
+  nextVersion = resolveFrom(entryPath, 'next/package.json').version;
+
+  const isUpdated = (v) => {
     try {
       return semver.satisfies(v, '>=8.0.5-canary.14', {
         includePrerelease: true,
@@ -230,8 +234,6 @@ exports.build = async ({
       : pathname;
   }
 
-  console.log('installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline']);
   console.log('running user script...');
   await runPackageJsonScript(entryPath, 'now-build');
 
