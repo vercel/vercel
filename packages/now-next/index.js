@@ -201,7 +201,7 @@ exports.build = async ({
     if (v === 'canary') return true;
 
     try {
-      return semver.satisfies(v, '>=8.0.5-canary.8', {
+      return semver.satisfies(v, '>=8.0.5-canary.14', {
         includePrerelease: true,
       });
     } catch (e) {
@@ -211,7 +211,7 @@ exports.build = async ({
 
   if ((meta.isDev || meta.requestPath) && !isUpdated(nextVersion)) {
     throw new Error(
-      '`now dev` can only be used with Next.js >=8.0.5-canary.8!',
+      '`now dev` can only be used with Next.js >=8.0.5-canary.14!',
     );
   }
 
