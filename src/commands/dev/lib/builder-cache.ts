@@ -117,7 +117,7 @@ export async function installBuilders(packages: string[]): Promise<void> {
     );
     try {
       await writeJSON(buildersPkg, pkg);
-      await execa('npm', ['install', '--prefer-offline'], {
+      await execa('npm', ['install'], {
         cwd: cacheDir
       });
     } finally {
