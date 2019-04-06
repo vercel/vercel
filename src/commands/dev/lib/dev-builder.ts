@@ -1,11 +1,11 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { tmpdir } from 'os';
-import { FileFsRef } from '@now/build-utils';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
-import ignore, { Ignore } from '@zeit/dockerignore';
 import { readFile, mkdirp } from 'fs-extra';
+import ignore, { Ignore } from '@zeit/dockerignore';
+import { FileFsRef, download } from '@now/build-utils';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
@@ -74,6 +74,11 @@ export async function executeBuild(
   const workPath = getWorkPath();
   await mkdirp(workPath);
 
+  if (buildConfig.builderCache) {
+    devServer.output.debug('Restoring build cache from previous build');
+    await download(buildConfig.builderCache, workPath);
+  }
+
   devServer.output.debug(
     `Building ${buildEntry.fsPath} (workPath = ${workPath})`
   );
@@ -94,6 +99,20 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath }
     });
+
+    if (typeof builder.prepareCache === 'function') {
+      const cachePath = getWorkPath();
+      await mkdirp(cachePath);
+      const builderCache = await builder.prepareCache({
+        files,
+        entrypoint,
+        workPath,
+        cachePath,
+        config,
+        meta: { isDev: true, requestPath }
+      });
+      buildConfig.builderCache = builderCache;
+    }
   } finally {
     devServer.restoreOriginalEnv();
   }
@@ -220,6 +239,20 @@ async function executeBuilds(
               `Building ${entry.fsPath} (workPath = ${workPath})`
             );
             output = await builder.build({ ...buildConfig, workPath });
+
+            if (typeof builder.prepareCache === 'function') {
+              const cachePath = getWorkPath();
+              await mkdirp(cachePath);
+              const builderCache = await builder.prepareCache({
+                files,
+                entrypoint,
+                workPath,
+                cachePath,
+                config,
+                meta: { isDev: true, requestPath: null }
+              });
+              build.builderCache = builderCache;
+            }
           }
         } finally {
           devServer.restoreOriginalEnv();
