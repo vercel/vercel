@@ -43,17 +43,8 @@ exports.build = async ({ files, entrypoint, workPath }) => {
   return glob('**', outDir, mountpoint);
 };
 
-exports.prepareCache = async ({ cachePath }) => {
-  console.log('writing package.json...');
-  const packageJson = { dependencies: { 'mdx-deck': '1.7.15' } };
-  const packageJsonPath = path.join(cachePath, 'package.json');
-  await writeFile(packageJsonPath, JSON.stringify(packageJson));
-  console.log('running npm install...');
-  await runNpmInstall(path.dirname(packageJsonPath), ['--prod']);
-
-  return {
-    ...(await glob('node_modules/**', cachePath)),
-    ...(await glob('package-lock.json', cachePath)),
-    ...(await glob('yarn.lock', cachePath)),
-  };
-};
+exports.prepareCache = async ({ workPath }) => ({
+  ...(await glob('node_modules/**', workPath)),
+  ...(await glob('package-lock.json', workPath)),
+  ...(await glob('yarn.lock', workPath)),
+});

@@ -15,8 +15,6 @@ const {
   writeFile,
   unlink: unlinkFile,
   remove: removePath,
-  mkdirp,
-  rename: renamePath,
   pathExists,
 } = require('fs-extra');
 const semver = require('semver');
@@ -417,12 +415,10 @@ exports.build = async ({
   return { ...lambdas, ...staticFiles, ...staticDirectoryFiles };
 };
 
-exports.prepareCache = async ({ cachePath, workPath, entrypoint }) => {
+exports.prepareCache = async ({ workPath, entrypoint }) => {
   console.log('preparing cache ...');
-
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const cacheEntryPath = path.join(cachePath, entryDirectory);
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
@@ -433,26 +429,18 @@ exports.prepareCache = async ({ cachePath, workPath, entrypoint }) => {
     return {};
   }
 
-  console.log('clearing old cache ...');
-  await removePath(cacheEntryPath);
-  await mkdirp(cacheEntryPath);
-
-  console.log('copying build files for cache ...');
-  await renamePath(entryPath, cacheEntryPath);
-
   console.log('producing cache file manifest ...');
-
-  const cacheEntrypoint = path.relative(cachePath, cacheEntryPath);
+  const cacheEntrypoint = path.relative(workPath, entryPath);
   return {
     ...(await glob(
       path.join(
         cacheEntrypoint,
         'node_modules/{**,!.*,.yarn*,.cache/next-minifier/**}',
       ),
-      cachePath,
+      workPath,
     )),
-    ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), cachePath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), cachePath)),
+    ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
+    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
 };
 

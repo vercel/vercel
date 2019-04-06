@@ -142,16 +142,13 @@ export async function build({ files, entrypoint, workPath, config }: BuildOption
   return { [entrypoint]: lambda };
 }
 
-export async function prepareCache({ files, entrypoint, workPath, cachePath }: PrepareCacheOptions) {
-  await remove(workPath);
-  await downloadInstallAndBundle({ files, entrypoint, workPath: cachePath });
-
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
   return {
-    ...(await glob('user/node_modules/**', cachePath)),
-    ...(await glob('user/package-lock.json', cachePath)),
-    ...(await glob('user/yarn.lock', cachePath)),
-    ...(await glob('ncc/node_modules/**', cachePath)),
-    ...(await glob('ncc/package-lock.json', cachePath)),
-    ...(await glob('ncc/yarn.lock', cachePath))
+    ...(await glob('user/node_modules/**', workPath)),
+    ...(await glob('user/package-lock.json', workPath)),
+    ...(await glob('user/yarn.lock', workPath)),
+    ...(await glob('ncc/node_modules/**', workPath)),
+    ...(await glob('ncc/package-lock.json', workPath)),
+    ...(await glob('ncc/yarn.lock', workPath))
   };
 }
