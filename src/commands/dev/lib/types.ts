@@ -22,7 +22,7 @@ export interface BuildConfig {
   use: string;
   config?: object;
   builder?: Builder;
-  builderCache?: CacheOutputs;
+  builderCachePromise?: Promise<CacheOutputs>;
 }
 
 export interface RouteConfig {
@@ -105,7 +105,9 @@ export interface Builder {
   };
   build(params: BuilderParams): BuilderOutputs;
   subscribe?(params: BuilderParamsBase): Promise<string[]>;
-  prepareCache?(params: PrepareCacheParams): CacheOutputs;
+  prepareCache?(
+    params: PrepareCacheParams
+  ): CacheOutputs | Promise<CacheOutputs>;
 }
 
 export interface HttpHeadersConfig {

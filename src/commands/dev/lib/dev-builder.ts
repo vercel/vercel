@@ -21,7 +21,9 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
-  BuiltLambda
+  BuiltLambda,
+  CacheOutputs,
+  PrepareCacheParams
 } from './types';
 
 const tmpDir = tmpdir();
@@ -58,6 +60,31 @@ export async function executeInitialBuilds(
   }
 }
 
+export async function executePrepareCache(
+  devServer: DevServer,
+  buildConfig: BuildConfig,
+  params: PrepareCacheParams
+): Promise<CacheOutputs> {
+  const { builder } = buildConfig;
+  if (!builder) {
+    throw new Error('No builder');
+  }
+  if (!builder.prepareCache) {
+    throw new Error('Builder has no `prepareCache()` function');
+  }
+
+  // Since the `prepareCache()` function may be computationally expensive, and
+  // its run in the same process as `now dev` (for now), defer executing it
+  // until after there has been time for the current HTTP request to complete.
+  await new Promise(r => setTimeout(r, 3000));
+
+  const startTime = Date.now();
+  const results = await builder.prepareCache(params);
+  const cacheTime = Date.now() - startTime;
+  devServer.output.debug(`\`prepareCache()\` took ${cacheTime}ms`);
+  return results;
+}
+
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
@@ -74,9 +101,10 @@ export async function executeBuild(
   const workPath = getWorkPath();
   await mkdirp(workPath);
 
-  if (buildConfig.builderCache) {
+  if (buildConfig.builderCachePromise) {
     devServer.output.debug('Restoring build cache from previous build');
-    await download(buildConfig.builderCache, workPath);
+    const builderCache = await buildConfig.builderCachePromise;
+    await download(builderCache, workPath);
   }
 
   devServer.output.debug(
@@ -103,15 +131,18 @@ export async function executeBuild(
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
       await mkdirp(cachePath);
-      const builderCache = await builder.prepareCache({
-        files,
-        entrypoint,
-        workPath,
-        cachePath,
-        config,
-        meta: { isDev: true, requestPath }
-      });
-      buildConfig.builderCache = builderCache;
+      buildConfig.builderCachePromise = executePrepareCache(
+        devServer,
+        buildConfig,
+        {
+          files,
+          entrypoint,
+          workPath,
+          cachePath,
+          config,
+          meta: { isDev: true, requestPath }
+        }
+      );
     }
   } finally {
     devServer.restoreOriginalEnv();
@@ -243,15 +274,18 @@ async function executeBuilds(
             if (typeof builder.prepareCache === 'function') {
               const cachePath = getWorkPath();
               await mkdirp(cachePath);
-              const builderCache = await builder.prepareCache({
-                files,
-                entrypoint,
-                workPath,
-                cachePath,
-                config,
-                meta: { isDev: true, requestPath: null }
-              });
-              build.builderCache = builderCache;
+              build.builderCachePromise = executePrepareCache(
+                devServer,
+                build,
+                {
+                  files,
+                  entrypoint,
+                  workPath,
+                  cachePath,
+                  config,
+                  meta: { isDev: true, requestPath: null }
+                }
+              );
             }
           }
         } finally {
