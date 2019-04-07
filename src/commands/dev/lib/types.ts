@@ -31,6 +31,7 @@ export interface RouteConfig {
   methods?: string[];
   headers?: HttpHeadersConfig;
   status?: number;
+  handle?: string;
 }
 
 export interface NowConfig {
