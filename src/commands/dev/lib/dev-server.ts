@@ -395,7 +395,7 @@ export default class DevServer {
       headers = {},
       uri_args,
       matched_route
-    } = devRouter(req.url, nowJson.routes);
+    } = devRouter(req.url, nowJson.routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -593,6 +593,18 @@ export default class DevServer {
         return;
     }
   };
+
+  hasFilesystem(dest: string): boolean {
+    const { subscription } = resolveSubscription(this.subscriptions, dest);
+    if (subscription) {
+      return true;
+    }
+    const { asset } = resolveDest(this.assets, dest);
+    if (asset) {
+      return true;
+    }
+    return false;
+  }
 }
 
 /**
@@ -630,7 +642,7 @@ function serveStaticFile(
 function resolveDest(
   assets: BuilderOutputs,
   dest: string
-): { asset: BuilderOutput | null; assetKey: string | undefined } {
+): { asset?: BuilderOutput; assetKey?: string } {
   let assetKey = dest.replace(/^\//, '');
   let asset: BuilderOutput | undefined = assets[assetKey];
 

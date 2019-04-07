@@ -2,6 +2,7 @@ import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
+import DevServer from './dev-server';
 
 import { RouteConfig, RouteResult } from './types';
 
@@ -24,16 +25,18 @@ export function resolveRouteParameters(
   });
 }
 
-export default function(reqPath = '', routes?: RouteConfig[]): RouteResult {
+export default function(reqPath = '', routes?: RouteConfig[], devServer?: DevServer): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
 
   // try route match
   if (routes) {
     routes.find((routeConfig: RouteConfig, idx: number) => {
-      let { src, headers } = routeConfig;
-      if (!src) {
-        // ignore { "handler" } routes for now
+      let { src, headers, handle } = routeConfig;
+      if (handle) {
+        if (handle === 'filesystem' && devServer) {
+          return devServer.hasFilesystem(reqPathname);
+        }
         return false;
       }
 
