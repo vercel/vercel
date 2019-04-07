@@ -105,7 +105,9 @@ export interface Builder {
   };
   build(params: BuilderParams): BuilderOutputs;
   subscribe?(params: BuilderParamsBase): Promise<string[]>;
-  prepareCache?(params: PrepareCacheParams): CacheOutputs | Promise<CacheOutputs>;
+  prepareCache?(
+    params: PrepareCacheParams
+  ): CacheOutputs | Promise<CacheOutputs>;
 }
 
 export interface HttpHeadersConfig {

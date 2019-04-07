@@ -61,6 +61,7 @@ export async function executeInitialBuilds(
 }
 
 export async function executePrepareCache(
+  devServer: DevServer,
   buildConfig: BuildConfig,
   params: PrepareCacheParams
 ): Promise<CacheOutputs> {
@@ -77,7 +78,11 @@ export async function executePrepareCache(
   // until after there has been time for the current HTTP request to complete.
   await new Promise(r => setTimeout(r, 3000));
 
-  return await builder.prepareCache(params);
+  const startTime = Date.now();
+  const results = await builder.prepareCache(params);
+  const cacheTime = Date.now() - startTime;
+  devServer.output.debug(`\`prepareCache()\` took ${cacheTime}ms`);
+  return results;
 }
 
 export async function executeBuild(
@@ -126,14 +131,18 @@ export async function executeBuild(
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
       await mkdirp(cachePath);
-      buildConfig.builderCachePromise = executePrepareCache(buildConfig, {
-        files,
-        entrypoint,
-        workPath,
-        cachePath,
-        config,
-        meta: { isDev: true, requestPath }
-      });
+      buildConfig.builderCachePromise = executePrepareCache(
+        devServer,
+        buildConfig,
+        {
+          files,
+          entrypoint,
+          workPath,
+          cachePath,
+          config,
+          meta: { isDev: true, requestPath }
+        }
+      );
     }
   } finally {
     devServer.restoreOriginalEnv();
@@ -265,14 +274,18 @@ async function executeBuilds(
             if (typeof builder.prepareCache === 'function') {
               const cachePath = getWorkPath();
               await mkdirp(cachePath);
-              build.builderCachePromise = executePrepareCache(build, {
-                files,
-                entrypoint,
-                workPath,
-                cachePath,
-                config,
-                meta: { isDev: true, requestPath: null }
-              });
+              build.builderCachePromise = executePrepareCache(
+                devServer,
+                build,
+                {
+                  files,
+                  entrypoint,
+                  workPath,
+                  cachePath,
+                  config,
+                  meta: { isDev: true, requestPath: null }
+                }
+              );
             }
           }
         } finally {
