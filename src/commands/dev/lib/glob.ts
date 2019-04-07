@@ -3,10 +3,10 @@
  * This file can be removed if that PR is merged.
  */
 
-import fs from 'fs';
 import { inherits } from 'util';
-import * as minimatch from 'minimatch';
 import { Glob, IOptions } from 'glob';
+import * as minimatch from 'minimatch';
+import { lstat, Stats } from 'fs-extra';
 import { Ignore } from '@zeit/dockerignore';
 import { FileFsRef } from '@now/build-utils';
 import { isAbsolute, join, relative } from 'path';
@@ -23,7 +23,7 @@ export interface GlobIgnoreOptions extends minimatch.IOptions {
   silent?: boolean;
   strict?: boolean;
   cache?: { [path: string]: boolean | 'DIR' | 'FILE' | ReadonlyArray<string> };
-  statCache?: { [path: string]: false | fs.Stats | undefined };
+  statCache?: { [path: string]: false | Stats | undefined };
   symlinks?: { [path: string]: boolean | undefined };
   realpathCache?: { [path: string]: string };
   sync?: boolean;
@@ -143,33 +143,37 @@ export async function globBuilderInputs(
     throw new Error(`basePath/cwd must be an absolute path (${options.cwd})`);
   }
 
+  const results: BuilderInputs = {};
+
+  options.symlinks = {};
   options.statCache = {};
   options.stat = true;
   options.dot = true;
 
-  // eslint-disable-next-line consistent-return
   const files = await glob(pattern, options);
 
-  return files.reduce((files2: BuilderInputs, relativePath: string) => {
+  for (const relativePath of files) {
     const fsPath = join(options.cwd || '/', relativePath);
-    const stat: fs.Stats | false | undefined =
-      options.statCache && options.statCache[fsPath];
+    let stat: Stats = options.statCache![fsPath] as Stats;
     if (!stat) {
       throw new Error(
         `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
       );
     }
-    if (!stat.isDirectory()) {
+    if (stat.isFile()) {
+      const isSymlink = options.symlinks![fsPath];
+      if (isSymlink) {
+        stat = await lstat(fsPath);
+      }
+
       let finalPath = relativePath;
       if (mountpoint) {
         finalPath = join(mountpoint, finalPath);
       }
-      return {
-        ...files2,
-        [finalPath]: new FileFsRef({ mode: stat.mode, fsPath })
-      };
-    }
 
-    return files2;
-  }, {});
+      results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
+    }
+  }
+
+  return results;
 }
