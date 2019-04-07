@@ -124,6 +124,13 @@ export async function installBuilders(packages: string[]): Promise<void> {
       stopSpinner();
     }
   }
+
+  const stopSpinner = wait('Checking for builder updates');
+  await execa('npm', ['update'], {
+    reject: false,
+    cwd: cacheDir
+  });
+  stopSpinner();
 }
 
 /**
