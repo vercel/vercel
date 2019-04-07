@@ -5,3 +5,4 @@
 /packages/now-build-utils/dist/*
 /packages/now-node/dist/*
 /packages/now-node-bridge/*
+/packages/now-python/*

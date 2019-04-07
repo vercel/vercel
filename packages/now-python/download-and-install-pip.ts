@@ -1,9 +1,8 @@
-const { join } = require('path');
-const fetch = require('node-fetch');
-const execa = require('execa');
-const { createWriteStream } = require('fs');
-// eslint-disable-next-line import/no-extraneous-dependencies
-const { getWriteableDirectory } = require('@now/build-utils');
+import { join } from 'path';
+import fetch from 'node-fetch';
+import execa from 'execa';
+import { createWriteStream } from 'fs';
+import { getWriteableDirectory } from '@now/build-utils';
 
 const url = 'https://bootstrap.pypa.io/get-pip.py';
 
@@ -20,7 +19,7 @@ async function downloadGetPipScript() {
   const filePath = join(dir, 'get-pip.py');
   const writeStream = createWriteStream(filePath);
 
-  return new Promise((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     res.body
       .on('error', reject)
       .pipe(writeStream)
@@ -31,7 +30,7 @@ async function downloadGetPipScript() {
 // downloads and installs `pip` (respecting
 // process.env.PYTHONUSERBASE), and returns
 // the absolute path to it
-async function downloadAndInstallPip() {
+export async function downloadAndInstallPip() {
   const { PYTHONUSERBASE } = process.env;
   if (!PYTHONUSERBASE) {
     // this is the directory in which `pip` will be
@@ -55,4 +54,3 @@ async function downloadAndInstallPip() {
   return join(PYTHONUSERBASE, 'bin', 'pip');
 }
 
-module.exports = downloadAndInstallPip;

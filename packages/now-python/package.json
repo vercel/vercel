@@ -9,11 +9,16 @@
     "directory": "packages/now-python"
   },
   "scripts": {
-    "test": "jest"
+    "build": "tsc",
+    "test": "tsc && jest",
+    "prepublish": "tsc"
   },
   "dependencies": {
     "execa": "^1.0.0",
-    "fs.promised": "^3.0.0",
     "node-fetch": "^2.2.0"
+  },
+  "devDependencies": {
+    "@types/execa": "^0.9.0",
+    "typescript": "3.3.4000"
   }
 }
