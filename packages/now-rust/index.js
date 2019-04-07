@@ -100,12 +100,20 @@ async function buildWholeProject({
   return lambdas;
 }
 
-function gatherExtraFiles(globMatcher, entrypoint) {
+async function gatherExtraFiles(globMatcher, entrypoint) {
   if (!globMatcher) return {};
 
   console.log('gathering extra files for the fs...');
 
   const entryDir = path.dirname(entrypoint);
+
+  if (Array.isArray(globMatcher)) {
+    const allMatches = await Promise.all(
+      globMatcher.map(pattern => glob(pattern, entryDir)),
+    );
+
+    return allMatches.reduce((acc, matches) => ({ ...acc, ...matches }), {});
+  }
 
   return glob(globMatcher, entryDir);
 }
@@ -348,17 +356,6 @@ function findCargoToml(files, entrypoint) {
 
   return cargoTomlPath;
 }
-
-/*
-console.log(findCargoToml(
-  {
-    'rust/src/main.rs': true,
-    'rust/Cargo.toml': true,
-    'Cargo.toml': true,
-  },
-  'rust/src/main.rs',
-));
-*/
 
 exports.getDefaultCache = ({ files, entrypoint }) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);

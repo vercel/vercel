@@ -5,7 +5,7 @@
       "src": "Cargo.toml",
       "use": "@now/rust",
       "config": {
-        "includeFiles": "static/**"
+        "includeFiles": ["static/**/*.txt", "static/**/*.svg"]
       }
     }
   ],
