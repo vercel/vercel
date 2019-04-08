@@ -1,6 +1,8 @@
 /* global beforeAll, expect, it, jest */
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs-extra');
+const assert = require('assert');
+const { glob, download } = require('../');
 
 const {
   packAndDeploy,
@@ -15,6 +17,26 @@ beforeAll(async () => {
   const buildUtilsPath = path.resolve(__dirname, '..');
   buildUtilsUrl = await packAndDeploy(buildUtilsPath);
   console.log('buildUtilsUrl', buildUtilsUrl);
+});
+
+// unit tests
+
+it('should re-create symlinks properly', async () => {
+  const files = await glob('**', path.join(__dirname, 'symlinks'));
+  assert.equal(Object.keys(files).length, 2);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  assert.equal(Object.keys(files2).length, 2);
+
+  const [linkStat, aStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+  ]);
+  assert(linkStat.isSymbolicLink());
+  assert(aStat.isFile());
 });
 
 // own fixtures

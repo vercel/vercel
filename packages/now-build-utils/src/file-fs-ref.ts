@@ -12,10 +12,6 @@ interface FileFsRefOptions {
   fsPath: string;
 }
 
-interface FromOptions {
-  fsPath: string;
-}
-
 interface FromStreamOptions {
   mode: number;
   stream: NodeJS.ReadableStream;
@@ -35,9 +31,13 @@ class FileFsRef implements File {
     this.fsPath = fsPath;
   }
 
-  static async fromFsPath({ fsPath }: FromOptions): Promise<FileFsRef> {
-    const { mode } = await fs.lstat(fsPath);
-    return new FileFsRef({ mode, fsPath });
+  static async fromFsPath({ mode, fsPath }: FileFsRefOptions): Promise<FileFsRef> {
+    let m = mode;
+    if (!m) {
+      const stat = await fs.lstat(fsPath);
+      m = stat.mode;
+    }
+    return new FileFsRef({ mode: m, fsPath });
   }
 
   static async fromStream({ mode = 0o100644, stream, fsPath }: FromStreamOptions): Promise<FileFsRef> {
