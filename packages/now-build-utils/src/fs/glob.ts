@@ -1,10 +1,10 @@
-import assert from 'assert';
 import path from 'path';
+import assert from 'assert';
 import vanillaGlob from 'glob';
 import FileFsRef from '../file-fs-ref';
 
-type GlobOptions = import('glob').IOptions;
- 
+type GlobOptions = vanillaGlob.IOptions;
+
 interface FsFiles {
   [filePath: string]: FileFsRef
 }
