@@ -1,7 +1,7 @@
 import path from 'path';
 import mri from 'mri';
 
-const getLocalPathConfig = prefix => {
+const getLocalPathConfig = (prefix: string) => {
   const args = mri(process.argv.slice(2), {
     string: ['local-config'],
     alias: {

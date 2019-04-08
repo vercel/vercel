@@ -1,0 +1,15 @@
+{
+    "version": 2,
+    "name": "nodejs",
+    "builds": [
+        { "src": "*.js", "use": "@now/node" },
+        { "src": "statics/*", "use": "@now/static" }
+    ],
+    "routes": [
+        { "src": "/api/(.*)", "dest": "/api.js?topic=$1" },
+        { "src": "/help.js", "dest": "/index.js" },
+        { "src": "/help", "dest": "/help.js" },
+        { "src": "/proxy_pass", "dest": "https://zeit.co" },
+        { "src": "/redirect", "status": 301, "headers": { "Location": "https://zeit.co" }}
+    ]
+}
