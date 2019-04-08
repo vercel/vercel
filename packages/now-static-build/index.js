@@ -1,18 +1,18 @@
-const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
-const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const { existsSync } = require('fs');
 const {
+  glob,
+  download,
   runNpmInstall,
   runPackageJsonScript,
   runShellScript,
-} = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
+} = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 
 function validateDistDir(distDir) {
   const distDirName = path.basename(distDir);
   if (!existsSync(distDir)) {
     const message = `Build was unable to create the distDir: ${distDirName}.`
-      + '\nMake sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#configuring-the-dist-directory';
+      + '\nMake sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#configuring-the-build-output-directory';
     throw new Error(message);
   }
 }
