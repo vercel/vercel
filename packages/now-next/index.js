@@ -199,7 +199,9 @@ exports.build = async ({
   console.log('installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline']);
 
-  nextVersion = resolveFrom(entryPath, 'next/package.json').version;
+  nextVersion = JSON.parse(
+    await readFile(resolveFrom(entryPath, 'next/package.json'), 'utf8'),
+  ).version;
 
   const isUpdated = (v) => {
     if (v === 'canary') return true;
