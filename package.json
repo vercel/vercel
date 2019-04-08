@@ -133,7 +133,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.4.39",
+    "@now/build-utils": "0.4.40-canary.0",
     "@sentry/node": "4.5.3",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",

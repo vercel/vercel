@@ -25,7 +25,11 @@ export function resolveRouteParameters(
   });
 }
 
-export default function(reqPath = '', routes?: RouteConfig[], devServer?: DevServer): RouteResult {
+export default function(
+  reqPath = '',
+  routes?: RouteConfig[],
+  devServer?: DevServer
+): RouteResult {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
 
