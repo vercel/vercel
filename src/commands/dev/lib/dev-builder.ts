@@ -1,17 +1,18 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { FileFsRef } from '@now/build-utils';
+import { tmpdir } from 'os';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
+import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { readFile, stat, mkdirp } from 'fs-extra';
+import { FileFsRef, download } from '@now/build-utils';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
-import { installBuilders, getBuilder, cacheDirPromise } from './builder-cache';
+import { installBuilders, getBuilder } from './builder-cache';
 import {
   NowConfig,
   BuildConfig,
@@ -20,8 +21,22 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
-  BuiltLambda
+  BuiltLambda,
+  CacheOutputs,
+  PrepareCacheParams
 } from './types';
+
+const tmpDir = tmpdir();
+const getWorkPath = () =>
+  join(
+    tmpDir,
+    'co.zeit.now',
+    'dev',
+    'workPaths',
+    Math.random()
+      .toString(32)
+      .slice(-8)
+  );
 
 /**
  * Build project to statics & lambdas
@@ -45,6 +60,31 @@ export async function executeInitialBuilds(
   }
 }
 
+export async function executePrepareCache(
+  devServer: DevServer,
+  buildConfig: BuildConfig,
+  params: PrepareCacheParams
+): Promise<CacheOutputs> {
+  const { builder } = buildConfig;
+  if (!builder) {
+    throw new Error('No builder');
+  }
+  if (!builder.prepareCache) {
+    throw new Error('Builder has no `prepareCache()` function');
+  }
+
+  // Since the `prepareCache()` function may be computationally expensive, and
+  // its run in the same process as `now dev` (for now), defer executing it
+  // until after there has been time for the current HTTP request to complete.
+  await new Promise(r => setTimeout(r, 3000));
+
+  const startTime = Date.now();
+  const results = await builder.prepareCache(params);
+  const cacheTime = Date.now() - startTime;
+  devServer.output.debug(`\`prepareCache()\` took ${cacheTime}ms`);
+  return results;
+}
+
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
@@ -58,10 +98,14 @@ export async function executeBuild(
   const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);
 
-  const cacheDir = await cacheDirPromise;
-  const { dev, ino } = await stat(entrypoint);
-  const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+  const workPath = getWorkPath();
   await mkdirp(workPath);
+
+  if (buildConfig.builderCachePromise) {
+    devServer.output.debug('Restoring build cache from previous build');
+    const builderCache = await buildConfig.builderCachePromise;
+    await download(builderCache, workPath);
+  }
 
   devServer.output.debug(
     `Building ${buildEntry.fsPath} (workPath = ${workPath})`
@@ -83,6 +127,23 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath }
     });
+
+    if (typeof builder.prepareCache === 'function') {
+      const cachePath = getWorkPath();
+      await mkdirp(cachePath);
+      buildConfig.builderCachePromise = executePrepareCache(
+        devServer,
+        buildConfig,
+        {
+          files,
+          entrypoint,
+          workPath,
+          cachePath,
+          config,
+          meta: { isDev: true, requestPath }
+        }
+      );
+    }
   } finally {
     devServer.restoreOriginalEnv();
   }
@@ -124,6 +185,7 @@ export async function executeBuild(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
+          MemorySize: 3008,
           Environment: {
             Variables: {
               ...nowJson.env,
@@ -154,10 +216,7 @@ async function executeBuilds(
   }
 
   const { cwd, env } = devServer;
-  const [files, cacheDir] = await Promise.all([
-    collectProjectFiles('**', cwd),
-    cacheDirPromise
-  ]);
+  const files = await collectProjectFiles('**', cwd);
 
   for (const build of nowJson.builds) {
     try {
@@ -178,8 +237,7 @@ async function executeBuilds(
         const config = build.config || {};
         const entrypoint = relative(cwd, entry.fsPath);
 
-        const { dev, ino } = await stat(entrypoint);
-        const workPath = join(cacheDir, 'workPaths', String(dev + ino));
+        const workPath = getWorkPath();
         await mkdirp(workPath);
 
         let output: BuilderOutputs;
@@ -212,6 +270,23 @@ async function executeBuilds(
               `Building ${entry.fsPath} (workPath = ${workPath})`
             );
             output = await builder.build({ ...buildConfig, workPath });
+
+            if (typeof builder.prepareCache === 'function') {
+              const cachePath = getWorkPath();
+              await mkdirp(cachePath);
+              build.builderCachePromise = executePrepareCache(
+                devServer,
+                build,
+                {
+                  files,
+                  entrypoint,
+                  workPath,
+                  cachePath,
+                  config,
+                  meta: { isDev: true, requestPath: null }
+                }
+              );
+            }
           }
         } finally {
           devServer.restoreOriginalEnv();
@@ -253,6 +328,7 @@ async function executeBuilds(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
+          MemorySize: 3008,
           Environment: {
             Variables: {
               ...nowJson.env,

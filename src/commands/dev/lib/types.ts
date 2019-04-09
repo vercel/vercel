@@ -22,6 +22,7 @@ export interface BuildConfig {
   use: string;
   config?: object;
   builder?: Builder;
+  builderCachePromise?: Promise<CacheOutputs>;
 }
 
 export interface RouteConfig {
@@ -30,6 +31,7 @@ export interface RouteConfig {
   methods?: string[];
   headers?: HttpHeadersConfig;
   status?: number;
+  handle?: string;
 }
 
 export interface NowConfig {
@@ -68,14 +70,16 @@ export type BuiltLambda = Lambda &
   BuiltAsset & {
     fn?: FunLambda;
   };
-export type BuilderOutput =
-  | BuildSubscription
-  | BuiltLambda
-  | BuiltFileFsRef
-  | BuiltFileBlob;
+export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
+}
+
+export type CacheOutput = BuiltFileFsRef | BuiltFileBlob;
+
+export interface CacheOutputs {
+  [path: string]: CacheOutput;
 }
 
 export interface BuilderParamsBase {
@@ -92,7 +96,7 @@ export interface BuilderParams extends BuilderParamsBase {
   workPath: string;
 }
 
-export interface PrepareCacheParams extends BuilderParamsBase {
+export interface PrepareCacheParams extends BuilderParams {
   cachePath: string;
 }
 
@@ -102,7 +106,9 @@ export interface Builder {
   };
   build(params: BuilderParams): BuilderOutputs;
   subscribe?(params: BuilderParamsBase): Promise<string[]>;
-  prepareCache?(params: PrepareCacheParams): BuilderOutputs;
+  prepareCache?(
+    params: PrepareCacheParams
+  ): CacheOutputs | Promise<CacheOutputs>;
 }
 
 export interface HttpHeadersConfig {

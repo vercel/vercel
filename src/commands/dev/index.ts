@@ -9,7 +9,6 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
-import { cleanCacheDir } from './lib/builder-cache';
 
 const COMMAND_CONFIG = {
   dev: ['dev']
@@ -17,12 +16,9 @@ const COMMAND_CONFIG = {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now dev`)} [options] <command | dir>
+  ${chalk.bold(`${logo} now dev`)} [options] <dir>
 
-  ${chalk.dim('Commands:')}
-
-    start          [dir]     Starts the \`now dev\` server [default]
-    cache clean              Deletes the local cache directories used by \`now dev\`
+  Starts the \`now dev\` server.
 
   ${chalk.dim('Options:')}
 
@@ -58,11 +54,6 @@ export default async function main(ctx: NowContext) {
   if (argv['--help']) {
     help();
     return 2;
-  }
-
-  if (args[0] === 'cache' && args[1] === 'clean') {
-    await cleanCacheDir(output);
-    return 0;
   }
 
   if (argv._.length > 2) {
