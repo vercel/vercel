@@ -429,8 +429,8 @@ export class CertOrderNotFound extends NowError<
 }
 
 /**
- * Returned when the user tries to create a wildcard certificate but LE API returns
- * a rate limit error because there were too many certificates created already.
+ * Returned when the user tries to create a certificate but LE API returns
+ * a CAA conflict error, preventing cert issuance.
  */
 export class TooManyCertificates extends NowError<
   'TOO_MANY_CERTIFICATES',
@@ -443,6 +443,23 @@ export class TooManyCertificates extends NowError<
       message: `Too many certificates already issued for exact set of domains: ${domains.join(
         ', '
       )}`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to create a wildcard certificate but LE API returns
+ * a rate limit error because there were too many certificates created already.
+ */
+export class ConflictingCAARecord extends NowError<
+  'CONFLICTING_CAA_RECORD',
+  { domains: string[] }
+> {
+  constructor(domains: string[], message: string) {
+    super({
+      code: 'CONFLICTING_CAA_RECORD',
+      meta: { domains },
+      message
     });
   }
 }
@@ -876,7 +893,7 @@ export class DNSConflictingRecord extends NowError<
       code: 'DNS_CONFLICTING_RECORD',
       meta: { record },
       message: ` A conflicting record exists "${record}".`
-    })
+    });
   }
 }
 
@@ -986,10 +1003,7 @@ export class InvalidMoveToken extends NowError<
   }
 }
 
-export class NoBuilderCacheError extends NowError<
-  'NO_BUILDER_CACHE',
-  {}
-> {
+export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
   constructor() {
     super({
       code: 'NO_BUILDER_CACHE',
@@ -1014,16 +1028,16 @@ export class BuilderCacheCleanError extends NowError<
 
 export class LambdaSizeExceededError extends NowError<
   'MAX_LAMBDA_SIZE_EXCEEDED',
-  { size: number, maxLambdaSize: number }
+  { size: number; maxLambdaSize: number }
 > {
   constructor(size: number, maxLambdaSize: number) {
     super({
       code: 'MAX_LAMBDA_SIZE_EXCEEDED',
       message: `The lambda function size (${bytes(
-            size
-          ).toLowerCase()}) exceeds the configured limit (${bytes(
-            maxLambdaSize
-          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+        size
+      ).toLowerCase()}) exceeds the configured limit (${bytes(
+        maxLambdaSize
+      ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
       meta: { size, maxLambdaSize }
     });
   }
@@ -1031,12 +1045,14 @@ export class LambdaSizeExceededError extends NowError<
 
 export class MissingDotenvVarsError extends NowError<
   'MISSING_DOTENV_VARS',
-  { type: string, missing: string[] }
+  { type: string; missing: string[] }
 > {
   constructor(type: string, missing: string[]) {
     let message: string;
     if (missing.length === 1) {
-      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)} file`;
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(
+        type
+      )} file`;
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
