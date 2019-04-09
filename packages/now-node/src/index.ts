@@ -30,41 +30,21 @@ async function downloadInstallAndBundle({
   workPath,
   npmArguments = []
 }: DownloadOptions) {
-  const userPath = join(workPath, 'user');
-  const nccPath = join(workPath, 'ncc');
-
   console.log('downloading user files...');
-  const downloadedFiles = await download(files, userPath);
+  const downloadedFiles = await download(files, workPath);
 
   console.log("installing dependencies for user's code...");
-  const entrypointFsDirname = join(userPath, dirname(entrypoint));
+  const entrypointFsDirname = join(workPath, dirname(entrypoint));
   await runNpmInstall(entrypointFsDirname, npmArguments);
 
-  console.log('writing ncc package.json...');
-  await download(
-    {
-      'package.json': new FileBlob({
-        data: JSON.stringify({
-          license: 'UNLICENSED',
-          dependencies: {
-            '@zeit/ncc': '0.17.3',
-          }
-        })
-      })
-    },
-    nccPath
-  );
-
-  console.log('installing dependencies for ncc...');
-  await runNpmInstall(nccPath, npmArguments);
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, workNccPath: nccPath, entrypointFsDirname };
+  return { entrypointPath, entrypointFsDirname };
 }
 
-async function compile(workNccPath: string, entrypointPath: string, entrypoint: string, config: CompilerConfig): Promise<Files> {
+async function compile(entrypointPath: string, entrypoint: string, config: CompilerConfig): Promise<Files> {
   const input = entrypointPath;
   const inputDir = dirname(input);
-  const ncc = require(join(workNccPath, 'node_modules/@zeit/ncc'));
+  const ncc = require('@zeit/ncc');
   const { code, assets } = await ncc(input);
 
   if (config && config.includeFiles) {
@@ -87,12 +67,12 @@ async function compile(workNccPath: string, entrypointPath: string, entrypoint: 
   const preparedFiles: Files = {};
   const blob = new FileBlob({ data: code });
   // move all user code to 'user' subdirectory
-  preparedFiles[join('user', entrypoint)] = blob;
+  preparedFiles[entrypoint] = blob;
   // eslint-disable-next-line no-restricted-syntax
   for (const assetName of Object.keys(assets)) {
     const { source: data, permissions: mode } = assets[assetName];
     const blob2 = new FileBlob({ data, mode });
-    preparedFiles[join('user', dirname(entrypoint), assetName)] = blob2;
+    preparedFiles[join(dirname(entrypoint), assetName)] = blob2;
   }
 
   return preparedFiles;
@@ -105,9 +85,8 @@ export const config = {
 export async function build({ files, entrypoint, workPath, config }: BuildOptions) {
   const {
     entrypointPath,
-    workNccPath,
     entrypointFsDirname
- } = await downloadInstallAndBundle(
+  } = await downloadInstallAndBundle(
     { files, entrypoint, workPath, npmArguments: ['--prefer-offline'] }
   );
 
@@ -115,15 +94,14 @@ export async function build({ files, entrypoint, workPath, config }: BuildOption
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
 
   console.log('compiling entrypoint with ncc...');
-  const preparedFiles = await compile(workNccPath, entrypointPath, entrypoint, config);
+  const preparedFiles = await compile(entrypointPath, entrypoint, config);
   const launcherPath = join(__dirname, 'launcher.js');
   let launcherData = await readFile(launcherPath, 'utf8');
 
   launcherData = launcherData.replace(
     '// PLACEHOLDER',
     [
-      'process.chdir("./user");',
-      `listener = require("./${join('user', entrypoint)}");`,
+      `listener = require("./${entrypoint}");`,
       'if (listener.default) listener = listener.default;'
     ].join(' ')
   );
@@ -144,11 +122,8 @@ export async function build({ files, entrypoint, workPath, config }: BuildOption
 
 export async function prepareCache({ workPath }: PrepareCacheOptions) {
   return {
-    ...(await glob('user/node_modules/**', workPath)),
-    ...(await glob('user/package-lock.json', workPath)),
-    ...(await glob('user/yarn.lock', workPath)),
-    ...(await glob('ncc/node_modules/**', workPath)),
-    ...(await glob('ncc/package-lock.json', workPath)),
-    ...(await glob('ncc/yarn.lock', workPath))
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('package-lock.json', workPath)),
+    ...(await glob('yarn.lock', workPath))
   };
 }

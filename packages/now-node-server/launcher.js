@@ -24,7 +24,8 @@ try {
     );
     process.exit(1);
   } else {
-    throw err;
+    console.error(err);
+    process.exit(1);
   }
 }
 

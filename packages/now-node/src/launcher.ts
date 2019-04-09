@@ -15,7 +15,8 @@ try {
     console.error('Did you forget to add it to "dependencies" in `package.json`?');
     process.exit(1);
   } else {
-    throw err;
+    console.error(err);
+    process.exit(1);
   }
 }
 
