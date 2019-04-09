@@ -50,8 +50,10 @@ export default async function startCertOrder(
       return new ERRORS.DomainPermissionDenied(error.domain, context);
     }
     if (error.code === 'conflicting_caa_record') {
-      const domain = error.domain ? [error.domain] : cns;
-      return new ERRORS.ConflictingCAARecord(domain, error.message);
+      return new ERRORS.ConflictingCAARecord(
+        error.domain ? [error.domain] : cns,
+        error.message
+      );
     }
     if (error.code === 'rate_limited') {
       return new ERRORS.TooManyCertificates(error.domains);

@@ -429,8 +429,8 @@ export class CertOrderNotFound extends NowError<
 }
 
 /**
- * Returned when the user tries to create a certificate but LE API returns
- * a CAA conflict error, preventing cert issuance.
+ * Returned when the user tries to create a wildcard certificate but LE API returns
+ * a rate limit error because there were too many certificates created already.
  */
 export class TooManyCertificates extends NowError<
   'TOO_MANY_CERTIFICATES',
@@ -448,8 +448,8 @@ export class TooManyCertificates extends NowError<
 }
 
 /**
- * Returned when the user tries to create a wildcard certificate but LE API returns
- * a rate limit error because there were too many certificates created already.
+ * Returned when the user tries to create a certificate but LE API returns
+ * a CAA conflict error, preventing cert issuance.
  */
 export class ConflictingCAARecord extends NowError<
   'CONFLICTING_CAA_RECORD',
