@@ -34,7 +34,7 @@ export default async function importZonefile(
     cancelWait();
     if (error.code === 'not_found') {
       return new DomainNotFound(domain);
-    } else if (error.code === 'invalid_domain') {
+    } if (error.code === 'invalid_domain') {
       return new InvalidDomain(domain);
     }
     throw error;

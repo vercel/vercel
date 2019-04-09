@@ -119,7 +119,7 @@ export default async function move(
       client,
       context,
       domainName,
-      matchId ? matchId : destination
+      matchId || destination
     );
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {

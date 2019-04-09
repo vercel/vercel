@@ -590,7 +590,7 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-        return;
+        
     }
   };
 
