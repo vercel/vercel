@@ -92,7 +92,7 @@ export async function installBuilders(packages: string[]): Promise<void> {
   for (const builderPkg of packages) {
     const parsed = npa(builderPkg);
     const name = parsed.name || builderPkg;
-    if (localBuilders.hasOwnProperty(name)) {
+    if (Object.hasOwnProperty.call(localBuilders, name)) {
       continue;
     }
     const spec = parsed.rawSpec || parsed.fetchSpec || 'latest';

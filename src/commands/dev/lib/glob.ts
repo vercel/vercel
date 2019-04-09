@@ -107,6 +107,7 @@ export async function glob(
       ? (val: string): boolean => ignore.ignores(val)
       : () => false;
     delete opts.ignore;
+    /* eslint-disable no-new */
     // @ts-ignore
     new GlobIgnore(
       pattern,
