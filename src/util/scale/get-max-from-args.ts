@@ -20,9 +20,13 @@ export default function getMaxFromArgs(args: string[]) {
   } else {
     if (!args[3]) {
       return AUTO;
-    } if (isValidMinMaxValue(args[4])) {
+    }
+
+    if (isValidMinMaxValue(args[4])) {
       return toNumberOrAuto(args[4]);
-    } if (args[4]) {
+    }
+
+    if (args[4]) {
       return new ERRORS.InvalidMaxForScale(args[4]);
     }
   }
