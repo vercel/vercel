@@ -109,7 +109,7 @@
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
     "@types/write-json-file": "2.2.1",
-    "@typescript-eslint/eslint-plugin": "1.5.0",
+    "@typescript-eslint/eslint-plugin": "1.6.0",
     "@typescript-eslint/parser": "1.1.0",
     "@zeit/dockerignore": "0.0.4",
     "@zeit/fun": "0.6.0",

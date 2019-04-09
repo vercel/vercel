@@ -41,5 +41,5 @@ rules:
   no-use-before-define: 0
   prefer-const: 0
   prefer-destructuring: 0
-  typescript/no-unused-vars: 2 # https://github.com/typescript-eslint/typescript-eslint/issues/379
-  no-unused-vars: 0 # https://github.com/typescript-eslint/typescript-eslint/issues/363
+  no-unused-vars: 0           # in favor of '@typescript-eslint/no-unused-vars'
+  '@typescript-eslint/no-unused-vars': 1
