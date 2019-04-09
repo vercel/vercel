@@ -114,6 +114,36 @@ function isLegacyNext(nextVersion) {
   return true;
 }
 
+function setNextExperimentalPage(files, entry, meta) {
+  if (meta.requestPath) {
+    if (
+      meta.requestPath.startsWith(path.join(entry, 'static'))
+      || /^\/?_next\/static\/(?:client|runtime|chunks)\//.test(meta.requestPath)
+    ) {
+      return onlyStaticDirectory(
+        includeOnlyEntryDirectory(files, entry),
+        entry,
+      );
+    }
+
+    const { pathname } = url.parse(meta.requestPath);
+    const assetPath = pathname.match(
+      /^\/?_next\/static\/[^/]+\/pages\/(.+)\.js$/,
+    );
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = assetPath
+      ? assetPath[1]
+      : pathname;
+  }
+
+  if (meta.isDev) {
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
+  }
+
+  return null;
+}
+
 exports.config = {
   maxLambdaSize: '5mb',
 };
@@ -127,8 +157,11 @@ exports.build = async ({
 }) => {
   validateEntrypoint(entrypoint);
 
-  console.log('downloading user files...');
   const entryDirectory = path.dirname(entrypoint);
+  const maybeStaticFiles = setNextExperimentalPage(files, entryDirectory, meta);
+  if (maybeStaticFiles) return maybeStaticFiles; // return early if requestPath is static file
+
+  console.log('downloading user files...');
   await download(files, workPath);
   const entryPath = path.join(workPath, entryDirectory);
   const dotNext = path.join(entryPath, '.next');
@@ -219,21 +252,6 @@ exports.build = async ({
     throw new Error(
       '`now dev` can only be used with Next.js >=8.0.5-canary.14!',
     );
-  }
-
-  if (meta.isDev) {
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
-  }
-  if (meta.requestPath) {
-    const { pathname } = url.parse(meta.requestPath);
-    const assetPath = pathname.match(
-      /^\/?_next\/static\/[^/]+\/pages\/(.+)\.js$/,
-    );
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = assetPath
-      ? assetPath[1]
-      : pathname;
   }
 
   console.log('running user script...');
@@ -455,6 +473,7 @@ exports.subscribe = async ({ entrypoint, files }) => {
 
   return [
     path.join(entryDirectory, '_next/static/**'),
+    path.join(entryDirectory, 'static/**'),
     // List all pages without their extensions
     ...Object.keys(pageFiles).map(page => page
       .replace(/^pages\//i, '')
