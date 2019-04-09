@@ -27,6 +27,18 @@ export interface NowProxyResponse {
   encoding: string;
 }
 
+/**
+ * If the `http.Server` handler function throws an error asynchronously,
+ * then it ends up being an unhandled rejection which doesn't kill the node
+ * process which causes the HTTP request to hang indefinitely. So print the
+ * error here and force the process to exit so that the lambda invocation
+ * returns an Unhandled error quickly.
+ */
+process.on('unhandledRejection', (err: Error) => {
+  console.error('Unhandled rejection:', err);
+  process.exit(1);
+});
+
 function normalizeNowProxyEvent(event: NowProxyEvent): NowProxyRequest {
   let bodyBuffer: Buffer | null;
   const { method, path, headers, encoding, body } = JSON.parse(event.body);
