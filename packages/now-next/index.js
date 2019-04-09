@@ -116,10 +116,7 @@ function isLegacyNext(nextVersion) {
 
 function setNextExperimentalPage(files, entry, meta) {
   if (meta.requestPath) {
-    if (
-      meta.requestPath.startsWith(path.join(entry, 'static'))
-      || /^\/?_next\/static\/(?:client|runtime|chunks)\//.test(meta.requestPath)
-    ) {
+    if (meta.requestPath.startsWith(path.join(entry, 'static'))) {
       return onlyStaticDirectory(
         includeOnlyEntryDirectory(files, entry),
         entry,
@@ -472,7 +469,7 @@ exports.subscribe = async ({ entrypoint, files }) => {
   );
 
   return [
-    path.join(entryDirectory, '_next/static/**'),
+    path.join(entryDirectory, '_next/static/unoptimized-build/pages/**'),
     path.join(entryDirectory, 'static/**'),
     // List all pages without their extensions
     ...Object.keys(pageFiles).map(page => page
