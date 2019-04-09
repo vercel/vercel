@@ -415,6 +415,29 @@ export class DomainConfigurationError extends NowError<
   }
 }
 
+export class CertNotFound extends NowError<'CERT_NOT_FOUND', { id: string }> {
+  constructor(id: string) {
+    super({
+      code: 'CERT_NOT_FOUND',
+      meta: { id },
+      message: `The cert ${id} can't be found.`
+    });
+  }
+}
+
+export class CertsPermissionDenied extends NowError<
+  'CERTS_PERMISSION_DENIED',
+  { domain: string }
+> {
+  constructor(context: string, domain: string) {
+    super({
+      code: 'CERTS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to ${domain}'s certs under ${context}.`
+    });
+  }
+}
+
 export class CertOrderNotFound extends NowError<
   'CERT_ORDER_NOT_FOUND',
   { cns: string[] }
@@ -876,7 +899,7 @@ export class DNSConflictingRecord extends NowError<
       code: 'DNS_CONFLICTING_RECORD',
       meta: { record },
       message: ` A conflicting record exists "${record}".`
-    })
+    });
   }
 }
 
@@ -986,10 +1009,7 @@ export class InvalidMoveToken extends NowError<
   }
 }
 
-export class NoBuilderCacheError extends NowError<
-  'NO_BUILDER_CACHE',
-  {}
-> {
+export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
   constructor() {
     super({
       code: 'NO_BUILDER_CACHE',
@@ -1014,16 +1034,16 @@ export class BuilderCacheCleanError extends NowError<
 
 export class LambdaSizeExceededError extends NowError<
   'MAX_LAMBDA_SIZE_EXCEEDED',
-  { size: number, maxLambdaSize: number }
+  { size: number; maxLambdaSize: number }
 > {
   constructor(size: number, maxLambdaSize: number) {
     super({
       code: 'MAX_LAMBDA_SIZE_EXCEEDED',
       message: `The lambda function size (${bytes(
-            size
-          ).toLowerCase()}) exceeds the configured limit (${bytes(
-            maxLambdaSize
-          ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+        size
+      ).toLowerCase()}) exceeds the configured limit (${bytes(
+        maxLambdaSize
+      ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
       meta: { size, maxLambdaSize }
     });
   }
@@ -1031,12 +1051,14 @@ export class LambdaSizeExceededError extends NowError<
 
 export class MissingDotenvVarsError extends NowError<
   'MISSING_DOTENV_VARS',
-  { type: string, missing: string[] }
+  { type: string; missing: string[] }
 > {
   constructor(type: string, missing: string[]) {
     let message: string;
     if (missing.length === 1) {
-      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(type)} file`;
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(
+        type
+      )} file`;
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
