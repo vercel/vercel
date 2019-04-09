@@ -137,10 +137,10 @@ export default async function set(
       );
       const remaining = handleCreateAliasError(output, pathAlias);
       if (handleSetupDomainError(output, remaining) !== 1) {
-        console.log(
-          `${chalk.cyan('> Success!')} ${
-            rules.length
-          } rules configured for ${chalk.underline(target)} ${setStamp()}`
+        output.success(
+          `${rules.length} rules configured for ${chalk.underline(
+            target
+          )} ${setStamp()}`
         );
       }
     }
@@ -208,10 +208,10 @@ export default async function set(
     if (handleResult === 1) {
       return 1;
     } else {
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
-          `https://${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
+      output.success(
+        `${chalk.bold(`https://${handleResult.alias}`)} now points to https://${
+          deployment.url
+        } ${setStamp()}`
       );
     }
   }
