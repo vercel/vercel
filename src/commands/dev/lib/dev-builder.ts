@@ -221,12 +221,6 @@ async function executeBuilds(
     return;
   }
 
-  devServer.output.debug(
-    `Building ${buildEntry.fsPath} with "${buildConfig.use}" v${
-      builder[PACKAGE]!.version
-    } (workPath = ${workPath})`
-  );
-
   const { cwd, env } = devServer;
   const files = await collectProjectFiles('**', cwd);
 
