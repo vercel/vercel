@@ -1,7 +1,7 @@
 import { NowError } from '../now-error';
 import { Output } from '../output';
 import getInferredTargets from './get-inferred-targets';
-import toHost from "../to-host";
+import toHost from '../to-host';
 import { Config } from '../../types';
 
 export default async function getTargetsForAlias(

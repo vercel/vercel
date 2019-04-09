@@ -93,7 +93,7 @@ export async function executeBuild(
 ): Promise<void> {
   const { buildConfig, buildEntry } = asset;
   if (!buildConfig || !buildEntry) {
-    throw new Error("Asset has not been built yet, can't rebuild");
+    throw new Error('Asset has not been built yet, can\'t rebuild');
   }
   const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);

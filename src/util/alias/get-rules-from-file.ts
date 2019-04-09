@@ -1,7 +1,7 @@
 import path from 'path';
-import * as ERRORS from "../errors-ts";
-import humanizePath from "../humanize-path";
-import readJSONFile from "../read-json-file";
+import * as ERRORS from '../errors-ts';
+import humanizePath from '../humanize-path';
+import readJSONFile from '../read-json-file';
 import validatePathAliasRules from './validate-path-alias-rules';
 import { PathRule } from '../../types';
 

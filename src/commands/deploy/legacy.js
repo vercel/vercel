@@ -454,7 +454,7 @@ async function sync({
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
       error(
-        "Can't set both `regions` and `scale` options simultaneously",
+        'Can\'t set both `regions` and `scale` options simultaneously',
         'regions-and-scale-at-once'
       );
       await exit(1);
