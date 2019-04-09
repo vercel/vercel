@@ -427,22 +427,35 @@ export default class DevServer {
       );
       if (subscription && subscription.buildEntry) {
         const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
-        this.output.debug(
-          `Building initial asset "${entrypoint}" for "${req.method} ${
-            req.url
-          }" (${subscriptionKey})`
-        );
-        let buildPromise = executeBuild(
-          nowJson,
-          this,
-          subscription,
-          subscriptionKey
-        );
-        this.inProgressBuilds.set(entrypoint, buildPromise);
+        const buildKey = `${entrypoint}-${subscriptionKey}`;
+        let buildPromise = this.inProgressBuilds.get(buildKey);
+        if (buildPromise) {
+          // A build for this entrypoint + subscription key is already in
+          // progress, so don't trigger another rebuild for this request -
+          // just wait on the existing one.
+          this.output.debug(
+            `De-duping build "${entrypoint}" for "${req.method} ${
+              req.url
+            }" (${subscriptionKey})`
+          );
+        } else {
+          this.output.debug(
+            `Building initial asset "${entrypoint}" for "${req.method} ${
+              req.url
+            }" (${subscriptionKey})`
+          );
+          buildPromise = executeBuild(
+            nowJson,
+            this,
+            subscription,
+            subscriptionKey
+          );
+          this.inProgressBuilds.set(buildKey, buildPromise);
+        }
         try {
           await buildPromise;
         } finally {
-          this.inProgressBuilds.delete(entrypoint);
+          this.inProgressBuilds.delete(buildKey);
         }
 
         // Since the `asset` was just built, resolve the built asset
