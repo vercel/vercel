@@ -47,14 +47,15 @@ class FileFsRef implements File {
     await fs.mkdirp(path.dirname(fsPath));
 
     await new Promise<void>((resolve, reject) => {
-      const dest = fs.createWriteStream(fsPath);
+      const dest = fs.createWriteStream(fsPath, {
+        mode: mode & 0o777
+      });
       stream.pipe(dest);
       stream.on('error', reject);
       dest.on('finish', resolve);
       dest.on('error', reject);
     });
 
-    await fs.chmod(fsPath, mode.toString(8).slice(-3));
     return new FileFsRef({ mode, fsPath });
   }
 
