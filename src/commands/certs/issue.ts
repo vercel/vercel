@@ -98,9 +98,7 @@ export default async function issue(
       );
     } catch (err) {
       if (err.code === 'ENOENT') {
-        output.error(
-          `The specified file "${err.path}" doesn't exist.`
-        );
+        output.error(`The specified file "${err.path}" doesn't exist.`);
         return 1;
       }
       throw err;
@@ -187,6 +185,10 @@ export default async function issue(
         '  Read more: https://err.sh/now-cli/cant-solve-challenge\n\n'
       );
     }
+    return 1;
+  }
+  if (cert instanceof ERRORS.ConflictingCAARecord) {
+    output.error(cert.message);
     return 1;
   }
   if (cert instanceof ERRORS.TooManyRequests) {

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import psl from 'psl';
 
 import { Cert } from '../../types';
-import * as Errors from '../errors-ts';
+import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import wait from '../output/wait';
 
@@ -27,12 +27,12 @@ export default async function startCertOrder(
   } catch (error) {
     cancelWait();
     if (error.code === 'cert_order_not_found') {
-      return new Errors.CertOrderNotFound(cns);
+      return new ERRORS.CertOrderNotFound(cns);
     }
     if (error.code === 'configuration_error') {
       const parsedDomain = psl.parse(error.domain);
       if (parsedDomain.error) {
-        throw new Errors.DomainConfigurationError(
+        throw new ERRORS.DomainConfigurationError(
           error.domain,
           null,
           Boolean(error.external)
@@ -40,32 +40,38 @@ export default async function startCertOrder(
       }
 
       const { domain, subdomain } = parsedDomain;
-      return new Errors.DomainConfigurationError(
+      return new ERRORS.DomainConfigurationError(
         domain || error.domain,
         subdomain as string,
         error.external
       );
     }
     if (error.code === 'forbidden') {
-      return new Errors.DomainPermissionDenied(error.domain, context);
+      return new ERRORS.DomainPermissionDenied(error.domain, context);
+    }
+    if (error.code === 'conflicting_caa_record') {
+      return new ERRORS.ConflictingCAARecord(
+        error.domain ? [error.domain] : cns,
+        error.message
+      );
     }
     if (error.code === 'rate_limited') {
-      return new Errors.TooManyCertificates(error.domains);
+      return new ERRORS.TooManyCertificates(error.domains);
     }
     if (error.code === 'too_many_requests') {
-      return new Errors.TooManyRequests('certificates', error.retryAfter);
+      return new ERRORS.TooManyRequests('certificates', error.retryAfter);
     }
     if (error.code === 'validation_running') {
-      return new Errors.DomainValidationRunning(error.domain);
+      return new ERRORS.DomainValidationRunning(error.domain);
     }
     if (error.code === 'should_share_root_domain') {
-      return new Errors.DomainsShouldShareRoot(error.domains);
+      return new ERRORS.DomainsShouldShareRoot(error.domains);
     }
     if (error.code === 'cant_solve_challenge') {
-      return new Errors.CantSolveChallenge(error.domain, error.type);
+      return new ERRORS.CantSolveChallenge(error.domain, error.type);
     }
     if (error.code === 'not_found') {
-      return new Errors.DomainNotFound(error.domain);
+      return new ERRORS.DomainNotFound(error.domain);
     }
 
     throw error;

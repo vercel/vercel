@@ -40,6 +40,12 @@ export default async function createCertForCns(
     if (error.code === 'forbidden') {
       return new ERRORS.DomainPermissionDenied(error.domain, context);
     }
+    if (error.code === 'conflicting_caa_record') {
+      return new ERRORS.ConflictingCAARecord(
+        error.domain ? [error.domain] : cns,
+        error.message
+      );
+    }
     if (error.code === 'rate_limited') {
       return new ERRORS.TooManyCertificates(cns);
     }
