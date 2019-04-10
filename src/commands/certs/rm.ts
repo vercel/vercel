@@ -2,16 +2,31 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
+import { NowContext, Cert } from '../../types';
+import * as ERRORS from '../../util/errors-ts';
+import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
-import getCerts from '../../util/certs/get-certs';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import Now from '../../util';
-import stamp from '../../util/output/stamp.ts';
+import getCertsForDomain from '../../util/certs/get-certs-for-domain';
+import Client from '../../util/client';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import param from '../../util/output/param';
 
-async function rm(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+type Options = {
+  '--debug': boolean;
+};
+
+async function rm(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+) {
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const rmStamp = stamp();
@@ -31,28 +46,28 @@ async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug, currentTeam });
-
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         '`now certs rm <id or cn>`'
       )}`
     );
-    now.close();
     return 1;
   }
 
   const id = args[0];
-  const certs = await getCertsToDelete(output, now, id);
+  const certs = await getCertsToDelete(output, client, contextName, id);
+  if (certs instanceof ERRORS.CertsPermissionDenied) {
+    output.error(
+      `You don't have access to ${param(id)}'s certs under ${contextName}.`
+    );
+    return 1;
+  }
 
   if (certs.length === 0) {
     output.error(
-      `No certificates found by id "${id}" under ${chalk.bold(
-        contextName
-      )}`
+      `No certificates found by id "${id}" under ${chalk.bold(contextName)}`
     );
-    now.close();
     return 1;
   }
 
@@ -63,11 +78,12 @@ async function rm(ctx, opts, args, output) {
   );
 
   if (!yes) {
-    now.close();
     return 0;
   }
 
-  await Promise.all(certs.map(cert => deleteCertById(output, now, cert.uid)));
+  await Promise.all(
+    certs.map(cert => deleteCertById(output, client, cert.uid))
+  );
   output.success(
     `${chalk.bold(
       plural('Certificate', certs.length, true)
@@ -76,16 +92,28 @@ async function rm(ctx, opts, args, output) {
   return 0;
 }
 
-async function getCertsToDelete(output, now, id) {
-  const cert = await getCertById(output, now, id);
-  return !cert ? getCerts(output, now, id) : [cert];
+async function getCertsToDelete(
+  output: Output,
+  client: Client,
+  contextName: string,
+  id: string
+) {
+  const cert = await getCertById(output, client, id);
+  if (cert instanceof ERRORS.CertNotFound) {
+    const certs = await getCertsForDomain(output, client, contextName, id);
+    if (certs instanceof ERRORS.CertsPermissionDenied) {
+      return certs;
+    }
+    return certs;
+  }
+  return [cert];
 }
 
-function readConfirmation(output, msg, certs) {
+function readConfirmation(output: Output, msg: string, certs: Cert[]) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
-      `${table([...certs.map(formatCertRow)], {
+      `${table(certs.map(formatCertRow), {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6)
       }).replace(/^(.*)/gm, '  $1')}\n`
@@ -107,13 +135,13 @@ function readConfirmation(output, msg, certs) {
   });
 }
 
-function formatCertRow(cert) {
+function formatCertRow(cert: Cert) {
   return [
     cert.uid,
     chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
-    ...cert.created
-      ? [chalk.gray(`${ms(new Date() - new Date(cert.created))} ago`)]
-      : []
+    ...(cert.created
+      ? [chalk.gray(`${ms(Date.now() - new Date(cert.created).getTime())} ago`)]
+      : [])
   ];
 }
 

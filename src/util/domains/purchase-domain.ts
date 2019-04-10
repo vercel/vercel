@@ -38,6 +38,9 @@ export default async function purchaseDomain(
     if (error.code === 'payment_error') {
       return new ERRORS.DomainPaymentError();
     }
+    if (error.code === 'unsupported_tld') {
+      return new ERRORS.UnsupportedTLD(name);
+    }
     throw error;
   }
 }
