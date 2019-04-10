@@ -70,7 +70,7 @@ function formatDomainsTable(domains: Domain[]) {
         chalk.gray('domain'),
         chalk.gray('serviceType'),
         chalk.gray('verified'),
-        chalk.gray('cf'),
+        chalk.gray('cdn'),
         chalk.gray('age')
       ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
