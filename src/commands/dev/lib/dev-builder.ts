@@ -14,6 +14,7 @@ import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { installBuilders, getBuilder } from './builder-cache';
 import {
+  PACKAGE,
   NowConfig,
   BuildConfig,
   BuildSubscription,
@@ -104,16 +105,21 @@ export async function executeBuild(
   if (buildConfig.builderCachePromise) {
     devServer.output.debug('Restoring build cache from previous build');
     const builderCache = await buildConfig.builderCachePromise;
+    const startTime = Date.now();
     await download(builderCache, workPath);
+    const cacheRestoreTime = Date.now() - startTime;
+    devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
   }
 
-  devServer.output.debug(
-    `Building ${buildEntry.fsPath} (workPath = ${workPath})`
-  );
   const { builder } = buildConfig;
   if (!builder) {
     throw new Error('No builder');
   }
+  devServer.output.debug(
+    `Building ${buildEntry.fsPath} with "${buildConfig.use}" v${
+      builder[PACKAGE]!.version
+    } (workPath = ${workPath})`
+  );
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
   const config = buildConfig.config || {};
@@ -267,7 +273,9 @@ async function executeBuilds(
             continue;
           } else {
             devServer.output.debug(
-              `Building ${entry.fsPath} (workPath = ${workPath})`
+              `Building ${entry.fsPath} with "${build.use}" v${
+                builder[PACKAGE]!.version
+              } (workPath = ${workPath})`
             );
             output = await builder.build({ ...buildConfig, workPath });
 

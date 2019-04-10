@@ -9,13 +9,17 @@ import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
-import { Builder } from './types';
+import { Builder, PACKAGE } from './types';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
 } from '../../../util/errors-ts';
 
-import * as staticBuilder from './static-builder';
+import * as _staticBuilder from './static-builder';
+const staticBuilder: Builder = _staticBuilder;
+staticBuilder[PACKAGE] = {
+  version: 'built-in'
+};
 
 const localBuilders: { [key: string]: Builder } = {
   '@now/static': staticBuilder
@@ -143,6 +147,7 @@ export async function getBuilder(builderPkg: string): Promise<Builder> {
     const parsed = npa(builderPkg);
     const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
     builder = require(dest);
+    builder[PACKAGE] = require(join(dest, 'package.json'));
   }
   return builder;
 }

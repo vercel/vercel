@@ -3,6 +3,8 @@ import { Output } from '../../../util/output';
 import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 
+export const PACKAGE = Symbol('package.json');
+
 export enum DevServerStatus {
   busy,
   idle,
@@ -109,6 +111,9 @@ export interface Builder {
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;
+  [PACKAGE]?: {
+    version: string;
+  };
 }
 
 export interface HttpHeadersConfig {
