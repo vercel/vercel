@@ -452,7 +452,7 @@ exports.prepareCache = async ({ workPath, entrypoint }) => {
     ...(await glob(
       path.join(
         cacheEntrypoint,
-        'node_modules/{**,!.*,.yarn*,.cache/next-minifier/**}',
+        'node_modules/{**,!.*,.yarn*,.cache/next-minifier/**,.cache/next-flying-shuttle/**}',
       ),
       workPath,
     )),
