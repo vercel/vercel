@@ -19,7 +19,10 @@ export interface BuildConfig {
 
 export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
+  buildOutput?: BuilderOutputs;
+  buildResult?: BuildResult;
   builderCachePromise?: Promise<CacheOutputs>;
+  buildTimestamp?: number;
 }
 
 export interface RouteConfig {
@@ -53,7 +56,6 @@ export interface BuilderInputs {
 export interface BuiltAsset {
   buildEntry?: FileFsRef;
   buildMatch?: BuildMatch;
-  buildTimestamp?: number;
 }
 
 export type BuiltFileFsRef = FileFsRef & BuiltAsset;
@@ -92,12 +94,12 @@ export interface PrepareCacheParams extends BuilderParams {
   cachePath: string;
 }
 
-export interface BuilderV1 {
+export interface Builder {
   config?: {
     maxLambdaSize?: string | number;
   };
-  version: 1;
-  build(params: BuilderParams): BuilderOutputs | Promise<BuilderOutputs>;
+  build(params: BuilderParams): BuilderOutputs | BuildResult | Promise<BuilderOutputs> | Promise<BuildResult>;
+  shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;
@@ -115,20 +117,6 @@ export interface ShouldServeParams {
   config?: object;
   requestPath: string;
 }
-
-export interface BuilderV2 {
-  config?: {
-    maxLambdaSize?: string | number;
-  };
-  version: 2;
-  build(params: BuilderParams): BuildResult | Promise<BuildResult>;
-  shouldServe(params: ShouldServeParams): boolean | Promise<boolean>;
-  prepareCache?(
-    params: PrepareCacheParams
-  ): CacheOutputs | Promise<CacheOutputs>;
-}
-
-export type Builder = BuilderV1 | BuilderV2;
 
 export interface BuilderWithPackage {
   builder: Builder;

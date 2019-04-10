@@ -53,6 +53,7 @@ export async function executeInitialBuilds(
   devServer.setStatusBusy('Building lambdas');
   await executeBuilds(nowJson, devServer);
 }
+ */
 
 export async function executePrepareCache(
   devServer: DevServer,
@@ -83,61 +84,56 @@ export async function executePrepareCache(
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
-  asset: BuilderOutput,
+  match: BuildMatch,
   requestPath: string | null = null
 ): Promise<void> {
-  const { buildMatch, buildEntry } = asset;
-  if (!buildMatch || !buildEntry) {
-    throw new Error("Asset has not been built yet, can't rebuild");
-  }
+  const { builderWithPkg: { builder, package: pkg } } = match;
   const { cwd, env } = devServer;
-  const entrypoint = relative(cwd, buildEntry.fsPath);
+  const entrypoint = match.src;
 
   const workPath = getWorkPath();
   await mkdirp(workPath);
 
-  if (buildMatch.builderCachePromise) {
+  if (match.builderCachePromise) {
     devServer.output.debug('Restoring build cache from previous build');
-    const builderCache = await buildMatch.builderCachePromise;
+    const builderCache = await match.builderCachePromise;
     const startTime = Date.now();
     await download(builderCache, workPath);
     const cacheRestoreTime = Date.now() - startTime;
     devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
   }
 
-  const { builderWithPkg } = buildMatch;
-  if (!builderWithPkg) {
-    throw new Error('No builder');
-  }
-  const { builder, package: pkg } = builderWithPkg;
   devServer.output.debug(
-    `Building ${buildEntry.fsPath} with "${buildMatch.use}" v${
+    `Building ${entrypoint} with "${match.use}" v${
       pkg.version
     } (workPath = ${workPath})`
   );
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
-  const config = buildMatch.config || {};
+  const config = match.config || {};
   let outputs: BuilderOutputs;
+  let result: BuildResult;
   try {
     devServer.applyBuildEnv(nowJson);
-    if (builder.version === 2) {
-    } else {
-      outputs = await builder.build({
-        files,
-        entrypoint,
-        workPath,
-        config,
-        meta: { isDev: true, requestPath }
-      });
+    let result = await builder.build({
+      files,
+      entrypoint,
+      workPath,
+      config,
+      meta: { isDev: true, requestPath }
+    });
+    if (!result.output) {
+      // `BuilderOutputs` map was returned
+      result = { output: result as BuilderOutputs };
     }
+    outputs = result.output as BuilderOutputs;
 
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
       await mkdirp(cachePath);
-      buildMatch.builderCachePromise = executePrepareCache(
+      match.builderCachePromise = executePrepareCache(
         devServer,
-        buildMatch,
+        match,
         {
           files,
           entrypoint,
@@ -169,8 +165,8 @@ export async function executeBuild(
       }
     }
 
-    asset.buildMatch = buildMatch;
-    asset.buildEntry = buildEntry;
+    //asset.buildMatch = buildMatch;
+    //asset.buildEntry = buildEntry;
   }
 
   await Promise.all(
@@ -201,16 +197,20 @@ export async function executeBuild(
         });
       }
 
-      asset.buildTimestamp = Date.now();
+      match.buildTimestamp = Date.now();
     })
   );
 
   // TODO: remove previous assets, i.e. if the rebuild has different outputs that
   // don't include some of the previous ones. For example, deleting a page in
   // a Next.js build
-  Object.assign(devServer.assets, outputs);
+  if (!match.buildOutput) {
+    match.buildOutput = {};
+  }
+  Object.assign(match.buildOutput, outputs);
 }
 
+/*
 async function executeBuilds(
   nowJson: NowConfig,
   devServer: DevServer

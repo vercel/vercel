@@ -9,7 +9,7 @@ import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
-import { Builder, BuilderWithPackage, ShouldServeParams } from './types';
+import { Builder, BuilderWithPackage } from './types';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
@@ -19,10 +19,7 @@ import * as staticBuilder from './static-builder';
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
-    builder: Object.freeze({
-      ...staticBuilder,
-      shouldServe: defaultShouldServe
-    }),
+    builder: Object.freeze(staticBuilder),
     package: { version: 'built-in' }
   }
 };
@@ -144,15 +141,6 @@ export async function installBuilders(
   }
 }
 
-export function defaultShouldServe({
-  entrypoint,
-  files,
-  requestPath
-}: ShouldServeParams) {
-  console.error('defaultShouldServe', { entrypoint, files, requestPath });
-  return entrypoint === requestPath && requestPath in files;
-}
-
 /**
  * Get a builder from the cache directory.
  */
@@ -165,12 +153,6 @@ export async function getBuilder(
     const parsed = npa(builderPkg);
     const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
     const mod = require(dest);
-    if (!mod.version) {
-      mod.version = 1;
-    }
-    if (mod.version === 2 && typeof mod.shouldServe !== 'function') {
-      mod.shouldServe = defaultShouldServe;
-    }
     const pkg = require(join(dest, 'package.json'));
     builderWithPkg = Object.freeze({
       builder: mod,

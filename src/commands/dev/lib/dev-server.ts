@@ -12,7 +12,7 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { parse as parseDotenv } from 'dotenv';
 import { lookup as lookupMimeType } from 'mime-types';
-import { basename, dirname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
 import error from '../../../util/output/error';
@@ -22,7 +22,7 @@ import isURL from './is-url';
 import devRouter from './dev-router';
 import { installBuilders } from './builder-cache';
 import {
-  //executeBuild,
+  executeBuild,
   collectProjectFiles,
   createIgnoreList,
   getBuildMatches
@@ -213,14 +213,14 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
       console.log({ nowJson });
       console.log({ matches: this.buildMatches });
-      const v1Builders = Array.from(this.buildMatches.values()).filter(
+      const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-          return builder.version === 1;
+          return typeof builder.shouldServe !== 'function';
         }
       );
-      console.error({ v1Builders });
-      if (v1Builders.length > 0) {
+      console.error({ needsInitialBuild });
+      if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
         //await executeInitialBuilds(nowJson, this);
         this.output.success('Initial builds ready');
@@ -455,64 +455,156 @@ export default class DevServer {
       return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
     }
 
-    res.end();
+    const requestPath = dest.replace(/^\//, '');
+    const match = await findBuildMatch(this.buildMatches, files, requestPath);
+    console.error({ match });
 
-    //if (!nowJson.builds) {
-    //  return this.serveProjectAsStatic(req, res, nowRequestId);
-    //}
+    if (!match) {
+      await this.send404(req, res, nowRequestId);
+      return;
+    }
 
-    //// find asset responsible for dest
-    //let { asset, assetKey } = resolveDest(this.assets, dest);
+    let foundAsset = findAsset(match, requestPath);
+    console.error({ foundAsset });
 
-    //if (!asset || !assetKey) {
-    //  /*
-    //  const { subscription, subscriptionKey } = resolveSubscription(
-    //    this.subscriptions,
-    //    dest
-    //  );
-    //  if (subscription && subscription.buildEntry) {
-    //    const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
-    //    const buildKey = `${entrypoint}-${subscriptionKey}`;
-    //    let buildPromise = this.inProgressBuilds.get(buildKey);
-    //    if (buildPromise) {
-    //      // A build for this entrypoint + subscription key is already in
-    //      // progress, so don't trigger another rebuild for this request -
-    //      // just wait on the existing one.
-    //      this.output.debug(
-    //        `De-duping build "${entrypoint}" for "${req.method} ${
-    //          req.url
-    //        }" (${subscriptionKey})`
-    //      );
-    //    } else {
-    //      this.output.debug(
-    //        `Building initial asset "${entrypoint}" for "${req.method} ${
-    //          req.url
-    //        }" (${subscriptionKey})`
-    //      );
-    //      buildPromise = executeBuild(
-    //        nowJson,
-    //        this,
-    //        subscription,
-    //        subscriptionKey
-    //      );
-    //      this.inProgressBuilds.set(buildKey, buildPromise);
-    //    }
-    //    try {
-    //      await buildPromise;
-    //    } finally {
-    //      this.inProgressBuilds.delete(buildKey);
-    //    }
+    if (!foundAsset) {
+      // If the requested asset wasn't found in the match's outputs then trigger
+      // a build
+      const entrypoint = match.src;
+      const buildTimestamp: number = match.buildTimestamp || 0;
+      let buildPromise = this.inProgressBuilds.get(entrypoint);
+      if (buildPromise) {
+        // A build for `entrypoint` is already in progress, so don't trigger
+        // another rebuild for this request - just wait on the existing one.
+        this.output.debug(
+          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
+        );
+      } else if (Date.now() - buildTimestamp < ms('2s')) {
+        // If the built asset was created less than 2s ago, then don't trigger
+        // a rebuild. The purpose of this threshold is because once an HTML page
+        // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
+        // with a `no-cache` header, so this avoids *two* rebuilds for that case.
+        this.output.debug(
+          `Skipping build for "${entrypoint}" (not older than 2s) for "${
+            req.method
+          } ${req.url}"`
+        );
+      } else {
+        this.output.debug(
+          `Building asset "${entrypoint}" for "${req.method} ${
+            req.url
+          }" (${requestPath})`
+        );
+        buildPromise = executeBuild(nowJson, this, match, requestPath);
+        this.inProgressBuilds.set(entrypoint, buildPromise);
+      }
+      try {
+        await buildPromise;
+      } finally {
+        this.inProgressBuilds.delete(entrypoint);
+      }
 
-    //    // Since the `asset` was just built, resolve the built asset
-    //    ({ asset, assetKey } = resolveDest(this.assets, dest));
-    //  }
-    //  */
+      // Since the `asset` was re-built, resolve it again to get the new asset
+      foundAsset = findAsset(match, requestPath);
+    }
 
-    //  if (!asset || !assetKey) {
-    //    await this.send404(req, res, nowRequestId);
-    //    return;
-    //  }
-    //}
+    if (!foundAsset) {
+      await this.send404(req, res, nowRequestId);
+      return;
+    }
+
+    const { asset, assetKey } = foundAsset;
+    switch (asset.type) {
+      case 'FileFsRef':
+        this.setResponseHeaders(res, nowRequestId);
+        req.url = `/${basename(asset.fsPath)}`;
+        return serveStaticFile(req, res, dirname(asset.fsPath));
+
+      case 'FileBlob':
+        const contentType = lookupMimeType(assetKey);
+        const headers: http.OutgoingHttpHeaders = {
+          'Content-Length': asset.data.length
+        };
+        if (contentType) {
+          headers['Content-Type'] = contentType;
+        }
+        this.setResponseHeaders(res, nowRequestId, headers);
+        res.end(asset.data);
+        return;
+
+      case 'Lambda':
+        if (!asset.fn) {
+          // This is mostly to appease TypeScript since `fn` is an optional prop,
+          // but this shouldn't really ever happen since we run the builds before
+          // responding to HTTP requests.
+          await this.sendError(
+            req,
+            res,
+            nowRequestId,
+            'INTERNAL_LAMBDA_NOT_FOUND',
+            'Lambda function has not been built'
+          );
+          return;
+        }
+
+        // Mix the `routes` result dest query params into the req path
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        const path = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query
+        });
+
+        const body = await rawBody(req);
+        const payload: InvokePayload = {
+          method: req.method || 'GET',
+          path,
+          headers: this.getNowProxyHeaders(req, nowRequestId),
+          encoding: 'base64',
+          body: body.toString('base64')
+        };
+
+        let result: InvokeResult;
+        try {
+          result = await asset.fn<InvokeResult>({
+            Action: 'Invoke',
+            body: JSON.stringify(payload)
+          });
+        } catch (err) {
+          console.error(err);
+          await this.sendError(
+            req,
+            res,
+            nowRequestId,
+            'NO_STATUS_CODE_FROM_LAMBDA',
+            'An error occurred with your deployment',
+            502
+          );
+          return;
+        }
+
+        res.statusCode = result.statusCode;
+        this.setResponseHeaders(res, nowRequestId, result.headers);
+
+        let resBody: Buffer | string | undefined;
+        if (result.encoding === 'base64' && typeof result.body === 'string') {
+          resBody = Buffer.from(result.body, 'base64');
+        } else {
+          resBody = result.body;
+        }
+        return res.end(resBody);
+
+      default:
+        // This shouldn't really ever happen...
+        await this.sendError(
+          req,
+          res,
+          nowRequestId,
+          'UNKNOWN_ASSET_TYPE',
+          `Don't know how to handle asset type: ${(asset as any).type}`
+        );
+        return;
+    }
 
     //// If the user did a hard-refresh in the browser,
     //// then re-run the build that generated this asset
@@ -560,97 +652,6 @@ export default class DevServer {
     //  }
     //}
 
-    //switch (asset.type) {
-    //  case 'FileFsRef':
-    //    this.setResponseHeaders(res, nowRequestId);
-    //    req.url = `/${basename(asset.fsPath)}`;
-    //    return serveStaticFile(req, res, dirname(asset.fsPath));
-
-    //  case 'FileBlob':
-    //    const contentType = lookupMimeType(assetKey);
-    //    const headers: http.OutgoingHttpHeaders = {
-    //      'Content-Length': asset.data.length
-    //    };
-    //    if (contentType) {
-    //      headers['Content-Type'] = contentType;
-    //    }
-    //    this.setResponseHeaders(res, nowRequestId, headers);
-    //    res.end(asset.data);
-    //    return;
-
-    //  case 'Lambda':
-    //    if (!asset.fn) {
-    //      // This is mostly to appease TypeScript since `fn` is an optional prop,
-    //      // but this shouldn't really ever happen since we run the builds before
-    //      // responding to HTTP requests.
-    //      await this.sendError(
-    //        req,
-    //        res,
-    //        nowRequestId,
-    //        'INTERNAL_LAMBDA_NOT_FOUND',
-    //        'Lambda function has not been built'
-    //      );
-    //      return;
-    //    }
-
-    //    // Mix the `routes` result dest query params into the req path
-    //    const parsed = url.parse(req.url || '/', true);
-    //    Object.assign(parsed.query, uri_args);
-    //    const path = url.format({
-    //      pathname: parsed.pathname,
-    //      query: parsed.query
-    //    });
-
-    //    const body = await rawBody(req);
-    //    const payload: InvokePayload = {
-    //      method: req.method || 'GET',
-    //      path,
-    //      headers: this.getNowProxyHeaders(req, nowRequestId),
-    //      encoding: 'base64',
-    //      body: body.toString('base64')
-    //    };
-
-    //    let result: InvokeResult;
-    //    try {
-    //      result = await asset.fn<InvokeResult>({
-    //        Action: 'Invoke',
-    //        body: JSON.stringify(payload)
-    //      });
-    //    } catch (err) {
-    //      console.error(err);
-    //      await this.sendError(
-    //        req,
-    //        res,
-    //        nowRequestId,
-    //        'NO_STATUS_CODE_FROM_LAMBDA',
-    //        'An error occurred with your deployment',
-    //        502
-    //      );
-    //      return;
-    //    }
-
-    //    res.statusCode = result.statusCode;
-    //    this.setResponseHeaders(res, nowRequestId, result.headers);
-
-    //    let resBody: Buffer | string | undefined;
-    //    if (result.encoding === 'base64' && typeof result.body === 'string') {
-    //      resBody = Buffer.from(result.body, 'base64');
-    //    } else {
-    //      resBody = result.body;
-    //    }
-    //    return res.end(resBody);
-
-    //  default:
-    //    // This shouldn't really ever happen...
-    //    await this.sendError(
-    //      req,
-    //      res,
-    //      nowRequestId,
-    //      'UNKNOWN_ASSET_TYPE',
-    //      `Don't know how to handle asset type: ${(asset as any).type}`
-    //    );
-    //    return;
-    //}
   };
 
   hasFilesystem(dest: string): boolean {
@@ -659,11 +660,11 @@ export default class DevServer {
     if (subscription) {
       return true;
     }
-    */
     const { asset } = resolveDest(this.assets, dest);
     if (asset) {
       return true;
     }
+    */
     return false;
   }
 }
@@ -697,32 +698,6 @@ function serveStaticFile(
   });
 }
 
-/**
- * Find the dest handler from assets.
- */
-function resolveDest(
-  assets: BuilderOutputs,
-  dest: string
-): { asset?: BuilderOutput; assetKey?: string } {
-  let assetKey = dest.replace(/^\//, '');
-  let asset: BuilderOutput | undefined = assets[assetKey];
-
-  if (!asset) {
-    // Find `${assetKey}/index.*` for indexes
-    const indexKey = Object.keys(assets).find(name => {
-      const withoutIndex = name.replace(/\/?index(\.\w+)?$/, '');
-      return withoutIndex === assetKey.replace(/\/$/, '');
-    });
-
-    if (indexKey) {
-      assetKey = indexKey;
-      asset = assets[assetKey];
-    }
-  }
-
-  return { asset, assetKey };
-}
-
 function close(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((err?: Error) => {
@@ -752,4 +727,56 @@ function generateRequestId(): string {
 
 function hasOwnProperty(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+function findBuildMatch(
+  matches: Map<string, BuildMatch>,
+  files: BuilderInputs,
+  requestPath: string
+): BuildMatch | null {
+  for (const match of matches.values()) {
+    const { builderWithPkg: { builder } } = match;
+    if (typeof builder.shouldServe === 'function') {
+      if (builder.shouldServe({ entrypoint: match.src, files, requestPath })) {
+        return match;
+      }
+    } else {
+      // If there's no `shouldServe()` function, then look up if there's
+      // a matching build asset on the `match` that has already been built.
+    }
+  }
+  return null;
+}
+
+function findAsset(
+  match: BuildMatch,
+  requestPath: string
+): { asset: BuilderOutput, assetKey: string } | void {
+  if (!match.buildOutput) {
+    return;
+  }
+  let assetKey: string = requestPath;
+  let asset = match.buildOutput[requestPath];
+
+  // In the case of an index path, fall back to iterating over the
+  // builder outputs and doing an "is index" check until we find one.
+  if (!asset) {
+    const requestDir = dirname(requestPath);
+    for (const [name, a] of Object.entries(match.buildOutput)) {
+      if (dirname(name) === requestDir && isIndex(name)) {
+        asset = a;
+        assetKey = name;
+      }
+    }
+  }
+
+  if (asset) {
+    return { asset, assetKey };
+  }
+}
+
+function isIndex(path: string): boolean {
+  const ext = extname(path);
+  const name = basename(path, ext);
+  return name === 'index';
 }
