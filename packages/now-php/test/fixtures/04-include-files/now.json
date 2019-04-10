@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.php", "use": "@now/php", "config": { "includeFiles": ["included*.php"] } }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "mainfile:included:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
