@@ -41,7 +41,7 @@ export default async function createCertForCns(
       return new ERRORS.DomainPermissionDenied(error.domain, context);
     }
     if (error.code === 'rate_limited') {
-      return new ERRORS.TooManyCertificates(error.domains);
+      return new ERRORS.TooManyCertificates(cns);
     }
     if (error.code === 'too_many_requests') {
       return new ERRORS.TooManyRequests('certificates', error.retryAfter);
