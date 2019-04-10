@@ -542,8 +542,8 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
 });
 
 test('friendly error for malformed JSON', async t => {
-  const err = await t.throws(
-    readMetadata(fixture('json-syntax-error'), {
+  const err = await t.throwsAsync(
+    () => readMetadata(fixture('json-syntax-error'), {
       quiet: true,
       strict: false
     })
@@ -733,13 +733,6 @@ test('5xx response error with random JSON', async t => {
 test('getProjectName with argv - option 1', t => {
   const project = getProjectName({argv: {
     name: 'abc'
-  }});
-  t.is(project, 'abc');
-});
-
-test('getProjectName with argv - option 2', t => {
-  const project = getProjectName({argv: {
-    '--name': 'abc'
   }});
   t.is(project, 'abc');
 });
