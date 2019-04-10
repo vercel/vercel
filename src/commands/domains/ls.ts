@@ -74,10 +74,9 @@ function formatDomainsTable(domains: Domain[]) {
         chalk.gray('age')
       ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
-        const cf = domain.cdnEnabled || false;
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, domain.serviceType, domain.verified, cf, time];
+        return ['', url, domain.serviceType, domain.verified, time];
       })
     ],
     {

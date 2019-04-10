@@ -75,7 +75,6 @@ export type Domain = {
   transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
-  cdnEnabled: boolean;
   verified: boolean;
   nsVerifiedAt: number | null;
   txtVerifiedAt: number | null;
