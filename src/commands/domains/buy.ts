@@ -113,6 +113,13 @@ export default async function buy(
     return 1;
   }
 
+  if (buyResult instanceof ERRORS.UnsupportedTLD) {
+    output.error(
+      `The TLD for domain name ${buyResult.meta.domain} is not supported.`
+    );
+    return 1;
+  }
+
   if (buyResult instanceof ERRORS.InvalidDomain) {
     output.error(`The domain ${buyResult.meta.domain} is not valid.`);
     return 1;
