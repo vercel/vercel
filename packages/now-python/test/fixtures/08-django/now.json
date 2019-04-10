@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.py", "use": "@now/python", "config": { "maxLambdaSize": "15mb" } }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "django:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
