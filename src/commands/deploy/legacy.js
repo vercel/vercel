@@ -1245,7 +1245,7 @@ function handleCreateDeployError(output, error) {
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}: ${message}\nFull list of allowed properties: ${link}`
+      )}: ${message}\nDocumentation: ${link}`
     );
 
     return 1;
