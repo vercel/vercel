@@ -1,20 +1,19 @@
 import { Cert } from '../../types';
 import { Output } from '../output/create-output';
 import Client from '../client';
-
-type CertDetails = Cert & {
-  key: string;
-  ca: string;
-  crt: string;
-};
+import * as ERRORS from '../errors-ts';
 
 export default async function getCertById(
   output: Output,
   client: Client,
   id: string
 ) {
-  const cert = await client.fetch<CertDetails>(`/v3/now/certs/${id}?limit=1`);
-  // If `id` isn't a valid id the API responds with a set of certificates instead
-  if (!cert || !cert.key) return null;
-  return cert;
+  try {
+    return await client.fetch<Cert>(`/v3/now/certs/${id}`);
+  } catch (error) {
+    if (error.code === 'cert_not_found') {
+      return new ERRORS.CertNotFound(id);
+    }
+    throw error;
+  }
 }

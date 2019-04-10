@@ -415,6 +415,29 @@ export class DomainConfigurationError extends NowError<
   }
 }
 
+export class CertNotFound extends NowError<'CERT_NOT_FOUND', { id: string }> {
+  constructor(id: string) {
+    super({
+      code: 'CERT_NOT_FOUND',
+      meta: { id },
+      message: `The cert ${id} can't be found.`
+    });
+  }
+}
+
+export class CertsPermissionDenied extends NowError<
+  'CERTS_PERMISSION_DENIED',
+  { domain: string }
+> {
+  constructor(context: string, domain: string) {
+    super({
+      code: 'CERTS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to ${domain}'s certs under ${context}.`
+    });
+  }
+}
+
 export class CertOrderNotFound extends NowError<
   'CERT_ORDER_NOT_FOUND',
   { cns: string[] }
