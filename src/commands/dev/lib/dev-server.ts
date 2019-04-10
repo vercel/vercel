@@ -20,10 +20,12 @@ import success from '../../../util/output/success';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
+import { installBuilders } from './builder-cache';
 import {
-  executeBuild,
-  executeInitialBuilds,
-  createIgnoreList
+  //executeBuild,
+  collectProjectFiles,
+  createIgnoreList,
+  getBuildMatches
 } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
@@ -31,9 +33,10 @@ import { MissingDotenvVarsError } from '../../../util/errors-ts';
 import {
   EnvConfig,
   NowConfig,
-  DevServerStatus,
   DevServerOptions,
-  BuildSubscription,
+  BuildConfig,
+  BuildMatch,
+  BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
   HttpHandler,
@@ -47,46 +50,77 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public assets: BuilderOutputs;
-  public subscriptions: BuildSubscription[];
 
   private server: http.Server;
-  private status: DevServerStatus;
   private stopping: boolean;
-  private statusMessage: string = '';
+  private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private originalEnv: EnvConfig;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
-    this.assets = {};
     this.env = {};
     this.buildEnv = {};
+    this.assets = {};
+
     this.server = http.createServer(this.devServerHandler);
-    this.status = DevServerStatus.busy;
     this.stopping = false;
+    this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
     this.originalEnv = { ...process.env };
-    this.subscriptions = [];
   }
 
-  /* set dev-server status */
-  setStatusIdle(): void {
-    this.status = DevServerStatus.idle;
-    this.statusMessage = '';
+  async getProjectFiles(): Promise<BuilderInputs> {
+    // TODO: use the file watcher to keep the files list up-to-date
+    // incrementally, instead of re-globbing the filesystem every time
+    const files = await collectProjectFiles('**', this.cwd);
+    return files;
   }
 
-  setStatusBusy(msg: string): void {
-    this.status = DevServerStatus.busy;
-    this.statusMessage = msg;
+  async updateBuildMatches(nowJson: NowConfig): Promise<void> {
+    const matches = await getBuildMatches(nowJson, this.cwd);
+    const sources = matches.map(m => m.src);
+
+    // Delete build matches that no longer exists
+    for (const src of this.buildMatches.keys()) {
+      if (!sources.includes(src)) {
+        this.output.debug(`Removing build match for "${src}"`);
+        // TODO: shutdown lambda functions
+        this.buildMatches.delete(src);
+      }
+    }
+
+    // Add the new matches to the `buildMatches` map
+    for (const match of matches) {
+      const currentMatch = this.buildMatches.get(match.src);
+      if (!currentMatch || currentMatch.use !== match.use) {
+        this.output.debug(`Adding build match for "${match.src}"`);
+        this.buildMatches.set(match.src, match);
+      }
+    }
   }
 
-  setStatusError(msg: string): void {
-    this.status = DevServerStatus.error;
-    this.statusMessage = msg;
+  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+    // TODO: use the file watcher to only invalidate the env `dotfile`
+    // once a change to the `fileName` occurs
+    const filePath = join(this.cwd, fileName);
+    let env: EnvConfig = {};
+    try {
+      const dotenv = await fs.readFile(filePath, 'utf8');
+      this.output.debug(`Using local env: ${filePath}`);
+      env = parseDotenv(dotenv);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+    return env;
   }
 
   async getNowJson(): Promise<NowConfig | null> {
+    // TODO: use the file watcher to only invalidate this `nowJson`
+    // config once a change to the `now.json` file occurs
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
@@ -102,21 +136,6 @@ export default class DevServer {
     }
 
     return null;
-  }
-
-  async getLocalEnv(fileName: string): Promise<EnvConfig> {
-    const filePath = join(this.cwd, fileName);
-    this.output.debug(`Reading local env: ${filePath}`);
-    let env: EnvConfig = {};
-    try {
-      const dotenv = await fs.readFile(filePath, 'utf8');
-      env = parseDotenv(dotenv);
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
-        throw err;
-      }
-    }
-    return env;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -184,6 +203,31 @@ export default class DevServer {
     this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
+    // v1 Now Builders need to be executed at boot-up time in order to get
+    // the initial assets.
+    // v2 Now Builders have the `shouldServe()` function
+    // which avoids this requirement.
+    if (nowJson) {
+      const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
+      await installBuilders(builders, true);
+      await this.updateBuildMatches(nowJson);
+      console.log({ nowJson });
+      console.log({ matches: this.buildMatches });
+      const v1Builders = Array.from(this.buildMatches.values()).filter(
+        (buildMatch: BuildMatch) => {
+          const { builder } = buildMatch.builderWithPkg;
+          return builder.version === 1;
+        }
+      );
+      console.error({ v1Builders });
+      if (v1Builders.length > 0) {
+        this.output.log('Running initial builds');
+        //await executeInitialBuilds(nowJson, this);
+        this.output.success('Initial builds ready');
+        this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
+      }
+    }
+
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, port);
@@ -204,18 +248,6 @@ export default class DevServer {
         address.replace('[::]', 'localhost')
       )}`
     );
-
-    // Perform the initial build of assets so that we know what assets exist.
-    // Even though the server is running, it won't respond to any requests until
-    // this is complete.
-    if (nowJson && Array.isArray(nowJson.builds)) {
-      this.output.log('Running initial builds');
-      await executeInitialBuilds(nowJson, this);
-      this.output.success('Initial builds ready');
-      this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
-    }
-
-    this.setStatusIdle();
   }
 
   /**
@@ -247,6 +279,8 @@ export default class DevServer {
     nowRequestId: string
   ): Promise<void> {
     return this.sendError(
+      // TODO: use the file watcher to keep the files list up-to-date
+      // incrementally
       req,
       res,
       nowRequestId,
@@ -336,28 +370,26 @@ export default class DevServer {
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
-    if (this.status === DevServerStatus.busy) {
-      return res.end(`[busy] ${this.statusMessage}...`);
-    }
+    //if (this.status === DevServerStatus.busy) {
+    //  return res.end(`[busy] ${this.statusMessage}...`);
+    //}
 
     try {
       const nowJson = await this.getNowJson();
-      if (!nowJson) {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      } else {
+      if (nowJson) {
         await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
+      } else {
+        await this.serveProjectAsStatic(req, res, nowRequestId);
       }
     } catch (err) {
-      this.setStatusError(err.message);
+      console.error(err);
       this.output.debug(err.stack);
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(this.statusMessage);
+        res.end(err.message);
       }
     }
-
-    this.setStatusIdle();
   };
 
   /**
@@ -369,12 +401,14 @@ export default class DevServer {
     nowRequestId: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
+    /*
     const ignore = await createIgnoreList(this.cwd);
 
     if (filePath && ignore.ignores(filePath)) {
       await this.send404(req, res, nowRequestId);
       return;
     }
+     */
 
     this.setResponseHeaders(res, nowRequestId);
     return serveStaticFile(req, res, this.cwd);
@@ -389,6 +423,12 @@ export default class DevServer {
     nowRequestId: string,
     nowJson: NowConfig
   ) => {
+    const files = await this.getProjectFiles();
+    await this.updateBuildMatches(nowJson);
+    console.log({ nowJson });
+    console.log({ files });
+    console.log({ matches: this.buildMatches });
+
     const {
       dest,
       status = 200,
@@ -396,6 +436,8 @@ export default class DevServer {
       uri_args,
       matched_route
     } = devRouter(req.url, nowJson.routes, this);
+
+    console.log({ dest, status, headers, uri_args, matched_route });
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -413,205 +455,211 @@ export default class DevServer {
       return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
     }
 
-    if (!nowJson.builds) {
-      return this.serveProjectAsStatic(req, res, nowRequestId);
-    }
+    res.end();
 
-    // find asset responsible for dest
-    let { asset, assetKey } = resolveDest(this.assets, dest);
+    //if (!nowJson.builds) {
+    //  return this.serveProjectAsStatic(req, res, nowRequestId);
+    //}
 
-    if (!asset || !assetKey) {
-      const { subscription, subscriptionKey } = resolveSubscription(
-        this.subscriptions,
-        dest
-      );
-      if (subscription && subscription.buildEntry) {
-        const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
-        const buildKey = `${entrypoint}-${subscriptionKey}`;
-        let buildPromise = this.inProgressBuilds.get(buildKey);
-        if (buildPromise) {
-          // A build for this entrypoint + subscription key is already in
-          // progress, so don't trigger another rebuild for this request -
-          // just wait on the existing one.
-          this.output.debug(
-            `De-duping build "${entrypoint}" for "${req.method} ${
-              req.url
-            }" (${subscriptionKey})`
-          );
-        } else {
-          this.output.debug(
-            `Building initial asset "${entrypoint}" for "${req.method} ${
-              req.url
-            }" (${subscriptionKey})`
-          );
-          buildPromise = executeBuild(
-            nowJson,
-            this,
-            subscription,
-            subscriptionKey
-          );
-          this.inProgressBuilds.set(buildKey, buildPromise);
-        }
-        try {
-          await buildPromise;
-        } finally {
-          this.inProgressBuilds.delete(buildKey);
-        }
+    //// find asset responsible for dest
+    //let { asset, assetKey } = resolveDest(this.assets, dest);
 
-        // Since the `asset` was just built, resolve the built asset
-        ({ asset, assetKey } = resolveDest(this.assets, dest));
-      }
+    //if (!asset || !assetKey) {
+    //  /*
+    //  const { subscription, subscriptionKey } = resolveSubscription(
+    //    this.subscriptions,
+    //    dest
+    //  );
+    //  if (subscription && subscription.buildEntry) {
+    //    const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
+    //    const buildKey = `${entrypoint}-${subscriptionKey}`;
+    //    let buildPromise = this.inProgressBuilds.get(buildKey);
+    //    if (buildPromise) {
+    //      // A build for this entrypoint + subscription key is already in
+    //      // progress, so don't trigger another rebuild for this request -
+    //      // just wait on the existing one.
+    //      this.output.debug(
+    //        `De-duping build "${entrypoint}" for "${req.method} ${
+    //          req.url
+    //        }" (${subscriptionKey})`
+    //      );
+    //    } else {
+    //      this.output.debug(
+    //        `Building initial asset "${entrypoint}" for "${req.method} ${
+    //          req.url
+    //        }" (${subscriptionKey})`
+    //      );
+    //      buildPromise = executeBuild(
+    //        nowJson,
+    //        this,
+    //        subscription,
+    //        subscriptionKey
+    //      );
+    //      this.inProgressBuilds.set(buildKey, buildPromise);
+    //    }
+    //    try {
+    //      await buildPromise;
+    //    } finally {
+    //      this.inProgressBuilds.delete(buildKey);
+    //    }
 
-      if (!asset || !assetKey) {
-        await this.send404(req, res, nowRequestId);
-        return;
-      }
-    }
+    //    // Since the `asset` was just built, resolve the built asset
+    //    ({ asset, assetKey } = resolveDest(this.assets, dest));
+    //  }
+    //  */
 
-    // If the user did a hard-refresh in the browser,
-    // then re-run the build that generated this asset
-    if (this.shouldRebuild(req) && asset.buildEntry) {
-      const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
-      const buildTimestamp: number = asset.buildTimestamp || 0;
-      let buildPromise = this.inProgressBuilds.get(entrypoint);
-      if (buildPromise) {
-        // A build for `entrypoint` is already in progress, so don't trigger
-        // another rebuild for this request - just wait on the existing one.
-        this.output.debug(
-          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
-        );
-      } else if (Date.now() - buildTimestamp < ms('2s')) {
-        // If the built asset was created less than 2s ago, then don't trigger
-        // a rebuild. The purpose of this threshold is because once an HTML page
-        // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-        // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-        this.output.debug(
-          `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
-            req.method
-          } ${req.url}"`
-        );
-      } else {
-        this.output.debug(
-          `Rebuilding asset "${entrypoint}" for "${req.method} ${
-            req.url
-          }" (${assetKey})`
-        );
-        buildPromise = executeBuild(nowJson, this, asset, assetKey);
-        this.inProgressBuilds.set(entrypoint, buildPromise);
-      }
-      try {
-        await buildPromise;
-      } finally {
-        this.inProgressBuilds.delete(entrypoint);
-      }
+    //  if (!asset || !assetKey) {
+    //    await this.send404(req, res, nowRequestId);
+    //    return;
+    //  }
+    //}
 
-      // Since the `asset` was re-built, resolve it again to get the new asset
-      ({ asset, assetKey } = resolveDest(this.assets, dest));
+    //// If the user did a hard-refresh in the browser,
+    //// then re-run the build that generated this asset
+    //if (this.shouldRebuild(req) && asset.buildEntry) {
+    //  const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
+    //  const buildTimestamp: number = asset.buildTimestamp || 0;
+    //  let buildPromise = this.inProgressBuilds.get(entrypoint);
+    //  if (buildPromise) {
+    //    // A build for `entrypoint` is already in progress, so don't trigger
+    //    // another rebuild for this request - just wait on the existing one.
+    //    this.output.debug(
+    //      `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
+    //    );
+    //  } else if (Date.now() - buildTimestamp < ms('2s')) {
+    //    // If the built asset was created less than 2s ago, then don't trigger
+    //    // a rebuild. The purpose of this threshold is because once an HTML page
+    //    // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
+    //    // with a `no-cache` header, so this avoids *two* rebuilds for that case.
+    //    this.output.debug(
+    //      `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
+    //        req.method
+    //      } ${req.url}"`
+    //    );
+    //  } else {
+    //    this.output.debug(
+    //      `Rebuilding asset "${entrypoint}" for "${req.method} ${
+    //        req.url
+    //      }" (${assetKey})`
+    //    );
+    //    buildPromise = executeBuild(nowJson, this, asset, assetKey);
+    //    this.inProgressBuilds.set(entrypoint, buildPromise);
+    //  }
+    //  try {
+    //    await buildPromise;
+    //  } finally {
+    //    this.inProgressBuilds.delete(entrypoint);
+    //  }
 
-      if (!asset || !assetKey) {
-        await this.send404(req, res, nowRequestId);
-        return;
-      }
-    }
+    //  // Since the `asset` was re-built, resolve it again to get the new asset
+    //  ({ asset, assetKey } = resolveDest(this.assets, dest));
 
-    switch (asset.type) {
-      case 'FileFsRef':
-        this.setResponseHeaders(res, nowRequestId);
-        req.url = `/${basename(asset.fsPath)}`;
-        return serveStaticFile(req, res, dirname(asset.fsPath));
+    //  if (!asset || !assetKey) {
+    //    await this.send404(req, res, nowRequestId);
+    //    return;
+    //  }
+    //}
 
-      case 'FileBlob':
-        const contentType = lookupMimeType(assetKey);
-        const headers: http.OutgoingHttpHeaders = {
-          'Content-Length': asset.data.length
-        };
-        if (contentType) {
-          headers['Content-Type'] = contentType;
-        }
-        this.setResponseHeaders(res, nowRequestId, headers);
-        res.end(asset.data);
-        return;
+    //switch (asset.type) {
+    //  case 'FileFsRef':
+    //    this.setResponseHeaders(res, nowRequestId);
+    //    req.url = `/${basename(asset.fsPath)}`;
+    //    return serveStaticFile(req, res, dirname(asset.fsPath));
 
-      case 'Lambda':
-        if (!asset.fn) {
-          // This is mostly to appease TypeScript since `fn` is an optional prop,
-          // but this shouldn't really ever happen since we run the builds before
-          // responding to HTTP requests.
-          await this.sendError(
-            req,
-            res,
-            nowRequestId,
-            'INTERNAL_LAMBDA_NOT_FOUND',
-            'Lambda function has not been built'
-          );
-          return;
-        }
+    //  case 'FileBlob':
+    //    const contentType = lookupMimeType(assetKey);
+    //    const headers: http.OutgoingHttpHeaders = {
+    //      'Content-Length': asset.data.length
+    //    };
+    //    if (contentType) {
+    //      headers['Content-Type'] = contentType;
+    //    }
+    //    this.setResponseHeaders(res, nowRequestId, headers);
+    //    res.end(asset.data);
+    //    return;
 
-        // Mix the `routes` result dest query params into the req path
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
-        const path = url.format({
-          pathname: parsed.pathname,
-          query: parsed.query
-        });
+    //  case 'Lambda':
+    //    if (!asset.fn) {
+    //      // This is mostly to appease TypeScript since `fn` is an optional prop,
+    //      // but this shouldn't really ever happen since we run the builds before
+    //      // responding to HTTP requests.
+    //      await this.sendError(
+    //        req,
+    //        res,
+    //        nowRequestId,
+    //        'INTERNAL_LAMBDA_NOT_FOUND',
+    //        'Lambda function has not been built'
+    //      );
+    //      return;
+    //    }
 
-        const body = await rawBody(req);
-        const payload: InvokePayload = {
-          method: req.method || 'GET',
-          path,
-          headers: this.getNowProxyHeaders(req, nowRequestId),
-          encoding: 'base64',
-          body: body.toString('base64')
-        };
+    //    // Mix the `routes` result dest query params into the req path
+    //    const parsed = url.parse(req.url || '/', true);
+    //    Object.assign(parsed.query, uri_args);
+    //    const path = url.format({
+    //      pathname: parsed.pathname,
+    //      query: parsed.query
+    //    });
 
-        let result: InvokeResult;
-        try {
-          result = await asset.fn<InvokeResult>({
-            Action: 'Invoke',
-            body: JSON.stringify(payload)
-          });
-        } catch (err) {
-          console.error(err);
-          await this.sendError(
-            req,
-            res,
-            nowRequestId,
-            'NO_STATUS_CODE_FROM_LAMBDA',
-            'An error occurred with your deployment',
-            502
-          );
-          return;
-        }
+    //    const body = await rawBody(req);
+    //    const payload: InvokePayload = {
+    //      method: req.method || 'GET',
+    //      path,
+    //      headers: this.getNowProxyHeaders(req, nowRequestId),
+    //      encoding: 'base64',
+    //      body: body.toString('base64')
+    //    };
 
-        res.statusCode = result.statusCode;
-        this.setResponseHeaders(res, nowRequestId, result.headers);
+    //    let result: InvokeResult;
+    //    try {
+    //      result = await asset.fn<InvokeResult>({
+    //        Action: 'Invoke',
+    //        body: JSON.stringify(payload)
+    //      });
+    //    } catch (err) {
+    //      console.error(err);
+    //      await this.sendError(
+    //        req,
+    //        res,
+    //        nowRequestId,
+    //        'NO_STATUS_CODE_FROM_LAMBDA',
+    //        'An error occurred with your deployment',
+    //        502
+    //      );
+    //      return;
+    //    }
 
-        let resBody: Buffer | string | undefined;
-        if (result.encoding === 'base64' && typeof result.body === 'string') {
-          resBody = Buffer.from(result.body, 'base64');
-        } else {
-          resBody = result.body;
-        }
-        return res.end(resBody);
+    //    res.statusCode = result.statusCode;
+    //    this.setResponseHeaders(res, nowRequestId, result.headers);
 
-      default:
-        // This shouldn't really ever happen...
-        await this.sendError(
-          req,
-          res,
-          nowRequestId,
-          'UNKNOWN_ASSET_TYPE',
-          `Don't know how to handle asset type: ${(asset as any).type}`
-        );
-        return;
-    }
+    //    let resBody: Buffer | string | undefined;
+    //    if (result.encoding === 'base64' && typeof result.body === 'string') {
+    //      resBody = Buffer.from(result.body, 'base64');
+    //    } else {
+    //      resBody = result.body;
+    //    }
+    //    return res.end(resBody);
+
+    //  default:
+    //    // This shouldn't really ever happen...
+    //    await this.sendError(
+    //      req,
+    //      res,
+    //      nowRequestId,
+    //      'UNKNOWN_ASSET_TYPE',
+    //      `Don't know how to handle asset type: ${(asset as any).type}`
+    //    );
+    //    return;
+    //}
   };
 
   hasFilesystem(dest: string): boolean {
+    /*
     const { subscription } = resolveSubscription(this.subscriptions, dest);
     if (subscription) {
       return true;
     }
+    */
     const { asset } = resolveDest(this.assets, dest);
     if (asset) {
       return true;
@@ -673,36 +721,6 @@ function resolveDest(
   }
 
   return { asset, assetKey };
-}
-
-/**
- * Find a matching subscription object from `dest`
- */
-function resolveSubscription(
-  subscriptions: BuildSubscription[],
-  dest: string
-): {
-  subscription?: BuildSubscription;
-  subscriptionKey?: string;
-} {
-  let subscriptionKey = dest.replace(/^\//, '');
-  const subscription = subscriptions.find(subscription => {
-    return subscription.patterns.some(pattern => {
-      let match = minimatch(subscriptionKey, pattern);
-      if (!match) {
-        const indexMatch = pattern.match(/\/?index(\.\w+)?$/);
-        if (indexMatch) {
-          const withoutIndex = pattern.replace(/\/?index(\.\w+)?$/, '');
-          match = minimatch(subscriptionKey, withoutIndex);
-          if (match) {
-            subscriptionKey += indexMatch[0];
-          }
-        }
-      }
-      return match;
-    });
-  });
-  return { subscription, subscriptionKey };
 }
 
 function close(server: http.Server): Promise<void> {

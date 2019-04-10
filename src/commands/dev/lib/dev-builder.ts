@@ -14,10 +14,10 @@ import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { installBuilders, getBuilder } from './builder-cache';
 import {
-  PACKAGE,
   NowConfig,
   BuildConfig,
-  BuildSubscription,
+  BuildMatch,
+  BuildResult,
   BuilderParamsBase,
   BuilderInputs,
   BuilderOutput,
@@ -42,34 +42,28 @@ const getWorkPath = () =>
 /**
  * Build project to statics & lambdas
  */
+/*
 export async function executeInitialBuilds(
   nowJson: NowConfig,
   devServer: DevServer
 ): Promise<void> {
-  try {
-    devServer.setStatusBusy('Installing builders');
-    const builds = nowJson.builds || [];
-    await installBuilders(builds.map(build => build.use));
+  const builds = nowJson.builds || [];
+  await installBuilders(builds.map(build => build.use));
 
-    devServer.setStatusBusy('Building lambdas');
-    await executeBuilds(nowJson, devServer);
-
-    devServer.setStatusIdle();
-  } catch (err) {
-    devServer.setStatusIdle();
-    throw err;
-  }
+  devServer.setStatusBusy('Building lambdas');
+  await executeBuilds(nowJson, devServer);
 }
 
 export async function executePrepareCache(
   devServer: DevServer,
-  buildConfig: BuildConfig,
+  buildMatch: BuildMatch,
   params: PrepareCacheParams
 ): Promise<CacheOutputs> {
-  const { builder } = buildConfig;
-  if (!builder) {
+  const { builderWithPkg } = buildMatch;
+  if (!builderWithPkg) {
     throw new Error('No builder');
   }
+  const { builder } = builderWithPkg;
   if (!builder.prepareCache) {
     throw new Error('Builder has no `prepareCache()` function');
   }
@@ -89,11 +83,11 @@ export async function executePrepareCache(
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
-  asset: BuilderOutput | BuildSubscription,
+  asset: BuilderOutput,
   requestPath: string | null = null
 ): Promise<void> {
-  const { buildConfig, buildEntry } = asset;
-  if (!buildConfig || !buildEntry) {
+  const { buildMatch, buildEntry } = asset;
+  if (!buildMatch || !buildEntry) {
     throw new Error("Asset has not been built yet, can't rebuild");
   }
   const { cwd, env } = devServer;
@@ -102,44 +96,48 @@ export async function executeBuild(
   const workPath = getWorkPath();
   await mkdirp(workPath);
 
-  if (buildConfig.builderCachePromise) {
+  if (buildMatch.builderCachePromise) {
     devServer.output.debug('Restoring build cache from previous build');
-    const builderCache = await buildConfig.builderCachePromise;
+    const builderCache = await buildMatch.builderCachePromise;
     const startTime = Date.now();
     await download(builderCache, workPath);
     const cacheRestoreTime = Date.now() - startTime;
     devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
   }
 
-  const { builder } = buildConfig;
-  if (!builder) {
+  const { builderWithPkg } = buildMatch;
+  if (!builderWithPkg) {
     throw new Error('No builder');
   }
+  const { builder, package: pkg } = builderWithPkg;
   devServer.output.debug(
-    `Building ${buildEntry.fsPath} with "${buildConfig.use}" v${
-      builder[PACKAGE]!.version
+    `Building ${buildEntry.fsPath} with "${buildMatch.use}" v${
+      pkg.version
     } (workPath = ${workPath})`
   );
   const builderConfig = builder.config || {};
   const files = await collectProjectFiles('**', cwd);
-  const config = buildConfig.config || {};
-  let output: BuilderOutputs;
+  const config = buildMatch.config || {};
+  let outputs: BuilderOutputs;
   try {
     devServer.applyBuildEnv(nowJson);
-    output = await builder.build({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta: { isDev: true, requestPath }
-    });
+    if (builder.version === 2) {
+    } else {
+      outputs = await builder.build({
+        files,
+        entrypoint,
+        workPath,
+        config,
+        meta: { isDev: true, requestPath }
+      });
+    }
 
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
       await mkdirp(cachePath);
-      buildConfig.builderCachePromise = executePrepareCache(
+      buildMatch.builderCachePromise = executePrepareCache(
         devServer,
-        buildConfig,
+        buildMatch,
         {
           files,
           entrypoint,
@@ -163,7 +161,7 @@ export async function executeBuild(
     maxLambdaBytes = maxLambdaSize;
   }
 
-  for (const asset of Object.values(output)) {
+  for (const asset of Object.values(outputs)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -171,12 +169,12 @@ export async function executeBuild(
       }
     }
 
-    asset.buildConfig = buildConfig;
+    asset.buildMatch = buildMatch;
     asset.buildEntry = buildEntry;
   }
 
   await Promise.all(
-    Object.entries(output).map(async entry => {
+    Object.entries(outputs).map(async entry => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
@@ -210,7 +208,7 @@ export async function executeBuild(
   // TODO: remove previous assets, i.e. if the rebuild has different outputs that
   // don't include some of the previous ones. For example, deleting a page in
   // a Next.js build
-  Object.assign(devServer.assets, output);
+  Object.assign(devServer.assets, outputs);
 }
 
 async function executeBuilds(
@@ -221,16 +219,16 @@ async function executeBuilds(
     return;
   }
 
-  const { cwd, env } = devServer;
+  const { cwd, env, output } = devServer;
   const files = await collectProjectFiles('**', cwd);
 
-  for (const build of nowJson.builds) {
+  for (const buildConfig of nowJson.builds) {
     try {
-      devServer.output.debug(`Build ${JSON.stringify(build)}`);
-      const builder = await getBuilder(build.use);
-      build.builder = builder;
+      output.debug(`Build ${JSON.stringify(buildConfig)}`);
+      const builderWithPkg = await getBuilder(buildConfig.use);
+      const { builder, package: pkg } = builderWithPkg;
 
-      let { src } = build;
+      let { src } = buildConfig;
       if (src[0] === '/') {
         // Remove a leading slash so that the globbing is relative to `cwd`
         // instead of the root of the filesystem. This matches the behavior
@@ -239,62 +237,53 @@ async function executeBuilds(
       }
       const entries = Object.values(await collectProjectFiles(src, cwd));
 
-      for (const entry of entries) {
-        const config = build.config || {};
-        const entrypoint = relative(cwd, entry.fsPath);
+      for (const buildEntry of entries) {
+        const entrypoint = relative(cwd, buildEntry.fsPath);
+        const buildMatch: BuildMatch = {
+          ...buildConfig,
+          src: entrypoint,
+          builderWithPkg
+        };
+        const config = buildMatch.config || {};
 
         const workPath = getWorkPath();
         await mkdirp(workPath);
 
-        let output: BuilderOutputs;
+        let buildResult: BuildResult;
+        let outputs: BuilderOutputs;
         try {
           devServer.applyBuildEnv(nowJson);
-          const buildConfig: BuilderParamsBase = {
+          const buildParams: BuilderParamsBase = {
             files,
             entrypoint,
             config,
             meta: { isDev: true, requestPath: null }
           };
-          if (typeof builder.subscribe === 'function') {
-            // If the builder has a `subscribe()` function, then the initial
-            // builds are not run and instead an array of "subscriptions" is
-            // created. When an HTTP request comes in that matches one of the
-            // subscription patterns, then this builder will be actually be
-            // executed.
-            devServer.output.debug(`Getting subscriptions for ${entry.fsPath}`);
-            const subscription = await builder.subscribe(buildConfig);
-            devServer.subscriptions.push({
-              type: 'Subscription',
-              patterns: subscription,
-              buildConfig: build,
-              buildEntry: entry,
-              buildTimestamp: Date.now()
-            });
-            continue;
+          output.debug(
+            `Building ${buildEntry.fsPath} with "${buildConfig.use}" v${
+              pkg.version
+            } (workPath = ${workPath})`
+          );
+          if (builder.version === 2) {
           } else {
-            devServer.output.debug(
-              `Building ${entry.fsPath} with "${build.use}" v${
-                builder[PACKAGE]!.version
-              } (workPath = ${workPath})`
-            );
-            output = await builder.build({ ...buildConfig, workPath });
+            outputs = await builder.build({ ...buildMatch, workPath });
+          }
 
-            if (typeof builder.prepareCache === 'function') {
-              const cachePath = getWorkPath();
-              await mkdirp(cachePath);
-              build.builderCachePromise = executePrepareCache(
-                devServer,
-                build,
-                {
-                  files,
-                  entrypoint,
-                  workPath,
-                  cachePath,
-                  config,
-                  meta: { isDev: true, requestPath: null }
-                }
-              );
-            }
+          if (typeof builder.prepareCache === 'function') {
+            const cachePath = getWorkPath();
+            await mkdirp(cachePath);
+            buildMatch.builderCachePromise = executePrepareCache(
+              devServer,
+              buildMatch,
+              {
+                files,
+                entrypoint,
+                workPath,
+                cachePath,
+                config,
+                meta: { isDev: true, requestPath: null }
+              }
+            );
           }
         } finally {
           devServer.restoreOriginalEnv();
@@ -310,7 +299,7 @@ async function executeBuilds(
           maxLambdaBytes = maxLambdaSize;
         }
 
-        for (const asset of Object.values(output)) {
+        for (const asset of Object.values(outputs)) {
           if (asset.type === 'Lambda') {
             const size = asset.zipBuffer.length;
             if (size > maxLambdaBytes) {
@@ -318,11 +307,11 @@ async function executeBuilds(
             }
           }
 
-          asset.buildConfig = build;
-          asset.buildEntry = entry;
+          asset.buildMatch = buildMatch;
+          asset.buildEntry = buildEntry;
         }
 
-        Object.assign(devServer.assets, output);
+        Object.assign(devServer.assets, outputs);
       }
     } catch (err) {
       throw err;
@@ -351,6 +340,32 @@ async function executeBuilds(
       asset.buildTimestamp = Date.now();
     })
   );
+}
+*/
+
+export async function getBuildMatches(
+  nowJson: NowConfig,
+  cwd: string
+): Promise<BuildMatch[]> {
+  const matches: BuildMatch[] = [];
+  const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
+  for (const buildConfig of builds) {
+    let { src, use } = buildConfig;
+    if (src[0] === '/') {
+      // Remove a leading slash so that the globbing is relative to `cwd`
+      // instead of the root of the filesystem. This matches the behavior
+      // of Now deployments.
+      src = src.substring(1);
+    }
+    const entries = Object.values(await collectProjectFiles(src, cwd));
+
+    for (const buildEntry of entries) {
+      src = relative(cwd, buildEntry.fsPath);
+      const builderWithPkg = await getBuilder(use);
+      matches.push({ ...buildConfig, src, builderWithPkg });
+    }
+  }
+  return matches;
 }
 
 /**

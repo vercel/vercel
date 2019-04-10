@@ -9,20 +9,22 @@ import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
-import { Builder, PACKAGE } from './types';
+import { Builder, BuilderWithPackage, ShouldServeParams } from './types';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
 } from '../../../util/errors-ts';
 
-import * as _staticBuilder from './static-builder';
-const staticBuilder: Builder = _staticBuilder;
-staticBuilder[PACKAGE] = {
-  version: 'built-in'
-};
+import * as staticBuilder from './static-builder';
 
-const localBuilders: { [key: string]: Builder } = {
-  '@now/static': staticBuilder
+const localBuilders: { [key: string]: BuilderWithPackage } = {
+  '@now/static': {
+    builder: Object.freeze({
+      ...staticBuilder,
+      shouldServe: defaultShouldServe
+    }),
+    package: { version: 'built-in' }
+  }
 };
 
 export const cacheDirPromise = prepareCacheDir();
@@ -82,7 +84,10 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 /**
  * Install a list of builders to the cache directory.
  */
-export async function installBuilders(packages: string[]): Promise<void> {
+export async function installBuilders(
+  packages: string[],
+  update: boolean = false
+): Promise<void> {
   const cacheDir = await builderDirPromise;
   const buildersPkg = join(cacheDir, 'package.json');
   const pkg = await readJSON(buildersPkg);
@@ -129,25 +134,48 @@ export async function installBuilders(packages: string[]): Promise<void> {
     }
   }
 
-  const stopSpinner = wait('Checking for builder updates');
-  await execa('npm', ['update'], {
-    reject: false,
-    cwd: cacheDir
-  });
-  stopSpinner();
+  if (update) {
+    const stopSpinner = wait('Checking for builder updates');
+    await execa('npm', ['update'], {
+      reject: false,
+      cwd: cacheDir
+    });
+    stopSpinner();
+  }
+}
+
+export function defaultShouldServe({
+  entrypoint,
+  files,
+  requestPath
+}: ShouldServeParams) {
+  console.error('defaultShouldServe', { entrypoint, files, requestPath });
+  return entrypoint === requestPath && requestPath in files;
 }
 
 /**
  * Get a builder from the cache directory.
  */
-export async function getBuilder(builderPkg: string): Promise<Builder> {
-  let builder: Builder = localBuilders[builderPkg];
-  if (!builder) {
+export async function getBuilder(
+  builderPkg: string
+): Promise<BuilderWithPackage> {
+  let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
+  if (!builderWithPkg) {
     const cacheDir = await builderDirPromise;
     const parsed = npa(builderPkg);
     const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
-    builder = require(dest);
-    builder[PACKAGE] = require(join(dest, 'package.json'));
+    const mod = require(dest);
+    if (!mod.version) {
+      mod.version = 1;
+    }
+    if (mod.version === 2 && typeof mod.shouldServe !== 'function') {
+      mod.shouldServe = defaultShouldServe;
+    }
+    const pkg = require(join(dest, 'package.json'));
+    builderWithPkg = Object.freeze({
+      builder: mod,
+      package: pkg
+    });
   }
-  return builder;
+  return builderWithPkg;
 }

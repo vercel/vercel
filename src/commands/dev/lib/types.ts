@@ -3,14 +3,6 @@ import { Output } from '../../../util/output';
 import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 
-export const PACKAGE = Symbol('package.json');
-
-export enum DevServerStatus {
-  busy,
-  idle,
-  error
-}
-
 export interface DevServerOptions {
   output: Output;
 }
@@ -23,7 +15,10 @@ export interface BuildConfig {
   src: string;
   use: string;
   config?: object;
-  builder?: Builder;
+}
+
+export interface BuildMatch extends BuildConfig {
+  builderWithPkg: BuilderWithPackage;
   builderCachePromise?: Promise<CacheOutputs>;
 }
 
@@ -56,15 +51,10 @@ export interface BuilderInputs {
 }
 
 export interface BuiltAsset {
-  buildConfig?: BuildConfig;
   buildEntry?: FileFsRef;
+  buildMatch?: BuildMatch;
   buildTimestamp?: number;
 }
-
-export type BuildSubscription = BuiltAsset & {
-  type: 'Subscription';
-  patterns: string[];
-};
 
 export type BuiltFileFsRef = FileFsRef & BuiltAsset;
 export type BuiltFileBlob = FileBlob & BuiltAsset;
@@ -102,16 +92,47 @@ export interface PrepareCacheParams extends BuilderParams {
   cachePath: string;
 }
 
-export interface Builder {
+export interface BuilderV1 {
   config?: {
     maxLambdaSize?: string | number;
   };
-  build(params: BuilderParams): BuilderOutputs;
-  subscribe?(params: BuilderParamsBase): Promise<string[]>;
+  version: 1;
+  build(params: BuilderParams): BuilderOutputs | Promise<BuilderOutputs>;
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;
-  [PACKAGE]?: {
+}
+
+export interface BuildResult {
+  output: BuilderOutputs;
+  routes?: RouteConfig[];
+  watch?: string[];
+}
+
+export interface ShouldServeParams {
+  files: BuilderInputs;
+  entrypoint: string;
+  config?: object;
+  requestPath: string;
+}
+
+export interface BuilderV2 {
+  config?: {
+    maxLambdaSize?: string | number;
+  };
+  version: 2;
+  build(params: BuilderParams): BuildResult | Promise<BuildResult>;
+  shouldServe(params: ShouldServeParams): boolean | Promise<boolean>;
+  prepareCache?(
+    params: PrepareCacheParams
+  ): CacheOutputs | Promise<CacheOutputs>;
+}
+
+export type Builder = BuilderV1 | BuilderV2;
+
+export interface BuilderWithPackage {
+  builder: Builder;
+  package: {
     version: string;
   };
 }
