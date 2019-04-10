@@ -115,6 +115,7 @@ export default async function inspect(
   output.print(
     `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
   );
+  output.print(`    ${chalk.cyan('Cloudflare Enabled')}\t\t${domain.cdnEnabled}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
