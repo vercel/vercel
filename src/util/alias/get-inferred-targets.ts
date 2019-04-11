@@ -1,7 +1,7 @@
 import { Output } from '../output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../errors-ts';
 import { Config } from '../../types';
-import cmd from '../../util/output/cmd';
+import cmd from '../output/cmd';
 
 export default async function getInferredTargets(
   output: Output,

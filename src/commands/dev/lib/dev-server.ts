@@ -15,8 +15,6 @@ import { lookup as lookupMimeType } from 'mime-types';
 import { basename, dirname, extname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
-import error from '../../../util/output/error';
-import success from '../../../util/output/success';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
@@ -371,9 +369,9 @@ export default class DevServer {
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
-    //if (this.status === DevServerStatus.busy) {
-    //  return res.end(`[busy] ${this.statusMessage}...`);
-    //}
+    // if (this.status === DevServerStatus.busy) {
+    //   return res.end(`[busy] ${this.statusMessage}...`);
+    // }
 
     try {
       const nowJson = await this.getNowJson();
@@ -505,6 +503,7 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
+    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, nowRequestId);
@@ -594,7 +593,7 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-        return;
+
     }
   };
 
@@ -682,13 +681,13 @@ async function findBuildMatch(
       ) {
         return match;
       }
-    } else {
-      // If there's no `shouldServe()` function, then look up if there's
-      // a matching build asset on the `match` that has already been built.
-      if (findAsset(match, requestPath)) {
-        return match;
-      }
     }
+    // If there's no `shouldServe()` function, then look up if there's
+    // a matching build asset on the `match` that has already been built.
+    if (findAsset(match, requestPath)) {
+      return match;
+    }
+
   }
   return null;
 }

@@ -1,3 +1,5 @@
+/* disable this rule _here_ to avoid conflict with ongoing changes */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { tmpdir } from 'os';

@@ -88,7 +88,7 @@ export function getAuthConfigFilePath() {
 }
 
 export function readLocalConfig(prefix: string = process.cwd()) {
-  let target: string = '';
+  let target = '';
 
   try {
     target = getLocalPathConfig(prefix || process.cwd());

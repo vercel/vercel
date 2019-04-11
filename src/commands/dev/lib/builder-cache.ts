@@ -85,7 +85,7 @@ export async function installBuilders(
   packages: string[],
   update: boolean = false
 ): Promise<void> {
-  if (packages.length === 1 && localBuilders.hasOwnProperty(packages[0])) {
+  if (packages.length === 1 && Object.hasOwnProperty.call(localBuilders, packages[0])) {
     // Static deployment, no bulders to install
     return;
   }
@@ -102,7 +102,7 @@ export async function installBuilders(
   for (const builderPkg of packages) {
     const parsed = npa(builderPkg);
     const name = parsed.name || builderPkg;
-    if (localBuilders.hasOwnProperty(name)) {
+    if (Object.hasOwnProperty.call(localBuilders, name)) {
       continue;
     }
     const spec = parsed.rawSpec || parsed.fetchSpec || 'latest';
