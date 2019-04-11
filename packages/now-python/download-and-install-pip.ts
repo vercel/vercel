@@ -43,7 +43,7 @@ export async function downloadAndInstallPip() {
   }
   const getPipFilePath = await downloadGetPipScript();
 
-  console.log('runing "python get-pip.py"...');
+  console.log('running "python get-pip.py"...');
   try {
     await execa('python3', [getPipFilePath, '--user'], { stdio: 'inherit' });
   } catch (err) {
