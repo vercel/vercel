@@ -450,6 +450,7 @@ exports.prepareCache = async ({ workPath, entrypoint }) => {
   const cacheEntrypoint = path.relative(workPath, entryPath);
   return {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
+    ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
