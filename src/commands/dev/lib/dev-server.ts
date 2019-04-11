@@ -225,6 +225,7 @@ export default class DevServer {
     if (this.stopping) return;
     this.stopping = true;
     this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+    /* eslint-disable-next-line array-callback-return */
     const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
       if (asset.type === 'Lambda' && asset.fn) {
         return asset.fn.destroy();
@@ -514,6 +515,7 @@ export default class DevServer {
       }
     }
 
+    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, nowRequestId);
@@ -603,7 +605,7 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-        return;
+
     }
   };
 

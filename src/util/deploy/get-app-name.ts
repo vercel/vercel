@@ -1,5 +1,5 @@
 import path from 'path';
-import { NowError } from '../../util/now-error';
+import { NowError } from '../now-error';
 import { Output } from '../output';
 import { Config } from '../../types';
 import readPackage from '../read-package';

@@ -207,13 +207,12 @@ export default async function set(
     );
     if (handleResult === 1) {
       return 1;
-    } else {
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
-          `https://${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
-      );
     }
+    console.log(
+      `${chalk.cyan('> Success!')} ${chalk.bold(
+        `https://${handleResult.alias}`
+      )} now points to https://${deployment.url} ${setStamp()}`
+    );
   }
 
   return 0;

@@ -64,7 +64,7 @@ export const getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      "This is your Now credentials file. DON'T SHARE! More: https://bit.ly/2qAK8bb"
+      'This is your Now credentials file. DON\'T SHARE! More: https://bit.ly/2qAK8bb'
   };
 
   if (existing) {
