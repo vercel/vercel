@@ -958,7 +958,7 @@ export class DomainRemovalConflict extends NowError<
         transferring,
         resolvable
       },
-      message: message
+      message
     });
   }
 }
@@ -985,7 +985,7 @@ export class DomainMoveConflict extends NowError<
         resolvable,
         suffix
       },
-      message: message
+      message
     });
   }
 }

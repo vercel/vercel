@@ -1,6 +1,6 @@
+import chalk from 'chalk';
 import { DomainConfigurationError } from './errors-ts';
 import { Output } from './output';
-import chalk from 'chalk';
 import dnsTable from './format-dns-table';
 
 export function handleDomainConfigurationError(

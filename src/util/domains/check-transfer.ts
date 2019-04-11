@@ -16,5 +16,5 @@ type Response = {
 };
 
 export default async function checkTransfer(client: Client, name: string) {
-  return await client.fetch<Response>(`/v4/domains/${name}/registry`);
+  return client.fetch<Response>(`/v4/domains/${name}/registry`);
 }

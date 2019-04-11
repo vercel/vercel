@@ -9,7 +9,7 @@
     "test": "yarn test-lint",
     "test-unit": "nyc ava test/*unit.js --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
-    "test-lint": "eslint .",
+    "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build-download && cp download/default.js download/dist/now",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "postinstall": "node download/install.js",
@@ -68,60 +68,6 @@
       "node10-win-x64"
     ]
   },
-  "eslintConfig": {
-    "extends": [
-      "airbnb",
-      "prettier"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "typescript"
-    ],
-    "settings": {
-      "import/resolver": {
-        "typescript": {}
-      }
-    },
-    "rules": {
-      "camelcase": 0,
-      "class-methods-use-this": 0,
-      "consistent-return": 0,
-      "func-names": 0,
-      "global-require": 0,
-      "guard-for-in": 0,
-      "import/no-duplicates": 0,
-      "import/no-dynamic-require": 0,
-      "import/no-extraneous-dependencies": 0,
-      "import/prefer-default-export": 0,
-      "lines-between-class-members": 0,
-      "no-await-in-loop": 0,
-      "no-bitwise": 0,
-      "no-console": 0,
-      "no-continue": 0,
-      "no-control-regex": 0,
-      "no-empty": 0,
-      "no-loop-func": 0,
-      "no-nested-ternary": 0,
-      "no-param-reassign": 0,
-      "no-plusplus": 0,
-      "no-restricted-globals": 0,
-      "no-restricted-syntax": 0,
-      "no-shadow": 0,
-      "no-underscore-dangle": 0,
-      "no-use-before-define": 0,
-      "prefer-const": 0,
-      "prefer-destructuring": 0,
-      "typescript/no-unused-vars": "error"
-    }
-  },
-  "eslintIgnore": [
-    "@types",
-    "download",
-    "dist",
-    "test/fixtures",
-    "bin",
-    "link"
-  ],
   "ava": {
     "compileEnhancements": false,
     "extensions": [
@@ -163,6 +109,7 @@
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
     "@types/write-json-file": "2.2.1",
+    "@typescript-eslint/eslint-plugin": "1.6.0",
     "@typescript-eslint/parser": "1.1.0",
     "@zeit/dockerignore": "0.0.4",
     "@zeit/fun": "0.6.0",
@@ -194,14 +141,13 @@
     "email-prompt": "0.3.2",
     "email-validator": "1.1.1",
     "epipebomb": "1.0.0",
-    "eslint": "5.3.0",
+    "eslint": "5.16.0",
     "eslint-config-airbnb": "17.1.0",
-    "eslint-config-prettier": "3.3.0",
+    "eslint-config-prettier": "4.1.0",
     "eslint-import-resolver-typescript": "1.1.1",
-    "eslint-plugin-import": "2.14.0",
-    "eslint-plugin-jsx-a11y": "6.1.1",
-    "eslint-plugin-react": "7.11.0",
-    "eslint-plugin-typescript": "0.14.0",
+    "eslint-plugin-import": "2.16.0",
+    "eslint-plugin-jsx-a11y": "6.2.1",
+    "eslint-plugin-react": "7.12.4",
     "esm": "3.0.84",
     "execa": "0.9.0",
     "fetch-h2": "2.0.3",

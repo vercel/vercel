@@ -2,8 +2,8 @@ import chalk from 'chalk';
 
 import getAppLastDeployment from '../deploy/get-app-last-deployment';
 import getAppName from '../deploy/get-app-name';
-import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
-import wait from '../../util/output/wait';
+import fetchDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
+import wait from '../output/wait';
 import Client from '../client';
 import { Output } from '../output';
 import { User, Config } from '../../types';

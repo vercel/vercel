@@ -1,3 +1,5 @@
+/* disable this rule _here_ to avoid conflict with ongoing changes */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { tmpdir } from 'os';
@@ -94,7 +96,7 @@ export async function executeBuild(
 ): Promise<void> {
   const { buildConfig, buildEntry } = asset;
   if (!buildConfig || !buildEntry) {
-    throw new Error("Asset has not been built yet, can't rebuild");
+    throw new Error('Asset has not been built yet, can\'t rebuild');
   }
   const { cwd, env } = devServer;
   const entrypoint = relative(cwd, buildEntry.fsPath);

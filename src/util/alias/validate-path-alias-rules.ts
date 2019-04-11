@@ -1,4 +1,4 @@
-import { RulesFileValidationError } from '../../util/errors-ts';
+import { RulesFileValidationError } from '../errors-ts';
 import { PathRule } from '../../types';
 
 export default function validatePathAliasRules(
