@@ -3,14 +3,6 @@ import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 import { Output } from '../../../util/output';
 
-export const PACKAGE = Symbol('package.json');
-
-export enum DevServerStatus {
-  busy,
-  idle,
-  error
-}
-
 export interface DevServerOptions {
   output: Output;
 }
@@ -23,8 +15,14 @@ export interface BuildConfig {
   src: string;
   use: string;
   config?: object;
-  builder?: Builder;
+}
+
+export interface BuildMatch extends BuildConfig {
+  builderWithPkg: BuilderWithPackage;
+  buildOutput?: BuilderOutputs;
+  buildResult?: BuildResult;
   builderCachePromise?: Promise<CacheOutputs>;
+  buildTimestamp?: number;
 }
 
 export interface RouteConfig {
@@ -55,30 +53,16 @@ export interface BuilderInputs {
   [path: string]: FileFsRef;
 }
 
-export interface BuiltAsset {
-  buildConfig?: BuildConfig;
-  buildEntry?: FileFsRef;
-  buildTimestamp?: number;
-}
-
-export type BuildSubscription = BuiltAsset & {
-  type: 'Subscription';
-  patterns: string[];
+export type BuiltLambda = Lambda & {
+  fn?: FunLambda;
 };
-
-export type BuiltFileFsRef = FileFsRef & BuiltAsset;
-export type BuiltFileBlob = FileBlob & BuiltAsset;
-export type BuiltLambda = Lambda &
-  BuiltAsset & {
-    fn?: FunLambda;
-  };
-export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
+export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
 }
 
-export type CacheOutput = BuiltFileFsRef | BuiltFileBlob;
+export type CacheOutput = FileFsRef | FileBlob;
 
 export interface CacheOutputs {
   [path: string]: CacheOutput;
@@ -106,12 +90,35 @@ export interface Builder {
   config?: {
     maxLambdaSize?: string | number;
   };
-  build(params: BuilderParams): BuilderOutputs;
-  subscribe?(params: BuilderParamsBase): Promise<string[]>;
+  build(
+    params: BuilderParams
+  ):
+    | BuilderOutputs
+    | BuildResult
+    | Promise<BuilderOutputs>
+    | Promise<BuildResult>;
+  shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;
-  [PACKAGE]?: {
+}
+
+export interface BuildResult {
+  output: BuilderOutputs;
+  routes?: RouteConfig[];
+  watch?: string[];
+}
+
+export interface ShouldServeParams {
+  files: BuilderInputs;
+  entrypoint: string;
+  config?: object;
+  requestPath: string;
+}
+
+export interface BuilderWithPackage {
+  builder: Builder;
+  package: {
     version: string;
   };
 }

@@ -12,18 +12,18 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { parse as parseDotenv } from 'dotenv';
 import { lookup as lookupMimeType } from 'mime-types';
-import { basename, dirname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
-import error from '../../../util/output/error';
-import success from '../../../util/output/success';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
+import { installBuilders } from './builder-cache';
 import {
   executeBuild,
-  executeInitialBuilds,
-  createIgnoreList
+  collectProjectFiles,
+  createIgnoreList,
+  getBuildMatches
 } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
@@ -31,9 +31,10 @@ import { MissingDotenvVarsError } from '../../../util/errors-ts';
 import {
   EnvConfig,
   NowConfig,
-  DevServerStatus,
   DevServerOptions,
-  BuildSubscription,
+  BuildConfig,
+  BuildMatch,
+  BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
   HttpHandler,
@@ -46,47 +47,76 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
-  public assets: BuilderOutputs;
-  public subscriptions: BuildSubscription[];
 
   private server: http.Server;
-  private status: DevServerStatus;
   private stopping: boolean;
-  private statusMessage: string = '';
+  private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private originalEnv: EnvConfig;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
-    this.assets = {};
     this.env = {};
     this.buildEnv = {};
+
     this.server = http.createServer(this.devServerHandler);
-    this.status = DevServerStatus.busy;
     this.stopping = false;
+    this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
     this.originalEnv = { ...process.env };
-    this.subscriptions = [];
   }
 
-  /* set dev-server status */
-  setStatusIdle(): void {
-    this.status = DevServerStatus.idle;
-    this.statusMessage = '';
+  async getProjectFiles(): Promise<BuilderInputs> {
+    // TODO: use the file watcher to keep the files list up-to-date
+    // incrementally, instead of re-globbing the filesystem every time
+    const files = await collectProjectFiles('**', this.cwd);
+    return files;
   }
 
-  setStatusBusy(msg: string): void {
-    this.status = DevServerStatus.busy;
-    this.statusMessage = msg;
+  async updateBuildMatches(nowJson: NowConfig): Promise<void> {
+    const matches = await getBuildMatches(nowJson, this.cwd);
+    const sources = matches.map(m => m.src);
+
+    // Delete build matches that no longer exists
+    for (const src of this.buildMatches.keys()) {
+      if (!sources.includes(src)) {
+        this.output.debug(`Removing build match for "${src}"`);
+        // TODO: shutdown lambda functions
+        this.buildMatches.delete(src);
+      }
+    }
+
+    // Add the new matches to the `buildMatches` map
+    for (const match of matches) {
+      const currentMatch = this.buildMatches.get(match.src);
+      if (!currentMatch || currentMatch.use !== match.use) {
+        this.output.debug(`Adding build match for "${match.src}"`);
+        this.buildMatches.set(match.src, match);
+      }
+    }
   }
 
-  setStatusError(msg: string): void {
-    this.status = DevServerStatus.error;
-    this.statusMessage = msg;
+  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+    // TODO: use the file watcher to only invalidate the env `dotfile`
+    // once a change to the `fileName` occurs
+    const filePath = join(this.cwd, fileName);
+    let env: EnvConfig = {};
+    try {
+      const dotenv = await fs.readFile(filePath, 'utf8');
+      this.output.debug(`Using local env: ${filePath}`);
+      env = parseDotenv(dotenv);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+    return env;
   }
 
   async getNowJson(): Promise<NowConfig | null> {
+    // TODO: use the file watcher to only invalidate this `nowJson`
+    // config once a change to the `now.json` file occurs
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
@@ -102,21 +132,6 @@ export default class DevServer {
     }
 
     return null;
-  }
-
-  async getLocalEnv(fileName: string): Promise<EnvConfig> {
-    const filePath = join(this.cwd, fileName);
-    this.output.debug(`Reading local env: ${filePath}`);
-    let env: EnvConfig = {};
-    try {
-      const dotenv = await fs.readFile(filePath, 'utf8');
-      env = parseDotenv(dotenv);
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
-        throw err;
-      }
-    }
-    return env;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -184,6 +199,30 @@ export default class DevServer {
     this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
+    // Now Builders that do not define a `shouldServe()` function need to be
+    // executed at boot-up time in order to get the initial assets that can be
+    // routed to.
+    if (nowJson) {
+      const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
+      const shouldUpdate = true;
+      await installBuilders(builders, shouldUpdate);
+      await this.updateBuildMatches(nowJson);
+      const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
+        (buildMatch: BuildMatch) => {
+          const { builder } = buildMatch.builderWithPkg;
+          return typeof builder.shouldServe !== 'function';
+        }
+      );
+      if (needsInitialBuild.length > 0) {
+        this.output.log('Running initial builds');
+        const files = await this.getProjectFiles();
+        for (const match of this.buildMatches.values()) {
+          await executeBuild(nowJson, this, files, match);
+        }
+        this.output.success('Initial builds complete');
+      }
+    }
+
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, port);
@@ -204,18 +243,6 @@ export default class DevServer {
         address.replace('[::]', 'localhost')
       )}`
     );
-
-    // Perform the initial build of assets so that we know what assets exist.
-    // Even though the server is running, it won't respond to any requests until
-    // this is complete.
-    if (nowJson && Array.isArray(nowJson.builds)) {
-      this.output.log('Running initial builds');
-      await executeInitialBuilds(nowJson, this);
-      this.output.success('Initial builds ready');
-      this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
-    }
-
-    this.setStatusIdle();
   }
 
   /**
@@ -225,12 +252,15 @@ export default class DevServer {
     if (this.stopping) return;
     this.stopping = true;
     this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
-    /* eslint-disable-next-line array-callback-return */
-    const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
-      if (asset.type === 'Lambda' && asset.fn) {
-        return asset.fn.destroy();
+    const ops: Promise<void>[] = [];
+    for (const match of this.buildMatches.values()) {
+      if (!match.buildOutput) continue;
+      for (const asset of Object.values(match.buildOutput)) {
+        if (asset.type === 'Lambda' && asset.fn) {
+          ops.push(asset.fn.destroy());
+        }
       }
-    });
+    }
     ops.push(close(this.server));
     await Promise.all(ops);
   }
@@ -248,6 +278,8 @@ export default class DevServer {
     nowRequestId: string
   ): Promise<void> {
     return this.sendError(
+      // TODO: use the file watcher to keep the files list up-to-date
+      // incrementally
       req,
       res,
       nowRequestId,
@@ -337,28 +369,26 @@ export default class DevServer {
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
-    if (this.status === DevServerStatus.busy) {
-      return res.end(`[busy] ${this.statusMessage}...`);
-    }
+    // if (this.status === DevServerStatus.busy) {
+    //   return res.end(`[busy] ${this.statusMessage}...`);
+    // }
 
     try {
       const nowJson = await this.getNowJson();
-      if (!nowJson) {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      } else {
+      if (nowJson) {
         await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
+      } else {
+        await this.serveProjectAsStatic(req, res, nowRequestId);
       }
     } catch (err) {
-      this.setStatusError(err.message);
+      console.error(err);
       this.output.debug(err.stack);
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(this.statusMessage);
+        res.end(err.message);
       }
     }
-
-    this.setStatusIdle();
   };
 
   /**
@@ -390,13 +420,16 @@ export default class DevServer {
     nowRequestId: string,
     nowJson: NowConfig
   ) => {
+    const files = await this.getProjectFiles();
+    await this.updateBuildMatches(nowJson);
+
     const {
       dest,
       status = 200,
       headers = {},
       uri_args,
       matched_route
-    } = devRouter(req.url, nowJson.routes, this);
+    } = await devRouter(req.url, nowJson.routes, this, files);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -414,67 +447,21 @@ export default class DevServer {
       return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
     }
 
-    if (!nowJson.builds) {
-      return this.serveProjectAsStatic(req, res, nowRequestId);
+    const requestPath = dest.replace(/^\//, '');
+    const match = await findBuildMatch(this.buildMatches, files, requestPath);
+    if (!match) {
+      await this.send404(req, res, nowRequestId);
+      return;
     }
 
-    // find asset responsible for dest
-    let { asset, assetKey } = resolveDest(this.assets, dest);
-
-    if (!asset || !assetKey) {
-      const { subscription, subscriptionKey } = resolveSubscription(
-        this.subscriptions,
-        dest
-      );
-      if (subscription && subscription.buildEntry) {
-        const entrypoint = relative(this.cwd, subscription.buildEntry.fsPath);
-        const buildKey = `${entrypoint}-${subscriptionKey}`;
-        let buildPromise = this.inProgressBuilds.get(buildKey);
-        if (buildPromise) {
-          // A build for this entrypoint + subscription key is already in
-          // progress, so don't trigger another rebuild for this request -
-          // just wait on the existing one.
-          this.output.debug(
-            `De-duping build "${entrypoint}" for "${req.method} ${
-              req.url
-            }" (${subscriptionKey})`
-          );
-        } else {
-          this.output.debug(
-            `Building initial asset "${entrypoint}" for "${req.method} ${
-              req.url
-            }" (${subscriptionKey})`
-          );
-          buildPromise = executeBuild(
-            nowJson,
-            this,
-            subscription,
-            subscriptionKey
-          );
-          this.inProgressBuilds.set(buildKey, buildPromise);
-        }
-        try {
-          await buildPromise;
-        } finally {
-          this.inProgressBuilds.delete(buildKey);
-        }
-
-        // Since the `asset` was just built, resolve the built asset
-        ({ asset, assetKey } = resolveDest(this.assets, dest));
-      }
-
-      if (!asset || !assetKey) {
-        await this.send404(req, res, nowRequestId);
-        return;
-      }
-    }
-
-    // If the user did a hard-refresh in the browser,
-    // then re-run the build that generated this asset
-    if (this.shouldRebuild(req) && asset.buildEntry) {
-      const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
-      const buildTimestamp: number = asset.buildTimestamp || 0;
-      let buildPromise = this.inProgressBuilds.get(entrypoint);
+    let foundAsset = findAsset(match, requestPath);
+    if (!foundAsset || this.shouldRebuild(req)) {
+      // If the requested asset wasn't found in the match's outputs, or
+      // a hard-refresh was detected, then trigger a build
+      const entrypoint = match.src;
+      const buildTimestamp: number = match.buildTimestamp || 0;
+      const buildKey = `${entrypoint}-${requestPath}`;
+      let buildPromise = this.inProgressBuilds.get(buildKey);
       if (buildPromise) {
         // A build for `entrypoint` is already in progress, so don't trigger
         // another rebuild for this request - just wait on the existing one.
@@ -487,34 +474,35 @@ export default class DevServer {
         // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
         // with a `no-cache` header, so this avoids *two* rebuilds for that case.
         this.output.debug(
-          `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
+          `Skipping build for "${entrypoint}" (not older than 2s) for "${
             req.method
           } ${req.url}"`
         );
       } else {
         this.output.debug(
-          `Rebuilding asset "${entrypoint}" for "${req.method} ${
+          `Building asset "${entrypoint}" for "${req.method} ${
             req.url
-          }" (${assetKey})`
+          }" (${requestPath})`
         );
-        buildPromise = executeBuild(nowJson, this, asset, assetKey);
-        this.inProgressBuilds.set(entrypoint, buildPromise);
+        buildPromise = executeBuild(nowJson, this, files, match, requestPath);
+        this.inProgressBuilds.set(buildKey, buildPromise);
       }
       try {
         await buildPromise;
       } finally {
-        this.inProgressBuilds.delete(entrypoint);
+        this.inProgressBuilds.delete(buildKey);
       }
 
       // Since the `asset` was re-built, resolve it again to get the new asset
-      ({ asset, assetKey } = resolveDest(this.assets, dest));
-
-      if (!asset || !assetKey) {
-        await this.send404(req, res, nowRequestId);
-        return;
-      }
+      foundAsset = findAsset(match, requestPath);
     }
 
+    if (!foundAsset) {
+      await this.send404(req, res, nowRequestId);
+      return;
+    }
+
+    const { asset, assetKey } = foundAsset;
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
@@ -609,13 +597,9 @@ export default class DevServer {
     }
   };
 
-  hasFilesystem(dest: string): boolean {
-    const { subscription } = resolveSubscription(this.subscriptions, dest);
-    if (subscription) {
-      return true;
-    }
-    const { asset } = resolveDest(this.assets, dest);
-    if (asset) {
+  async hasFilesystem(files: BuilderInputs, dest: string): Promise<boolean> {
+    const requestPath = dest.replace(/^\//, '');
+    if (await findBuildMatch(this.buildMatches, files, requestPath)) {
       return true;
     }
     return false;
@@ -651,62 +635,6 @@ function serveStaticFile(
   });
 }
 
-/**
- * Find the dest handler from assets.
- */
-function resolveDest(
-  assets: BuilderOutputs,
-  dest: string
-): { asset?: BuilderOutput; assetKey?: string } {
-  let assetKey = dest.replace(/^\//, '');
-  let asset: BuilderOutput | undefined = assets[assetKey];
-
-  if (!asset) {
-    // Find `${assetKey}/index.*` for indexes
-    const indexKey = Object.keys(assets).find(name => {
-      const withoutIndex = name.replace(/\/?index(\.\w+)?$/, '');
-      return withoutIndex === assetKey.replace(/\/$/, '');
-    });
-
-    if (indexKey) {
-      assetKey = indexKey;
-      asset = assets[assetKey];
-    }
-  }
-
-  return { asset, assetKey };
-}
-
-/**
- * Find a matching subscription object from `dest`
- */
-function resolveSubscription(
-  subscriptions: BuildSubscription[],
-  dest: string
-): {
-  subscription?: BuildSubscription;
-  subscriptionKey?: string;
-} {
-  let subscriptionKey = dest.replace(/^\//, '');
-  const subscription = subscriptions.find(subscription => {
-    return subscription.patterns.some(pattern => {
-      let match = minimatch(subscriptionKey, pattern);
-      if (!match) {
-        const indexMatch = pattern.match(/\/?index(\.\w+)?$/);
-        if (indexMatch) {
-          const withoutIndex = pattern.replace(/\/?index(\.\w+)?$/, '');
-          match = minimatch(subscriptionKey, withoutIndex);
-          if (match) {
-            subscriptionKey += indexMatch[0];
-          }
-        }
-      }
-      return match;
-    });
-  });
-  return { subscription, subscriptionKey };
-}
-
 function close(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((err?: Error) => {
@@ -736,4 +664,63 @@ function generateRequestId(): string {
 
 function hasOwnProperty(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+async function findBuildMatch(
+  matches: Map<string, BuildMatch>,
+  files: BuilderInputs,
+  requestPath: string
+): Promise<BuildMatch | null> {
+  for (const match of matches.values()) {
+    const {
+      builderWithPkg: { builder }
+    } = match;
+    if (typeof builder.shouldServe === 'function') {
+      if (
+        await builder.shouldServe({ entrypoint: match.src, files, requestPath })
+      ) {
+        return match;
+      }
+    }
+    // If there's no `shouldServe()` function, then look up if there's
+    // a matching build asset on the `match` that has already been built.
+    if (findAsset(match, requestPath)) {
+      return match;
+    }
+
+  }
+  return null;
+}
+
+function findAsset(
+  match: BuildMatch,
+  requestPath: string
+): { asset: BuilderOutput; assetKey: string } | void {
+  if (!match.buildOutput) {
+    return;
+  }
+  let assetKey: string = requestPath;
+  let asset = match.buildOutput[requestPath];
+
+  // In the case of an index path, fall back to iterating over the
+  // builder outputs and doing an "is index" check until we find one.
+  if (!asset) {
+    const requestDir = dirname(requestPath);
+    for (const [name, a] of Object.entries(match.buildOutput)) {
+      if (dirname(name) === requestDir && isIndex(name)) {
+        asset = a;
+        assetKey = name;
+      }
+    }
+  }
+
+  if (asset) {
+    return { asset, assetKey };
+  }
+}
+
+function isIndex(path: string): boolean {
+  const ext = extname(path);
+  const name = basename(path, ext);
+  return name === 'index';
 }

@@ -4,7 +4,7 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './dev-server';
 
-import { RouteConfig, RouteResult } from './types';
+import { BuilderInputs, RouteConfig, RouteResult } from './types';
 
 export function resolveRouteParameters(
   str: string,
@@ -25,23 +25,28 @@ export function resolveRouteParameters(
   });
 }
 
-export default function(
+export default async function(
   reqPath = '',
   routes?: RouteConfig[],
-  devServer?: DevServer
-): RouteResult {
+  devServer?: DevServer,
+  files?: BuilderInputs
+): Promise<RouteResult> {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
 
   // try route match
   if (routes) {
-    routes.find((routeConfig: RouteConfig, idx: number) => {
+    let idx = -1;
+    for (const routeConfig of routes) {
+      idx++;
       let { src, headers, handle } = routeConfig;
       if (handle) {
-        if (handle === 'filesystem' && devServer) {
-          return devServer.hasFilesystem(reqPathname);
+        if (handle === 'filesystem' && devServer && files) {
+          if (await devServer.hasFilesystem(files, reqPathname)) {
+            break;
+          }
         }
-        return false;
+        continue;
       }
 
       if (!src.startsWith('^')) {
@@ -92,11 +97,9 @@ export default function(
           };
         }
 
-        return true;
+        break;
       }
-
-      return false;
-    });
+    }
   }
 
   if (!found) {

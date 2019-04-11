@@ -2,11 +2,11 @@ import test from 'ava';
 
 import devRouter from '../src/commands/dev/lib/dev-router';
 
-test('[dev-router] 301 redirection', t => {
+test('[dev-router] 301 redirection', async (t) => {
   const routesConfig = [
     { src: '/redirect', status: 301, headers: { 'Location': 'https://zeit.co' } }
   ];
-  const result = devRouter('/redirect', routesConfig);
+  const result = await devRouter('/redirect', routesConfig);
 
   t.deepEqual(result, {
     dest: '/redirect',
@@ -18,11 +18,11 @@ test('[dev-router] 301 redirection', t => {
   });
 });
 
-test('[dev-router] captured groups', t => {
+test('[dev-router] captured groups', async (t) => {
   const routesConfig = [
     { src: '/api/(.*)', dest: '/endpoints/$1.js' }
   ];
-  const result = devRouter('/api/user', routesConfig);
+  const result = await devRouter('/api/user', routesConfig);
 
   t.deepEqual(result, {
     dest: '/endpoints/user.js',
@@ -34,11 +34,11 @@ test('[dev-router] captured groups', t => {
   });
 });
 
-test('[dev-router] named groups', t => {
+test('[dev-router] named groups', async (t) => {
   const routesConfig = [
     { src: '/user/(?<id>.+)', dest: '/user.js?id=$id' }
   ];
-  const result = devRouter('/user/123', routesConfig);
+  const result = await devRouter('/user/123', routesConfig);
 
   t.deepEqual(result, {
     dest: '/user.js',
@@ -50,13 +50,13 @@ test('[dev-router] named groups', t => {
   });
 });
 
-test('[dev-router] unreached route', t => {
+test('[dev-router] unreached route', async (t) => {
   const routesConfig = [
     { src: '/.*', dest: '/index.js' },
     { src: '/hidden', dest: '/hidden.js' }
   ];
 
-  const result = devRouter('/hidden', routesConfig);
+  const result = await devRouter('/hidden', routesConfig);
 
   t.deepEqual(result, {
     dest: '/index.js',
@@ -69,12 +69,12 @@ test('[dev-router] unreached route', t => {
 });
 
 
-test('[dev-router] proxy_pass', t => {
+test('[dev-router] proxy_pass', async (t) => {
   const routesConfig = [
     { src: '/proxy', dest: 'https://zeit.co' }
   ];
 
-  const result = devRouter('/proxy', routesConfig);
+  const result = await devRouter('/proxy', routesConfig);
 
   t.deepEqual(result, {
     dest: 'https://zeit.co',
