@@ -11,7 +11,7 @@ export function build({ files, entrypoint }: BuilderParams): BuildResult {
 export function shouldServe({
   entrypoint,
   files,
-  requestPath,
+  requestPath
 }: ShouldServeParams) {
   if (isIndex(entrypoint)) {
     const indexPath = join(requestPath, basename(entrypoint));

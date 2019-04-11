@@ -598,10 +598,7 @@ export default class DevServer {
     }
   };
 
-  async hasFilesystem(
-    files: BuilderInputs,
-    dest: string
-  ): Promise<boolean> {
+  async hasFilesystem(files: BuilderInputs, dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (await findBuildMatch(this.buildMatches, files, requestPath)) {
       return true;
@@ -676,9 +673,13 @@ async function findBuildMatch(
   requestPath: string
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    const { builderWithPkg: { builder } } = match;
+    const {
+      builderWithPkg: { builder }
+    } = match;
     if (typeof builder.shouldServe === 'function') {
-      if (await builder.shouldServe({ entrypoint: match.src, files, requestPath })) {
+      if (
+        await builder.shouldServe({ entrypoint: match.src, files, requestPath })
+      ) {
         return match;
       }
     } else {
@@ -695,7 +696,7 @@ async function findBuildMatch(
 function findAsset(
   match: BuildMatch,
   requestPath: string
-): { asset: BuilderOutput, assetKey: string } | void {
+): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
   }

@@ -90,7 +90,13 @@ export interface Builder {
   config?: {
     maxLambdaSize?: string | number;
   };
-  build(params: BuilderParams): BuilderOutputs | BuildResult | Promise<BuilderOutputs> | Promise<BuildResult>;
+  build(
+    params: BuilderParams
+  ):
+    | BuilderOutputs
+    | BuildResult
+    | Promise<BuilderOutputs>
+    | Promise<BuildResult>;
   shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
   prepareCache?(
     params: PrepareCacheParams

@@ -29,7 +29,7 @@ export default async function(
   reqPath = '',
   routes?: RouteConfig[],
   devServer?: DevServer,
-  files?: BuilderInputs,
+  files?: BuilderInputs
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);

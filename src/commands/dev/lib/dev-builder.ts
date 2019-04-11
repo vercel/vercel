@@ -75,7 +75,9 @@ export async function executeBuild(
   if (!match.buildOutput) {
     match.buildOutput = {};
   }
-  const { builderWithPkg: { builder, package: pkg } } = match;
+  const {
+    builderWithPkg: { builder, package: pkg }
+  } = match;
   const { cwd, env } = devServer;
   const entrypoint = match.src;
 
@@ -118,18 +120,14 @@ export async function executeBuild(
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
       await mkdirp(cachePath);
-      match.builderCachePromise = executePrepareCache(
-        devServer,
-        match,
-        {
-          files,
-          entrypoint,
-          workPath,
-          cachePath,
-          config,
-          meta: { isDev: true, requestPath }
-        }
-      );
+      match.builderCachePromise = executePrepareCache(devServer, match, {
+        files,
+        entrypoint,
+        workPath,
+        cachePath,
+        config,
+        meta: { isDev: true, requestPath }
+      });
     }
   } finally {
     devServer.restoreOriginalEnv();
