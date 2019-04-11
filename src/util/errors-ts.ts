@@ -471,6 +471,23 @@ export class TooManyCertificates extends NowError<
 }
 
 /**
+ * Returned when the user tries to create a certificate but LE API returns
+ * a CAA conflict error, preventing cert issuance.
+ */
+export class ConflictingCAARecord extends NowError<
+  'CONFLICTING_CAA_RECORD',
+  { domains: string[] }
+> {
+  constructor(domains: string[], message: string) {
+    super({
+      code: 'CONFLICTING_CAA_RECORD',
+      meta: { domains },
+      message
+    });
+  }
+}
+
+/**
  * This error is returned when consuming an API that got rate limited because too
  * many requests where performed already. It gives a retryAfter parameter with the
  * time the user needs to wait.

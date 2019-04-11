@@ -1206,14 +1206,17 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { params, keyword, dataPath } = error.meta;
+    const { message, params, keyword, dataPath } = error.meta;
+
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
+
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
           'now.json'
         )} when using Now 1.0 – please remove it.`
       );
+
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(
           `Do you mean ${code('build')} (object) with a property ${code(
@@ -1221,23 +1224,30 @@ function handleCreateDeployError(output, error) {
           )} (object) instead of ${code(prop)}?`
         );
       }
+
       return 1;
     }
+
     if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
+
       output.error(
         `The property ${code(prop)} in ${highlight(
           'now.json'
         )} can only be of type ${code(title(params.type))}.`
       );
+
       return 1;
     }
-    const link = 'https://zeit.co/docs/v1/features/configuration/#settings';
+
+    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}. Only use properties mentioned here: ${link}`
+      )}: ${message}\nDocumentation: ${link}`
     );
+
     return 1;
   }
   if (error instanceof TooManyCertificates) {
