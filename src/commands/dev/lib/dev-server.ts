@@ -49,7 +49,6 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
-  public assets: BuilderOutputs;
 
   private server: http.Server;
   private stopping: boolean;
@@ -62,7 +61,6 @@ export default class DevServer {
     this.output = options.output;
     this.env = {};
     this.buildEnv = {};
-    this.assets = {};
 
     this.server = http.createServer(this.devServerHandler);
     this.stopping = false;
@@ -203,28 +201,27 @@ export default class DevServer {
     this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
-    // v1 Now Builders need to be executed at boot-up time in order to get
-    // the initial assets.
-    // v2 Now Builders have the `shouldServe()` function
-    // which avoids this requirement.
+    // Now Builders that do not define a `shouldServe()` function need to be
+    // executed at boot-up time in order to get the initial assets that can be
+    // routed to.
     if (nowJson) {
       const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
-      await installBuilders(builders, true);
+      const shouldUpdate = true;
+      await installBuilders(builders, shouldUpdate);
       await this.updateBuildMatches(nowJson);
-      console.log({ nowJson });
-      console.log({ matches: this.buildMatches });
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
           return typeof builder.shouldServe !== 'function';
         }
       );
-      console.error({ needsInitialBuild });
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
-        //await executeInitialBuilds(nowJson, this);
-        this.output.success('Initial builds ready');
-        this.output.debug(`Built: ${inspect(Object.keys(this.assets))}`);
+        const files = await this.getProjectFiles();
+        for (const match of this.buildMatches.values()) {
+          await executeBuild(nowJson, this, files, match);
+        }
+        this.output.success('Initial builds complete');
       }
     }
 
@@ -257,11 +254,15 @@ export default class DevServer {
     if (this.stopping) return;
     this.stopping = true;
     this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
-    const ops = Object.values(this.assets).map((asset: BuilderOutput) => {
-      if (asset.type === 'Lambda' && asset.fn) {
-        return asset.fn.destroy();
+    const ops: Promise<void>[] = [];
+    for (const match of this.buildMatches.values()) {
+      if (!match.buildOutput) continue;
+      for (const asset of Object.values(match.buildOutput)) {
+        if (asset.type === 'Lambda' && asset.fn) {
+          ops.push(asset.fn.destroy());
+        }
       }
-    });
+    }
     ops.push(close(this.server));
     await Promise.all(ops);
   }
@@ -401,14 +402,12 @@ export default class DevServer {
     nowRequestId: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
-    /*
     const ignore = await createIgnoreList(this.cwd);
 
     if (filePath && ignore.ignores(filePath)) {
       await this.send404(req, res, nowRequestId);
       return;
     }
-     */
 
     this.setResponseHeaders(res, nowRequestId);
     return serveStaticFile(req, res, this.cwd);
@@ -425,9 +424,6 @@ export default class DevServer {
   ) => {
     const files = await this.getProjectFiles();
     await this.updateBuildMatches(nowJson);
-    console.log({ nowJson });
-    console.log({ files });
-    console.log({ matches: this.buildMatches });
 
     const {
       dest,
@@ -436,8 +432,6 @@ export default class DevServer {
       uri_args,
       matched_route
     } = devRouter(req.url, nowJson.routes, this);
-
-    console.log({ dest, status, headers, uri_args, matched_route });
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -457,22 +451,19 @@ export default class DevServer {
 
     const requestPath = dest.replace(/^\//, '');
     const match = await findBuildMatch(this.buildMatches, files, requestPath);
-    console.error({ match });
-
     if (!match) {
       await this.send404(req, res, nowRequestId);
       return;
     }
 
     let foundAsset = findAsset(match, requestPath);
-    console.error({ foundAsset });
-
-    if (!foundAsset) {
-      // If the requested asset wasn't found in the match's outputs then trigger
-      // a build
+    if (!foundAsset || this.shouldRebuild(req)) {
+      // If the requested asset wasn't found in the match's outputs, or
+      // a hard-refresh was detected, then trigger a build
       const entrypoint = match.src;
       const buildTimestamp: number = match.buildTimestamp || 0;
-      let buildPromise = this.inProgressBuilds.get(entrypoint);
+      const buildKey = `${entrypoint}-${requestPath}`;
+      let buildPromise = this.inProgressBuilds.get(buildKey);
       if (buildPromise) {
         // A build for `entrypoint` is already in progress, so don't trigger
         // another rebuild for this request - just wait on the existing one.
@@ -495,13 +486,13 @@ export default class DevServer {
             req.url
           }" (${requestPath})`
         );
-        buildPromise = executeBuild(nowJson, this, match, requestPath);
-        this.inProgressBuilds.set(entrypoint, buildPromise);
+        buildPromise = executeBuild(nowJson, this, files, match, requestPath);
+        this.inProgressBuilds.set(buildKey, buildPromise);
       }
       try {
         await buildPromise;
       } finally {
-        this.inProgressBuilds.delete(entrypoint);
+        this.inProgressBuilds.delete(buildKey);
       }
 
       // Since the `asset` was re-built, resolve it again to get the new asset
@@ -605,53 +596,6 @@ export default class DevServer {
         );
         return;
     }
-
-    //// If the user did a hard-refresh in the browser,
-    //// then re-run the build that generated this asset
-    //if (this.shouldRebuild(req) && asset.buildEntry) {
-    //  const entrypoint = relative(this.cwd, asset.buildEntry.fsPath);
-    //  const buildTimestamp: number = asset.buildTimestamp || 0;
-    //  let buildPromise = this.inProgressBuilds.get(entrypoint);
-    //  if (buildPromise) {
-    //    // A build for `entrypoint` is already in progress, so don't trigger
-    //    // another rebuild for this request - just wait on the existing one.
-    //    this.output.debug(
-    //      `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
-    //    );
-    //  } else if (Date.now() - buildTimestamp < ms('2s')) {
-    //    // If the built asset was created less than 2s ago, then don't trigger
-    //    // a rebuild. The purpose of this threshold is because once an HTML page
-    //    // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-    //    // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-    //    this.output.debug(
-    //      `Skipping rebuild for "${entrypoint}" (not older than 2s) for "${
-    //        req.method
-    //      } ${req.url}"`
-    //    );
-    //  } else {
-    //    this.output.debug(
-    //      `Rebuilding asset "${entrypoint}" for "${req.method} ${
-    //        req.url
-    //      }" (${assetKey})`
-    //    );
-    //    buildPromise = executeBuild(nowJson, this, asset, assetKey);
-    //    this.inProgressBuilds.set(entrypoint, buildPromise);
-    //  }
-    //  try {
-    //    await buildPromise;
-    //  } finally {
-    //    this.inProgressBuilds.delete(entrypoint);
-    //  }
-
-    //  // Since the `asset` was re-built, resolve it again to get the new asset
-    //  ({ asset, assetKey } = resolveDest(this.assets, dest));
-
-    //  if (!asset || !assetKey) {
-    //    await this.send404(req, res, nowRequestId);
-    //    return;
-    //  }
-    //}
-
   };
 
   hasFilesystem(dest: string): boolean {
@@ -665,6 +609,7 @@ export default class DevServer {
       return true;
     }
     */
+    // TODO: iterate over the `buildMatches` and call `findAsset()` on the outputs
     return false;
   }
 }
@@ -729,20 +674,23 @@ function hasOwnProperty(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-function findBuildMatch(
+async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
   requestPath: string
-): BuildMatch | null {
+): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
     const { builderWithPkg: { builder } } = match;
     if (typeof builder.shouldServe === 'function') {
-      if (builder.shouldServe({ entrypoint: match.src, files, requestPath })) {
+      if (await builder.shouldServe({ entrypoint: match.src, files, requestPath })) {
         return match;
       }
     } else {
       // If there's no `shouldServe()` function, then look up if there's
       // a matching build asset on the `match` that has already been built.
+      if (findAsset(match, requestPath)) {
+        return match;
+      }
     }
   }
   return null;

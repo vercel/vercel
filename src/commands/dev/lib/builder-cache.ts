@@ -85,6 +85,10 @@ export async function installBuilders(
   packages: string[],
   update: boolean = false
 ): Promise<void> {
+  if (packages.length === 1 && localBuilders.hasOwnProperty(packages[0])) {
+    // Static deployment, no bulders to install
+    return;
+  }
   const cacheDir = await builderDirPromise;
   const buildersPkg = join(cacheDir, 'package.json');
   const pkg = await readJSON(buildersPkg);
