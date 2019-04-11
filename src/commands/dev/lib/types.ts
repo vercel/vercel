@@ -53,24 +53,16 @@ export interface BuilderInputs {
   [path: string]: FileFsRef;
 }
 
-export interface BuiltAsset {
-  buildEntry?: FileFsRef;
-  buildMatch?: BuildMatch;
-}
-
-export type BuiltFileFsRef = FileFsRef & BuiltAsset;
-export type BuiltFileBlob = FileBlob & BuiltAsset;
-export type BuiltLambda = Lambda &
-  BuiltAsset & {
-    fn?: FunLambda;
-  };
-export type BuilderOutput = BuiltLambda | BuiltFileFsRef | BuiltFileBlob;
+export type BuiltLambda = Lambda & {
+  fn?: FunLambda;
+};
+export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;
 
 export interface BuilderOutputs {
   [path: string]: BuilderOutput;
 }
 
-export type CacheOutput = BuiltFileFsRef | BuiltFileBlob;
+export type CacheOutput = FileFsRef | FileBlob;
 
 export interface CacheOutputs {
   [path: string]: CacheOutput;
