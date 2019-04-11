@@ -431,7 +431,7 @@ export default class DevServer {
       headers = {},
       uri_args,
       matched_route
-    } = devRouter(req.url, nowJson.routes, this);
+    } = await devRouter(req.url, nowJson.routes, this, files);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -598,18 +598,14 @@ export default class DevServer {
     }
   };
 
-  hasFilesystem(dest: string): boolean {
-    /*
-    const { subscription } = resolveSubscription(this.subscriptions, dest);
-    if (subscription) {
+  async hasFilesystem(
+    files: BuilderInputs,
+    dest: string
+  ): Promise<boolean> {
+    const requestPath = dest.replace(/^\//, '');
+    if (await findBuildMatch(this.buildMatches, files, requestPath)) {
       return true;
     }
-    const { asset } = resolveDest(this.assets, dest);
-    if (asset) {
-      return true;
-    }
-    */
-    // TODO: iterate over the `buildMatches` and call `findAsset()` on the outputs
     return false;
   }
 }
