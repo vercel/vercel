@@ -86,7 +86,7 @@ export async function installBuilders(
   update: boolean = false
 ): Promise<void> {
   if (packages.length === 1 && Object.hasOwnProperty.call(localBuilders, packages[0])) {
-    // Static deployment, no bulders to install
+    // Static deployment, no builders to install
     return;
   }
   const cacheDir = await builderDirPromise;
