@@ -4,9 +4,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
-import { inspect } from 'util';
 import listen from 'async-listen';
-import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -18,6 +16,7 @@ import { Output } from '../../../util/output';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
+import defaultShouldServe from './default-should-serve';
 import { installBuilders } from './builder-cache';
 import {
   executeBuild,
@@ -593,7 +592,6 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-
     }
   };
 
@@ -675,15 +673,11 @@ async function findBuildMatch(
     const {
       builderWithPkg: { builder }
     } = match;
-    if (typeof builder.shouldServe === 'function') {
-      if (
-        await builder.shouldServe({ entrypoint: match.src, files, requestPath })
-      ) {
-        return match;
-      }
-    } else if (findAsset(match, requestPath)) {
-      // If there's no `shouldServe()` function, then look up if there's
-      // a matching build asset on the `match` that has already been built.
+    const shouldServe =
+      typeof builder.shouldServe === 'function'
+        ? builder.shouldServe
+        : defaultShouldServe;
+    if (shouldServe({ requestPath, entrypoint: match.src, files })) {
       return match;
     }
   }
