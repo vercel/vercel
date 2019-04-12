@@ -7,7 +7,8 @@ export default function shouldServe({
   files,
   requestPath
 }: ShouldServeParams): boolean {
-  requestPath = requestPath.replace(/\/$/, '');
+  requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility
 
   if (entrypoint === requestPath) {
     return true;
