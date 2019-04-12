@@ -51,6 +51,7 @@ export default class DevServer {
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
 
+  private cachedNowJson: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
@@ -65,6 +66,7 @@ export default class DevServer {
     this.buildEnv = {};
     this.files = {};
 
+    this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
     this.stopping = false;
     this.buildMatches = new Map();
@@ -88,12 +90,22 @@ export default class DevServer {
         await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
       }
     }
+    console.log('changed', filesChanged);
 
-    // TODO: update the build matches
+    if (filesChanged.has('now.json')) {
+      // The `now.json` file was changed, so invalidate the in-memory copy
+      this.output.debug('Invalidating cached `now.json`');
+      this.cachedNowJson = null;
+    }
+
+    // Update the build matches in case an entrypoint was created or deleted
+    const nowJson = await this.getNowJson();
+    if (nowJson) {
+      await this.updateBuildMatches(nowJson);
+    }
 
     // TODO: trigger rebuilds of any existing builds that are dependant
     // on one of the files that has changed.
-    console.log('changed', filesChanged);
   }
 
   async handleFileCreated(event: nsfw.CreatedEvent, changed: Set<string>): Promise<void> {
@@ -173,8 +185,11 @@ export default class DevServer {
   }
 
   async getNowJson(): Promise<NowConfig | null> {
-    // TODO: use the file watcher to only invalidate this `nowJson`
-    // config once a change to the `now.json` file occurs
+    if (this.cachedNowJson) {
+      return this.cachedNowJson;
+    }
+
+    this.output.debug('Reading "now.json" file');
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
@@ -182,6 +197,7 @@ export default class DevServer {
         await fs.readFile(nowJsonPath, 'utf8')
       );
       this.validateNowConfig(config);
+      this.cachedNowJson = config;
       return config;
     } catch (err) {
       if (err.code !== 'ENOENT') {
