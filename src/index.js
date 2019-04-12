@@ -473,7 +473,7 @@ const main = async argv_ => {
     output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
   }
 
-  if (typeof scope === 'string' && targetCommand !== 'login') {
+  if (typeof scope === 'string' && targetCommand !== 'login' && !(targetCommand === 'teams' && argv._.slice(-1)[0] !== 'invite' && argv._.slice(-2)[0] !== 'invite')) {
     const { authConfig: { token } } = ctx;
     const client = new Client({ apiUrl, token });
 
