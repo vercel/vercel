@@ -671,13 +671,15 @@ async function findBuildMatch(
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
     const {
+      src,
+      config,
       builderWithPkg: { builder }
     } = match;
     const shouldServe =
       typeof builder.shouldServe === 'function'
         ? builder.shouldServe
         : defaultShouldServe;
-    if (shouldServe({ requestPath, entrypoint: match.src, files })) {
+    if (shouldServe({ requestPath, entrypoint: src, files, config })) {
       return match;
     }
   }
