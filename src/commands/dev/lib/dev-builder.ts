@@ -202,6 +202,8 @@ export async function getBuildMatches(
       // of Now deployments.
       src = src.substring(1);
     }
+
+    // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const entries = Object.values(await collectProjectFiles(src, cwd));
 
     for (const fileRef of entries) {

@@ -1,6 +1,7 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
+import nsfw from 'nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -10,6 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { lookup as lookupMimeType } from 'mime-types';
 import { basename, dirname, extname, join, relative } from 'path';
@@ -47,18 +49,21 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public files: BuilderInputs;
 
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private originalEnv: EnvConfig;
+  private nsfw?: nsfw.Watcher;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.env = {};
     this.buildEnv = {};
+    this.files = {};
 
     this.server = http.createServer(this.devServerHandler);
     this.stopping = false;
@@ -67,11 +72,64 @@ export default class DevServer {
     this.originalEnv = { ...process.env };
   }
 
-  async getProjectFiles(): Promise<BuilderInputs> {
-    // TODO: use the file watcher to keep the files list up-to-date
-    // incrementally, instead of re-globbing the filesystem every time
-    const files = await collectProjectFiles('**', this.cwd);
-    return files;
+  async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
+    const filesChanged: Set<string> = new Set();
+
+    // First, update the `files` mapping of source files
+    for (const event of events) {
+      // TODO: for some reason the type inference isn't working, hence the casting
+      if (event.action === nsfw.actions.CREATED) {
+        await this.handleFileCreated(event as nsfw.CreatedEvent, filesChanged);
+      } else if (event.action === nsfw.actions.DELETED) {
+        this.handleFileDeleted(event as nsfw.DeletedEvent, filesChanged);
+      } else if (event.action === nsfw.actions.MODIFIED) {
+        await this.handleFileModified(event as nsfw.ModifiedEvent, filesChanged);
+      } else if (event.action === nsfw.actions.RENAMED) {
+        await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
+      }
+    }
+
+    // TODO: update the build matches
+
+    // TODO: trigger rebuilds of any existing builds that are dependant
+    // on one of the files that has changed.
+    console.log('changed', filesChanged);
+  }
+
+  async handleFileCreated(event: nsfw.CreatedEvent, changed: Set<string>): Promise<void> {
+    const fsPath = join(event.directory, event.file);
+    const name = relative(this.cwd, fsPath);
+    this.output.debug(`File created: ${name}`);
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+    changed.add(name);
+  }
+
+  handleFileDeleted(event: nsfw.DeletedEvent, changed: Set<string>): void {
+    const name = relative(this.cwd, join(event.directory, event.file));
+    this.output.debug(`File deleted: ${name}`);
+    delete this.files[name];
+    changed.add(name);
+  }
+
+  async handleFileModified(event: nsfw.ModifiedEvent, changed: Set<string>): Promise<void> {
+    const fsPath = join(event.directory, event.file);
+    const name = relative(this.cwd, fsPath);
+    this.output.debug(`File modified: ${name}`);
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+    changed.add(name);
+  }
+
+  async handleFileRenamed(event: nsfw.RenamedEvent, changed: Set<string>): Promise<void> {
+    const oldName = relative(this.cwd, join(event.directory, event.oldFile));
+    changed.add(oldName);
+
+    const fsPath = join(event.newDirectory, event.newFile);
+    const name = relative(this.cwd, fsPath);
+    changed.add(name);
+
+    this.output.debug(`File renamed: ${oldName} -> ${name}`);
+    delete this.files[oldName];
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
@@ -190,7 +248,12 @@ export default class DevServer {
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
-    let address: string | null = null;
+    this.files = await collectProjectFiles('**', this.cwd);
+
+    // Start the filesystem watcher
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this));
+    await this.nsfw.start();
+
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env'),
       this.getLocalEnv('.env.build')
@@ -215,14 +278,14 @@ export default class DevServer {
       );
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
-        const files = await this.getProjectFiles();
         for (const match of needsInitialBuild) {
-          await executeBuild(nowJson, this, files, match);
+          await executeBuild(nowJson, this, this.files, match);
         }
         this.output.success('Initial builds complete');
       }
     }
 
+    let address: string | null = null;
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, port);
@@ -420,7 +483,7 @@ export default class DevServer {
     nowRequestId: string,
     nowJson: NowConfig
   ) => {
-    const files = await this.getProjectFiles();
+    const files = this.files;
     await this.updateBuildMatches(nowJson);
 
     const {
