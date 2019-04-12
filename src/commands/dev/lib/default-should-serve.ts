@@ -1,4 +1,4 @@
-import { parse, basename, extname } from 'path';
+import { parse } from 'path';
 // @ts-ignore
 import { ShouldServeParams } from '@now/build-utils';
 
@@ -13,17 +13,10 @@ export default function shouldServe({
     return true;
   }
 
-  if (isIndex(entrypoint)) {
-    if (parse(entrypoint).dir === requestPath) {
-      return true;
-    }
+  const { dir, name } = parse(entrypoint);
+  if (name === 'index' && dir === requestPath) {
+    return true;
   }
 
   return false;
-}
-
-function isIndex(path: string): boolean {
-  const ext = extname(path);
-  const name = basename(path, ext);
-  return name === 'index';
 }
