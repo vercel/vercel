@@ -681,13 +681,11 @@ async function findBuildMatch(
       ) {
         return match;
       }
-    }
-    // If there's no `shouldServe()` function, then look up if there's
-    // a matching build asset on the `match` that has already been built.
-    if (findAsset(match, requestPath)) {
+    } else if (findAsset(match, requestPath)) {
+      // If there's no `shouldServe()` function, then look up if there's
+      // a matching build asset on the `match` that has already been built.
       return match;
     }
-
   }
   return null;
 }
@@ -699,17 +697,17 @@ function findAsset(
   if (!match.buildOutput) {
     return;
   }
-  let assetKey: string = requestPath;
+  let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
 
   // In the case of an index path, fall back to iterating over the
-  // builder outputs and doing an "is index" check until we find one.
+  // builder outputs and doing an "is index" check until a match is found.
   if (!asset) {
-    const requestDir = dirname(requestPath);
     for (const [name, a] of Object.entries(match.buildOutput)) {
-      if (dirname(name) === requestDir && isIndex(name)) {
+      if (isIndex(name) && dirnameWithoutDot(name) === assetKey) {
         asset = a;
         assetKey = name;
+        break;
       }
     }
   }
@@ -717,6 +715,14 @@ function findAsset(
   if (asset) {
     return { asset, assetKey };
   }
+}
+
+function dirnameWithoutDot(path: string): string {
+  let dir = dirname(path);
+  if (dir === '.') {
+    dir = '';
+  }
+  return dir;
 }
 
 function isIndex(path: string): boolean {
