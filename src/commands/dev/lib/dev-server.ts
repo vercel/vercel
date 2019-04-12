@@ -216,7 +216,7 @@ export default class DevServer {
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
         const files = await this.getProjectFiles();
-        for (const match of this.buildMatches.values()) {
+        for (const match of needsInitialBuild) {
           await executeBuild(nowJson, this, files, match);
         }
         this.output.success('Initial builds complete');
