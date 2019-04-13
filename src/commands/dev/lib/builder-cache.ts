@@ -20,7 +20,7 @@ import * as staticBuilder from './static-builder';
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     builder: Object.freeze(staticBuilder),
-    package: { version: 'built-in' }
+    package: { version: '' }
   }
 };
 
