@@ -368,6 +368,9 @@ export default class DevServer {
       }
     }
     ops.push(close(this.server));
+    if (this.nsfw) {
+      ops.push(this.nsfw.stop());
+    }
     await Promise.all(ops);
   }
 
