@@ -126,8 +126,8 @@ export default class DevServer {
 
     if (needsRebuild.size > 0) {
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
-      for (const [requestPath, match] of needsRebuild.values()) {
-        this.triggerBuild(match, requestPath).catch(err => {
+      for (const [result, [requestPath, match]] of needsRebuild) {
+        this.triggerBuild(match, requestPath, null, result).catch(err => {
           this.output.warn(`An error occured while rebuilding ${match.src}:`);
           console.error(err.stack);
         });
@@ -458,7 +458,8 @@ export default class DevServer {
   async triggerBuild(
     match: BuildMatch,
     requestPath: string | null,
-    req?: http.IncomingMessage
+    req: http.IncomingMessage | null,
+    previousBuildResult?: BuildResult
   ) {
     // If the requested asset wasn't found in the match's outputs, or
     // a hard-refresh was detected, then trigger a build
@@ -481,6 +482,15 @@ export default class DevServer {
     } else {
       const nowJson = await this.getNowJson();
       if (nowJson) {
+        if (previousBuildResult) {
+          // Tear down any `output` assets from a previous build, so that they
+          // are not available to be served while the rebuild is in progress.
+          for (const [name, asset] of Object.entries(previousBuildResult.output)) {
+            this.output.debug(`Removing asset "${name}"`);
+            delete match.buildOutput[name];
+            // TODO: shut down Lambda instance
+          }
+        }
         let msg = `Building asset "${buildKey}"`;
         if (req) msg += ` for "${req.method} ${req.url}"`;
         this.output.debug(msg);

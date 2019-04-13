@@ -144,7 +144,6 @@ export async function executeBuild(
   }
 
   for (const asset of Object.values(outputs)) {
-
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
