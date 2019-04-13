@@ -10,7 +10,7 @@ declare namespace nsfw {
     stop(): Promise<void>;
   }
   export interface BaseEvent {
-    action: number;
+    action: nsfw.actions;
     directory: string;
   };
   export interface CreatedEvent extends BaseEvent {

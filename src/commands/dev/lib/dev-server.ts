@@ -86,7 +86,10 @@ export default class DevServer {
       } else if (event.action === nsfw.actions.DELETED) {
         this.handleFileDeleted(event as nsfw.DeletedEvent, filesChanged);
       } else if (event.action === nsfw.actions.MODIFIED) {
-        await this.handleFileModified(event as nsfw.ModifiedEvent, filesChanged);
+        await this.handleFileModified(
+          event as nsfw.ModifiedEvent,
+          filesChanged
+        );
       } else if (event.action === nsfw.actions.RENAMED) {
         await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
       }
@@ -106,7 +109,10 @@ export default class DevServer {
 
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
-    const needsRebuild: Map<BuildResult, [string | null, BuildMatch]> = new Map();
+    const needsRebuild: Map<
+      BuildResult,
+      [string | null, BuildMatch]
+    > = new Map();
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -135,7 +141,10 @@ export default class DevServer {
     }
   }
 
-  async handleFileCreated(event: nsfw.CreatedEvent, changed: Set<string>): Promise<void> {
+  async handleFileCreated(
+    event: nsfw.CreatedEvent,
+    changed: Set<string>
+  ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     this.output.debug(`File created: ${name}`);
@@ -150,7 +159,10 @@ export default class DevServer {
     changed.add(name);
   }
 
-  async handleFileModified(event: nsfw.ModifiedEvent, changed: Set<string>): Promise<void> {
+  async handleFileModified(
+    event: nsfw.ModifiedEvent,
+    changed: Set<string>
+  ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     this.output.debug(`File modified: ${name}`);
@@ -158,7 +170,10 @@ export default class DevServer {
     changed.add(name);
   }
 
-  async handleFileRenamed(event: nsfw.RenamedEvent, changed: Set<string>): Promise<void> {
+  async handleFileRenamed(
+    event: nsfw.RenamedEvent,
+    changed: Set<string>
+  ): Promise<void> {
     const oldName = relative(this.cwd, join(event.directory, event.oldFile));
     changed.add(oldName);
 
@@ -488,7 +503,9 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name, asset] of Object.entries(previousBuildResult.output)) {
+          for (const [name, asset] of Object.entries(
+            previousBuildResult.output
+          )) {
             this.output.debug(`Removing asset "${name}"`);
             delete match.buildOutput[name];
             // TODO: shut down Lambda instance
@@ -497,10 +514,18 @@ export default class DevServer {
         let msg = `Building asset "${buildKey}"`;
         if (req) msg += ` for "${req.method} ${req.url}"`;
         this.output.debug(msg);
-        buildPromise = executeBuild(nowJson, this, this.files, match, requestPath);
+        buildPromise = executeBuild(
+          nowJson,
+          this,
+          this.files,
+          match,
+          requestPath
+        );
         this.inProgressBuilds.set(buildKey, buildPromise);
       } else {
-        this.output.warn('Skipping build because `now.json` could not be loaded');
+        this.output.warn(
+          'Skipping build because `now.json` could not be loaded'
+        );
       }
     }
     try {
@@ -579,7 +604,6 @@ export default class DevServer {
     nowRequestId: string,
     nowJson: NowConfig
   ) => {
-    const files = this.files;
     await this.updateBuildMatches(nowJson);
 
     const {
@@ -588,7 +612,7 @@ export default class DevServer {
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, nowJson.routes, this, files);
+    } = await devRouter(req.url, nowJson.routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -607,7 +631,11 @@ export default class DevServer {
     }
 
     const requestPath = dest.replace(/^\//, '');
-    const match = await findBuildMatch(this.buildMatches, files, requestPath);
+    const match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      requestPath
+    );
     if (!match) {
       await this.send404(req, res, nowRequestId);
       return;
@@ -717,13 +745,12 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-
     }
   };
 
-  async hasFilesystem(files: BuilderInputs, dest: string): Promise<boolean> {
+  async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
-    if (await findBuildMatch(this.buildMatches, files, requestPath)) {
+    if (await findBuildMatch(this.buildMatches, this.files, requestPath)) {
       return true;
     }
     return false;
@@ -797,12 +824,15 @@ async function findBuildMatch(
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
     const {
-      builderWithPkg: { builder }
+      builderWithPkg: { builder, package: pkg }
     } = match;
     if (typeof builder.shouldServe === 'function') {
-      if (
-        await builder.shouldServe({ entrypoint: match.src, files, requestPath })
-      ) {
+      const shouldServe = await builder.shouldServe({
+        entrypoint: match.src,
+        files,
+        requestPath
+      });
+      if (shouldServe) {
         return match;
       }
     } else if (findAsset(match, requestPath)) {
