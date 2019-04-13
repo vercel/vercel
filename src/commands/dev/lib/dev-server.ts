@@ -36,6 +36,7 @@ import {
   DevServerOptions,
   BuildConfig,
   BuildMatch,
+  BuildResult,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
@@ -90,7 +91,6 @@ export default class DevServer {
         await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
       }
     }
-    console.log('changed', filesChanged);
 
     if (filesChanged.has('now.json')) {
       // The `now.json` file was changed, so invalidate the in-memory copy
@@ -104,8 +104,35 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
     }
 
-    // TODO: trigger rebuilds of any existing builds that are dependant
-    // on one of the files that has changed.
+    // Trigger rebuilds of any existing builds that are dependent
+    // on one of the files that has changed
+    const needsRebuild: Map<BuildResult, [string | null, BuildMatch]> = new Map();
+    for (const match of this.buildMatches.values()) {
+      for (const [requestPath, result] of match.buildResults) {
+        // If the `BuildResult` is already queued for a re-build,
+        // then we can skip subsequent lookups
+        if (needsRebuild.has(result)) continue;
+
+        if (Array.isArray(result.watch)) {
+          for (const fileName of result.watch) {
+            if (filesChanged.has(fileName)) {
+              needsRebuild.set(result, [requestPath, match]);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (needsRebuild.size > 0) {
+      this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
+      for (const [requestPath, match] of needsRebuild.values()) {
+        this.triggerBuild(match, requestPath).catch(err => {
+          this.output.warn(`An error occured while rebuilding ${match.src}:`);
+          console.error(err.stack);
+        });
+      }
+    }
   }
 
   async handleFileCreated(event: nsfw.CreatedEvent, changed: Set<string>): Promise<void> {
@@ -189,7 +216,7 @@ export default class DevServer {
       return this.cachedNowJson;
     }
 
-    this.output.debug('Reading "now.json" file');
+    this.output.debug('Reading `now.json` file');
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
@@ -357,8 +384,6 @@ export default class DevServer {
     nowRequestId: string
   ): Promise<void> {
     return this.sendError(
-      // TODO: use the file watcher to keep the files list up-to-date
-      // incrementally
       req,
       res,
       nowRequestId,
@@ -428,6 +453,48 @@ export default class DevServer {
       'x-now-log-id': nowRequestId.split('-')[2],
       'x-zeit-co-forwarded-for': ip
     };
+  }
+
+  async triggerBuild(
+    match: BuildMatch,
+    requestPath: string | null,
+    req?: http.IncomingMessage
+  ) {
+    // If the requested asset wasn't found in the match's outputs, or
+    // a hard-refresh was detected, then trigger a build
+    const buildKey = `${match.src}-${requestPath}`;
+    let buildPromise = this.inProgressBuilds.get(buildKey);
+    if (buildPromise) {
+      // A build for `buildKey` is already in progress, so don't trigger
+      // another rebuild for this request - just wait on the existing one.
+      let msg = `De-duping build "${buildKey}"`;
+      if (req) msg += ` for "${req.method} ${req.url}"`;
+      this.output.debug(msg);
+    } else if (Date.now() - match.buildTimestamp < ms('2s')) {
+      // If the built asset was created less than 2s ago, then don't trigger
+      // a rebuild. The purpose of this threshold is because once an HTML page
+      // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
+      // with a `no-cache` header, so this avoids *two* rebuilds for that case.
+      let msg = `Skipping build for "${buildKey}" (not older than 2s)`;
+      if (req) msg += ` for "${req.method} ${req.url}"`;
+      this.output.debug(msg);
+    } else {
+      const nowJson = await this.getNowJson();
+      if (nowJson) {
+        let msg = `Building asset "${buildKey}"`;
+        if (req) msg += ` for "${req.method} ${req.url}"`;
+        this.output.debug(msg);
+        buildPromise = executeBuild(nowJson, this, this.files, match, requestPath);
+        this.inProgressBuilds.set(buildKey, buildPromise);
+      } else {
+        this.output.warn('Skipping build because `now.json` could not be loaded');
+      }
+    }
+    try {
+      await buildPromise;
+    } finally {
+      this.inProgressBuilds.delete(buildKey);
+    }
   }
 
   /**
@@ -535,42 +602,7 @@ export default class DevServer {
 
     let foundAsset = findAsset(match, requestPath);
     if (!foundAsset || this.shouldRebuild(req)) {
-      // If the requested asset wasn't found in the match's outputs, or
-      // a hard-refresh was detected, then trigger a build
-      const entrypoint = match.src;
-      const buildTimestamp: number = match.buildTimestamp || 0;
-      const buildKey = `${entrypoint}-${requestPath}`;
-      let buildPromise = this.inProgressBuilds.get(buildKey);
-      if (buildPromise) {
-        // A build for `entrypoint` is already in progress, so don't trigger
-        // another rebuild for this request - just wait on the existing one.
-        this.output.debug(
-          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
-        );
-      } else if (Date.now() - buildTimestamp < ms('2s')) {
-        // If the built asset was created less than 2s ago, then don't trigger
-        // a rebuild. The purpose of this threshold is because once an HTML page
-        // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-        // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-        this.output.debug(
-          `Skipping build for "${entrypoint}" (not older than 2s) for "${
-            req.method
-          } ${req.url}"`
-        );
-      } else {
-        this.output.debug(
-          `Building asset "${entrypoint}" for "${req.method} ${
-            req.url
-          }" (${requestPath})`
-        );
-        buildPromise = executeBuild(nowJson, this, files, match, requestPath);
-        this.inProgressBuilds.set(buildKey, buildPromise);
-      }
-      try {
-        await buildPromise;
-      } finally {
-        this.inProgressBuilds.delete(buildKey);
-      }
+      await this.triggerBuild(match, requestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
       foundAsset = findAsset(match, requestPath);
