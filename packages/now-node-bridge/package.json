@@ -1,6 +1,6 @@
 {
   "name": "@now/node-bridge",
-  "version": "1.0.2-canary.1",
+  "version": "1.0.2-canary.2",
   "license": "MIT",
   "main": "./index.js",
   "repository": {

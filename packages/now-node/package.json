@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "0.5.4-canary.2",
+  "version": "0.5.4-canary.3",
   "license": "MIT",
   "main": "./dist/index",
   "repository": {
@@ -9,7 +9,7 @@
     "directory": "packages/now-node"
   },
   "dependencies": {
-    "@now/node-bridge": "^1.0.2-canary.0",
+    "@now/node-bridge": "^1.0.2-canary.2",
     "@zeit/ncc": "0.17.3",
     "fs-extra": "7.0.1"
   },
