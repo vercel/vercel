@@ -21,7 +21,7 @@ async function test3({ deploymentUrl, fetch, randomness }) {
   const resp = await fetch(`https://${deploymentUrl}/test3.js`);
   assert.equal(resp.status, 401);
   assert.equal(await resp.text(), bodyMustBe);
-  assert.equal(resp.headers.get('content-length'), null);
+  assert.equal(resp.headers.get('content-length'), bodyMustBe.length);
 }
 
 module.exports = async ({ deploymentUrl, fetch, randomness }) => {
