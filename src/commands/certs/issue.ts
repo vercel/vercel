@@ -98,9 +98,7 @@ export default async function issue(
       );
     } catch (err) {
       if (err.code === 'ENOENT') {
-        output.error(
-          `The specified file "${err.path}" doesn't exist.`
-        );
+        output.error(`The specified file "${err.path}" doesn't exist.`);
         return 1;
       }
       throw err;
@@ -237,7 +235,11 @@ export default async function issue(
     );
     return 1;
   }
-  if (cert instanceof ERRORS.DomainNotFound) {
+  if (
+    cert instanceof ERRORS.DomainNotFound ||
+    cert instanceof ERRORS.DNSError ||
+    cert instanceof ERRORS.UnauthorizedRequestError
+  ) {
     output.error(cert.message);
     return 1;
   }
