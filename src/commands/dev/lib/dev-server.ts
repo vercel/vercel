@@ -548,6 +548,7 @@ export default class DevServer {
         const body = await rawBody(req);
         const payload: InvokePayload = {
           method: req.method || 'GET',
+          host: req.headers.host,
           path,
           headers: this.getNowProxyHeaders(req, nowRequestId),
           encoding: 'base64',
