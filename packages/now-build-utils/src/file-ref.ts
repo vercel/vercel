@@ -8,6 +8,7 @@ import { File } from './types';
 interface FileRefOptions {
   mode?: number;
   digest: string;
+  mutable?: boolean;
 }
 
 const semaToDownloadFromS3 = new Sema(5);
@@ -25,13 +26,16 @@ export default class FileRef implements File {
   public type: 'FileRef';
   public mode: number;
   public digest: string;
+  public mutable: boolean;
 
-  constructor({ mode = 0o100644, digest }: FileRefOptions) {
+  constructor({ mode = 0o100644, digest, mutable = false }: FileRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
+    assert(typeof mutable === 'boolean');
     this.type = 'FileRef';
     this.mode = mode;
     this.digest = digest;
+    this.mutable = mutable;
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
@@ -39,8 +43,9 @@ export default class FileRef implements File {
     // sha:24be087eef9fac01d61b30a725c1a10d7b45a256
     const digestParts = this.digest.split(':');
     if (digestParts[0] === 'sha') {
-      // url = `https://s3.amazonaws.com/now-files/${digestParts[1]}`;
-      url = `https://dmmcy0pwk6bqi.cloudfront.net/${digestParts[1]}`;
+      url = this.mutable
+        ? `https://s3.amazonaws.com/now-files/${digestParts[1]}`
+        : `https://dmmcy0pwk6bqi.cloudfront.net/${digestParts[1]}`;
     } else {
       throw new Error('Expected digest to be sha');
     }
