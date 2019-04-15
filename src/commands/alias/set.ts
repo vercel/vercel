@@ -207,13 +207,12 @@ export default async function set(
     );
     if (handleResult === 1) {
       return 1;
-    } else {
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
-          `https://${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
-      );
     }
+    console.log(
+      `${chalk.cyan('> Success!')} ${chalk.bold(
+        `https://${handleResult.alias}`
+      )} now points to https://${deployment.url} ${setStamp()}`
+    );
   }
 
   return 0;
@@ -571,6 +570,7 @@ function handleCreateAliasError<T>(
   }
 
   if (
+    error instanceof ERRORS.ConflictingCAARecord ||
     error instanceof ERRORS.DomainPermissionDenied ||
     error instanceof ERRORS.DeploymentFailedAliasImpossible ||
     error instanceof ERRORS.InvalidDeploymentId ||

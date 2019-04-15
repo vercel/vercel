@@ -160,15 +160,13 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
         `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory. You may use ${cmd('--force')} or ${cmd('--f')} to override it.`
       );
     }
-  } else {
-    if (dest !== cwd) {
+  } else if (dest !== cwd) {
       try {
         fs.mkdirSync(dest);
       } catch (e) {
         throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
       }
     }
-  }
 
   return dest;
 }

@@ -1,8 +1,8 @@
+import { stringify } from 'querystring';
 import { Cert } from '../../types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
-import { stringify } from 'querystring';
 
 type Response = {
   certs: Cert[];

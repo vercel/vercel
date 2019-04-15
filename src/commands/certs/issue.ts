@@ -187,6 +187,10 @@ export default async function issue(
     }
     return 1;
   }
+  if (cert instanceof ERRORS.ConflictingCAARecord) {
+    output.error(cert.message);
+    return 1;
+  }
   if (cert instanceof ERRORS.TooManyRequests) {
     output.error(
       `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(

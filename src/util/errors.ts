@@ -25,6 +25,7 @@ export class SchemaValidationFailed extends NowError<
   }
 }
 
+/* eslint-disable-next-line @typescript-eslint/no-empty-interface */
 interface InvalidAllForScaleMeta {}
 
 export class InvalidAllForScale extends NowError<

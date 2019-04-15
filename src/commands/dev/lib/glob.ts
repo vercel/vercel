@@ -107,6 +107,7 @@ export async function glob(
       ? (val: string): boolean => ignore.ignores(val)
       : () => false;
     delete opts.ignore;
+    /* eslint-disable no-new */
     // @ts-ignore
     new GlobIgnore(
       pattern,
@@ -154,14 +155,14 @@ export async function globBuilderInputs(
 
   for (const relativePath of files) {
     const fsPath = join(options.cwd || '/', relativePath);
-    let stat: Stats = options.statCache![fsPath] as Stats;
+    let stat: Stats = options.statCache[fsPath] as Stats;
     if (!stat) {
       throw new Error(
         `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
       );
     }
     if (stat.isFile()) {
-      const isSymlink = options.symlinks![fsPath];
+      const isSymlink = options.symlinks[fsPath];
       if (isSymlink) {
         stat = await lstat(fsPath);
       }

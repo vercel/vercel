@@ -1,7 +1,7 @@
+import chalk from 'chalk';
 import { DeploymentScale } from '../../types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
-import chalk from 'chalk';
 import Client from '../client';
 import joinWords from '../output/join-words';
 import wait from '../output/wait';

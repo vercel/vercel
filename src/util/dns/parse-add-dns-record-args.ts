@@ -1,4 +1,4 @@
-import { DNSRecordData } from "../../types";
+import { DNSRecordData } from '../../types';
 
 export default function parseAddArgs(
   args: string[]
