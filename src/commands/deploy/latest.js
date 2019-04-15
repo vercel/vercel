@@ -364,7 +364,8 @@ export default async function main(
       now,
       contextName,
       paths,
-      createArgs
+      createArgs,
+      ctx
     );
 
     if (

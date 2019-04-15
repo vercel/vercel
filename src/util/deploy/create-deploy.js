@@ -1,4 +1,6 @@
+import Client from '../client';
 import generateCertForDeploy from './generate-cert-for-deploy';
+import purchaseDomainIfAvailable from '../domains/purchase-domain-if-available';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 
@@ -7,7 +9,8 @@ export default async function createDeploy(
   now,
   contextName,
   paths,
-  createArgs
+  createArgs,
+  ctx = null
 ) {
   try {
     return await now.create(paths, createArgs);
@@ -15,6 +18,26 @@ export default async function createDeploy(
     // Means that the domain used as a suffix no longer exists
     if (error.code === 'domain_missing') {
       return new ERRORS_TS.DomainNotFound(error.value);
+    }
+
+    if (error.code === 'domain_not_found' && error.domain && ctx) {
+      const client = new Client({
+        apiUrl: ctx.apiUrl,
+        token: ctx.authConfig.token,
+        currentTeam: ctx.config.currentTeam
+      });
+
+      const purchase = await purchaseDomainIfAvailable(output, client, error.domain, contextName);
+
+      if (purchase === true) {
+        return createDeploy(output, now, contextName, paths, createArgs, ctx);
+      }
+
+      if (purchase instanceof Error) {
+        return purchase;
+      }
+
+      return new ERRORS_TS.DomainNotFound(error.domain);
     }
 
     // This error occures when a domain used in the `alias`
