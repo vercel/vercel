@@ -3,7 +3,7 @@ set -euo pipefail
 
 NCC_OPTS=""
 if [ -z "${DEV-}" ]; then
-  NCC_OPTS="-m -s"
+  NCC_OPTS="-s"
 fi
 
 # Do the initial `ncc` build
