@@ -183,6 +183,7 @@
     "qr-image": "3.2.0",
     "raw-body": "2.3.3",
     "read-pkg": "2.0.0",
+    "rx-lite-aggregates": "4.0.8",
     "semver": "5.5.0",
     "serve-handler": "5.0.7",
     "sinon": "4.4.2",
