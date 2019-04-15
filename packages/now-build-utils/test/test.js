@@ -1,8 +1,11 @@
 /* global beforeAll, expect, it, jest */
 const path = require('path');
 const fs = require('fs-extra');
+// eslint-disable-next-line import/no-extraneous-dependencies
+const execa = require('execa');
 const assert = require('assert');
 const { glob, download } = require('../');
+const { createZip } = require('../dist/lambda');
 
 const {
   packAndDeploy,
@@ -30,6 +33,28 @@ it('should re-create symlinks properly', async () => {
 
   const files2 = await download(files, outDir);
   assert.equal(Object.keys(files2).length, 2);
+
+  const [linkStat, aStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+  ]);
+  assert(linkStat.isSymbolicLink());
+  assert(aStat.isFile());
+});
+
+it('should create zip files with symlinks properly', async () => {
+  const files = await glob('**', path.join(__dirname, 'symlinks'));
+  assert.equal(Object.keys(files).length, 2);
+
+  const outFile = path.join(__dirname, 'symlinks.zip');
+  await fs.remove(outFile);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+  await fs.mkdirp(outDir);
+
+  await fs.writeFile(outFile, await createZip(files));
+  await execa('unzip', [outFile], { cwd: outDir });
 
   const [linkStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
