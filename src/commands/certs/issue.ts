@@ -248,9 +248,9 @@ export default async function issue(
   }
   if (cert instanceof ERRORS.CertsDNSError) {
     output.error(
-      `We could not solve the ${cert.meta.type} challenge for cns ${
-        cert.meta.domain
-      }.`
+      `We could not solve the dns-01 challenge for cns ${cert.meta.cns.join(
+        ', '
+      )}.`
     );
     output.log(
       `The certificate provider could not resolve the required DNS record queries.`
