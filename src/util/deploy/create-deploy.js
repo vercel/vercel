@@ -33,7 +33,10 @@ export default async function createDeploy(
         return createDeploy(output, now, contextName, paths, createArgs, ctx);
       }
 
-      if (purchase instanceof Error) {
+      if (
+          (purchase instanceof Error) &&
+          !(purchase instanceof ERRORS_TS.UserAborted)
+      ) {
         return purchase;
       }
 

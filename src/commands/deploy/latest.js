@@ -731,11 +731,7 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof DomainNotFound) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
-    );
+    output.error(error.message);
     return 1;
   }
   if (error instanceof DomainNotVerified) {
