@@ -574,10 +574,22 @@ function handleCreateAliasError<T>(
     error instanceof ERRORS.DomainPermissionDenied ||
     error instanceof ERRORS.DeploymentFailedAliasImpossible ||
     error instanceof ERRORS.InvalidDeploymentId ||
-    error instanceof ERRORS.CertsDNSError ||
     error instanceof ERRORS.UnauthorizedCertsRequestError
   ) {
     output.error(error.message);
+    return 1;
+  }
+
+  if (error instanceof ERRORS.CertsDNSError) {
+    output.error(
+      `We could not solve the ${error.meta.type} challenge for cns ${
+        error.meta.domain
+      }.`
+    );
+    output.log(
+      `The certificate provider could not resolve the required DNS record queries.`
+    );
+    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
   }
   return error;

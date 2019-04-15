@@ -68,14 +68,14 @@ export default async function createCertForCns(
       return new ERRORS.UnauthorizedCertsRequestError(
         error.response.detail,
         error.response.type,
-        cns
+        error.response.domain
       );
     }
     if (error.code === 'dns_error') {
       return new ERRORS.CertsDNSError(
         error.response.detail,
         error.response.type,
-        cns
+        error.response.domain
       );
     }
     throw error;
