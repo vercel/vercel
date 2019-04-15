@@ -1105,12 +1105,12 @@ export class UnauthorizedCertsRequestError extends NowError<
 
 export class CertsDNSError extends NowError<
   'CERTS_DNS_ERROR',
-  { detail: string; type: string; domain: string }
+  { detail: string; type: string; cns: string[] }
 > {
-  constructor(detail: string, type: string, domain: string) {
+  constructor(detail: string, cns: string[]) {
     super({
       code: 'CERTS_DNS_ERROR',
-      meta: { detail, type, domain },
+      meta: { detail, type: 'dns-01', cns },
       message:
         'There was a problem with a DNS query during identifier validation'
     });

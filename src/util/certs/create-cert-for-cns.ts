@@ -72,11 +72,7 @@ export default async function createCertForCns(
       );
     }
     if (error.code === 'dns_error') {
-      return new ERRORS.CertsDNSError(
-        error.response.detail,
-        error.response.type,
-        error.response.domain
-      );
+      return new ERRORS.CertsDNSError(error.detail, cns);
     }
     throw error;
   }

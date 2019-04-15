@@ -582,9 +582,7 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.CertsDNSError) {
     output.error(
-      `We could not solve the ${error.meta.type} challenge for cns ${
-        error.meta.domain
-      }.`
+      `We could not solve the dns-01 challenge for cns ${error.meta.cns}.`
     );
     output.log(
       `The certificate provider could not resolve the required DNS record queries.`
