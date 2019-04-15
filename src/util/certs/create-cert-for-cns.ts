@@ -64,6 +64,16 @@ export default async function createCertForCns(
     if (error.code === 'wildcard_not_allowed') {
       return new ERRORS.WildcardNotAllowed(error.domain);
     }
+    if (error.code === 'unauthorized_request_error') {
+      return new ERRORS.UnauthorizedCertsRequestError(
+        error.response.detail,
+        error.response.type,
+        error.response.domain
+      );
+    }
+    if (error.code === 'dns_error') {
+      return new ERRORS.CertsDNSError(error.detail, cns);
+    }
     throw error;
   }
 }

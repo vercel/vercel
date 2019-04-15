@@ -1089,3 +1089,30 @@ export class MissingDotenvVarsError extends NowError<
     });
   }
 }
+
+export class UnauthorizedCertsRequestError extends NowError<
+  'UNAUTHORIZED_CERTS_REQUEST_ERROR',
+  { detail: string; type: string; domain: string }
+> {
+  constructor(detail: string, type: string, domain: string) {
+    super({
+      code: 'UNAUTHORIZED_CERTS_REQUEST_ERROR',
+      meta: { detail, type, domain },
+      message: 'ACME request was unauthorized'
+    });
+  }
+}
+
+export class CertsDNSError extends NowError<
+  'CERTS_DNS_ERROR',
+  { detail: string; cns: string[] }
+> {
+  constructor(detail: string, cns: string[]) {
+    super({
+      code: 'CERTS_DNS_ERROR',
+      meta: { detail, cns },
+      message:
+        'There was a problem with a DNS query during identifier validation'
+    });
+  }
+}

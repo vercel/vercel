@@ -239,8 +239,23 @@ export default async function issue(
     );
     return 1;
   }
-  if (cert instanceof ERRORS.DomainNotFound) {
+  if (
+    cert instanceof ERRORS.DomainNotFound ||
+    cert instanceof ERRORS.UnauthorizedCertsRequestError
+  ) {
     output.error(cert.message);
+    return 1;
+  }
+  if (cert instanceof ERRORS.CertsDNSError) {
+    output.error(
+      `We could not solve the dns-01 challenge for cns ${cert.meta.cns.join(
+        ', '
+      )}.`
+    );
+    output.log(
+      `The certificate provider could not resolve the required DNS record queries.`
+    );
+    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
   }
 
