@@ -1,7 +1,9 @@
 declare function nsfw(
   dir: string,
   callback: nsfw.EventsCallback,
-  options?: nsfw.WatcherOptions
+  options?: nsfw.WatcherOptions,
+  errorCallback?: (errors: Error[]) => void,
+  modulePath?: string,
 ): Promise<nsfw.Watcher>;
 
 declare namespace nsfw {
@@ -45,6 +47,6 @@ declare namespace nsfw {
   };
 }
 
-declare module 'nsfw' {
+declare module '@zeit/nsfw' {
   export = nsfw;
 }

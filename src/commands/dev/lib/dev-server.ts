@@ -1,7 +1,7 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
-import nsfw from 'nsfw';
+import nsfw from '@zeit/nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -21,6 +21,7 @@ import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
 import { installBuilders } from './builder-cache';
+import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
   collectProjectFiles,
@@ -306,10 +307,15 @@ export default class DevServer {
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
+    // Retrieve the path of the native module
+    const modulePath = await getModuleForNSFW(this.output);
+
+    // Collect files to watch
     this.files = await collectProjectFiles('**', this.cwd);
 
     // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this));
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), undefined, undefined, modulePath);
+
     await this.nsfw.start();
 
     const [env, buildEnv] = await Promise.all([

@@ -11,7 +11,6 @@ import { FileFsRef, download } from '@now/build-utils';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
-import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { installBuilders, getBuilder } from './builder-cache';
