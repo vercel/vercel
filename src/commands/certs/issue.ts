@@ -241,8 +241,8 @@ export default async function issue(
   }
   if (
     cert instanceof ERRORS.DomainNotFound ||
-    cert instanceof ERRORS.DNSError ||
-    cert instanceof ERRORS.UnauthorizedRequestError
+    cert instanceof ERRORS.CertsDNSError ||
+    cert instanceof ERRORS.UnauthorizedCertsRequestError
   ) {
     output.error(cert.message);
     return 1;

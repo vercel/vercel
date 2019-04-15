@@ -574,8 +574,8 @@ function handleCreateAliasError<T>(
     error instanceof ERRORS.DomainPermissionDenied ||
     error instanceof ERRORS.DeploymentFailedAliasImpossible ||
     error instanceof ERRORS.InvalidDeploymentId ||
-    error instanceof ERRORS.DNSError ||
-    error instanceof ERRORS.UnauthorizedRequestError
+    error instanceof ERRORS.CertsDNSError ||
+    error instanceof ERRORS.UnauthorizedCertsRequestError
   ) {
     output.error(error.message);
     return 1;
