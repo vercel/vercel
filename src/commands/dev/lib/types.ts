@@ -19,10 +19,10 @@ export interface BuildConfig {
 
 export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
-  buildOutput?: BuilderOutputs;
-  buildResult?: BuildResult;
+  buildOutput: BuilderOutputs;
+  buildResults: Map<string | null, BuildResult>;
   builderCachePromise?: Promise<CacheOutputs>;
-  buildTimestamp?: number;
+  buildTimestamp: number;
 }
 
 export interface RouteConfig {

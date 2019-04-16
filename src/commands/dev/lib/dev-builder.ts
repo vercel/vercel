@@ -11,7 +11,6 @@ import { FileFsRef, download } from '@now/build-utils';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
-import wait from '../../../util/output/wait';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { installBuilders, getBuilder } from './builder-cache';
@@ -74,9 +73,6 @@ export async function executeBuild(
   match: BuildMatch,
   requestPath: string | null = null
 ): Promise<void> {
-  if (!match.buildOutput) {
-    match.buildOutput = {};
-  }
   const {
     builderWithPkg: { builder, package: pkg }
   } = match;
@@ -106,18 +102,20 @@ export async function executeBuild(
   let result: BuildResult;
   try {
     devServer.applyBuildEnv(nowJson);
-    let result = await builder.build({
+    const r = await builder.build({
       files,
       entrypoint,
       workPath,
       config,
       meta: { isDev: true, requestPath }
     });
-    if (!result.output) {
-      // `BuilderOutputs` map was returned
-      result = { output: result as BuilderOutputs };
+    if (r.output) {
+      result = r as BuildResult;
+    } else {
+      // `BuilderOutputs` map was returned (Now Builder v1 behavior)
+      result = { output: r as BuilderOutputs };
     }
-    outputs = result.output as BuilderOutputs;
+    outputs = result.output;
 
     if (typeof builder.prepareCache === 'function') {
       const cachePath = getWorkPath();
@@ -185,6 +183,7 @@ export async function executeBuild(
     })
   );
 
+  match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, outputs);
 }
 
@@ -202,12 +201,21 @@ export async function getBuildMatches(
       // of Now deployments.
       src = src.substring(1);
     }
+
+    // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const entries = Object.values(await collectProjectFiles(src, cwd));
 
     for (const fileRef of entries) {
       src = relative(cwd, fileRef.fsPath);
       const builderWithPkg = await getBuilder(use);
-      matches.push({ ...buildConfig, src, builderWithPkg });
+      matches.push({
+        ...buildConfig,
+        src,
+        builderWithPkg,
+        buildOutput: {},
+        buildResults: new Map(),
+        buildTimestamp: 0
+      });
     }
   }
   return matches;

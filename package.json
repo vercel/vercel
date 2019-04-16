@@ -62,10 +62,10 @@
       "dist/runtimes"
     ],
     "targets": [
-      "node10-alpine-x64",
-      "node10-linux-x64",
-      "node10-macos-x64",
-      "node10-win-x64"
+      "node10.4.1-alpine-x64",
+      "node10.4.1-linux-x64",
+      "node10.4.1-macos-x64",
+      "node10.4.1-win-x64"
     ]
   },
   "ava": {
@@ -115,6 +115,7 @@
     "@zeit/fun": "0.6.0",
     "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.17.4",
+    "@zeit/nsfw": "2.0.1",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
@@ -178,10 +179,12 @@
     "prettier": "1.16.2",
     "printf": "0.2.5",
     "progress": "2.0.3",
+    "promisepipe": "3.0.0",
     "psl": "1.1.31",
     "qr-image": "3.2.0",
     "raw-body": "2.3.3",
     "read-pkg": "2.0.0",
+    "rx-lite-aggregates": "4.0.8",
     "semver": "5.5.0",
     "serve-handler": "5.0.7",
     "sinon": "4.4.2",
