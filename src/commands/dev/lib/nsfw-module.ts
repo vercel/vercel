@@ -6,7 +6,7 @@ import { spawnSync } from 'child_process';
 import { devDependencies } from '../../../../package.json';
 import { Output } from '../../../util/output/create-output';
 
-const platformToName: any = {
+const platformToName: { [name: string]: string } = {
   alpine: 'nsfw-alpine',
   darwin: 'nsfw-macos',
   linux: 'nsfw-linux'
