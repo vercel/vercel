@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "0.1.3-canary.14",
+  "version": "0.1.3-canary.15",
   "license": "MIT",
   "scripts": {
     "build": "tsc"
