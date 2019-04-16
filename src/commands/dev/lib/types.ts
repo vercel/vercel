@@ -146,7 +146,7 @@ export interface RouteResult {
 
 export interface InvokePayload {
   method: string;
-  host?: string,
+  host?: string;
   path: string;
   headers: http.IncomingHttpHeaders;
   encoding?: string;
