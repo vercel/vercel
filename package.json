@@ -79,7 +79,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.4.40",
+    "@now/build-utils": "0.4.41-canary.5",
     "@sentry/node": "4.5.3",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
@@ -157,6 +157,7 @@
     "http-proxy": "1.17.0",
     "ini": "1.3.4",
     "inquirer": "3.3.0",
+    "intercept-stdout": "0.1.2",
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
     "jsonlines": "0.1.1",
