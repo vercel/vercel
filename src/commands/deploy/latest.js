@@ -68,33 +68,25 @@ const addProcessEnv = async (log, env) => {
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 const prepareAlias = input => `https://${input}`;
-const isAliasDone = ({ aliasFinal }) => Array.isArray(aliasFinal);
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, aliasFinal, alias },
+  { url, readyState, alias: aliasList },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
-    if (isAliasDone({ aliasFinal })) {
-      if (aliasFinal.length === 0) {
-        const hasCustomAlias = (Array.isArray(alias) && alias.length > 0) || alias;
-        const hasMultiple = Array.isArray(alias) && alias.length > 1;
-        output.error(`Failed to assign default alias${hasCustomAlias ? ` and custom alias${hasMultiple ? 'es' : ''}` : ''}`);
-        return 1;
-      }
-
-      if (aliasFinal.length === 1) {
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
+      if (aliasList.length === 1) {
         if (clipboardEnabled) {
           try {
-            await copy(`https://${aliasFinal[0]}`);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+            await copy(`https://${aliasList[0]}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasFinal[0])))} ${deployStamp()}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${deployStamp()}`);
           }
         }
       } else {
@@ -104,9 +96,9 @@ const printDeploymentStatus = async (
         // copy the first one to the clipboard.
         const matching = (localConfig.alias || [])[0];
 
-        for (const alias of aliasFinal) {
-          const index = aliasFinal.indexOf(alias);
-          const isLast = index === (aliasFinal.length - 1);
+        for (const alias of aliasList) {
+          const index = aliasList.indexOf(alias);
+          const isLast = index === (aliasList.length - 1);
           const shouldCopy = matching ? alias === matching : isLast;
 
           if (shouldCopy && clipboardEnabled) {
@@ -512,7 +504,7 @@ export default async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v8/now/deployments/${deployment.id}`;
+  const deploymentUrl = `/v9/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
@@ -560,7 +552,7 @@ export default async function main(
     } else {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if ((isReady(deploymentResponse) && isAliasDone(deploymentResponse)) || isFailed(deploymentResponse)) {
+      if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {

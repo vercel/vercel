@@ -293,7 +293,7 @@ export default class Now extends EventEmitter {
       }
 
       const query = qs.stringify(queryProps);
-      const version = isBuilds ? 'v6' : 'v4';
+      const version = isBuilds ? 'v9' : 'v4';
 
       const res = await this._fetch(
         `/${version}/now/deployments${query ? `?${query}` : ''}`,
@@ -655,7 +655,7 @@ export default class Now extends EventEmitter {
       isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/${isBuilds ? 'v6' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${isBuilds ? 'v9' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
