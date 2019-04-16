@@ -13,13 +13,13 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
-import { lookup as lookupMimeType } from 'mime-types';
 import { basename, dirname, extname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
+import getMimeType from './mime-type';
 import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
@@ -685,16 +685,25 @@ export default class DevServer {
       case 'FileFsRef':
         this.setResponseHeaders(res, nowRequestId);
         req.url = `/${basename(asset.fsPath)}`;
-        return serveStaticFile(req, res, dirname(asset.fsPath));
+        return serveStaticFile(req, res, dirname(asset.fsPath), {
+          headers: [
+            {
+              source: '**/*',
+              headers: [
+                {
+                  key: 'Content-Type',
+                  value: getMimeType(assetKey)
+                }
+              ]
+            }
+          ]
+        });
 
       case 'FileBlob':
-        const contentType = lookupMimeType(assetKey);
         const headers: http.OutgoingHttpHeaders = {
-          'Content-Length': asset.data.length
+          'Content-Length': asset.data.length,
+          'Content-Type': getMimeType(assetKey)
         };
-        if (contentType) {
-          headers['Content-Type'] = contentType;
-        }
         this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
         return;
@@ -804,11 +813,13 @@ function proxyPass(
 function serveStaticFile(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  cwd: string
+  cwd: string,
+  opts?: object
 ) {
   return serveHandler(req, res, {
     public: cwd,
-    cleanUrls: false
+    cleanUrls: false,
+    ...opts
   });
 }
 
