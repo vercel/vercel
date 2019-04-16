@@ -46,19 +46,24 @@ const plusxSync = (file: string): void => {
   chmodSync(file, base8);
 };
 
-const prepareModule = async (): Promise<string> =>  {
+const prepareModule = async (output: Output): Promise<string> =>  {
   const version = devDependencies['@zeit/nsfw'];
   const fileName = `nsfw-${version}.node`;
   const dirName = join(tmpdir(), 'co.zeit.now', 'dev');
   const full = join(dirName, fileName);
 
   if (await pathExists(full)) {
+    output.debug('The nsfw module is already cached, not re-downloading');
     return full;
   }
 
+  output.debug(`Creating ${dirName} for the nsfw module`);
   await mkdirp(dirName);
+  output.debug(`Finished creating ${dirName} for the nsfw module`);
 
   const url = `https://github.com/zeit/nsfw/releases/download/${version}/${name}.node`;
+
+  output.debug(`Downloading ${url}`);
   const response = await fetch(url, { compress: false });
 
   if (response.status !== 200) {
@@ -69,9 +74,11 @@ const prepareModule = async (): Promise<string> =>  {
 
   // Fill the body into the file
   await pipe(response.body, target);
+  output.debug(`Finished downloading ${url}`);
 
-  // Make the binary executable
+  output.debug(`Making the nsfw binary executable`);
   plusxSync(full);
+  output.debug(`Finished making the nsfw binary executable`);
 
   return full;
 };
@@ -80,7 +87,7 @@ export default async (output: Output): Promise<string|undefined> => {
   let modulePath = null;
 
   try {
-    modulePath = await prepareModule();
+    modulePath = await prepareModule(output);
   } catch (err) {
     output.error('Failed to prepare file watcher. Please try again.');
     output.debug(err);
