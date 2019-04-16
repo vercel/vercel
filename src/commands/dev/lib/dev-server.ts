@@ -314,7 +314,7 @@ export default class DevServer {
     this.files = await collectProjectFiles('**', this.cwd);
 
     // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), undefined, undefined, modulePath);
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), { modulePath });
 
     await this.nsfw.start();
 
