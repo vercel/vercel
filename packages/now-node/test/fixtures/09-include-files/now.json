@@ -9,12 +9,25 @@
           "templates/**"
         ]
       }
+    },
+    {
+      "src": "root.js",
+      "use": "@now/node",
+      "config": {
+        "includeFiles": [
+          "root.edge"
+        ]
+      }
     }
   ],
   "probes": [
     {
       "path": "/",
       "mustContain": "hello Now!"
+    },
+    {
+      "path": "/root.js",
+      "mustContain": "hello Root!"
     }
   ]
 }
