@@ -5,6 +5,15 @@ import fetch from 'node-fetch';
 import { devDependencies } from '../../../../package.json';
 import { Output } from '../../../util/output/create-output';
 
+const platformToName = {
+  alpine: 'nsfw-alpine',
+  darwin: 'nsfw-macos',
+  linux: 'nsfw-linux'
+};
+
+const { platform } = process;
+const name = platformToName[platform];
+
 const prepareModule = async (): Promise<string> =>  {
   const version = devDependencies['@zeit/nsfw'];
   const fileName = `nsfw-${version}.node`;
@@ -17,7 +26,7 @@ const prepareModule = async (): Promise<string> =>  {
 
   await mkdirp(dirName);
 
-  const url = `https://github.com/zeit/nsfw/releases/download/${version}/nsfw.node`;
+  const url = `https://github.com/zeit/nsfw/releases/download/${version}/${name}.node`;
   const response = await fetch(url, { compress: false });
 
   if (response.status !== 200) {
