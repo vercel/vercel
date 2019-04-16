@@ -1,55 +1,56 @@
-const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
-const FileFsRef = require('@now/build-utils/file-fs-ref'); // eslint-disable-line import/no-extraneous-dependencies
-const FileBlob = require('@now/build-utils/file-blob'); // eslint-disable-line import/no-extraneous-dependencies
-const resolveFrom = require('resolve-from');
-const path = require('path');
-const url = require('url');
-const {
+import { 
+  createLambda,
+  download,
+  FileFsRef,
+  FileBlob,
+  glob,
   runNpmInstall,
   runPackageJsonScript,
-} = require('@now/build-utils/fs/run-user-scripts'); // eslint-disable-line import/no-extraneous-dependencies
-const glob = require('@now/build-utils/fs/glob'); // eslint-disable-line import/no-extraneous-dependencies
-const {
+  Lambda,
+  Files,
+  BuildOptions,
+  PrepareCacheOptions,
+} from '@now/build-utils';
+import resolveFrom from 'resolve-from';
+import path from 'path';
+import url from 'url';
+import {
   readFile,
   writeFile,
-  unlink: unlinkFile,
-  remove: removePath,
+  unlink as unlinkFile,
+  remove as removePath,
   pathExists,
-} = require('fs-extra');
-const semver = require('semver');
-const nextLegacyVersions = require('./legacy-versions');
-const {
+} from 'fs-extra';
+import semver from 'semver';
+import nextLegacyVersions from './legacy-versions';
+import {
   excludeFiles,
   validateEntrypoint,
   includeOnlyEntryDirectory,
   normalizePackageJson,
   onlyStaticDirectory,
   getNextConfig,
-} = require('./utils');
+  getWatchers,
+} from './utils';
 
-/** @typedef { import('@now/build-utils/file-ref').Files } Files */
-/** @typedef { import('@now/build-utils/fs/download').DownloadedFiles } DownloadedFiles */
+interface BuildParamsMeta {
+  isDev: boolean | undefined,
+  requestPath: string | undefined,
+};
 
-/**
- * @typedef {Object} BuildParamsMeta
- * @property {boolean} [isDev] - Files object
- * @property {?string} [requestPath] - Entrypoint specified for the builder
- */
+interface BuildParamsType extends BuildOptions {
+  files: Files,
+  entrypoint: string,
+  workPath: string,
+  meta: BuildParamsMeta,
+};
 
-/**
- * @typedef {Object} BuildParamsType
- * @property {Files} files - Files object
- * @property {string} entrypoint - Entrypoint specified for the builder
- * @property {string} workPath - Working directory for this build
- * @property {BuildParamsMeta} [meta] - Various meta settings
- */
+export const version = 2;
 
 /**
  * Read package.json from files
- * @param {string} entryPath
  */
-async function readPackageJson(entryPath) {
+async function readPackageJson(entryPath: string) {
   const packagePath = path.join(entryPath, 'package.json');
 
   try {
@@ -62,10 +63,8 @@ async function readPackageJson(entryPath) {
 
 /**
  * Write package.json
- * @param {string} workPath
- * @param {Object} packageJson
  */
-async function writePackageJson(workPath, packageJson) {
+async function writePackageJson(workPath: string, packageJson: Object) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2),
@@ -74,17 +73,15 @@ async function writePackageJson(workPath, packageJson) {
 
 /**
  * Write .npmrc with npm auth token
- * @param {string} workPath
- * @param {string} token
  */
-async function writeNpmRc(workPath, token) {
+async function writeNpmRc(workPath: string, token: string) {
   await writeFile(
     path.join(workPath, '.npmrc'),
     `//registry.npmjs.org/:_authToken=${token}`,
   );
 }
 
-function getNextVersion(packageJson) {
+function getNextVersion(packageJson: {dependencies?: {[key: string]: string},devDependencies?: {[key:string]:string}}) {
   let nextVersion;
   if (packageJson.dependencies && packageJson.dependencies.next) {
     nextVersion = packageJson.dependencies.next;
@@ -94,7 +91,7 @@ function getNextVersion(packageJson) {
   return nextVersion;
 }
 
-function isLegacyNext(nextVersion) {
+function isLegacyNext(nextVersion: string) {
   // If version is using the dist-tag instead of a version range
   if (nextVersion === 'canary' || nextVersion === 'latest') {
     return false;
@@ -114,22 +111,35 @@ function isLegacyNext(nextVersion) {
   return true;
 }
 
-function setNextExperimentalPage(files, entry, meta) {
-  if (meta.requestPath) {
-    if (meta.requestPath.startsWith(path.join(entry, 'static'))) {
-      return onlyStaticDirectory(
-        includeOnlyEntryDirectory(files, entry),
-        entry,
-      );
+function setNextExperimentalPage(files: Files, entry: string, meta: BuildParamsMeta) {
+  const entryPath = entry !== '.' ? `${entry}/` : '';
+  if (meta.requestPath || meta.requestPath === '') {
+    if (
+      meta.requestPath.startsWith(`${entryPath}static`)
+      || (meta.requestPath.startsWith(`${entryPath}_next`)
+        && !meta.requestPath.startsWith(
+          `${entryPath}_next/static/unoptimized-build/pages`,
+        ))
+    ) {
+      return files[meta.requestPath]
+        ? {
+          output: {
+            [meta.requestPath]: files[meta.requestPath],
+          },
+        }
+        : undefined;
     }
 
-    const { pathname } = url.parse(meta.requestPath);
-    const assetPath = pathname.match(
-      /^\/?_next\/static\/[^/]+\/pages\/(.+)\.js$/,
+    const { pathname } = meta.requestPath
+      ? url.parse(meta.requestPath)
+      : { pathname: '/' };
+    const clientPageRegex = new RegExp(
+      `^${entryPath}_next/static/unoptimized-build/pages/(.+)\\.js$`,
     );
+    const clientPage = (pathname || '/').match(clientPageRegex);
     // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = assetPath
-      ? assetPath[1]
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = clientPage
+      ? clientPage[1]
       : pathname;
   }
 
@@ -141,17 +151,52 @@ function setNextExperimentalPage(files, entry, meta) {
   return null;
 }
 
-exports.config = {
+function pageExists(name: string, pages: Files, entry: string) {
+  const pageWhere = (key: string) => Object.prototype.hasOwnProperty.call(pages, key);
+  const inPages = (...names: string[]) => {
+    let exists = false;
+    while (names.length >= 1) {
+      if (pageWhere(`${entry ? `${entry}/` : ''}pages/${names[0]}`)) {
+        exists = true;
+        break;
+      }
+      names.shift();
+    }
+
+    return exists;
+  };
+
+  if (name === '' || name === '/') {
+    return inPages(
+      'index.js',
+      'index.ts',
+      'index.jsx',
+      'index.tsx',
+      'index.mdx',
+    );
+  }
+
+  return inPages(
+    `${name}.js`,
+    `${name}.ts`,
+    `${name}.jsx`,
+    `${name}.tsx`,
+    `${name}.mdx`,
+    `${name}/index.js`,
+    `${name}/index.ts`,
+    `${name}/index.jsx`,
+    `${name}/index.tsx`,
+    `${name}/index.mdx`,
+  );
+}
+
+export const config = {
   maxLambdaSize: '5mb',
 };
 
-/**
- * @param {BuildParamsType} buildParams
- * @returns {Promise<Files>}
- */
-exports.build = async ({
-  files, workPath, entrypoint, meta = {},
-}) => {
+export const build = async ({
+  files, workPath, entrypoint, meta = {} as BuildParamsMeta,
+}: BuildParamsType): Promise<{output: Files, watch?: string[]}> => {
   validateEntrypoint(entrypoint);
 
   const entryDirectory = path.dirname(entrypoint);
@@ -232,8 +277,9 @@ exports.build = async ({
   nextVersion = JSON.parse(
     await readFile(resolveFrom(entryPath, 'next/package.json'), 'utf8'),
   ).version;
+  if (!nextVersion) throw new Error('Could not parse Next.js version');
 
-  const isUpdated = (v) => {
+  const isUpdated = (v: string) => {
     if (v === 'canary') return true;
 
     try {
@@ -263,13 +309,13 @@ exports.build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const lambdas = {};
+  const lambdas: {[key: string]: Lambda} = {};
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
 
     console.log('preparing lambda files...');
-    let buildId;
+    let buildId: string;
     try {
       buildId = await readFile(
         path.join(entryPath, '.next', 'BUILD_ID'),
@@ -290,7 +336,7 @@ exports.build = async ({
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
     };
-    const nextFiles = {
+    const nextFiles: {[key: string]: FileFsRef} = {
       ...nodeModules,
       ...dotNextRootFiles,
       ...dotNextServerRootFiles,
@@ -429,16 +475,20 @@ exports.build = async ({
     entryDirectory,
   );
 
-  return { ...lambdas, ...staticFiles, ...staticDirectoryFiles };
+  return {
+    output: { ...lambdas, ...staticFiles, ...staticDirectoryFiles },
+    watch: await getWatchers(dotNext),
+  };
 };
 
-exports.prepareCache = async ({ workPath, entrypoint }) => {
+export const prepareCache = async ({ workPath, entrypoint }: PrepareCacheOptions) => {
   console.log('preparing cache ...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
+  if (!nextVersion) throw new Error('Could not parse Next.js version')
   const isLegacy = isLegacyNext(nextVersion);
 
   if (isLegacy) {
@@ -458,21 +508,32 @@ exports.prepareCache = async ({ workPath, entrypoint }) => {
   return cache;
 };
 
-exports.subscribe = async ({ entrypoint, files }) => {
-  const entryDirectory = path.dirname(entrypoint);
-  const pageFiles = includeOnlyEntryDirectory(
+export const shouldServe = async ({ entrypoint, files, requestPath }: {entrypoint: string, files: Files, requestPath: string}) => {
+  const entry = path.dirname(entrypoint);
+  const entryDirectory = entry === '.' ? '' : `${entry}/`;
+
+  if (new RegExp(`^${entryDirectory}static/.+$`).test(requestPath)) return true;
+
+  const pages = includeOnlyEntryDirectory(
     files,
     path.join(entryDirectory, 'pages'),
   );
 
-  return [
-    path.join(entryDirectory, '_next/static/unoptimized-build/pages/**'),
-    path.join(entryDirectory, 'static/**'),
-    // List all pages without their extensions
-    ...Object.keys(pageFiles).map(page => page
-      .replace(/^pages\//i, '')
-      .split('.')
-      .slice(0, -1)
-      .join('.')),
-  ];
+  const isClientPage = new RegExp(
+    `^${entryDirectory}_next/static/unoptimized-build/pages/(.+)\\.js$`,
+  );
+  if (isClientPage.test(requestPath)) {
+    const requestedPage = requestPath.match(isClientPage);
+    if (!requestedPage) return false;
+    if (requestedPage[1] === '_error' || requestedPage[1] === '_document' || requestedPage[1] === '_app') return true;
+    return pageExists(requestedPage[1], pages, entryDirectory);
+  }
+
+  if (new RegExp(`^${entryDirectory}_next.+$`).test(requestPath)) return true;
+
+  return pageExists(
+    requestPath.endsWith('/') ? requestPath.slice(0, -1) : requestPath,
+    pages,
+    entryDirectory,
+  );
 };

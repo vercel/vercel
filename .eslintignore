@@ -4,5 +4,6 @@
 /packages/now-go/go/*
 /packages/now-build-utils/dist/*
 /packages/now-node/dist/*
+/packages/now-next/dist/*
 /packages/now-node-bridge/*
 /packages/now-python/*

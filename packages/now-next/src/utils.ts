@@ -1,16 +1,13 @@
-const fs = require('fs-extra');
-const path = require('path');
+import fs from 'fs-extra';
+import path from 'path';
+import { Files } from '@now/build-utils';
 
-/** @typedef { import('@now/build-utils/file-ref') } FileRef */
-/** @typedef { import('@now/build-utils/file-fs-ref') } FileFsRef */
-/** @typedef {{[filePath: string]: FileRef|FileFsRef}} Files */
+type stringMap = {[key: string]: string};
 
 /**
  * Validate if the entrypoint is allowed to be used
- * @param {string} entrypoint
- * @throws {Error}
  */
-function validateEntrypoint(entrypoint) {
+function validateEntrypoint(entrypoint: string) {
   if (
     !/package\.json$/.exec(entrypoint)
     && !/next\.config\.js$/.exec(entrypoint)
@@ -22,20 +19,9 @@ function validateEntrypoint(entrypoint) {
 }
 
 /**
- * This callback type is called `requestCallback` and is displayed as a global symbol.
- *
- * @callback matcher
- * @param {string} filePath
- * @returns {boolean}
- */
-
-/**
  * Exclude certain files from the files object
- * @param {Files} files
- * @param {matcher} matcher
- * @returns {Files}
  */
-function excludeFiles(files, matcher) {
+function excludeFiles(files: Files, matcher: (filePath: string) => boolean): Files {
   return Object.keys(files).reduce((newFiles, filePath) => {
     if (matcher(filePath)) {
       return newFiles;
@@ -49,16 +35,13 @@ function excludeFiles(files, matcher) {
 
 /**
  * Creates a new Files object holding only the entrypoint files
- * @param {Files} files
- * @param {string} entryDirectory
- * @returns {Files}
  */
-function includeOnlyEntryDirectory(files, entryDirectory) {
+function includeOnlyEntryDirectory(files: Files, entryDirectory: string): Files {
   if (entryDirectory === '.') {
     return files;
   }
 
-  function matcher(filePath) {
+  function matcher(filePath: string) {
     return !filePath.startsWith(entryDirectory);
   }
 
@@ -67,10 +50,8 @@ function includeOnlyEntryDirectory(files, entryDirectory) {
 
 /**
  * Exclude package manager lockfiles from files
- * @param {Files} files
- * @returns {Files}
  */
-function excludeLockFiles(files) {
+function excludeLockFiles(files: Files): Files {
   const newFiles = files;
   if (newFiles['package-lock.json']) {
     delete newFiles['package-lock.json'];
@@ -83,11 +64,9 @@ function excludeLockFiles(files) {
 
 /**
  * Include the static directory from files
- * @param {Files} files
- * @returns {Files}
  */
-function onlyStaticDirectory(files, entryDir) {
-  function matcher(filePath) {
+function onlyStaticDirectory(files: Files, entryDir: string): Files {
+  function matcher(filePath: string) {
     return !filePath.startsWith(path.join(entryDir, 'static'));
   }
 
@@ -96,11 +75,10 @@ function onlyStaticDirectory(files, entryDir) {
 
 /**
  * Enforce specific package.json configuration for smallest possible lambda
- * @param {{dependencies?: any, devDependencies?: any, scripts?: any}} defaultPackageJson
  */
-function normalizePackageJson(defaultPackageJson = {}) {
-  const dependencies = {};
-  const devDependencies = {
+function normalizePackageJson(defaultPackageJson: {dependencies?: stringMap, devDependencies?: stringMap, scripts?: stringMap} = {}) {
+  const dependencies: stringMap = {};
+  const devDependencies: stringMap = {
     ...defaultPackageJson.dependencies,
     ...defaultPackageJson.devDependencies,
   };
@@ -139,7 +117,7 @@ function normalizePackageJson(defaultPackageJson = {}) {
   };
 }
 
-async function getNextConfig(workPath, entryPath) {
+async function getNextConfig(workPath: string, entryPath: string) {
   const entryConfig = path.join(entryPath, './next.config.js');
   if (await fs.pathExists(entryConfig)) {
     return fs.readFile(entryConfig, 'utf8');
@@ -153,7 +131,24 @@ async function getNextConfig(workPath, entryPath) {
   return null;
 }
 
-module.exports = {
+async function getWatchers(nextPath: string) {
+  const watch: string[] = [];
+  const manifest = path.join(nextPath, 'compilation-modules.json');
+
+  try {
+    const { pages } = JSON.parse(await fs.readFile(manifest, 'utf8'));
+
+    Object.keys(pages).forEach(page => pages[page].forEach((dep: string) => {
+      watch.push(dep);
+    }));
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+  }
+
+  return watch;
+}
+
+export {
   excludeFiles,
   validateEntrypoint,
   includeOnlyEntryDirectory,
@@ -161,4 +156,5 @@ module.exports = {
   normalizePackageJson,
   onlyStaticDirectory,
   getNextConfig,
+  getWatchers,
 };

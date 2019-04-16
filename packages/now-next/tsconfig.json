@@ -1,20 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "strict": true,
+    "esModuleInterop": true,
+    "lib": ["esnext"],
+    "target": "esnext",
     "module": "commonjs",
-    "lib": ["es2017"],
-    "allowJs": true,
-    "checkJs": true,
-    "noEmit": true,
-    "strict": false,
-    "types": ["node"],
-    "esModuleInterop": true
+    "outDir": "dist",
+    "sourceMap": false,
+    "declaration": false
   },
   "include": [
-    "./"
+    "src/**/*"
   ],
   "exclude": [
-    "./launcher.js",
-    "./legacy-launcher.js"
+    "node_modules"
   ]
 }

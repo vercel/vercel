@@ -1,17 +1,17 @@
 /* global it, expect */
 const path = require('path');
-const runBuildLambda = require('../../lib/run-build-lambda');
+const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
 const FOUR_MINUTES = 240000;
 
 it(
   'Should build the standard example',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'standard'),
-    );
-    expect(buildResult.index).toBeDefined();
-    const filePaths = Object.keys(buildResult);
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'standard'));
+    expect(output.index).toBeDefined();
+    const filePaths = Object.keys(output);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
@@ -23,12 +23,12 @@ it(
 it(
   'Should build the monorepo example',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'monorepo'),
-    );
-    expect(buildResult['www/index']).toBeDefined();
-    expect(buildResult['www/static/test.txt']).toBeDefined();
-    const filePaths = Object.keys(buildResult);
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'monorepo'));
+    expect(output['www/index']).toBeDefined();
+    expect(output['www/static/test.txt']).toBeDefined();
+    const filePaths = Object.keys(output);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
@@ -40,11 +40,11 @@ it(
 it(
   'Should build the legacy standard example',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'legacy-standard'),
-    );
-    expect(buildResult.index).toBeDefined();
-    const filePaths = Object.keys(buildResult);
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'legacy-standard'));
+    expect(output.index).toBeDefined();
+    const filePaths = Object.keys(output);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
@@ -56,10 +56,10 @@ it(
 it(
   'Should build the legacy custom dependency test',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'legacy-custom-dependency'),
-    );
-    expect(buildResult.index).toBeDefined();
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'legacy-custom-dependency'));
+    expect(output.index).toBeDefined();
   },
   FOUR_MINUTES,
 );
@@ -78,10 +78,10 @@ it('Should throw when package.json or next.config.js is not the "src"', async ()
 it(
   'Should build the static-files test on legacy',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'legacy-static-files'),
-    );
-    expect(buildResult['static/test.txt']).toBeDefined();
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'legacy-static-files'));
+    expect(output['static/test.txt']).toBeDefined();
   },
   FOUR_MINUTES,
 );
@@ -89,10 +89,10 @@ it(
 it(
   'Should build the static-files test',
   async () => {
-    const { buildResult } = await runBuildLambda(
-      path.join(__dirname, 'static-files'),
-    );
-    expect(buildResult['static/test.txt']).toBeDefined();
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'static-files'));
+    expect(output['static/test.txt']).toBeDefined();
   },
   FOUR_MINUTES,
 );

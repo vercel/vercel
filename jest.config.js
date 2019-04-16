@@ -1,4 +1,8 @@
 module.exports = {
   testEnvironment: 'node',
-  collectCoverageFrom: ['packages/**/*.{js,jsx}', '!**/node_modules/**'],
+  collectCoverageFrom: [
+    'packages/(!test)/**/*.{js,jsx}',
+    '!**/node_modules/**',
+    '!**/test/**',
+  ],
 };

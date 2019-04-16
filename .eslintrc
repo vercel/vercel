@@ -8,7 +8,7 @@
   },
   "overrides": [
     {
-      "files": ["test/**"],
+      "files": ["**/test/**"],
       "rules": {
         "import/no-extraneous-dependencies": 0
       },
