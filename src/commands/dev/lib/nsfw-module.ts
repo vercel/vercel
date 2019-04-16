@@ -2,6 +2,7 @@ import { tmpdir } from 'os';
 import { pathExists, mkdirp, createWriteStream } from 'fs-extra';
 import { join } from 'path';
 import fetch from 'node-fetch';
+import { spawnSync } from 'child_process';
 import { devDependencies } from '../../../../package.json';
 import { Output } from '../../../util/output/create-output';
 
@@ -11,7 +12,25 @@ const platformToName: any = {
   linux: 'nsfw-linux'
 };
 
-const { platform } = process;
+// @ts-ignore
+let { platform } = process;
+
+const detectAlpine = () => {
+  if (platform !== 'linux') {
+    return false;
+  }
+
+  // https://github.com/sass/node-sass/issues/1589#issuecomment-265292579
+  const ldd = spawnSync('ldd', [process.execPath]).stdout.toString();
+
+  return /\bmusl\b/.test(ldd);
+};
+
+if (detectAlpine()) {
+  // @ts-ignore
+  platform = 'alpine';
+}
+
 const name = platformToName[platform];
 
 const prepareModule = async (): Promise<string> =>  {
