@@ -3,11 +3,11 @@ set -euo pipefail
 
 NCC_OPTS=""
 if [ -z "${DEV-}" ]; then
-  NCC_OPTS="-m -s"
+  NCC_OPTS="--minify"
 fi
 
 # Do the initial `ncc` build
-ncc build $NCC_OPTS ./src
+ncc build --source-map $NCC_OPTS ./src
 
 # `ncc` has some issues with `@zeit/fun`'s runtime files:
 #   - Executable bits on the `bootstrap` files appear to be lost:
