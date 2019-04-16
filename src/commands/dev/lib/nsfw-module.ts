@@ -1,5 +1,11 @@
 import { tmpdir } from 'os';
-import { pathExists, mkdirp, createWriteStream, statSync, chmodSync } from 'fs-extra';
+import {
+  pathExists,
+  mkdirp,
+  createWriteStream,
+  statSync,
+  chmodSync
+} from 'fs-extra';
 import pipe from 'promisepipe';
 import { join } from 'path';
 import fetch from 'node-fetch';
@@ -46,7 +52,7 @@ const plusxSync = (file: string): void => {
   chmodSync(file, base8);
 };
 
-const prepareModule = async (output: Output): Promise<string> =>  {
+const prepareModule = async (output: Output): Promise<string> => {
   const version = devDependencies['@zeit/nsfw'];
   const fileName = `nsfw-${version}.node`;
   const dirName = join(tmpdir(), 'co.zeit.now', 'dev');
@@ -73,7 +79,10 @@ const prepareModule = async (output: Output): Promise<string> =>  {
   const target = createWriteStream(full);
 
   // Fill the body into the file
-  await pipe(response.body, target);
+  await pipe(
+    response.body,
+    target
+  );
   output.debug(`Finished downloading ${url}`);
 
   output.debug(`Making the nsfw binary executable`);
@@ -83,7 +92,7 @@ const prepareModule = async (output: Output): Promise<string> =>  {
   return full;
 };
 
-export default async (output: Output): Promise<string|undefined> => {
+export default async (output: Output): Promise<string | undefined> => {
   let modulePath = null;
 
   try {
