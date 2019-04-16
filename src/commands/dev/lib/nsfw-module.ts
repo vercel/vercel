@@ -1,5 +1,5 @@
 import { tmpdir } from 'os';
-import { pathExists, mkdirp, createWriteStream } from 'fs-extra';
+import { pathExists, mkdirp, createWriteStream, statSync, chmodSync } from 'fs-extra';
 import { join } from 'path';
 import fetch from 'node-fetch';
 import { spawnSync } from 'child_process';
@@ -33,6 +33,18 @@ if (detectAlpine()) {
 
 const name = platformToName[platform];
 
+const plusxSync = (file: string): void => {
+  const s = statSync(file);
+  const newMode = s.mode | 64 | 8 | 1;
+
+  if (s.mode === newMode) {
+    return;
+  }
+
+  const base8 = newMode.toString(8).slice(-3);
+  chmodSync(file, base8);
+};
+
 const prepareModule = async (): Promise<string> =>  {
   const version = devDependencies['@zeit/nsfw'];
   const fileName = `nsfw-${version}.node`;
@@ -54,6 +66,9 @@ const prepareModule = async (): Promise<string> =>  {
 
   const target = createWriteStream(full);
   response.body.pipe(target);
+
+  // Make the binary executable
+  plusxSync(full);
 
   return full;
 };
