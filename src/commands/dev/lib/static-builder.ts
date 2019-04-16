@@ -5,7 +5,8 @@ export function build({ files, entrypoint }: BuilderParams): BuildResult {
   const output = {
     [entrypoint]: files[entrypoint]
   };
-  return { output };
+  const watch = [entrypoint];
+  return { output, watch };
 }
 
 export function shouldServe({

@@ -28,8 +28,7 @@ export function resolveRouteParameters(
 export default async function(
   reqPath = '',
   routes?: RouteConfig[],
-  devServer?: DevServer,
-  files?: BuilderInputs
+  devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
@@ -41,8 +40,8 @@ export default async function(
       idx++;
       let { src, headers, handle } = routeConfig;
       if (handle) {
-        if (handle === 'filesystem' && devServer && files) {
-          if (await devServer.hasFilesystem(files, reqPathname)) {
+        if (handle === 'filesystem' && devServer) {
+          if (await devServer.hasFilesystem(reqPathname)) {
             break;
           }
         }

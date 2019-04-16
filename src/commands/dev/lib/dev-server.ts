@@ -1,6 +1,7 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
+import nsfw from '@zeit/nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -10,6 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { lookup as lookupMimeType } from 'mime-types';
 import { basename, dirname, extname, join, relative } from 'path';
@@ -19,6 +21,7 @@ import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
 import { installBuilders } from './builder-cache';
+import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
   collectProjectFiles,
@@ -34,6 +37,7 @@ import {
   DevServerOptions,
   BuildConfig,
   BuildMatch,
+  BuildResult,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
@@ -47,19 +51,24 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public files: BuilderInputs;
 
+  private cachedNowJson: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private originalEnv: EnvConfig;
+  private nsfw?: nsfw.Watcher;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.env = {};
     this.buildEnv = {};
+    this.files = {};
 
+    this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
     this.stopping = false;
     this.buildMatches = new Map();
@@ -67,11 +76,115 @@ export default class DevServer {
     this.originalEnv = { ...process.env };
   }
 
-  async getProjectFiles(): Promise<BuilderInputs> {
-    // TODO: use the file watcher to keep the files list up-to-date
-    // incrementally, instead of re-globbing the filesystem every time
-    const files = await collectProjectFiles('**', this.cwd);
-    return files;
+  async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
+    const filesChanged: Set<string> = new Set();
+
+    // First, update the `files` mapping of source files
+    for (const event of events) {
+      // TODO: for some reason the type inference isn't working, hence the casting
+      if (event.action === nsfw.actions.CREATED) {
+        await this.handleFileCreated(event as nsfw.CreatedEvent, filesChanged);
+      } else if (event.action === nsfw.actions.DELETED) {
+        this.handleFileDeleted(event as nsfw.DeletedEvent, filesChanged);
+      } else if (event.action === nsfw.actions.MODIFIED) {
+        await this.handleFileModified(
+          event as nsfw.ModifiedEvent,
+          filesChanged
+        );
+      } else if (event.action === nsfw.actions.RENAMED) {
+        await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
+      }
+    }
+
+    if (filesChanged.has('now.json')) {
+      // The `now.json` file was changed, so invalidate the in-memory copy
+      this.output.debug('Invalidating cached `now.json`');
+      this.cachedNowJson = null;
+    }
+
+    // Update the build matches in case an entrypoint was created or deleted
+    const nowJson = await this.getNowJson();
+    if (nowJson) {
+      await this.updateBuildMatches(nowJson);
+    }
+
+    // Trigger rebuilds of any existing builds that are dependent
+    // on one of the files that has changed
+    const needsRebuild: Map<
+      BuildResult,
+      [string | null, BuildMatch]
+    > = new Map();
+    for (const match of this.buildMatches.values()) {
+      for (const [requestPath, result] of match.buildResults) {
+        // If the `BuildResult` is already queued for a re-build,
+        // then we can skip subsequent lookups
+        if (needsRebuild.has(result)) continue;
+
+        if (Array.isArray(result.watch)) {
+          for (const fileName of result.watch) {
+            if (filesChanged.has(fileName)) {
+              needsRebuild.set(result, [requestPath, match]);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (needsRebuild.size > 0) {
+      this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
+      for (const [result, [requestPath, match]] of needsRebuild) {
+        this.triggerBuild(match, requestPath, null, result).catch(err => {
+          this.output.warn(`An error occured while rebuilding ${match.src}:`);
+          console.error(err.stack);
+        });
+      }
+    }
+  }
+
+  async handleFileCreated(
+    event: nsfw.CreatedEvent,
+    changed: Set<string>
+  ): Promise<void> {
+    const fsPath = join(event.directory, event.file);
+    const name = relative(this.cwd, fsPath);
+    this.output.debug(`File created: ${name}`);
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+    changed.add(name);
+  }
+
+  handleFileDeleted(event: nsfw.DeletedEvent, changed: Set<string>): void {
+    const name = relative(this.cwd, join(event.directory, event.file));
+    this.output.debug(`File deleted: ${name}`);
+    delete this.files[name];
+    changed.add(name);
+  }
+
+  async handleFileModified(
+    event: nsfw.ModifiedEvent,
+    changed: Set<string>
+  ): Promise<void> {
+    const fsPath = join(event.directory, event.file);
+    const name = relative(this.cwd, fsPath);
+    this.output.debug(`File modified: ${name}`);
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+    changed.add(name);
+  }
+
+  async handleFileRenamed(
+    event: nsfw.RenamedEvent,
+    changed: Set<string>
+  ): Promise<void> {
+    const oldName = relative(this.cwd, join(event.directory, event.oldFile));
+    changed.add(oldName);
+
+    const fsPath = join(event.newDirectory, event.newFile);
+    const name = relative(this.cwd, fsPath);
+    changed.add(name);
+
+    this.output.debug(`File renamed: ${oldName} -> ${name}`);
+    delete this.files[oldName];
+    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
@@ -115,8 +228,11 @@ export default class DevServer {
   }
 
   async getNowJson(): Promise<NowConfig | null> {
-    // TODO: use the file watcher to only invalidate this `nowJson`
-    // config once a change to the `now.json` file occurs
+    if (this.cachedNowJson) {
+      return this.cachedNowJson;
+    }
+
+    this.output.debug('Reading `now.json` file');
     const nowJsonPath = getNowJsonPath(this.cwd);
 
     try {
@@ -124,6 +240,7 @@ export default class DevServer {
         await fs.readFile(nowJsonPath, 'utf8')
       );
       this.validateNowConfig(config);
+      this.cachedNowJson = config;
       return config;
     } catch (err) {
       if (err.code !== 'ENOENT') {
@@ -190,7 +307,17 @@ export default class DevServer {
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
-    let address: string | null = null;
+    // Retrieve the path of the native module
+    const modulePath = await getModuleForNSFW(this.output);
+
+    // Collect files to watch
+    this.files = await collectProjectFiles('**', this.cwd);
+
+    // Start the filesystem watcher
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), { modulePath });
+
+    await this.nsfw.start();
+
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env'),
       this.getLocalEnv('.env.build')
@@ -215,14 +342,14 @@ export default class DevServer {
       );
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
-        const files = await this.getProjectFiles();
         for (const match of needsInitialBuild) {
-          await executeBuild(nowJson, this, files, match);
+          await executeBuild(nowJson, this, this.files, match);
         }
         this.output.success('Initial builds complete');
       }
     }
 
+    let address: string | null = null;
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, port);
@@ -262,6 +389,9 @@ export default class DevServer {
       }
     }
     ops.push(close(this.server));
+    if (this.nsfw) {
+      ops.push(this.nsfw.stop());
+    }
     await Promise.all(ops);
   }
 
@@ -278,8 +408,6 @@ export default class DevServer {
     nowRequestId: string
   ): Promise<void> {
     return this.sendError(
-      // TODO: use the file watcher to keep the files list up-to-date
-      // incrementally
       req,
       res,
       nowRequestId,
@@ -351,6 +479,68 @@ export default class DevServer {
     };
   }
 
+  async triggerBuild(
+    match: BuildMatch,
+    requestPath: string | null,
+    req: http.IncomingMessage | null,
+    previousBuildResult?: BuildResult
+  ) {
+    // If the requested asset wasn't found in the match's outputs, or
+    // a hard-refresh was detected, then trigger a build
+    const buildKey = `${match.src}-${requestPath}`;
+    let buildPromise = this.inProgressBuilds.get(buildKey);
+    if (buildPromise) {
+      // A build for `buildKey` is already in progress, so don't trigger
+      // another rebuild for this request - just wait on the existing one.
+      let msg = `De-duping build "${buildKey}"`;
+      if (req) msg += ` for "${req.method} ${req.url}"`;
+      this.output.debug(msg);
+    } else if (Date.now() - match.buildTimestamp < ms('2s')) {
+      // If the built asset was created less than 2s ago, then don't trigger
+      // a rebuild. The purpose of this threshold is because once an HTML page
+      // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
+      // with a `no-cache` header, so this avoids *two* rebuilds for that case.
+      let msg = `Skipping build for "${buildKey}" (not older than 2s)`;
+      if (req) msg += ` for "${req.method} ${req.url}"`;
+      this.output.debug(msg);
+    } else {
+      const nowJson = await this.getNowJson();
+      if (nowJson) {
+        if (previousBuildResult) {
+          // Tear down any `output` assets from a previous build, so that they
+          // are not available to be served while the rebuild is in progress.
+          for (const [name, asset] of Object.entries(
+            previousBuildResult.output
+          )) {
+            this.output.debug(`Removing asset "${name}"`);
+            delete match.buildOutput[name];
+            // TODO: shut down Lambda instance
+          }
+        }
+        let msg = `Building asset "${buildKey}"`;
+        if (req) msg += ` for "${req.method} ${req.url}"`;
+        this.output.debug(msg);
+        buildPromise = executeBuild(
+          nowJson,
+          this,
+          this.files,
+          match,
+          requestPath
+        );
+        this.inProgressBuilds.set(buildKey, buildPromise);
+      } else {
+        this.output.warn(
+          'Skipping build because `now.json` could not be loaded'
+        );
+      }
+    }
+    try {
+      await buildPromise;
+    } finally {
+      this.inProgressBuilds.delete(buildKey);
+    }
+  }
+
   /**
    * DevServer HTTP handler
    */
@@ -420,7 +610,6 @@ export default class DevServer {
     nowRequestId: string,
     nowJson: NowConfig
   ) => {
-    const files = await this.getProjectFiles();
     await this.updateBuildMatches(nowJson);
 
     const {
@@ -429,7 +618,7 @@ export default class DevServer {
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, nowJson.routes, this, files);
+    } = await devRouter(req.url, nowJson.routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -448,7 +637,11 @@ export default class DevServer {
     }
 
     const requestPath = dest.replace(/^\//, '');
-    const match = await findBuildMatch(this.buildMatches, files, requestPath);
+    const match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      requestPath
+    );
     if (!match) {
       await this.send404(req, res, nowRequestId);
       return;
@@ -456,42 +649,7 @@ export default class DevServer {
 
     let foundAsset = findAsset(match, requestPath);
     if (!foundAsset || this.shouldRebuild(req)) {
-      // If the requested asset wasn't found in the match's outputs, or
-      // a hard-refresh was detected, then trigger a build
-      const entrypoint = match.src;
-      const buildTimestamp: number = match.buildTimestamp || 0;
-      const buildKey = `${entrypoint}-${requestPath}`;
-      let buildPromise = this.inProgressBuilds.get(buildKey);
-      if (buildPromise) {
-        // A build for `entrypoint` is already in progress, so don't trigger
-        // another rebuild for this request - just wait on the existing one.
-        this.output.debug(
-          `De-duping build "${entrypoint}" for "${req.method} ${req.url}"`
-        );
-      } else if (Date.now() - buildTimestamp < ms('2s')) {
-        // If the built asset was created less than 2s ago, then don't trigger
-        // a rebuild. The purpose of this threshold is because once an HTML page
-        // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-        // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-        this.output.debug(
-          `Skipping build for "${entrypoint}" (not older than 2s) for "${
-            req.method
-          } ${req.url}"`
-        );
-      } else {
-        this.output.debug(
-          `Building asset "${entrypoint}" for "${req.method} ${
-            req.url
-          }" (${requestPath})`
-        );
-        buildPromise = executeBuild(nowJson, this, files, match, requestPath);
-        this.inProgressBuilds.set(buildKey, buildPromise);
-      }
-      try {
-        await buildPromise;
-      } finally {
-        this.inProgressBuilds.delete(buildKey);
-      }
+      await this.triggerBuild(match, requestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
       foundAsset = findAsset(match, requestPath);
@@ -594,13 +752,12 @@ export default class DevServer {
           'UNKNOWN_ASSET_TYPE',
           `Don't know how to handle asset type: ${(asset as any).type}`
         );
-
     }
   };
 
-  async hasFilesystem(files: BuilderInputs, dest: string): Promise<boolean> {
+  async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
-    if (await findBuildMatch(this.buildMatches, files, requestPath)) {
+    if (await findBuildMatch(this.buildMatches, this.files, requestPath)) {
       return true;
     }
     return false;
@@ -674,12 +831,15 @@ async function findBuildMatch(
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
     const {
-      builderWithPkg: { builder }
+      builderWithPkg: { builder, package: pkg }
     } = match;
     if (typeof builder.shouldServe === 'function') {
-      if (
-        await builder.shouldServe({ entrypoint: match.src, files, requestPath })
-      ) {
+      const shouldServe = await builder.shouldServe({
+        entrypoint: match.src,
+        files,
+        requestPath
+      });
+      if (shouldServe) {
         return match;
       }
     } else if (findAsset(match, requestPath)) {
