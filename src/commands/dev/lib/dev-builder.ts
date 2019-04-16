@@ -71,7 +71,9 @@ export async function executeBuild(
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
-  requestPath: string | null = null
+  requestPath: string | null = null,
+  filesChanged?: string[],
+  filesRemoved?: string[]
 ): Promise<void> {
   const {
     builderWithPkg: { builder, package: pkg }
@@ -107,7 +109,7 @@ export async function executeBuild(
       entrypoint,
       workPath,
       config,
-      meta: { isDev: true, requestPath }
+      meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
     if (r.output) {
       result = r as BuildResult;

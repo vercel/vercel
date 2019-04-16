@@ -75,6 +75,8 @@ export interface BuilderParamsBase {
   meta?: {
     isDev?: boolean;
     requestPath?: string | null;
+    filesChanged?: string[];
+    filesRemoved?: string[];
   };
 }
 
