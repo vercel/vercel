@@ -745,10 +745,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.17.4.tgz#19688f844efd9bbe49d0d361a6f518c6f1c32a6c"
   integrity sha512-d931CjCTzfSC4VYDYgvvBTzhTGv7ExjumFTe8RVbXKAKoTjqOA8ZWDndqjSEbTeQTggyxCcCHm7HpZ28lScKnQ==
 
-"@zeit/nsfw@1.2.8":
-  version "1.2.8"
-  resolved "https://registry.yarnpkg.com/@zeit/nsfw/-/nsfw-1.2.8.tgz#9321fac0d602f20737628f26766f98b9cea3aa51"
-  integrity sha512-4eE7wK7yUd0j+Nk8iosoW+FQRa5+W0MSmJ83dWIabw04BsY+sWBILE4NrnLVWDZKGMsTEvBLcb7WeNaHdYPAjA==
+"@zeit/nsfw@1.2.9":
+  version "1.2.9"
+  resolved "https://registry.yarnpkg.com/@zeit/nsfw/-/nsfw-1.2.9.tgz#13dea35a1028c90202d340d57cc8af270dcb5c1c"
+  integrity sha512-tlYUUYZzQ4IJVQi38rsZKnmOufaZzULCuRuylxCaFVHg6uW3LFA7re7QQO3lgNZVWRJ0HOnafjA0y7lwqXaYSQ==
   dependencies:
     fs-extra "^7.0.0"
     lodash.isinteger "^4.0.4"
