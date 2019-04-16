@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import { devDependencies } from '../../../../package.json';
 import { Output } from '../../../util/output/create-output';
 
-const platformToName = {
+const platformToName: any = {
   alpine: 'nsfw-alpine',
   darwin: 'nsfw-macos',
   linux: 'nsfw-linux'
