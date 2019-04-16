@@ -1,5 +1,6 @@
 import { tmpdir } from 'os';
 import { pathExists, mkdirp, createWriteStream, statSync, chmodSync } from 'fs-extra';
+import pipe from 'promisepipe';
 import { join } from 'path';
 import fetch from 'node-fetch';
 import { spawnSync } from 'child_process';
@@ -65,7 +66,9 @@ const prepareModule = async (): Promise<string> =>  {
   }
 
   const target = createWriteStream(full);
-  response.body.pipe(target);
+
+  // Fill the body into the file
+  await pipe(response.body, target);
 
   // Make the binary executable
   plusxSync(full);
