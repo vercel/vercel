@@ -78,6 +78,7 @@ export default class DevServer {
 
   async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
     const filesChanged: Set<string> = new Set();
+    const filesRemoved: Set<string> = new Set();
 
     // First, update the `files` mapping of source files
     for (const event of events) {
@@ -85,18 +86,22 @@ export default class DevServer {
       if (event.action === nsfw.actions.CREATED) {
         await this.handleFileCreated(event as nsfw.CreatedEvent, filesChanged);
       } else if (event.action === nsfw.actions.DELETED) {
-        this.handleFileDeleted(event as nsfw.DeletedEvent, filesChanged);
+        this.handleFileDeleted(event as nsfw.DeletedEvent, filesRemoved);
       } else if (event.action === nsfw.actions.MODIFIED) {
         await this.handleFileModified(
           event as nsfw.ModifiedEvent,
           filesChanged
         );
       } else if (event.action === nsfw.actions.RENAMED) {
-        await this.handleFileRenamed(event as nsfw.RenamedEvent, filesChanged);
+        await this.handleFileRenamed(
+          event as nsfw.RenamedEvent,
+          filesChanged,
+          filesRemoved
+        );
       }
     }
 
-    if (filesChanged.has('now.json')) {
+    if (filesChanged.has('now.json') || filesRemoved.has('now.json')) {
       // The `now.json` file was changed, so invalidate the in-memory copy
       this.output.debug('Invalidating cached `now.json`');
       this.cachedNowJson = null;
@@ -122,7 +127,7 @@ export default class DevServer {
 
         if (Array.isArray(result.watch)) {
           for (const fileName of result.watch) {
-            if (filesChanged.has(fileName)) {
+            if (filesChanged.has(fileName) || filesRemoved.has(fileName)) {
               needsRebuild.set(result, [requestPath, match]);
               break;
             }
@@ -134,7 +139,14 @@ export default class DevServer {
     if (needsRebuild.size > 0) {
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
       for (const [result, [requestPath, match]] of needsRebuild) {
-        this.triggerBuild(match, requestPath, null, result).catch(err => {
+        this.triggerBuild(
+          match,
+          requestPath,
+          null,
+          result,
+          filesChanged,
+          filesRemoved
+        ).catch(err => {
           this.output.warn(`An error occured while rebuilding ${match.src}:`);
           console.error(err.stack);
         });
@@ -153,11 +165,11 @@ export default class DevServer {
     changed.add(name);
   }
 
-  handleFileDeleted(event: nsfw.DeletedEvent, changed: Set<string>): void {
+  handleFileDeleted(event: nsfw.DeletedEvent, removed: Set<string>): void {
     const name = relative(this.cwd, join(event.directory, event.file));
     this.output.debug(`File deleted: ${name}`);
     delete this.files[name];
-    changed.add(name);
+    removed.add(name);
   }
 
   async handleFileModified(
@@ -173,10 +185,11 @@ export default class DevServer {
 
   async handleFileRenamed(
     event: nsfw.RenamedEvent,
-    changed: Set<string>
+    changed: Set<string>,
+    removed: Set<string>
   ): Promise<void> {
     const oldName = relative(this.cwd, join(event.directory, event.oldFile));
-    changed.add(oldName);
+    removed.add(oldName);
 
     const fsPath = join(event.newDirectory, event.newFile);
     const name = relative(this.cwd, fsPath);
@@ -314,7 +327,9 @@ export default class DevServer {
     this.files = await collectProjectFiles('**', this.cwd);
 
     // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), { modulePath });
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
+      modulePath
+    });
 
     await this.nsfw.start();
 
@@ -483,7 +498,9 @@ export default class DevServer {
     match: BuildMatch,
     requestPath: string | null,
     req: http.IncomingMessage | null,
-    previousBuildResult?: BuildResult
+    previousBuildResult?: BuildResult,
+    filesChanged?: Set<string>,
+    filesRemoved?: Set<string>
   ) {
     // If the requested asset wasn't found in the match's outputs, or
     // a hard-refresh was detected, then trigger a build
@@ -525,7 +542,9 @@ export default class DevServer {
           this,
           this.files,
           match,
-          requestPath
+          requestPath,
+          filesChanged ? Array.from(filesChanged) : undefined,
+          filesRemoved ? Array.from(filesRemoved) : undefined
         );
         this.inProgressBuilds.set(buildKey, buildPromise);
       } else {
