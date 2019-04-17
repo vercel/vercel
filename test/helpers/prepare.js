@@ -81,6 +81,19 @@ http_request(
 <marquee>Thanks for your feedback!</marquee>
 `;
 
+const getRevertAliasConfigFile = () => {
+  return JSON.stringify({
+      'version': 2,
+      'name': 'now-revert-alias',
+      'builds': [
+        {
+          'src': '*.json',
+          'use': '@now/static'
+        }
+      ]
+  });
+};
+
 module.exports = async session => {
   const files = {
     Dockerfile: getDockerFile(session),
@@ -174,6 +187,14 @@ ARG NONCE
 RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `
+    },
+    'now-revert-alias-1': {
+      'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
+      'now.json': getRevertAliasConfigFile()
+    },
+    'now-revert-alias-2': {
+      'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
+      'now.json': getRevertAliasConfigFile()
     }
   };
 

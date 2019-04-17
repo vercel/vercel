@@ -1287,6 +1287,44 @@ test('try to initialize example "example-404"', async t => {
   t.true(stdout.includes(goal));
 });
 
+test('try to revert a deployment and assign the automatic aliases', async t => {
+  const firstDeployment = fixture('now-revert-alias-1');
+  const secondDeployment = fixture('now-revert-alias-2');
+
+  const { stdout: username } = await execute(['whoami']);
+  let url = `https://now-revert-alias.${username}.now.sh`;
+
+  {
+    const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
+    t.is(code, 0);
+
+    await waitForDeployment(deploymentUrl);
+
+    const result = await fetch(url).then(r => r.json());
+    t.is(result.name, 'now-revert-alias-1');
+  }
+
+  {
+    const { stdout: deploymentUrl, code } = await execute([secondDeployment]);
+    t.is(code, 0);
+
+    await waitForDeployment(deploymentUrl);
+
+    const result = await fetch(url).then(r => r.json());
+    t.is(result.name, 'now-revert-alias-2');
+  }
+
+  {
+    const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
+    t.is(code, 0);
+
+    await waitForDeployment(deploymentUrl);
+
+    const result = await fetch(url).then(r => r.json());
+    t.is(result.name, 'now-revert-alias-1');
+  }
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
