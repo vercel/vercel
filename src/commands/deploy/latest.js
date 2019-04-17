@@ -36,7 +36,8 @@ import {
   TooManyCertificates,
   TooManyRequests,
   InvalidDomain,
-  DeploymentNotFound
+  DeploymentNotFound,
+  BuildsRateLimited
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -415,7 +416,8 @@ export default async function main(
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
       firstDeployCall instanceof InvalidDomain ||
-      firstDeployCall instanceof DeploymentNotFound
+      firstDeployCall instanceof DeploymentNotFound ||
+      firstDeployCall instanceof BuildsRateLimited
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -777,6 +779,11 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof DeploymentNotFound) {
     output.error(error.message);
+    return 1;
+  }
+  if (error instanceof BuildsRateLimited) {
+    output.error(error.message);
+    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
     return 1;
   }
 
