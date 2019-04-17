@@ -77,6 +77,8 @@ export default class DevServer {
   }
 
   async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
+    this.output.debug(`Filesystem watcher notified of ${events.length} events`);
+
     const filesChanged: Set<string> = new Set();
     const filesRemoved: Set<string> = new Set();
 
@@ -160,9 +162,17 @@ export default class DevServer {
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
-    this.output.debug(`File created: ${name}`);
-    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-    changed.add(name);
+    try {
+      this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+      changed.add(name);
+      this.output.debug(`File created: ${name}`);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        this.output.debug(`File created, but has since been deleted: ${name}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   handleFileDeleted(event: nsfw.DeletedEvent, removed: Set<string>): void {
@@ -178,9 +188,17 @@ export default class DevServer {
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
-    this.output.debug(`File modified: ${name}`);
-    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-    changed.add(name);
+    try {
+      this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+      changed.add(name);
+      this.output.debug(`File modified: ${name}`);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        this.output.debug(`File modified, but has since been deleted: ${name}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   async handleFileRenamed(
@@ -190,14 +208,22 @@ export default class DevServer {
   ): Promise<void> {
     const oldName = relative(this.cwd, join(event.directory, event.oldFile));
     removed.add(oldName);
+    delete this.files[oldName];
 
     const fsPath = join(event.newDirectory, event.newFile);
     const name = relative(this.cwd, fsPath);
-    changed.add(name);
 
-    this.output.debug(`File renamed: ${oldName} -> ${name}`);
-    delete this.files[oldName];
-    this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+    try {
+      this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+      changed.add(name);
+      this.output.debug(`File renamed: ${oldName} -> ${name}`);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        this.output.debug(`File renamed, but has since been deleted: ${oldName} -> ${name}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
