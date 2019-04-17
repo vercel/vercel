@@ -1301,7 +1301,12 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     await waitForDeployment(deploymentUrl);
 
     const result = await fetch(url).then(r => r.json());
-    t.is(result.name, 'now-revert-alias-1');
+
+    t.is(
+      result.name,
+      'now-revert-alias-1',
+      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+    );
   }
 
   {
@@ -1311,7 +1316,12 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     await waitForDeployment(deploymentUrl);
 
     const result = await fetch(url).then(r => r.json());
-    t.is(result.name, 'now-revert-alias-2');
+
+    t.is(
+      result.name,
+      'now-revert-alias-2',
+      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+    );
   }
 
   {
@@ -1321,7 +1331,12 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     await waitForDeployment(deploymentUrl);
 
     const result = await fetch(url).then(r => r.json());
-    t.is(result.name, 'now-revert-alias-1');
+
+    t.is(
+      result.name,
+      'now-revert-alias-1',
+      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+    );
   }
 });
 
