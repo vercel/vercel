@@ -21,7 +21,7 @@ export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
-  builderCachePromise?: Promise<CacheOutputs>;
+  builderCachePromise?: Promise<Buffer>;
   buildTimestamp: number;
 }
 
@@ -62,10 +62,8 @@ export interface BuilderOutputs {
   [path: string]: BuilderOutput;
 }
 
-export type CacheOutput = FileFsRef | FileBlob;
-
 export interface CacheOutputs {
-  [path: string]: CacheOutput;
+  [path: string]: FileFsRef;
 }
 
 export interface BuilderParamsBase {

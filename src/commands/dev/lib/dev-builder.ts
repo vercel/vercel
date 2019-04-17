@@ -1,19 +1,22 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import tar from 'tar-fs';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
+import pipe from 'promisepipe';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { download } from '@now/build-utils';
 import intercept from 'intercept-stdout';
 
-import { globBuilderInputs } from './glob';
-import DevServer from './dev-server';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
+import { bufferToReadable, readableToBuffer } from '../../../util/stream';
+
+import DevServer from './dev-server';
 import { getBuilder } from './builder-cache';
+import { globBuilderInputs } from './glob';
 import {
   NowConfig,
   BuildMatch,
@@ -41,7 +44,7 @@ export async function executePrepareCache(
   devServer: DevServer,
   buildMatch: BuildMatch,
   params: PrepareCacheParams
-): Promise<CacheOutputs> {
+): Promise<Buffer> {
   const { builderWithPkg } = buildMatch;
   if (!builderWithPkg) {
     throw new Error('No builder');
@@ -58,9 +61,16 @@ export async function executePrepareCache(
 
   const startTime = Date.now();
   const results = await builder.prepareCache(params);
+  const entries = Object.keys(results);
+  const usesWorkPath =
+    entries.length > 0 &&
+    results[entries[0]].fsPath.startsWith(params.workPath);
+  const cacheDir = usesWorkPath ? params.workPath : params.cachePath;
+  const pack = tar.pack(cacheDir, { entries: Object.keys(results) });
+  const buffer = await readableToBuffer(pack);
   const cacheTime = Date.now() - startTime;
   devServer.output.debug(`\`prepareCache()\` took ${cacheTime}ms`);
-  return results;
+  return buffer;
 }
 
 export async function executeBuild(
@@ -83,9 +93,12 @@ export async function executeBuild(
 
   if (match.builderCachePromise) {
     devServer.output.debug('Restoring build cache from previous build');
-    const builderCache = await match.builderCachePromise;
+    const cacheTarballBuffer = await match.builderCachePromise;
     const startTime = Date.now();
-    await download(builderCache, workPath);
+    await pipe(
+      bufferToReadable(cacheTarballBuffer),
+      tar.extract(workPath)
+    );
     const cacheRestoreTime = Date.now() - startTime;
     devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
   }

@@ -216,7 +216,9 @@ export default class DevServer {
       this.output.debug(`File renamed: ${oldName} -> ${name}`);
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.debug(`File renamed, but has since been deleted: ${oldName} -> ${name}`);
+        this.output.debug(
+          `File renamed, but has since been deleted: ${oldName} -> ${name}`
+        );
       } else {
         throw err;
       }
@@ -549,9 +551,7 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name] of Object.entries(
-            previousBuildResult.output
-          )) {
+          for (const name of Object.keys(previousBuildResult.output)) {
             this.output.debug(`Removing asset "${name}"`);
             delete match.buildOutput[name];
             // TODO: shut down Lambda instance
@@ -579,7 +579,7 @@ export default class DevServer {
     try {
       await buildPromise;
     } finally {
-      this.output.debug(`Built asset ${buildKey}`);
+      this.output.debug(`Built asset "${buildKey}"`);
       this.inProgressBuilds.delete(buildKey);
     }
   }
@@ -704,7 +704,7 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(`Serve asset: [${asset.type}] ${assetKey}`);
+    this.output.debug(`Serving asset: [${asset.type}] ${assetKey}`);
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
@@ -766,7 +766,7 @@ export default class DevServer {
           body: body.toString('base64')
         };
 
-        this.output.debug(`Invode lambda: "${assetKey}" with ${path}`);
+        this.output.debug(`Invoking lambda: "${assetKey}" with ${path}`);
 
         let result: InvokeResult;
         try {
