@@ -38,7 +38,7 @@ const waitForDeployment = async href => {
       break;
     }
 
-    sleep(2000);
+    await sleep(2000);
   }
 };
 
