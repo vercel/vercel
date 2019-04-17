@@ -556,6 +556,7 @@ export default class DevServer {
     try {
       await buildPromise;
     } finally {
+      this.output.debug(`Built asset ${buildKey}`);
       this.inProgressBuilds.delete(buildKey);
     }
   }
@@ -680,6 +681,7 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
+    this.output.debug(`Serve asset: [${asset.type}] ${assetKey}`);
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
@@ -740,6 +742,8 @@ export default class DevServer {
           encoding: 'base64',
           body: body.toString('base64')
         };
+
+        this.output.debug(`Invode lambda: "${assetKey}" with ${path}`);
 
         let result: InvokeResult;
         try {
