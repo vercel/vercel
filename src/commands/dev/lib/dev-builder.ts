@@ -6,24 +6,21 @@ import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { FileFsRef, download } from '@now/build-utils';
+import { download } from '@now/build-utils';
 import intercept from 'intercept-stdout';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import IGNORED from '../../../util/ignored';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
-import { installBuilders, getBuilder } from './builder-cache';
+import { getBuilder } from './builder-cache';
 import {
   NowConfig,
-  BuildConfig,
   BuildMatch,
   BuildResult,
-  BuilderParamsBase,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
-  BuiltLambda,
   CacheOutputs,
   PrepareCacheParams
 } from './types';
@@ -78,7 +75,7 @@ export async function executeBuild(
   const {
     builderWithPkg: { builder, package: pkg }
   } = match;
-  const { cwd, env } = devServer;
+  const { env } = devServer;
   const entrypoint = match.src;
 
   const workPath = getWorkPath();
