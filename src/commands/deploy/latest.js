@@ -783,7 +783,7 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
-    output.note(`You can run ${code('now upgrade')} to increase your builds limit`);
+    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
     return 1;
   }
 
