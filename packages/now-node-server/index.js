@@ -43,7 +43,10 @@ async function compile(workPath, downloadedFiles, entrypoint, config) {
   const input = downloadedFiles[entrypoint].fsPath;
   const inputDir = path.dirname(input);
   const ncc = require('@zeit/ncc');
-  const { code, assets } = await ncc(input, { sourceMap: true });
+  const { code, map, assets } = await ncc(input, {
+    sourceMap: true,
+    sourceMapRegister: true,
+  });
 
   if (config && config.includeFiles) {
     // eslint-disable-next-line no-restricted-syntax
@@ -67,16 +70,16 @@ async function compile(workPath, downloadedFiles, entrypoint, config) {
   }
 
   const preparedFiles = {};
-  const blob = new FileBlob({ data: code });
   // move all user code to 'user' subdirectory
-  preparedFiles[entrypoint] = blob;
+  preparedFiles[entrypoint] = new FileBlob({ data: code });
+  preparedFiles[`${entrypoint.replace('.ts', '.js')}.map`] = new FileBlob({
+    data: map,
+  });
   // eslint-disable-next-line no-restricted-syntax
   for (const assetName of Object.keys(assets)) {
     const { source: data, permissions: mode } = assets[assetName];
     const blob2 = new FileBlob({ data, mode });
-    preparedFiles[
-      path.join(path.dirname(entrypoint), assetName)
-    ] = blob2;
+    preparedFiles[path.join(path.dirname(entrypoint), assetName)] = blob2;
   }
 
   return preparedFiles;
@@ -93,10 +96,7 @@ exports.config = {
 exports.build = async ({
   files, entrypoint, config, workPath,
 }) => {
-  const [
-    downloadedFiles,
-    entrypointFsDirname,
-  ] = await downloadInstallAndBundle(
+  const [downloadedFiles, entrypointFsDirname] = await downloadInstallAndBundle(
     { files, entrypoint, workPath },
     { npmArguments: ['--prefer-offline'] },
   );
@@ -123,9 +123,7 @@ exports.build = async ({
   let launcherData = await fs.readFile(launcherPath, 'utf8');
   launcherData = launcherData.replace(
     '// PLACEHOLDER',
-    [
-      `require("./${entrypoint}");`,
-    ].join(' '),
+    [`require("./${entrypoint}");`].join(' '),
   );
 
   const launcherFiles = {
