@@ -4,6 +4,7 @@ import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
+import Client from '../../util/client';
 import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
@@ -22,6 +23,7 @@ import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
 import {
+  UserAborted,
   WildcardNotAllowed,
   CantSolveChallenge,
   DomainConfigurationError,
@@ -37,6 +39,7 @@ import {
   DeploymentNotFound
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
+import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -356,8 +359,47 @@ export default async function main(
       now,
       contextName,
       paths,
-      createArgs
+      createArgs,
+      ctx
     );
+
+    if (
+      firstDeployCall instanceof DomainNotFound &&
+      firstDeployCall.meta && firstDeployCall.meta.domain
+    ) {
+      output.debug(`The domain ${
+        firstDeployCall.meta.domain
+      } was not found, trying to purchase it`);
+
+      const purchase = await purchaseDomainIfAvailable(
+        output,
+        new Client({
+          apiUrl: ctx.apiUrl,
+          token: ctx.authConfig.token,
+          currentTeam: ctx.config.currentTeam
+        }),
+        firstDeployCall.meta.domain,
+        contextName
+      );
+
+      if (purchase === true) {
+        output.success(`Successfully purchased the domain ${
+          firstDeployCall.meta.domain
+        }!`);
+
+        // We exit if the purchase is completed since
+        // the domain verification can take some time
+        return 0;
+      }
+
+      if (purchase === false || purchase instanceof UserAborted) {
+        handleCreateDeployError(output, firstDeployCall);
+        return 1;
+      }
+
+      handleCreateDeployError(output, purchase);
+      return 1;
+    }
 
     if (
       firstDeployCall instanceof WildcardNotAllowed ||
@@ -722,11 +764,7 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof DomainNotFound) {
-    output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
-    );
+    output.error(error.message);
     return 1;
   }
   if (error instanceof DomainNotVerified) {
