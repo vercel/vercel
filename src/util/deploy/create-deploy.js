@@ -1,4 +1,3 @@
-import Client from '../client';
 import generateCertForDeploy from './generate-cert-for-deploy';
 import purchaseDomainIfAvailable from '../domains/purchase-domain-if-available';
 import * as ERRORS_TS from '../errors-ts';
@@ -9,8 +8,7 @@ export default async function createDeploy(
   now,
   contextName,
   paths,
-  createArgs,
-  ctx = null
+  createArgs
 ) {
   try {
     return await now.create(paths, createArgs);
@@ -20,26 +18,7 @@ export default async function createDeploy(
       return new ERRORS_TS.DomainNotFound(error.value);
     }
 
-    if (error.code === 'domain_not_found' && error.domain && ctx) {
-      const client = new Client({
-        apiUrl: ctx.apiUrl,
-        token: ctx.authConfig.token,
-        currentTeam: ctx.config.currentTeam
-      });
-
-      const purchase = await purchaseDomainIfAvailable(output, client, error.domain, contextName);
-
-      if (purchase === true) {
-        return createDeploy(output, now, contextName, paths, createArgs, ctx);
-      }
-
-      if (
-          (purchase instanceof Error) &&
-          !(purchase instanceof ERRORS_TS.UserAborted)
-      ) {
-        return purchase;
-      }
-
+    if (error.code === 'domain_not_found' && error.domain) {
       return new ERRORS_TS.DomainNotFound(error.domain);
     }
 
