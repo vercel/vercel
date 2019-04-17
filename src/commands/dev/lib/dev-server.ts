@@ -5,9 +5,7 @@ import nsfw from '@zeit/nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
-import { inspect } from 'util';
 import listen from 'async-listen';
-import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -40,7 +38,6 @@ import {
   BuildResult,
   BuilderInputs,
   BuilderOutput,
-  BuilderOutputs,
   HttpHandler,
   InvokePayload,
   InvokeResult
@@ -288,7 +285,7 @@ export default class DevServer {
           value.startsWith('@') &&
           !hasOwnProperty(localEnv, name)
       )
-      .map(([name, value]) => name);
+      .map(([name]) => name);
     if (missing.length >= 1) {
       throw new MissingDotenvVarsError(type, missing);
     }
@@ -526,7 +523,7 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name, asset] of Object.entries(
+          for (const [name] of Object.entries(
             previousBuildResult.output
           )) {
             this.output.debug(`Removing asset "${name}"`);
@@ -865,7 +862,7 @@ async function findBuildMatch(
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
     const {
-      builderWithPkg: { builder, package: pkg }
+      builderWithPkg: { builder }
     } = match;
     if (typeof builder.shouldServe === 'function') {
       const shouldServe = await builder.shouldServe({
