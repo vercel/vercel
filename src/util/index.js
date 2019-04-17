@@ -317,6 +317,7 @@ export default class Now extends EventEmitter {
           const err = new Error(body.error.message);
           err.status = res.status;
           err.retryAfter = 'never';
+          err.code = body.error.code;
 
           return bail(err);
         }
