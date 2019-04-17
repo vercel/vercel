@@ -1116,3 +1116,16 @@ export class CertsDNSError extends NowError<
     });
   }
 }
+
+export class BuildsRateLimited extends NowError<
+  'BUILDS_RATE_LIMITED',
+  { }
+> {
+  constructor(message: string) {
+    super({
+      code: 'BUILDS_RATE_LIMITED',
+      meta: {},
+      message
+    });
+  }
+}

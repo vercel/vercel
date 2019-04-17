@@ -33,6 +33,10 @@ export default async function createDeploy(
       return new ERRORS_TS.DomainVerificationFailed(error.value);
     }
 
+    if (error.code === 'builds_rate_limited') {
+      return new ERRORS_TS.BuildsRateLimited(error.message);
+    }
+
     // If the user doesn't have permissions over the domain used as a suffix we fail
     if (error.code === 'forbidden') {
       return new ERRORS_TS.DomainPermissionDenied(error.value, contextName);
