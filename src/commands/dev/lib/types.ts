@@ -20,7 +20,7 @@ export interface BuildConfig {
 export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
-  buildResults: Map<string | null, BuildResult>;
+  buildResults: Map<string, BuildResult>;
   builderCachePromise?: Promise<CacheOutputs>;
   buildTimestamp: number;
 }
@@ -74,7 +74,7 @@ export interface BuilderParamsBase {
   config: object;
   meta?: {
     isDev?: boolean;
-    requestPath?: string | null;
+    requestPath?: string;
     filesChanged?: string[];
     filesRemoved?: string[];
   };
