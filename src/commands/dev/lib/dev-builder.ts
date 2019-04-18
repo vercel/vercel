@@ -21,7 +21,7 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
-  CacheOutputs,
+  CacheOutputs
 } from './types';
 
 const tmpDir = tmpdir();
@@ -49,10 +49,7 @@ export async function executeBuild(
     builderWithPkg: { builder, package: pkg }
   } = match;
   const { env } = devServer;
-  const {
-    src: entrypoint,
-    workPath
-  } = match;
+  const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
   if (match.builderCachePromise) {
