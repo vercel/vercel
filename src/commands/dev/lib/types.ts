@@ -116,7 +116,7 @@ export interface Builder {
 export type BuildResultV1 = BuilderOutputs;
 
 export interface BuildResultV2 {
-  outputs: BuilderOutputs;
+  output: BuilderOutputs;
   routes: RouteConfig[];
   watch: string[];
 }

@@ -375,18 +375,27 @@ export default class DevServer {
     this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
-    // Now Builders that do not define a `shouldServe()` function need to be
-    // executed at boot-up time in order to get the initial assets that can be
-    // routed to.
     if (nowJson) {
       const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
       const shouldUpdate = true;
       await installBuilders(builders, shouldUpdate);
       await this.updateBuildMatches(nowJson);
+
+      // Now Builders that do not define a `shouldServe()` function need to be
+      // executed at boot-up time in order to get the initial assets that can be
+      // routed to.
+      // Also for v2 builders with 'continuous: true' flag, which only needs the
+      // initial build.
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-          return typeof builder.shouldServe !== 'function';
+          if (builder.continuous) {
+            return true;
+          }
+          if (typeof builder.shouldServe !== 'function') {
+            return true;
+          }
+          return false;
         }
       );
       if (needsInitialBuild.length > 0) {
@@ -561,7 +570,7 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name] of Object.entries(previousBuildResult.outputs)) {
+          for (const [name] of Object.entries(previousBuildResult.output)) {
             this.output.debug(`Removing asset "${name}"`);
             delete match.buildOutput[name];
             // TODO: shut down Lambda instance

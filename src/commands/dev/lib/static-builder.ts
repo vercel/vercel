@@ -1,8 +1,10 @@
 import { basename, extname, join } from 'path';
 import { BuilderParams, BuildResult, RouteConfig, ShouldServeParams } from './types';
 
+export const version = 2;
+
 export function build({ files, entrypoint }: BuilderParams): BuildResult {
-  const outputs = {
+  const output = {
     [entrypoint]: files[entrypoint]
   };
   const routes: RouteConfig[] = [
@@ -10,7 +12,7 @@ export function build({ files, entrypoint }: BuilderParams): BuildResult {
   ];
   const watch = [entrypoint];
 
-  return { outputs, routes, watch };
+  return { output, routes, watch };
 }
 
 export function shouldServe({

@@ -88,7 +88,7 @@ export async function executeBuild(
     if (builder.version === undefined) {
       // `BuilderOutputs` map was returned (Now Builder v1 behavior)
       result = {
-        outputs: result as BuilderOutputs,
+        output: result as BuilderOutputs,
         routes: [],
         watch: []
       };
@@ -105,7 +105,7 @@ export async function executeBuild(
   } else {
     maxLambdaBytes = maxLambdaSize;
   }
-  for (const asset of Object.values(result.outputs)) {
+  for (const asset of Object.values(result.output)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -116,7 +116,7 @@ export async function executeBuild(
 
   // Create function for all 'Lambda' type output
   await Promise.all(
-    Object.entries(result.outputs).map(async entry => {
+    Object.entries(result.output).map(async entry => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
@@ -148,7 +148,7 @@ export async function executeBuild(
   );
 
   match.buildResults.set(requestPath, result);
-  Object.assign(match.buildOutput, result.outputs);
+  Object.assign(match.buildOutput, result.output);
 }
 
 export async function getBuildMatches(
