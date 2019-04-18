@@ -139,9 +139,6 @@ export default class DevServer {
       this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
       this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
       for (const [result, [requestPath, match]] of needsRebuild) {
-        const {
-          builderWithPkg: { builder }
-        } = match;
         if (await shouldServe(match, this.files, requestPath)) {
           this.triggerBuild(
             match,
