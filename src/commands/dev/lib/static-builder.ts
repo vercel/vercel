@@ -1,12 +1,16 @@
-import { basename, extname, dirname, join } from 'path';
-import { BuilderParams, BuildResult, ShouldServeParams } from './types';
+import { basename, extname, join } from 'path';
+import { BuilderParams, BuildResult, RouteConfig, ShouldServeParams } from './types';
 
 export function build({ files, entrypoint }: BuilderParams): BuildResult {
-  const output = {
+  const outputs = {
     [entrypoint]: files[entrypoint]
   };
+  const routes: RouteConfig[] = [
+    { src: entrypoint, dest: entrypoint }
+  ];
   const watch = [entrypoint];
-  return { output, watch };
+
+  return { outputs, routes, watch };
 }
 
 export function shouldServe({

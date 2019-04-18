@@ -90,11 +90,14 @@ export interface PrepareCacheParams extends BuilderParams {
   cachePath: string;
 }
 
+export interface BuilderConfigAttr {
+  maxLambdaSize?: string | number;
+}
+
 export interface Builder {
   version?: 2;
-  config?: {
-    maxLambdaSize?: string | number;
-  };
+  continuous?: boolean;
+  config?: BuilderConfigAttr;
   build(
     params: BuilderParams
   ):
@@ -102,7 +105,9 @@ export interface Builder {
     | BuildResult
     | Promise<BuilderOutputs>
     | Promise<BuildResult>;
-  shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
+  shouldServe?(
+    params: ShouldServeParams
+  ): boolean | Promise<boolean>;
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;

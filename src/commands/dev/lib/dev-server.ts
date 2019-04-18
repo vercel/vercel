@@ -561,7 +561,7 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name] of Object.entries(previousBuildResult.output)) {
+          for (const [name] of Object.entries(previousBuildResult.outputs)) {
             this.output.debug(`Removing asset "${name}"`);
             delete match.buildOutput[name];
             // TODO: shut down Lambda instance
