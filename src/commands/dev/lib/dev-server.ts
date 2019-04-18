@@ -114,10 +114,7 @@ export default class DevServer {
 
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
-    const needsRebuild: Map<
-      BuildResult,
-      [string | null, BuildMatch]
-    > = new Map();
+    const needsRebuild: Map<BuildResult, [string, BuildMatch]> = new Map();
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -136,19 +133,31 @@ export default class DevServer {
     }
 
     if (needsRebuild.size > 0) {
+      const filesChangedArray = [...filesChanged];
+      const filesRemovedArray = [...filesRemoved];
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
+      this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
+      this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
       for (const [result, [requestPath, match]] of needsRebuild) {
-        this.triggerBuild(
-          match,
-          requestPath,
-          null,
-          result,
-          filesChanged,
-          filesRemoved
-        ).catch(err => {
-          this.output.warn(`An error occured while rebuilding ${match.src}:`);
-          console.error(err.stack);
-        });
+        if (await shouldServe(match, this.files, requestPath)) {
+          this.triggerBuild(
+            match,
+            requestPath,
+            null,
+            result,
+            filesChangedArray,
+            filesRemovedArray
+          ).catch(err => {
+            this.output.warn(`An error occured while rebuilding ${match.src}:`);
+            console.error(err.stack);
+          });
+        } else {
+          this.output.debug(
+            `Not rebuilding because \`shouldServe()\` returned \`false\` for "${
+              match.use
+            }" request path "${requestPath}"`
+          );
+        }
       }
     }
   }
@@ -216,7 +225,9 @@ export default class DevServer {
       this.output.debug(`File renamed: ${oldName} -> ${name}`);
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.debug(`File renamed, but has since been deleted: ${oldName} -> ${name}`);
+        this.output.debug(
+          `File renamed, but has since been deleted: ${oldName} -> ${name}`
+        );
       } else {
         throw err;
       }
@@ -380,8 +391,9 @@ export default class DevServer {
       );
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
+        const requestPath = '';
         for (const match of needsInitialBuild) {
-          await executeBuild(nowJson, this, this.files, match);
+          await executeBuild(nowJson, this, this.files, match, requestPath);
         }
         this.output.success('Initial builds complete');
       }
@@ -519,11 +531,11 @@ export default class DevServer {
 
   async triggerBuild(
     match: BuildMatch,
-    requestPath: string | null,
+    requestPath: string,
     req: http.IncomingMessage | null,
     previousBuildResult?: BuildResult,
-    filesChanged?: Set<string>,
-    filesRemoved?: Set<string>
+    filesChanged?: string[],
+    filesRemoved?: string[]
   ) {
     // If the requested asset wasn't found in the match's outputs, or
     // a hard-refresh was detected, then trigger a build
@@ -549,9 +561,7 @@ export default class DevServer {
         if (previousBuildResult) {
           // Tear down any `output` assets from a previous build, so that they
           // are not available to be served while the rebuild is in progress.
-          for (const [name] of Object.entries(
-            previousBuildResult.output
-          )) {
+          for (const [name] of Object.entries(previousBuildResult.output)) {
             this.output.debug(`Removing asset "${name}"`);
             delete match.buildOutput[name];
             // TODO: shut down Lambda instance
@@ -566,8 +576,8 @@ export default class DevServer {
           this.files,
           match,
           requestPath,
-          filesChanged ? Array.from(filesChanged) : undefined,
-          filesRemoved ? Array.from(filesRemoved) : undefined
+          filesChanged,
+          filesRemoved
         );
         this.inProgressBuilds.set(buildKey, buildPromise);
       } else {
@@ -887,25 +897,39 @@ async function findBuildMatch(
   requestPath: string
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    const {
-      builderWithPkg: { builder }
-    } = match;
-    if (typeof builder.shouldServe === 'function') {
-      const shouldServe = await builder.shouldServe({
-        entrypoint: match.src,
-        files,
-        requestPath
-      });
-      if (shouldServe) {
-        return match;
-      }
-    } else if (findAsset(match, requestPath)) {
-      // If there's no `shouldServe()` function, then look up if there's
-      // a matching build asset on the `match` that has already been built.
+    if (await shouldServe(match, files, requestPath)) {
       return match;
     }
   }
   return null;
+}
+
+async function shouldServe(
+  match: BuildMatch,
+  files: BuilderInputs,
+  requestPath: string
+): Promise<boolean> {
+  const {
+    src: entrypoint,
+    config,
+    builderWithPkg: { builder }
+  } = match;
+  if (typeof builder.shouldServe === 'function') {
+    const shouldServe = await builder.shouldServe({
+      entrypoint,
+      files,
+      config,
+      requestPath
+    });
+    if (shouldServe) {
+      return true;
+    }
+  } else if (findAsset(match, requestPath)) {
+    // If there's no `shouldServe()` function, then look up if there's
+    // a matching build asset on the `match` that has already been built.
+    return true;
+  }
+  return false;
 }
 
 function findAsset(

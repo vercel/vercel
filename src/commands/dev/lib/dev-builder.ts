@@ -68,7 +68,7 @@ export async function executeBuild(
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
-  requestPath: string | null = null,
+  requestPath: string,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
