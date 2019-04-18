@@ -23,6 +23,7 @@ export interface BuildMatch extends BuildConfig {
   buildResults: Map<string | null, BuildResult>;
   builderCachePromise?: Promise<CacheOutputs>;
   buildTimestamp: number;
+  workPath: string;
 }
 
 export interface RouteConfig {
