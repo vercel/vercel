@@ -1291,8 +1291,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  const { stdout: username } = await execute(['whoami']);
-  let url = `https://now-revert-alias.${username}.now.sh`;
+  let url = `https://now-cli.user.now.sh`;
 
   {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
