@@ -21,8 +21,7 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs,
-  CacheOutputs,
-  PrepareCacheParams
+  CacheOutputs
 } from './types';
 
 const tmpDir = tmpdir();
@@ -37,32 +36,6 @@ const getWorkPath = () =>
       .slice(-8)
   );
 
-export async function executePrepareCache(
-  devServer: DevServer,
-  buildMatch: BuildMatch,
-  params: PrepareCacheParams
-): Promise<CacheOutputs> {
-  const { builderWithPkg } = buildMatch;
-  if (!builderWithPkg) {
-    throw new Error('No builder');
-  }
-  const { builder } = builderWithPkg;
-  if (!builder.prepareCache) {
-    throw new Error('Builder has no `prepareCache()` function');
-  }
-
-  // Since the `prepareCache()` function may be computationally expensive, and
-  // its run in the same process as `now dev` (for now), defer executing it
-  // until after there has been time for the current HTTP request to complete.
-  await new Promise(r => setTimeout(r, 3000));
-
-  const startTime = Date.now();
-  const results = await builder.prepareCache(params);
-  const cacheTime = Date.now() - startTime;
-  devServer.output.debug(`\`prepareCache()\` took ${cacheTime}ms`);
-  return results;
-}
-
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
@@ -76,9 +49,7 @@ export async function executeBuild(
     builderWithPkg: { builder, package: pkg }
   } = match;
   const { env } = devServer;
-  const entrypoint = match.src;
-
-  const workPath = getWorkPath();
+  const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
   if (match.builderCachePromise) {
@@ -117,19 +88,6 @@ export async function executeBuild(
       result = { output: r as BuilderOutputs };
     }
     outputs = result.output;
-
-    if (typeof builder.prepareCache === 'function') {
-      const cachePath = getWorkPath();
-      await mkdirp(cachePath);
-      match.builderCachePromise = executePrepareCache(devServer, match, {
-        files,
-        entrypoint,
-        workPath,
-        cachePath,
-        config,
-        meta: { isDev: true, requestPath }
-      });
-    }
   } finally {
     devServer.restoreOriginalEnv();
   }
@@ -215,7 +173,8 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0
+        buildTimestamp: 0,
+        workPath: getWorkPath()
       });
     }
   }
