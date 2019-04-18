@@ -20,8 +20,7 @@ import {
   BuildResult,
   BuilderInputs,
   BuilderOutput,
-  BuilderOutputs,
-  CacheOutputs
+  BuilderOutputs
 } from './types';
 
 const tmpDir = tmpdir();
@@ -66,14 +65,17 @@ export async function executeBuild(
       pkg.version ? ` v${pkg.version}` : ''
     } (workPath = ${workPath})`
   );
+
   const builderConfig = builder.config || {};
   const config = match.config || {};
-  let outputs: BuilderOutputs;
   let result: BuildResult;
+
   try {
     devServer.applyBuildEnv(nowJson);
+
+    // Run build
     const unhookIntercept = intercept(() => '');
-    const r = await builder.build({
+    result = await builder.build({
       files,
       entrypoint,
       workPath,
@@ -81,18 +83,21 @@ export async function executeBuild(
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
     unhookIntercept();
-    if (r.output) {
-      result = r as BuildResult;
-    } else {
+
+    // Sort out build result to builder v2 shape
+    if (builder.version === undefined) {
       // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-      result = { output: r as BuilderOutputs };
+      result = {
+        outputs: result as BuilderOutputs,
+        routes: [],
+        watch: []
+      };
     }
-    outputs = result.output;
   } finally {
     devServer.restoreOriginalEnv();
   }
 
-  // enforce the lambda zip size soft watermark
+  // Enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
   let maxLambdaBytes: number;
   if (typeof maxLambdaSize === 'string') {
@@ -100,8 +105,7 @@ export async function executeBuild(
   } else {
     maxLambdaBytes = maxLambdaSize;
   }
-
-  for (const asset of Object.values(outputs)) {
+  for (const asset of Object.values(result.outputs)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -110,8 +114,9 @@ export async function executeBuild(
     }
   }
 
+  // Create function for all 'Lambda' type output
   await Promise.all(
-    Object.entries(outputs).map(async entry => {
+    Object.entries(result.outputs).map(async entry => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
@@ -143,7 +148,7 @@ export async function executeBuild(
   );
 
   match.buildResults.set(requestPath, result);
-  Object.assign(match.buildOutput, outputs);
+  Object.assign(match.buildOutput, result.outputs);
 }
 
 export async function getBuildMatches(

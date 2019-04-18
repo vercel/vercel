@@ -57,6 +57,7 @@ export interface BuilderInputs {
 export type BuiltLambda = Lambda & {
   fn?: FunLambda;
 };
+
 export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;
 
 export interface BuilderOutputs {
@@ -90,6 +91,7 @@ export interface PrepareCacheParams extends BuilderParams {
 }
 
 export interface Builder {
+  version?: 2;
   config?: {
     maxLambdaSize?: string | number;
   };
@@ -106,11 +108,15 @@ export interface Builder {
   ): CacheOutputs | Promise<CacheOutputs>;
 }
 
-export interface BuildResult {
-  output: BuilderOutputs;
-  routes?: RouteConfig[];
-  watch?: string[];
+export type BuildResultV1 = BuilderOutputs;
+
+export interface BuildResultV2 {
+  outputs: BuilderOutputs;
+  routes: RouteConfig[];
+  watch: string[];
 }
+
+export type BuildResult = BuildResultV1 | BuildResultV2;
 
 export interface ShouldServeParams {
   files: BuilderInputs;

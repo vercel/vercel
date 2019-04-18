@@ -612,10 +612,6 @@ export default class DevServer {
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
-    // if (this.status === DevServerStatus.busy) {
-    //   return res.end(`[busy] ${this.statusMessage}...`);
-    // }
-
     try {
       const nowJson = await this.getNowJson();
       if (nowJson) {
