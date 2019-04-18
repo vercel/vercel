@@ -168,7 +168,7 @@ async function main() {
 
       fs.writeFileSync(
         npmCmdFile,
-        '@%~dp0\\node_modules\\now\\download\\dist\\now.exe %*'
+        '@\"%~dp0node_modules\\now\\download\\dist\\now.exe\" %*'
       );
     } catch (err) {
       if (err.code !== 'ENOENT') {
