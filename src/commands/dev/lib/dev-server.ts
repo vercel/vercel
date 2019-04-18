@@ -913,12 +913,15 @@ async function shouldServe(
   requestPath: string
 ): Promise<boolean> {
   const {
+    src: entrypoint,
+    config,
     builderWithPkg: { builder }
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
-      entrypoint: match.src,
+      entrypoint,
       files,
+      config,
       requestPath
     });
     if (shouldServe) {
