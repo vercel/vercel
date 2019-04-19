@@ -239,7 +239,7 @@ export async function combineRoutes (
   await Promise.all(builds.map(async buildConfig => {
     const { builder } = await getBuilder(buildConfig.use);
     const { files } = devServer;
-    if (builder.version === 2 && builder.continuous) {
+    if (builder.version === 2) {
       await executeBuild(
         nowJson,
         devServer,
