@@ -14,6 +14,13 @@ export interface Config {
   [key: string]: string
 }
 
+export interface Meta {
+  isDev?: boolean;
+  requestPath?: string;
+  filesChanged?: string[];
+  filesRemoved?: string[];
+}
+
 export interface AnalyzeOptions {
   /**
    * All source files of the project
@@ -67,6 +74,13 @@ export interface BuildOptions {
    * in `now.json`.
    */
   config: Config;
+
+  /**
+   * Metadata related to the invoker of the builder, used by `now dev`.
+   * Builders may use the properties on this object to change behavior based
+   * on the build environment.
+   */
+  meta?: Meta;
 }
 
 export interface PrepareCacheOptions {
@@ -107,6 +121,7 @@ export interface ShouldServeOptions {
    * A path string from a request.
    */
   requestPath: string;
+
   /**
    * Name of entrypoint file for this particular build job. Value
    * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
@@ -114,12 +129,14 @@ export interface ShouldServeOptions {
    * expanded into separate builds at deployment time.
    */
   entrypoint: string;
+
   /**
    * All source files of the project
    */
   files: {
     [path: string]: FileFsRef
   };
+
   /**
    * An arbitrary object passed by the user in the build definition defined
    * in `now.json`.
