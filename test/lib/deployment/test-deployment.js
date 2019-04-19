@@ -77,7 +77,7 @@ async function testDeployment (
   bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
-  console.log('deploymentUrl', deploymentUrl);
+  console.log('deploymentUrl', `https://${deploymentUrl}`);
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
