@@ -14,7 +14,8 @@ test('[dev-router] 301 redirection', async (t) => {
     headers: { 'Location': 'https://zeit.co' },
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: false
   });
 });
 
@@ -30,7 +31,8 @@ test('[dev-router] captured groups', async (t) => {
     headers: undefined,
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: false
   });
 });
 
@@ -82,6 +84,7 @@ test('[dev-router] proxy_pass', async (t) => {
     headers: undefined,
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: false
   });
 });
