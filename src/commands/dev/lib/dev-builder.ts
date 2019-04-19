@@ -76,7 +76,7 @@ export async function executeBuild(
     devServer.applyBuildEnv(nowJson);
 
     // Run build
-    const unhookIntercept = intercept(() => '');
+    // const unhookIntercept = intercept(() => '');
     result = await builder.build({
       files,
       entrypoint,
@@ -84,7 +84,7 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
-    unhookIntercept();
+    // unhookIntercept();
 
     // Sort out build result to builder v2 shape
     if (builder.version === undefined) {
