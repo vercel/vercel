@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "0.2.0-canary.1",
+  "version": "0.2.0-canary.37",
   "license": "MIT",
   "main": "./dist/index",
   "scripts": {
@@ -17,6 +17,7 @@
     "@now/node-bridge": "^1.0.2-canary.2",
     "execa": "^1.0.0",
     "fs-extra": "^7.0.0",
+    "get-port": "^5.0.0",
     "resolve-from": "^4.0.0",
     "semver": "^5.6.0"
   },

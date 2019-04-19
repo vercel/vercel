@@ -1,4 +1,4 @@
-import { 
+import {
   createLambda,
   download,
   FileFsRef,
@@ -14,6 +14,7 @@ import {
 import resolveFrom from 'resolve-from';
 import path from 'path';
 import url from 'url';
+import execa from 'execa';
 import {
   readFile,
   writeFile,
@@ -22,6 +23,7 @@ import {
   pathExists,
 } from 'fs-extra';
 import semver from 'semver';
+import getPort from 'get-port';
 import nextLegacyVersions from './legacy-versions';
 import {
   excludeFiles,
@@ -31,6 +33,7 @@ import {
   onlyStaticDirectory,
   getNextConfig,
   getWatchers,
+  stringMap,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -46,6 +49,7 @@ interface BuildParamsType extends BuildOptions {
 };
 
 export const version = 2;
+export const continuous = true;
 
 /**
  * Read package.json from files
@@ -111,46 +115,6 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-function setNextExperimentalPage(files: Files, entry: string, meta: BuildParamsMeta) {
-  const entryPath = entry !== '.' ? `${entry}/` : '';
-  if (meta.requestPath || meta.requestPath === '') {
-    if (
-      meta.requestPath.startsWith(`${entryPath}static`)
-      || (meta.requestPath.startsWith(`${entryPath}_next`)
-        && !meta.requestPath.startsWith(
-          `${entryPath}_next/static/unoptimized-build/pages`,
-        ))
-    ) {
-      return files[meta.requestPath]
-        ? {
-          output: {
-            [meta.requestPath]: files[meta.requestPath],
-          },
-        }
-        : undefined;
-    }
-
-    const { pathname } = meta.requestPath
-      ? url.parse(meta.requestPath)
-      : { pathname: '/' };
-    const clientPageRegex = new RegExp(
-      `^${entryPath}_next/static/unoptimized-build/pages/(.+)\\.js$`,
-    );
-    const clientPage = (pathname || '/').match(clientPageRegex);
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_PAGE = clientPage
-      ? clientPage[1]
-      : pathname;
-  }
-
-  if (meta.isDev) {
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
-  }
-
-  return null;
-}
-
 function pageExists(name: string, pages: Files, entry: string) {
   const pageWhere = (key: string) => Object.prototype.hasOwnProperty.call(pages, key);
   const inPages = (...names: string[]) => {
@@ -194,30 +158,71 @@ export const config = {
   maxLambdaSize: '5mb',
 };
 
+const name = '[@now/next]';
+const urls: stringMap = {};
+
 export const build = async ({
   files, workPath, entrypoint, meta = {} as BuildParamsMeta,
-}: BuildParamsType): Promise<{output: Files, watch?: string[]}> => {
+}: BuildParamsType): Promise<{routes?: any[], output: Files, watch?: string[]}> => {
   validateEntrypoint(entrypoint);
 
-  const entryDirectory = path.dirname(entrypoint);
-  const maybeStaticFiles = setNextExperimentalPage(files, entryDirectory, meta);
-  if (maybeStaticFiles) return maybeStaticFiles; // return early if requestPath is static file
+  const entrypointFull = files[entrypoint].fsPath;
+  const routes: any[] = [];
 
-  console.log('downloading user files...');
-  await download(files, workPath);
+  if (meta.isDev && entrypointFull) {
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
+
+    const entrypointDir = path.dirname(entrypointFull);
+    const outputDir = path.join(entrypointDir, '.next');
+
+    console.log(`${name} Requested ${meta.requestPath}`);
+
+    // If this is the initial build, we want to start the server
+    if (!urls[entrypoint]) {
+      const openPort = await getPort({
+        port: [ 5000, 4000 ]
+      });
+
+      urls[entrypoint] = `http://localhost:${openPort}`;
+
+      const command = [ 'next', 'dev', entrypointDir, '--port', `${openPort}` ];
+      console.log(`${name} Running \`${command.join(' ')}\``);
+
+      const { stdout, stderr } = execa('npx', command, {
+        cwd: entrypointDir
+      });
+
+      stderr.pipe(process.stderr);
+    }
+
+    if (typeof meta.requestPath === 'string') {
+      routes.push({
+        // This property is not allowed to contain GET parameters, as they
+        // contain a ?, which is a regex operator.
+        src: `${url.parse(`/${meta.requestPath}`).pathname}(.*)`,
+        dest: `${urls[entrypoint]}/${meta.requestPath}`
+      });
+    }
+
+    return {
+      routes,
+      output: {},
+      watch: []
+    };
+  }
+
+  const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const dotNext = path.join(entryPath, '.next');
 
+  console.log('downloading user files...');
+  await download(files, workPath);
+
   if (await pathExists(dotNext)) {
-    if (meta.isDev) {
-      await removePath(dotNext).catch((e) => {
-        if (e.code !== 'ENOENT') throw e;
-      });
-    } else {
-      console.warn(
-        'WARNING: You should probably not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more information.',
-      );
-    }
+    console.warn(
+      'WARNING: You should probably not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more information.',
+    );
   }
 
   const pkg = await readPackageJson(entryPath);
@@ -290,12 +295,6 @@ export const build = async ({
       return false;
     }
   };
-
-  if ((meta.isDev || meta.requestPath) && !isUpdated(nextVersion)) {
-    throw new Error(
-      '`now dev` can only be used with Next.js >=8.0.5-canary.14!',
-    );
-  }
 
   console.log('running user script...');
   await runPackageJsonScript(entryPath, 'now-build');
@@ -476,6 +475,7 @@ export const build = async ({
   );
 
   return {
+    routes,
     output: { ...lambdas, ...staticFiles, ...staticDirectoryFiles },
     watch: await getWatchers(dotNext),
   };
