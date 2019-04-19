@@ -25,13 +25,33 @@ export function resolveRouteParameters(
   });
 }
 
+function mergeRoutes(
+  existing: RouteResult | undefined,
+  fresh: RouteResult
+): RouteResult {
+  if (!existing) {
+    return fresh;
+  }
+
+  return {
+    dest: fresh.userDest ? fresh.dest : (existing.dest || fresh.dest),
+    status: fresh.status || existing.status,
+    headers: fresh.headers || existing.headers,
+    uri_args: fresh.uri_args || existing.uri_args || {},
+    matched_route: fresh.matched_route,
+    matched_route_idx: fresh.matched_route_idx
+  };
+}
+
 export default async function(
   reqPath = '',
   routes?: RouteConfig[],
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-  const { pathname: reqPathname = '/', query } = url.parse(reqPath, true);
+
+  const path = reqPath;
+  const { query, pathname: reqPathname = '/' } = url.parse(path, true);
 
   // try route match
   if (routes) {
@@ -58,7 +78,10 @@ export default async function(
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
-      const match = matcher.exec(reqPathname);
+
+      // Matching by `path` and not `reqPathname` here is
+      // important because we want to consider GET parameters.
+      const match = matcher.exec(path);
 
       if (match) {
         let destPath: string = reqPathname;
@@ -76,27 +99,28 @@ export default async function(
         }
 
         if (isURL(destPath)) {
-          found = {
+          found = mergeRoutes(found, {
             dest: destPath,
+            userDest: false,
             status: routeConfig.status,
             headers,
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
-          };
+          });
         } else {
           const { pathname, query } = url.parse(destPath, true);
-          found = {
+
+          found = mergeRoutes(found, {
             dest: pathname || '/',
+            userDest: Boolean(routeConfig.dest),
             status: routeConfig.status,
             headers,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
-          };
+          });
         }
-
-        break;
       }
     }
   }

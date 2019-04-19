@@ -155,6 +155,8 @@ export interface RouteResult {
   matched_route?: RouteConfig;
   // "matched_route_idx": <integer of the index of the route matched>
   matched_route_idx?: number;
+  // "userDest": <boolean in case the destination was user defined>
+  userDest?: boolean;
 }
 
 export interface InvokePayload {
