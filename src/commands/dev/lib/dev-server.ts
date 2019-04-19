@@ -45,6 +45,7 @@ import {
 
 export default class DevServer {
   public cwd: string;
+  public debug: boolean;
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
@@ -60,6 +61,7 @@ export default class DevServer {
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
+    this.debug = options.debug;
     this.output = options.output;
     this.env = {};
     this.buildEnv = {};
