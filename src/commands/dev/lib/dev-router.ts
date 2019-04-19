@@ -51,7 +51,7 @@ export default async function(
   let found: RouteResult | undefined;
 
   const path = reqPath;
-  const { query, pathname: reqPathname = '' } = url.parse(path, true);
+  const { query, pathname: reqPathname = '/' } = url.parse(path, true);
 
   // try route match
   if (routes) {
