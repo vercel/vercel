@@ -674,8 +674,10 @@ export default class DevServer {
     await this.updateBuildMatches(nowJson);
 
     let routes = nowJson.routes;
+
     const reqPath = (req.url || '').replace(/^\//, '');
     const _match = await findBuildMatch(this.buildMatches, this.files, reqPath);
+
     if (_match) {
       routes = await combineRoutes(nowJson, this, _match, reqPath);
     }
@@ -694,7 +696,7 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.output.debug(`ProxyPass: ${matched_route}`);
+      this.output.debug(`ProxyPass: ${JSON.stringify(matched_route)}`);
       return proxyPass(req, res, dest);
     }
 
@@ -854,6 +856,8 @@ function proxyPass(
 ): void {
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
+    ws: true,
+    ignorePath: true,
     target: dest
   });
   return proxy.web(req, res);

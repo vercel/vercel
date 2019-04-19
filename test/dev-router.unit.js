@@ -14,7 +14,8 @@ test('[dev-router] 301 redirection', async (t) => {
     headers: { 'Location': 'https://zeit.co' },
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: false
   });
 });
 
@@ -30,7 +31,8 @@ test('[dev-router] captured groups', async (t) => {
     headers: undefined,
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: true
   });
 });
 
@@ -46,7 +48,8 @@ test('[dev-router] named groups', async (t) => {
     headers: undefined,
     uri_args: { id: '123' },
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: true
   });
 });
 
@@ -58,16 +61,17 @@ test('[dev-router] unreached route', async (t) => {
 
   const result = await devRouter('/hidden', routesConfig);
 
+  // We need to match the last route. We read from
+  // top to bottom and every route can overwrite each other.
   t.deepEqual(result, {
-    dest: '/index.js',
+    dest: '/hidden.js',
     status: undefined,
     headers: undefined,
     uri_args: {},
-    matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route: routesConfig[1],
+    matched_route_idx: 1
   });
 });
-
 
 test('[dev-router] proxy_pass', async (t) => {
   const routesConfig = [
@@ -82,6 +86,7 @@ test('[dev-router] proxy_pass', async (t) => {
     headers: undefined,
     uri_args: {},
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: false
   });
 });

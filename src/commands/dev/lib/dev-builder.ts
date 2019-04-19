@@ -236,12 +236,13 @@ export async function combineRoutes (
   match: BuildMatch,
   requestPath: string,
 ): Promise<RouteConfig[]> {
-  const routes = nowJson.routes || [];
+  let routes: RouteConfig[] = [];
   const builds = nowJson.builds || [];
 
   await Promise.all(builds.map(async buildConfig => {
     const { builder } = await getBuilder(buildConfig.use);
     const { files } = devServer;
+
     if (builder.version === 2) {
       await executeBuild(
         nowJson,
@@ -251,9 +252,9 @@ export async function combineRoutes (
         requestPath
       );
       const buildResult = match.buildResults.get(requestPath) as BuildResultV2;
-      routes.concat(buildResult.routes);
+      routes = [...routes, ...buildResult.routes];
     }
   }));
 
-  return routes;
+  return [...routes, ...nowJson.routes || []];
 };
