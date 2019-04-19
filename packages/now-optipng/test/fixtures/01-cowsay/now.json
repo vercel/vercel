@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "builds": [
+        { "src": "showcase.png", "use": "@now/optipng" },
+        { "src": "subdirectory/naruto.png", "use": "@now/optipng" }
+    ],
+    "probes": [
+        { "path": "/", "mustContain": "showcase.png" },
+        { "path": "/", "mustContain": "subdirectory" }
+    ]
+}

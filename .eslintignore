@@ -7,3 +7,4 @@
 /packages/now-next/dist/*
 /packages/now-node-bridge/*
 /packages/now-python/*
+/packages/now-optipng/dist/*

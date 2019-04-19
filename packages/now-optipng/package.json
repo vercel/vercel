@@ -2,6 +2,14 @@
   "name": "@now/optipng",
   "version": "0.4.9-canary.0",
   "license": "MIT",
+  "main": "./dist/index",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && jest"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now-builders.git",
@@ -10,5 +18,9 @@
   "dependencies": {
     "multipipe": "2.0.3",
     "optipng": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "11.9.4",
+    "typescript": "3.3.3"
   }
 }
