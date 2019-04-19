@@ -22,6 +22,7 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
+  combineRoutes,
   collectProjectFiles,
   createIgnoreList,
   getBuildMatches
@@ -670,13 +671,20 @@ export default class DevServer {
   ) => {
     await this.updateBuildMatches(nowJson);
 
+    let routes = nowJson.routes;
+    const reqPath = (req.url || '').replace(/^\//, '');
+    const _match = await findBuildMatch(this.buildMatches, this.files, reqPath);
+    if (_match) {
+      routes = await combineRoutes(nowJson, this, _match, reqPath);
+    }
+
     const {
       dest,
       status = 200,
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, nowJson.routes, this);
+    } = await devRouter(req.url, routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {

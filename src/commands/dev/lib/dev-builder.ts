@@ -16,8 +16,10 @@ import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { getBuilder } from './builder-cache';
 import {
   NowConfig,
+  RouteConfig,
   BuildMatch,
   BuildResult,
+  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs
@@ -221,3 +223,34 @@ export async function createIgnoreList(cwd: string): Promise<Ignore> {
 
   return ig;
 }
+
+/**
+  * Combine builder's output routes with Now Config's routes
+  */
+export async function combineRoutes (
+  nowJson: NowConfig,
+  devServer: DevServer,
+  match: BuildMatch,
+  requestPath: string,
+): Promise<RouteConfig[]> {
+  const routes = nowJson.routes || [];
+  const builds = nowJson.builds || [];
+
+  await Promise.all(builds.map(async buildConfig => {
+    const { builder } = await getBuilder(buildConfig.use);
+    const { files } = devServer;
+    if (builder.version === 2 && builder.continuous) {
+      await executeBuild(
+        nowJson,
+        devServer,
+        files,
+        match,
+        requestPath
+      );
+      const buildResult = match.buildResults.get(requestPath) as BuildResultV2;
+      routes.concat(buildResult.routes);
+    }
+  }));
+
+  return routes;
+};
