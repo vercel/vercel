@@ -5,6 +5,7 @@ import { Output } from '../../../util/output';
 
 export interface DevServerOptions {
   output: Output;
+  debug: boolean;
 }
 
 export interface EnvConfig {

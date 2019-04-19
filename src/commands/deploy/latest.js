@@ -110,7 +110,7 @@ const printDeploymentStatus = async (
               await copy(`https://${alias}`);
               output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
 
-              return 0;
+              continue;
             } catch (err) {
               output.debug(`Error copying to clipboard: ${err}`);
             }
