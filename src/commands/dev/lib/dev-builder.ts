@@ -16,12 +16,13 @@ import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { getBuilder } from './builder-cache';
 import {
   NowConfig,
+  RouteConfig,
   BuildMatch,
   BuildResult,
+  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
-  BuilderOutputs,
-  CacheOutputs
+  BuilderOutputs
 } from './types';
 
 const tmpDir = tmpdir();
@@ -66,17 +67,18 @@ export async function executeBuild(
       pkg.version ? ` v${pkg.version}` : ''
     } (workPath = ${workPath})`
   );
+
   const builderConfig = builder.config || {};
   const config = match.config || {};
-  let outputs: BuilderOutputs;
   let result: BuildResult;
+
   try {
     devServer.applyBuildEnv(nowJson);
     let unhookIntercept;
     if (!devServer.debug) {
       unhookIntercept = intercept(() => '');
     }
-    const r = await builder.build({
+    result = await builder.build({
       files,
       entrypoint,
       workPath,
@@ -86,18 +88,21 @@ export async function executeBuild(
     if (typeof unhookIntercept === 'function') {
       unhookIntercept();
     }
-    if (r.output) {
-      result = r as BuildResult;
-    } else {
+
+    // Sort out build result to builder v2 shape
+    if (builder.version === undefined) {
       // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-      result = { output: r as BuilderOutputs };
+      result = {
+        output: result as BuilderOutputs,
+        routes: [],
+        watch: []
+      };
     }
-    outputs = result.output;
   } finally {
     devServer.restoreOriginalEnv();
   }
 
-  // enforce the lambda zip size soft watermark
+  // Enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
   let maxLambdaBytes: number;
   if (typeof maxLambdaSize === 'string') {
@@ -105,8 +110,7 @@ export async function executeBuild(
   } else {
     maxLambdaBytes = maxLambdaSize;
   }
-
-  for (const asset of Object.values(outputs)) {
+  for (const asset of Object.values(result.output)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -115,8 +119,9 @@ export async function executeBuild(
     }
   }
 
+  // Create function for all 'Lambda' type output
   await Promise.all(
-    Object.entries(outputs).map(async entry => {
+    Object.entries(result.output).map(async entry => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
@@ -148,7 +153,7 @@ export async function executeBuild(
   );
 
   match.buildResults.set(requestPath, result);
-  Object.assign(match.buildOutput, outputs);
+  Object.assign(match.buildOutput, result.output);
 }
 
 export async function getBuildMatches(
@@ -221,3 +226,34 @@ export async function createIgnoreList(cwd: string): Promise<Ignore> {
 
   return ig;
 }
+
+/**
+  * Combine builder's output routes with Now Config's routes
+  */
+export async function combineRoutes (
+  nowJson: NowConfig,
+  devServer: DevServer,
+  match: BuildMatch,
+  requestPath: string,
+): Promise<RouteConfig[]> {
+  const routes = nowJson.routes || [];
+  const builds = nowJson.builds || [];
+
+  await Promise.all(builds.map(async buildConfig => {
+    const { builder } = await getBuilder(buildConfig.use);
+    const { files } = devServer;
+    if (builder.version === 2) {
+      await executeBuild(
+        nowJson,
+        devServer,
+        files,
+        match,
+        requestPath
+      );
+      const buildResult = match.buildResults.get(requestPath) as BuildResultV2;
+      routes.concat(buildResult.routes);
+    }
+  }));
+
+  return routes;
+};
