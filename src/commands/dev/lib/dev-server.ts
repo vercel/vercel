@@ -22,6 +22,7 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
+  combineRoutes,
   collectProjectFiles,
   createIgnoreList,
   getBuildMatches
@@ -377,18 +378,27 @@ export default class DevServer {
     this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
-    // Now Builders that do not define a `shouldServe()` function need to be
-    // executed at boot-up time in order to get the initial assets that can be
-    // routed to.
     if (nowJson) {
       const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
       const shouldUpdate = true;
       await installBuilders(builders, shouldUpdate);
       await this.updateBuildMatches(nowJson);
+
+      // Now Builders that do not define a `shouldServe()` function need to be
+      // executed at boot-up time in order to get the initial assets that can be
+      // routed to.
+      // Also for v2 builders with 'continuous: true' flag, which only needs the
+      // initial build.
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-          return typeof builder.shouldServe !== 'function';
+          if (builder.continuous) {
+            return true;
+          }
+          if (typeof builder.shouldServe !== 'function') {
+            return true;
+          }
+          return false;
         }
       );
       if (needsInitialBuild.length > 0) {
@@ -614,10 +624,6 @@ export default class DevServer {
     const method = req.method || 'GET';
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
-    // if (this.status === DevServerStatus.busy) {
-    //   return res.end(`[busy] ${this.statusMessage}...`);
-    // }
-
     try {
       const nowJson = await this.getNowJson();
       if (nowJson) {
@@ -667,13 +673,20 @@ export default class DevServer {
   ) => {
     await this.updateBuildMatches(nowJson);
 
+    let routes = nowJson.routes;
+    const reqPath = (req.url || '').replace(/^\//, '');
+    const _match = await findBuildMatch(this.buildMatches, this.files, reqPath);
+    if (_match) {
+      routes = await combineRoutes(nowJson, this, _match, reqPath);
+    }
+
     const {
       dest,
       status = 200,
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, nowJson.routes, this);
+    } = await devRouter(req.url, routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
