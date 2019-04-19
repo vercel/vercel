@@ -76,10 +76,6 @@ export default async function(
         src = `${src}$`;
       }
 
-      if (src.includes('?')) {
-        src = src.replace(/\?/g, '\\?');
-      }
-
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
 

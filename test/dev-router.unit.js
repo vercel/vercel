@@ -48,7 +48,8 @@ test('[dev-router] named groups', async (t) => {
     headers: undefined,
     uri_args: { id: '123' },
     matched_route: routesConfig[0],
-    matched_route_idx: 0
+    matched_route_idx: 0,
+    userDest: true
   });
 });
 
