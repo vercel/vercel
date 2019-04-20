@@ -96,6 +96,8 @@ async function deploymentPost (payload) {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+
+  console.log(`fetch status: ${resp.status} ${resp.statusText}`);
   const json = await resp.json();
 
   if (json.error) {
