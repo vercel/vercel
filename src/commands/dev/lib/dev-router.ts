@@ -49,9 +49,7 @@ export default async function(
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-
-  const path = reqPath;
-  const { query, pathname: reqPathname = '/' } = url.parse(path, true);
+  const { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
 
   // try route match
   if (routes) {
@@ -78,10 +76,7 @@ export default async function(
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
-
-      // Matching by `path` and not `reqPathname` here is
-      // important because we want to consider GET parameters.
-      const match = matcher.exec(path);
+      const match = matcher.exec(reqPathname);
 
       if (match) {
         let destPath: string = reqPathname;
