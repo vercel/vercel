@@ -200,7 +200,7 @@ export const build = async ({
       routes.push({
         // This property is not allowed to contain GET parameters, as they
         // contain a ?, which is a regex operator.
-        src: `${url.parse(`/${meta.requestPath}`).pathname}(.*)`,
+        src: url.parse(`/${meta.requestPath}`).pathname,
         dest: `${urls[entrypoint]}/${meta.requestPath}`
       });
     }
