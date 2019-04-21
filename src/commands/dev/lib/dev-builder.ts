@@ -42,7 +42,7 @@ export async function executeBuild(
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
-  requestPath: string,
+  requestPath: string | null,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
@@ -152,7 +152,7 @@ export async function executeBuild(
     })
   );
 
-  match.buildResults.set(requestPath, result);
+  match.buildResults.set(requestPath || '', result);
   Object.assign(match.buildOutput, result.output);
 }
 

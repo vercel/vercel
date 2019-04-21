@@ -406,10 +406,11 @@ export default class DevServer {
       );
       if (needsInitialBuild.length > 0) {
         this.output.log('Running initial builds');
-        const requestPath = '';
+
         for (const match of needsInitialBuild) {
-          await executeBuild(nowJson, this, this.files, match, requestPath);
+          await executeBuild(nowJson, this, this.files, match, null);
         }
+
         this.output.success('Initial builds complete');
       }
     }
