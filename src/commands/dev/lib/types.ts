@@ -97,7 +97,7 @@ export interface BuilderConfigAttr {
 
 export interface Builder {
   version?: 2;
-  continuous?: boolean;
+  requiresInitialBuild?: boolean;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
