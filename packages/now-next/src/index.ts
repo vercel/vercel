@@ -154,12 +154,46 @@ function pageExists(name: string, pages: Files, entry: string) {
   );
 }
 
+const name = '[@now/next]';
+const urls: stringMap = {};
+
+async function startDevServer(entrypoint: string, entrypointDir: string): Promise<string> {
+  const openPort = await getPort({
+    port: [ 5000, 4000 ]
+  });
+
+  const url = `http://localhost:${openPort}`;
+
+  const command = [
+    'next',
+    'dev',
+    entrypointDir,
+    '--port',
+    `${openPort}`
+  ];
+
+  return new Promise((resolve, reject) => {
+    console.log(`${name} Running \`${command.join(' ')}\``);
+
+    const { stdout, stderr } = execa('npx', command, {
+      cwd: entrypointDir
+    });
+
+    stdout.on('data', chunk => {
+      if (!chunk.includes(url) || urls[entrypoint]) {
+        return;
+      }
+
+      resolve(url);
+    });
+
+    stderr.pipe(process.stderr);
+  });
+}
+
 export const config = {
   maxLambdaSize: '5mb',
 };
-
-const name = '[@now/next]';
-const urls: stringMap = {};
 
 export const build = async ({
   files, workPath, entrypoint, meta = {} as BuildParamsMeta,
@@ -180,20 +214,8 @@ export const build = async ({
 
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
-      const openPort = await getPort({
-        port: [ 5000, 4000 ]
-      });
-
-      urls[entrypoint] = `http://localhost:${openPort}`;
-
-      const command = [ 'next', 'dev', entrypointDir, '--port', `${openPort}` ];
-      console.log(`${name} Running \`${command.join(' ')}\``);
-
-      const { stdout, stderr } = execa('npx', command, {
-        cwd: entrypointDir
-      });
-
-      stderr.pipe(process.stderr);
+      urls[entrypoint] = await startDevServer(entrypoint, entrypointDir);
+      console.log(`${name} Development server for ${entrypointDir} running at ${urls[entrypoint]}`);
     }
 
     if (typeof meta.requestPath === 'string') {
