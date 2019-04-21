@@ -697,7 +697,7 @@ export default class DevServer {
 
     if (isURL(dest)) {
       this.output.debug(`ProxyPass: ${JSON.stringify(matched_route)}`);
-      return proxyPass(req, res, dest);
+      return proxyPass(req, res, dest, this.output);
     }
 
     if ([301, 302, 303].includes(status)) {
@@ -852,7 +852,8 @@ export default class DevServer {
 function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  dest: string
+  dest: string,
+  output: Output
 ): void {
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
@@ -860,6 +861,19 @@ function proxyPass(
     ignorePath: true,
     target: dest
   });
+
+  proxy.on('error', (error: NodeJS.ErrnoException) => {
+    // If the client hangs up a socket, we do not
+    // want to do anything, as the client just expects
+    // the connection to be closed.
+    if (error.code === 'ECONNRESET') {
+      res.end();
+      return;
+    }
+
+    output.error(`Failed to complete request to ${req.url}: ${error}`);
+  });
+
   return proxy.web(req, res);
 }
 
