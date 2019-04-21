@@ -387,17 +387,20 @@ export default class DevServer {
       // Now Builders that do not define a `shouldServe()` function need to be
       // executed at boot-up time in order to get the initial assets that can be
       // routed to.
-      // Also for v2 builders with 'continuous: true' flag, which only needs the
+      // Also for v2 builders with 'requiresInitialBuild: true' flag, which only needs the
       // initial build.
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-          if (builder.continuous) {
+
+          if (builder.requiresInitialBuild) {
             return true;
           }
+
           if (typeof builder.shouldServe !== 'function') {
             return true;
           }
+
           return false;
         }
       );
