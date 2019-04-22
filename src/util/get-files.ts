@@ -242,13 +242,13 @@ interface NpmOptions {
  */
 export async function npm(
   path: string,
-  pkg: any = {},
+  pkg: { files?: string[], now?: { files?: string[] } } = {},
   nowConfig: NowConfig = {},
   { hasNowJson = false, output }: NpmOptions
 ) {
   const { debug, time } = output;
   const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
-  let files = [];
+  let files: string[] = [];
 
   if (whitelist) {
     files = await getFilesInWhitelist(whitelist, path, { output });
@@ -341,7 +341,7 @@ export async function docker(
   { hasNowJson = false, output }: DockerOptions
 ) {
   const { debug, time } = output;
-  let files = [];
+  let files: string[] = [];
 
   if (nowConfig.files) {
     files = await getFilesInWhitelist(nowConfig.files, path, { output });
