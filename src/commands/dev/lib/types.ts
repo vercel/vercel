@@ -45,6 +45,7 @@ export interface NowConfig {
   };
   builds?: BuildConfig[];
   routes?: RouteConfig[];
+  files?: string[];
 }
 
 export interface HttpHandler {
