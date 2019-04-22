@@ -734,7 +734,8 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(`Serve asset: [${asset.type}] ${assetKey}`);
+    this.output.debug(`Serving asset: [${asset.type}] ${assetKey}`);
+
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
@@ -796,7 +797,7 @@ export default class DevServer {
           body: body.toString('base64')
         };
 
-        this.output.debug(`Invode lambda: "${assetKey}" with ${path}`);
+        this.output.debug(`Invoking lambda: "${assetKey}" with ${path}`);
 
         let result: InvokeResult;
         try {
