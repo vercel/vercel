@@ -150,7 +150,7 @@ export default class DevServer {
             result,
             filesChangedArray,
             filesRemovedArray
-          ).catch((err: NodeJS.ErrnoException) => {
+          ).catch((err: Error) => {
             this.output.warn(`An error occured while rebuilding ${match.src}:`);
             console.error(err.stack);
           });
