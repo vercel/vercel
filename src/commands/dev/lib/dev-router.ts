@@ -34,7 +34,8 @@ function mergeRoutes(
   }
 
   return {
-    dest: fresh.userDest ? fresh.dest : (existing.dest || fresh.dest),
+    found: true,
+    dest: fresh.userDest ? fresh.dest : existing.dest || fresh.dest,
     status: fresh.status || existing.status,
     headers: fresh.headers || existing.headers,
     uri_args: fresh.uri_args || existing.uri_args || {},
@@ -95,6 +96,7 @@ export default async function(
 
         if (isURL(destPath)) {
           found = mergeRoutes(found, {
+            found: true,
             dest: destPath,
             userDest: false,
             status: routeConfig.status,
@@ -107,6 +109,7 @@ export default async function(
           const { pathname, query } = url.parse(destPath, true);
 
           found = mergeRoutes(found, {
+            found: true,
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
             status: routeConfig.status,
@@ -122,6 +125,7 @@ export default async function(
 
   if (!found) {
     found = {
+      found: false,
       dest: reqPathname,
       uri_args: query
     };
