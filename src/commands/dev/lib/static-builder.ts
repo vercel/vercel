@@ -12,10 +12,9 @@ export function build({ files, entrypoint }: BuilderParams): BuildResult {
   const output = {
     [entrypoint]: files[entrypoint]
   };
-  const routes: RouteConfig[] = [{ src: entrypoint, dest: entrypoint }];
   const watch = [entrypoint];
 
-  return { output, routes, watch };
+  return { output, routes: [], watch };
 }
 
 export function shouldServe({
