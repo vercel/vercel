@@ -6,7 +6,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "index.ts:6"
+      "mustContain": "index.ts:4"
     }
   ]
 }
