@@ -152,7 +152,7 @@ export async function executeBuild(
     })
   );
 
-  match.buildResults.set(requestPath || '', result);
+  match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
 }
 
