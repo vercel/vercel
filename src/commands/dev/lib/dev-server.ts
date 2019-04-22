@@ -699,7 +699,7 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.output.debug(`ProxyPass: ${JSON.stringify(matched_route)}`);
+      this.output.debug(`ProxyPass: ${dest}`);
       return proxyPass(req, res, dest, this.output);
     }
 
@@ -723,7 +723,7 @@ export default class DevServer {
     const buildRequestPath = match.buildResults.has(null) ? null : requestPath;
     const buildResult = match.buildResults.get(buildRequestPath);
 
-    if (buildResult && Array.isArray(buildResult.routes)) {
+    if (buildResult && Array.isArray(buildResult.routes) && buildResult.routes.length > 0) {
       const newUrl = `/${requestPath}`;
       this.output.debug(`Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`);
       const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
