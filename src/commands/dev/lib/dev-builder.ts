@@ -42,7 +42,7 @@ export async function executeBuild(
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
-  requestPath: string,
+  requestPath: string | null,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
