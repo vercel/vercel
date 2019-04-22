@@ -236,7 +236,7 @@ export async function combineRoutes (
   match: BuildMatch,
   requestPath: string,
 ): Promise<RouteConfig[]> {
-  let routes: RouteConfig[] = [];
+  let routes: RouteConfig[] = nowJson.routes || [];
   const builds = nowJson.builds || [];
 
   await Promise.all(builds.map(async buildConfig => {
@@ -252,9 +252,11 @@ export async function combineRoutes (
         requestPath
       );
       const buildResult = match.buildResults.get(requestPath) as BuildResultV2;
-      routes = [...routes, ...buildResult.routes];
+      if (buildResult.routes) {
+        routes = [...routes, ...buildResult.routes];
+      }
     }
   }));
 
-  return [...routes, ...nowJson.routes || []];
+  return routes;
 };
