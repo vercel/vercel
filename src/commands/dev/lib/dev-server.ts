@@ -22,7 +22,6 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
-  combineRoutes,
   collectProjectFiles,
   createIgnoreList,
   getBuildMatches
@@ -41,7 +40,8 @@ import {
   BuilderOutput,
   HttpHandler,
   InvokePayload,
-  InvokeResult
+  InvokeResult,
+  RouteConfig
 } from './types';
 
 export default class DevServer {
@@ -117,7 +117,10 @@ export default class DevServer {
 
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
-    const needsRebuild: Map<BuildResult, [string|null, BuildMatch]> = new Map();
+    const needsRebuild: Map<
+      BuildResult,
+      [string | null, BuildMatch]
+    > = new Map();
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -142,7 +145,10 @@ export default class DevServer {
       this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
       this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
       for (const [result, [requestPath, match]] of needsRebuild) {
-        if (requestPath === null || await shouldServe(match, this.files, requestPath)) {
+        if (
+          requestPath === null ||
+          (await shouldServe(match, this.files, requestPath))
+        ) {
           this.triggerBuild(
             match,
             requestPath,
@@ -547,7 +553,7 @@ export default class DevServer {
 
   async triggerBuild(
     match: BuildMatch,
-    requestPath: string|null,
+    requestPath: string | null,
     req: http.IncomingMessage | null,
     previousBuildResult?: BuildResult,
     filesChanged?: string[],
@@ -555,7 +561,8 @@ export default class DevServer {
   ) {
     // If the requested asset wasn't found in the match's outputs, or
     // a hard-refresh was detected, then trigger a build
-    const buildKey = requestPath === null ? match.src : `${match.src}-${requestPath}`;
+    const buildKey =
+      requestPath === null ? match.src : `${match.src}-${requestPath}`;
     let buildPromise = this.inProgressBuilds.get(buildKey);
     if (buildPromise) {
       // A build for `buildKey` is already in progress, so don't trigger
@@ -673,18 +680,10 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    nowJson: NowConfig
+    nowJson: NowConfig,
+    routes: RouteConfig[] | undefined = nowJson.routes
   ) => {
     await this.updateBuildMatches(nowJson);
-
-    let routes = nowJson.routes;
-
-    const reqPath = (req.url || '').replace(/^\//, '');
-    const _match = await findBuildMatch(this.buildMatches, this.files, reqPath);
-
-    if (_match) {
-      routes = await combineRoutes(nowJson, this, _match, reqPath);
-    }
 
     const {
       dest,
@@ -700,7 +699,7 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.output.debug(`ProxyPass: ${JSON.stringify(matched_route)}`);
+      this.output.debug(`ProxyPass: ${dest}`);
       return proxyPass(req, res, dest, this.output);
     }
 
@@ -721,9 +720,30 @@ export default class DevServer {
       return;
     }
 
+    const buildRequestPath = match.buildResults.has(null) ? null : requestPath;
+    const buildResult = match.buildResults.get(buildRequestPath);
+
+    if (buildResult && Array.isArray(buildResult.routes) && buildResult.routes.length > 0) {
+      const newUrl = `/${requestPath}`;
+      this.output.debug(`Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`);
+      const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
+      if (matchedRoute.found) {
+        this.output.debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
+        req.url = newUrl;
+        await this.serveProjectAsNowV2(
+          req,
+          res,
+          nowRequestId,
+          nowJson,
+          buildResult.routes
+        );
+        return;
+      }
+    }
+
     let foundAsset = findAsset(match, requestPath);
     if (!foundAsset || this.shouldRebuild(req)) {
-      await this.triggerBuild(match, requestPath, req);
+      await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
       foundAsset = findAsset(match, requestPath);
