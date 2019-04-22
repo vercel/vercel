@@ -104,10 +104,7 @@ const getFilesInWhitelist = async function(whitelist: string[], path: string, op
  * because ignore doesn't like them :|
  */
 
-const clearRelative = function(str: string | null) {
-  if (!str) {
-    return '';
-  }
+const clearRelative = function(str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 };
 
@@ -271,13 +268,13 @@ export async function npm(
 
     // Compile list of ignored patterns and files
     const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null);
-    const gitIgnore =
-      npmIgnore === null ? await maybeRead(resolve(path, '.gitignore'), '') : null;
 
     const filter = ignore()
       .add(
         `${IGNORED}\n${clearRelative(
-          npmIgnore === null ? gitIgnore : npmIgnore
+          npmIgnore === null
+            ? await maybeRead(resolve(path, '.gitignore'), '')
+            : npmIgnore
         )}`
       )
       .createFilter();
@@ -365,7 +362,7 @@ export async function docker(
         ? await maybeRead(resolve(path, '.gitignore'), '')
         : dockerIgnore
     );
-    const ignoreInit = (dockerIgnore === null ? ignore : dockerignore);
+    const ignoreInit = (dockerIgnore === null ? ignore : dockerignore) as any as typeof ignore;
     const filter = ignoreInit()
       .add(`${IGNORED}\n${ignoredFiles}`)
       .createFilter();
@@ -464,5 +461,9 @@ async function explode(paths: string[], { accepts, output }: ExplodeOptions): Pr
 
   const many = (all: string[]) => Promise.all(all.map(file => list(file)));
   const arrayOfArrays = await many(paths);
-  return flatten(arrayOfArrays).filter((v: string) => v !== null);
+  return flatten(arrayOfArrays).filter(notNull);
+}
+
+function notNull<T>(value: T | null): value is T {
+  return value !== null;
 }
