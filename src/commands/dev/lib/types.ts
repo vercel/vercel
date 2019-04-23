@@ -21,7 +21,7 @@ export interface BuildConfig {
 export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
-  buildResults: Map<string, BuildResult>;
+  buildResults: Map<string | null, BuildResult>;
   builderCachePromise?: Promise<CacheOutputs>;
   buildTimestamp: number;
   workPath: string;
@@ -78,7 +78,7 @@ export interface BuilderParamsBase {
   config: object;
   meta?: {
     isDev?: boolean;
-    requestPath?: string;
+    requestPath?: string | null;
     filesChanged?: string[];
     filesRemoved?: string[];
   };
@@ -98,7 +98,6 @@ export interface BuilderConfigAttr {
 
 export interface Builder {
   version?: 2;
-  requiresInitialBuild?: boolean;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -107,9 +106,7 @@ export interface Builder {
     | BuildResult
     | Promise<BuilderOutputs>
     | Promise<BuildResult>;
-  shouldServe?(
-    params: ShouldServeParams
-  ): boolean | Promise<boolean>;
+  shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
   prepareCache?(
     params: PrepareCacheParams
   ): CacheOutputs | Promise<CacheOutputs>;
@@ -130,11 +127,13 @@ export interface ShouldServeParams {
   entrypoint: string;
   config?: object;
   requestPath: string;
+  workPath: string
 }
 
 export interface BuilderWithPackage {
   builder: Builder;
   package: {
+    name?: string;
     version: string;
   };
 }
@@ -144,6 +143,8 @@ export interface HttpHeadersConfig {
 }
 
 export interface RouteResult {
+  // `true` if a route was matched, `false` otherwise
+  found: boolean;
   // "dest": <string of the dest, either file for lambda or full url for remote>
   dest: string;
   // "status": <integer in case exit code is intended to be changed>

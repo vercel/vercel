@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "15.0.7-canary.2",
+  "version": "15.0.7-canary.3",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -114,7 +114,7 @@
     "@zeit/dockerignore": "0.0.5",
     "@zeit/fun": "0.6.0",
     "@zeit/git-hooks": "0.1.4",
-    "@zeit/ncc": "0.17.4",
+    "@zeit/ncc": "0.18.1",
     "@zeit/nsfw": "2.0.2",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
