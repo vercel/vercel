@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import execa from 'execa';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
 import { funCacheDir } from '@zeit/fun';
@@ -32,7 +32,9 @@ export const builderDirPromise = prepareBuilderDir();
  */
 export async function prepareCacheDir() {
   const { NOW_BUILDER_CACHE_DIR } = process.env;
-  const designated = NOW_BUILDER_CACHE_DIR || cacheDirectory('co.zeit.now');
+  const designated = NOW_BUILDER_CACHE_DIR
+    ? resolve(NOW_BUILDER_CACHE_DIR)
+    : cacheDirectory('co.zeit.now');
 
   if (!designated) {
     throw new NoBuilderCacheError();
