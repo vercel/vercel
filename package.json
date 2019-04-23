@@ -114,7 +114,7 @@
     "@zeit/dockerignore": "0.0.4",
     "@zeit/fun": "0.6.0",
     "@zeit/git-hooks": "0.1.4",
-    "@zeit/ncc": "0.17.4",
+    "@zeit/ncc": "0.18.1",
     "@zeit/nsfw": "2.0.2",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
