@@ -56,27 +56,6 @@ test('[dev-router] named groups', async (t) => {
   });
 });
 
-test('[dev-router] unreached route', async (t) => {
-  const routesConfig = [
-    { src: '/.*', dest: '/index.js' },
-    { src: '/hidden', dest: '/hidden.js' }
-  ];
-
-  const result = await devRouter('/hidden', routesConfig);
-
-  // We need to match the last route. We read from
-  // top to bottom and every route can overwrite each other.
-  t.deepEqual(result, {
-    found: true,
-    dest: '/hidden.js',
-    status: undefined,
-    headers: undefined,
-    uri_args: {},
-    matched_route: routesConfig[1],
-    matched_route_idx: 1
-  });
-});
-
 test('[dev-router] proxy_pass', async (t) => {
   const routesConfig = [
     { src: '/proxy', dest: 'https://zeit.co' }
