@@ -989,6 +989,7 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
+    workPath,
     builderWithPkg: { builder, package: pkg }
   } = match;
   if (typeof builder.shouldServe === 'function') {
@@ -997,7 +998,7 @@ async function shouldServe(
       files,
       config,
       requestPath,
-      workPath: devServer.cwd
+      workPath
     });
     if (shouldServe) {
       return true;
