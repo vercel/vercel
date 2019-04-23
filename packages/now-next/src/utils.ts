@@ -131,21 +131,81 @@ async function getNextConfig(workPath: string, entryPath: string) {
   return null;
 }
 
-async function getWatchers(nextPath: string) {
+function pathIsInside(firstPath: string, secondPath: string) {
+  return !path.relative(firstPath, secondPath).startsWith('..');
+}
+
+function getPathsInside(entryDirectory: string, files: Files) {
   const watch: string[] = [];
-  const manifest = path.join(nextPath, 'compilation-modules.json');
 
-  try {
-    const { pages } = JSON.parse(await fs.readFile(manifest, 'utf8'));
+  for (const file of Object.keys(files)) {
+    // If the file is outside of the entrypoint directory, we do
+    // not want to monitor it for changes.
+    if (!pathIsInside(entryDirectory, file)) {
+      continue;
+    }
 
-    Object.keys(pages).forEach(page => pages[page].forEach((dep: string) => {
-      watch.push(dep);
-    }));
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e;
+    watch.push(file);
   }
 
   return watch;
+}
+
+function getRoutes(entryDirectory: string, pathsInside: string[], files: Files, url: string): any[] {
+  const filesInside: Files = {};
+  const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
+
+  for (const file of Object.keys(files)) {
+    if (!pathsInside.includes(file)) {
+      continue;
+    }
+
+    filesInside[file] = files[file];
+  }
+
+  const routes: any[] = [
+    {
+      src: `${prefix}_next/(.*)`,
+      dest: `${url}/_next/$1`
+    },
+    {
+      src: `${prefix}static/(.*)`,
+      dest: `${url}/static/$1`
+    }
+  ];
+
+  for (const file of Object.keys(filesInside)) {
+    const relativePath = path.relative(entryDirectory, file);
+    const isPage = pathIsInside('pages', relativePath);
+
+    if (!isPage) {
+      continue;
+    }
+
+    const relativeToPages = path.relative('pages', relativePath);
+    const extension = path.extname(relativeToPages);
+    const pageName = relativeToPages.replace(extension, '');
+
+    if (pageName.startsWith('_')) {
+      continue;
+    }
+
+    routes.push({
+      src: `${prefix}${pageName}`,
+      dest: `${url}/${pageName}`
+    });
+
+    if (pageName.endsWith('index')) {
+      const resolvedIndex = pageName.replace('/index', '').replace('index', '');
+
+      routes.push({
+        src: `${prefix}${resolvedIndex}`,
+        dest: `${url}/${resolvedIndex}`
+      });
+    }
+  }
+
+  return routes;
 }
 
 export {
@@ -156,6 +216,7 @@ export {
   normalizePackageJson,
   onlyStaticDirectory,
   getNextConfig,
-  getWatchers,
+  getPathsInside,
+  getRoutes,
   stringMap,
 };

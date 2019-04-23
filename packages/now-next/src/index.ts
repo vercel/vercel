@@ -13,8 +13,7 @@ import {
 } from '@now/build-utils';
 import resolveFrom from 'resolve-from';
 import path from 'path';
-import url from 'url';
-import execa from 'execa';
+import { fork } from 'child_process';
 import {
   readFile,
   writeFile,
@@ -23,7 +22,6 @@ import {
   pathExists,
 } from 'fs-extra';
 import semver from 'semver';
-import getPort from 'get-port';
 import nextLegacyVersions from './legacy-versions';
 import {
   excludeFiles,
@@ -32,7 +30,8 @@ import {
   normalizePackageJson,
   onlyStaticDirectory,
   getNextConfig,
-  getWatchers,
+  getPathsInside,
+  getRoutes,
   stringMap,
 } from './utils';
 
@@ -49,7 +48,6 @@ interface BuildParamsType extends BuildOptions {
 };
 
 export const version = 2;
-export const requiresInitialBuild = true;
 
 /**
  * Read package.json from files
@@ -115,79 +113,21 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-function pageExists(name: string, pages: Files, entry: string) {
-  const pageWhere = (key: string) => Object.prototype.hasOwnProperty.call(pages, key);
-  const inPages = (...names: string[]) => {
-    let exists = false;
-    while (names.length >= 1) {
-      if (pageWhere(`${entry ? `${entry}/` : ''}pages/${names[0]}`)) {
-        exists = true;
-        break;
-      }
-      names.shift();
-    }
-
-    return exists;
-  };
-
-  if (name === '' || name === '/') {
-    return inPages(
-      'index.js',
-      'index.ts',
-      'index.jsx',
-      'index.tsx',
-      'index.mdx',
-    );
-  }
-
-  return inPages(
-    `${name}.js`,
-    `${name}.ts`,
-    `${name}.jsx`,
-    `${name}.tsx`,
-    `${name}.mdx`,
-    `${name}/index.js`,
-    `${name}/index.ts`,
-    `${name}/index.jsx`,
-    `${name}/index.tsx`,
-    `${name}/index.mdx`,
-  );
-}
-
 const name = '[@now/next]';
 const urls: stringMap = {};
 
-async function startDevServer(entrypoint: string, entrypointDir: string): Promise<string> {
-  const openPort = await getPort({
-    port: [ 5000, 4000 ]
+async function startDevServer(entryPath: string): Promise<string> {
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
+    cwd: entryPath,
+    env: {
+      ENTRY_PATH: entryPath,
+      NOW_REGION: 'dev1'
+    },
+    silent: true
   });
 
-  const url = `http://localhost:${openPort}`;
-
-  const command = [
-    'next',
-    'dev',
-    entrypointDir,
-    '--port',
-    `${openPort}`
-  ];
-
-  return new Promise((resolve, reject) => {
-    console.log(`${name} Running \`${command.join(' ')}\``);
-
-    const { stdout, stderr } = execa('npx', command, {
-      cwd: entrypointDir
-    });
-
-    stdout.on('data', chunk => {
-      if (!chunk.includes(url) || urls[entrypoint]) {
-        return;
-      }
-
-      resolve(url);
-    });
-
-    stderr.pipe(process.stderr);
+  return new Promise(resolve => {
+    forked.on('message', resolve);
   });
 }
 
@@ -200,59 +140,53 @@ export const build = async ({
 }: BuildParamsType): Promise<{routes?: any[], output: Files, watch?: string[]}> => {
   validateEntrypoint(entrypoint);
 
-  const entrypointFull = files[entrypoint].fsPath;
   const routes: any[] = [];
-
-  if (meta.isDev && entrypointFull) {
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
-
-    const entrypointDir = path.dirname(entrypointFull);
-    const outputDir = path.join(entrypointDir, '.next');
-
-    console.log(`${name} Requested ${meta.requestPath}`);
-
-    // If this is the initial build, we want to start the server
-    if (!urls[entrypoint]) {
-      urls[entrypoint] = await startDevServer(entrypoint, entrypointDir);
-      console.log(`${name} Development server for ${entrypointDir} running at ${urls[entrypoint]}`);
-    }
-
-    if (typeof meta.requestPath === 'string') {
-      routes.push({
-        // This property is not allowed to contain GET parameters, as they
-        // contain a ?, which is a regex operator.
-        src: url.parse(`/${meta.requestPath}`).pathname,
-        dest: `${urls[entrypoint]}/${meta.requestPath}`
-      });
-    }
-
-    return {
-      routes,
-      output: {},
-      watch: []
-    };
-  }
-
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const dotNext = path.join(entryPath, '.next');
+  const uponRequest = typeof meta.requestPath === 'string';
 
-  console.log('downloading user files...');
-  await download(files, workPath);
-
-  if (await pathExists(dotNext)) {
-    console.warn(
-      'WARNING: You should probably not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more information.',
-    );
+  if ((meta.isDev && !uponRequest) || !meta.isDev) {
+    console.log(`${name} Downloading user files...`);
+    await download(files, workPath);
   }
 
   const pkg = await readPackageJson(entryPath);
+  const nextVersion = getNextVersion(pkg);
 
-  let nextVersion = getNextVersion(pkg);
   if (!nextVersion) {
     throw new Error(
       'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
+    );
+  }
+
+  if (meta.isDev) {
+    // eslint-disable-next-line no-underscore-dangle
+    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
+
+    console.log(`${name} Requested ${meta.requestPath || '/'}`);
+
+    // If this is the initial build, we want to start the server
+    if (!urls[entrypoint]) {
+      console.log(`${name} Installing dependencies...`);
+      await runNpmInstall(entryPath, ['--prefer-offline']);
+
+      urls[entrypoint] = await startDevServer(entryPath);
+      console.log(`${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`);
+    }
+
+    const pathsInside = getPathsInside(entryDirectory, files)
+
+    return {
+      output: {},
+      routes: getRoutes(entryDirectory, pathsInside, files, urls[entrypoint]),
+      watch: pathsInside
+    };
+  }
+
+  if (await pathExists(dotNext)) {
+    console.warn(
+      'WARNING: You should not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more details.',
     );
   }
 
@@ -480,9 +414,9 @@ export const build = async ({
   );
 
   return {
-    routes,
     output: { ...lambdas, ...staticFiles, ...staticDirectoryFiles },
-    watch: await getWatchers(dotNext),
+    routes: [],
+    watch: []
   };
 };
 
@@ -511,34 +445,4 @@ export const prepareCache = async ({ workPath, entrypoint }: PrepareCacheOptions
   };
   console.log('cache file manifest produced');
   return cache;
-};
-
-export const shouldServe = async ({ entrypoint, files, requestPath }: {entrypoint: string, files: Files, requestPath: string}) => {
-  const entry = path.dirname(entrypoint);
-  const entryDirectory = entry === '.' ? '' : `${entry}/`;
-
-  if (new RegExp(`^${entryDirectory}static/.+$`).test(requestPath)) return true;
-
-  const pages = includeOnlyEntryDirectory(
-    files,
-    path.join(entryDirectory, 'pages'),
-  );
-
-  const isClientPage = new RegExp(
-    `^${entryDirectory}_next/static/unoptimized-build/pages/(.+)\\.js$`,
-  );
-  if (isClientPage.test(requestPath)) {
-    const requestedPage = requestPath.match(isClientPage);
-    if (!requestedPage) return false;
-    if (requestedPage[1] === '_error' || requestedPage[1] === '_document' || requestedPage[1] === '_app') return true;
-    return pageExists(requestedPage[1], pages, entryDirectory);
-  }
-
-  if (new RegExp(`^${entryDirectory}_next.+$`).test(requestPath)) return true;
-
-  return pageExists(
-    requestPath.endsWith('/') ? requestPath.slice(0, -1) : requestPath,
-    pages,
-    entryDirectory,
-  );
 };
