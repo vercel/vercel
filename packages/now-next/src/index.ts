@@ -12,7 +12,7 @@ import {
   PrepareCacheOptions,
 } from '@now/build-utils';
 import path from 'path';
-import { fork } from 'child_process';
+import { fork, ChildProcess } from 'child_process';
 import {
   readFile,
   writeFile,
@@ -114,19 +114,21 @@ function isLegacyNext(nextVersion: string) {
 const name = '[@now/next]';
 const urls: stringMap = {};
 
-async function startDevServer(entryPath: string): Promise<string> {
-  return new Promise(async (resolve, reject) => {
-    const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
-      cwd: entryPath,
-      execArgv: [],
-      env: {
-        NOW_REGION: 'dev1'
-      }
-    });
+function startDevServer(entryPath: string) {
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
+    cwd: entryPath,
+    execArgv: [],
+    env: {
+      NOW_REGION: 'dev1'
+    }
+  });
 
+  const getUrl = () => new Promise<string>((resolve, reject) => {
     forked.on('message', resolve);
     forked.on('error', reject);
   });
+
+  return { forked, getUrl };
 }
 
 export const config = {
@@ -135,7 +137,7 @@ export const config = {
 
 export const build = async ({
   files, workPath, entrypoint, meta = {} as BuildParamsMeta,
-}: BuildParamsType): Promise<{routes?: any[], output: Files, watch?: string[]}> => {
+}: BuildParamsType): Promise<{routes?: any[], output: Files, watch?: string[], childProcesses: ChildProcess[]}> => {
   validateEntrypoint(entrypoint);
 
   const routes: any[] = [];
@@ -158,13 +160,15 @@ export const build = async ({
   if (meta.isDev) {
     // eslint-disable-next-line no-underscore-dangle
     process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
+    let childProcess: ChildProcess | undefined;
 
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
       console.log(`${name} Installing dependencies...`);
       await runNpmInstall(entryPath, ['--prefer-offline']);
-
-      urls[entrypoint] = await startDevServer(entryPath);
+      const { forked, getUrl } = startDevServer(entryPath);
+      urls[entrypoint] = await getUrl();
+      childProcess = forked;
       console.log(`${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`);
     }
 
@@ -173,7 +177,8 @@ export const build = async ({
     return {
       output: {},
       routes: getRoutes(entryDirectory, pathsInside, files, urls[entrypoint]),
-      watch: pathsInside
+      watch: pathsInside,
+      childProcesses: childProcess ? [childProcess] : []
     };
   }
 
@@ -409,7 +414,8 @@ export const build = async ({
   return {
     output: { ...lambdas, ...staticFiles, ...staticDirectoryFiles },
     routes: [],
-    watch: []
+    watch: [],
+    childProcesses: []
   };
 };
 
