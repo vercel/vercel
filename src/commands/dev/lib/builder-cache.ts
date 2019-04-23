@@ -9,7 +9,7 @@ import cacheDirectory from 'cache-or-tmp-directory';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
-import { Builder, BuilderWithPackage } from './types';
+import { BuilderWithPackage } from './types';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
@@ -31,7 +31,8 @@ export const builderDirPromise = prepareBuilderDir();
  * Prepare cache directory for installing now-builders
  */
 export async function prepareCacheDir() {
-  const designated = cacheDirectory('co.zeit.now');
+  const { NOW_BUILDER_CACHE_DIR } = process.env;
+  const designated = NOW_BUILDER_CACHE_DIR || cacheDirectory('co.zeit.now');
 
   if (!designated) {
     throw new NoBuilderCacheError();
