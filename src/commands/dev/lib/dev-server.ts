@@ -88,13 +88,18 @@ export default class DevServer {
     for (const event of events) {
       // TODO: for some reason the type inference isn't working, hence the casting
       if (event.action === nsfw.actions.CREATED) {
-        await this.handleFileCreated(event as nsfw.CreatedEvent, filesChanged);
+        await this.handleFileCreated(
+          event as nsfw.CreatedEvent,
+          filesChanged,
+          filesRemoved
+        );
       } else if (event.action === nsfw.actions.DELETED) {
         this.handleFileDeleted(event as nsfw.DeletedEvent, filesRemoved);
       } else if (event.action === nsfw.actions.MODIFIED) {
         await this.handleFileModified(
           event as nsfw.ModifiedEvent,
-          filesChanged
+          filesChanged,
+          filesRemoved
         );
       } else if (event.action === nsfw.actions.RENAMED) {
         await this.handleFileRenamed(
@@ -175,7 +180,8 @@ export default class DevServer {
 
   async handleFileCreated(
     event: nsfw.CreatedEvent,
-    changed: Set<string>
+    changed: Set<string>,
+    removed: Set<string>
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
@@ -186,6 +192,8 @@ export default class DevServer {
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File created, but has since been deleted: ${name}`);
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
@@ -201,7 +209,8 @@ export default class DevServer {
 
   async handleFileModified(
     event: nsfw.ModifiedEvent,
-    changed: Set<string>
+    changed: Set<string>,
+    removed: Set<string>
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
@@ -212,6 +221,8 @@ export default class DevServer {
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
@@ -239,6 +250,8 @@ export default class DevServer {
         this.output.debug(
           `File renamed, but has since been deleted: ${oldName} -> ${name}`
         );
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
