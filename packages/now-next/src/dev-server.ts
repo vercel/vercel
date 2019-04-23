@@ -7,18 +7,9 @@ export interface ProcessEnv {
   [key: string]: string;
 }
 
-async function main(env: ProcessEnv) {
-  const { ENTRY_PATH } = env;
-
-  if (!ENTRY_PATH) {
-    console.error('No ENTRY_PATH defined');
-    process.exit(1);
-
-    return;
-  }
-
-  const next = require(resolveFrom(ENTRY_PATH, 'next'));
-  const app = next({ dev: true, dir: ENTRY_PATH });
+async function main(env: ProcessEnv, cwd: string) {
+  const next = require(resolveFrom(cwd, 'next'));
+  const app = next({ dev: true, dir: cwd });
   const handler = app.getRequestHandler();
 
   const openPort = await getPort({
@@ -47,4 +38,4 @@ async function main(env: ProcessEnv) {
   });
 }
 
-main(process.env as ProcessEnv);
+main(process.env as ProcessEnv, process.cwd());

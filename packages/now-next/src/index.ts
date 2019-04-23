@@ -11,7 +11,6 @@ import {
   BuildOptions,
   PrepareCacheOptions,
 } from '@now/build-utils';
-import resolveFrom from 'resolve-from';
 import path from 'path';
 import { fork } from 'child_process';
 import {
@@ -36,8 +35,7 @@ import {
 } from './utils';
 
 interface BuildParamsMeta {
-  isDev: boolean | undefined,
-  requestPath: string | undefined,
+  isDev: boolean | undefined
 };
 
 interface BuildParamsType extends BuildOptions {
@@ -117,17 +115,17 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 async function startDevServer(entryPath: string): Promise<string> {
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
-    cwd: entryPath,
-    env: {
-      ENTRY_PATH: entryPath,
-      NOW_REGION: 'dev1'
-    },
-    silent: true
-  });
+  return new Promise(async (resolve, reject) => {
+    const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
+      cwd: entryPath,
+      execArgv: [],
+      env: {
+        NOW_REGION: 'dev1'
+      }
+    });
 
-  return new Promise(resolve => {
     forked.on('message', resolve);
+    forked.on('error', reject);
   });
 }
 
@@ -144,12 +142,9 @@ export const build = async ({
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const dotNext = path.join(entryPath, '.next');
-  const uponRequest = typeof meta.requestPath === 'string';
 
-  if ((meta.isDev && !uponRequest) || !meta.isDev) {
-    console.log(`${name} Downloading user files...`);
-    await download(files, workPath);
-  }
+  console.log(`${name} Downloading user files...`);
+  await download(files, workPath);
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
@@ -163,8 +158,6 @@ export const build = async ({
   if (meta.isDev) {
     // eslint-disable-next-line no-underscore-dangle
     process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
-
-    console.log(`${name} Requested ${meta.requestPath || '/'}`);
 
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
