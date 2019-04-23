@@ -984,7 +984,6 @@ async function shouldServe(
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
     // been built.
-    console.error('found matching route');
     return true;
   }
   return false;
@@ -998,7 +997,6 @@ async function findMatchingRoute(
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
     const route = await devRouter(reqUrl, (buildResult as BuildResultV2).routes, devServer);
-    console.error({ route, reqUrl });
     if (route.found) {
       return route;
     }
