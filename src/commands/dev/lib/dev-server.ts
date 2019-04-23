@@ -728,12 +728,22 @@ export default class DevServer {
     const buildRequestPath = match.buildResults.has(null) ? null : requestPath;
     const buildResult = match.buildResults.get(buildRequestPath);
 
-    if (buildResult && Array.isArray(buildResult.routes) && buildResult.routes.length > 0) {
+    if (
+      buildResult &&
+      Array.isArray(buildResult.routes) &&
+      buildResult.routes.length > 0
+    ) {
       const newUrl = `/${requestPath}`;
-      this.output.debug(`Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`);
+      this.output.debug(
+        `Checking build result's ${
+          buildResult.routes.length
+        } \`routes\` to match ${newUrl}`
+      );
       const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
       if (matchedRoute.found) {
-        this.output.debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
+        this.output.debug(
+          `Found matching route ${matchedRoute.dest} for ${newUrl}`
+        );
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -869,7 +879,9 @@ export default class DevServer {
 
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
-    if (await findBuildMatch(this.buildMatches, this.files, requestPath, this)) {
+    if (
+      await findBuildMatch(this.buildMatches, this.files, requestPath, this)
+    ) {
       return true;
     }
     return false;
@@ -1009,7 +1021,11 @@ async function findMatchingRoute(
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
-    const route = await devRouter(reqUrl, (buildResult as BuildResultV2).routes, devServer);
+    const route = await devRouter(
+      reqUrl,
+      (buildResult as BuildResultV2).routes,
+      devServer
+    );
     if (route.found) {
       return route;
     }
