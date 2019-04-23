@@ -900,6 +900,7 @@ function proxyPass(
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
     ws: true,
+    xfwd: true,
     ignorePath: true,
     target: dest
   });
