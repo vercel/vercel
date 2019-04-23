@@ -996,7 +996,8 @@ async function shouldServe(
       entrypoint,
       files,
       config,
-      requestPath
+      requestPath,
+      workPath: devServer.cwd
     });
     if (shouldServe) {
       return true;
