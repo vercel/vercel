@@ -36,12 +36,14 @@ import {
   BuildConfig,
   BuildMatch,
   BuildResult,
+  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   HttpHandler,
   InvokePayload,
   InvokeResult,
-  RouteConfig
+  RouteConfig,
+  RouteResult
 } from './types';
 
 export default class DevServer {
@@ -147,7 +149,7 @@ export default class DevServer {
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
-          (await shouldServe(match, this.files, requestPath))
+          (await shouldServe(match, this.files, requestPath, this))
         ) {
           this.triggerBuild(
             match,
@@ -391,23 +393,12 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
 
       // Now Builders that do not define a `shouldServe()` function need to be
-      // executed at boot-up time in order to get the initial assets that can be
-      // routed to.
-      // Also for v2 builders with 'requiresInitialBuild: true' flag, which only needs the
-      // initial build.
+      // executed at boot-up time in order to get the initial assets and/or routes
+      // that can be served by the builder.
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-
-          if (builder.requiresInitialBuild) {
-            return true;
-          }
-
-          if (typeof builder.shouldServe !== 'function') {
-            return true;
-          }
-
-          return false;
+          return typeof builder.shouldServe !== 'function';
         }
       );
       if (needsInitialBuild.length > 0) {
@@ -713,7 +704,8 @@ export default class DevServer {
     const match = await findBuildMatch(
       this.buildMatches,
       this.files,
-      requestPath
+      requestPath,
+      this
     );
     if (!match) {
       await this.send404(req, res, nowRequestId);
@@ -864,7 +856,7 @@ export default class DevServer {
 
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
-    if (await findBuildMatch(this.buildMatches, this.files, requestPath)) {
+    if (await findBuildMatch(this.buildMatches, this.files, requestPath, this)) {
       return true;
     }
     return false;
@@ -952,10 +944,11 @@ function hasOwnProperty(obj: any, prop: string) {
 async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
-  requestPath: string
+  requestPath: string,
+  devServer: DevServer
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath)) {
+    if (await shouldServe(match, files, requestPath, devServer)) {
       return match;
     }
   }
@@ -965,12 +958,13 @@ async function findBuildMatch(
 async function shouldServe(
   match: BuildMatch,
   files: BuilderInputs,
-  requestPath: string
+  requestPath: string,
+  devServer: DevServer
 ): Promise<boolean> {
   const {
     src: entrypoint,
     config,
-    builderWithPkg: { builder }
+    builderWithPkg: { builder, package: pkg }
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
@@ -986,8 +980,29 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
+  } else if (await findMatchingRoute(match, requestPath, devServer)) {
+    // If there's no `shouldServe()` function and no matched asset, then look
+    // up if there's a matching build route on the `match` that has already
+    // been built.
+    console.error('found matching route');
+    return true;
   }
   return false;
+}
+
+async function findMatchingRoute(
+  match: BuildMatch,
+  requestPath: string,
+  devServer: DevServer
+): Promise<RouteResult | void> {
+  const reqUrl = `/${requestPath}`;
+  for (const buildResult of match.buildResults.values()) {
+    const route = await devRouter(reqUrl, (buildResult as BuildResultV2).routes, devServer);
+    console.error({ route, reqUrl });
+    if (route.found) {
+      return route;
+    }
+  }
 }
 
 function findAsset(
