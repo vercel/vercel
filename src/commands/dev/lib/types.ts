@@ -97,7 +97,6 @@ export interface BuilderConfigAttr {
 
 export interface Builder {
   version?: 2;
-  requiresInitialBuild?: boolean;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -127,11 +126,13 @@ export interface ShouldServeParams {
   entrypoint: string;
   config?: object;
   requestPath: string;
+  workPath: string
 }
 
 export interface BuilderWithPackage {
   builder: Builder;
   package: {
+    name?: string;
     version: string;
   };
 }

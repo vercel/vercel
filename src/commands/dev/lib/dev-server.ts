@@ -36,12 +36,14 @@ import {
   BuildConfig,
   BuildMatch,
   BuildResult,
+  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   HttpHandler,
   InvokePayload,
   InvokeResult,
-  RouteConfig
+  RouteConfig,
+  RouteResult
 } from './types';
 
 export default class DevServer {
@@ -86,13 +88,18 @@ export default class DevServer {
     for (const event of events) {
       // TODO: for some reason the type inference isn't working, hence the casting
       if (event.action === nsfw.actions.CREATED) {
-        await this.handleFileCreated(event as nsfw.CreatedEvent, filesChanged);
+        await this.handleFileCreated(
+          event as nsfw.CreatedEvent,
+          filesChanged,
+          filesRemoved
+        );
       } else if (event.action === nsfw.actions.DELETED) {
         this.handleFileDeleted(event as nsfw.DeletedEvent, filesRemoved);
       } else if (event.action === nsfw.actions.MODIFIED) {
         await this.handleFileModified(
           event as nsfw.ModifiedEvent,
-          filesChanged
+          filesChanged,
+          filesRemoved
         );
       } else if (event.action === nsfw.actions.RENAMED) {
         await this.handleFileRenamed(
@@ -147,7 +154,7 @@ export default class DevServer {
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
-          (await shouldServe(match, this.files, requestPath))
+          (await shouldServe(match, this.files, requestPath, this))
         ) {
           this.triggerBuild(
             match,
@@ -173,7 +180,8 @@ export default class DevServer {
 
   async handleFileCreated(
     event: nsfw.CreatedEvent,
-    changed: Set<string>
+    changed: Set<string>,
+    removed: Set<string>
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
@@ -184,6 +192,8 @@ export default class DevServer {
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File created, but has since been deleted: ${name}`);
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
@@ -199,7 +209,8 @@ export default class DevServer {
 
   async handleFileModified(
     event: nsfw.ModifiedEvent,
-    changed: Set<string>
+    changed: Set<string>,
+    removed: Set<string>
   ): Promise<void> {
     const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
@@ -210,6 +221,8 @@ export default class DevServer {
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
@@ -237,6 +250,8 @@ export default class DevServer {
         this.output.debug(
           `File renamed, but has since been deleted: ${oldName} -> ${name}`
         );
+        delete this.files[name];
+        removed.add(name);
       } else {
         throw err;
       }
@@ -391,23 +406,12 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
 
       // Now Builders that do not define a `shouldServe()` function need to be
-      // executed at boot-up time in order to get the initial assets that can be
-      // routed to.
-      // Also for v2 builders with 'requiresInitialBuild: true' flag, which only needs the
-      // initial build.
+      // executed at boot-up time in order to get the initial assets and/or routes
+      // that can be served by the builder.
       const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
         (buildMatch: BuildMatch) => {
           const { builder } = buildMatch.builderWithPkg;
-
-          if (builder.requiresInitialBuild) {
-            return true;
-          }
-
-          if (typeof builder.shouldServe !== 'function') {
-            return true;
-          }
-
-          return false;
+          return typeof builder.shouldServe !== 'function';
         }
       );
       if (needsInitialBuild.length > 0) {
@@ -713,7 +717,8 @@ export default class DevServer {
     const match = await findBuildMatch(
       this.buildMatches,
       this.files,
-      requestPath
+      requestPath,
+      this
     );
     if (!match) {
       await this.send404(req, res, nowRequestId);
@@ -723,12 +728,22 @@ export default class DevServer {
     const buildRequestPath = match.buildResults.has(null) ? null : requestPath;
     const buildResult = match.buildResults.get(buildRequestPath);
 
-    if (buildResult && Array.isArray(buildResult.routes) && buildResult.routes.length > 0) {
+    if (
+      buildResult &&
+      Array.isArray(buildResult.routes) &&
+      buildResult.routes.length > 0
+    ) {
       const newUrl = `/${requestPath}`;
-      this.output.debug(`Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`);
+      this.output.debug(
+        `Checking build result's ${
+          buildResult.routes.length
+        } \`routes\` to match ${newUrl}`
+      );
       const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
       if (matchedRoute.found) {
-        this.output.debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
+        this.output.debug(
+          `Found matching route ${matchedRoute.dest} for ${newUrl}`
+        );
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -864,7 +879,9 @@ export default class DevServer {
 
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
-    if (await findBuildMatch(this.buildMatches, this.files, requestPath)) {
+    if (
+      await findBuildMatch(this.buildMatches, this.files, requestPath, this)
+    ) {
       return true;
     }
     return false;
@@ -952,10 +969,11 @@ function hasOwnProperty(obj: any, prop: string) {
 async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
-  requestPath: string
+  requestPath: string,
+  devServer: DevServer
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath)) {
+    if (await shouldServe(match, files, requestPath, devServer)) {
       return match;
     }
   }
@@ -965,19 +983,21 @@ async function findBuildMatch(
 async function shouldServe(
   match: BuildMatch,
   files: BuilderInputs,
-  requestPath: string
+  requestPath: string,
+  devServer: DevServer
 ): Promise<boolean> {
   const {
     src: entrypoint,
     config,
-    builderWithPkg: { builder }
+    builderWithPkg: { builder, package: pkg }
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
       entrypoint,
       files,
       config,
-      requestPath
+      requestPath,
+      workPath: devServer.cwd
     });
     if (shouldServe) {
       return true;
@@ -986,8 +1006,31 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
+  } else if (await findMatchingRoute(match, requestPath, devServer)) {
+    // If there's no `shouldServe()` function and no matched asset, then look
+    // up if there's a matching build route on the `match` that has already
+    // been built.
+    return true;
   }
   return false;
+}
+
+async function findMatchingRoute(
+  match: BuildMatch,
+  requestPath: string,
+  devServer: DevServer
+): Promise<RouteResult | void> {
+  const reqUrl = `/${requestPath}`;
+  for (const buildResult of match.buildResults.values()) {
+    const route = await devRouter(
+      reqUrl,
+      (buildResult as BuildResultV2).routes,
+      devServer
+    );
+    if (route.found) {
+      return route;
+    }
+  }
 }
 
 function findAsset(

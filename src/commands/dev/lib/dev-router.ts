@@ -25,25 +25,6 @@ export function resolveRouteParameters(
   });
 }
 
-function mergeRoutes(
-  existing: RouteResult | undefined,
-  fresh: RouteResult
-): RouteResult {
-  if (!existing) {
-    return fresh;
-  }
-
-  return {
-    found: true,
-    dest: fresh.userDest ? fresh.dest : existing.dest || fresh.dest,
-    status: fresh.status || existing.status,
-    headers: fresh.headers || existing.headers,
-    uri_args: fresh.uri_args || existing.uri_args || {},
-    matched_route: fresh.matched_route,
-    matched_route_idx: fresh.matched_route_idx
-  };
-}
-
 export default async function(
   reqPath = '',
   routes?: RouteConfig[],
@@ -95,7 +76,7 @@ export default async function(
         }
 
         if (isURL(destPath)) {
-          found = mergeRoutes(found, {
+          found = {
             found: true,
             dest: destPath,
             userDest: false,
@@ -104,11 +85,11 @@ export default async function(
             uri_args: {},
             matched_route: routeConfig,
             matched_route_idx: idx
-          });
+          };
+          break;
         } else {
           const { pathname, query } = url.parse(destPath, true);
-
-          found = mergeRoutes(found, {
+          found = {
             found: true,
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
@@ -117,7 +98,8 @@ export default async function(
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
-          });
+          };
+          break;
         }
       }
     }
