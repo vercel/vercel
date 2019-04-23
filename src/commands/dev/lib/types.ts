@@ -126,7 +126,7 @@ export interface ShouldServeParams {
   entrypoint: string;
   config?: object;
   requestPath: string;
-  workPath: string
+  workPath: string;
 }
 
 export interface BuilderWithPackage {
