@@ -22,7 +22,6 @@ export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
-  builderCachePromise?: Promise<CacheOutputs>;
   buildTimestamp: number;
   workPath: string;
 }

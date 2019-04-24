@@ -53,15 +53,6 @@ export async function executeBuild(
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
-  if (match.builderCachePromise) {
-    devServer.output.debug('Restoring build cache from previous build');
-    const builderCache = await match.builderCachePromise;
-    const startTime = Date.now();
-    await download(builderCache, workPath);
-    const cacheRestoreTime = Date.now() - startTime;
-    devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
-  }
-
   devServer.output.debug(
     `Building ${entrypoint} with "${match.use}"${
       pkg.version ? ` v${pkg.version}` : ''
