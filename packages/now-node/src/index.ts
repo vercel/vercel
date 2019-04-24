@@ -11,14 +11,15 @@ import {
   runPackageJsonScript,
   PrepareCacheOptions,
   BuildOptions,
+  shouldServe,
 } from '@now/build-utils';
 
 interface CompilerConfig {
-  includeFiles?: string[]
+  includeFiles?: string[];
 }
 
 interface DownloadOptions {
-  files: Files,
+  files: Files;
   entrypoint: string;
   workPath: string;
   npmArguments?: string[];
@@ -28,7 +29,7 @@ async function downloadInstallAndBundle({
   files,
   entrypoint,
   workPath,
-  npmArguments = []
+  npmArguments = [],
 }: DownloadOptions) {
   console.log('downloading user files...');
   const downloadedFiles = await download(files, workPath);
@@ -41,12 +42,19 @@ async function downloadInstallAndBundle({
   return { entrypointPath, entrypointFsDirname };
 }
 
-async function compile(entrypointPath: string, entrypoint: string, config: CompilerConfig): Promise<Files> {
+async function compile(
+  entrypointPath: string,
+  entrypoint: string,
+  config: CompilerConfig
+): Promise<Files> {
   const input = entrypointPath;
   const inputDir = dirname(input);
   const rootIncludeFiles = inputDir.split(sep).pop() || '';
   const ncc = require('@zeit/ncc');
-  const { code, map, assets } = await ncc(input, { sourceMap: true, sourceMapRegister: true });
+  const { code, map, assets } = await ncc(input, {
+    sourceMap: true,
+    sourceMapRegister: true,
+  });
 
   if (config && config.includeFiles) {
     for (const pattern of config.includeFiles) {
@@ -61,12 +69,12 @@ async function compile(entrypointPath: string, entrypoint: string, config: Compi
         // if asset contain directory
         // no need to use `rootIncludeFiles`
         if (assetName.includes(sep)) {
-          fullPath = assetName
+          fullPath = assetName;
         }
 
         assets[fullPath] = {
-          'source': data,
-          'permissions': mode
+          source: data,
+          permissions: mode,
         };
       }
     }
@@ -75,7 +83,9 @@ async function compile(entrypointPath: string, entrypoint: string, config: Compi
   const preparedFiles: Files = {};
   // move all user code to 'user' subdirectory
   preparedFiles[entrypoint] = new FileBlob({ data: code });
-  preparedFiles[`${entrypoint.replace('.ts', '.js')}.map`] = new FileBlob({ data: map });
+  preparedFiles[`${entrypoint.replace('.ts', '.js')}.map`] = new FileBlob({
+    data: map,
+  });
   // eslint-disable-next-line no-restricted-syntax
   for (const assetName of Object.keys(assets)) {
     const { source: data, permissions: mode } = assets[assetName];
@@ -86,17 +96,27 @@ async function compile(entrypointPath: string, entrypoint: string, config: Compi
   return preparedFiles;
 }
 
+export const version = 2;
+
 export const config = {
-  maxLambdaSize: '5mb'
+  maxLambdaSize: '5mb',
 };
 
-export async function build({ files, entrypoint, workPath, config }: BuildOptions) {
+export async function build({
+  files,
+  entrypoint,
+  workPath,
+  config,
+}: BuildOptions) {
   const {
     entrypointPath,
-    entrypointFsDirname
-  } = await downloadInstallAndBundle(
-    { files, entrypoint, workPath, npmArguments: ['--prefer-offline'] }
-  );
+    entrypointFsDirname,
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    npmArguments: ['--prefer-offline'],
+  });
 
   console.log('running user script...');
   await runPackageJsonScript(entrypointFsDirname, 'now-build');
@@ -110,28 +130,35 @@ export async function build({ files, entrypoint, workPath, config }: BuildOption
     '// PLACEHOLDER',
     [
       `listener = require("./${entrypoint}");`,
-      'if (listener.default) listener = listener.default;'
+      'if (listener.default) listener = listener.default;',
     ].join(' ')
   );
 
   const launcherFiles = {
     'launcher.js': new FileBlob({ data: launcherData }),
-    'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') })
+    'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
   };
 
   const lambda = await createLambda({
     files: { ...preparedFiles, ...launcherFiles },
     handler: 'launcher.launcher',
-    runtime: 'nodejs8.10'
+    runtime: 'nodejs8.10',
   });
 
-  return { [entrypoint]: lambda };
+  const watch: string[] = [entrypoint];
+  const output = { [entrypoint]: lambda };
+  return {
+    output,
+    watch,
+  };
 }
 
 export async function prepareCache({ workPath }: PrepareCacheOptions) {
   return {
     ...(await glob('node_modules/**', workPath)),
     ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath))
+    ...(await glob('yarn.lock', workPath)),
   };
 }
+
+export { shouldServe };
