@@ -160,7 +160,7 @@ export const build = async ({
   const dotNext = path.join(entryPath, '.next');
 
   console.log(`${name} Downloading user files...`);
-  await download(files, workPath);
+  await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
