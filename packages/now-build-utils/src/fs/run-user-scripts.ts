@@ -112,7 +112,11 @@ export async function installDependencies(destPath: string, args: string[] = [])
   }
 }
 
-export async function runPackageJsonScript(destPath: string, scriptName: string) {
+export async function runPackageJsonScript(
+  destPath: string,
+  scriptName: string,
+  opts?: SpawnOptions
+) {
   assert(path.isAbsolute(destPath));
   const { hasScript, hasPackageLockJson } = await scanParentDirs(
     destPath,
@@ -122,10 +126,10 @@ export async function runPackageJsonScript(destPath: string, scriptName: string)
 
   if (hasPackageLockJson) {
     console.log(`running "npm run ${scriptName}"`);
-    await spawnAsync('npm', ['run', scriptName], destPath);
+    await spawnAsync('npm', ['run', scriptName], destPath, opts);
   } else {
     console.log(`running "yarn run ${scriptName}"`);
-    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], destPath);
+    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], destPath, opts);
   }
 
   return true;
