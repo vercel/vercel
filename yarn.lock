@@ -646,22 +646,6 @@
   resolved "https://registry.yarnpkg.com/@types/write-json-file/-/write-json-file-2.2.1.tgz#74155aaccbb0d532be21f9d66bebc4ea875a5a62"
   integrity sha512-JdO/UpPm9RrtQBNVcZdt3M7j3mHO/kXaea9LBGx3UgWJd1f9BkIWP7jObLBG6ZtRyqp7KzLFEsaPhWcidVittA==
 
-"@types/yauzl-promise@2.1.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@types/yauzl-promise/-/yauzl-promise-2.1.0.tgz#a813ca317cd897f286fdfefb9b202463d315313a"
-  integrity sha512-7PkQ5UtElDsanzjdUQzXnstCqxx6KAOTMURuHwOuqC6YO2WaYQ6ItLnLy3TiEVNQMO/pD+QSOcfnAkeSX4hsTA==
-  dependencies:
-    "@types/events" "*"
-    "@types/node" "*"
-    "@types/yauzl" "*"
-
-"@types/yauzl@*":
-  version "2.9.1"
-  resolved "https://registry.yarnpkg.com/@types/yauzl/-/yauzl-2.9.1.tgz#d10f69f9f522eef3cf98e30afb684a1e1ec923af"
-  integrity sha512-A1b8SU4D10uoPjwb0lnHmmu8wZhR9d+9o2PKBQT2jU5YPTKsxac6M2qGAdY7VcL+dHHhARVUDmeg0rOrcd9EjA==
-  dependencies:
-    "@types/node" "*"
-
 "@typescript-eslint/eslint-plugin@1.6.0":
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-1.6.0.tgz#a5ff3128c692393fb16efa403ec7c8a5593dab0f"
@@ -711,12 +695,11 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.4.tgz#6d390640f13145d940f3e709e53b826b76dc43fc"
   integrity sha512-0a2VVt13IMGR6MlEael2ODblZnDNbbQ8DeESM9+KHBpxaBmf024mjLBT8kq5vhSihS9fiIRYpeyFkTTAKGEOqw==
 
-"@zeit/fun@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.6.0.tgz#73181b559e7325f64503f04b730b2689cbe50026"
-  integrity sha512-SP9K+nu22V6NqVJhgNs40wQLUduN8qrpRtYy/bmf90VMNm1KB2scb2JjRlZ3Iu95T4ozMJZkR1qI6RzbXaRidQ==
+"@zeit/fun@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.7.0.tgz#9c8925fdd8173303a3672c836474da6e336de2f4"
+  integrity sha512-RZvD9C9ZqhD300sC6ves4J73MlN/kAAbROrtMrBnNR4+A3z1KiAbwB0XTguHfT9+LS2FGLP2RH95k3PJmebWJQ==
   dependencies:
-    "@types/yauzl-promise" "2.1.0"
     async-listen "1.0.0"
     cache-or-tmp-directory "1.0.0"
     debug "4.1.1"
