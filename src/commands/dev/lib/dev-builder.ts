@@ -17,7 +17,6 @@ import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { getBuilder } from './builder-cache';
 import {
   NowConfig,
-  RouteConfig,
   BuildMatch,
   BuildResult,
   BuildResultV2,
