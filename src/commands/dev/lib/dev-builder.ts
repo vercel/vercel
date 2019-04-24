@@ -112,6 +112,13 @@ export async function executeBuild(
     return w;
   });
 
+  // The `entrypoint` should always be watched, since we know that it was used
+  // to produce the build output. This is for builders that don't implement
+  // a fully featured `watch` return value.
+  if (!result.watch.includes(entrypoint)) {
+    result.watch.push(entrypoint);
+  }
+
   // Enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
   let maxLambdaBytes: number;
