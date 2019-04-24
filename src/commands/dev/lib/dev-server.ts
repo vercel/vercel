@@ -384,11 +384,11 @@ export default class DevServer {
    */
   async start(port: number = 3000): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
-      throw new Error(`${chalk.bold(this.cwd)} doesn't exists`);
+      throw new Error(`${chalk.bold(this.cwd)} doesn't exists.`);
     }
 
     if (!fs.lstatSync(this.cwd).isDirectory()) {
-      throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
+      throw new Error(`${chalk.bold(this.cwd)} is not a directory.`);
     }
 
     // Retrieve the path of the native module
