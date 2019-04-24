@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
+import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -122,6 +123,9 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
     }
 
+    const filesChangedArray = [...filesChanged];
+    const filesRemovedArray = [...filesRemoved];
+
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
     const needsRebuild: Map<
@@ -135,8 +139,11 @@ export default class DevServer {
         if (needsRebuild.has(result)) continue;
 
         if (Array.isArray(result.watch)) {
-          for (const fileName of result.watch) {
-            if (filesChanged.has(fileName) || filesRemoved.has(fileName)) {
+          for (const pattern of result.watch) {
+            if (
+              minimatches(filesChangedArray, pattern) ||
+              minimatches(filesRemovedArray, pattern)
+            ) {
               needsRebuild.set(result, [requestPath, match]);
               break;
             }
@@ -146,8 +153,6 @@ export default class DevServer {
     }
 
     if (needsRebuild.size > 0) {
-      const filesChangedArray = [...filesChanged];
-      const filesRemovedArray = [...filesRemoved];
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
       this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
       this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
@@ -1074,4 +1079,8 @@ function isIndex(path: string): boolean {
   const ext = extname(path);
   const name = basename(path, ext);
   return name === 'index';
+}
+
+function minimatches(files: string[], pattern: string): boolean {
+  return files.some(file => minimatch(file, pattern));
 }
