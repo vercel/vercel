@@ -171,6 +171,8 @@ export const build = async ({
     );
   }
 
+  process.env.__NEXT_BUILDER_EXPERIMENTAL_TARGET = 'serverless';
+
   if (meta.isDev) {
     // eslint-disable-next-line no-underscore-dangle
     process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
@@ -257,7 +259,6 @@ export const build = async ({
     env: {
       ...process.env,
       NODE_OPTIONS: `--max_old_space_size=${memoryToConsume}`,
-      __NEXT_BUILDER_EXPERIMENTAL_TARGET: 'serverless',
     },
   } as SpawnOptions);
 
