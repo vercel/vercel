@@ -257,6 +257,7 @@ export const build = async ({
     env: {
       ...process.env,
       NODE_OPTIONS: `--max_old_space_size=${memoryToConsume}`,
+      __NEXT_BUILDER_EXPERIMENTAL_TARGET: 'serverless',
     },
   } as SpawnOptions);
 
