@@ -1,6 +1,7 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
+import chalk from 'chalk';
 import { tmpdir } from 'os';
 import { join, relative } from 'path';
 import { createFunction } from '@zeit/fun';
@@ -74,10 +75,10 @@ export async function executeBuild(
 
   try {
     devServer.applyBuildEnv(nowJson);
-    let unhookIntercept;
-    if (!devServer.debug) {
-      unhookIntercept = intercept(() => '');
-    }
+    const unhookIntercept = intercept((log) => {
+      const builderName = pkg.name || 'builder';
+      return `[${chalk.yellow(builderName)}] ${log}`;
+    });
     result = await builder.build({
       files,
       entrypoint,
@@ -85,9 +86,7 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
-    if (typeof unhookIntercept === 'function') {
-      unhookIntercept();
-    }
+    unhookIntercept();
 
     // Sort out build result to builder v2 shape
     if (builder.version === undefined) {
