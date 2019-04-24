@@ -102,6 +102,16 @@ export async function executeBuild(
     devServer.restoreOriginalEnv();
   }
 
+  // The `watch` array must not have "./" prefix, so if the builder returned
+  // watched files that contain "./" strip them here for ease of writing the
+  // builder.
+  result.watch = ((result as BuildResultV2).watch || []).map((w: string) => {
+    if (w.startsWith('./')) {
+      return w.substring(2);
+    }
+    return w;
+  });
+
   // Enforce the lambda zip size soft watermark
   const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
   let maxLambdaBytes: number;
