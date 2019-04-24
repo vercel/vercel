@@ -7,7 +7,6 @@ import { createFunction } from '@zeit/fun';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { download } from '@now/build-utils';
-import intercept from 'intercept-stdout';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
@@ -65,10 +64,6 @@ export async function executeBuild(
 
   try {
     devServer.applyBuildEnv(nowJson);
-    let unhookIntercept;
-    if (!devServer.debug) {
-      unhookIntercept = intercept(() => '');
-    }
     result = await builder.build({
       files,
       entrypoint,
@@ -76,9 +71,6 @@ export async function executeBuild(
       config,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
-    if (typeof unhookIntercept === 'function') {
-      unhookIntercept();
-    }
 
     // Sort out build result to builder v2 shape
     if (builder.version === undefined) {
