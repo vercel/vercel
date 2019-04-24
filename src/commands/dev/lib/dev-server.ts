@@ -158,8 +158,12 @@ export default class DevServer {
 
     if (needsRebuild.size > 0) {
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
-      this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
-      this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
+      if (filesChangedArray.length > 0) {
+        this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
+      }
+      if (filesRemovedArray.length > 0) {
+        this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
+      }
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
