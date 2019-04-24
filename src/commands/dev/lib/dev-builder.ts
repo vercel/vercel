@@ -74,18 +74,20 @@ export async function executeBuild(
 
   try {
     devServer.applyBuildEnv(nowJson);
-    const unhookIntercept = intercept((log) => {
-      const builderName = pkg.name || 'builder';
-      return `[${chalk.yellow(builderName)}] ${log}`;
-    });
+
+    const builderName = pkg.name || 'builder';
+    const { unhookFilter, logUtils: log } = filterStdio(builderName);
+
     result = await builder.build({
       files,
       entrypoint,
       workPath,
       config,
+      log,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
     });
-    unhookIntercept();
+
+    unhookFilter();
 
     // Sort out build result to builder v2 shape
     if (builder.version === undefined) {
@@ -162,6 +164,35 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
+}
+
+const LOG_PREFIX = 'LOG_FROM_NOW_BUILDER';
+const LOG_PREFIX_INFO = `${LOG_PREFIX}#INFO`;
+const LOG_PREFIX_DEBUG = `${LOG_PREFIX}#DEBUG`;
+
+/**
+ * Only allow logs from provided log utils (`info` and `debug`).
+ */
+function filterStdio (topic: string) {
+  const unhookFilter = intercept((log: string) => {
+    if (log.startsWith(LOG_PREFIX_INFO)) {
+      return `[${chalk.yellow(topic)}] ${log.substr(LOG_PREFIX_INFO.length + 1)}`;
+    }
+    if (log.startsWith(LOG_PREFIX_DEBUG)) {
+      return `[${chalk.green(topic)}] ${log.substr(LOG_PREFIX_DEBUG.length) + 1}`;
+    }
+    return '';
+  });
+
+  const logUtils = {
+    info: (...args: any[]) => console.log(LOG_PREFIX_INFO, ...args),
+    debug: (...args: any[]) => console.log(LOG_PREFIX_DEBUG, ...args)
+  };
+
+  return {
+    unhookFilter,
+    logUtils
+  }
 }
 
 export async function getBuildMatches(

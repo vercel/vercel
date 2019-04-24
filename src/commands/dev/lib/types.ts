@@ -75,6 +75,10 @@ export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
   config: object;
+  log: {
+    info: () => void;
+    debug: () => void;
+  },
   meta?: {
     isDev?: boolean;
     requestPath?: string | null;
