@@ -66,7 +66,7 @@ export async function prepareBuilderDir() {
 }
 
 export async function prepareBuilderModulePath() {
-  const [ builderDir, builderContents ] = await Promise.all([
+  const [builderDir, builderContents] = await Promise.all([
     builderDirPromise,
     readFile(join(__dirname, 'builder.js'))
   ]);

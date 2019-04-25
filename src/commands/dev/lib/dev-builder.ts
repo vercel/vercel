@@ -170,15 +170,26 @@ export async function executeBuild(
   for (const name of Object.keys(output)) {
     const obj = output[name] as File;
     let lambda: Lambda;
+    let fileRef: FileFsRef;
+    let fileBlob: FileBlob;
     switch (obj.type) {
+      case 'FileFsRef':
+        fileRef = Object.assign(Object.create(FileFsRef.prototype), obj);
+        output[name] = fileRef;
+        break;
+      case 'FileBlob':
+        fileBlob = Object.assign(Object.create(FileBlob.prototype), obj);
+        fileBlob.data = Buffer.from((obj as any).data.data);
+        output[name] = fileBlob;
+        break;
       case 'Lambda':
         lambda = Object.assign(Object.create(Lambda.prototype), obj) as Lambda;
+        // Convert the JSON-ified Buffer object back into an actual Buffer
         lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
         output[name] = lambda;
         break;
       default:
-        // TODO: Convert `FileBlob` and `FileFsRef` types as well
-        break;
+        throw new Error(`Unknown file type: ${obj.type}`);
     }
   }
 
