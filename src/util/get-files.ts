@@ -1,14 +1,28 @@
 import { resolve } from 'path';
-import flatten from 'arr-flatten';
 import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
-import _glob from 'glob';
+import _glob, { IOptions } from 'glob';
 import fs from 'fs';
 import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
+import { Output } from './output/create-output';
+import { NowConfig } from '../commands/dev/lib/types';
 
-const glob = async function(pattern, options) {
+type NullableString = string | null;
+
+const flatten = (arr: NullableString[] | NullableString[][], res: NullableString[] = []) => {
+  for (let cur of arr) {
+    if (Array.isArray(cur)) {
+      flatten(cur, res);
+    } else {
+      res.push(cur);
+    }
+  }
+  return res;
+}
+
+const glob = async function(pattern: string, options: IOptions) {
   return new Promise((resolve, reject) => {
     _glob(pattern, options, (error, files) => {
       if (error) {
@@ -20,6 +34,10 @@ const glob = async function(pattern, options) {
   });
 };
 
+interface WalkSyncOptions {
+  output: Output;
+}
+
 /**
  * Will recursivly walk through a directory and return an array of the files found within.
  * @param {string} dir the directory to walk
@@ -29,15 +47,15 @@ const glob = async function(pattern, options) {
  *  - `output` {Object} "output" helper object
  * @returns {Array}
  */
-const walkSync = async (dir, path, filelist = [], { output } = {}) => {
-  const { debug } = output;
+const walkSync = async (dir: string, path: string, filelist: string[] = [], opts: WalkSyncOptions) => {
+  const { debug } = opts.output;
   const dirc = await fs.promises.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
     file = asAbsolute(file, dir);
     try {
       const file_stat = await fs.promises.stat(file);
       filelist = file_stat.isDirectory()
-        ? await walkSync(file, path, filelist, { output })
+        ? await walkSync(file, path, filelist, opts)
         : filelist.concat(file);
     } catch (e) {
       debug(`Ignoring invalid file ${file}`);
@@ -45,6 +63,10 @@ const walkSync = async (dir, path, filelist = [], { output } = {}) => {
   }
   return filelist;
 };
+
+interface FilesInWhitelistOptions {
+  output: Output;
+}
 
 /**
  * Will return an array containing the expaneded list of all files included in the whitelist.
@@ -54,17 +76,17 @@ const walkSync = async (dir, path, filelist = [], { output } = {}) => {
  *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
-const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
-  const { debug } = output;
-  const files = [];
+const getFilesInWhitelist = async function(whitelist: string[], path: string, opts: FilesInWhitelistOptions) {
+  const { debug } = opts.output;
+  const files: string[] = [];
 
   await Promise.all(
-    whitelist.map(async file => {
+    whitelist.map(async (file: string) => {
       file = asAbsolute(file, path);
       try {
         const file_stat = await fs.promises.stat(file);
         if (file_stat.isDirectory()) {
-          const dir_files = await walkSync(file, path, [], { output });
+          const dir_files = await walkSync(file, path, [], opts);
           files.push(...dir_files);
         } else {
           files.push(file);
@@ -82,7 +104,7 @@ const getFilesInWhitelist = async function(whitelist, path, { output } = {}) {
  * because ignore doesn't like them :|
  */
 
-const clearRelative = function(str) {
+const clearRelative = function(str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 };
 
@@ -92,7 +114,7 @@ const clearRelative = function(str) {
  * @return {String} results or `''`
  */
 
-const maybeRead = async function(path, default_ = '') {
+const maybeRead = async function<T>(path: string, default_: T) {
   try {
     return await fs.promises.readFile(path, 'utf8');
   } catch (err) {
@@ -108,13 +130,18 @@ const maybeRead = async function(path, default_ = '') {
  * @param {String} parent full path
  */
 
-const asAbsolute = function(path, parent) {
+const asAbsolute = function(path: string, parent: string) {
   if (path[0] === '/') {
     return path;
   }
 
   return resolve(parent, path);
 };
+
+interface StaticFilesOptions {
+  output: Output;
+  isBuilds: boolean;
+}
 
 /**
  * Returns a list of files in the given
@@ -129,12 +156,12 @@ const asAbsolute = function(path, parent) {
  */
 
 export async function staticFiles(
-  path,
-  nowConfig = {},
-  { limit = null, output, isBuilds } = {}
+  path: string,
+  nowConfig: NowConfig = {},
+  { output, isBuilds }: StaticFilesOptions
 ) {
   const { debug, time } = output;
-  let files = [];
+  let files: string[] = [];
 
   if (!isBuilds && nowConfig.files && Array.isArray(nowConfig.files)) {
     files = await getFilesInWhitelist(nowConfig.files, path, { output });
@@ -154,7 +181,7 @@ export async function staticFiles(
 
     // Compile list of ignored patterns and files
     const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ignoreFile = await maybeRead(resolve(path, ignoreName));
+    const ignoreFile = await maybeRead(resolve(path, ignoreName), '');
 
     const filter = ignore()
       .add(`${IGNORED}\n${clearRelative(ignoreFile)}`)
@@ -166,7 +193,7 @@ export async function staticFiles(
     // honors npmignores: https://docs.npmjs.com/files/package.json#files
     // but we don't ignore if the user is explicitly listing files
     // under the now namespace, or using files in combination with gitignore
-    const accepts = file => {
+    const accepts = (file: string) => {
       const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
@@ -187,7 +214,6 @@ export async function staticFiles(
       `Locating files ${path}`,
       explode(search, {
         accepts,
-        limit,
         output
       })
     );
@@ -195,6 +221,11 @@ export async function staticFiles(
 
   // Get files
   return uniqueStrings(files);
+}
+
+interface NpmOptions {
+  hasNowJson: boolean;
+  output: Output;
 }
 
 /**
@@ -209,16 +240,15 @@ export async function staticFiles(
  *  - `output` {Object} "output" helper object
  * @return {Array} comprehensive list of paths to sync
  */
-
 export async function npm(
-  path,
-  pkg = {},
-  nowConfig = {},
-  { limit = null, hasNowJson = false, output } = {}
+  path: string,
+  pkg: { files?: string[], now?: { files?: string[] } } = {},
+  nowConfig: NowConfig = {},
+  { hasNowJson = false, output }: NpmOptions
 ) {
   const { debug, time } = output;
   const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
-  let files = [];
+  let files: string[] = [];
 
   if (whitelist) {
     files = await getFilesInWhitelist(whitelist, path, { output });
@@ -238,20 +268,20 @@ export async function npm(
 
     // Compile list of ignored patterns and files
     const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null);
-    const gitIgnore =
-      npmIgnore === null ? await maybeRead(resolve(path, '.gitignore')) : null;
 
     const filter = ignore()
       .add(
         `${IGNORED}\n${clearRelative(
-          npmIgnore === null ? gitIgnore : npmIgnore
+          npmIgnore === null
+            ? await maybeRead(resolve(path, '.gitignore'), '')
+            : npmIgnore
         )}`
       )
       .createFilter();
 
     const prefixLength = path.length + 1;
 
-    const accepts = file => {
+    const accepts = (file: string) => {
       const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
@@ -270,7 +300,6 @@ export async function npm(
       `Locating files ${path}`,
       explode(search, {
         accepts,
-        limit,
         output
       })
     );
@@ -288,6 +317,11 @@ export async function npm(
   return uniqueStrings(files);
 }
 
+interface DockerOptions {
+  hasNowJson: boolean;
+  output: Output;
+}
+
 /**
  * Returns a list of files in the given
  * directory that are subject to be
@@ -302,12 +336,12 @@ export async function npm(
  */
 
 export async function docker(
-  path,
-  nowConfig = {},
-  { limit = null, hasNowJson = false, output } = {}
+  path: string,
+  nowConfig: NowConfig = {},
+  { hasNowJson = false, output }: DockerOptions
 ) {
   const { debug, time } = output;
-  let files = [];
+  let files: string[] = [];
 
   if (nowConfig.files) {
     files = await getFilesInWhitelist(nowConfig.files, path, { output });
@@ -325,16 +359,16 @@ export async function docker(
 
     const ignoredFiles = clearRelative(
       dockerIgnore === null
-        ? await maybeRead(resolve(path, '.gitignore'))
+        ? await maybeRead(resolve(path, '.gitignore'), '')
         : dockerIgnore
     );
-
-    const filter = (dockerIgnore === null ? ignore : dockerignore)()
+    const ignoreInit = (dockerIgnore === null ? ignore : dockerignore) as any as typeof ignore;
+    const filter = ignoreInit()
       .add(`${IGNORED}\n${ignoredFiles}`)
       .createFilter();
 
     const prefixLength = path.length + 1;
-    const accepts = function(file) {
+    const accepts = function(file: string) {
       const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
@@ -351,7 +385,7 @@ export async function docker(
     // Locate files
     files = await time(
       `Locating files ${path}`,
-      explode(search, { accepts, limit, output })
+      explode(search, { accepts, output })
     );
   }
 
@@ -367,6 +401,11 @@ export async function docker(
   return uniqueStrings(files);
 }
 
+interface ExplodeOptions {
+  accepts: (file: string) => boolean;
+  output: Output;
+}
+
 /**
  * Explodes directories into a full list of files.
  * Eg:
@@ -380,12 +419,11 @@ export async function docker(
  *  - `output` {Object} "output" helper object
  * @return {Array} of {String}s of full paths
  */
-
-async function explode(paths, { accepts, output }) {
+async function explode(paths: string[], { accepts, output }: ExplodeOptions): Promise<string[]> {
   const { debug } = output;
-  const list = async file => {
+  const list = async (file: string): Promise<string | null> => {
     let path = file;
-    let s;
+    let s: fs.Stats;
 
     if (!accepts(file)) {
       return null;
@@ -409,7 +447,8 @@ async function explode(paths, { accepts, output }) {
     if (s.isDirectory()) {
       const all = await fs.promises.readdir(file);
       /* eslint-disable no-use-before-define */
-      return many(all.map(subdir => asAbsolute(subdir, file)));
+      const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
+      return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
     if (!s.isFile()) {
@@ -420,6 +459,11 @@ async function explode(paths, { accepts, output }) {
     return path;
   };
 
-  const many = all => Promise.all(all.map(file => list(file)));
-  return flatten(await many(paths)).filter(v => v !== null);
+  const many = (all: string[]) => Promise.all(all.map(file => list(file)));
+  const arrayOfArrays = await many(paths);
+  return flatten(arrayOfArrays).filter(notNull);
+}
+
+function notNull<T>(value: T | null): value is T {
+  return value !== null;
 }

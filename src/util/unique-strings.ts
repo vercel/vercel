@@ -6,12 +6,12 @@
  * @param {Array} arr Input array that potentially has duplicates
  * @returns {Array} An array of the unique values in `arr`
  */
-export default arr => {
+export default (arr: string[]) => {
   const len = arr.length;
-  const res = [];
-  const o = {};
+  const res: string[] = [];
+  const o: { [key: string]: string | number } = {};
 
-  let i;
+  let i: number;
 
   for (i = 0; i < len; i += 1) {
     o[arr[i]] = o[arr[i]] || res.push(arr[i]);
