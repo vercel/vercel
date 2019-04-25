@@ -106,11 +106,8 @@ export async function executeBuild(
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
-  devServer.output.debug(
-    `Building ${entrypoint} with "${match.use}"${
-      pkg.version ? ` v${pkg.version}` : ''
-    } (workPath = ${workPath})`
-  );
+  devServer.output.log(`Building ${entrypoint} with "${match.use}"`);
+  devServer.output.debug(`"${match.use}"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
@@ -126,15 +123,25 @@ export async function executeBuild(
     );
 
     devServer.output.log(`Building ${entrypoint} with "${match.use}"`);
-    const spinner = ora('').start();
-    buildProcess.on('message', ({type}) => {
+    const fullLogs: string[] = [];
+    const spinner = ora().start();
+
+    buildProcess.on('message', ({ type }) => {
       if (type === 'buildResult') {
         spinner.stop();
       }
     });
 
+    buildProcess.on('error', () => {
+      spinner.stop();
+      console.error(fullLogs.join('\n'));
+    });
+
     const spinLogger = (data: Buffer) => {
-      spinner.text = `${data.toString().split('\n')[0]}`;
+      const rawLog = data.toString();
+      fullLogs.push(rawLog);
+
+      spinner.text = `${rawLog.split('\n')[0]}`;
     };
 
     buildProcess!.stdout!.on('data', spinLogger);
