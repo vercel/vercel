@@ -1,6 +1,5 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import tty from 'tty';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
