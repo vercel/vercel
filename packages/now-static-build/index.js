@@ -1,5 +1,9 @@
 const path = require('path');
-const { existsSync } = require('fs');
+const getPort = require('get-port');
+const { promisify } = require('util');
+const { timeout } = require('promise-timeout');
+const { existsSync, readFileSync } = require('fs');
+const waitForPort = promisify(require('wait-for-port'));
 const {
   glob,
   download,
@@ -17,12 +21,16 @@ function validateDistDir(distDir) {
   }
 }
 
+exports.version = 2;
+
+const nowDevScriptPorts = new Map();
+
 exports.build = async ({
-  files, entrypoint, workPath, config,
+  files, entrypoint, workPath, config, meta = {},
 }) => {
   console.log('downloading user files...');
-  await download(files, workPath);
-  console.log('running user scripts...');
+  await download(files, workPath, meta);
+
   const mountpoint = path.dirname(entrypoint);
   const entrypointFsDirname = path.join(workPath, mountpoint);
   const distPath = path.join(
@@ -31,13 +39,79 @@ exports.build = async ({
     (config && config.distDir) || 'dist',
   );
 
-  if (path.basename(entrypoint) === 'package.json') {
+  const entrypointName = path.basename(entrypoint);
+  if (entrypointName === 'package.json') {
     await runNpmInstall(entrypointFsDirname, ['--prefer-offline']);
-    if (await runPackageJsonScript(entrypointFsDirname, 'now-build')) {
+
+    const pkgPath = path.join(workPath, entrypoint);
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+
+    let output = {};
+    const routes = [];
+
+    if (meta.isDev && pkg.scripts && pkg.scripts['now-dev']) {
+      let devPort = nowDevScriptPorts.get(entrypoint);
+      if (typeof devPort === 'number') {
+        console.log('`now-dev` server already running for %j', entrypoint);
+      } else {
+        // Run the `now-dev` script out-of-bounds, since it is assumed that
+        // it will launch a dev server that never "completes"
+        devPort = await getPort();
+        nowDevScriptPorts.set(entrypoint, devPort);
+        const opts = {
+          env: { ...process.env, PORT: String(devPort) },
+        };
+        const promise = runPackageJsonScript(
+          entrypointFsDirname,
+          'now-dev',
+          opts,
+        );
+        promise.then(
+          () => {
+            nowDevScriptPorts.delete(entrypoint);
+          },
+          (err) => {
+            console.log('`now-dev` script error:', err);
+            nowDevScriptPorts.delete(entrypoint);
+          },
+        );
+
+        // Now wait for the server to have listened on `$PORT`, after which we
+        // will ProxyPass any requests to that development server that come in
+        // for this builder.
+        try {
+          await timeout(waitForPort('localhost', devPort), 60 * 1000);
+        } catch (err) {
+          throw new Error(
+            `Failed to detect a server running on port ${devPort}`,
+          );
+        }
+
+        console.log('Detected dev server for %j', entrypoint);
+      }
+
+      let srcBase = mountpoint.replace(/^\.\/?/, '');
+      if (srcBase.length > 0) {
+        srcBase = `/${srcBase}`;
+      }
+      routes.push({
+        src: `${srcBase}/(.*)`,
+        dest: `http://localhost:${devPort}${srcBase}/$1`,
+      });
+    } else {
+      // Run the `now-build` script and wait for completion to collect the build
+      // outputs
+      console.log('running user "now-build" script from `package.json`...');
+      if (!(await runPackageJsonScript(entrypointFsDirname, 'now-build'))) {
+        throw new Error(
+          `An error running "now-build" script in "${entrypoint}"`,
+        );
+      }
       validateDistDir(distPath);
-      return glob('**', distPath, mountpoint);
+      output = await glob('**', distPath, mountpoint);
     }
-    throw new Error(`An error running "now-build" script in "${entrypoint}"`);
+    const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
+    return { routes, watch, output };
   }
 
   if (path.extname(entrypoint) === '.sh') {
