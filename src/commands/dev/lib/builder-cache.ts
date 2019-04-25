@@ -1,21 +1,22 @@
 import chalk from 'chalk';
 import execa from 'execa';
+import { createHash } from 'crypto';
 import { join, resolve } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
 import { funCacheDir } from '@zeit/fun';
-import { readJSON, writeJSON, remove } from 'fs-extra';
 import cacheDirectory from 'cache-or-tmp-directory';
+import { readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
+
+import * as staticBuilder from './static-builder';
+import { BuilderWithPackage } from './types';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
-import { BuilderWithPackage } from './types';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
 } from '../../../util/errors-ts';
-
-import * as staticBuilder from './static-builder';
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
@@ -26,6 +27,7 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
+export const builderModulePathPromise = prepareBuilderModulePath();
 
 /**
  * Prepare cache directory for installing now-builders
@@ -61,6 +63,36 @@ export async function prepareBuilderDir() {
   }
 
   return builderDir;
+}
+
+export async function prepareBuilderModulePath() {
+  const [builderDir, builderContents] = await Promise.all([
+    builderDirPromise,
+    readFile(join(__dirname, 'builder.js'))
+  ]);
+  let needsWrite = false;
+  const builderSha = getSha(builderContents);
+  const cachedBuilderPath = join(builderDir, 'builder.js');
+
+  try {
+    const cachedBuilderContents = await readFile(cachedBuilderPath);
+    const cachedBuilderSha = getSha(cachedBuilderContents);
+    if (builderSha !== cachedBuilderSha) {
+      needsWrite = true;
+    }
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      needsWrite = true;
+    } else {
+      throw err;
+    }
+  }
+
+  if (needsWrite) {
+    await writeFile(cachedBuilderPath, builderContents);
+  }
+
+  return cachedBuilderPath;
 }
 
 // Is responsible for cleaning the cache
@@ -170,4 +202,10 @@ export async function getBuilder(
     });
   }
   return builderWithPkg;
+}
+
+function getSha(buffer: Buffer): string {
+  const hash = createHash('sha256');
+  hash.update(buffer);
+  return hash.digest('hex');
 }

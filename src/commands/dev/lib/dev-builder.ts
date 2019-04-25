@@ -2,24 +2,27 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
 import { tmpdir } from 'os';
-import { join, relative } from 'path';
-import { createFunction } from '@zeit/fun';
+import { dirname, join, relative } from 'path';
+import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { download } from '@now/build-utils';
-import intercept from 'intercept-stdout';
+import { createFunction, initializeRuntime } from '@zeit/fun';
+import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import stripAnsi from 'strip-ansi';
+import chalk from 'chalk';
+import ora from 'ora';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import IGNORED from '../../../util/ignored';
+import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
-import { getBuilder } from './builder-cache';
+import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
+  EnvConfig,
   NowConfig,
-  RouteConfig,
   BuildMatch,
   BuildResult,
-  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs
@@ -37,6 +40,58 @@ const getWorkPath = () =>
       .slice(-8)
   );
 
+const nodeBinPromise = (async () => {
+  const runtime = await initializeRuntime('nodejs8.10');
+  if (!runtime.cacheDir) {
+    throw new Error('nodejs8.10 runtime failed to initialize');
+  }
+  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
+  return nodeBin;
+})();
+
+async function createBuildProcess(
+  match: BuildMatch,
+  buildEnv: EnvConfig,
+  output: Output
+): Promise<ChildProcess> {
+  const [execPath, modulePath] = await Promise.all([
+    nodeBinPromise,
+    builderModulePathPromise
+  ]);
+  const buildProcess = fork(modulePath, [], {
+    cwd: match.workPath,
+    env: {
+      ...process.env,
+      PATH: `${dirname(execPath)}:${process.env.PATH}`,
+      ...buildEnv
+    },
+    execPath,
+    execArgv: [],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+  });
+  match.buildProcess = buildProcess;
+
+  buildProcess.on('message', m => {
+    // console.log('got message from builder:', m);
+  });
+  buildProcess.on('exit', (code, signal) => {
+    output.debug(
+      `Build process for ${match.src} exited with ${signal || code}`
+    );
+  });
+
+  return new Promise((resolve, reject) => {
+    // The first message that the builder process sends is the `ready` event
+    buildProcess.once('message', ({ type }) => {
+      if (type !== 'ready') {
+        reject(new Error('Did not get "ready" event from builder'));
+      } else {
+        resolve(buildProcess);
+      }
+    });
+  });
+}
+
 export async function executeBuild(
   nowJson: NowConfig,
   devServer: DevServer,
@@ -53,59 +108,126 @@ export async function executeBuild(
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
-  if (match.builderCachePromise) {
-    devServer.output.debug('Restoring build cache from previous build');
-    const builderCache = await match.builderCachePromise;
-    const startTime = Date.now();
-    await download(builderCache, workPath);
-    const cacheRestoreTime = Date.now() - startTime;
-    devServer.output.debug(`Restoring build cache took ${cacheRestoreTime}ms`);
-  }
-
-  devServer.output.debug(
-    `Building ${entrypoint} with "${match.use}"${
-      pkg.version ? ` v${pkg.version}` : ''
-    } (workPath = ${workPath})`
-  );
+  devServer.output.debug(`Building ${entrypoint} with "${match.use
+    }"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
   let result: BuildResult;
 
-  try {
-    devServer.applyBuildEnv(nowJson);
-    let unhookIntercept;
-    if (!devServer.debug) {
-      unhookIntercept = intercept(() => '');
-    }
-    result = await builder.build({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta: { isDev: true, requestPath, filesChanged, filesRemoved }
-    });
-    if (typeof unhookIntercept === 'function') {
-      unhookIntercept();
-    }
+  let { buildProcess } = match;
+  if (!buildProcess) {
+    devServer.output.debug(`Creating build process for ${entrypoint}`);
+    buildProcess = await createBuildProcess(
+      match,
+      devServer.buildEnv,
+      devServer.output
+    );
 
-    // Sort out build result to builder v2 shape
-    if (builder.version === undefined) {
-      // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-      result = {
-        output: result as BuilderOutputs,
-        routes: [],
-        watch: []
+    if (process.stdout.isTTY) {
+      const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
+      const fullLogs: string[] = [];
+      const spinner = ora(logTitle).start();
+
+      buildProcess.on('message', ({ type }) => {
+        if (type === 'buildResult') {
+          spinner.stop();
+        }
+      });
+
+      buildProcess.on('error', () => {
+        spinner.stop();
+        console.error(fullLogs.join('\n'));
+      });
+
+      const spinLogger = (data: Buffer) => {
+        const rawLog = stripAnsi(data.toString());
+        fullLogs.push(rawLog);
+
+        const lines = rawLog.replace(/\s+$/, '').split('\n');
+        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
+        const maxCols = process.stdout.columns || 80;
+        const overflow = stripAnsi(spinText).length + 3 - maxCols;
+        spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
+
+      buildProcess!.stdout!.on('data', spinLogger);
+      buildProcess!.stderr!.on('data', spinLogger);
+    } else {
+      buildProcess!.stdout!.on('data', devServer.output.debug);
+      buildProcess!.stderr!.on('data', devServer.output.debug);
     }
-  } finally {
-    devServer.restoreOriginalEnv();
+  }
+
+  const buildParams = {
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+  };
+
+  buildProcess.send({
+    type: 'build',
+    builderName: pkg.name,
+    buildParams
+  });
+
+  const buildResultOrOutputs = await new Promise((resolve, reject) => {
+    buildProcess!.once('message', ({ type, result }) => {
+      if (type === 'buildResult') {
+        resolve(result);
+      } else {
+        reject(new Error(`Got unexpected message type: ${type}`));
+      }
+    });
+  });
+
+  // Sort out build result to builder v2 shape
+  if (builder.version === undefined) {
+    // `BuilderOutputs` map was returned (Now Builder v1 behavior)
+    result = {
+      output: buildResultOrOutputs as BuilderOutputs,
+      routes: [],
+      watch: []
+    };
+  } else {
+    result = buildResultOrOutputs as BuildResult;
+  }
+
+  // Convert the JSON-ified output map back into their corresponding `File`
+  // subclass type instances.
+  const output = result.output as BuilderOutputs;
+  for (const name of Object.keys(output)) {
+    const obj = output[name] as File;
+    let lambda: Lambda;
+    let fileRef: FileFsRef;
+    let fileBlob: FileBlob;
+    switch (obj.type) {
+      case 'FileFsRef':
+        fileRef = Object.assign(Object.create(FileFsRef.prototype), obj);
+        output[name] = fileRef;
+        break;
+      case 'FileBlob':
+        fileBlob = Object.assign(Object.create(FileBlob.prototype), obj);
+        fileBlob.data = Buffer.from((obj as any).data.data);
+        output[name] = fileBlob;
+        break;
+      case 'Lambda':
+        lambda = Object.assign(Object.create(Lambda.prototype), obj) as Lambda;
+        // Convert the JSON-ified Buffer object back into an actual Buffer
+        lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
+        output[name] = lambda;
+        break;
+      default:
+        throw new Error(`Unknown file type: ${obj.type}`);
+    }
   }
 
   // The `watch` array must not have "./" prefix, so if the builder returned
   // watched files that contain "./" strip them here for ease of writing the
   // builder.
-  result.watch = ((result as BuildResultV2).watch || []).map((w: string) => {
+  result.watch = (result.watch || []).map((w: string) => {
     if (w.startsWith('./')) {
       return w.substring(2);
     }
