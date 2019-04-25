@@ -410,7 +410,11 @@ export default class DevServer {
         }
       );
       if (needsInitialBuild.length > 0) {
-        this.output.log('Running initial builds');
+        this.output.log(
+          `Running ${needsInitialBuild.length} initial build${
+            needsInitialBuild.length === 1 ? '' : 's'
+          }`
+        );
 
         for (const match of needsInitialBuild) {
           await executeBuild(nowJson, this, this.files, match, null);
