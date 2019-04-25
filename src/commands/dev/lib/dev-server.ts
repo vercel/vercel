@@ -37,7 +37,6 @@ import {
   BuildConfig,
   BuildMatch,
   BuildResult,
-  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   HttpHandler,
@@ -1044,11 +1043,8 @@ async function findMatchingRoute(
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
-    const route = await devRouter(
-      reqUrl,
-      (buildResult as BuildResultV2).routes,
-      devServer
-    );
+    if (!Array.isArray(buildResult.routes)) continue;
+    const route = await devRouter(reqUrl, buildResult.routes, devServer);
     if (route.found) {
       return route;
     }

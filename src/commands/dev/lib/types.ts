@@ -112,15 +112,11 @@ export interface Builder {
   ): CacheOutputs | Promise<CacheOutputs>;
 }
 
-export type BuildResultV1 = BuilderOutputs;
-
-export interface BuildResultV2 {
+export interface BuildResult {
   output: BuilderOutputs;
   routes: RouteConfig[];
   watch: string[];
 }
-
-export type BuildResult = BuildResultV1 | BuildResultV2;
 
 export interface ShouldServeParams {
   files: BuilderInputs;

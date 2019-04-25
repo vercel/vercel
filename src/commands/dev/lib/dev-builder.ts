@@ -20,7 +20,6 @@ import {
   RouteConfig,
   BuildMatch,
   BuildResult,
-  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   BuilderOutputs
@@ -51,7 +50,7 @@ async function createBuildProcess(
   match: BuildMatch,
   output: Output
 ): Promise<ChildProcess> {
-  const [ execPath, modulePath ] = await Promise.all([
+  const [execPath, modulePath] = await Promise.all([
     nodeBinPromise,
     builderModulePathPromise
   ]);
@@ -63,11 +62,13 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('message', (m) => {
+  buildProcess.on('message', m => {
     // console.log('got message from builder:', m);
   });
   buildProcess.on('exit', (code, signal) => {
-    output.debug(`Build process for ${match.src} exited with ${signal || code}`);
+    output.debug(
+      `Build process for ${match.src} exited with ${signal || code}`
+    );
   });
   buildProcess.stdout!.pipe(process.stdout);
   buildProcess.stderr!.pipe(process.stdout);
@@ -133,7 +134,7 @@ export async function executeBuild(
       buildParams
     });
 
-    result = await new Promise((resolve, reject) => {
+    const buildResultOrOutputs = await new Promise((resolve, reject) => {
       buildProcess!.once('message', ({ type, result }) => {
         if (type === 'buildResult') {
           resolve(result);
@@ -147,10 +148,12 @@ export async function executeBuild(
     if (builder.version === undefined) {
       // `BuilderOutputs` map was returned (Now Builder v1 behavior)
       result = {
-        output: result as BuilderOutputs,
+        output: buildResultOrOutputs as BuilderOutputs,
         routes: [],
         watch: []
       };
+    } else {
+      result = buildResultOrOutputs as BuildResult;
     }
   } finally {
     devServer.restoreOriginalEnv();
@@ -164,10 +167,7 @@ export async function executeBuild(
     let lambda: Lambda;
     switch (obj.type) {
       case 'Lambda':
-        lambda = Object.assign(
-          Object.create(Lambda.prototype),
-          obj
-        ) as Lambda;
+        lambda = Object.assign(Object.create(Lambda.prototype), obj) as Lambda;
         lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
         output[name] = lambda;
         break;
@@ -180,7 +180,7 @@ export async function executeBuild(
   // The `watch` array must not have "./" prefix, so if the builder returned
   // watched files that contain "./" strip them here for ease of writing the
   // builder.
-  result.watch = ((result as BuildResultV2).watch || []).map((w: string) => {
+  result.watch = (result.watch || []).map((w: string) => {
     if (w.startsWith('./')) {
       return w.substring(2);
     }
