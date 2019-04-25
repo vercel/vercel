@@ -59,8 +59,18 @@ const prepareModule = async (output: Output): Promise<string> => {
   const full = join(dirName, fileName);
 
   if (await pathExists(full)) {
-    output.debug('The nsfw module is already cached, not re-downloading');
-    return full;
+    try {
+      require(full);
+      output.debug('The nsfw module is already cached, not re-downloading');
+      return full;
+    } catch (error) {
+      if (/NODE_MODULE_VERSION \d+/.test(error.message)) {
+        output.debug('The nsfw module is outdated, re-installing');
+      } else {
+        output.debug(error.stack);
+        output.debug('The nsfw module is corrupt, re-installing');
+      }
+    }
   }
 
   output.debug(`Creating ${dirName} for the nsfw module`);
