@@ -1,5 +1,6 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import tty from 'tty';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
@@ -8,6 +9,7 @@ import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import chalk from 'chalk';
 import ora from 'ora';
 
 import { globBuilderInputs } from './glob';
@@ -122,30 +124,35 @@ export async function executeBuild(
       devServer.output
     );
 
-    devServer.output.log(`Building ${entrypoint} with "${match.use}"`);
-    const fullLogs: string[] = [];
-    const spinner = ora().start();
+    if (process.stdout.isTTY) {
+      const logTitle = `[${chalk.green(match.use)} ${chalk.yellow(entrypoint)}]`;
+      const fullLogs: string[] = [];
+      const spinner = ora(logTitle).start();
 
-    buildProcess.on('message', ({ type }) => {
-      if (type === 'buildResult') {
+      buildProcess.on('message', ({ type }) => {
+        if (type === 'buildResult') {
+          spinner.stop();
+        }
+      });
+
+      buildProcess.on('error', () => {
         spinner.stop();
-      }
-    });
+        console.error(fullLogs.join('\n'));
+      });
 
-    buildProcess.on('error', () => {
-      spinner.stop();
-      console.error(fullLogs.join('\n'));
-    });
+      const spinLogger = (data: Buffer) => {
+        const rawLog = data.toString();
+        fullLogs.push(rawLog);
 
-    const spinLogger = (data: Buffer) => {
-      const rawLog = data.toString();
-      fullLogs.push(rawLog);
+        spinner.text = `${logTitle} ${rawLog.split('\n')[0]}`;
+      };
 
-      spinner.text = `${rawLog.split('\n')[0]}`;
-    };
-
-    buildProcess!.stdout!.on('data', spinLogger);
-    buildProcess!.stderr!.on('data', spinLogger);
+      buildProcess!.stdout!.on('data', spinLogger);
+      buildProcess!.stderr!.on('data', spinLogger);
+    } else {
+      buildProcess!.stdout!.on('data', devServer.output.debug);
+      buildProcess!.stderr!.on('data', devServer.output.debug);
+    }
   }
 
   const buildParams = {
