@@ -127,6 +127,7 @@ export interface ShouldServeParams {
 }
 
 export interface BuilderWithPackage {
+  runInProcess?: boolean;
   builder: Builder;
   package: {
     name?: string;
