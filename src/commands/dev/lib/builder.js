@@ -25,10 +25,7 @@ process.on('message', async (message) => {
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
 
-  process.send({
-    type: 'buildResult',
-    result
-  });
+  process.send({ type: 'buildResult', result });
 });
 
-process.send({ type: 'ready', ready: true, version: process.version });
+process.send({ type: 'ready' });
