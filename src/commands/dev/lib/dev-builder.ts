@@ -9,6 +9,7 @@ import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import ora from 'ora';
 
@@ -141,10 +142,14 @@ export async function executeBuild(
       });
 
       const spinLogger = (data: Buffer) => {
-        const rawLog = data.toString();
+        const rawLog = stripAnsi(data.toString());
         fullLogs.push(rawLog);
 
-        spinner.text = `${logTitle} ${rawLog.split('\n')[0]}`;
+        const lines = rawLog.replace(/\s+$/, '').split('\n');
+        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
+        const maxCols = process.stdout.columns || 80;
+        const overflow = stripAnsi(spinText).length + 3 - maxCols;
+        spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       buildProcess!.stdout!.on('data', spinLogger);
