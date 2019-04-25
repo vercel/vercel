@@ -20,6 +20,7 @@ import {
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
+    runInProcess: true,
     builder: Object.freeze(staticBuilder),
     package: { version: '' }
   }

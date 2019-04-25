@@ -102,7 +102,7 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { builder, package: pkg }
+    builderWithPkg: { runInProcess, builder, package: pkg }
   } = match;
   const { env } = devServer;
   const { src: entrypoint, workPath } = match;
@@ -116,7 +116,7 @@ export async function executeBuild(
   let result: BuildResult;
 
   let { buildProcess } = match;
-  if (!buildProcess) {
+  if (!runInProcess && !buildProcess) {
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
@@ -124,7 +124,7 @@ export async function executeBuild(
       devServer.output
     );
 
-    if (process.stdout.isTTY) {
+    if (!devServer.debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
@@ -167,21 +167,26 @@ export async function executeBuild(
     meta: { isDev: true, requestPath, filesChanged, filesRemoved }
   };
 
-  buildProcess.send({
-    type: 'build',
-    builderName: pkg.name,
-    buildParams
-  });
-
-  const buildResultOrOutputs = await new Promise((resolve, reject) => {
-    buildProcess!.once('message', ({ type, result }) => {
-      if (type === 'buildResult') {
-        resolve(result);
-      } else {
-        reject(new Error(`Got unexpected message type: ${type}`));
-      }
+  let buildResultOrOutputs: BuilderOutputs | BuildResult;
+  if (buildProcess) {
+    buildProcess.send({
+      type: 'build',
+      builderName: pkg.name,
+      buildParams
     });
-  });
+
+    buildResultOrOutputs = await new Promise((resolve, reject) => {
+      buildProcess!.once('message', ({ type, result }) => {
+        if (type === 'buildResult') {
+          resolve(result);
+        } else {
+          reject(new Error(`Got unexpected message type: ${type}`));
+        }
+      });
+    });
+  } else {
+    buildResultOrOutputs = await builder.build(buildParams);
+  }
 
   // Sort out build result to builder v2 shape
   if (builder.version === undefined) {
