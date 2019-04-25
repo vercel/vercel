@@ -7,7 +7,8 @@ import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
-import { download, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import ora from 'ora';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
@@ -18,7 +19,6 @@ import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
   EnvConfig,
   NowConfig,
-  RouteConfig,
   BuildMatch,
   BuildResult,
   BuilderInputs,
@@ -77,8 +77,6 @@ async function createBuildProcess(
       `Build process for ${match.src} exited with ${signal || code}`
     );
   });
-  buildProcess.stdout!.pipe(process.stdout);
-  buildProcess.stderr!.pipe(process.stdout);
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
@@ -126,6 +124,21 @@ export async function executeBuild(
       devServer.buildEnv,
       devServer.output
     );
+
+    devServer.output.log(`Building ${entrypoint} with "${match.use}"`);
+    const spinner = ora('').start();
+    buildProcess.on('message', ({type}) => {
+      if (type === 'buildResult') {
+        spinner.stop();
+      }
+    });
+
+    const spinLogger = (data: Buffer) => {
+      spinner.text = `${data.toString().split('\n')[0]}`;
+    };
+
+    buildProcess!.stdout!.on('data', spinLogger);
+    buildProcess!.stderr!.on('data', spinLogger);
   }
 
   const buildParams = {
