@@ -2,17 +2,19 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
 import { tmpdir } from 'os';
+import { fork, ChildProcess } from 'child_process';
 import { join, relative } from 'path';
-import { createFunction } from '@zeit/fun';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
-import { download } from '@now/build-utils';
+import { createFunction, initializeRuntime } from '@zeit/fun';
+import { download, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 
 import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
 import IGNORED from '../../../util/ignored';
+import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
-import { getBuilder } from './builder-cache';
+import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
   NowConfig,
   RouteConfig,
@@ -35,6 +37,52 @@ const getWorkPath = () =>
       .toString(32)
       .slice(-8)
   );
+
+const nodeBinPromise = (async () => {
+  const runtime = await initializeRuntime('nodejs8.10');
+  if (!runtime.cacheDir) {
+    throw new Error('nodejs8.10 runtime failed to initialize');
+  }
+  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
+  return nodeBin;
+})();
+
+async function createBuildProcess(
+  match: BuildMatch,
+  output: Output
+): Promise<ChildProcess> {
+  const [ execPath, modulePath ] = await Promise.all([
+    nodeBinPromise,
+    builderModulePathPromise
+  ]);
+  const buildProcess = fork(modulePath, [], {
+    cwd: match.workPath,
+    execPath,
+    execArgv: [],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+  });
+  match.buildProcess = buildProcess;
+
+  buildProcess.on('message', (m) => {
+    // console.log('got message from builder:', m);
+  });
+  buildProcess.on('exit', (code, signal) => {
+    output.debug(`Build process for ${match.src} exited with ${signal || code}`);
+  });
+  buildProcess.stdout!.pipe(process.stdout);
+  buildProcess.stderr!.pipe(process.stdout);
+
+  return new Promise((resolve, reject) => {
+    // The first message that the builder process sends is the `ready` event
+    buildProcess.once('message', ({ type }) => {
+      if (type !== 'ready') {
+        reject(new Error('Did not get "ready" event from builder'));
+      } else {
+        resolve(buildProcess);
+      }
+    });
+  });
+}
 
 export async function executeBuild(
   nowJson: NowConfig,
@@ -62,14 +110,37 @@ export async function executeBuild(
   const config = match.config || {};
   let result: BuildResult;
 
+  let { buildProcess } = match;
+  if (!buildProcess) {
+    devServer.output.debug(`Creating build process for ${entrypoint}`);
+    buildProcess = await createBuildProcess(match, devServer.output);
+  }
+
   try {
     devServer.applyBuildEnv(nowJson);
-    result = await builder.build({
+
+    const buildParams = {
       files,
       entrypoint,
       workPath,
       config,
       meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+    };
+
+    buildProcess.send({
+      type: 'build',
+      builderName: pkg.name,
+      buildParams
+    });
+
+    result = await new Promise((resolve, reject) => {
+      buildProcess!.once('message', ({ type, result }) => {
+        if (type === 'buildResult') {
+          resolve(result);
+        } else {
+          reject(new Error(`Got unexpected message type: ${type}`));
+        }
+      });
     });
 
     // Sort out build result to builder v2 shape
@@ -83,6 +154,27 @@ export async function executeBuild(
     }
   } finally {
     devServer.restoreOriginalEnv();
+  }
+
+  // Convert the JSON-ified output map back into their corresponding `File`
+  // subclass type instances.
+  const output = result.output as BuilderOutputs;
+  for (const name of Object.keys(output)) {
+    const obj = output[name] as File;
+    let lambda: Lambda;
+    switch (obj.type) {
+      case 'Lambda':
+        lambda = Object.assign(
+          Object.create(Lambda.prototype),
+          obj
+        ) as Lambda;
+        lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
+        output[name] = lambda;
+        break;
+      default:
+        // TODO: Convert `FileBlob` and `FileFsRef` types as well
+        break;
+    }
   }
 
   // The `watch` array must not have "./" prefix, so if the builder returned

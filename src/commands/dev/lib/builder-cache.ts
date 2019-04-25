@@ -26,6 +26,7 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
+export const builderModulePathPromise = prepareBuilderModulePath();
 
 /**
  * Prepare cache directory for installing now-builders
@@ -61,6 +62,13 @@ export async function prepareBuilderDir() {
   }
 
   return builderDir;
+}
+
+export async function prepareBuilderModulePath() {
+  const builderDir = await builderDirPromise;
+  // TODO: fake news
+  const modulePath = '/Users/nrajlich/Library/Caches/co.zeit.now/dev/builders/builder.js';
+  return modulePath;
 }
 
 // Is responsible for cleaning the cache
