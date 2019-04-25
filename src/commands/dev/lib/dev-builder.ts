@@ -108,8 +108,8 @@ export async function executeBuild(
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
-  devServer.output.log(`Building ${entrypoint} with "${match.use}"`);
-  devServer.output.debug(`"${match.use}"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
+  devServer.output.debug(`Building ${entrypoint} with "${match.use
+    }"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
@@ -125,7 +125,7 @@ export async function executeBuild(
     );
 
     if (process.stdout.isTTY) {
-      const logTitle = `[${chalk.green(match.use)} ${chalk.yellow(entrypoint)}]`;
+      const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
 
