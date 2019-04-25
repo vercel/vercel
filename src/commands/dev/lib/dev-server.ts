@@ -59,7 +59,6 @@ export default class DevServer {
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
-  private originalEnv: EnvConfig;
   private nsfw?: nsfw.Watcher;
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -75,7 +74,6 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
-    this.originalEnv = { ...process.env };
   }
 
   async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
@@ -364,37 +362,15 @@ export default class DevServer {
   }
 
   /**
-   * Sets the `build.env` vars onto `process.env`, since the builders are
-   * executed in the now-cli process.
-   */
-  applyBuildEnv(nowJson: NowConfig): void {
-    const buildEnv = nowJson.build && nowJson.build.env;
-    Object.assign(process.env, buildEnv, this.buildEnv);
-  }
-
-  /**
-   * Restores the original `process.env`, deleting any new env vars that
-   * a builder might have set and then applying the original env vars.
-   */
-  restoreOriginalEnv(): void {
-    for (const key of Object.keys(process.env)) {
-      if (!hasOwnProperty(this.originalEnv, key)) {
-        delete process.env[key];
-      }
-    }
-    Object.assign(process.env, this.originalEnv);
-  }
-
-  /**
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
-      throw new Error(`${chalk.bold(this.cwd)} doesn't exists.`);
+      throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
 
     if (!fs.lstatSync(this.cwd).isDirectory()) {
-      throw new Error(`${chalk.bold(this.cwd)} is not a directory.`);
+      throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
     // Retrieve the path of the native module

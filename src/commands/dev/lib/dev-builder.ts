@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import bytes from 'bytes';
 import { tmpdir } from 'os';
+import { dirname, join, relative } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { join, relative } from 'path';
 import { readFile, mkdirp } from 'fs-extra';
 import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
@@ -16,6 +16,7 @@ import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
+  EnvConfig,
   NowConfig,
   RouteConfig,
   BuildMatch,
@@ -48,6 +49,7 @@ const nodeBinPromise = (async () => {
 
 async function createBuildProcess(
   match: BuildMatch,
+  buildEnv: EnvConfig,
   output: Output
 ): Promise<ChildProcess> {
   const [execPath, modulePath] = await Promise.all([
@@ -56,6 +58,11 @@ async function createBuildProcess(
   ]);
   const buildProcess = fork(modulePath, [], {
     cwd: match.workPath,
+    env: {
+      ...process.env,
+      PATH: `${dirname(execPath)}:${process.env.PATH}`,
+      ...buildEnv
+    },
     execPath,
     execArgv: [],
     stdio: ['ignore', 'pipe', 'pipe', 'ipc']
@@ -114,49 +121,47 @@ export async function executeBuild(
   let { buildProcess } = match;
   if (!buildProcess) {
     devServer.output.debug(`Creating build process for ${entrypoint}`);
-    buildProcess = await createBuildProcess(match, devServer.output);
+    buildProcess = await createBuildProcess(
+      match,
+      devServer.buildEnv,
+      devServer.output
+    );
   }
 
-  try {
-    devServer.applyBuildEnv(nowJson);
+  const buildParams = {
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+  };
 
-    const buildParams = {
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+  buildProcess.send({
+    type: 'build',
+    builderName: pkg.name,
+    buildParams
+  });
+
+  const buildResultOrOutputs = await new Promise((resolve, reject) => {
+    buildProcess!.once('message', ({ type, result }) => {
+      if (type === 'buildResult') {
+        resolve(result);
+      } else {
+        reject(new Error(`Got unexpected message type: ${type}`));
+      }
+    });
+  });
+
+  // Sort out build result to builder v2 shape
+  if (builder.version === undefined) {
+    // `BuilderOutputs` map was returned (Now Builder v1 behavior)
+    result = {
+      output: buildResultOrOutputs as BuilderOutputs,
+      routes: [],
+      watch: []
     };
-
-    buildProcess.send({
-      type: 'build',
-      builderName: pkg.name,
-      buildParams
-    });
-
-    const buildResultOrOutputs = await new Promise((resolve, reject) => {
-      buildProcess!.once('message', ({ type, result }) => {
-        if (type === 'buildResult') {
-          resolve(result);
-        } else {
-          reject(new Error(`Got unexpected message type: ${type}`));
-        }
-      });
-    });
-
-    // Sort out build result to builder v2 shape
-    if (builder.version === undefined) {
-      // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-      result = {
-        output: buildResultOrOutputs as BuilderOutputs,
-        routes: [],
-        watch: []
-      };
-    } else {
-      result = buildResultOrOutputs as BuildResult;
-    }
-  } finally {
-    devServer.restoreOriginalEnv();
+  } else {
+    result = buildResultOrOutputs as BuildResult;
   }
 
   // Convert the JSON-ified output map back into their corresponding `File`
