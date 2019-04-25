@@ -307,7 +307,7 @@ export default class DevServer {
     return env;
   }
 
-  async getNowJson(): Promise<NowConfig | null> {
+  async getNowJson(): Promise<NowConfig> {
     if (this.cachedNowJson) {
       return this.cachedNowJson;
     }
@@ -315,20 +315,26 @@ export default class DevServer {
     this.output.debug('Reading `now.json` file');
     const nowJsonPath = getNowJsonPath(this.cwd);
 
+    // The default empty `now.json` is used to serve all files as static
+    // when no `now.json` is present
+    let config: NowConfig = { version: 2 };
+
     try {
-      const config: NowConfig = JSON.parse(
-        await fs.readFile(nowJsonPath, 'utf8')
-      );
-      this.validateNowConfig(config);
-      this.cachedNowJson = config;
-      return config;
+      config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if (err.code === 'ENOENT') {
+        this.output.note(
+          'No `now.json` file present, serving all files as static'
+        );
+      } else {
         throw err;
       }
     }
 
-    return null;
+    this.validateNowConfig(config);
+    this.cachedNowJson = config;
+
+    return config;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -392,36 +398,34 @@ export default class DevServer {
     ]);
     this.env = env;
     this.buildEnv = buildEnv;
+
     const nowJson = await this.getNowJson();
+    const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
+    const shouldUpdate = true;
+    await installBuilders(builders, shouldUpdate);
+    await this.updateBuildMatches(nowJson);
 
-    if (nowJson) {
-      const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
-      const shouldUpdate = true;
-      await installBuilders(builders, shouldUpdate);
-      await this.updateBuildMatches(nowJson);
-
-      // Now Builders that do not define a `shouldServe()` function need to be
-      // executed at boot-up time in order to get the initial assets and/or routes
-      // that can be served by the builder.
-      const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
-        (buildMatch: BuildMatch) => {
-          const { builder } = buildMatch.builderWithPkg;
-          return typeof builder.shouldServe !== 'function';
-        }
-      );
-      if (needsInitialBuild.length > 0) {
-        this.output.log(
-          `Running ${needsInitialBuild.length} initial build${
-            needsInitialBuild.length === 1 ? '' : 's'
-          }`
-        );
-
-        for (const match of needsInitialBuild) {
-          await executeBuild(nowJson, this, this.files, match, null);
-        }
-
-        this.output.success('Initial builds complete');
+    // Now Builders that do not define a `shouldServe()` function need to be
+    // executed at boot-up time in order to get the initial assets and/or routes
+    // that can be served by the builder.
+    const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
+      (buildMatch: BuildMatch) => {
+        const { builder } = buildMatch.builderWithPkg;
+        return typeof builder.shouldServe !== 'function';
       }
+    );
+    if (needsInitialBuild.length > 0) {
+      this.output.log(
+        `Running ${needsInitialBuild.length} initial build${
+          needsInitialBuild.length === 1 ? '' : 's'
+        }`
+      );
+
+      for (const match of needsInitialBuild) {
+        await executeBuild(nowJson, this, this.files, match, null);
+      }
+
+      this.output.success('Initial builds complete');
     }
 
     let address: string | null = null;
@@ -583,34 +587,28 @@ export default class DevServer {
       this.output.debug(msg);
     } else {
       const nowJson = await this.getNowJson();
-      if (nowJson) {
-        if (previousBuildResult) {
-          // Tear down any `output` assets from a previous build, so that they
-          // are not available to be served while the rebuild is in progress.
-          for (const [name] of Object.entries(previousBuildResult.output)) {
-            this.output.debug(`Removing asset "${name}"`);
-            delete match.buildOutput[name];
-            // TODO: shut down Lambda instance
-          }
+      if (previousBuildResult) {
+        // Tear down any `output` assets from a previous build, so that they
+        // are not available to be served while the rebuild is in progress.
+        for (const [name] of Object.entries(previousBuildResult.output)) {
+          this.output.debug(`Removing asset "${name}"`);
+          delete match.buildOutput[name];
+          // TODO: shut down Lambda instance
         }
-        let msg = `Building asset "${buildKey}"`;
-        if (req) msg += ` for "${req.method} ${req.url}"`;
-        this.output.debug(msg);
-        buildPromise = executeBuild(
-          nowJson,
-          this,
-          this.files,
-          match,
-          requestPath,
-          filesChanged,
-          filesRemoved
-        );
-        this.inProgressBuilds.set(buildKey, buildPromise);
-      } else {
-        this.output.warn(
-          'Skipping build because `now.json` could not be loaded'
-        );
       }
+      let msg = `Building asset "${buildKey}"`;
+      if (req) msg += ` for "${req.method} ${req.url}"`;
+      this.output.debug(msg);
+      buildPromise = executeBuild(
+        nowJson,
+        this,
+        this.files,
+        match,
+        requestPath,
+        filesChanged,
+        filesRemoved
+      );
+      this.inProgressBuilds.set(buildKey, buildPromise);
     }
     try {
       await buildPromise;
@@ -640,11 +638,7 @@ export default class DevServer {
 
     try {
       const nowJson = await this.getNowJson();
-      if (nowJson) {
-        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
-      } else {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      }
+      await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -654,26 +648,6 @@ export default class DevServer {
         res.end(err.message);
       }
     }
-  };
-
-  /**
-   * Serve project directory as a static deployment.
-   */
-  serveProjectAsStatic = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    nowRequestId: string
-  ) => {
-    const filePath = req.url ? req.url.replace(/^\//, '') : '';
-    const ignore = await createIgnoreList(this.cwd);
-
-    if (filePath && ignore.ignores(filePath)) {
-      await this.send404(req, res, nowRequestId);
-      return;
-    }
-
-    this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd);
   };
 
   /**
