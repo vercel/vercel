@@ -8,3 +8,4 @@
 /packages/now-node-bridge/*
 /packages/now-python/*
 /packages/now-optipng/dist/*
+/packages/now-go/*

@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.go", "use": "@now/go" }
+  ],
+  "env": {
+    "RANDOMNESS_ENV_VAR": "RANDOMNESS_PLACEHOLDER"
+  }
+}

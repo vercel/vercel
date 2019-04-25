@@ -1,33 +1,41 @@
-const { join, sep, dirname } = require('path');
-const {
+import { join, sep, dirname } from 'path';
+import {
   readFile, writeFile, pathExists, move,
-} = require('fs-extra');
+} from 'fs-extra';
 
-const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
-const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory.js'); // eslint-disable-line import/no-extraneous-dependencies
-const { createGo, getExportedFunctionName } = require('./go-helpers');
+import {
+  glob, download, createLambda, getWriteableDirectory, BuildOptions, shouldServe,
+} from '@now/build-utils';
 
-const config = {
+import { createGo, getAnalyzedEntrypoint } from './go-helpers';
+
+interface Analyzed {
+  packageName: string;
+  functionName: string;
+  watch: string[];
+}
+
+export const version = 2;
+
+export const config = {
   maxLambdaSize: '10mb',
 };
 
-async function build({ files, entrypoint }) {
+export async function build({ files, entrypoint }: BuildOptions) {
   console.log('Downloading user files...');
 
   const [goPath, outDir] = await Promise.all([
-    getWritableDirectory(),
-    getWritableDirectory(),
+    getWriteableDirectory(),
+    getWriteableDirectory(),
   ]);
 
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadedFiles = await download(files, srcPath);
 
   console.log(`Parsing AST for "${entrypoint}"`);
-  let parseFunctionName;
+  let analyzed: string;
   try {
-    parseFunctionName = await getExportedFunctionName(
+    analyzed = await getAnalyzedEntrypoint(
       downloadedFiles[entrypoint].fsPath,
     );
   } catch (err) {
@@ -35,7 +43,7 @@ async function build({ files, entrypoint }) {
     throw err;
   }
 
-  if (!parseFunctionName) {
+  if (!analyzed) {
     const err = new Error(
       `Could not find an exported function in "${entrypoint}"`,
     );
@@ -43,8 +51,9 @@ async function build({ files, entrypoint }) {
     throw err;
   }
 
-  const handlerFunctionName = parseFunctionName.split(',')[0];
+  const parsedAnalyzed = JSON.parse(analyzed) as Analyzed
 
+  const handlerFunctionName = parsedAnalyzed.functionName;
   console.log(
     `Found exported function "${handlerFunctionName}" in "${entrypoint}"`,
   );
@@ -54,8 +63,9 @@ async function build({ files, entrypoint }) {
   const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
 
   // check if package name other than main
-  const packageName = parseFunctionName.split(',')[1];
+  const packageName = parsedAnalyzed.packageName;
   const isGoModExist = await pathExists(join(entrypointDirname, 'go.mod'));
+  const entrypointArr = entrypoint.split(sep);
   if (packageName !== 'main') {
     const go = await createGo(
       goPath,
@@ -91,9 +101,8 @@ async function build({ files, entrypoint }) {
         join(entrypointDirname, 'go.mod'),
         'utf8',
       );
-      goPackageName = `${
-        goModContents.split('\n')[0].split(' ')[1]
-      }/${packageName}`;
+      const usrModName = goModContents.split('\n')[0].split(' ')[1];
+      goPackageName = `${usrModName}/${packageName}`;
     }
 
     const mainModGoContents = modMainGoContents
@@ -110,14 +119,13 @@ async function build({ files, entrypoint }) {
     try {
       // default path
       let finalDestination = join(entrypointDirname, packageName, entrypoint);
-      const entrypointArr = entrypoint.split(sep);
 
       // if `entrypoint` include folder, only use filename
       if (entrypointArr.length > 1) {
         finalDestination = join(
           entrypointDirname,
           packageName,
-          entrypointArr.pop(),
+          entrypointArr[entrypointArr.length - 1],
         );
       }
 
@@ -127,10 +135,10 @@ async function build({ files, entrypoint }) {
       throw err;
     }
 
-    console.log('tidy go.mod file');
+    console.log('Tidy `go.mod` file...');
     try {
       // ensure go.mod up-to-date
-      await go('mod', 'tidy');
+      await go.mod();
     } catch (err) {
       console.log('failed to `go mod tidy`');
       throw err;
@@ -140,7 +148,7 @@ async function build({ files, entrypoint }) {
     const destPath = join(outDir, 'handler');
     try {
       const src = [join(entrypointDirname, mainModGoFileName)];
-      await go.build({ src, dest: destPath });
+      await go.build(src, destPath);
     } catch (err) {
       console.log('failed to `go build`');
       throw err;
@@ -174,6 +182,7 @@ async function build({ files, entrypoint }) {
 
     // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
     // and download any packages that aren't part of the stdlib
+    console.log('Running `go get`...');
     try {
       await go.get();
     } catch (err) {
@@ -188,7 +197,7 @@ async function build({ files, entrypoint }) {
         join(entrypointDirname, mainGoFileName),
         downloadedFiles[entrypoint].fsPath,
       ];
-      await go.build({ src, dest: destPath });
+      await go.build(src, destPath);
     } catch (err) {
       console.log('failed to `go build`');
       throw err;
@@ -201,10 +210,21 @@ async function build({ files, entrypoint }) {
     runtime: 'go1.x',
     environment: {},
   });
+  const output = {
+    [entrypoint]: lambda,
+  }
+
+  let watch = parsedAnalyzed.watch
+  // if `entrypoint` located in subdirectory
+  // we will need to concat it with return watch array
+  if (entrypointArr.length > 1) {
+    entrypointArr.pop();
+    watch = parsedAnalyzed.watch.map(file => join(...entrypointArr, file));
+  }
 
   return {
-    [entrypoint]: lambda,
+    output, watch
   };
 }
 
-module.exports = { config, build };
+export { shouldServe };

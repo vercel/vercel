@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "env/index.go",
+      "use": "@now/go"
+    }
+  ],
+  "env": {
+    "RANDOMNESS_ENV": "RANDOMNESS_PLACEHOLDER"
+  },
+  "probes": [
+    {
+      "path": "/env",
+      "mustContain": "RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

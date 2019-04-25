@@ -1,5 +1,6 @@
 node_modules
 *.log
-/?.js
 /go
-/get-exported-function-name
+/analyze
+*.js
+!util/install.js
