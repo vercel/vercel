@@ -10,7 +10,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
-import { FileFsRef } from '@now/build-utils';
+import { FileFsRef, glob } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join, relative } from 'path';
 
@@ -23,12 +23,11 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
-  collectProjectFiles,
-  createIgnoreList,
   getBuildMatches
 } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
+// import { staticFiles as getFiles } from '../../../util/get-files';
 
 import {
   EnvConfig,
@@ -268,7 +267,7 @@ export default class DevServer {
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
-    const matches = await getBuildMatches(nowJson, this.cwd);
+    const matches = await getBuildMatches(nowJson, this.cwd, this.output);
     const sources = matches.map(m => m.src);
 
     // Delete build matches that no longer exists
@@ -381,9 +380,10 @@ export default class DevServer {
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
+    const nowJson = await this.getNowJson();
 
     // Collect files to watch
-    this.files = await collectProjectFiles('**', this.cwd);
+    this.files = await glob('**', { cwd: this.cwd });
 
     // Start the filesystem watcher
     this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
@@ -399,7 +399,6 @@ export default class DevServer {
     this.env = env;
     this.buildEnv = buildEnv;
 
-    const nowJson = await this.getNowJson();
     const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
     const shouldUpdate = true;
     await installBuilders(builders, shouldUpdate);
