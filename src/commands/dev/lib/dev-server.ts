@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
+import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -36,7 +37,6 @@ import {
   BuildConfig,
   BuildMatch,
   BuildResult,
-  BuildResultV2,
   BuilderInputs,
   BuilderOutput,
   HttpHandler,
@@ -59,7 +59,6 @@ export default class DevServer {
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
-  private originalEnv: EnvConfig;
   private nsfw?: nsfw.Watcher;
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -75,7 +74,6 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
-    this.originalEnv = { ...process.env };
   }
 
   async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
@@ -94,7 +92,11 @@ export default class DevServer {
           filesRemoved
         );
       } else if (event.action === nsfw.actions.DELETED) {
-        this.handleFileDeleted(event as nsfw.DeletedEvent, filesRemoved);
+        this.handleFileDeleted(
+          event as nsfw.DeletedEvent,
+          filesChanged,
+          filesRemoved
+        );
       } else if (event.action === nsfw.actions.MODIFIED) {
         await this.handleFileModified(
           event as nsfw.ModifiedEvent,
@@ -122,6 +124,9 @@ export default class DevServer {
       await this.updateBuildMatches(nowJson);
     }
 
+    const filesChangedArray = [...filesChanged];
+    const filesRemovedArray = [...filesRemoved];
+
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
     const needsRebuild: Map<
@@ -135,8 +140,11 @@ export default class DevServer {
         if (needsRebuild.has(result)) continue;
 
         if (Array.isArray(result.watch)) {
-          for (const fileName of result.watch) {
-            if (filesChanged.has(fileName) || filesRemoved.has(fileName)) {
+          for (const pattern of result.watch) {
+            if (
+              minimatches(filesChangedArray, pattern) ||
+              minimatches(filesRemovedArray, pattern)
+            ) {
               needsRebuild.set(result, [requestPath, match]);
               break;
             }
@@ -146,11 +154,13 @@ export default class DevServer {
     }
 
     if (needsRebuild.size > 0) {
-      const filesChangedArray = [...filesChanged];
-      const filesRemovedArray = [...filesRemoved];
       this.output.debug(`Triggering ${needsRebuild.size} rebuilds`);
-      this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
-      this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
+      if (filesChangedArray.length > 0) {
+        this.output.debug(`Files changed: ${filesChangedArray.join(', ')}`);
+      }
+      if (filesRemovedArray.length > 0) {
+        this.output.debug(`Files removed: ${filesRemovedArray.join(', ')}`);
+      }
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
@@ -187,24 +197,26 @@ export default class DevServer {
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-      changed.add(name);
+      fileChanged(name, changed, removed);
       this.output.debug(`File created: ${name}`);
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File created, but has since been deleted: ${name}`);
-        delete this.files[name];
-        removed.add(name);
+        fileRemoved(name, this.files, changed, removed);
       } else {
         throw err;
       }
     }
   }
 
-  handleFileDeleted(event: nsfw.DeletedEvent, removed: Set<string>): void {
+  handleFileDeleted(
+    event: nsfw.DeletedEvent,
+    changed: Set<string>,
+    removed: Set<string>
+  ): void {
     const name = relative(this.cwd, join(event.directory, event.file));
     this.output.debug(`File deleted: ${name}`);
-    delete this.files[name];
-    removed.add(name);
+    fileRemoved(name, this.files, changed, removed);
   }
 
   async handleFileModified(
@@ -216,13 +228,12 @@ export default class DevServer {
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-      changed.add(name);
+      fileChanged(name, changed, removed);
       this.output.debug(`File modified: ${name}`);
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
-        delete this.files[name];
-        removed.add(name);
+        fileRemoved(name, this.files, changed, removed);
       } else {
         throw err;
       }
@@ -235,23 +246,21 @@ export default class DevServer {
     removed: Set<string>
   ): Promise<void> {
     const oldName = relative(this.cwd, join(event.directory, event.oldFile));
-    removed.add(oldName);
-    delete this.files[oldName];
+    fileRemoved(oldName, this.files, changed, removed);
 
     const fsPath = join(event.newDirectory, event.newFile);
     const name = relative(this.cwd, fsPath);
 
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-      changed.add(name);
+      fileChanged(name, changed, removed);
       this.output.debug(`File renamed: ${oldName} -> ${name}`);
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(
           `File renamed, but has since been deleted: ${oldName} -> ${name}`
         );
-        delete this.files[name];
-        removed.add(name);
+        fileRemoved(oldName, this.files, changed, removed);
       } else {
         throw err;
       }
@@ -353,31 +362,17 @@ export default class DevServer {
   }
 
   /**
-   * Sets the `build.env` vars onto `process.env`, since the builders are
-   * executed in the now-cli process.
-   */
-  applyBuildEnv(nowJson: NowConfig): void {
-    const buildEnv = nowJson.build && nowJson.build.env;
-    Object.assign(process.env, buildEnv, this.buildEnv);
-  }
-
-  /**
-   * Restores the original `process.env`, deleting any new env vars that
-   * a builder might have set and then applying the original env vars.
-   */
-  restoreOriginalEnv(): void {
-    for (const key of Object.keys(process.env)) {
-      if (!hasOwnProperty(this.originalEnv, key)) {
-        delete process.env[key];
-      }
-    }
-    Object.assign(process.env, this.originalEnv);
-  }
-
-  /**
    * Launches the `now dev` server.
    */
   async start(port: number = 3000): Promise<void> {
+    if (!fs.existsSync(this.cwd)) {
+      throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
+    }
+
+    if (!fs.lstatSync(this.cwd).isDirectory()) {
+      throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
+    }
+
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
 
@@ -415,7 +410,11 @@ export default class DevServer {
         }
       );
       if (needsInitialBuild.length > 0) {
-        this.output.log('Running initial builds');
+        this.output.log(
+          `Running ${needsInitialBuild.length} initial build${
+            needsInitialBuild.length === 1 ? '' : 's'
+          }`
+        );
 
         for (const match of needsInitialBuild) {
           await executeBuild(nowJson, this, this.files, match, null);
@@ -900,6 +899,7 @@ function proxyPass(
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
     ws: true,
+    xfwd: true,
     ignorePath: true,
     target: dest
   });
@@ -989,6 +989,7 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
+    workPath,
     builderWithPkg: { builder, package: pkg }
   } = match;
   if (typeof builder.shouldServe === 'function') {
@@ -997,7 +998,7 @@ async function shouldServe(
       files,
       config,
       requestPath,
-      workPath: devServer.cwd
+      workPath
     });
     if (shouldServe) {
       return true;
@@ -1022,11 +1023,8 @@ async function findMatchingRoute(
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
-    const route = await devRouter(
-      reqUrl,
-      (buildResult as BuildResultV2).routes,
-      devServer
-    );
+    if (!Array.isArray(buildResult.routes)) continue;
+    const route = await devRouter(reqUrl, buildResult.routes, devServer);
     if (route.found) {
       return route;
     }
@@ -1072,4 +1070,28 @@ function isIndex(path: string): boolean {
   const ext = extname(path);
   const name = basename(path, ext);
   return name === 'index';
+}
+
+function minimatches(files: string[], pattern: string): boolean {
+  return files.some(file => minimatch(file, pattern));
+}
+
+function fileChanged(
+  name: string,
+  changed: Set<string>,
+  removed: Set<string>
+): void {
+  changed.add(name);
+  removed.delete(name);
+}
+
+function fileRemoved(
+  name: string,
+  files: BuilderInputs,
+  changed: Set<string>,
+  removed: Set<string>
+): void {
+  delete files[name];
+  changed.delete(name);
+  removed.add(name);
 }

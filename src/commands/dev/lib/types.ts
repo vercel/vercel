@@ -1,4 +1,5 @@
 import http from 'http';
+import { ChildProcess } from 'child_process';
 import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 import { Output } from '../../../util/output';
@@ -22,8 +23,8 @@ export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
-  builderCachePromise?: Promise<CacheOutputs>;
   buildTimestamp: number;
+  buildProcess?: ChildProcess;
   workPath: string;
 }
 
@@ -112,22 +113,18 @@ export interface Builder {
   ): CacheOutputs | Promise<CacheOutputs>;
 }
 
-export type BuildResultV1 = BuilderOutputs;
-
-export interface BuildResultV2 {
+export interface BuildResult {
   output: BuilderOutputs;
   routes: RouteConfig[];
   watch: string[];
 }
-
-export type BuildResult = BuildResultV1 | BuildResultV2;
 
 export interface ShouldServeParams {
   files: BuilderInputs;
   entrypoint: string;
   config?: object;
   requestPath: string;
-  workPath: string
+  workPath: string;
 }
 
 export interface BuilderWithPackage {
