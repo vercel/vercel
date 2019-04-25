@@ -124,7 +124,7 @@ export async function executeBuild(
       devServer.output
     );
 
-    if (!devServer.debug) {
+    if (!devServer.debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
