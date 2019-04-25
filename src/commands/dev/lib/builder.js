@@ -19,11 +19,12 @@ process.on('message', async (message) => {
     buildParams.files[name] = ref;
   }
 
-  console.log({ builder });
-  console.log('CHILD got message:', message);
-
   const result = await builder.build(buildParams);
-  console.log({ result });
+
+  // `@now/next` sets this, but it causes "Converting circular
+  // structure to JSON" errors, so delete the property...
+  delete result.childProcesses;
+
   process.send({
     type: 'buildResult',
     result
