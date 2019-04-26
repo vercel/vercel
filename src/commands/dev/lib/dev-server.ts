@@ -381,6 +381,12 @@ export default class DevServer {
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
+    const [env, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env'),
+      this.getLocalEnv('.env.build')
+    ]);
+    this.env = env;
+    this.buildEnv = buildEnv;
     const nowJson = await this.getNowJson();
 
     const opts = { output: this.output, isBuilds: true };
@@ -401,13 +407,6 @@ export default class DevServer {
     });
 
     await this.nsfw.start();
-
-    const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env'),
-      this.getLocalEnv('.env.build')
-    ]);
-    this.env = env;
-    this.buildEnv = buildEnv;
 
     const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
     const shouldUpdate = true;
