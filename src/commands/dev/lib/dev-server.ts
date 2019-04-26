@@ -10,7 +10,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
-import { FileFsRef, glob } from '@now/build-utils';
+import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join, relative } from 'path';
 
@@ -28,7 +28,6 @@ import {
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
 import { staticFiles as getFiles } from '../../../util/get-files';
-// import { createIgnoreFilter } from '../../../util/ignored';
 
 import {
   EnvConfig,

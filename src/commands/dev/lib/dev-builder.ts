@@ -324,7 +324,7 @@ export async function getBuildMatches(
     const files =  await getFiles(cwd, nowJson, opts);
 
     for (const file of files) {
-      src = relative(cwd, file); // todo: maybe join() instead?
+      src = relative(cwd, file);
       const builderWithPkg = await getBuilder(use);
       matches.push({
         ...buildConfig,
