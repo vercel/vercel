@@ -2,6 +2,7 @@ import path from 'path';
 
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
+import { MissingDotenvVarsError } from '../../util/errors-ts';
 
 import DevServer from './lib/dev-server';
 
@@ -24,5 +25,14 @@ export default async function dev(
   const debug = opts['-d'] || opts['--debug'];
   const devServer = new DevServer(cwd, { output, debug });
   process.once('SIGINT', devServer.stop.bind(devServer));
-  await devServer.start(port);
+
+  try {
+    await devServer.start(port);
+  } catch (error) {
+    if (error instanceof MissingDotenvVarsError) {
+      output.error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
 }

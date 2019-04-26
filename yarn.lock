@@ -583,9 +583,9 @@
     "@types/node" "*"
 
 "@types/node@*":
-  version "11.13.7"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.7.tgz#85dbb71c510442d00c0631f99dae957ce44fd104"
-  integrity sha512-suFHr6hcA9mp8vFrZTgrmqW2ZU3mbWsryQtQlY/QvwTISCw7nw/j+bCQPPohqmskhmqa5wLNuMHTTsc+xf1MQg==
+  version "11.13.8"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-11.13.8.tgz#e5d71173c95533be9842b2c798978f095f912aab"
+  integrity sha512-szA3x/3miL90ZJxUCzx9haNbK5/zmPieGraZEe4WI+3srN0eGLiT22NXeMHmyhNEopn+IrxqMc7wdVwvPl8meg==
 
 "@types/node@11.11.0":
   version "11.11.0"
@@ -723,10 +723,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.18.1.tgz#1723884210c792ba702ec6dccb390f387f0a3ba6"
   integrity sha512-Tq13BzK+hAWBZY+VvncRZzpE5PHGks3kn2XJ+bcWSXgTZb4rTR/CTV1YYXilNNkX//jC1sziuM167FhLzFu2XA==
 
-"@zeit/nsfw@2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@zeit/nsfw/-/nsfw-2.0.2.tgz#a5839f53391157ffb7b5cf621c80caed0ffbc3a8"
-  integrity sha512-FfEznQ50GCBevkoNkqMVyqmdycFSMjXTuiGgFnpouQnK3aXJ1IAN0tpGhl5uk84B2hvL+JsdWKUntAwfED+5hw==
+"@zeit/nsfw@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@zeit/nsfw/-/nsfw-3.0.0.tgz#12e17acc6ec6fb244c05e281629cf7948cba9c86"
+  integrity sha512-qjqb3ccDwHsuf1rpmAjW1JP+kaIkacTHaa4GKQhmCf3hi3la/Q08Y95lxtRLYSg1iymXlOMg+W8Qlr+1nFeRZQ==
   dependencies:
     fs-extra "^7.0.0"
     lodash.isinteger "^4.0.4"
@@ -6605,9 +6605,9 @@ typescript@3.2.4:
   integrity sha512-0RNDbSdEokBeEAkgNbxJ+BLwSManFy9TeXz8uW+48j/xhEXv1ePME60olyzw2XzUqUBNAYFeJadIqAgNqIACwg==
 
 uglify-js@^3.1.4:
-  version "3.5.7"
-  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.5.7.tgz#1442fda9991a01aa0eb2853876640477109113ff"
-  integrity sha512-GCgJx3BBuaf/QMvBBkhoHDh4SVsHCC3ILEzriPw4FgJJKCuxVBSYLRkDlmT3uhXyGWKs3VN5r0mCkBIZaHWu3w==
+  version "3.5.8"
+  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.5.8.tgz#496f62a8c23c3e6791563acbc04908edaca4025f"
+  integrity sha512-GFSjB1nZIzoIq70qvDRtWRORHX3vFkAnyK/rDExc0BN7r9+/S+Voz3t/fwJuVfjppAMz+ceR2poE7tkhvnVwQQ==
   dependencies:
     commander "~2.20.0"
     source-map "~0.6.1"
