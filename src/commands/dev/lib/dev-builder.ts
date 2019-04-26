@@ -40,20 +40,25 @@ const getWorkPath = () =>
       .slice(-8)
   );
 
-const nodeBinPromise = (async () => {
+let nodeBinPromise: Promise<string>;
+
+async function getNodeBin(): Promise<string> {
   const runtime = await initializeRuntime('nodejs8.10');
   if (!runtime.cacheDir) {
     throw new Error('nodejs8.10 runtime failed to initialize');
   }
   const nodeBin = join(runtime.cacheDir, 'bin', 'node');
   return nodeBin;
-})();
+}
 
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
   output: Output
 ): Promise<ChildProcess> {
+  if (!nodeBinPromise) {
+    nodeBinPromise = getNodeBin();
+  }
   const [execPath, modulePath] = await Promise.all([
     nodeBinPromise,
     builderModulePathPromise
