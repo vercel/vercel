@@ -398,8 +398,6 @@ export default class DevServer {
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;
-    console.log(this.files);
-    console.log('^ start');
 
     // Start the filesystem watcher
     this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {

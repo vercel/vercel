@@ -317,8 +317,6 @@ export async function getBuildMatches(
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
     const files =  await getFiles(cwd, nowJson, opts);
-    console.log(files);
-    console.log('^ getBuildMatches');
 
     for (const file of files) {
       src = relative(cwd, file); // todo: maybe join() instead?
