@@ -141,6 +141,7 @@ const asAbsolute = function(path: string, parent: string) {
 interface StaticFilesOptions {
   output: Output;
   isBuilds: boolean;
+  src?: string;
 }
 
 /**
@@ -158,7 +159,7 @@ interface StaticFilesOptions {
 export async function staticFiles(
   path: string,
   nowConfig: NowConfig = {},
-  { output, isBuilds }: StaticFilesOptions
+  { output, isBuilds, src }: StaticFilesOptions
 ) {
   const { debug, time } = output;
   let files: string[] = [];
@@ -168,7 +169,7 @@ export async function staticFiles(
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.'];
+    const search_ = src ? [src] : ['.'];
     // Convert all filenames into absolute paths
     const search = Array.prototype.concat.apply(
       [],

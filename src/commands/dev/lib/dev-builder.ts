@@ -303,7 +303,6 @@ export async function getBuildMatches(
   cwd: string,
   output: Output
 ): Promise<BuildMatch[]> {
-  const isBuilds = true;
   const matches: BuildMatch[] = [];
   const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
   for (const buildConfig of builds) {
@@ -316,7 +315,10 @@ export async function getBuildMatches(
     }
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
-    const files =  await getFiles(src, nowJson, { output, isBuilds });
+    const opts = { output, src, isBuilds: true };
+    const files =  await getFiles(cwd, nowJson, opts);
+    console.log(files);
+    console.log('^ getBuildMatches');
 
     for (const file of files) {
       src = relative(cwd, file); // todo: maybe join() instead?

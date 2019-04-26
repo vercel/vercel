@@ -27,7 +27,8 @@ import {
 } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
-// import { staticFiles as getFiles } from '../../../util/get-files';
+import { staticFiles as getFiles } from '../../../util/get-files';
+// import { createIgnoreFilter } from '../../../util/ignored';
 
 import {
   EnvConfig,
@@ -382,8 +383,17 @@ export default class DevServer {
     const modulePath = await getModuleForNSFW(this.output);
     const nowJson = await this.getNowJson();
 
-    // Collect files to watch
-    this.files = await glob('**', { cwd: this.cwd });
+    const opts = { output: this.output, isBuilds: true };
+    const files =  await getFiles(this.cwd, nowJson, opts);
+    const results: { [filePath: string]: FileFsRef } = {};
+    for (const fsPath of files) {
+      const path = relative(this.cwd, fsPath);
+      const mode = 33188; // TODO: get the real mode
+      results[path] = new FileFsRef({ mode, fsPath });
+    }
+    this.files = results;
+    console.log(this.files);
+    console.log('^ start');
 
     // Start the filesystem watcher
     this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
