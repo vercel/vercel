@@ -16,7 +16,8 @@ import { Output } from '../../../util/output/create-output';
 const platformToName: { [name: string]: string } = {
   alpine: 'nsfw-alpine',
   darwin: 'nsfw-macos',
-  linux: 'nsfw-linux'
+  linux: 'nsfw-linux',
+  win32: 'nsfw-win'
 };
 
 // @ts-ignore
