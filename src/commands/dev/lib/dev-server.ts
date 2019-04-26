@@ -24,7 +24,6 @@ import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
   collectProjectFiles,
-  createIgnoreList,
   getBuildMatches
 } from './dev-builder';
 
