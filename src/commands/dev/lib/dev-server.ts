@@ -675,8 +675,21 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.output.debug(`ProxyPass: ${dest}`);
-      return proxyPass(req, res, dest, this.output);
+      let destUrl = dest
+      let decodedUrl = dest
+      // make sure original query wasn't stripped
+      if (!destUrl.includes('?') && (req.url || '').includes('?')) {
+        destUrl = url.format(
+          Object.assign(
+            url.parse(destUrl),
+            { query: uri_args || {} }
+          )
+        )
+        // this is just for nice logs
+        decodedUrl = decodeURIComponent(destUrl)
+      }
+      this.output.debug(`ProxyPass: ${decodedUrl}`);
+      return proxyPass(req, res, destUrl, this.output);
     }
 
     if ([301, 302, 303].includes(status)) {
@@ -705,7 +718,12 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const newUrl = `/${requestPath}`;
+      const origUrl = url.parse(req.url || '')
+      const newUrl = url.format(
+        Object.assign(origUrl, {
+          pathname: `/${requestPath}`
+        })
+      );
       this.output.debug(
         `Checking build result's ${
           buildResult.routes.length

@@ -82,7 +82,7 @@ export default async function(
             userDest: false,
             status: routeConfig.status,
             headers,
-            uri_args: {},
+            uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
           };
