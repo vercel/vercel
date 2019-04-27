@@ -1,5 +1,6 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import ms from 'ms';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
@@ -27,6 +28,16 @@ import {
   BuilderOutput,
   BuilderOutputs
 } from './types';
+
+interface BuildMessage {
+  type: string;
+};
+
+interface BuildMessageResult extends BuildMessage {
+  type: 'buildResult';
+  result?: BuilderOutputs | BuildResult;
+  error?: object;
+};
 
 const tmpDir = tmpdir();
 const getWorkPath = () =>
@@ -83,7 +94,11 @@ async function createBuildProcess(
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
     );
+    match.buildProcess = undefined;
   });
+
+  buildProcess.stdout!.setEncoding('utf8');
+  buildProcess.stderr!.setEncoding('utf8');
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
@@ -113,8 +128,9 @@ export async function executeBuild(
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
-  devServer.output.debug(`Building ${entrypoint} with "${match.use
-    }"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
+  const startTime = Date.now();
+  devServer.output.log(`Building ${match.use}:${entrypoint}`);
+  devServer.output.debug(`${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`);
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
@@ -128,19 +144,32 @@ export async function executeBuild(
       devServer.buildEnv,
       devServer.output
     );
+  }
 
-    if (!devServer.debug && process.stdout.isTTY) {
+  const buildParams = {
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+  };
+
+  let buildResultOrOutputs: BuilderOutputs | BuildResult;
+  if (buildProcess) {
+    let logsListener: (b: any) => void = devServer.output.debug;
+
+    if (!devServer.debug && process.stdout.isTTY && false) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
 
-      buildProcess.on('message', ({ type }) => {
+      buildProcess!.on('message', ({ type }) => {
         if (type === 'buildResult') {
           spinner.stop();
         }
       });
 
-      buildProcess.on('error', () => {
+      buildProcess!.on('error', () => {
         spinner.stop();
         console.error(fullLogs.join('\n'));
       });
@@ -156,40 +185,51 @@ export async function executeBuild(
         spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
+      logsListener = spinLogger;
+      
       buildProcess!.stdout!.on('data', spinLogger);
       buildProcess!.stderr!.on('data', spinLogger);
-    } else {
-      const buildingLogger = (data: Buffer) => devServer.output.debug(data.toString().trim());
-      buildProcess!.stdout!.on('data', buildingLogger);
-      buildProcess!.stderr!.on('data', buildingLogger);
     }
-  }
 
-  const buildParams = {
-    files,
-    entrypoint,
-    workPath,
-    config,
-    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
-  };
+    buildProcess.stdout!.on('data', logsListener);
+    buildProcess.stderr!.on('data', logsListener);
 
-  let buildResultOrOutputs: BuilderOutputs | BuildResult;
-  if (buildProcess) {
-    buildProcess.send({
-      type: 'build',
-      builderName: pkg.name,
-      buildParams
-    });
-
-    buildResultOrOutputs = await new Promise((resolve, reject) => {
-      buildProcess!.once('message', ({ type, result }) => {
-        if (type === 'buildResult') {
-          resolve(result);
-        } else {
-          reject(new Error(`Got unexpected message type: ${type}`));
-        }
+    try {
+      buildProcess.send({
+        type: 'build',
+        builderName: pkg.name,
+        buildParams
       });
-    });
+
+      buildResultOrOutputs = await new Promise((resolve, reject) => {
+        function onMessage({ type, result, error }: BuildMessageResult) {
+          cleanup();
+          if (type === 'buildResult') {
+            if (result) {
+              resolve(result);
+            } else if (error) {
+              reject(Object.assign(new Error(), error));
+            }
+          } else {
+            reject(new Error(`Got unexpected message type: ${type}`));
+          }
+        }
+        function onExit(code: number | null, signal: string | null) {
+          cleanup();
+          const err = new Error(`Builder exited with ${signal || code} before sending build result`);
+          reject(err);
+        }
+        function cleanup() {
+          buildProcess!.removeListener('exit', onExit);
+          buildProcess!.removeListener('message', onMessage);
+        }
+        buildProcess!.on('exit', onExit);
+        buildProcess!.on('message', onMessage);
+      });
+    } finally {
+      buildProcess.stdout!.removeListener('data', logsListener);
+      buildProcess.stderr!.removeListener('data', logsListener);
+    }
   } else {
     buildResultOrOutputs = await builder.build(buildParams);
   }
@@ -304,6 +344,9 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
+
+  const endTime = Date.now();
+  devServer.output.log(`Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`);
 }
 
 export async function getBuildMatches(

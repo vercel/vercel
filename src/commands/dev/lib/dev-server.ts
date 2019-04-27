@@ -389,8 +389,6 @@ export default class DevServer {
       modulePath
     });
 
-    await this.nsfw.start();
-
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env'),
       this.getLocalEnv('.env.build')
@@ -426,6 +424,8 @@ export default class DevServer {
 
       this.output.success('Initial builds complete');
     }
+
+    await this.nsfw.start();
 
     let address: string | null = null;
     while (typeof address !== 'string') {
