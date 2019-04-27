@@ -1,8 +1,8 @@
-import test from 'ava';
+import test from 'ava'
 import path from 'path'
 import fetch from 'node-fetch'
-import DevServer from '../src/commands/dev/lib/dev-server';
 import createOutput from '../src/util/output'
+import DevServer from '../src/commands/dev/lib/dev-server'
 
 let server
 
