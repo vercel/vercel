@@ -400,7 +400,14 @@ export default class DevServer {
 
     const nowJson = await this.getNowJson();
     const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
-    const shouldUpdate = true;
+
+    let shouldUpdate = true;
+
+    // If the project is entirely static, no need to check for Builder updates
+    if (builders.length === 0 || builders.every(item => item === '@now/static')) {
+      shouldUpdate = false;
+    }
+
     await installBuilders(builders, shouldUpdate);
     await this.updateBuildMatches(nowJson);
 
