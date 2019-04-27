@@ -152,15 +152,16 @@ export async function executeBuild(
         const lines = rawLog.replace(/\s+$/, '').split('\n');
         const spinText = `${logTitle} ${lines[lines.length - 1]}`;
         const maxCols = process.stdout.columns || 80;
-        const overflow = stripAnsi(spinText).length + 3 - maxCols;
+        const overflow = stripAnsi(spinText).length + 2 - maxCols;
         spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       buildProcess!.stdout!.on('data', spinLogger);
       buildProcess!.stderr!.on('data', spinLogger);
     } else {
-      buildProcess!.stdout!.on('data', devServer.output.debug);
-      buildProcess!.stderr!.on('data', devServer.output.debug);
+      const buildingLogger = (data: Buffer) => devServer.output.debug(data.toString().trim());
+      buildProcess!.stdout!.on('data', buildingLogger);
+      buildProcess!.stderr!.on('data', buildingLogger);
     }
   }
 
