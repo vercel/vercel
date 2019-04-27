@@ -186,7 +186,7 @@ export async function executeBuild(
       };
 
       logsListener = spinLogger;
-      
+
       buildProcess!.stdout!.on('data', spinLogger);
       buildProcess!.stderr!.on('data', spinLogger);
     }
