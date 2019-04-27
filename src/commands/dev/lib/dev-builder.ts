@@ -181,11 +181,14 @@ export async function executeBuild(
         const lines = rawLog.replace(/\s+$/, '').split('\n');
         const spinText = `${logTitle} ${lines[lines.length - 1]}`;
         const maxCols = process.stdout.columns || 80;
-        const overflow = stripAnsi(spinText).length + 3 - maxCols;
+        const overflow = stripAnsi(spinText).length + 2 - maxCols;
         spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       logsListener = spinLogger;
+      
+      buildProcess!.stdout!.on('data', spinLogger);
+      buildProcess!.stderr!.on('data', spinLogger);
     }
 
     buildProcess.stdout!.on('data', logsListener);
