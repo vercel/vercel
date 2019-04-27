@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "name": "now-dev-query-test",
+  "builds": [
+    { "src": "index.js", "use": "@now/node" }
+  ],
+  "routes": [
+    {
+      "src": "/_next/webpack-hmr",
+      "dest": "http://localhost:3000/"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    }
+  ]
+}
