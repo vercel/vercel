@@ -56,6 +56,7 @@ export default class DevServer {
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
+  private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private nsfw?: nsfw.Watcher;
@@ -70,6 +71,7 @@ export default class DevServer {
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
+    this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
@@ -448,6 +450,8 @@ export default class DevServer {
         address.replace('[::]', 'localhost')
       )}`
     );
+
+    this.serverUrlPrinted = true;
   }
 
   /**
@@ -455,21 +459,31 @@ export default class DevServer {
    */
   async stop(): Promise<void> {
     if (this.stopping) return;
+
     this.stopping = true;
-    this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+
+    if (this.serverUrlPrinted) {
+      this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+    }
+
     const ops: Promise<void>[] = [];
+
     for (const match of this.buildMatches.values()) {
       if (!match.buildOutput) continue;
+
       for (const asset of Object.values(match.buildOutput)) {
         if (asset.type === 'Lambda' && asset.fn) {
           ops.push(asset.fn.destroy());
         }
       }
     }
+
     ops.push(close(this.server));
+
     if (this.nsfw) {
       ops.push(this.nsfw.stop());
     }
+
     await Promise.all(ops);
   }
 
