@@ -1072,6 +1072,7 @@ export class MissingDotenvVarsError extends NowError<
 > {
   constructor(type: string, missing: string[]) {
     let message: string;
+
     if (missing.length === 1) {
       message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(
         type
@@ -1079,9 +1080,12 @@ export class MissingDotenvVarsError extends NowError<
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
-        ...missing.map(name => ` - ${JSON.stringify(name)}`)
+        ...missing.map(name => `  - ${JSON.stringify(name)}`)
       ].join('\n');
     }
+
+    message += '\nRead more: https://err.sh/now-cli/missing-env-file';
+
     super({
       code: 'MISSING_DOTENV_VARS',
       message,
