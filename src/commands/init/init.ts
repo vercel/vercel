@@ -131,10 +131,9 @@ async function extractExample(name: string, dir: string, force?: boolean) {
       const successLog = `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
       const deployHint = folderRel === ''
-        ? `To deploy, run ${cmd('now')}.`
-        : `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`;
+        ? `To develop, run ${cmd('now dev')}. To deploy, run ${cmd('now')}.`
+        : `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd('now dev')}. To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`;
       console.log(success(`${successLog} ${deployHint}`));
-
       return 0;
     })
     .catch(e => {
