@@ -459,7 +459,7 @@ export default class DevServer {
     }
 
     this.output.ready(
-      `Development server running at ${chalk.cyan.underline(
+      `Available at ${chalk.cyan.underline(
         address.replace('[::]', 'localhost')
       )}`
     );
