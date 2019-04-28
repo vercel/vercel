@@ -1342,10 +1342,6 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 });
 
-test('log out', async t => {
-  await execa(binaryPath, ['logout', ...defaultArgs]);
-});
-
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
