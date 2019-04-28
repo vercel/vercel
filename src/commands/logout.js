@@ -37,7 +37,6 @@ const help = () => {
 
 let argv;
 let apiUrl;
-let endpoint;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -48,8 +47,6 @@ const main = async ctx => {
   });
 
   apiUrl = ctx.apiUrl;
-  endpoint = `${apiUrl}/user/tokens/`;
-
   argv._ = argv._.slice(1);
 
   if (argv.help || argv._[0] === 'help') {
@@ -69,36 +66,15 @@ export default async ctx => {
   }
 };
 
-const requestHeaders = token => ({
-  headers: {
-    Authorization: `bearer ${token}`
-  }
-});
-
-const getTokenId = async token => {
-  const result = await fetch(endpoint, requestHeaders(token));
-  const tokenList = await result.json();
-
-  if (!tokenList.tokens) {
-    return;
-  }
-
-  const tokenInfo = tokenList.tokens.find(t => token === t.token);
-
-  if (!tokenInfo) {
-    return;
-  }
-
-  return tokenInfo.id;
-};
-
-const revokeToken = async (token, tokenId) => {
-  const details = {
-    method: 'DELETE'
+const revokeToken = async (token) => {
+  const options = {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
   };
 
-  Object.assign(details, requestHeaders(token));
-  const result = await fetch(endpoint + encodeURIComponent(tokenId), details);
+  const result = await fetch(`${apiUrl}/user/tokens/current`, options);
 
   if (!result.ok) {
     console.error(error('Not able to log out'));
@@ -134,21 +110,8 @@ const logout = async () => {
     process.exit(1);
   }
 
-  let tokenId;
-
   try {
-    tokenId = await getTokenId(token);
-  } catch (err) {
-    spinner.fail('Not able to get token id on logout');
-    process.exit(1);
-  }
-
-  if (!tokenId) {
-    return;
-  }
-
-  try {
-    await revokeToken(token, tokenId);
+    await revokeToken(token);
   } catch (err) {
     spinner.fail('Could not revoke token on logout');
     process.exit(1);
