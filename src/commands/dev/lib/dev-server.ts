@@ -405,15 +405,6 @@ export default class DevServer {
       modulePath
     });
 
-    const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env'),
-      this.getLocalEnv('.env.build')
-    ]);
-    this.env = env;
-    this.buildEnv = buildEnv;
-
-    const nowJson = await this.getNowJson();
-
     const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
 
     let shouldUpdate = true;
