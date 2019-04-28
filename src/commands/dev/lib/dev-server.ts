@@ -915,9 +915,8 @@ export default class DevServer {
     nowRequestId: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
-    const ignore = await createIgnoreList(this.cwd);
 
-    if (filePath && ignore.ignores(filePath)) {
+    if (filePath && typeof this.files[filePath] === 'undefined') {
       await this.send404(req, res, nowRequestId);
       return;
     }
