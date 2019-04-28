@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You ran `now dev` inside a project that contains a `now.json` file with `env` or `build.env` properties.
+You ran `now dev` inside a project that contains a `now.json` file with `env` or `build.env` properties that use [Now Secrets](https://zeit.co/docs/v2/deployments/environment-variables-and-secrets).
 
 #### Possible Ways to Fix It
 
