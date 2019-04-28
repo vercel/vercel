@@ -333,7 +333,17 @@ export default class DevServer {
       }
     }
 
-    this.validateNowConfig(config);
+    try {
+      this.validateNowConfig(config);
+    } catch (err) {
+      if (err instanceof MissingDotenvVarsError) {
+        this.output.error(err.message);
+        process.exit(1);
+      } else {
+        throw err;
+      }
+    }
+
     this.cachedNowJson = config;
 
     return config;
