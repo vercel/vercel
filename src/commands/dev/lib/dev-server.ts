@@ -400,16 +400,11 @@ export default class DevServer {
     this.buildEnv = buildEnv;
 
     const nowJson = await this.getNowJson();
-    const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
+    const builders: Set<string> = new Set(
+      (nowJson.builds || []).map((b: BuildConfig) => b.use)
+    );
 
-    let shouldUpdate = true;
-
-    // If the project is entirely static, no need to check for Builder updates
-    if (builders.length === 0 || builders.every(item => item === '@now/static')) {
-      shouldUpdate = false;
-    }
-
-    await installBuilders(builders, shouldUpdate);
+    await installBuilders(builders);
     await this.updateBuildMatches(nowJson);
 
     // Now Builders that do not define a `shouldServe()` function need to be
