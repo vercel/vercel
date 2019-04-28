@@ -96,8 +96,10 @@ func main() {
 	}
 
 	for _, file := range files {
+		absFileName, _ := filepath.Abs(fileName)
+		absFile, _ := filepath.Abs(file)
 		// if it isn't entrypoint
-		if filepath.Base(fileName) != filepath.Base(file) {
+		if absFileName != absFile {
 			// find all export structs and functions
 			pf := parse(file)
 			var exportedDecl []string
