@@ -127,8 +127,12 @@ export async function executeBuild(
   await mkdirp(workPath);
 
   const startTime = Date.now();
-  devServer.output.log(`Building ${match.use}:${entrypoint}`);
-  devServer.output.debug(`${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`);
+  if (match.use !== '@now/static') {
+    devServer.output.log(`Building ${match.use}:${entrypoint}`);
+    devServer.output.debug(
+      `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
+    );
+  }
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
@@ -343,8 +347,12 @@ export async function executeBuild(
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
 
-  const endTime = Date.now();
-  devServer.output.log(`Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`);
+  if (match.use !== '@now/static') {
+    const endTime = Date.now();
+    devServer.output.log(
+      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
+    );
+  }
 }
 
 export async function getBuildMatches(

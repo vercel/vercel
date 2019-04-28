@@ -9,7 +9,7 @@ import cacheDirectory from 'cache-or-tmp-directory';
 import { readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
 
 import * as staticBuilder from './static-builder';
-import { BuilderWithPackage } from './types';
+import { BuilderWithPackage, Package } from './types';
 import wait from '../../../util/output/wait';
 import { Output } from '../../../util/output';
 import { devDependencies as nowCliDeps } from '../../../../package.json';
@@ -25,6 +25,8 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
     package: { version: '' }
   }
 };
+
+const registryTypes = new Set(['version', 'tag', 'range']);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -117,10 +119,8 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 /**
  * Install a list of builders to the cache directory.
  */
-export async function installBuilders(
-  packages: string[],
-  update: boolean = false
-): Promise<void> {
+export async function installBuilders(packagesSet: Set<string>): Promise<void> {
+  const packages = Array.from(packagesSet);
   if (
     packages.length === 1 &&
     Object.hasOwnProperty.call(localBuilders, packages[0])
@@ -130,56 +130,28 @@ export async function installBuilders(
   }
   const cacheDir = await builderDirPromise;
   const buildersPkg = join(cacheDir, 'package.json');
-  const pkg = await readJSON(buildersPkg);
-  const updatedPackages: string[] = [];
-
-  if (!pkg.devDependencies) {
-    pkg.devDependencies = {};
-  }
-  const deps = pkg.devDependencies;
-
-  for (const builderPkg of packages) {
-    const parsed = npa(builderPkg);
-    const name = parsed.name || builderPkg;
-    if (Object.hasOwnProperty.call(localBuilders, name)) {
-      continue;
-    }
-    const spec = parsed.rawSpec || parsed.fetchSpec || 'latest';
-    const currentVersion = deps[name];
-    if (currentVersion !== spec) {
-      updatedPackages.push(builderPkg);
-      deps[name] = spec;
-    }
-  }
 
   // Pull the same version of `@now/build-utils` that now-cli is using
   const buildUtils = '@now/build-utils';
   const buildUtilsVersion = nowCliDeps[buildUtils];
-  if (deps[buildUtils] !== buildUtilsVersion) {
-    updatedPackages.push(`${buildUtils}@${buildUtilsVersion}`);
-    deps[buildUtils] = buildUtilsVersion;
-  }
-
-  if (updatedPackages.length > 0) {
-    const stopSpinner = wait(
-      `Installing builders: ${updatedPackages.join(', ')}`
-    );
-    try {
-      await writeJSON(buildersPkg, pkg);
-      await execa('npm', ['install'], {
+  const stopSpinner = wait(
+    `Installing builders: ${packages.sort().join(', ')}`
+  );
+  try {
+    await execa(
+      'npm',
+      [
+        'install',
+        '--save-exact',
+        '--no-package-lock',
+        `${buildUtils}@${buildUtilsVersion}`,
+        ...packages.filter(p => p !== '@now/static')
+      ],
+      {
         cwd: cacheDir
-      });
-    } finally {
-      stopSpinner();
-    }
-  }
-
-  if (update) {
-    const stopSpinner = wait('Checking for builder updates');
-    await execa('npm', ['update'], {
-      reject: false,
-      cwd: cacheDir
-    });
+      }
+    );
+  } finally {
     stopSpinner();
   }
 }
@@ -194,7 +166,9 @@ export async function getBuilder(
   if (!builderWithPkg) {
     const cacheDir = await builderDirPromise;
     const parsed = npa(builderPkg);
-    const dest = join(cacheDir, 'node_modules', parsed.name || builderPkg);
+    const buildersPkg = await readJSON(join(cacheDir, 'package.json'));
+    const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
+    const dest = join(cacheDir, 'node_modules', pkgName);
     const mod = require(dest);
     const pkg = require(join(dest, 'package.json'));
     builderWithPkg = Object.freeze({
@@ -203,6 +177,22 @@ export async function getBuilder(
     });
   }
   return builderWithPkg;
+}
+
+function getPackageName(
+  parsed: npa.Result,
+  buildersPkg: Package
+): string | null {
+  if (registryTypes.has(parsed.type)) {
+    return parsed.name;
+  }
+  const deps = buildersPkg.dependencies || {};
+  for (const [name, dep] of Object.entries(deps)) {
+    if (dep === parsed.raw) {
+      return name;
+    }
+  }
+  return null;
 }
 
 function getSha(buffer: Buffer): string {

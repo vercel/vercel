@@ -332,7 +332,17 @@ export default class DevServer {
       }
     }
 
-    this.validateNowConfig(config);
+    try {
+      this.validateNowConfig(config);
+    } catch (err) {
+      if (err instanceof MissingDotenvVarsError) {
+        this.output.error(err.message);
+        process.exit(1);
+      } else {
+        throw err;
+      }
+    }
+
     this.cachedNowJson = config;
 
     return config;
@@ -405,16 +415,11 @@ export default class DevServer {
       modulePath
     });
 
-    const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
+    const builders: Set<string> = new Set(
+      (nowJson.builds || []).map((b: BuildConfig) => b.use)
+    );
 
-    let shouldUpdate = true;
-
-    // If the project is entirely static, no need to check for Builder updates
-    if (builders.length === 0 || builders.every(item => item === '@now/static')) {
-      shouldUpdate = false;
-    }
-
-    await installBuilders(builders, shouldUpdate);
+    await installBuilders(builders);
     await this.updateBuildMatches(nowJson);
 
     // Now Builders that do not define a `shouldServe()` function need to be
@@ -666,7 +671,12 @@ export default class DevServer {
 
     try {
       const nowJson = await this.getNowJson();
-      await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
+
+      if (isStaticDeployment(nowJson)) {
+        await this.serveProjectAsStatic(req, res, nowRequestId);
+      } else {
+        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
+      }
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -896,6 +906,26 @@ export default class DevServer {
     }
   };
 
+  /**
+   * Serve project directory as a static deployment.
+   */
+   serveProjectAsStatic = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string
+  ) => {
+    const filePath = req.url ? req.url.replace(/^\//, '') : '';
+    const ignore = await createIgnoreList(this.cwd);
+
+    if (filePath && ignore.ignores(filePath)) {
+      await this.send404(req, res, nowRequestId);
+      return;
+    }
+
+    this.setResponseHeaders(res, nowRequestId);
+    return serveStaticFile(req, res, this.cwd);
+  };
+
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
@@ -1114,4 +1144,23 @@ function fileRemoved(
   delete files[name];
   changed.delete(name);
   removed.add(name);
+}
+
+/**
+ * It is a static deployment if `now.json` match one of these:
+ *   - no `builds`
+ *   - all `builds` have `@now/static` as `use`
+ */
+function isStaticDeployment(
+  nowJson: NowConfig
+): boolean {
+  if (nowJson.builds instanceof Array) {
+    if (nowJson.builds.every(build => {
+      return build.use.split('@')[1] === 'now/static';
+    })) {
+      return true;
+    }
+    return false;
+  }
+  return true;
 }

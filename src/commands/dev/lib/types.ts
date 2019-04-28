@@ -127,13 +127,16 @@ export interface ShouldServeParams {
   workPath: string;
 }
 
+export interface Package {
+  name?: string;
+  version: string;
+  dependencies?: { [name: string]: string };
+}
+
 export interface BuilderWithPackage {
   runInProcess?: boolean;
   builder: Builder;
-  package: {
-    name?: string;
-    version: string;
-  };
+  package: Package;
 }
 
 export interface HttpHeadersConfig {
