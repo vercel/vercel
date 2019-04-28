@@ -1297,15 +1297,15 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
     t.is(code, 0);
 
-    await sleep(10000);
     await waitForDeployment(deploymentUrl);
+    await sleep(10000);
 
     const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
       'now-revert-alias-1',
-      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+      `[First run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
 
@@ -1313,15 +1313,15 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     const { stdout: deploymentUrl, code } = await execute([secondDeployment]);
     t.is(code, 0);
 
-    await sleep(10000);
     await waitForDeployment(deploymentUrl);
+    await sleep(10000);
 
     const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
       'now-revert-alias-2',
-      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+      `[Second run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
 
@@ -1329,15 +1329,15 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
     t.is(code, 0);
 
-    await sleep(10000);
     await waitForDeployment(deploymentUrl);
+    await sleep(10000);
 
     const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
       'now-revert-alias-1',
-      `Received ${result.name} instead on ${url} (${deploymentUrl})`
+      `[Third run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
 });
