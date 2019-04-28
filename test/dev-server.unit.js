@@ -15,7 +15,7 @@ test.before(async () => {
   const output = createOutput({})
   const origReady = output.ready
   output.ready = msg => {
-    if (msg.toString().match(/Development server running at/)) {
+    if (msg.toString().match(/Available at/)) {
       readyResolve()
     }
     origReady(msg)
