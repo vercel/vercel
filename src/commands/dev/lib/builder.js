@@ -6,7 +6,24 @@
  */
 const { FileFsRef } = require('@now/build-utils');
 
-process.on('message', async (message) => {
+process.on('unhandledRejection', (err) => {
+  console.error('Exiting builder due to build error:');
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('message', onMessage);
+
+function onMessage(message) {
+  processMessage(message).catch(err => {
+    Object.defineProperty(err, 'message', { enumerable: true });
+    Object.defineProperty(err, 'stack', { enumerable: true });
+    process.removeListener('message', onMessage);
+    process.send({ type: 'buildResult', error: err }, () => process.exit(1));
+  });
+}
+
+async function processMessage(message) {
   const { builderName, buildParams } = message;
   const builder = require(builderName);
 
@@ -26,6 +43,6 @@ process.on('message', async (message) => {
   delete result.childProcesses;
 
   process.send({ type: 'buildResult', result });
-});
+}
 
 process.send({ type: 'ready' });

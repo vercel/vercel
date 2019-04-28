@@ -56,6 +56,7 @@ export default class DevServer {
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
+  private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private nsfw?: nsfw.Watcher;
@@ -70,6 +71,7 @@ export default class DevServer {
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
+    this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
@@ -403,10 +405,24 @@ export default class DevServer {
       modulePath
     });
 
-    await this.nsfw.start();
+    const [env, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env'),
+      this.getLocalEnv('.env.build')
+    ]);
+    this.env = env;
+    this.buildEnv = buildEnv;
+
+    const nowJson = await this.getNowJson();
 
     const builders = (nowJson.builds || []).map((b: BuildConfig) => b.use);
-    const shouldUpdate = true;
+
+    let shouldUpdate = true;
+
+    // If the project is entirely static, no need to check for Builder updates
+    if (builders.length === 0 || builders.every(item => item === '@now/static')) {
+      shouldUpdate = false;
+    }
+
     await installBuilders(builders, shouldUpdate);
     await this.updateBuildMatches(nowJson);
 
@@ -433,6 +449,8 @@ export default class DevServer {
       this.output.success('Initial builds complete');
     }
 
+    await this.nsfw.start();
+
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
@@ -454,6 +472,8 @@ export default class DevServer {
         address.replace('[::]', 'localhost')
       )}`
     );
+
+    this.serverUrlPrinted = true;
   }
 
   /**
@@ -461,21 +481,33 @@ export default class DevServer {
    */
   async stop(): Promise<void> {
     if (this.stopping) return;
+
     this.stopping = true;
-    this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+
+    if (this.serverUrlPrinted) {
+      // This makes it look cleaner
+      process.stdout.write('\n');
+      this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+    }
+
     const ops: Promise<void>[] = [];
+
     for (const match of this.buildMatches.values()) {
       if (!match.buildOutput) continue;
+
       for (const asset of Object.values(match.buildOutput)) {
         if (asset.type === 'Lambda' && asset.fn) {
           ops.push(asset.fn.destroy());
         }
       }
     }
+
     ops.push(close(this.server));
+
     if (this.nsfw) {
       ops.push(this.nsfw.stop());
     }
+
     await Promise.all(ops);
   }
 
@@ -681,8 +713,21 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      this.output.debug(`ProxyPass: ${dest}`);
-      return proxyPass(req, res, dest, this.output);
+      let destUrl = dest
+      let decodedUrl = dest
+      // make sure original query wasn't stripped
+      if (!destUrl.includes('?') && (req.url || '').includes('?')) {
+        destUrl = url.format(
+          Object.assign(
+            url.parse(destUrl),
+            { query: uri_args || {} }
+          )
+        )
+        // this is just for nice logs
+        decodedUrl = decodeURIComponent(destUrl)
+      }
+      this.output.debug(`ProxyPass: ${decodedUrl}`);
+      return proxyPass(req, res, destUrl, this.output);
     }
 
     if ([301, 302, 303].includes(status)) {
@@ -711,7 +756,12 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const newUrl = `/${requestPath}`;
+      const origUrl = url.parse(req.url || '')
+      const newUrl = url.format(
+        Object.assign(origUrl, {
+          pathname: `/${requestPath}`
+        })
+      );
       this.output.debug(
         `Checking build result's ${
           buildResult.routes.length

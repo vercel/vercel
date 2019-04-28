@@ -13,8 +13,10 @@ export default `.hg
 .lock-wscript
 .env
 .env.build
+.venv
 npm-debug.log
 config.gypi
 node_modules
-__pycache__
+__pycache__/
+venv/
 CVS`;
