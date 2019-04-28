@@ -187,8 +187,7 @@ function getPackageName(
     return parsed.name;
   }
   const deps = buildersPkg.dependencies || {};
-  for (const name of Object.keys(deps)) {
-    const dep = deps[name];
+  for (const [name, dep] of Object.entries(deps)) {
     if (dep === parsed.raw) {
       return name;
     }
