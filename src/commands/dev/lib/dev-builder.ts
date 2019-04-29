@@ -6,19 +6,17 @@ import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
-import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import ora from 'ora';
 
-import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
-import IGNORED from '../../../util/ignored';
 import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
+import { staticFiles as getFiles } from '../../../util/get-files';
 import {
   EnvConfig,
   NowConfig,
@@ -364,7 +362,8 @@ export async function executeBuild(
 
 export async function getBuildMatches(
   nowJson: NowConfig,
-  cwd: string
+  cwd: string,
+  output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
   const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
@@ -378,10 +377,11 @@ export async function getBuildMatches(
     }
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
-    const entries = Object.values(await collectProjectFiles(src, cwd));
+    const opts = { output, src, isBuilds: true };
+    const files =  await getFiles(cwd, nowJson, opts);
 
-    for (const fileRef of entries) {
-      src = relative(cwd, fileRef.fsPath);
+    for (const file of files) {
+      src = relative(cwd, file);
       const builderWithPkg = await getBuilder(use);
       matches.push({
         ...buildConfig,
@@ -395,40 +395,4 @@ export async function getBuildMatches(
     }
   }
   return matches;
-}
-
-/**
- * Collect project files, with `.nowignore` honored.
- */
-export async function collectProjectFiles(
-  pattern: string,
-  cwd: string
-): Promise<BuilderInputs> {
-  const ignore = await createIgnoreList(cwd);
-  const files = await globBuilderInputs(pattern, { cwd, ignore });
-  return files;
-}
-
-/**
- * Create ignore list according `.nowignore` in cwd.
- */
-export async function createIgnoreList(cwd: string): Promise<Ignore> {
-  const ig = ignore();
-
-  // Add the default ignored files
-  ig.add(IGNORED);
-
-  // Special case for now-cli's usage
-  ig.add('.nowignore');
-
-  try {
-    const nowignore = join(cwd, '.nowignore');
-    ig.add(await readFile(nowignore, 'utf8'));
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-
-  return ig;
 }

@@ -23,12 +23,11 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import {
   executeBuild,
-  collectProjectFiles,
-  getBuildMatches,
-  createIgnoreList
+  getBuildMatches
 } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
+import { staticFiles as getFiles } from '../../../util/get-files';
 
 import {
   EnvConfig,
@@ -270,7 +269,7 @@ export default class DevServer {
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
-    const matches = await getBuildMatches(nowJson, this.cwd);
+    const matches = await getBuildMatches(nowJson, this.cwd, this.output);
     const sources = matches.map(m => m.src);
 
     // Delete build matches that no longer exists
@@ -393,23 +392,29 @@ export default class DevServer {
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
-
-    // Collect files to watch
-    this.files = await collectProjectFiles('**', this.cwd);
-
-    // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
-      modulePath
-    });
-
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env'),
       this.getLocalEnv('.env.build')
     ]);
     this.env = env;
     this.buildEnv = buildEnv;
-
     const nowJson = await this.getNowJson();
+
+    const opts = { output: this.output, isBuilds: true };
+    const files =  await getFiles(this.cwd, nowJson, opts);
+    const results: { [filePath: string]: FileFsRef } = {};
+    for (const fsPath of files) {
+      const path = relative(this.cwd, fsPath);
+      const { mode } = await fs.promises.stat(fsPath);
+      results[path] = new FileFsRef({ mode, fsPath });
+    }
+    this.files = results;
+
+    // Start the filesystem watcher
+    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
+      modulePath
+    });
+
     const builders: Set<string> = new Set(
       (nowJson.builds || []).map((b: BuildConfig) => b.use)
     );
@@ -911,9 +916,8 @@ export default class DevServer {
     nowRequestId: string
   ) => {
     const filePath = req.url ? req.url.replace(/^\//, '') : '';
-    const ignore = await createIgnoreList(this.cwd);
 
-    if (filePath && ignore.ignores(filePath)) {
+    if (filePath && typeof this.files[filePath] === 'undefined') {
       await this.send404(req, res, nowRequestId);
       return;
     }
