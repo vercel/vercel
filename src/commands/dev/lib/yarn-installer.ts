@@ -1,16 +1,16 @@
 import execa from 'execa';
 import { tmpdir } from 'os';
+import { createHash } from 'crypto';
 import {
-  pathExists,
   mkdirp,
   createWriteStream,
   statSync,
-  chmodSync
+  chmodSync,
+  createReadStream
 } from 'fs-extra';
 import pipe from 'promisepipe';
 import { join } from 'path';
 import fetch from 'node-fetch';
-import tar from 'tar-fs';
 import { Output } from '../../../util/output/create-output';
 
 async function isFoundInPath(output: Output): Promise<boolean> {
@@ -34,15 +34,30 @@ function plusxSync(file: string): void {
 
   const base8 = newMode.toString(8).slice(-3);
   chmodSync(file, base8);
-};
+}
+
+function getSha1(filePath: string) {
+  return new Promise<string | Buffer>((resolve, reject) => {
+    const hash = createHash('sha1').setEncoding('hex');
+    const stream = createReadStream(filePath)
+    .pipe(hash)
+    .on('error', () => resolve('not found'))
+    .on('finish', () => {
+      const str = stream.read();
+      resolve(str);
+    });
+  });
+
+}
 
 async function installYarn(output: Output): Promise<string> {
   // Loosely based on https://yarnpkg.com/install.sh
   const dirName = join(tmpdir(), 'co.zeit.now', 'dev', 'yarn');
   const yarnBin = join(dirName, 'yarn.js');
+  const sha1 = await getSha1(yarnBin);
 
-  if (await pathExists(yarnBin)) {
-    output.debug('The yarn executable is already cached');
+  if (sha1 === 'e7c1b06bc4dac907a7adba7240d5b569aed396326caa159d85a8ca26bc09d31f') {
+    output.debug('The yarn executable is already downloaded');
     return dirName;
   }
 
