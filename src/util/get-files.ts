@@ -151,8 +151,9 @@ interface StaticFilesOptions {
  *
  * @param {String} full path to directory
  * @param {Object} options:
- *  - `limit` {Number|null} byte limit
+ *  - `isBuilds` {boolean} true for Now 2.0 builders
  *  - `output` {Object} "output" helper object
+ *  - `src` {string|undefined} optional builder source
  * @return {Array} comprehensive list of paths to sync
  */
 
