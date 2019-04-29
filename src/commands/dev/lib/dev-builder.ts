@@ -51,6 +51,8 @@ const getWorkPath = () =>
       .slice(-8)
   );
 
+const isLogging = new WeakSet<ChildProcess>();
+
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
@@ -60,6 +62,14 @@ async function getNodeBin(): Promise<string> {
   }
   const nodeBin = join(runtime.cacheDir, 'bin', 'node');
   return nodeBin;
+}
+
+function pipeChildLogging(child: ChildProcess): void {
+  if (!isLogging.has(child)) {
+    child.stdout!.pipe(process.stdout);
+    child.stderr!.pipe(process.stderr);
+    isLogging.add(child);
+  }
 }
 
 async function createBuildProcess(
@@ -118,6 +128,7 @@ export async function executeBuild(
   files: BuilderInputs,
   match: BuildMatch,
   requestPath: string | null,
+  isInitialBuild: boolean,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
@@ -161,9 +172,9 @@ export async function executeBuild(
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
-    let logsListener: (b: any) => void = devServer.output.debug;
+    let spinLogger;
 
-    if (!devServer.debug && process.stdout.isTTY) {
+    if (isInitialBuild && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
@@ -179,7 +190,7 @@ export async function executeBuild(
         console.error(fullLogs.join('\n'));
       });
 
-      const spinLogger = (data: Buffer) => {
+      spinLogger = (data: Buffer) => {
         const rawLog = stripAnsi(data.toString());
         fullLogs.push(rawLog);
 
@@ -190,14 +201,11 @@ export async function executeBuild(
         spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
-      logsListener = spinLogger;
-
       buildProcess!.stdout!.on('data', spinLogger);
       buildProcess!.stderr!.on('data', spinLogger);
+    } else {
+      pipeChildLogging(buildProcess!);
     }
-
-    buildProcess.stdout!.on('data', logsListener);
-    buildProcess.stderr!.on('data', logsListener);
 
     try {
       buildProcess.send({
@@ -232,8 +240,11 @@ export async function executeBuild(
         buildProcess!.on('message', onMessage);
       });
     } finally {
-      buildProcess.stdout!.removeListener('data', logsListener);
-      buildProcess.stderr!.removeListener('data', logsListener);
+      if (spinLogger) {
+        buildProcess.stdout!.removeListener('data', spinLogger);
+        buildProcess.stderr!.removeListener('data', spinLogger);
+      }
+      pipeChildLogging(buildProcess!);
     }
   } else {
     buildResultOrOutputs = await builder.build(buildParams);

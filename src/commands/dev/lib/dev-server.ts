@@ -434,7 +434,7 @@ export default class DevServer {
       );
 
       for (const match of needsInitialBuild) {
-        await executeBuild(nowJson, this, this.files, match, null);
+        await executeBuild(nowJson, this, this.files, match, null, true);
       }
 
       this.output.success('Builder setup complete');
@@ -633,6 +633,7 @@ export default class DevServer {
         this.files,
         match,
         requestPath,
+        false,
         filesChanged,
         filesRemoved
       );
