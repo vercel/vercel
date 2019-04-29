@@ -138,8 +138,11 @@ export async function executeBuild(
   await mkdirp(workPath);
 
   const startTime = Date.now();
+  const showBuildTimestamp =
+    match.use !== '@now/static' && (!isInitialBuild || devServer.debug);
 
-  if (match.use !== '@now/static') {
+  if (showBuildTimestamp) {
+    devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
       `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
     );
@@ -358,6 +361,13 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
+
+  if (showBuildTimestamp) {
+    const endTime = Date.now();
+    devServer.output.log(
+      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
+    );
+  }
 }
 
 export async function getBuildMatches(
