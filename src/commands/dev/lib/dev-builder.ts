@@ -6,20 +6,17 @@ import { tmpdir } from 'os';
 import { dirname, join, relative } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
-import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import ora from 'ora';
 
-import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
-import IGNORED from '../../../util/ignored';
 import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
-
+import { staticFiles as getFiles } from '../../../util/get-files';
 import {
   EnvConfig,
   NowConfig,
@@ -52,6 +49,8 @@ const getWorkPath = () =>
       .slice(-8)
   );
 
+const isLogging = new WeakSet<ChildProcess>();
+
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
@@ -61,6 +60,14 @@ async function getNodeBin(): Promise<string> {
   }
   const nodeBin = join(runtime.cacheDir, 'bin', 'node');
   return nodeBin;
+}
+
+function pipeChildLogging(child: ChildProcess): void {
+  if (!isLogging.has(child)) {
+    child.stdout!.pipe(process.stdout);
+    child.stderr!.pipe(process.stderr);
+    isLogging.add(child);
+  }
 }
 
 async function createBuildProcess(
@@ -124,6 +131,7 @@ export async function executeBuild(
   files: BuilderInputs,
   match: BuildMatch,
   requestPath: string | null,
+  isInitialBuild: boolean,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
@@ -135,8 +143,11 @@ export async function executeBuild(
   await mkdirp(workPath);
 
   const startTime = Date.now();
+  const showBuildTimestamp =
+    match.use !== '@now/static' && (!isInitialBuild || devServer.debug);
 
-  if (match.use !== '@now/static') {
+  if (showBuildTimestamp) {
+    devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
       `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
     );
@@ -168,9 +179,9 @@ export async function executeBuild(
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
-    let logsListener: (b: any) => void = devServer.output.debug;
+    let spinLogger;
 
-    if (!devServer.debug && process.stdout.isTTY) {
+    if (isInitialBuild && !devServer.debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
@@ -186,7 +197,7 @@ export async function executeBuild(
         console.error(fullLogs.join('\n'));
       });
 
-      const spinLogger = (data: Buffer) => {
+      spinLogger = (data: Buffer) => {
         const rawLog = stripAnsi(data.toString());
         fullLogs.push(rawLog);
 
@@ -197,14 +208,11 @@ export async function executeBuild(
         spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
-      logsListener = spinLogger;
-
       buildProcess!.stdout!.on('data', spinLogger);
       buildProcess!.stderr!.on('data', spinLogger);
+    } else {
+      pipeChildLogging(buildProcess!);
     }
-
-    buildProcess.stdout!.on('data', logsListener);
-    buildProcess.stderr!.on('data', logsListener);
 
     try {
       buildProcess.send({
@@ -239,8 +247,11 @@ export async function executeBuild(
         buildProcess!.on('message', onMessage);
       });
     } finally {
-      buildProcess.stdout!.removeListener('data', logsListener);
-      buildProcess.stderr!.removeListener('data', logsListener);
+      if (spinLogger) {
+        buildProcess.stdout!.removeListener('data', spinLogger);
+        buildProcess.stderr!.removeListener('data', spinLogger);
+      }
+      pipeChildLogging(buildProcess!);
     }
   } else {
     buildResultOrOutputs = await builder.build(buildParams);
@@ -356,11 +367,19 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
+
+  if (showBuildTimestamp) {
+    const endTime = Date.now();
+    devServer.output.log(
+      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
+    );
+  }
 }
 
 export async function getBuildMatches(
   nowJson: NowConfig,
-  cwd: string
+  cwd: string,
+  output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
   const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
@@ -374,10 +393,11 @@ export async function getBuildMatches(
     }
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
-    const entries = Object.values(await collectProjectFiles(src, cwd));
+    const opts = { output, src, isBuilds: true };
+    const files =  await getFiles(cwd, nowJson, opts);
 
-    for (const fileRef of entries) {
-      src = relative(cwd, fileRef.fsPath);
+    for (const file of files) {
+      src = relative(cwd, file);
       const builderWithPkg = await getBuilder(use);
       matches.push({
         ...buildConfig,
@@ -391,40 +411,4 @@ export async function getBuildMatches(
     }
   }
   return matches;
-}
-
-/**
- * Collect project files, with `.nowignore` honored.
- */
-export async function collectProjectFiles(
-  pattern: string,
-  cwd: string
-): Promise<BuilderInputs> {
-  const ignore = await createIgnoreList(cwd);
-  const files = await globBuilderInputs(pattern, { cwd, ignore });
-  return files;
-}
-
-/**
- * Create ignore list according `.nowignore` in cwd.
- */
-export async function createIgnoreList(cwd: string): Promise<Ignore> {
-  const ig = ignore();
-
-  // Add the default ignored files
-  ig.add(IGNORED);
-
-  // Special case for now-cli's usage
-  ig.add('.nowignore');
-
-  try {
-    const nowignore = join(cwd, '.nowignore');
-    ig.add(await readFile(nowignore, 'utf8'));
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-
-  return ig;
 }

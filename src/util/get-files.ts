@@ -23,7 +23,7 @@ const flatten = (arr: NullableString[] | NullableString[][], res: NullableString
 }
 
 const glob = async function(pattern: string, options: IOptions) {
-  return new Promise((resolve, reject) => {
+  return new Promise<string[]>((resolve, reject) => {
     _glob(pattern, options, (error, files) => {
       if (error) {
         reject(error);
@@ -141,6 +141,7 @@ const asAbsolute = function(path: string, parent: string) {
 interface StaticFilesOptions {
   output: Output;
   isBuilds: boolean;
+  src?: string;
 }
 
 /**
@@ -150,15 +151,16 @@ interface StaticFilesOptions {
  *
  * @param {String} full path to directory
  * @param {Object} options:
- *  - `limit` {Number|null} byte limit
+ *  - `isBuilds` {boolean} true for Now 2.0 builders
  *  - `output` {Object} "output" helper object
+ *  - `src` {string|undefined} optional builder source
  * @return {Array} comprehensive list of paths to sync
  */
 
 export async function staticFiles(
   path: string,
   nowConfig: NowConfig = {},
-  { output, isBuilds }: StaticFilesOptions
+  { output, isBuilds, src }: StaticFilesOptions
 ) {
   const { debug, time } = output;
   let files: string[] = [];
@@ -168,16 +170,9 @@ export async function staticFiles(
   } else {
     // The package.json `files` whitelist still
     // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.'];
+    const source = src || '.';
     // Convert all filenames into absolute paths
-    const search = Array.prototype.concat.apply(
-      [],
-      await Promise.all(
-        search_.map(file =>
-          glob(file, { cwd: path, absolute: true, dot: true })
-        )
-      )
-    );
+    const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
     // Compile list of ignored patterns and files
     const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
