@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import execa from 'execa';
 import { createHash } from 'crypto';
-import { join, resolve } from 'path';
+import { join, resolve, delimiter } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
 import { funCacheDir } from '@zeit/fun';
@@ -130,6 +130,7 @@ export async function installBuilders(packagesSet: Set<string>): Promise<void> {
     return;
   }
   const cacheDir = await builderDirPromise;
+  const yarnPath = join(cacheDir, 'node_modules', '.bin', 'yarn');
   const buildersPkg = join(cacheDir, 'package.json');
 
   // Pull the same version of `@now/build-utils` that now-cli is using
@@ -140,11 +141,12 @@ export async function installBuilders(packagesSet: Set<string>): Promise<void> {
   );
   try {
     await execa(
-      'npm',
+      process.execPath,
       [
-        'install',
-        '--save-exact',
-        '--no-package-lock',
+        yarnPath,
+        'add',
+        '--exact',
+        '--no-lockfile',
         `${buildUtils}@${buildUtilsVersion}`,
         ...packages.filter(p => p !== '@now/static')
       ],
