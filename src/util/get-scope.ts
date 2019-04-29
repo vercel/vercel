@@ -8,6 +8,7 @@ export default async function getScope(client: Client) {
 
   if (client.currentTeam) {
     const team = await getTeamById(client, client.currentTeam);
+
     if (!team) {
       throw new TeamDeleted();
     }

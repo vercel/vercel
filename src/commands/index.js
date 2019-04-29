@@ -1,6 +1,8 @@
 export default {
   deploy: 'deploy',
   help: 'help',
+  init: 'init',
+  dev: 'dev',
   list: 'list',
   remove: 'remove',
   alias: 'alias',
@@ -24,6 +26,7 @@ export default {
   domain: 'domains',
   cert: 'certs',
   secret: 'secrets',
+  projects: 'projects',
   cc: 'billing',
   downgrade: 'upgrade',
   team: 'teams',

@@ -36,7 +36,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
@@ -96,7 +96,7 @@ const main = async ctx => {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }

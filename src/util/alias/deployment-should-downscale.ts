@@ -1,7 +1,7 @@
 import deploymentIsAliased from './deployment-is-aliased';
 import { Output } from '../output';
 import Client from '../client';
-import getScaleForDC from '../../util/scale/get-scale-for-dc';
+import getScaleForDC from '../scale/get-scale-for-dc';
 import { Deployment } from '../../types';
 
 export default async function deploymentShouldDownscale(

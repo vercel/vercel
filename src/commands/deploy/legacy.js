@@ -8,12 +8,15 @@ import { promises as fs } from 'fs';
 import inquirer from 'inquirer';
 import mri from 'mri';
 import ms from 'ms';
+import title from 'title';
 import plural from 'pluralize';
 import Progress from 'progress';
 import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
 import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd.ts';
+import code from '../../util/output/code';
+import highlight from '../../util/output/highlight';
 import exit from '../../util/exit';
 import Now from '../../util';
 import uniq from '../../util/unique-strings';
@@ -37,10 +40,10 @@ import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
 import stamp from '../../util/output/stamp.ts';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 import parseMeta from '../../util/parse-meta';
+import getProjectName from '../../util/get-project-name';
 import {
   WildcardNotAllowed,
   CantSolveChallenge,
-  CDNNeedsUpgrade,
   DomainConfigurationError,
   DomainNotFound,
   DomainPermissionDenied,
@@ -49,7 +52,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  VerifyScaleTimeout
+  VerifyScaleTimeout,
+  DeploymentNotFound
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -75,6 +79,7 @@ let forwardNpm;
 let followSymlinks;
 let wantsPublic;
 let regions;
+let noScale;
 let noVerify;
 let apiUrl;
 let isTTY;
@@ -208,6 +213,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
     .map(s => s.trim())
     .filter(Boolean);
   noVerify = argv.verify === false;
+  noScale = argv.scale === false;
   apiUrl = ctx.apiUrl;
   // https://github.com/facebook/flow/issues/1825
   // $FlowFixMe
@@ -222,7 +228,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   const { authConfig: { token }, config } = ctx;
 
   try {
-    return sync({
+    return await sync({
       contextName,
       output,
       token,
@@ -383,9 +389,6 @@ async function sync({
       debug(`Forcing \`deploymentType\` = \`static\` automatically`);
 
       meta = {
-        name:
-          deploymentName ||
-          (isFile ? 'file' : paths.length === 1 ? basename(paths[0]) : 'files'),
         type: deploymentType,
         pkg: undefined,
         nowConfig: undefined,
@@ -411,7 +414,15 @@ async function sync({
           sessionAffinity
         ));
       } catch (err) {
-        if (err.code === 'config_prop_and_file') {
+        const print = [
+          'config_prop_and_file',
+          'dockerfile_missing',
+          'no_dockerfile_commands',
+          'unsupported_deployment_type',
+          'multiple_manifests'
+        ];
+
+        if (err.code && print.includes(err.code) || err.name === 'JSONError') {
           error(err.message);
           return 1;
         }
@@ -443,7 +454,7 @@ async function sync({
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
       error(
-        "Can't set both `regions` and `scale` options simultaneously",
+        'Can\'t set both `regions` and `scale` options simultaneously',
         'regions-and-scale-at-once'
       );
       await exit(1);
@@ -471,6 +482,9 @@ async function sync({
         (result, dcId) => ({ ...result, [dcId]: { min: 0, max: 1 } }),
         {}
       );
+    } else if (noScale) {
+      debug(`Option --no-scale was set. Skipping scale parameters`)
+      scale = {}
     } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
@@ -650,6 +664,8 @@ async function sync({
     let syncCount;
 
     try {
+      meta.name = getProjectName({argv, nowConfig, isFile, paths, pre: meta.name});
+      log(`Using project ${chalk.bold(meta.name)}`);
       // $FlowFixMe
       const createArgs = Object.assign(
         {
@@ -678,7 +694,6 @@ async function sync({
       if (
         firstDeployCall instanceof WildcardNotAllowed ||
         firstDeployCall instanceof CantSolveChallenge ||
-        firstDeployCall instanceof CDNNeedsUpgrade ||
         firstDeployCall instanceof DomainConfigurationError ||
         firstDeployCall instanceof DomainNotFound ||
         firstDeployCall instanceof DomainPermissionDenied ||
@@ -687,7 +702,8 @@ async function sync({
         firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof SchemaValidationFailed ||
         firstDeployCall instanceof TooManyCertificates ||
-        firstDeployCall instanceof TooManyRequests
+        firstDeployCall instanceof TooManyRequests ||
+        firstDeployCall instanceof DeploymentNotFound
       ) {
         handleCreateDeployError(output, firstDeployCall);
         await exit(1);
@@ -756,7 +772,6 @@ async function sync({
           if (
             secondDeployCall instanceof WildcardNotAllowed ||
             secondDeployCall instanceof CantSolveChallenge ||
-            secondDeployCall instanceof CDNNeedsUpgrade ||
             secondDeployCall instanceof DomainConfigurationError ||
             secondDeployCall instanceof DomainNotFound ||
             secondDeployCall instanceof DomainPermissionDenied ||
@@ -765,7 +780,8 @@ async function sync({
             secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyCertificates ||
-            secondDeployCall instanceof TooManyRequests
+            secondDeployCall instanceof TooManyRequests ||
+            secondDeployCall instanceof DeploymentNotFound
           ) {
             handleCreateDeployError(output, secondDeployCall);
             await exit(1);
@@ -809,7 +825,7 @@ async function sync({
           note(
             `You can use ${cmd(
               'now --public'
-            )} or upgrade your plan (${url}) to skip this prompt`
+            )} or upgrade your plan to skip this prompt. More: ${url}`
           );
 
           if (!proceed) {
@@ -831,7 +847,7 @@ async function sync({
 
         wantsPublic = true;
 
-        sync({
+        return sync({
           contextName,
           output,
           token,
@@ -841,8 +857,6 @@ async function sync({
           firstRun: false,
           deploymentType
         });
-
-        return;
       }
 
       debug(`Error: ${err}\n${err.stack}`);
@@ -878,9 +892,7 @@ async function sync({
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
-              '[in clipboard]'
-            )}${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${dcs} ${deployStamp()}`
           );
         }
       } else {
@@ -1033,7 +1045,7 @@ async function readMeta(
       sessionAffinity: _sessionAffinity
     };
   } catch (err) {
-    if (isTTY && err.code === 'MULTIPLE_MANIFESTS') {
+    if (isTTY && err.code === 'multiple_manifests') {
       debug('Multiple manifests found, disambiguating');
       log(
         `Two manifests found. Press [${chalk.bold(
@@ -1041,14 +1053,19 @@ async function readMeta(
         )}] to deploy or re-run with --flag`
       );
 
-      deploymentType = await promptOptions([
-        ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
-        ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
-      ]);
+      try {
+        deploymentType = await promptOptions([
+          ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+        ]);
+      } catch (_) {
+        throw err;
+      }
 
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
     }
+
     throw err;
   }
 }
@@ -1188,8 +1205,49 @@ function handleCreateDeployError(output, error) {
     );
     return 1;
   }
-  if (error instanceof CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan`);
+  if (error instanceof SchemaValidationFailed) {
+    const { message, params, keyword, dataPath } = error.meta;
+
+    if (params && params.additionalProperty) {
+      const prop = params.additionalProperty;
+
+      output.error(
+        `The property ${code(prop)} is not allowed in ${highlight(
+          'now.json'
+        )} when using Now 1.0 – please remove it.`
+      );
+
+      if (prop === 'build.env' || prop === 'builds.env') {
+        output.note(
+          `Do you mean ${code('build')} (object) with a property ${code(
+            'env'
+          )} (object) instead of ${code(prop)}?`
+        );
+      }
+
+      return 1;
+    }
+
+    if (keyword === 'type') {
+      const prop = dataPath.substr(1, dataPath.length);
+
+      output.error(
+        `The property ${code(prop)} in ${highlight(
+          'now.json'
+        )} can only be of type ${code(title(params.type))}.`
+      );
+
+      return 1;
+    }
+
+    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+
+    output.error(
+      `Failed to validate ${highlight(
+        'now.json'
+      )}: ${message}\nDocumentation: ${link}`
+    );
+
     return 1;
   }
   if (error instanceof TooManyCertificates) {
@@ -1215,6 +1273,10 @@ function handleCreateDeployError(output, error) {
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
     return 1;
   }
 

@@ -65,6 +65,7 @@ export default class Now extends EventEmitter {
 
       // Latest
       name,
+      project,
       wantsPublic,
       meta,
       regions,
@@ -72,7 +73,8 @@ export default class Now extends EventEmitter {
       env,
       build,
       followSymlinks = true,
-      forceNew = false
+      forceNew = false,
+      target = null
     }
   ) {
     const { log, warn, time } = this._output;
@@ -208,8 +210,13 @@ export default class Now extends EventEmitter {
         )
       );
 
-      const queryProps = {};
+      // This is a useful warning because it prevents people
+      // from getting confused about a deployment that renders 404.
+      if (files.length === 0 || files.every(item => item.file.startsWith('.'))) {
+        warn('There are no files (or only files starting with a dot) inside your deployment.');
+      }
 
+      const queryProps = {};
       const requestBody = isBuilds
         ? {
             version: 2,
@@ -217,6 +224,7 @@ export default class Now extends EventEmitter {
             build,
             public: wantsPublic || nowConfig.public,
             name,
+            project,
             files,
             meta,
             regions
@@ -228,6 +236,7 @@ export default class Now extends EventEmitter {
             public: wantsPublic || nowConfig.public,
             forceNew,
             name,
+            project,
             description,
             deploymentType: type,
             registryAuthToken: authToken,
@@ -243,7 +252,10 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = ['alias', 'github'];
+          const exclude = [
+            'github',
+            'scope'
+          ];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -266,6 +278,10 @@ export default class Now extends EventEmitter {
           queryProps.forceNew = 1;
         }
 
+        if (target) {
+          requestBody.target = target;
+        }
+
         if (isFile) {
           requestBody.routes = [
             {
@@ -277,7 +293,7 @@ export default class Now extends EventEmitter {
       }
 
       const query = qs.stringify(queryProps);
-      const version = isBuilds ? 'v6' : 'v4';
+      const version = isBuilds ? 'v9' : 'v4';
 
       const res = await this._fetch(
         `/${version}/now/deployments${query ? `?${query}` : ''}`,
@@ -297,6 +313,15 @@ export default class Now extends EventEmitter {
       }
 
       if (res.status === 429) {
+        if (body.error && body.error.code === 'builds_rate_limited') {
+          const err = new Error(body.error.message);
+          err.status = res.status;
+          err.retryAfter = 'never';
+          err.code = body.error.code;
+
+          return bail(err);
+        }
+
         let msg = 'You have been creating deployments at a very fast pace. ';
 
         if (body.error && body.error.limit && body.error.limit.reset) {
@@ -329,6 +354,14 @@ export default class Now extends EventEmitter {
         res.status === 400 &&
         body.error &&
         body.error.code === 'missing_files'
+      ) {
+        return body;
+      }
+
+      if (
+        res.status === 404 &&
+        body.error &&
+        body.error.code === 'not_found'
       ) {
         return body;
       }
@@ -467,7 +500,6 @@ export default class Now extends EventEmitter {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/octet-stream',
-                  'Content-Length': data.length,
                   'x-now-digest': sha,
                   'x-now-size': data.length,
                   ...additionalHeaders
@@ -584,7 +616,9 @@ export default class Now extends EventEmitter {
 
   async findDeployment(hostOrId) {
     const { debug } = this._output;
-    let id = !hostOrId.includes('.') && hostOrId;
+
+    let id = hostOrId && !hostOrId.includes('.');
+    let isBuilds = null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -619,9 +653,10 @@ export default class Now extends EventEmitter {
       );
 
       id = deployment.id;
+      isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/v5/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${isBuilds ? 'v9' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {

@@ -1,5 +1,4 @@
 import { stringify as stringifyQuery } from 'querystring';
-import { hostname } from 'os';
 import fetch from 'node-fetch';
 import debugFactory from 'debug';
 import promptEmail from 'email-prompt';
@@ -24,6 +23,7 @@ import getNowDir from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
+import loginOrSignup from '../util/login/login-or-signup.ts'
 
 const debug = debugFactory('now:sh:login');
 
@@ -51,75 +51,6 @@ const help = () => {
 
     ${chalk.cyan('$ now login john@doe.com')}
 `);
-};
-
-// POSTs to /now/registration – either creates an account or performs a login
-// returns {token, securityCode}
-// token: should be used to verify the status of the login process
-// securityCode: will be sent to the user in the email body
-const getVerificationData = async ({ apiUrl, email }) => {
-  const hyphens = new RegExp('-', 'g');
-  const host = hostname()
-    .replace(hyphens, ' ')
-    .replace('.local', '');
-  const tokenName = `Now CLI on ${host}`;
-
-  const data = JSON.stringify({ email, tokenName });
-  debug('POST /now/registration');
-
-  let res;
-
-  try {
-    res = await fetch(`${apiUrl}/now/registration`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
-        'User-Agent': ua
-      },
-      body: data
-    });
-  } catch (err) {
-    debug('error fetching /now/registration: %O', err.stack);
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to login: ${err.message}`
-      )
-    );
-  }
-
-  debug('parsing response from POST /now/registration');
-
-  let body;
-  try {
-    body = await res.json();
-  } catch (err) {
-    debug(
-      `error parsing the response from /now/registration as JSON – got %O`,
-      err.stack
-    );
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to log in: ${err.message}`
-      )
-    );
-  }
-
-  if (!res.ok) {
-    debug(
-      'error response from POST /now/registration: %d %j',
-      res.status,
-      body
-    );
-    const { error = {} } = body;
-    const message =
-      error.code === 'invalid_email'
-        ? 'Invalid email address'
-        : `Unexpected error: ${error.message}`;
-    throw new Error(message);
-  }
-
-  return body;
 };
 
 const verify = async ({ apiUrl, email, verificationToken }) => {
@@ -258,12 +189,12 @@ const login = async ctx => {
   stopSpinner = wait('Sending you an email');
 
   try {
-    const data = await getVerificationData({ apiUrl, email });
+    const data = await loginOrSignup(apiUrl, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(err.message);
+    console.log(error(err.message))
     return 1;
   }
 

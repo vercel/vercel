@@ -1,7 +1,9 @@
+import bytes from 'bytes';
 import { Response } from 'fetch-h2';
 import { NowError } from './now-error';
 import param from './output/param';
 import cmd from './output/cmd';
+import code from './output/code';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -85,37 +87,6 @@ export class MissingUser extends NowError<'MISSING_USER', {}> {
 }
 
 /**
- * When you're passing two different options in the cli that exclude each
- * other, this error is thrown with the name of the conflicting property.
- */
-export class ConflictingOption extends NowError<
-  'CONFLICTING_OPTION',
-  { name: string }
-> {
-  constructor(name: string) {
-    super({
-      code: 'CONFLICTING_OPTION',
-      message: `You can't use at the same time a positive and negative value for option ${name}`,
-      meta: { name }
-    });
-  }
-}
-
-/**
- * Thrown when the user tries to add a domain forcing the CDN enabled but he's
- * on the OSS plan and we don't allow it.
- */
-export class CDNNeedsUpgrade extends NowError<'CDN_NEEDS_UPGRADE', {}> {
-  constructor() {
-    super({
-      code: 'CDN_NEEDS_UPGRADE',
-      meta: {},
-      message: `You can't add domains with CDN enabled from an OSS plan.`
-    });
-  }
-}
-
-/**
  * Thrown when a user tries to add a domain that exists already for a different
  * user under a different context.
  */
@@ -149,6 +120,19 @@ export class DomainPermissionDenied extends NowError<
   }
 }
 
+export class DomainExternal extends NowError<
+  'DOMAIN_EXTERNAL',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_EXTERNAL',
+      meta: { domain },
+      message: `The domain ${domain} must point to zeit.world.`
+    });
+  }
+}
+
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
@@ -157,7 +141,22 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${cmd('now billing add')}.`
+      message: `Not able to purchase. Please add a payment method using ${cmd(
+        'now billing add'
+      )}.`
+    });
+  }
+}
+
+export class InvalidTransferAuthCode extends NowError<
+  'INVALID_TRANSFER_AUTH_CODE',
+  { domain: string; authCode: string }
+> {
+  constructor(domain: string, authCode: string) {
+    super({
+      code: 'INVALID_TRANSFER_AUTH_CODE',
+      meta: { domain, authCode },
+      message: `The provided auth code does not match with the one expected by the current registar`
     });
   }
 }
@@ -174,6 +173,19 @@ export class DomainNotFound extends NowError<
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
       message: `The domain ${domain} can't be found.`
+    });
+  }
+}
+
+export class DomainNotVerified extends NowError<
+  'DOMAIN_NOT_VERIFIED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_VERIFIED',
+      meta: { domain },
+      message: `The domain ${domain} is not verified.`
     });
   }
 }
@@ -235,11 +247,24 @@ export class InvalidDomain extends NowError<
   'INVALID_DOMAIN',
   { domain: string }
 > {
-  constructor(domain: string) {
+  constructor(domain: string, message?: string | null) {
     super({
       code: 'INVALID_DOMAIN',
       meta: { domain },
-      message: `The domain ${domain} is not valid.`
+      message: message || `The domain ${domain} is not valid.`
+    });
+  }
+}
+
+export class InvalidDeploymentId extends NowError<
+  'INVALID_DEPLOYMENT_ID',
+  { id: string }
+> {
+  constructor(id: string) {
+    super({
+      code: 'INVALID_DEPLOYMENT_ID',
+      meta: { id },
+      message: `The deployment id "${id}" is not valid.`
     });
   }
 }
@@ -296,6 +321,23 @@ export class DomainServiceNotAvailable extends NowError<
 }
 
 /**
+ * Returned when the user tries to purchase a domain but the API returns
+ * an error telling that it is not available.
+ */
+export class DomainNotTransferable extends NowError<
+  'DOMAIN_NOT_TRANSFERABLE',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_NOT_TRANSFERABLE',
+      meta: { domain },
+      message: `The domain ${domain} is not available to be transferred.`
+    });
+  }
+}
+
+/**
  * Returned when there is an expected error during the domain purchase.
  */
 export class UnexpectedDomainPurchaseError extends NowError<
@@ -307,6 +349,36 @@ export class UnexpectedDomainPurchaseError extends NowError<
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: { domain },
       message: `An unexpected error happened while purchasing.`
+    });
+  }
+}
+
+/**
+ * Returned when there is an expected error charging the card.
+ */
+export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
+  constructor() {
+    super({
+      code: 'DOMAIN_PAYMENT_ERROR',
+      meta: {},
+      message: `Your card was declined.`
+    });
+  }
+}
+
+/**
+ * Returned during purchase in alias when the domain was purchased but the
+ * order is pending so the alias can't be completed yet
+ */
+export class DomainPurchasePending extends NowError<
+  'DOMAIN_PURCHASE_PENDING',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PURCHASE_PENDING',
+      meta: { domain },
+      message: `The domain purchase for ${domain} is pending.`
     });
   }
 }
@@ -332,13 +404,36 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
  */
 export class DomainConfigurationError extends NowError<
   'DOMAIN_CONFIGURATION_ERROR',
-  { domain: string; subdomain: string; external: boolean }
+  { domain: string; subdomain: string | null; external: boolean }
 > {
-  constructor(domain: string, subdomain: string, external: boolean) {
+  constructor(domain: string, subdomain: string | null, external: boolean) {
     super({
       code: 'DOMAIN_CONFIGURATION_ERROR',
       meta: { domain, subdomain, external },
       message: `The domain is unreachable to solve the HTTP challenge needed for the certificate.`
+    });
+  }
+}
+
+export class CertNotFound extends NowError<'CERT_NOT_FOUND', { id: string }> {
+  constructor(id: string) {
+    super({
+      code: 'CERT_NOT_FOUND',
+      meta: { id },
+      message: `The cert ${id} can't be found.`
+    });
+  }
+}
+
+export class CertsPermissionDenied extends NowError<
+  'CERTS_PERMISSION_DENIED',
+  { domain: string }
+> {
+  constructor(context: string, domain: string) {
+    super({
+      code: 'CERTS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to ${domain}'s certs under ${context}.`
     });
   }
 }
@@ -371,6 +466,23 @@ export class TooManyCertificates extends NowError<
       message: `Too many certificates already issued for exact set of domains: ${domains.join(
         ', '
       )}`
+    });
+  }
+}
+
+/**
+ * Returned when the user tries to create a certificate but LE API returns
+ * a CAA conflict error, preventing cert issuance.
+ */
+export class ConflictingCAARecord extends NowError<
+  'CONFLICTING_CAA_RECORD',
+  { domains: string[] }
+> {
+  constructor(domains: string[], message: string) {
+    super({
+      code: 'CONFLICTING_CAA_RECORD',
+      meta: { domains },
+      message
     });
   }
 }
@@ -452,11 +564,24 @@ export class DeploymentNotFound extends NowError<
   'DEPLOYMENT_NOT_FOUND',
   { id: string; context: string }
 > {
-  constructor(id: string, context: string) {
+  constructor({ context, id = '' }: { context: string; id: string }) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
       message: `Can't find the deployment ${id} under the context ${context}`
+    });
+  }
+}
+
+export class DeploymentFailedAliasImpossible extends NowError<
+  'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
+      meta: {},
+      message: `The deployment build has failed and cannot be aliased`
     });
   }
 }
@@ -474,6 +599,19 @@ export class DeploymentPermissionDenied extends NowError<
       code: 'DEPLOYMENT_PERMISSION_DENIED',
       meta: { id, context },
       message: `You don't have access to the deployment ${id} under ${context}.`
+    });
+  }
+}
+
+export class DeploymentTypeUnsupported extends NowError<
+  'DEPLOYMENT_TYPE_UNSUPPORTED',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'DEPLOYMENT_TYPE_UNSUPPORTED',
+      meta: {},
+      message: `This region only accepts Serverless Docker Deployments`
     });
   }
 }
@@ -523,13 +661,13 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
 
 export class ForbiddenScaleMinInstances extends NowError<
   'FORBIDDEN_SCALE_MIN_INSTANCES',
-  { url: string; min: number }
+  { url: string; max: number }
 > {
-  constructor(url: string, min: number) {
+  constructor(url: string, max: number) {
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
-      meta: { url, min },
-      message: `You can't scale to more than ${min} min instances with your current plan.`
+      meta: { url, max },
+      message: `You can't scale to more than ${max} min instances with your current plan.`
     });
   }
 }
@@ -729,6 +867,269 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
       code: 'INVALID_CERT',
       meta: {},
       message: `The provided custom certificate is invalid and couldn't be added`
+    });
+  }
+}
+
+export class DNSPermissionDenied extends NowError<
+  'DNS_PERMISSION_DENIED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DNS_PERMISSION_DENIED',
+      meta: { domain },
+      message: `You don't have access to the DNS records of ${domain}.`
+    });
+  }
+}
+
+export class DNSInvalidPort extends NowError<'DNS_INVALID_PORT', {}> {
+  constructor() {
+    super({
+      code: 'DNS_INVALID_PORT',
+      meta: {},
+      message: `Invalid <port> parameter. A number was expected`
+    });
+  }
+}
+
+export class DNSInvalidType extends NowError<
+  'DNS_INVALID_TYPE',
+  { type: string }
+> {
+  constructor(type: string) {
+    super({
+      code: 'DNS_INVALID_TYPE',
+      meta: { type },
+      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`
+    });
+  }
+}
+
+export class DNSConflictingRecord extends NowError<
+  'DNS_CONFLICTING_RECORD',
+  { record: string }
+> {
+  constructor(record: string) {
+    super({
+      code: 'DNS_CONFLICTING_RECORD',
+      meta: { record },
+      message: ` A conflicting record exists "${record}".`
+    });
+  }
+}
+
+export class DomainRemovalConflict extends NowError<
+  'domain_removal_conflict',
+  {
+    aliases: string[];
+    certs: string[];
+    pendingAsyncPurchase: boolean;
+    suffix: boolean;
+    transferring: boolean;
+    resolvable: boolean;
+  }
+> {
+  constructor({
+    aliases,
+    certs,
+    message,
+    pendingAsyncPurchase,
+    resolvable,
+    suffix,
+    transferring
+  }: {
+    aliases: string[];
+    certs: string[];
+    message: string;
+    pendingAsyncPurchase: boolean;
+    resolvable: boolean;
+    suffix: boolean;
+    transferring: boolean;
+  }) {
+    super({
+      code: 'domain_removal_conflict',
+      meta: {
+        aliases,
+        certs,
+        pendingAsyncPurchase,
+        suffix,
+        transferring,
+        resolvable
+      },
+      message
+    });
+  }
+}
+
+export class DomainMoveConflict extends NowError<
+  'domain_move_conflict',
+  { pendingAsyncPurchase: boolean; suffix: boolean; resolvable: boolean }
+> {
+  constructor({
+    message,
+    pendingAsyncPurchase,
+    resolvable,
+    suffix
+  }: {
+    message: string;
+    pendingAsyncPurchase: boolean;
+    resolvable: boolean;
+    suffix: boolean;
+  }) {
+    super({
+      code: 'domain_move_conflict',
+      meta: {
+        pendingAsyncPurchase,
+        resolvable,
+        suffix
+      },
+      message
+    });
+  }
+}
+
+export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
+  constructor(email: string, message: string = 'Invalid Email') {
+    super({
+      code: 'INVALID_EMAIL',
+      message,
+      meta: { email }
+    });
+  }
+}
+
+export class InvalidMoveDestination extends NowError<
+  'INVALID_MOVE_DESTINATION',
+  { destination: string }
+> {
+  constructor(destination: string) {
+    super({
+      code: 'INVALID_MOVE_DESTINATION',
+      message: `Invalid move destination "${destination}"`,
+      meta: { destination }
+    });
+  }
+}
+
+export class InvalidMoveToken extends NowError<
+  'INVALID_MOVE_TOKEN',
+  { token: string }
+> {
+  constructor(token: string) {
+    super({
+      code: 'INVALID_MOVE_TOKEN',
+      message: `Invalid move token "${token}"`,
+      meta: { token }
+    });
+  }
+}
+
+export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
+  constructor() {
+    super({
+      code: 'NO_BUILDER_CACHE',
+      message: 'Could not find cache directory for now-builders.',
+      meta: {}
+    });
+  }
+}
+
+export class BuilderCacheCleanError extends NowError<
+  'BUILDER_CACHE_CLEAN_FAILED',
+  { path: string }
+> {
+  constructor(path: string, message: string) {
+    super({
+      code: 'BUILDER_CACHE_CLEAN_FAILED',
+      message: `Error cleaning builder cache: ${message}`,
+      meta: { path }
+    });
+  }
+}
+
+export class LambdaSizeExceededError extends NowError<
+  'MAX_LAMBDA_SIZE_EXCEEDED',
+  { size: number; maxLambdaSize: number }
+> {
+  constructor(size: number, maxLambdaSize: number) {
+    super({
+      code: 'MAX_LAMBDA_SIZE_EXCEEDED',
+      message: `The lambda function size (${bytes(
+        size
+      ).toLowerCase()}) exceeds the configured limit (${bytes(
+        maxLambdaSize
+      ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+      meta: { size, maxLambdaSize }
+    });
+  }
+}
+
+export class MissingDotenvVarsError extends NowError<
+  'MISSING_DOTENV_VARS',
+  { type: string; missing: string[] }
+> {
+  constructor(type: string, missing: string[]) {
+    let message: string;
+
+    if (missing.length === 1) {
+      message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(
+        type
+      )} file`;
+    } else {
+      message = [
+        `The following env vars are not defined in ${code(type)} file:`,
+        ...missing.map(name => `  - ${JSON.stringify(name)}`)
+      ].join('\n');
+    }
+
+    message += '\nRead more: https://err.sh/now-cli/missing-env-file';
+
+    super({
+      code: 'MISSING_DOTENV_VARS',
+      message,
+      meta: { type, missing }
+    });
+  }
+}
+
+export class UnauthorizedCertsRequestError extends NowError<
+  'UNAUTHORIZED_CERTS_REQUEST_ERROR',
+  { detail: string; type: string; domain: string }
+> {
+  constructor(detail: string, type: string, domain: string) {
+    super({
+      code: 'UNAUTHORIZED_CERTS_REQUEST_ERROR',
+      meta: { detail, type, domain },
+      message: 'ACME request was unauthorized'
+    });
+  }
+}
+
+export class CertsDNSError extends NowError<
+  'CERTS_DNS_ERROR',
+  { detail: string; cns: string[] }
+> {
+  constructor(detail: string, cns: string[]) {
+    super({
+      code: 'CERTS_DNS_ERROR',
+      meta: { detail, cns },
+      message:
+        'There was a problem with a DNS query during identifier validation'
+    });
+  }
+}
+
+export class BuildsRateLimited extends NowError<
+  'BUILDS_RATE_LIMITED',
+  { }
+> {
+  constructor(message: string) {
+    super({
+      code: 'BUILDS_RATE_LIMITED',
+      meta: {},
+      message
     });
   }
 }

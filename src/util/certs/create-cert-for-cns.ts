@@ -21,18 +21,33 @@ export default async function createCertForCns(
   } catch (error) {
     cancelWait();
     if (error.code === 'configuration_error') {
-      const { domain, subdomain } = psl.parse(error.domain);
+      const parsedDomain = psl.parse(error.domain);
+      if (parsedDomain.error) {
+        throw new ERRORS.DomainConfigurationError(
+          error.domain,
+          null,
+          Boolean(error.external)
+        );
+      }
+
+      const { domain, subdomain } = parsedDomain;
       return new ERRORS.DomainConfigurationError(
-        domain as string,
-        subdomain as string,
+        domain || error.domain,
+        subdomain,
         Boolean(error.external)
       );
     }
     if (error.code === 'forbidden') {
       return new ERRORS.DomainPermissionDenied(error.domain, context);
     }
+    if (error.code === 'conflicting_caa_record') {
+      return new ERRORS.ConflictingCAARecord(
+        error.domain ? [error.domain] : cns,
+        error.message
+      );
+    }
     if (error.code === 'rate_limited') {
-      return new ERRORS.TooManyCertificates(error.domains);
+      return new ERRORS.TooManyCertificates(cns);
     }
     if (error.code === 'too_many_requests') {
       return new ERRORS.TooManyRequests('certificates', error.retryAfter);
@@ -48,6 +63,16 @@ export default async function createCertForCns(
     }
     if (error.code === 'wildcard_not_allowed') {
       return new ERRORS.WildcardNotAllowed(error.domain);
+    }
+    if (error.code === 'unauthorized_request_error') {
+      return new ERRORS.UnauthorizedCertsRequestError(
+        error.response.detail,
+        error.response.type,
+        error.response.domain
+      );
+    }
+    if (error.code === 'dns_error') {
+      return new ERRORS.CertsDNSError(error.detail, cns);
     }
     throw error;
   }

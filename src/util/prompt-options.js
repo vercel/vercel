@@ -17,6 +17,7 @@ function promptOptions(opts) {
         }
 
         process.stdin.removeListener('data', ondata);
+        process.stdin.pause();
       };
 
       // Ctrl + C

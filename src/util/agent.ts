@@ -1,6 +1,8 @@
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 import { JsonBody, StreamBody, context } from 'fetch-h2';
+
+// Packages
 import { parse } from 'url';
 import Sema from 'async-sema';
 import createOutput, { Output } from './output/create-output';
@@ -153,8 +155,6 @@ export default class NowAgent {
       return res;
     };
 
-    // We have to set the `host` manually when using http2
-    opts.headers.host = this._url.replace(/^https?:\/\//, '');
     return currentContext
       .fetch(this._url + path, { ...opts, body })
       .then(res => handleCompleted(res))

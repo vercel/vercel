@@ -1,7 +1,7 @@
+import chalk from 'chalk';
 import { DeploymentScale } from '../../types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
-import chalk from 'chalk';
 import Client from '../client';
 import joinWords from '../output/join-words';
 import wait from '../output/wait';
@@ -36,7 +36,7 @@ export default async function setScale(
   } catch (error) {
     cancelWait();
     if (error.code === 'forbidden_min_instances') {
-      return new ERRORS.ForbiddenScaleMinInstances(url, error.min);
+      return new ERRORS.ForbiddenScaleMinInstances(url, error.max);
     }
     if (error.code === 'forbidden_max_instances') {
       return new ERRORS.ForbiddenScaleMaxInstances(url, error.max);

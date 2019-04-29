@@ -41,7 +41,7 @@ const help = () => {
     --until=${chalk.bold.underline(
       'UNTIL'
     )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
     'MODE'
   )}         Specify the output format (${Object.keys(logPrinters).join(
@@ -150,7 +150,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -211,7 +211,7 @@ export default async function main(ctx) {
   const storage = [];
   const storeEvent = event => storage.push(event);
 
-  await printEvents(now, deployment.uid, currentTeam, {
+  await printEvents(now, deployment.uid || deployment.id, currentTeam, {
     mode: 'logs',
     onEvent: storeEvent,
     quiet: false,
@@ -240,7 +240,7 @@ export default async function main(ctx) {
       since: since2,
       follow: true
     };
-    await printEvents(now, deployment.uid, currentTeam, {
+    await printEvents(now, deployment.uid || deployment.id, currentTeam, {
       mode: 'logs',
       onEvent: printEvent,
       quiet: false,

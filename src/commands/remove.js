@@ -33,7 +33,7 @@ const help = () => {
   )}        Login token
     -y, --yes                      Skip confirmation
     -s, --safe                     Skip deployments with an active alias
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
@@ -104,7 +104,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }

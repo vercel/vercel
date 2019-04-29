@@ -1,6 +1,6 @@
+import chalk from 'chalk';
 import { DomainConfigurationError } from './errors-ts';
 import { Output } from './output';
-import chalk from 'chalk';
 import dnsTable from './format-dns-table';
 
 export function handleDomainConfigurationError(
@@ -35,7 +35,7 @@ export function handleDomainConfigurationError(
       `  We configured them for you, but the propagation may take a few minutes. Please try again later.\n`
     );
     output.print(
-      '  Read more: https://err.sh/now-cli/dns-configuration-error\n'
+      '  Read more: https://err.sh/now-cli/dns-configuration-error\n\n'
     );
   }
 }

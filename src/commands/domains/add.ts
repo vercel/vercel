@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import { NowContext, Domain } from '../../types';
+import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import addDomain from '../../util/domains/add-domain';
@@ -9,10 +9,9 @@ import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
-import getBooleanOptionValue from '../../util/get-boolean-option-value';
-import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import param from '../../util/output/param';
 
 type Options = {
   '--cdn': boolean;
@@ -26,7 +25,10 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -36,7 +38,7 @@ export default async function add(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -44,11 +46,8 @@ export default async function add(
     throw err;
   }
 
-  const cdnEnabled = getBooleanOptionValue(opts, 'cdn');
-  if (cdnEnabled instanceof ERRORS.ConflictingOption) {
-    output.error(
-      `You can't use ${cmd('--cdn')} and ${cmd('--no-cdn')} in the same command`
-    );
+  if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
+    output.error(`Toggling CF from Now CLI is deprecated.`);
     return 1;
   }
 
@@ -58,9 +57,15 @@ export default async function add(
   }
 
   const domainName = String(args[0]);
-  const { domain, subdomain } = psl.parse(domainName);
+  const parsedDomain = psl.parse(domainName);
+  if (parsedDomain.error) {
+    output.error(`The provided domain name ${param(domainName)} is invalid`);
+    return 1;
+  }
+
+  const { domain, subdomain } = parsedDomain;
   if (!domain) {
-    output.error(`The domain '${domainName}' is not valid.`);
+    output.error(`The provided domain '${param(domainName)}' is not valid.`);
     return 1;
   }
 
@@ -75,16 +80,7 @@ export default async function add(
   }
 
   const addStamp = stamp();
-  const addedDomain = await addDomain(
-    client,
-    domainName,
-    contextName,
-    cdnEnabled
-  );
-  if (addedDomain instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan.`);
-    return 1;
-  }
+  const addedDomain = await addDomain(client, domainName, contextName);
 
   if (addedDomain instanceof ERRORS.InvalidDomain) {
     output.error(
@@ -146,7 +142,7 @@ export default async function add(
         'now domains verify <domain>'
       )}\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
   }
 
   return 0;

@@ -35,7 +35,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     -a, --all                      See all instances for each deployment (requires [app])
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
@@ -115,7 +115,7 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       error(err.message);
       return 1;
     }
@@ -254,12 +254,12 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['app', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
             [
-              dep.name,
+              getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               dep.instanceCount == null || dep.type === 'LAMBDAS'
                 ? chalk.gray('-')
@@ -296,6 +296,15 @@ export default async function main(ctx) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+}
+
+function getProjectName(d) {
+  // We group both file and files into a single project
+  if (d.name === 'file') {
+    return 'files';
+  }
+
+  return d.name
 }
 
 // renders the state string

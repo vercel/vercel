@@ -25,7 +25,7 @@ export default async function* verifyDeploymentScale(
   scale: DeploymentScale,
   options: Options = {}
 ) {
-  const { timeout = ms('3m') } = options;
+  const { timeout = ms('5m') } = options;
   const { pollingInterval = 2000 } = options;
   const getPollDeploymentInstances = createPollingFn(
     () => getDeploymentInstances(client, deploymentId, uuid()),
@@ -48,7 +48,7 @@ export default async function* verifyDeploymentScale(
     if (error) {
       // These ResponseErrors aren't typed yet :(
       // @ts-ignore
-      if (err.status !== 'not_ready') {
+      if (error.status !== 'not_ready') {
         throw error;
       }
     } else if (instances) {

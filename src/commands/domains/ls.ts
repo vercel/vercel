@@ -6,7 +6,6 @@ import table from 'text-table';
 import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
-import isDomainExternal from '../../util/domains/is-domain-external';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
@@ -32,7 +31,7 @@ export default async function ls(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -56,7 +55,7 @@ export default async function ls(
     )} ${chalk.gray(lsStamp())}\n`
   );
   if (domains.length > 0) {
-    console.log(formatDomainsTable(domains));
+    console.log(`${formatDomainsTable(domains)}\n`);
   }
 
   return 0;
@@ -66,12 +65,18 @@ function formatDomainsTable(domains: Domain[]) {
   const current = new Date();
   return table(
     [
-      ['', chalk.gray('domain'), chalk.gray('serviceType'), chalk.gray('verified'), chalk.gray('cdn'), chalk.gray('age')].map(s => chalk.dim(s)),
+      [
+        '',
+        chalk.gray('domain'),
+        chalk.gray('serviceType'),
+        chalk.gray('verified'),
+        chalk.gray('cdn'),
+        chalk.gray('age')
+      ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
-        const cdnEnabled = domain.cdnEnabled || false;
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, domain.serviceType, domain.verified, cdnEnabled, time];
+        return ['', url, domain.serviceType, domain.verified, true, time];
       })
     ],
     {
