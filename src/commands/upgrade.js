@@ -33,23 +33,29 @@ const help = type => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} ${type === 'upgrade'
-    ? 'Upgrade to the Unlimited plan'
-    : 'Downgrade to the Free plan'}
+  ${chalk.gray('–')} ${
+    type === 'upgrade'
+      ? 'Upgrade to the Unlimited plan'
+      : 'Downgrade to the Free plan'
+  }
 
       ${chalk.cyan(`$ now ${type}`)}
-      ${type === 'upgrade'
-        ? `
+      ${
+        type === 'upgrade'
+          ? `
       ${chalk.yellow('NOTE:')} ${chalk.gray(
-            'Make sure you have a payment method, or add one:'
-          )}
+              'Make sure you have a payment method, or add one:'
+            )}
 
       ${chalk.cyan(`$ now billing add`)}
       `
-        : ''}
-  ${chalk.gray('–')} ${type === 'upgrade'
-    ? 'Upgrade to the Unlimited plan without confirming'
-    : 'Downgrade to the Free plan without confirming'}
+          : ''
+      }
+  ${chalk.gray('–')} ${
+    type === 'upgrade'
+      ? 'Upgrade to the Unlimited plan without confirming'
+      : 'Downgrade to the Free plan without confirming'
+  }
 
       ${chalk.cyan(`$ now ${type} --yes`)}
   `);
@@ -145,7 +151,10 @@ export default async function main(ctx) {
   const output = createOutput({ debug: debugEnabled });
   const { log, success } = output;
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,

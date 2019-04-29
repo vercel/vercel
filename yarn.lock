@@ -2184,6 +2184,14 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
+editorconfig-checker@2.0.8:
+  version "2.0.8"
+  resolved "https://registry.yarnpkg.com/editorconfig-checker/-/editorconfig-checker-2.0.8.tgz#d4ac62f8294b7d3efc8301153abeb58b12f9156f"
+  integrity sha512-3uj37kvyI9WeiprooUsNg+UkmymqgpIpN4ExYajT+Lhe4z16Q82xYXSPNbD1bFN+hkj+2cZkghsiHlPGRXgA4g==
+  dependencies:
+    request "^2.88.0"
+    tar "^4.4.8"
+
 email-prompt@0.3.2:
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/email-prompt/-/email-prompt-0.3.2.tgz#2312e4474f3d67d660cf4e41c5033af59aa2179c"
@@ -5614,7 +5622,7 @@ request-progress@~3.0.0:
   dependencies:
     throttleit "^1.0.0"
 
-request@^2.87.0, request@~2.88.0:
+request@^2.87.0, request@^2.88.0, request@~2.88.0:
   version "2.88.0"
   resolved "https://registry.yarnpkg.com/request/-/request-2.88.0.tgz#9c2fca4f7d35b592efe57c7f0a55e81052124fef"
   integrity sha512-NAqBSrijGLZdM0WZNsInLJpkJokL72XYjUpnB0iwsRgxh7dB6COrHnTBNwN0E+lHDAJzu7kLAkDeY08z2/A0hg==
@@ -6332,7 +6340,7 @@ tar-stream@^1.1.2, tar-stream@^1.5.2:
     to-buffer "^1.1.1"
     xtend "^4.0.0"
 
-tar@4.4.8, tar@^4:
+tar@4.4.8, tar@^4, tar@^4.4.8:
   version "4.4.8"
   resolved "https://registry.yarnpkg.com/tar/-/tar-4.4.8.tgz#b19eec3fde2a96e64666df9fdb40c5ca1bc3747d"
   integrity sha512-LzHF64s5chPQQS0IYBn9IN5h3i98c12bo4NCO7e0sGM2llXQ3p2FGC5sdENN4cTW48O915Sh+x+EXx7XW96xYQ==

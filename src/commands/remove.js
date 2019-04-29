@@ -91,7 +91,10 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
@@ -155,9 +158,9 @@ export default async function main(ctx) {
 
   if (matches.length === 0) {
     log(
-      `Could not find ${argv.safe
-        ? 'unaliased'
-        : 'any'} deployments matching ${ids
+      `Could not find ${
+        argv.safe ? 'unaliased' : 'any'
+      } deployments matching ${ids
         .map(id => chalk.bold(`"${id}"`))
         .join(', ')}. Run ${cmd('now ls')} to list.`
     );

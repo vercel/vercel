@@ -75,7 +75,10 @@ export default async ctx => {
     return 2;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
 
   return run({ token, config });
 };

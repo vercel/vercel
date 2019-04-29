@@ -162,7 +162,9 @@ const downloadRepo = async repoPath => {
         'default'}.zip`;
       break;
     default:
-      url = `https://api.github.com/repos/${pathParts.main}/tarball/${pathParts.ref}`;
+      url = `https://api.github.com/repos/${pathParts.main}/tarball/${
+        pathParts.ref
+      }`;
   }
 
   try {

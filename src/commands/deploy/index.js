@@ -12,7 +12,11 @@ import * as parts from './args';
 import { handleError } from '../../util/error';
 
 export default async ctx => {
-  const { authConfig, config: { currentTeam }, apiUrl } = ctx;
+  const {
+    authConfig,
+    config: { currentTeam },
+    apiUrl
+  } = ctx;
   const combinedArgs = Object.assign({}, parts.legacyArgs, parts.latestArgs);
 
   let platformVersion = null;
@@ -159,5 +163,10 @@ export default async ctx => {
     );
   }
 
-  return require('./legacy').default(ctx, contextName, output, parts.legacyArgsMri);
+  return require('./legacy').default(
+    ctx,
+    contextName,
+    output,
+    parts.legacyArgsMri
+  );
 };

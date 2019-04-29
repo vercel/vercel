@@ -709,18 +709,15 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      let destUrl = dest
-      let decodedUrl = dest
+      let destUrl = dest;
+      let decodedUrl = dest;
       // make sure original query wasn't stripped
       if (!destUrl.includes('?') && (req.url || '').includes('?')) {
         destUrl = url.format(
-          Object.assign(
-            url.parse(destUrl),
-            { query: uri_args || {} }
-          )
-        )
+          Object.assign(url.parse(destUrl), { query: uri_args || {} })
+        );
         // this is just for nice logs
-        decodedUrl = decodeURIComponent(destUrl)
+        decodedUrl = decodeURIComponent(destUrl);
       }
       this.output.debug(`ProxyPass: ${decodedUrl}`);
       return proxyPass(req, res, destUrl, this.output);
@@ -752,7 +749,7 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '')
+      const origUrl = url.parse(req.url || '');
       const newUrl = url.format(
         Object.assign(origUrl, {
           pathname: `/${requestPath}`
@@ -904,7 +901,7 @@ export default class DevServer {
   /**
    * Serve project directory as a static deployment.
    */
-   serveProjectAsStatic = async (
+  serveProjectAsStatic = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string
@@ -1146,13 +1143,13 @@ function fileRemoved(
  *   - no `builds`
  *   - all `builds` have `@now/static` as `use`
  */
-function isStaticDeployment(
-  nowJson: NowConfig
-): boolean {
+function isStaticDeployment(nowJson: NowConfig): boolean {
   if (nowJson.builds instanceof Array) {
-    if (nowJson.builds.every(build => {
-      return build.use.split('@')[1] === 'now/static';
-    })) {
+    if (
+      nowJson.builds.every(build => {
+        return build.use.split('@')[1] === 'now/static';
+      })
+    ) {
       return true;
     }
     return false;

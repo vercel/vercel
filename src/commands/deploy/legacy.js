@@ -225,7 +225,10 @@ export default async function main(ctx, contextName, output, mriOpts) {
     'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
 
   try {
     return await sync({
@@ -239,7 +242,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   } catch (err) {
     await stopDeployment(err);
   }
-};
+}
 
 async function sync({
   contextName,
@@ -422,7 +425,10 @@ async function sync({
           'multiple_manifests'
         ];
 
-        if (err.code && print.includes(err.code) || err.name === 'JSONError') {
+        if (
+          (err.code && print.includes(err.code)) ||
+          err.name === 'JSONError'
+        ) {
           error(err.message);
           return 1;
         }
@@ -465,8 +471,9 @@ async function sync({
       dcIds = normalizeRegionsList(regions);
       if (dcIds instanceof InvalidRegionOrDCForScale) {
         error(
-          `The value "${dcIds.meta
-            .regionOrDC}" is not a valid region or DC identifier`
+          `The value "${
+            dcIds.meta.regionOrDC
+          }" is not a valid region or DC identifier`
         );
         await exit(1);
         return 1;
@@ -483,8 +490,8 @@ async function sync({
         {}
       );
     } else if (noScale) {
-      debug(`Option --no-scale was set. Skipping scale parameters`)
-      scale = {}
+      debug(`Option --no-scale was set. Skipping scale parameters`);
+      scale = {};
     } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
@@ -647,13 +654,15 @@ async function sync({
 
     const env = {};
 
-    env_.filter(v => Boolean(v)).forEach(([key, val]) => {
-      if (key in env) {
-        note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
-      }
+    env_
+      .filter(v => Boolean(v))
+      .forEach(([key, val]) => {
+        if (key in env) {
+          note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
+        }
 
-      env[key] = val;
-    });
+        env[key] = val;
+      });
 
     const metadata = Object.assign(
       {},
@@ -664,7 +673,13 @@ async function sync({
     let syncCount;
 
     try {
-      meta.name = getProjectName({argv, nowConfig, isFile, paths, pre: meta.name});
+      meta.name = getProjectName({
+        argv,
+        nowConfig,
+        isFile,
+        paths,
+        pre: meta.name
+      });
       log(`Using project ${chalk.bold(meta.name)}`);
       // $FlowFixMe
       const createArgs = Object.assign(
@@ -720,9 +735,9 @@ async function sync({
           }
 
           const size = bytes(now.syncAmount);
-          syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-            ? 's'
-            : ''}`;
+          syncCount = `${now.syncFileCount} file${
+            now.syncFileCount > 1 ? 's' : ''
+          }`;
           const bar = new Progress(
             `${chalk.gray(
               '>'
@@ -892,7 +907,9 @@ async function sync({
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
+              '[v1]'
+            )} ${dcs} ${deployStamp()}`
           );
         }
       } else {
@@ -1134,16 +1151,18 @@ function handleCreateDeployError(output, error) {
   if (error instanceof CantSolveChallenge) {
     if (error.meta.type === 'dns-01') {
       output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
+        `The certificate provider could not resolve the DNS queries for ${
+          error.meta.domain
+        }.`
       );
       output.print(
         `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
       );
     } else {
       output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
+        `The certificate provider could not resolve the HTTP queries for ${
+          error.meta.domain
+        }.`
       );
       output.print(
         `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
@@ -1260,10 +1279,12 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof TooManyRequests) {
     output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
+        error.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }

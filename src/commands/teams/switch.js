@@ -65,9 +65,9 @@ export default async function({ apiUrl, token, debug, args, config }) {
       updateCurrentTeam(config, newTeam);
       console.log(
         success(
-          `The team ${chalk.bold(
-            newTeam.name
-          )} (${newTeam.slug}) is now active!`
+          `The team ${chalk.bold(newTeam.name)} (${
+            newTeam.slug
+          }) is now active!`
         )
       );
       return 0;

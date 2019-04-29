@@ -101,7 +101,10 @@ const main = async argv_ => {
     return 1;
   }
 
-  if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
+  if (
+    localConfig instanceof NowError &&
+    !(localConfig instanceof ERRORS.CantFindConfig)
+  ) {
     output.error(`Failed to load local config file: ${localConfig.message}`);
     return 1;
   }
@@ -126,9 +129,9 @@ const main = async argv_ => {
   if (update && isTTY) {
     console.log(
       info(
-        `${chalk.bgRed(
-          'UPDATE AVAILABLE'
-        )} The latest version of Now CLI is ${update.latest}`
+        `${chalk.bgRed('UPDATE AVAILABLE')} The latest version of Now CLI is ${
+          update.latest
+        }`
       )
     );
     console.log(
@@ -136,7 +139,9 @@ const main = async argv_ => {
     );
     console.log(
       info(
-        `Changelog: https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+        `Changelog: https://github.com/zeit/now-cli/releases/tag/${
+          update.latest
+        }`
       )
     );
   }
@@ -152,8 +157,10 @@ const main = async argv_ => {
   if (!targetOrSubcommand) {
     if (argv['--version']) {
       console.log(
-        `${require('../package').version}${// $FlowFixMe
-        process.pkg ? '' : chalk.magenta(' (dev)')}`
+        `${require('../package').version}${
+          // $FlowFixMe
+          process.pkg ? '' : chalk.magenta(' (dev)')
+        }`
       );
       return 0;
     }
@@ -318,9 +325,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(
-              NOW_AUTH_CONFIG_PATH
-            )}" `}${err.message}`
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message
+          }`
         )
       );
       return 1;
@@ -470,11 +477,21 @@ const main = async argv_ => {
   const targetCommand = commands[subcommand];
 
   if (argv['--team']) {
-    output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
+    output.warn(
+      `The ${param('--team')} flag is deprecated. Please use ${param(
+        '--scope'
+      )} instead.`
+    );
   }
-  
-  if (typeof scope === 'string' && targetCommand !== 'login' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
-    const { authConfig: { token } } = ctx;
+
+  if (
+    typeof scope === 'string' &&
+    targetCommand !== 'login' &&
+    !(targetCommand === 'teams' && argv._[3] !== 'invite')
+  ) {
+    const {
+      authConfig: { token }
+    } = ctx;
     const client = new Client({ apiUrl, token });
 
     let user = null;

@@ -11,7 +11,10 @@ import strlen from '../../util/strlen.ts';
 import wait from '../../util/output/wait';
 
 export default async function ls(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
@@ -105,11 +108,11 @@ function printAliasTable(aliases) {
         a.rules && a.rules.length
           ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
           : // for legacy reasons, we might have situations
-            // where the deployment was deleted and the alias
-            // not collected appropriately, and we need to handle it
-            a.deployment && a.deployment.url
-            ? a.deployment.url
-            : chalk.gray('–'),
+          // where the deployment was deleted and the alias
+          // not collected appropriately, and we need to handle it
+          a.deployment && a.deployment.url
+          ? a.deployment.url
+          : chalk.gray('–'),
         a.alias,
         ms(Date.now() - new Date(a.created))
       ])

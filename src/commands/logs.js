@@ -136,7 +136,10 @@ export default async function main(ctx) {
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit'];
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const client = new Client({

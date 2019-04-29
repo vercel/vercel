@@ -23,7 +23,7 @@ import getNowDir from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
-import loginOrSignup from '../util/login/login-or-signup.ts'
+import loginOrSignup from '../util/login/login-or-signup.ts';
 
 const debug = debugFactory('now:sh:login');
 
@@ -75,7 +75,9 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
 
     throw new Error(
       error(
-        `An unexpected error occurred while trying to verify your login: ${err.message}`
+        `An unexpected error occurred while trying to verify your login: ${
+          err.message
+        }`
       )
     );
   }
@@ -92,7 +94,9 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
     );
     throw new Error(
       error(
-        `An unexpected error occurred while trying to verify your login: ${err.message}`
+        `An unexpected error occurred while trying to verify your login: ${
+          err.message
+        }`
       )
     );
   }
@@ -194,7 +198,7 @@ const login = async ctx => {
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(error(err.message))
+    console.log(error(err.message));
     return 1;
   }
 

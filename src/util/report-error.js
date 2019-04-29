@@ -44,17 +44,21 @@ export default async (sentry, error, apiUrl, configFiles) => {
     }
 
     // Report process.argv without sensitive data
-    let args
+    let args;
     try {
       args = getArgs(process.argv.slice(2), {});
     } catch (_) {}
 
     if (args) {
-      const flags = ['--env', '--build-env', '--token']
+      const flags = ['--env', '--build-env', '--token'];
       for (const flag of flags) {
         if (args[flag]) args[flag] = 'REDACTED';
       }
-      if (args._.length >= 4 && args._[0].startsWith('secret') && args._[1] === 'add') {
+      if (
+        args._.length >= 4 &&
+        args._[0].startsWith('secret') &&
+        args._[1] === 'add'
+      ) {
         args._[3] = 'REDACTED';
       }
       scope.setExtra('args', args);

@@ -9,7 +9,7 @@ export default function getRawMinFromArgs(args: string[]) {
     return toNumberOrAuto(args[3]);
   } if (args[3]) {
     return new InvalidMinForScale(args[3]);
-  } 
+  }
     return 0;
-  
+
 }

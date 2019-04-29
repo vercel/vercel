@@ -137,7 +137,7 @@ jobs:
             >-
               for file in ./packed/*.gz;
               do
-               github-release upload -R -t `git describe --tags` -n ${file##*/} -f $file
+                github-release upload -R -t `git describe --tags` -n ${file##*/} -f $file
               done
       - save_cache:
           key: v1-pkg-cache

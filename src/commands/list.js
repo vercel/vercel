@@ -102,7 +102,10 @@ export default async function main(ctx) {
   }
 
   const meta = parseMeta(argv['--meta']);
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam, includeScheme } = config;
   const client = new Client({
     apiUrl,
@@ -254,7 +257,9 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s =>
+          chalk.dim(s)
+        ),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -304,7 +309,7 @@ function getProjectName(d) {
     return 'files';
   }
 
-  return d.name
+  return d.name;
 }
 
 // renders the state string

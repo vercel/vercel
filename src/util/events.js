@@ -129,7 +129,9 @@ async function printEvents(
             o++;
             callOnOpenOnce();
 
-            const errorMessage = `Deployment event stream error: ${err.message}`;
+            const errorMessage = `Deployment event stream error: ${
+              err.message
+            }`;
             if (!findOpts.follow) {
               log(errorMessage);
               return;

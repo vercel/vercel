@@ -66,7 +66,7 @@ export default async ctx => {
   }
 };
 
-const revokeToken = async (token) => {
+const revokeToken = async token => {
   const options = {
     method: 'DELETE',
     headers: {

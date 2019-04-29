@@ -105,12 +105,14 @@ async function readMetaData(
 
     const labels = {};
 
-    dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
-      for (const key of Object.keys(args)) {
-        // Unescape and convert into string
-        labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
-      }
-    });
+    dockerfile
+      .filter(cmd => cmd.name === 'LABEL')
+      .forEach(({ args }) => {
+        for (const key of Object.keys(args)) {
+          // Unescape and convert into string
+          labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
+        }
+      });
 
     if (!name && labels.name) {
       name = labels.name;

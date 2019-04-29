@@ -24,7 +24,10 @@ import {
 } from '../../util/errors-ts';
 
 async function add(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const addStamp = stamp();
@@ -121,21 +124,24 @@ async function add(ctx, opts, args, output) {
     cancelWait();
     if (cert instanceof CantSolveChallenge) {
       output.error(
-        `We can't solve the ${cert.meta.type} challenge for domain ${cert.meta
-          .domain}.`
+        `We can't solve the ${cert.meta.type} challenge for domain ${
+          cert.meta.domain
+        }.`
       );
       if (cert.meta.type === 'dns-01') {
         output.error(
-          `The certificate provider could not resolve the DNS queries for ${cert
-            .meta.domain}.`
+          `The certificate provider could not resolve the DNS queries for ${
+            cert.meta.domain
+          }.`
         );
         output.print(
           `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
         );
       } else {
         output.error(
-          `The certificate provider could not resolve the HTTP queries for ${cert
-            .meta.domain}.`
+          `The certificate provider could not resolve the HTTP queries for ${
+            cert.meta.domain
+          }.`
         );
         output.print(
           `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
@@ -146,10 +152,12 @@ async function add(ctx, opts, args, output) {
     }
     if (cert instanceof TooManyRequests) {
       output.error(
-        `Too many requests detected for ${cert.meta
-          .api} API. Try again in ${ms(cert.meta.retryAfter * 1000, {
-          long: true
-        })}.`
+        `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(
+          cert.meta.retryAfter * 1000,
+          {
+            long: true
+          }
+        )}.`
       );
       return 1;
     }

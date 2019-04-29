@@ -11,7 +11,10 @@ import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen.ts';
 
 async function ls(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -84,11 +87,10 @@ function formatCertsTableBody(certsList) {
 }
 
 function formatCert(time, cert) {
-  return cert.cns.map(
-    (cn, idx) =>
-      idx === 0
-        ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
-        : formatCertNonFirstCn(cn, cert.cns.length > 1)
+  return cert.cns.map((cn, idx) =>
+    idx === 0
+      ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
+      : formatCertNonFirstCn(cn, cert.cns.length > 1)
   );
 }
 

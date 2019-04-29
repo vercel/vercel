@@ -212,8 +212,13 @@ export default class Now extends EventEmitter {
 
       // This is a useful warning because it prevents people
       // from getting confused about a deployment that renders 404.
-      if (files.length === 0 || files.every(item => item.file.startsWith('.'))) {
-        warn('There are no files (or only files starting with a dot) inside your deployment.');
+      if (
+        files.length === 0 ||
+        files.every(item => item.file.startsWith('.'))
+      ) {
+        warn(
+          'There are no files (or only files starting with a dot) inside your deployment.'
+        );
       }
 
       const queryProps = {};
@@ -252,10 +257,7 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = [
-            'github',
-            'scope'
-          ];
+          const exclude = ['github', 'scope'];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -358,11 +360,7 @@ export default class Now extends EventEmitter {
         return body;
       }
 
-      if (
-        res.status === 404 &&
-        body.error &&
-        body.error.code === 'not_found'
-      ) {
+      if (res.status === 404 && body.error && body.error.code === 'not_found') {
         return body;
       }
 
@@ -442,7 +440,9 @@ export default class Now extends EventEmitter {
     if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
-          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
+          chalk`Using Node.js {bold ${
+            deployment.nodeVersion
+          }} (requested: {dim \`${engines.node}\`})`
         );
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
@@ -656,7 +656,9 @@ export default class Now extends EventEmitter {
       isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/${isBuilds ? 'v9' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${
+      isBuilds ? 'v9' : 'v5'
+    }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
