@@ -428,7 +428,7 @@ export default class DevServer {
     );
     if (needsInitialBuild.length > 0) {
       this.output.log(
-        `Running ${needsInitialBuild.length} initial build${
+        `Setting up ${needsInitialBuild.length} Builder${
           needsInitialBuild.length === 1 ? '' : 's'
         }`
       );
@@ -437,7 +437,7 @@ export default class DevServer {
         await executeBuild(nowJson, this, this.files, match, null);
       }
 
-      this.output.success('Initial builds complete');
+      this.output.success('Builder setup complete');
     }
 
     await this.nsfw.start();
