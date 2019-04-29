@@ -1,9 +1,8 @@
 const path = require('path');
+const { spawn } = require('child_process');
 const getPort = require('get-port');
-const { promisify } = require('util');
 const { timeout } = require('promise-timeout');
 const { existsSync, readFileSync } = require('fs');
-const waitForPort = promisify(require('wait-for-port'));
 const {
   glob,
   download,
@@ -61,26 +60,31 @@ exports.build = async ({
         const opts = {
           env: { ...process.env, PORT: String(devPort) },
         };
-        const promise = runPackageJsonScript(
-          entrypointFsDirname,
-          'now-dev',
-          opts,
-        );
-        promise.then(
-          () => {
-            nowDevScriptPorts.delete(entrypoint);
-          },
-          (err) => {
-            console.log('`now-dev` script error:', err);
-            nowDevScriptPorts.delete(entrypoint);
-          },
-        );
+        const child = spawn('yarn', ['run', 'now-dev'], opts);
+        child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
+        child.stdout.setEncoding('utf8');
+        child.stdout.pipe(process.stdout);
+        child.stderr.setEncoding('utf8');
+        child.stderr.pipe(process.stderr);
 
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
         // for this builder.
         try {
-          await timeout(waitForPort('localhost', devPort), 60 * 1000);
+          await timeout(
+            new Promise((resolve) => {
+              const checkForPort = (data) => {
+                // Check the logs for the URL being printed with the port number
+                // (i.e. `http://localhost:47521`).
+                if (data.indexOf(`:${devPort}`) !== -1) {
+                  resolve();
+                }
+              };
+              child.stdout.on('data', checkForPort);
+              child.stderr.on('data', checkForPort);
+            }),
+            5 * 60 * 1000,
+          );
         } catch (err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}`,
