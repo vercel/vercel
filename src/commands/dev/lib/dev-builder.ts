@@ -129,8 +129,8 @@ export async function executeBuild(
   await mkdirp(workPath);
 
   const startTime = Date.now();
+
   if (match.use !== '@now/static') {
-    devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
       `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
     );
@@ -138,6 +138,7 @@ export async function executeBuild(
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
+
   let result: BuildResult;
 
   let { buildProcess } = match;
@@ -162,7 +163,7 @@ export async function executeBuild(
   if (buildProcess) {
     let logsListener: (b: any) => void = devServer.output.debug;
 
-    if (!devServer.debug && process.stdout.isTTY && false) {
+    if (!devServer.debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
       const fullLogs: string[] = [];
       const spinner = ora(logTitle).start();
@@ -348,13 +349,6 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
-
-  if (match.use !== '@now/static') {
-    const endTime = Date.now();
-    devServer.output.log(
-      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
-    );
-  }
 }
 
 export async function getBuildMatches(
