@@ -122,8 +122,9 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 export async function installBuilders(packagesSet: Set<string>): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
+    packages.length === 0 || (
     packages.length === 1 &&
-    Object.hasOwnProperty.call(localBuilders, packages[0])
+    Object.hasOwnProperty.call(localBuilders, packages[0]))
   ) {
     // Static deployment, no builders to install
     return;
