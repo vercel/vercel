@@ -19,6 +19,7 @@ import IGNORED from '../../../util/ignored';
 import { Output } from '../../../util/output';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
+
 import {
   EnvConfig,
   NowConfig,
@@ -65,7 +66,8 @@ async function getNodeBin(): Promise<string> {
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
-  output: Output
+  output: Output,
+  yarnPath?: string,
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -74,11 +76,15 @@ async function createBuildProcess(
     nodeBinPromise,
     builderModulePathPromise
   ]);
+  let PATH = `${dirname(execPath)}:${process.env.PATH}`;
+  if (yarnPath) {
+    PATH = `${yarnPath}:${PATH}`;
+  }
   const buildProcess = fork(modulePath, [], {
     cwd: match.workPath,
     env: {
       ...process.env,
-      PATH: `${dirname(execPath)}:${process.env.PATH}`,
+      PATH,
       ...buildEnv
     },
     execPath,
@@ -147,7 +153,8 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(
       match,
       devServer.buildEnv,
-      devServer.output
+      devServer.output,
+      devServer.yarnPath
     );
   }
 
