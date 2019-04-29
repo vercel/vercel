@@ -138,7 +138,8 @@ export async function executeBuild(
   await mkdirp(workPath);
 
   const startTime = Date.now();
-  const showBuildTimestamp = match.use !== '@now/static' && isInitialBuild && !devServer.debug;
+  const showBuildTimestamp =
+    match.use !== '@now/static' && (!isInitialBuild || devServer.debug);
 
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
