@@ -32,7 +32,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -y, --yes                      Skip confirmation
-    -s, --safe                     Skip deployments with an active alias
+    -s, --safe                     Skip finished deployments with an active alias
     -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
@@ -145,6 +145,10 @@ export default async function main(ctx) {
   }
 
   matches = matches.filter((match, i) => {
+    if (argv.safe && match.state === 'INITIALIZING') {
+      return false;
+    }
+
     if (argv.safe && aliases[i].length > 0) {
       return false;
     }
