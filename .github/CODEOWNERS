@@ -1,4 +1,7 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-/src/commands/init/     @amio
+*                       @tootallnate @leo
+/src/commands/dev/      @tootallnate @leo @styfle
+/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
+/src/commands/certs/    @javivelasco @mglagola @anatrajkovska
