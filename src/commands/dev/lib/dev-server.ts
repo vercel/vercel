@@ -975,7 +975,6 @@ function serveStaticFile(
 ) {
   return serveHandler(req, res, {
     public: cwd,
-    cleanUrls: false,
     ...opts
   });
 }
