@@ -38,16 +38,12 @@ function plusxSync(file: string): void {
 
 function getSha1(filePath: string) {
   return new Promise<string | Buffer>((resolve, reject) => {
-    const hash = createHash('sha1').setEncoding('hex');
-    const stream = createReadStream(filePath)
-    .pipe(hash)
-    .on('error', () => resolve('not found'))
-    .on('finish', () => {
-      const str = stream.read();
-      resolve(str);
-    });
+    const hash = createHash('sha1');
+    const stream = createReadStream(filePath);
+    stream.on('error', err => reject(err));
+    stream.on('data', chunk => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
   });
-
 }
 
 async function installYarn(output: Output): Promise<string> {
@@ -56,7 +52,7 @@ async function installYarn(output: Output): Promise<string> {
   const yarnBin = join(dirName, 'yarn.js');
   const sha1 = await getSha1(yarnBin);
 
-  if (sha1 === 'e7c1b06bc4dac907a7adba7240d5b569aed396326caa159d85a8ca26bc09d31f') {
+  if (sha1 === '97efd1871117e60c24f157289d61a7595e142070') {
     output.debug('The yarn executable is already downloaded');
     return dirName;
   }
