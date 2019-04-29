@@ -1,7 +1,7 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { mkdirp } from 'fs-extra';
+import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import Debug from 'debug';
 
@@ -25,6 +25,16 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
 export async function getAnalyzedEntrypoint(filePath: string) {
   debug('Analyzing entrypoint %o', filePath);
   const bin = join(__dirname, 'analyze');
+
+  const isAnalyzeExist = await pathExists(bin);
+  if (!isAnalyzeExist) {
+    const go = await downloadGo();
+    const src = join(__dirname, 'util', 'analyze.go');
+    const dest = join(__dirname, 'analyze');
+
+    await go.build(src, dest);
+  }
+
   const args = [filePath];
   const analyzed = await execa.stdout(bin, args);
   debug('Analyzed entrypoint %o', analyzed);
