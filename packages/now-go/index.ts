@@ -8,7 +8,7 @@ import {
   getWriteableDirectory,
   BuildOptions,
   shouldServe,
-  Files,
+  Files
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
@@ -37,6 +37,7 @@ export const config = {
 export async function build({
   files,
   entrypoint,
+  config,
   meta = {} as BuildParamsMeta,
 }: BuildParamsType) {
   console.log('Downloading user files...');
@@ -193,7 +194,7 @@ export async function build({
     const destPath = join(outDir, 'handler');
     try {
       const src = [join(entrypointDirname, mainModGoFileName)];
-      await go.build(src, destPath);
+      await go.build(src, destPath, config.ldsflags);
     } catch (err) {
       console.log('failed to `go build`');
       throw err;

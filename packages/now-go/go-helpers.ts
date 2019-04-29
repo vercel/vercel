@@ -42,15 +42,11 @@ function createGoPathTree(goPath: string, platform: string, arch: string) {
   ]);
 }
 
-
 class GoWrapper {
   private env: { [key: string]: string };
   private opts: execa.Options;
 
-  constructor(
-    env: { [key: string]: string },
-    opts: execa.Options = {}
-  ) {
+  constructor(env: { [key: string]: string }, opts: execa.Options = {}) {
     if (!opts.cwd) {
       opts.cwd = process.cwd();
     }
@@ -79,10 +75,10 @@ class GoWrapper {
     return this.execute(...args);
   }
 
-  build(src: string | string[], dest: string) {
-    debug('Building `go` binary %o -> %o', src, dest);
+  build(src: string | string[], dest: string, ldsflags = '-s -w') {
+    debug('Building optimized `go` binary %o -> %o', src, dest);
     const sources = Array.isArray(src) ? src : [src];
-    return this.execute('build', '-o', dest, ...sources);
+    return this.execute('build', '-ldflags', ldsflags, '-o', dest, ...sources);
   }
 }
 
@@ -91,7 +87,7 @@ export async function createGo(
   platform = process.platform,
   arch = process.arch,
   opts: execa.Options = {},
-  goMod = false,
+  goMod = false
 ) {
   const path = `${dirname(GO_BIN)}:${process.env.PATH}`;
   const env: { [key: string]: string } = {
@@ -111,7 +107,7 @@ export async function downloadGo(
   dir = GO_DIR,
   version = '1.12',
   platform = process.platform,
-  arch = process.arch,
+  arch = process.arch
 ) {
   debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
 
