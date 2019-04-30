@@ -10,7 +10,7 @@ import {
   createReadStream
 } from 'fs-extra';
 import pipe from 'promisepipe';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import fetch from 'node-fetch';
 import { Output } from '../../../util/output/create-output';
 import { builderDirPromise } from './builder-cache';
@@ -65,7 +65,7 @@ async function installYarn(output: Output): Promise<string> {
   const sha1 = await getSha1(yarnBin);
 
   if (sha1 === YARN_SHA) {
-    output.debug('The yarn executable is already downloaded');
+    output.debug('The yarn executable is already cached, not re-downloading');
     return dirName;
   }
 
@@ -94,7 +94,7 @@ async function installYarn(output: Output): Promise<string> {
 export async function getYarnPath(output: Output): Promise<string | undefined> {
   const path = await whichYarn(output);
   if (path) {
-    return path;
+    return dirname(path);
   }
   return installYarn(output);
 }

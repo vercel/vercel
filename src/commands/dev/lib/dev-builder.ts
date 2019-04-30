@@ -3,7 +3,7 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
-import { dirname, join, relative } from 'path';
+import { delimiter, dirname, join, relative } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
 import { createFunction, initializeRuntime } from '@zeit/fun';
@@ -83,9 +83,9 @@ async function createBuildProcess(
     nodeBinPromise,
     builderModulePathPromise
   ]);
-  let PATH = `${dirname(execPath)}:${process.env.PATH}`;
+  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
   if (yarnPath) {
-    PATH = `${yarnPath}:${PATH}`;
+    PATH = `${yarnPath}${delimiter}${PATH}`;
   }
   const buildProcess = fork(modulePath, [], {
     cwd: match.workPath,
