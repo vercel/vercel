@@ -15,8 +15,9 @@ import fetch from 'node-fetch';
 import { Output } from '../../../util/output/create-output';
 import { builderDirPromise } from './builder-cache';
 
+const YARN_VERSION = '1.15.2';
 const YARN_SHA = '97efd1871117e60c24f157289d61a7595e142070';
-const YARN_URL = 'https://github.com/yarnpkg/yarn/releases/download/v1.15.2/yarn-1.15.2.js';
+const YARN_URL = `https://github.com/yarnpkg/yarn/releases/download/v${YARN_VERSION}/yarn-${YARN_VERSION}.js`;
 
 async function whichYarn(output: Output): Promise<string | null> {
   try {
