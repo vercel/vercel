@@ -54,7 +54,7 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
-  public yarnPath?: string;
+  public yarnPath: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -71,7 +71,9 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
-    this.yarnPath = undefined;
+
+    // This gets updated when `start()` is invoked
+    this.yarnPath = '/';
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
@@ -425,7 +427,7 @@ export default class DevServer {
       (nowJson.builds || []).map((b: BuildConfig) => b.use)
     );
 
-    await installBuilders(builders);
+    await installBuilders(builders, this.yarnPath);
     await this.updateBuildMatches(nowJson);
 
     // Now Builders that do not define a `shouldServe()` function need to be

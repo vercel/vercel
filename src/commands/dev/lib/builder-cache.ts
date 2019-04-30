@@ -119,7 +119,7 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 /**
  * Install a list of builders to the cache directory.
  */
-export async function installBuilders(packagesSet: Set<string>): Promise<void> {
+export async function installBuilders(packagesSet: Set<string>, yarnDir: string): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
     packages.length === 0 || (
@@ -130,6 +130,7 @@ export async function installBuilders(packagesSet: Set<string>): Promise<void> {
     return;
   }
   const cacheDir = await builderDirPromise;
+  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkg = join(cacheDir, 'package.json');
 
   // Pull the same version of `@now/build-utils` that now-cli is using
@@ -140,11 +141,12 @@ export async function installBuilders(packagesSet: Set<string>): Promise<void> {
   );
   try {
     await execa(
-      'npm',
+      process.execPath,
       [
-        'install',
-        '--save-exact',
-        '--no-package-lock',
+        yarnPath,
+        'add',
+        '--exact',
+        '--no-lockfile',
         `${buildUtils}@${buildUtilsVersion}`,
         ...packages.filter(p => p !== '@now/static')
       ],
