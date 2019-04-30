@@ -22,3 +22,5 @@ TEST=value
 ```
 
 In the above example, `TEST` represents the name of the environment variable and `value` its value.
+
+For more information on Environment Variables in development, [see the documentation](https://zeit.co/docs/v2/development/environment-variables/).
