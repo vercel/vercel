@@ -57,4 +57,3 @@ test('do not install builders if there are no builds', async t => {
 
   t.pass();
 })
-

@@ -1,6 +1,5 @@
 import execa from 'execa';
 import { tmpdir } from 'os';
-import which from 'which-promise';
 import { createHash } from 'crypto';
 import {
   mkdirp,
@@ -18,17 +17,6 @@ import { builderDirPromise } from './builder-cache';
 const YARN_VERSION = '1.15.2';
 const YARN_SHA = '97efd1871117e60c24f157289d61a7595e142070';
 const YARN_URL = `https://github.com/yarnpkg/yarn/releases/download/v${YARN_VERSION}/yarn-${YARN_VERSION}.js`;
-
-async function whichYarn(output: Output): Promise<string | null> {
-  try {
-    const yarnPath = await which('yarn');
-    output.debug(`Found yarn in current $PATH at "${yarnPath}"`);
-    return yarnPath;
-  } catch (error) {
-    output.debug('Did not find yarn in current $PATH');
-    return null;
-  }
-}
 
 function plusxSync(file: string): void {
   const s = statSync(file);
@@ -60,7 +48,7 @@ function getSha1(filePath: string): Promise<string | null> {
 
 async function installYarn(output: Output): Promise<string> {
   // Loosely based on https://yarnpkg.com/install.sh
-  const dirName = join(await builderDirPromise, 'node_modules', '.bin');
+  const dirName = await builderDirPromise;
   const yarnBin = join(dirName, 'yarn');
   const sha1 = await getSha1(yarnBin);
 
@@ -91,10 +79,6 @@ async function installYarn(output: Output): Promise<string> {
   return dirName;
 }
 
-export async function getYarnPath(output: Output): Promise<string | undefined> {
-  const path = await whichYarn(output);
-  if (path) {
-    return dirname(path);
-  }
+export async function getYarnPath(output: Output): Promise<string> {
   return installYarn(output);
 }
