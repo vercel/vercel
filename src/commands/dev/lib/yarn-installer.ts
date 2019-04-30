@@ -1,5 +1,6 @@
 import execa from 'execa';
 import { tmpdir } from 'os';
+import which from 'which-promise';
 import { createHash } from 'crypto';
 import {
   mkdirp,
@@ -12,15 +13,19 @@ import pipe from 'promisepipe';
 import { join } from 'path';
 import fetch from 'node-fetch';
 import { Output } from '../../../util/output/create-output';
+import { builderDirPromise } from './builder-cache';
 
-async function isFoundInPath(output: Output): Promise<boolean> {
+const YARN_SHA = '97efd1871117e60c24f157289d61a7595e142070';
+const YARN_URL = 'https://github.com/yarnpkg/yarn/releases/download/v1.15.2/yarn-1.15.2.js';
+
+async function whichYarn(output: Output): Promise<string | null> {
   try {
-    await execa('yarn', ['--version']);
-    output.debug('Found yarn in current path');
-    return true;
+    const yarnPath = await which('yarn');
+    output.debug(`Found yarn in current $PATH at "${yarnPath}"`);
+    return yarnPath;
   } catch (error) {
-    output.debug('Did not find yarn in current path');
-    return false;
+    output.debug('Did not find yarn in current $PATH');
+    return null;
   }
 }
 
@@ -36,11 +41,17 @@ function plusxSync(file: string): void {
   chmodSync(file, base8);
 }
 
-function getSha1(filePath: string) {
-  return new Promise<string | Buffer>((resolve, reject) => {
+function getSha1(filePath: string): Promise<string | null> {
+  return new Promise((resolve, reject) => {
     const hash = createHash('sha1');
     const stream = createReadStream(filePath);
-    stream.on('error', err => reject(err));
+    stream.on('error', (err) => {
+      if (err.code === 'ENOENT') {
+        resolve(null);
+      } else {
+        reject(err);
+      }
+    });
     stream.on('data', chunk => hash.update(chunk));
     stream.on('end', () => resolve(hash.digest('hex')));
   });
@@ -48,11 +59,11 @@ function getSha1(filePath: string) {
 
 async function installYarn(output: Output): Promise<string> {
   // Loosely based on https://yarnpkg.com/install.sh
-  const dirName = join(tmpdir(), 'co.zeit.now', 'dev', 'yarn');
-  const yarnBin = join(dirName, 'yarn.js');
+  const dirName = join(await builderDirPromise, 'node_modules', '.bin');
+  const yarnBin = join(dirName, 'yarn');
   const sha1 = await getSha1(yarnBin);
 
-  if (sha1 === '97efd1871117e60c24f157289d61a7595e142070') {
+  if (sha1 === YARN_SHA) {
     output.debug('The yarn executable is already downloaded');
     return dirName;
   }
@@ -61,10 +72,8 @@ async function installYarn(output: Output): Promise<string> {
   await mkdirp(dirName);
   output.debug(`Finished creating ${dirName}`);
 
-  const url = 'https://github.com/yarnpkg/yarn/releases/download/v1.15.2/yarn-1.15.2.js';
-
-  output.debug(`Downloading ${url}`);
-  const response = await fetch(url, { compress: false, redirect: 'follow' });
+  output.debug(`Downloading ${YARN_URL}`);
+  const response = await fetch(YARN_URL, { compress: false, redirect: 'follow' });
 
   if (response.status !== 200) {
     throw new Error(`Received invalid response: ${await response.text()}`);
@@ -82,10 +91,9 @@ async function installYarn(output: Output): Promise<string> {
 }
 
 export async function getYarnPath(output: Output): Promise<string | undefined> {
-  const found = await isFoundInPath(output);
-  if (found) {
-    return;
+  const path = await whichYarn(output);
+  if (path) {
+    return path;
   }
-  const yarnPath = await installYarn(output);
-  return yarnPath;
+  return installYarn(output);
 }
