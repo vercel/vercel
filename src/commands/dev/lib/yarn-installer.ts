@@ -60,7 +60,7 @@ function getSha1(filePath: string): Promise<string | null> {
 
 async function installYarn(output: Output): Promise<string> {
   // Loosely based on https://yarnpkg.com/install.sh
-  const dirName = join(await builderDirPromise, 'node_modules', '.bin');
+  const dirName = await builderDirPromise;
   const yarnBin = join(dirName, 'yarn');
   const sha1 = await getSha1(yarnBin);
 

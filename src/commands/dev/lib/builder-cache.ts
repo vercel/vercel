@@ -130,7 +130,7 @@ export async function installBuilders(packagesSet: Set<string>): Promise<void> {
     return;
   }
   const cacheDir = await builderDirPromise;
-  const yarnPath = join(cacheDir, 'node_modules', '.bin', 'yarn');
+  const yarnPath = join(cacheDir, 'yarn');
   const buildersPkg = join(cacheDir, 'package.json');
 
   // Pull the same version of `@now/build-utils` that now-cli is using
