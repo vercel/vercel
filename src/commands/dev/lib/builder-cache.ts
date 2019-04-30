@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import execa from 'execa';
 import { createHash } from 'crypto';
-import { join, resolve, delimiter } from 'path';
+import { join, resolve } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
 import { funCacheDir } from '@zeit/fun';
