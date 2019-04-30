@@ -931,7 +931,7 @@ export default class DevServer {
     }
 
     this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd);
+    return serveStaticFile(req, res, this.cwd, { cleanUrls: true });
   };
 
   async hasFilesystem(dest: string): Promise<boolean> {
