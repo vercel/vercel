@@ -427,7 +427,7 @@ export default class DevServer {
       (nowJson.builds || []).map((b: BuildConfig) => b.use)
     );
 
-    await installBuilders(builders);
+    await installBuilders(builders, this.yarnPath);
     await this.updateBuildMatches(nowJson);
 
     // Now Builders that do not define a `shouldServe()` function need to be
