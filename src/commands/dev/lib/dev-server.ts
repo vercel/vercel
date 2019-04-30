@@ -54,7 +54,7 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
-  public yarnPath?: string;
+  public yarnPath: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -71,7 +71,9 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
-    this.yarnPath = undefined;
+
+    // This gets updated when `start()` is invoked
+    this.yarnPath = '/';
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
