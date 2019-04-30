@@ -3,7 +3,7 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
-import { delimiter, dirname, join, relative } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
 import { createFunction, initializeRuntime } from '@zeit/fun';
@@ -14,6 +14,7 @@ import ora from 'ora';
 
 import DevServer from './dev-server';
 import { Output } from '../../../util/output';
+import { relative } from '../../../util/path-helpers';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
 import { staticFiles as getFiles } from '../../../util/get-files';
