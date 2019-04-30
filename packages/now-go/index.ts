@@ -8,7 +8,7 @@ import {
   getWriteableDirectory,
   BuildOptions,
   shouldServe,
-  Files
+  Files,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';

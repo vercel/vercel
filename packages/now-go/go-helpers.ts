@@ -28,10 +28,9 @@ export async function getAnalyzedEntrypoint(filePath: string) {
 
   const isAnalyzeExist = await pathExists(bin);
   if (!isAnalyzeExist) {
-    const go = await downloadGo();
     const src = join(__dirname, 'util', 'analyze.go');
     const dest = join(__dirname, 'analyze');
-
+    const go = await downloadGo();
     await go.build(src, dest);
   }
 
@@ -122,22 +121,31 @@ export async function downloadGo(
   debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
 
   const url = getGoUrl(version, platform, arch);
-  debug('Downloading `go` URL: %o', url);
-  const res = await fetch(url);
 
-  if (!res.ok) {
-    throw new Error(`Failed to download: ${url} (${res.status})`);
+  // if we found GOPATH in ENV, use it
+  if (process.env.GOPATH !== undefined) {
+    return createGo(dir, platform, arch);
+  } else {
+    const isGoExist = await pathExists(join(dir, 'bin'));
+    if (!isGoExist) {
+      debug('Downloading `go` URL: %o', url);
+      console.log('Downloading Go ...');
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        throw new Error(`Failed to download: ${url} (${res.status})`);
+      }
+
+      // TODO: use a zip extractor when `ext === "zip"`
+      await mkdirp(dir);
+      await new Promise((resolve, reject) => {
+        res.body
+          .on('error', reject)
+          .pipe(tar.extract({ cwd: dir, strip: 1 }))
+          .on('error', reject)
+          .on('finish', resolve);
+      });
+    }
+    return createGo(dir, platform, arch);
   }
-
-  // TODO: use a zip extractor when `ext === "zip"`
-  await mkdirp(dir);
-  await new Promise((resolve, reject) => {
-    res.body
-      .on('error', reject)
-      .pipe(tar.extract({ cwd: dir, strip: 1 }))
-      .on('error', reject)
-      .on('finish', resolve);
-  });
-
-  return createGo(dir, platform, arch);
 }
