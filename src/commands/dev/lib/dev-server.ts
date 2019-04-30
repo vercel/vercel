@@ -12,9 +12,10 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join, relative } from 'path';
+import { basename, dirname, extname, join } from 'path';
 
 import { Output } from '../../../util/output';
+import { relative } from '../../../util/path-helpers';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
