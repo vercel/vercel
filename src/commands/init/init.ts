@@ -15,6 +15,7 @@ import success from '../../util/output/success';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
+import getInitialData from '../../util/init/get-initial-data';
 
 type Options = {
   '--debug': boolean;
@@ -32,6 +33,46 @@ export default async function init(
 ) {
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
+
+  if (!name) {
+    const stopSpinner = wait('Detecting builders needed');
+    const { builds, name, ignore } = await getInitialData()
+    stopSpinner()
+
+    if (builds) {
+      const nowJson = new Uint8Array(Buffer.from(
+        JSON.stringify({
+          version: 2,
+          name,
+          builds
+        }, null, 2)
+      ))
+      fs.writeFile('now.json', nowJson, { flag: 'wx', encoding: 'utf8' }, (err) => {
+        if (err) {
+          if (err.code !== 'EEXIST') throw err
+          output.log('A now.json already exists')
+        } else {
+          output.log('The now.json was generated automatically with the following builders:')
+          builds.forEach((build) => output.log(`${build.use} at ${build.src}`))
+        }
+      })
+
+      const nowIgnore = new Uint8Array(Buffer.from(ignore.join('\n')))
+      fs.writeFile('.nowignore', nowIgnore, { flag: 'wx', encoding: 'utf8' }, (err) => {
+        if (err) {
+          if (err.code !== 'EEXIST') throw err
+          output.log('A .nowignore already exists')
+        } else {
+          output.log('The .nowignore was generated automatically with the following rules:')
+          ignore.forEach((ig) => output.log(ig))
+        }
+      })
+
+      return
+    }
+
+    output.log('No builders could be found automatically... start from an example instead?')
+  }
 
   const exampleList = await fetchExampleList();
 

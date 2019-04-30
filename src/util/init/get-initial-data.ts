@@ -5,13 +5,20 @@ import { promisify } from 'util'
 const glob = promisify(_glob)
 const readFile = promisify(_readFile)
 
-type ExcludesFalse = <T>(x: T | false) => x is T
-type Build = { src: string, use: string }
+/**
+ * The key will be placed in .nowignore while the value is the glob
+ */
 type Ignore = { [key: string]: string }
+/**
+ * Stubbed version of package.json
+ */
 type Package = {
   name?: string,
   dependencies?: { [key: string]: string },
 }
+/**
+ * Runtime memory cache
+ */
 type Cache = {
   manifests: {
     node?: [{
@@ -20,9 +27,12 @@ type Cache = {
     }]
   }
 }
+type ExcludesFalse = <T>(x: T | false) => x is T
+type Build = { src: string, use: string }
 
 abstract class Detector {
   static use: string
+  static ignore: Ignore
   // object itself is readonly, but members can be mutated
   readonly cache: Cache
   constructor(cache: Cache) {
@@ -32,54 +42,64 @@ abstract class Detector {
     return this.cacheHandler(this.cache, Object.keys(ignore).map((e) => ignore[e]))
   }
   readonly abstract cacheHandler: (cache: Cache, ignore: string[]) => Promise<void>
-  abstract existsAt(): Promise<string[]>
-  abstract guessName(): Promise<string | null>
-  abstract ignore(): Ignore
+  abstract existsAt(): string[]
+  abstract guessName(): string | null
 }
 
-const ignoreDefault = {
-  '.git': '**/.git',
+const ignoreDefault: Ignore = {
+  '.git': '**/.git/**',
   '.gitignore': '**/.gitignore',
-  '.cache': '**/.cache'
+  '.cache': '**/.cache/**'
 }
-const ignoreNode = {
-  'node_modules': '**/node_modules'
+const ignoreNode: Ignore = {
+  'node_modules': '**/node_modules/**'
 }
 
+/**
+ * Gets all package.json files inside of the working dir.
+ * Will set them to `this.cache.manifests.node`
+ */
 const getNodeManifest = async (cache: Cache, ignore: string[]) => {
   if (!cache.manifests.node) {
-    (await glob('**/package.json', { nodir: true, ignore })).forEach((src) => {
-      readFile(src, { encoding: 'utf8' }).then((data) => {
-        const { name, dependencies }: Package = JSON.parse(data)
-        const contents = { name, dependencies }
+    const results = await glob('**/package.json', { nodir: true, ignore })
+    for (let i = 0; i < results.length; i++) {
+      const src = results[i]
+      const data = await readFile(src, { encoding: 'utf8' })
+      const { name, dependencies }: Package = JSON.parse(data)
+      const contents = { name, dependencies }
 
-        if (!cache.manifests.node) {
-          cache.manifests.node = [{
-            src,
-            contents
-          }]
-        } else {
-          cache.manifests.node.push({
-            src,
-            contents
-          })
-        }
-      }, () => {})
-    })
+      if (!cache.manifests.node) {
+        cache.manifests.node = [{
+          src,
+          contents
+        }]
+      } else {
+        cache.manifests.node.push({
+          src,
+          contents
+        })
+      }
+    }
   }
 }
 
 class NextDetector extends Detector {
-  static use = '@now/next'
   cacheHandler = getNodeManifest
+  static use = '@now/next'
+  static ignore = {
+    ...ignoreDefault,
+    ...ignoreNode,
+    '.next': '**/.next/**'
+  }
 
-  async existsAt() {
+  existsAt() {
     const manifests = this.cache.manifests.node
     if (manifests) {
       return manifests
         .map((manifest) => {
           const deps = manifest.contents.dependencies
           if (deps && Object.keys(deps).includes('next')) return manifest.src
+
           return false
         })
         .filter(Boolean as any as ExcludesFalse)
@@ -88,7 +108,7 @@ class NextDetector extends Detector {
     return []
   }
 
-  async guessName() {
+  guessName() {
     const manifests = this.cache.manifests.node
     if (manifests) {
       for (let i = 0; i < manifests.length; i++) {
@@ -98,14 +118,6 @@ class NextDetector extends Detector {
     }
 
     return null
-  }
-
-  ignore() {
-    return {
-      ...ignoreDefault,
-      ...ignoreNode,
-      '.next': '**/.next'
-    } as Ignore
   }
 }
 
@@ -120,21 +132,19 @@ async function getInitialData(): Promise<{ builds: Build[], name: string, ignore
   const builders = await Promise.all(
     detectors.map(
       (Detector): Promise<Build[]> => new Promise((resolve) => {
-        const buildType = new Detector(cache)
-        const buildIgnore = buildType.ignore()
+        const Instance = new Detector(cache)
 
-        buildType.populateCache(buildIgnore).then(() => {
-          buildType.existsAt().then((existing) => {
-            if (existing) {
-              ignore = Object.assign(buildIgnore, ignore)
-              resolve(existing.map((src) => ({ src, use: Detector.use })))
-            }
-          })
-  
-          if (name === 'experiment') {
-            buildType.guessName().then((guess) => {
+        Instance.populateCache(Detector.ignore).then(() => {
+          const found = Instance.existsAt()
+          if (found) {
+            ignore = Object.assign(Detector.ignore, ignore)
+
+            if (name === 'experiment') {
+              const guess = Instance.guessName()
               if (guess) name = guess
-            })
+            }
+
+            resolve(found.map((src) => ({ src, use: Detector.use })))
           }
         })
       })
