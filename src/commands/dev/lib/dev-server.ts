@@ -21,6 +21,8 @@ import devRouter from './dev-router';
 import getMimeType from './mime-type';
 import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
+import { getYarnPath } from './yarn-installer';
+
 import {
   executeBuild,
   getBuildMatches
@@ -52,6 +54,7 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
+  public yarnPath?: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -68,6 +71,7 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
+    this.yarnPath = undefined;
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
@@ -389,6 +393,8 @@ export default class DevServer {
     if (!fs.lstatSync(this.cwd).isDirectory()) {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
+
+    this.yarnPath = await getYarnPath(this.output);
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
