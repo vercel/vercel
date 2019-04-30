@@ -50,7 +50,6 @@ export default async function init(
     return extractExample(chosen, dir, force);
   }
 
-
   if (exampleList.includes(name)) {
     return extractExample(name, dir, force);
   }
@@ -128,12 +127,17 @@ async function extractExample(name: string, dir: string, force?: boolean) {
         resp.body.pipe(extractor);
       });
 
-      const successLog = `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`;
+      const successLog = `Initialized "${chalk.bold(
+        name
+      )}" example in ${chalk.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
-      const deployHint = folderRel === ''
-        ? `To develop, run ${cmd('now dev')}. To deploy, run ${cmd('now')}.`
-        : `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd('now dev')}. To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`;
-      console.log(success(`${successLog} ${deployHint}`));
+      const deployHint =
+        folderRel === ''
+          ? `To develop, run ${cmd('now dev')}. To deploy, run ${cmd('now')}.`
+          : `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd(
+              'now dev'
+            )}. To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`;
+      console.log(success(`${successLog} \n ${deployHint}`));
       return 0;
     })
     .catch(e => {
@@ -151,21 +155,27 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   if (fs.existsSync(dest)) {
     if (!fs.lstatSync(dest).isDirectory()) {
       throw new Error(
-        `Destination path "${chalk.bold(folder)}" already exists and is not a directory.`
+        `Destination path "${chalk.bold(
+          folder
+        )}" already exists and is not a directory.`
       );
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
       throw new Error(
-        `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory. You may use ${cmd('--force')} or ${cmd('--f')} to override it.`
+        `Destination path "${chalk.bold(
+          folder
+        )}" already exists and is not an empty directory. You may use ${cmd(
+          '--force'
+        )} or ${cmd('--f')} to override it.`
       );
     }
   } else if (dest !== cwd) {
-      try {
-        fs.mkdirSync(dest);
-      } catch (e) {
-        throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
-      }
+    try {
+      fs.mkdirSync(dest);
+    } catch (e) {
+      throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
     }
+  }
 
   return dest;
 }
