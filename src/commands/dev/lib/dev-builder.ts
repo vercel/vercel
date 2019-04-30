@@ -3,7 +3,7 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { tmpdir } from 'os';
-import { dirname, join, relative } from 'path';
+import { delimiter, dirname, join, relative } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { readFile, mkdirp } from 'fs-extra';
 import { createFunction, initializeRuntime } from '@zeit/fun';
@@ -73,7 +73,8 @@ function pipeChildLogging(child: ChildProcess): void {
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
-  output: Output
+  output: Output,
+  yarnPath?: string,
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -82,11 +83,15 @@ async function createBuildProcess(
     nodeBinPromise,
     builderModulePathPromise
   ]);
+  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+  if (yarnPath) {
+    PATH = `${yarnPath}${delimiter}${PATH}`;
+  }
   const buildProcess = fork(modulePath, [], {
     cwd: match.workPath,
     env: {
       ...process.env,
-      PATH: `${dirname(execPath)}:${process.env.PATH}`,
+      PATH,
       ...buildEnv
     },
     execPath,
@@ -159,7 +164,8 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(
       match,
       devServer.buildEnv,
-      devServer.output
+      devServer.output,
+      devServer.yarnPath
     );
   }
 
