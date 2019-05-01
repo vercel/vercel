@@ -5225,10 +5225,10 @@ pkg-fetch@2.5.7:
     semver "~5.6.0"
     unique-temp-dir "~1.0.0"
 
-pkg@4.3.7:
-  version "4.3.7"
-  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.7.tgz#a80767283d728adbcdf668ad99250af440efd8e3"
-  integrity sha512-/BvtFft1nKKtnTuOm/0es0sk1cOs7ZtWgJpqdtszJ4348jYJ8owVyCB/iuGhI3YJFX/ZFIv4Rmra9ETUgpnnfA==
+pkg@4.3.8:
+  version "4.3.8"
+  resolved "https://registry.yarnpkg.com/pkg/-/pkg-4.3.8.tgz#f90017fe27539e6a9c446d455b885b554600b3c1"
+  integrity sha512-HhnMcHvGFf0VR4fJygqo1WTKztEK6m3UKS+O4NIM9tzbdgCfsAEpNncPlO9Gj6wAMbe9JC48UmzPBErpYSwckQ==
   dependencies:
     "@babel/parser" "7.2.3"
     babel-runtime "6.26.0"
