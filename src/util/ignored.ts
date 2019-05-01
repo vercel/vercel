@@ -4,6 +4,8 @@ export default `.hg
 .git
 .gitmodules
 .svn
+.cache
+.next
 .npmignore
 .dockerignore
 .gitignore
