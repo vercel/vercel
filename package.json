@@ -102,7 +102,6 @@
     "@types/node": "11.11.0",
     "@types/node-fetch": "2.1.4",
     "@types/npm-package-arg": "6.1.0",
-    "@types/ora": "3.2.0",
     "@types/pluralize": "0.0.29",
     "@types/psl": "1.1.0",
     "@types/tar-fs": "1.16.1",
