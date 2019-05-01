@@ -15,7 +15,7 @@ function validateDistDir(distDir) {
   const distDirName = path.basename(distDir);
   if (!existsSync(distDir)) {
     const message = `Build was unable to create the distDir: ${distDirName}.`
-      + '\nMake sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#configuring-the-build-output-directory';
+      + '\nMake sure you mentioned the correct dist directory: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development';
     throw new Error(message);
   }
 }
@@ -103,6 +103,12 @@ exports.build = async ({
         dest: `http://localhost:${devPort}${srcBase}/$1`,
       });
     } else {
+      if (meta.isDev) {
+        console.log('WARN: "now-dev" script is missing from package.json');
+        console.log(
+          'See the local development docs: http://zeit.co/docs/v2/deployments/official-builders/static-now-static#local-development',
+        );
+      }
       // Run the `now-build` script and wait for completion to collect the build
       // outputs
       console.log('running user "now-build" script from `package.json`...');
