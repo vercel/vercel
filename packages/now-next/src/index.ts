@@ -120,12 +120,11 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string) {
+  // `env` is omitted since that
+  // makes it default to `process.env`
   const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
     cwd: entryPath,
     execArgv: [],
-    env: {
-      NOW_REGION: 'dev1',
-    },
   });
 
   const getUrl = () =>
