@@ -47,6 +47,7 @@ export async function build({
     getWriteableDirectory(),
     getWriteableDirectory(),
   ]);
+
   if (meta.isDev) {
     const devGoPath = `dev${entrypointArr[entrypointArr.length - 1]}`;
     const goPathArr = goPath.split(sep);
@@ -57,6 +58,17 @@ export async function build({
 
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadedFiles = await download(files, srcPath);
+  const input = dirname(downloadedFiles[entrypoint].fsPath);
+  var includedFiles: Files = {};
+
+  if (config && config.includeFiles) {
+    for (const pattern of config.includeFiles) {
+      const files = await glob(pattern, input);
+      for (const assetName of Object.keys(files)) {
+        includedFiles[assetName] = files[assetName];
+      }
+    }
+  }
 
   console.log(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
@@ -264,7 +276,7 @@ export async function build({
   }
 
   const lambda = await createLambda({
-    files: await glob('**', outDir),
+    files: { ...(await glob('**', outDir)), ...includedFiles },
     handler: 'handler',
     runtime: 'go1.x',
     environment: {},

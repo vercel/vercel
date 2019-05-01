@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.go",
+      "use": "@now/go",
+      "config": {
+        "includeFiles": [
+          "templates/**"
+        ]
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "foobar from file"
+    }
+  ]
+}
