@@ -144,7 +144,7 @@ async function extractExample(name: string, dir: string, force?: boolean) {
           : listItem(
               `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`
             );
-      console.log(success(`${successLog} \n ${developHint} \n ${deployHint}`));
+      console.log(success(`${successLog}\n${developHint}\n${deployHint}`));
       return 0;
     })
     .catch(e => {
