@@ -93,7 +93,8 @@ async function createBuildProcess(
     env: {
       ...process.env,
       PATH,
-      ...buildEnv
+      ...buildEnv,
+      NOW_REGION: 'dev1'
     },
     execPath,
     execArgv: [],
