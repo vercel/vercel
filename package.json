@@ -18,8 +18,8 @@
     "pack": "rm -rf packed && yarn build && yarn bundle",
     "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build-dev && cd link && npm link",
-    "build": "./build.sh",
-    "build-dev": "DEV=1 ./build.sh",
+    "build": "node build.js",
+    "build-dev": "node build.js --dev",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
@@ -128,6 +128,7 @@
     "chalk": "2.3.1",
     "clipboardy": "1.1.4",
     "codecov": "3.1.0",
+    "cpy": "7.2.0",
     "credit-card": "3.0.1",
     "date-fns": "1.29.0",
     "death": "1.1.0",
@@ -147,7 +148,7 @@
     "eslint-plugin-jsx-a11y": "6.2.1",
     "eslint-plugin-react": "7.12.4",
     "esm": "3.0.84",
-    "execa": "0.9.0",
+    "execa": "1.0.0",
     "fetch-h2": "2.0.3",
     "fs-extra": "7.0.1",
     "glob": "7.1.2",
