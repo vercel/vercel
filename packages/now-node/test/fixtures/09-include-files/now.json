@@ -18,12 +18,23 @@
           "root.edge"
         ]
       }
+    },
+    {
+      "src": "accepts-string.js",
+      "use": "@now/node",
+      "config": {
+        "includeFiles": "templates/accepts-string.edge"
+      }
     }
   ],
   "probes": [
     {
       "path": "/",
       "mustContain": "hello Now!"
+    },
+    {
+      "path": "/accepts-string.js",
+      "mustContain": "hello String!"
     },
     {
       "path": "/root.js",
