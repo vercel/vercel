@@ -1,6 +1,6 @@
 {
   "name": "@now/static-build",
-  "version": "0.5.2",
+  "version": "0.5.3-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
