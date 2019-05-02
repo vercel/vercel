@@ -10,8 +10,10 @@
     "directory": "packages/now-build-utils"
   },
   "dependencies": {
+    "@types/cross-spawn": "6.0.0",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
+    "cross-spawn": "6.0.5",
     "end-of-stream": "1.4.1",
     "fs-extra": "7.0.0",
     "glob": "7.1.3",
