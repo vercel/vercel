@@ -11,6 +11,7 @@ import {
   runPackageJsonScript,
   PrepareCacheOptions,
   BuildOptions,
+  shouldServe,
 } from '@now/build-utils';
 
 interface CompilerConfig {
@@ -157,3 +158,5 @@ export async function prepareCache({ workPath }: PrepareCacheOptions) {
     ...(await glob('yarn.lock', workPath)),
   };
 }
+
+export { shouldServe };

@@ -5,6 +5,7 @@ const glob = require('@now/build-utils/fs/glob'); // eslint-disable-line import/
 const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
 const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-line import/no-extraneous-dependencies
 const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory'); // eslint-disable-line import/no-extraneous-dependencies
+const { shouldServe } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
@@ -40,3 +41,5 @@ exports.build = async ({ files, entrypoint }) => {
     [entrypoint]: lambda,
   };
 };
+
+exports.shouldServe = shouldServe;

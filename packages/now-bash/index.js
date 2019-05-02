@@ -1,10 +1,13 @@
 const execa = require('execa');
 const { join } = require('path');
 const snakeCase = require('snake-case');
-const glob = require('@now/build-utils/fs/glob'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download'); // eslint-disable-line import/no-extraneous-dependencies
-const { createLambda } = require('@now/build-utils/lambda'); // eslint-disable-line import/no-extraneous-dependencies
-const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory'); // eslint-disable-line import/no-extraneous-dependencies
+const {
+  glob,
+  download,
+  createLambda,
+  getWriteableDirectory,
+  shouldServe,
+} = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.config = {
   maxLambdaSize: '10mb',
@@ -15,7 +18,7 @@ exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 exports.build = async ({
   workPath, files, entrypoint, config,
 }) => {
-  const srcDir = await getWritableDirectory();
+  const srcDir = await getWriteableDirectory();
 
   console.log('downloading files...');
   await download(files, srcDir);
@@ -55,3 +58,5 @@ exports.build = async ({
     [entrypoint]: lambda,
   };
 };
+
+exports.shouldServe = shouldServe;

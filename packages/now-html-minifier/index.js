@@ -1,4 +1,4 @@
-const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { FileBlob, shouldServe } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 const { minify } = require('html-minifier');
 
 const defaultOptions = {
@@ -28,3 +28,5 @@ exports.build = async ({ files, entrypoint, config }) => {
 
   return { [entrypoint]: result };
 };
+
+exports.shouldServe = shouldServe;

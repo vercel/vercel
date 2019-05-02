@@ -1,4 +1,4 @@
-const FileBlob = require('@now/build-utils/file-blob.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { FileBlob, shouldServe } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 const unified = require('unified');
 const unifiedStream = require('unified-stream');
 const markdown = require('remark-parse');
@@ -38,3 +38,5 @@ exports.build = async ({ files, entrypoint, config }) => {
 
   return { [replacedEntrypoint]: result };
 };
+
+exports.shouldServe = shouldServe;

@@ -9,6 +9,7 @@ import {
   download,
   glob,
   createLambda,
+  shouldServe,
   BuildOptions,
 } from '@now/build-utils';
 import { downloadAndInstallPip } from './download-and-install-pip';
@@ -159,3 +160,5 @@ export const build = async ({
     [entrypoint]: lambda,
   };
 };
+
+export { shouldServe };

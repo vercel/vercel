@@ -1,5 +1,9 @@
 const {
-  createLambda, rename, glob, download,
+  createLambda,
+  rename,
+  glob,
+  download,
+  shouldServe,
 } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
 const { getFiles } = require('@now/php-bridge');
@@ -52,3 +56,5 @@ exports.build = async ({
 
   return { [entrypoint]: lambda };
 };
+
+exports.shouldServe = shouldServe;

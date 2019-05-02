@@ -8,6 +8,7 @@ const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line impo
 const { runShellScript } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
 const FileRef = require('@now/build-utils/file-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
+const { shouldServe } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 const installRust = require('./install-rust.js');
 
 exports.config = {
@@ -367,3 +368,5 @@ exports.getDefaultCache = ({ files, entrypoint }) => {
   });
   return { [targetFolderDir]: defaultCacheRef };
 };
+
+exports.shouldServe = shouldServe;
