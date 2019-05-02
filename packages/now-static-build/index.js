@@ -58,6 +58,7 @@ exports.build = async ({
         devPort = await getPort();
         nowDevScriptPorts.set(entrypoint, devPort);
         const opts = {
+          cwd: entrypointFsDirname,
           env: { ...process.env, PORT: String(devPort) },
         };
         const child = spawn('yarn', ['run', 'now-dev'], opts);
