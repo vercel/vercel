@@ -10,7 +10,7 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 
 import DevServer from './dev-server';
 import { Output } from '../../../util/output';
@@ -182,22 +182,12 @@ export async function executeBuild(
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
     let spinLogger;
+    let spinner: Ora | undefined;
+    const fullLogs: string[] = [];
 
     if (isInitialBuild && !devServer.debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
-      const fullLogs: string[] = [];
-      const spinner = ora(logTitle).start();
-
-      buildProcess!.on('message', ({ type }) => {
-        if (type === 'buildResult') {
-          spinner.stop();
-        }
-      });
-
-      buildProcess!.on('error', () => {
-        spinner.stop();
-        console.error(fullLogs.join('\n'));
-      });
+      spinner = ora(logTitle).start();
 
       spinLogger = (data: Buffer) => {
         const rawLog = stripAnsi(data.toString());
@@ -207,7 +197,7 @@ export async function executeBuild(
         const spinText = `${logTitle} ${lines[lines.length - 1]}`;
         const maxCols = process.stdout.columns || 80;
         const overflow = stripAnsi(spinText).length + 2 - maxCols;
-        spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
+        spinner!.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       buildProcess!.stdout!.on('data', spinLogger);
@@ -248,10 +238,20 @@ export async function executeBuild(
         buildProcess!.on('exit', onExit);
         buildProcess!.on('message', onMessage);
       });
+    } catch (err) {
+      if (spinner) {
+        spinner.stop();
+        spinner = undefined;
+        console.log(fullLogs.join(''));
+      }
+      throw err;
     } finally {
       if (spinLogger) {
         buildProcess.stdout!.removeListener('data', spinLogger);
         buildProcess.stderr!.removeListener('data', spinLogger);
+      }
+      if (spinner) {
+        spinner.stop();
       }
       pipeChildLogging(buildProcess!);
     }
