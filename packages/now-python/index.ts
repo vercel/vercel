@@ -15,14 +15,24 @@ import { downloadAndInstallPip } from './download-and-install-pip';
 
 async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   const target = '.';
-  console.log(`running "pip install --target ${target} --upgrade ${args.join(' ')}"...`);
+  console.log(
+    `running "pip install --target ${target} --upgrade ${args.join(' ')}"...`
+  );
   try {
-    await execa(pipPath, ['install', '--target', target, '--upgrade', ...args], {
-      cwd: workDir,
-      stdio: 'inherit',
-    });
+    await execa(
+      pipPath,
+      ['install', '--target', target, '--upgrade', ...args],
+      {
+        cwd: workDir,
+        stdio: 'inherit',
+      }
+    );
   } catch (err) {
-    console.log(`failed to run "pip install --target ${target} --upgrade ${args.join(' ')}"...`);
+    console.log(
+      `failed to run "pip install --target ${target} --upgrade ${args.join(
+        ' '
+      )}"...`
+    );
     throw err;
   }
 }
@@ -42,11 +52,10 @@ async function pipInstallUser(pipPath: string, ...args: string[]) {
 async function pipenvInstall(pyUserBase: string, srcDir: string) {
   console.log('running "pipenv_to_requirements -f');
   try {
-    await execa(
-      join(pyUserBase, 'bin', 'pipenv_to_requirements'),
-      ['-f'],
-      { cwd: srcDir, stdio: 'inherit' },
-    );
+    await execa(join(pyUserBase, 'bin', 'pipenv_to_requirements'), ['-f'], {
+      cwd: srcDir,
+      stdio: 'inherit',
+    });
   } catch (err) {
     console.log('failed to run "pipenv_to_requirements -f"');
     throw err;
@@ -57,7 +66,12 @@ export const config = {
   maxLambdaSize: '5mb',
 };
 
-export const build = async ({ workPath, files, entrypoint }: BuildOptions) => {
+export const build = async ({
+  workPath,
+  files,
+  entrypoint,
+  meta = {},
+}: BuildOptions) => {
   console.log('downloading files...');
 
   // eslint-disable-next-line no-param-reassign
@@ -67,7 +81,7 @@ export const build = async ({ workPath, files, entrypoint }: BuildOptions) => {
   // we need it to be under `/tmp`
   const pyUserBase = await getWriteableDirectory();
   process.env.PYTHONUSERBASE = pyUserBase;
-  const pipPath = await downloadAndInstallPip();
+  const pipPath = meta.isDev ? 'pip3' : await downloadAndInstallPip();
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -122,7 +136,7 @@ export const build = async ({ workPath, files, entrypoint }: BuildOptions) => {
     .replace(/\.py$/, '');
   const nowHandlerPyContents = originalNowHandlerPyContents.replace(
     /__NOW_HANDLER_FILENAME/g,
-    userHandlerFilePath,
+    userHandlerFilePath
   );
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
@@ -131,7 +145,7 @@ export const build = async ({ workPath, files, entrypoint }: BuildOptions) => {
 
   await writeFile(
     join(workPath, `${nowHandlerPyFilename}.py`),
-    nowHandlerPyContents,
+    nowHandlerPyContents
   );
 
   const lambda = await createLambda({
