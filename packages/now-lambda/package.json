@@ -1,6 +1,6 @@
 {
   "name": "@now/lambda",
-  "version": "0.5.0",
+  "version": "0.5.1-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",

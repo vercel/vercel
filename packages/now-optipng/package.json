@@ -1,6 +1,6 @@
 {
   "name": "@now/optipng",
-  "version": "0.5.0",
+  "version": "0.5.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "files": [
