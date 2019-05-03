@@ -5,7 +5,7 @@ You ran `now dev` inside a project that contains a `now.json` file with `env` or
 
 In order to use environment variables in your project locally that have values defined using the Now Secrets format (e.g. `@my-secret-value`), you will need to provide the value as an environment variable using a `.env` or `.env.build` file.
 
-We require this to ensure your app works as you intend it to, in the Now Dev environment, and to provide you with a way to mirror or seperate private environment variables within your applications, for example when connecting to a database.
+We require this to ensure your app works as you intend it to, in the Now Dev environment, and to provide you with a way to mirror or separate private environment variables within your applications, for example when connecting to a database.
 
 Read below for how to address this error.
 
