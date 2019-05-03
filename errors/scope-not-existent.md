@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You specified the `--scope` flag and specified the ID or slug of a team that does not exist or that you're not a part of. Similiarily you might have specified the ID or username of user whose account you don't own.
+You specified the `--scope` flag and specified the ID or slug of a team that does not exist or that you're not a part of. Similarly you might have specified the ID or username of user whose account you don't own.
 
 #### Possible Ways to Fix It
 
