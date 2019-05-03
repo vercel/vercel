@@ -12,7 +12,6 @@ import {
   shouldServe,
   BuildOptions,
 } from '@now/build-utils';
-import { downloadAndInstallPip } from './download-and-install-pip';
 
 async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   const target = '.';
@@ -69,20 +68,16 @@ export const config = {
 
 export const build = async ({
   workPath,
-  files,
+  files: originalFiles,
   entrypoint,
   meta = {},
 }: BuildOptions) => {
   console.log('downloading files...');
-
-  // eslint-disable-next-line no-param-reassign
-  files = await download(files, workPath);
-
-  // this is where `pip` will be installed to
-  // we need it to be under `/tmp`
+  const downloadedFiles = await download(originalFiles, workPath);
+  const foundLockFile = 'Pipfile.lock' in downloadedFiles;
   const pyUserBase = await getWriteableDirectory();
   process.env.PYTHONUSERBASE = pyUserBase;
-  const pipPath = meta.isDev ? 'pip3' : await downloadAndInstallPip();
+  const pipPath = 'pip3';
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -92,8 +87,10 @@ export const build = async ({
     //
     // distutils.errors.DistutilsOptionError: must supply either home
     // or prefix/exec-prefix -- not both
-    const setupCfg = join(workPath, 'setup.cfg');
-    await writeFile(setupCfg, '[install]\nprefix=\n');
+    if (meta.isDev) {
+      const setupCfg = join(workPath, 'setup.cfg');
+      await writeFile(setupCfg, '[install]\nprefix=\n');
+    }
   } catch (err) {
     console.log('failed to create "setup.cfg" file');
     throw err;
@@ -102,10 +99,7 @@ export const build = async ({
   await pipInstall(pipPath, workPath, 'werkzeug');
   await pipInstall(pipPath, workPath, 'requests');
 
-  const entryDirectory = dirname(entrypoint);
-  const requirementsTxt = join(entryDirectory, 'requirements.txt');
-
-  if (files['Pipfile.lock']) {
+  if (foundLockFile) {
     console.log('found "Pipfile.lock"');
 
     // Install pipenv.
@@ -115,6 +109,8 @@ export const build = async ({
   }
 
   const fsFiles = await glob('**', workPath);
+  const entryDirectory = dirname(entrypoint);
+  const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
   if (fsFiles[requirementsTxt]) {
     console.log('found local "requirements.txt"');
