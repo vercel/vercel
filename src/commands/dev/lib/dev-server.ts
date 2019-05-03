@@ -24,10 +24,7 @@ import { installBuilders } from './builder-cache';
 import getModuleForNSFW from './nsfw-module';
 import { getYarnPath } from './yarn-installer';
 
-import {
-  executeBuild,
-  getBuildMatches
-} from './dev-builder';
+import { executeBuild, getBuildMatches } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
 import { staticFiles as getFiles } from '../../../util/get-files';
@@ -410,7 +407,7 @@ export default class DevServer {
     const nowJson = await this.getNowJson();
 
     const opts = { output: this.output, isBuilds: true };
-    const files =  await getFiles(this.cwd, nowJson, opts);
+    const files = await getFiles(this.cwd, nowJson, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
       const path = relative(this.cwd, fsPath);
@@ -716,7 +713,7 @@ export default class DevServer {
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, routes, this);
+    } = await devRouter(req.url, req.method, routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -724,18 +721,15 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      let destUrl = dest
-      let decodedUrl = dest
+      let destUrl = dest;
+      let decodedUrl = dest;
       // make sure original query wasn't stripped
       if (!destUrl.includes('?') && (req.url || '').includes('?')) {
         destUrl = url.format(
-          Object.assign(
-            url.parse(destUrl),
-            { query: uri_args || {} }
-          )
-        )
+          Object.assign(url.parse(destUrl), { query: uri_args || {} })
+        );
         // this is just for nice logs
-        decodedUrl = decodeURIComponent(destUrl)
+        decodedUrl = decodeURIComponent(destUrl);
       }
       this.output.debug(`ProxyPass: ${decodedUrl}`);
       return proxyPass(req, res, destUrl, this.output);
@@ -774,7 +768,7 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '')
+      const origUrl = url.parse(req.url || '/');
       const newUrl = url.format(
         Object.assign(origUrl, {
           pathname: `/${requestPath}`
@@ -785,7 +779,12 @@ export default class DevServer {
           buildResult.routes.length
         } \`routes\` to match ${newUrl}`
       );
-      const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
+      const matchedRoute = await devRouter(
+        newUrl,
+        req.method,
+        buildResult.routes,
+        this
+      );
       if (matchedRoute.found) {
         this.output.debug(
           `Found matching route ${matchedRoute.dest} for ${newUrl}`
@@ -926,7 +925,7 @@ export default class DevServer {
   /**
    * Serve project directory as a static deployment.
    */
-   serveProjectAsStatic = async (
+  serveProjectAsStatic = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string
@@ -1090,7 +1089,12 @@ async function findMatchingRoute(
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
     if (!Array.isArray(buildResult.routes)) continue;
-    const route = await devRouter(reqUrl, buildResult.routes, devServer);
+    const route = await devRouter(
+      reqUrl,
+      undefined,
+      buildResult.routes,
+      devServer
+    );
     if (route.found) {
       return route;
     }
@@ -1167,13 +1171,13 @@ function fileRemoved(
  *   - no `builds`
  *   - all `builds` have `@now/static` as `use`
  */
-function isStaticDeployment(
-  nowJson: NowConfig
-): boolean {
+function isStaticDeployment(nowJson: NowConfig): boolean {
   if (nowJson.builds instanceof Array) {
-    if (nowJson.builds.every(build => {
-      return build.use.split('@')[1] === 'now/static';
-    })) {
+    if (
+      nowJson.builds.every(build => {
+        return build.use.split('@')[1] === 'now/static';
+      })
+    ) {
       return true;
     }
     return false;
