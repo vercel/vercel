@@ -50,8 +50,12 @@ async function compile(workPath, downloadedFiles, entrypoint, config) {
   });
 
   if (config && config.includeFiles) {
+    const includeFiles = typeof config.includeFiles === 'string'
+      ? [config.includeFiles]
+      : config.includeFiles;
+
     // eslint-disable-next-line no-restricted-syntax
-    for (const pattern of config.includeFiles) {
+    for (const pattern of includeFiles) {
       // eslint-disable-next-line no-await-in-loop
       const files = await glob(pattern, inputDir);
 

@@ -9,11 +9,22 @@
           "templates/**"
         ]
       }
+    },
+    {
+      "src": "accepts-string/index.js",
+      "use": "@now/node-server",
+      "config": {
+        "includeFiles": "templates/**"
+      }
     }
   ],
   "probes": [
     {
       "path": "/",
+      "mustContain": "Hello Now!"
+    },
+    {
+      "path": "/accepts-string",
       "mustContain": "Hello Now!"
     }
   ]
