@@ -7,13 +7,20 @@
 
 ## Usage
 
-To install the latest version of Now CLI, run this command:
+To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
 
 ```
 npm install -g now
 ```
 
-There are also [other installation methods](https://zeit.co/download) available.
+To quickly start a new project, run the following commands:
+
+```
+now init        # Pick an example project to clone
+cd <PROJECT>    # Change directory to the newly created project
+now dev         # Run locally during development
+now             # Deploy to the cloud
+```
 
 ## Documentation
 
