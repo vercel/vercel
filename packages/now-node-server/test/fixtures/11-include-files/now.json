@@ -22,10 +22,6 @@
     {
       "path": "/",
       "mustContain": "Hello Now!"
-    },
-    {
-      "path": "/accepts-string",
-      "mustContain": "Hello Now!"
     }
   ]
 }
