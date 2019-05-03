@@ -712,7 +712,7 @@ export default class DevServer {
 
     const {
       dest,
-      status = 200,
+      status,
       headers = {},
       uri_args,
       matched_route
@@ -741,10 +741,17 @@ export default class DevServer {
       return proxyPass(req, res, destUrl, this.output);
     }
 
-    if ([301, 302, 303].includes(status)) {
-      this.output.debug(`Redirect: ${matched_route}`);
+    if (status) {
       res.statusCode = status;
-      return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
+      if ([301, 302, 303].includes(status)) {
+        this.output.debug(`Redirect: ${matched_route}`);
+        res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
+      } else if (status === 404) {
+        await this.send404(req, res, nowRequestId);
+      } else {
+        res.end(`${status} status code from routes config`);
+      }
+      return;
     }
 
     const requestPath = dest.replace(/^\//, '');
