@@ -69,6 +69,7 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --target                       Deploy to either 'staging' or 'production' aliases
+    --notify                       Create a notification upon deployment completion
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -111,6 +112,7 @@ export const latestArgs = {
   // the config property name.
   '--regions': String,
   '--target': String,
+  '--notify': Boolean,
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',

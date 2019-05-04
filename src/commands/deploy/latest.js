@@ -1,9 +1,11 @@
+import path from 'path';
 import ms from 'ms';
 import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
+import notifier from 'node-notifier';
 import Client from '../../util/client';
 import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
@@ -73,14 +75,34 @@ const addProcessEnv = async (log, env) => {
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
 const prepareAlias = input => `https://${input}`;
 
+function createNotification(argv, deployment, error) {
+  if (argv['--notify']) {
+    const prefix = error ? '\u26D4\uFE0F  ' : '\u2705  '
+    const options = {
+      icon: path.resolve(__dirname, './logo.png'),
+      title: error ? 'Deployment Failed' : 'Deployment Succeeded',
+      message: deployment && deployment.url ?
+        `${process.platform === 'darwin' ? prefix : ''}${deployment.url}`
+        : undefined,
+      timeout: 2
+    }
+
+    return new Promise((res, rej) =>
+      notifier.notify(options, (err, data) => (err ? rej(err) : res(data)))
+    );
+  }
+}
+
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList },
+  deployment,
   deployStamp,
-  clipboardEnabled,
+  argv,
   localConfig,
   builds
 ) => {
+  const { url, readyState, alias: aliasList } = deployment
+  const clipboardEnabled = !argv['--no-clipboard']
   if (readyState === 'READY') {
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
@@ -123,9 +145,12 @@ const printDeploymentStatus = async (
       output.success(`Deployment ready ${deployStamp()}`);
     }
 
+    createNotification(argv, deployment)
+
     return 0;
   }
 
+  createNotification(argv, deployment, deploymentErrorMsg)
   if (!builds) {
     output.error(deploymentErrorMsg);
     return 1;
@@ -213,7 +238,7 @@ export default async function main(
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
-  const { log, debug, error, print, warn } = output;
+  const { log, debug, print, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
@@ -249,6 +274,11 @@ export default async function main(
   let syncCount;
   let deployStamp = stamp();
   let deployment = null;
+
+  function error(message) {
+    output.error(message)
+    createNotification(argv, deployment, message)
+  }
 
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
@@ -541,7 +571,7 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
+    return printDeploymentStatus(output, deployment, deployStamp, argv, localConfig);
   }
 
   const sleepingTime = ms('1.5s');
@@ -613,7 +643,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
+  return printDeploymentStatus(output, deployment, deployStamp, argv, localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {

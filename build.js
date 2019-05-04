@@ -28,8 +28,12 @@ async function main() {
   // present on pkg's snapshot fs because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
   const runtimes = join(__dirname, 'node_modules/@zeit/fun/dist/src/runtimes');
+  const dist = join(__dirname, 'dist')
   const dest = join(__dirname, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
+  await cpy('logo.png', join(__dirname, dist));
+  await cpy('node_modules/node-notifier/vendor/mac.noindex/terminal-notifier.app/Contents/Info.plist', dist)
+  await cpy('node_modules/node-notifier/vendor/mac.noindex/terminal-notifier.app/Contents/Resources/en.lproj/MainMenu.nib', dist)
 
   console.log('Finished building `now-cli`');
 }
