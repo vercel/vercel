@@ -93,7 +93,7 @@ function createNotification(argv, deployment, error) {
   }
 }
 
-const printDeploymentStatus = async (
+const reportDeploymentStatus = async (
   output,
   deployment,
   deployStamp,
@@ -571,7 +571,7 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp, argv, localConfig);
+    return reportDeploymentStatus(output, deployment, deployStamp, argv, localConfig);
   }
 
   const sleepingTime = ms('1.5s');
@@ -643,7 +643,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, argv, localConfig, builds);
+  return reportDeploymentStatus(output, deployment, deployStamp, argv, localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {
