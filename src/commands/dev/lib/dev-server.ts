@@ -295,7 +295,7 @@ export default class DevServer {
     }
   }
 
-  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+  async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
     const filePath = join(this.cwd, fileName);
@@ -309,7 +309,7 @@ export default class DevServer {
         throw err;
       }
     }
-    return env;
+    return { ...base, ...env };
   }
 
   async getNowJson(): Promise<NowConfig> {
@@ -398,13 +398,15 @@ export default class DevServer {
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
+    const nowJson = await this.getNowJson();
+    const nowJsonBuild = nowJson.build || {};
     const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env'),
-      this.getLocalEnv('.env.build')
+      this.getLocalEnv('.env', nowJson.env),
+      this.getLocalEnv('.env.build', nowJsonBuild.env)
     ]);
+    Object.assign(process.env, buildEnv);
     this.env = env;
     this.buildEnv = buildEnv;
-    const nowJson = await this.getNowJson();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowJson, opts);
