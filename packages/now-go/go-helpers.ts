@@ -3,6 +3,7 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
+import { homedir } from 'os';
 import Debug from 'debug';
 
 const debug = Debug('@now/go:go-helpers');
@@ -118,16 +119,25 @@ export async function downloadGo(
   platform = process.platform,
   arch = process.arch
 ) {
-  debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
+  // Check default `Go` in user machine
+  const isUserGo = await pathExists(join(homedir(), 'go'));
 
-  const url = getGoUrl(version, platform, arch);
-
-  // if we found GOPATH in ENV, use it
-  if (process.env.GOPATH !== undefined) {
+  // If we found GOPATH in ENV, or default `Go` path exists
+  // asssume that user have `Go` installed
+  if (isUserGo || process.env.GOPATH !== undefined) {
     return createGo(dir, platform, arch);
   } else {
+    // Check `Go` bin in builder CWD
     const isGoExist = await pathExists(join(dir, 'bin'));
     if (!isGoExist) {
+      debug(
+        'Installing `go` v%s to %o for %s %s',
+        version,
+        dir,
+        platform,
+        arch
+      );
+      const url = getGoUrl(version, platform, arch);
       debug('Downloading `go` URL: %o', url);
       console.log('Downloading Go ...');
       const res = await fetch(url);
