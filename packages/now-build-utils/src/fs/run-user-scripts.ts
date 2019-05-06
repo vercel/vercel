@@ -116,7 +116,7 @@ export async function installDependencies(
   } else {
     await spawnAsync(
       'yarn',
-      ['--cwd', destPath].concat(commandArgs),
+      ['--ignore-engines', '--cwd', destPath].concat(commandArgs),
       destPath,
       opts as SpawnOptions
     );

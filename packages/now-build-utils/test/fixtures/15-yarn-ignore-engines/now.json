@@ -1,0 +1,10 @@
+{
+    "version": 2,
+    "builds": [
+      { "src": "index.js", "use": "@now/node", "config": { "maxLambdaSize": "15mb" } }
+    ],
+    "probes": [
+      { "path": "/", "mustContain": "found:RANDOMNESS_PLACEHOLDER" }
+    ]
+  }
+  
