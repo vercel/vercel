@@ -25,6 +25,7 @@ import {
 
 import nextLegacyVersions from './legacy-versions';
 import {
+  EnvConfig,
   excludeFiles,
   getNextConfig,
   getPathsInside,
@@ -33,11 +34,14 @@ import {
   normalizePackageJson,
   onlyStaticDirectory,
   stringMap,
+  syncEnvVars,
   validateEntrypoint,
 } from './utils';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
+  env?: EnvConfig;
+  buildEnv?: EnvConfig;
 }
 
 interface BuildParamsType extends BuildOptions {
@@ -119,10 +123,15 @@ function isLegacyNext(nextVersion: string) {
 const name = '[@now/next]';
 const urls: stringMap = {};
 
-function startDevServer(entryPath: string) {
+function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
+  // The runtime env vars are encoded and passed in as `argv[2]`, so that the
+  // dev-server process can replace them onto `process.env` after the Next.js
+  // "prepare" step
+  const encodedEnv = Buffer.from(JSON.stringify(runtimeEnv)).toString('base64');
+
   // `env` is omitted since that
   // makes it default to `process.env`
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
     cwd: entryPath,
     execArgv: [],
   });
@@ -181,7 +190,13 @@ export const build = async ({
     if (!urls[entrypoint]) {
       console.log(`${name} Installing dependencies...`);
       await runNpmInstall(entryPath, ['--prefer-offline']);
-      const { forked, getUrl } = startDevServer(entryPath);
+
+      // The runtime env vars consist of the base `process.env` vars, but with the
+      // build env vars removed, and the runtime env vars mixed in afterwards
+      const runtimeEnv: EnvConfig = Object.assign({}, process.env);
+      syncEnvVars(runtimeEnv, meta.buildEnv || {}, meta.env || {});
+
+      const { forked, getUrl } = startDevServer(entryPath, runtimeEnv);
       urls[entrypoint] = await getUrl();
       childProcess = forked;
       console.log(

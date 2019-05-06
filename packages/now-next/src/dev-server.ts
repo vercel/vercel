@@ -2,6 +2,13 @@ import resolveFrom from 'resolve-from';
 import { parse } from 'url';
 import getPort from 'get-port';
 import { createServer } from 'http';
+import { syncEnvVars } from './utils';
+
+process.on('unhandledRejection', err => {
+  console.error('Exiting builder due to build error:');
+  console.error(err);
+  process.exit(1);
+});
 
 async function main(cwd: string) {
   const next = require(resolveFrom(cwd, 'next'));
@@ -16,6 +23,13 @@ async function main(cwd: string) {
 
   // Prepare for incoming requests
   await app.prepare();
+
+  // The runtime env vars are passed in to `argv[2]`
+  // as a base64-encoded JSON string
+  const runtimeEnv = JSON.parse(
+    Buffer.from(process.argv[2], 'base64').toString()
+  );
+  syncEnvVars(process.env, process.env, runtimeEnv);
 
   createServer((req, res) => {
     const parsedUrl = parse(req.url || '', true);

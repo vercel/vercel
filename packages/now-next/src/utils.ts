@@ -2,18 +2,22 @@ import fs from 'fs-extra';
 import path from 'path';
 import { Files } from '@now/build-utils';
 
-type stringMap = {[key: string]: string};
+type stringMap = { [key: string]: string };
+
+export interface EnvConfig {
+  [name: string]: string | undefined;
+}
 
 /**
  * Validate if the entrypoint is allowed to be used
  */
 function validateEntrypoint(entrypoint: string) {
   if (
-    !/package\.json$/.exec(entrypoint)
-    && !/next\.config\.js$/.exec(entrypoint)
+    !/package\.json$/.exec(entrypoint) &&
+    !/next\.config\.js$/.exec(entrypoint)
   ) {
     throw new Error(
-      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
+      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"'
     );
   }
 }
@@ -21,7 +25,10 @@ function validateEntrypoint(entrypoint: string) {
 /**
  * Exclude certain files from the files object
  */
-function excludeFiles(files: Files, matcher: (filePath: string) => boolean): Files {
+function excludeFiles(
+  files: Files,
+  matcher: (filePath: string) => boolean
+): Files {
   return Object.keys(files).reduce((newFiles, filePath) => {
     if (matcher(filePath)) {
       return newFiles;
@@ -36,7 +43,10 @@ function excludeFiles(files: Files, matcher: (filePath: string) => boolean): Fil
 /**
  * Creates a new Files object holding only the entrypoint files
  */
-function includeOnlyEntryDirectory(files: Files, entryDirectory: string): Files {
+function includeOnlyEntryDirectory(
+  files: Files,
+  entryDirectory: string
+): Files {
   if (entryDirectory === '.') {
     return files;
   }
@@ -76,7 +86,13 @@ function onlyStaticDirectory(files: Files, entryDir: string): Files {
 /**
  * Enforce specific package.json configuration for smallest possible lambda
  */
-function normalizePackageJson(defaultPackageJson: {dependencies?: stringMap, devDependencies?: stringMap, scripts?: stringMap} = {}) {
+function normalizePackageJson(
+  defaultPackageJson: {
+    dependencies?: stringMap;
+    devDependencies?: stringMap;
+    scripts?: stringMap;
+  } = {}
+) {
   const dependencies: stringMap = {};
   const devDependencies: stringMap = {
     ...defaultPackageJson.dependencies,
@@ -112,7 +128,8 @@ function normalizePackageJson(defaultPackageJson: {dependencies?: stringMap, dev
     },
     scripts: {
       ...defaultPackageJson.scripts,
-      'now-build': 'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
+      'now-build':
+        'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
     },
   };
 }
@@ -151,7 +168,12 @@ function getPathsInside(entryDirectory: string, files: Files) {
   return watch;
 }
 
-function getRoutes(entryDirectory: string, pathsInside: string[], files: Files, url: string): any[] {
+function getRoutes(
+  entryDirectory: string,
+  pathsInside: string[],
+  files: Files,
+  url: string
+): any[] {
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
 
@@ -166,12 +188,12 @@ function getRoutes(entryDirectory: string, pathsInside: string[], files: Files, 
   const routes: any[] = [
     {
       src: `${prefix}_next/(.*)`,
-      dest: `${url}/_next/$1`
+      dest: `${url}/_next/$1`,
     },
     {
       src: `${prefix}static/(.*)`,
-      dest: `${url}/static/$1`
-    }
+      dest: `${url}/static/$1`,
+    },
   ];
 
   for (const file of Object.keys(filesInside)) {
@@ -192,7 +214,7 @@ function getRoutes(entryDirectory: string, pathsInside: string[], files: Files, 
 
     routes.push({
       src: `${prefix}${pageName}`,
-      dest: `${url}/${pageName}`
+      dest: `${url}/${pageName}`,
     });
 
     if (pageName.endsWith('index')) {
@@ -200,12 +222,26 @@ function getRoutes(entryDirectory: string, pathsInside: string[], files: Files, 
 
       routes.push({
         src: `${prefix}${resolvedIndex}`,
-        dest: `${url}/${resolvedIndex}`
+        dest: `${url}/${resolvedIndex}`,
       });
     }
   }
 
   return routes;
+}
+
+function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
+  // Remove any env vars from `removeEnv`
+  // that are not present in the `addEnv`
+  const addKeys = new Set(Object.keys(addEnv));
+  for (const name of Object.keys(removeEnv)) {
+    if (!addKeys.has(name)) {
+      delete base[name];
+    }
+  }
+
+  // Add in the keys from `addEnv`
+  Object.assign(base, addEnv);
 }
 
 export {
@@ -219,4 +255,5 @@ export {
   getPathsInside,
   getRoutes,
   stringMap,
+  syncEnvVars,
 };
