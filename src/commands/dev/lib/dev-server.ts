@@ -125,9 +125,7 @@ export default class DevServer {
 
     // Update the build matches in case an entrypoint was created or deleted
     const nowJson = await this.getNowJson();
-    if (nowJson) {
-      await this.updateBuildMatches(nowJson);
-    }
+    await this.updateBuildMatches(nowJson);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -295,7 +293,7 @@ export default class DevServer {
     }
   }
 
-  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+  async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
     const filePath = join(this.cwd, fileName);
@@ -309,7 +307,8 @@ export default class DevServer {
         throw err;
       }
     }
-    return env;
+    this.validateEnvConfig(fileName, base || {}, env);
+    return { ...base, ...env };
   }
 
   async getNowJson(): Promise<NowConfig> {
@@ -356,12 +355,6 @@ export default class DevServer {
     if (config.version !== 2) {
       throw new Error('Only `version: 2` is supported by `now dev`');
     }
-    this.validateEnvConfig('.env', config.env, this.env);
-    this.validateEnvConfig(
-      '.env.build',
-      config.build && config.build.env,
-      this.buildEnv
-    );
   }
 
   validateEnvConfig(
@@ -398,13 +391,15 @@ export default class DevServer {
 
     // Retrieve the path of the native module
     const modulePath = await getModuleForNSFW(this.output);
+    const nowJson = await this.getNowJson();
+    const nowJsonBuild = nowJson.build || {};
     const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env'),
-      this.getLocalEnv('.env.build')
+      this.getLocalEnv('.env', nowJson.env),
+      this.getLocalEnv('.env.build', nowJsonBuild.env)
     ]);
+    Object.assign(process.env, buildEnv);
     this.env = env;
     this.buildEnv = buildEnv;
-    const nowJson = await this.getNowJson();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowJson, opts);
