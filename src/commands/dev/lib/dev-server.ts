@@ -125,9 +125,7 @@ export default class DevServer {
 
     // Update the build matches in case an entrypoint was created or deleted
     const nowJson = await this.getNowJson();
-    if (nowJson) {
-      await this.updateBuildMatches(nowJson);
-    }
+    await this.updateBuildMatches(nowJson);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -309,6 +307,7 @@ export default class DevServer {
         throw err;
       }
     }
+    this.validateEnvConfig(fileName, base || {}, env);
     return { ...base, ...env };
   }
 
@@ -356,12 +355,6 @@ export default class DevServer {
     if (config.version !== 2) {
       throw new Error('Only `version: 2` is supported by `now dev`');
     }
-    this.validateEnvConfig('.env', config.env, this.env);
-    this.validateEnvConfig(
-      '.env.build',
-      config.build && config.build.env,
-      this.buildEnv
-    );
   }
 
   validateEnvConfig(
