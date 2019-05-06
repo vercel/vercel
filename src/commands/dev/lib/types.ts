@@ -82,6 +82,8 @@ export interface BuilderParamsBase {
     requestPath?: string | null;
     filesChanged?: string[];
     filesRemoved?: string[];
+    env?: EnvConfig;
+    buildEnv?: EnvConfig;
   };
 }
 

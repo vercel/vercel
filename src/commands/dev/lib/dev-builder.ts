@@ -30,13 +30,13 @@ import {
 
 interface BuildMessage {
   type: string;
-};
+}
 
 interface BuildMessageResult extends BuildMessage {
   type: 'buildResult';
   result?: BuilderOutputs | BuildResult;
   error?: object;
-};
+}
 
 const tmpDir = tmpdir();
 const getWorkPath = () =>
@@ -75,7 +75,7 @@ async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
   output: Output,
-  yarnPath?: string,
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -140,13 +140,13 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg }
   } = match;
-  const { env } = devServer;
+  const { env, debug, buildEnv, yarnPath } = devServer;
   const { src: entrypoint, workPath } = match;
   await mkdirp(workPath);
 
   const startTime = Date.now();
   const showBuildTimestamp =
-    match.use !== '@now/static' && (!isInitialBuild || devServer.debug);
+    match.use !== '@now/static' && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
@@ -165,9 +165,9 @@ export async function executeBuild(
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
-      devServer.buildEnv,
+      buildEnv,
       devServer.output,
-      devServer.yarnPath
+      yarnPath
     );
   }
 
@@ -176,7 +176,14 @@ export async function executeBuild(
     entrypoint,
     workPath,
     config,
-    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+    meta: {
+      isDev: true,
+      requestPath,
+      filesChanged,
+      filesRemoved,
+      env,
+      buildEnv
+    }
   };
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
@@ -185,8 +192,10 @@ export async function executeBuild(
     let spinner: Ora | undefined;
     const fullLogs: string[] = [];
 
-    if (isInitialBuild && !devServer.debug && process.stdout.isTTY) {
-      const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
+    if (isInitialBuild && !debug && process.stdout.isTTY) {
+      const logTitle = `${chalk.bold(
+        `Setting up Builder for ${chalk.underline(entrypoint)}`
+      )}:`;
       spinner = ora(logTitle).start();
 
       spinLogger = (data: Buffer) => {
@@ -197,7 +206,8 @@ export async function executeBuild(
         const spinText = `${logTitle} ${lines[lines.length - 1]}`;
         const maxCols = process.stdout.columns || 80;
         const overflow = stripAnsi(spinText).length + 2 - maxCols;
-        spinner!.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
+        spinner!.text =
+          overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       buildProcess!.stdout!.on('data', spinLogger);
@@ -228,7 +238,9 @@ export async function executeBuild(
         }
         function onExit(code: number | null, signal: string | null) {
           cleanup();
-          const err = new Error(`Builder exited with ${signal || code} before sending build result`);
+          const err = new Error(
+            `Builder exited with ${signal || code} before sending build result`
+          );
           reject(err);
         }
         function cleanup() {
@@ -396,7 +408,7 @@ export async function getBuildMatches(
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
-    const files =  await getFiles(cwd, nowJson, opts);
+    const files = await getFiles(cwd, nowJson, opts);
 
     for (const file of files) {
       src = relative(cwd, file);
