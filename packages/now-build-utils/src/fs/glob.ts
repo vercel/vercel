@@ -8,12 +8,16 @@ import FileFsRef from '../file-fs-ref';
 type GlobOptions = vanillaGlob_.IOptions;
 
 interface FsFiles {
-  [filePath: string]: FileFsRef
+  [filePath: string]: FileFsRef;
 }
 
 const vanillaGlob = promisify(vanillaGlob_);
 
-export default async function glob(pattern: string, opts: GlobOptions | string, mountpoint?: string): Promise<FsFiles> {
+export default async function glob(
+  pattern: string,
+  opts: GlobOptions | string,
+  mountpoint?: string
+): Promise<FsFiles> {
   let options: GlobOptions;
   if (typeof opts === 'string') {
     options = { cwd: opts };
@@ -23,7 +27,7 @@ export default async function glob(pattern: string, opts: GlobOptions | string, 
 
   if (!options.cwd) {
     throw new Error(
-      'Second argument (basePath) must be specified for names of resulting files',
+      'Second argument (basePath) must be specified for names of resulting files'
     );
   }
 
@@ -41,11 +45,11 @@ export default async function glob(pattern: string, opts: GlobOptions | string, 
   const files = await vanillaGlob(pattern, options);
 
   for (const relativePath of files) {
-    const fsPath = path.join(options.cwd!, relativePath);
+    const fsPath = path.join(options.cwd!, relativePath).replace(/\\/g, '/');
     let stat: Stats = options.statCache![fsPath] as Stats;
     assert(
       stat,
-      `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`,
+      `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
     );
     if (stat.isFile()) {
       const isSymlink = options.symlinks![fsPath];

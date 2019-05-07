@@ -28,11 +28,27 @@ async function runBuildLambda(inputPath) {
     entrypoint,
     config: build.config,
   });
-  console.log(analyzeResult);
+
   const workPath = await getWritableDirectory();
   const buildResult = await wrapper.build({
-    files: inputFiles, entrypoint, config: build.config, workPath,
+    files: inputFiles,
+    entrypoint,
+    config: build.config,
+    workPath,
   });
+  const { output } = buildResult;
+
+  // Windows support
+  if (output) {
+    buildResult.output = Object.keys(output).reduce(
+      (result, path) => ({
+        ...result,
+        [path.replace(/\\/g, '/')]: output[path],
+      }),
+      {},
+    );
+  }
+
   return {
     analyzeResult,
     buildResult,

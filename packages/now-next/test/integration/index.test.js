@@ -28,6 +28,7 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'monorepo'));
     expect(output['www/index']).toBeDefined();
     expect(output['www/static/test.txt']).toBeDefined();
+    expect(output['www/data.txt']).toBeDefined();
     const filePaths = Object.keys(output);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
@@ -93,6 +94,17 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'static-files'));
     expect(output['static/test.txt']).toBeDefined();
+  },
+  FOUR_MINUTES,
+);
+
+it(
+  'Should build the public-files test',
+  async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'public-files'));
+    expect(output['robots.txt']).toBeDefined();
   },
   FOUR_MINUTES,
 );

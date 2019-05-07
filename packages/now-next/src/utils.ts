@@ -73,11 +73,11 @@ function excludeLockFiles(files: Files): Files {
 }
 
 /**
- * Include the static directory from files
+ * Include only the files from a selected directory
  */
-function onlyStaticDirectory(files: Files, entryDir: string): Files {
+function filesFromDirectory(files: Files, dir: string): Files {
   function matcher(filePath: string) {
-    return !filePath.startsWith(path.join(entryDir, 'static'));
+    return !filePath.startsWith(dir.replace(/\\/g, '/'));
   }
 
   return excludeFiles(files, matcher);
@@ -195,8 +195,9 @@ function getRoutes(
       dest: `${url}/static/$1`,
     },
   ];
+  const filePaths = Object.keys(filesInside);
 
-  for (const file of Object.keys(filesInside)) {
+  for (const file of filePaths) {
     const relativePath = path.relative(entryDirectory, file);
     const isPage = pathIsInside('pages', relativePath);
 
@@ -227,6 +228,25 @@ function getRoutes(
     }
   }
 
+  // Add public folder routes
+  for (const file of filePaths) {
+    const relativePath = path.relative(entryDirectory, file);
+    const isPublic = pathIsInside('public', relativePath);
+
+    if (!isPublic) continue;
+
+    const fileName = path.relative('public', relativePath);
+    const route = {
+      src: `${prefix}${fileName}`,
+      dest: `${url}/${fileName}`,
+    };
+
+    // Only add the route if a page is not already using it
+    if (!routes.some(r => r.src === route.src)) {
+      routes.push(route);
+    }
+  }
+
   return routes;
 }
 
@@ -250,7 +270,7 @@ export {
   includeOnlyEntryDirectory,
   excludeLockFiles,
   normalizePackageJson,
-  onlyStaticDirectory,
+  filesFromDirectory,
   getNextConfig,
   getPathsInside,
   getRoutes,
