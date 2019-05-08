@@ -2,7 +2,7 @@
 const path = require('path');
 const os = require('os');
 const { build } = require('@now/next');
-const { FileBlob } = require('@now/build-utils');
+const { download, FileBlob } = require('@now/build-utils');
 
 jest.setTimeout(45000);
 
@@ -55,24 +55,12 @@ describe('build meta dev', () => {
       .slice(3),
   );
   console.log('workPath directory: ', workPath);
-  /*
-  it('should have builder v2 response isDev=false', async () => {
-    const meta = { isDev: false, requestPath: null };
-    const { output, routes, watch } = await build({
-      files,
-      workPath,
-      entrypoint,
-      meta,
-    });
-    //console.log('output: ', Object.keys(output));
-    expect(Object.keys(output).length).toBe(7);
-    expect(output.index.type).toBe('Lambda');
-    expect(routes.length).toBe(0);
-    expect(watch.length).toBe(0);
-  });
-  */
 
   it('should have builder v2 response isDev=true', async () => {
+    // Since `download()` is a no-op when `isDev=true`, the assumption is that the
+    // source files are already present, so manually download them here first.
+    await download(files, workPath);
+
     const meta = { isDev: true, requestPath: null };
     const {
       output, routes, watch, childProcesses,
