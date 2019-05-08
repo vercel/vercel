@@ -6,6 +6,7 @@ import {
   FileBlob,
   FileFsRef,
   Files,
+  Meta,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -22,6 +23,7 @@ interface DownloadOptions {
   files: Files;
   entrypoint: string;
   workPath: string;
+  meta?: Meta;
   npmArguments?: string[];
 }
 
@@ -29,10 +31,11 @@ async function downloadInstallAndBundle({
   files,
   entrypoint,
   workPath,
+  meta,
   npmArguments = [],
 }: DownloadOptions) {
   console.log('downloading user files...');
-  const downloadedFiles = await download(files, workPath);
+  const downloadedFiles = await download(files, workPath, meta);
 
   console.log("installing dependencies for user's code...");
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -110,6 +113,7 @@ export async function build({
   entrypoint,
   workPath,
   config,
+  meta,
 }: BuildOptions) {
   const {
     entrypointPath,
@@ -118,6 +122,7 @@ export async function build({
     files,
     entrypoint,
     workPath,
+    meta,
     npmArguments: ['--prefer-offline'],
   });
 
