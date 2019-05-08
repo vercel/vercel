@@ -1,0 +1,7 @@
+# Documentation
+# https://help.github.com/en/articles/about-code-owners
+
+*                       @styfle
+/packages/now-node      @styfle @tootallnate
+/packages/now-next      @styfle @dav-is
+/packages/now-go        @styfle @sophearak
