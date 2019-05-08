@@ -716,17 +716,12 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      let destUrl = dest;
-      let decodedUrl = dest;
-      // make sure original query wasn't stripped
-      if (!destUrl.includes('?') && (req.url || '').includes('?')) {
-        destUrl = url.format(
-          Object.assign(url.parse(destUrl), { query: uri_args || {} })
-        );
-        // this is just for nice logs
-        decodedUrl = decodeURIComponent(destUrl);
-      }
-      this.output.debug(`ProxyPass: ${decodedUrl}`);
+      // Mix the `routes` result dest query params into the req path
+      const parsed = url.parse(dest, true);
+      Object.assign(parsed.query, uri_args);
+      const destUrl = url.format(parsed);
+
+      this.output.debug(`ProxyPass: ${destUrl}`);
       return proxyPass(req, res, destUrl, this.output);
     }
 
@@ -763,12 +758,10 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/');
-      const newUrl = url.format(
-        Object.assign(origUrl, {
-          pathname: `/${requestPath}`
-        })
-      );
+      const origUrl = url.parse(req.url || '/', true);
+      origUrl.pathname = dest;
+      Object.assign(origUrl.query, uri_args);
+      const newUrl = url.format(origUrl);
       this.output.debug(
         `Checking build result's ${
           buildResult.routes.length
