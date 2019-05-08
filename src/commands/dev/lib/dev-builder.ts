@@ -2,10 +2,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
-import { tmpdir } from 'os';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { readFile, mkdirp } from 'fs-extra';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
@@ -38,18 +36,6 @@ interface BuildMessageResult extends BuildMessage {
   error?: object;
 }
 
-const tmpDir = tmpdir();
-const getWorkPath = () =>
-  join(
-    tmpDir,
-    'co.zeit.now',
-    'dev',
-    'workPaths',
-    Math.random()
-      .toString(32)
-      .slice(-8)
-  );
-
 const isLogging = new WeakSet<ChildProcess>();
 
 let nodeBinPromise: Promise<string>;
@@ -74,6 +60,7 @@ function pipeChildLogging(child: ChildProcess): void {
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
+  workPath: string,
   output: Output,
   yarnPath?: string
 ): Promise<ChildProcess> {
@@ -89,7 +76,7 @@ async function createBuildProcess(
     PATH = `${yarnPath}${delimiter}${PATH}`;
   }
   const buildProcess = fork(modulePath, [], {
-    cwd: match.workPath,
+    cwd: workPath,
     env: {
       ...process.env,
       PATH,
@@ -140,9 +127,8 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg }
   } = match;
-  const { env, debug, buildEnv, yarnPath } = devServer;
-  const { src: entrypoint, workPath } = match;
-  await mkdirp(workPath);
+  const { src: entrypoint } = match;
+  const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -151,7 +137,7 @@ export async function executeBuild(
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
-      `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
+      `Using \`${pkg.name}${pkg.version ? `v${pkg.version} ` : ''}\``
     );
   }
 
@@ -166,6 +152,7 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(
       match,
       buildEnv,
+      workPath,
       devServer.output,
       yarnPath
     );
@@ -419,8 +406,7 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0,
-        workPath: getWorkPath()
+        buildTimestamp: 0
       });
     }
   }
