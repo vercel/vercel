@@ -717,7 +717,7 @@ export default class DevServer {
     if (isURL(dest)) {
       // Mix the `routes` result dest query params into the req path
       const parsed = url.parse(dest, true);
-      parsed.search = null;
+      delete parsed.search;
       Object.assign(parsed.query, uri_args);
       const destUrl = url.format(parsed);
 
@@ -759,7 +759,7 @@ export default class DevServer {
       buildResult.routes.length > 0
     ) {
       const origUrl = url.parse(req.url || '/', true);
-      origUrl.search = null;
+      delete origUrl.search;
       origUrl.pathname = dest;
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
