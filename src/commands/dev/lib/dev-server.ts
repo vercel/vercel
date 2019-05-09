@@ -53,6 +53,7 @@ export default class DevServer {
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
   public yarnPath: string;
+  public address: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -69,6 +70,7 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
+    this.address = '';
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -464,11 +466,8 @@ export default class DevServer {
       }
     }
 
-    this.output.ready(
-      `Available at ${chalk.cyan.underline(
-        address.replace('[::]', 'localhost')
-      )}`
-    );
+    this.address = address.replace('[::]', 'localhost');
+    this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
 
     this.serverUrlPrinted = true;
   }
@@ -718,6 +717,7 @@ export default class DevServer {
     if (isURL(dest)) {
       // Mix the `routes` result dest query params into the req path
       const parsed = url.parse(dest, true);
+      parsed.search = null;
       Object.assign(parsed.query, uri_args);
       const destUrl = url.format(parsed);
 
@@ -759,6 +759,7 @@ export default class DevServer {
       buildResult.routes.length > 0
     ) {
       const origUrl = url.parse(req.url || '/', true);
+      origUrl.search = null;
       origUrl.pathname = dest;
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
