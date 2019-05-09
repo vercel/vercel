@@ -53,6 +53,7 @@ test(
   })
 );
 
+/*
 test(
   '[DevServer] Maintains query when proxy passing',
   testFixture('now-dev-query-proxy', async (t, server) => {
@@ -75,6 +76,7 @@ test(
     }
   })
 );
+*/
 
 test('[DevServer] Does not install builders if there are no builds', async t => {
   const handler = data => {
