@@ -65,7 +65,6 @@ test(
     try {
       const res = await fetch(`${server.address}/${port}?url-param=a`);
       const text = await res.text();
-      console.error({ text });
       const parsed = url.parse(text, true);
       t.is(parsed.pathname, '/something');
       t.is(parsed.query['url-param'], 'a');
