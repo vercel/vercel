@@ -9,12 +9,13 @@ const { shouldServe } = require('@now/build-utils'); // eslint-disable-line impo
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
-exports.build = async ({ files, entrypoint }) => {
+exports.build = async ({
+  workPath, files, entrypoint, meta,
+}) => {
   console.log('downloading files...');
-  const srcDir = await getWritableDirectory();
   const outDir = await getWritableDirectory();
 
-  await download(files, srcDir);
+  await download(files, workPath, meta);
 
   const handlerPath = path.join(__dirname, 'handler');
   await copyFile(handlerPath, path.join(outDir, 'handler'));
@@ -24,7 +25,7 @@ exports.build = async ({ files, entrypoint }) => {
 
   // For now only the entrypoint file is copied into the lambda
   await copyFile(
-    path.join(srcDir, entrypoint),
+    path.join(workPath, entrypoint),
     path.join(outDir, entrypoint),
   );
 
