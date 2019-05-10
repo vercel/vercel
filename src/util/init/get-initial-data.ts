@@ -1,6 +1,8 @@
 import _glob from 'glob';
 import { readFile as _readFile } from 'fs'
 import { promisify } from 'util'
+import chalk from 'chalk'
+import { Output } from '../output';
 
 const glob = promisify(_glob)
 const readFile = promisify(_readFile)
@@ -38,12 +40,31 @@ abstract class Detector {
   constructor(cache: Cache) {
     this.cache = cache
   }
-  populateCache(ignore: Ignore) {
-    return this.cacheHandler(this.cache, Object.keys(ignore).map((e) => ignore[e]))
+  populateCache(ignore: Ignore, output: Output) {
+    return this.cacheHandler(this.cache, Object.keys(ignore).map((e) => ignore[e]), output)
   }
-  readonly abstract cacheHandler: (cache: Cache, ignore: string[]) => Promise<void>
+  readonly abstract cacheHandler: (cache: Cache, ignore: string[], output: Output) => Promise<void>
   abstract existsAt(): string[]
   abstract guessName(): string | null
+}
+
+function userDenies(output: Output, msg: string) {
+  return new Promise(resolve => {
+    output.print(
+      `${chalk.bold.cyan(`> Do you want to include ${msg}?`)} ${chalk.gray('[y/N] ')}`
+    );
+    process.stdin
+      .on('data', d => {
+        process.stdin.pause();
+        resolve(
+          d
+            .toString()
+            .trim()
+            .toLowerCase() !== 'y'
+        );
+      })
+      .resume();
+  });
 }
 
 const ignoreDefault: Ignore = {
@@ -59,7 +80,7 @@ const ignoreNode: Ignore = {
  * Gets all package.json files inside of the working dir.
  * Will set them to `this.cache.manifests.node`
  */
-const getNodeManifest = async (cache: Cache, ignore: string[]) => {
+const getNodeManifest = async (cache: Cache, ignore: string[], output: Output) => {
   if (!cache.manifests.node) {
     const results = await glob('**/package.json', { nodir: true, ignore })
     for (let i = 0; i < results.length; i++) {
@@ -121,7 +142,7 @@ class NextDetector extends Detector {
   }
 }
 
-async function getInitialData(): Promise<{ builds: Build[], name: string, ignore: string[] }> {
+async function getInitialData(output: Output): Promise<{ builds: Build[], name: string, ignore: string[] }> {
   const detectors = [
     NextDetector
   ]
@@ -134,7 +155,7 @@ async function getInitialData(): Promise<{ builds: Build[], name: string, ignore
       (Detector): Promise<Build[]> => new Promise((resolve) => {
         const Instance = new Detector(cache)
 
-        Instance.populateCache(Detector.ignore).then(() => {
+        Instance.populateCache(Detector.ignore, output).then(() => {
           const found = Instance.existsAt()
           if (found) {
             ignore = Object.assign(Detector.ignore, ignore)

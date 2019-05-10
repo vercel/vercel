@@ -15,7 +15,6 @@ import success from '../../util/output/success';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
-import getInitialData from '../../util/init/get-initial-data';
 
 type Options = {
   '--debug': boolean;
@@ -33,12 +32,8 @@ export default async function init(
 ) {
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
-
+/*
   if (!name) {
-    const stopSpinner = wait('Detecting builders needed');
-    const { builds, name, ignore } = await getInitialData()
-    stopSpinner()
-
     if (builds) {
       const nowJson = new Uint8Array(Buffer.from(
         JSON.stringify({
@@ -70,10 +65,9 @@ export default async function init(
 
       return
     }
-
     output.log('No builders could be found automatically... start from an example instead?')
   }
-
+*/
   const exampleList = await fetchExampleList();
 
   if (!exampleList) {

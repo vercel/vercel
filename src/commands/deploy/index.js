@@ -10,6 +10,8 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
+import generateProject from '../../util/generate-project'
+import promptBool from '../../util/input/prompt-bool';
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
@@ -40,7 +42,7 @@ export default async ctx => {
     paths = [process.cwd()];
   }
 
-  const localConfig = readLocalConfig(paths[0]);
+  let localConfig = readLocalConfig(paths[0]);
   const output = createOutput({ debug: argv['--debug'] });
   const stats = {};
   const versionFlag = argv['--platform-version'];
@@ -101,37 +103,45 @@ export default async ctx => {
 
   if (!localConfig) {
     if (!isFile) {
-      output.warn(
-        `Your project is missing a ${file} file with a ${prop} property. More: https://zeit.co/docs/version-config`
-      );
-    }
-  } else {
-    const { version } = localConfig;
+      output.debug(`${file} not found, generating...`);
+      const { config } = await generateProject(paths[0], output);
 
-    if (version) {
-      if (typeof version === 'number') {
-        if (version !== 1 && version !== 2) {
-          const first = code(1);
-          const second = code(2);
-
-          output.error(
-            `The value of the ${prop} property within ${file} can only be ${first} or ${second}.`
-          );
-          return 1;
-        }
-
-        platformVersion = version;
+      if (await promptBool('Would you like to deploy?', { defaultValue: true })) {
+        localConfig = config;
       } else {
+        return 0;
+      }
+    } else {
+      output.error(`There was an issue parsing ${file}`);
+      return 1;
+    }
+  }
+
+  const { version } = localConfig;
+
+  if (version) {
+    if (typeof version === 'number') {
+      if (version !== 1 && version !== 2) {
+        const first = code(1);
+        const second = code(2);
+
         output.error(
-          `The ${prop} property inside your ${file} file must be a number.`
+          `The value of the ${prop} property within ${file} can only be ${first} or ${second}.`
         );
         return 1;
       }
+
+      platformVersion = version;
     } else {
-      output.warn(
-        `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
+      output.error(
+        `The ${prop} property inside your ${file} file must be a number.`
       );
+      return 1;
     }
+  } else {
+    output.warn(
+      `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
+    );
   }
 
   if (versionFlag) {
