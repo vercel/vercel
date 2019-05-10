@@ -8,9 +8,11 @@ const { runNpmInstall } = require('@now/build-utils/fs/run-user-scripts.js'); //
 
 const writeFile = promisify(fs.writeFile);
 
-exports.build = async ({ files, entrypoint, workPath }) => {
+exports.build = async ({
+  files, entrypoint, workPath, meta,
+}) => {
   console.log('downloading user files...');
-  const downloadedFiles = await download(files, workPath);
+  const downloadedFiles = await download(files, workPath, meta);
   console.log('writing package.json...');
   const packageJson = { dependencies: { 'mdx-deck': '1.7.15' } };
   const packageJsonPath = path.join(workPath, 'package.json');
