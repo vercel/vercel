@@ -53,6 +53,7 @@ export default class DevServer {
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
   public yarnPath: string;
+  public address: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -69,6 +70,7 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
+    this.address = '';
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -464,11 +466,8 @@ export default class DevServer {
       }
     }
 
-    this.output.ready(
-      `Available at ${chalk.cyan.underline(
-        address.replace('[::]', 'localhost')
-      )}`
-    );
+    this.address = address.replace('[::]', 'localhost');
+    this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
 
     this.serverUrlPrinted = true;
   }
@@ -716,17 +715,13 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      let destUrl = dest;
-      let decodedUrl = dest;
-      // make sure original query wasn't stripped
-      if (!destUrl.includes('?') && (req.url || '').includes('?')) {
-        destUrl = url.format(
-          Object.assign(url.parse(destUrl), { query: uri_args || {} })
-        );
-        // this is just for nice logs
-        decodedUrl = decodeURIComponent(destUrl);
-      }
-      this.output.debug(`ProxyPass: ${decodedUrl}`);
+      // Mix the `routes` result dest query params into the req path
+      const parsed = url.parse(dest, true);
+      delete parsed.search;
+      Object.assign(parsed.query, uri_args);
+      const destUrl = url.format(parsed);
+
+      this.output.debug(`ProxyPass: ${destUrl}`);
       return proxyPass(req, res, destUrl, this.output);
     }
 
@@ -763,12 +758,11 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/');
-      const newUrl = url.format(
-        Object.assign(origUrl, {
-          pathname: `/${requestPath}`
-        })
-      );
+      const origUrl = url.parse(req.url || '/', true);
+      delete origUrl.search;
+      origUrl.pathname = dest;
+      Object.assign(origUrl.query, uri_args);
+      const newUrl = url.format(origUrl);
       this.output.debug(
         `Checking build result's ${
           buildResult.routes.length

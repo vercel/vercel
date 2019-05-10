@@ -1,46 +1,81 @@
-import test from 'ava'
-import path from 'path'
-import fetch from 'node-fetch'
-import createOutput from '../src/util/output'
-import DevServer from '../src/commands/dev/lib/dev-server'
-import { installBuilders } from '../src/commands/dev/lib/builder-cache'
+import url from 'url';
+import test from 'ava';
+import path from 'path';
+import fetch from 'node-fetch';
+import listen from 'async-listen';
+import { createServer } from 'http';
+import createOutput from '../src/util/output';
+import DevServer from '../src/commands/dev/lib/dev-server';
+import { installBuilders } from '../src/commands/dev/lib/builder-cache';
 
-let server
+function testFixture(name, fn) {
+  return async t => {
+    let server;
+    try {
+      let readyResolve;
+      let readyPromise = new Promise(resolve => {
+        readyResolve = resolve;
+      });
 
-test.before(async () => {
-  let readyResolve
-  let readyPromise = new Promise(resolve => {
-    readyResolve = resolve
-  })
+      const debug = false;
+      const output = createOutput({ debug });
+      const origReady = output.ready;
 
-  const output = createOutput({})
-  const origReady = output.ready
+      output.ready = msg => {
+        if (msg.toString().match(/Available at/)) {
+          readyResolve();
+        }
+        origReady(msg);
+      };
 
-  output.ready = msg => {
-    if (msg.toString().match(/Available at/)) {
-      readyResolve()
+      const fixturePath = path.join(__dirname, `fixtures/unit/${name}`);
+      server = new DevServer(fixturePath, { output, debug });
+
+      await server.start(0);
+      await readyPromise;
+
+      await fn(t, server);
+    } finally {
+      server.stop();
     }
-    origReady(msg)
-  }
+  };
+}
 
-  server = new DevServer(
-    path.join(__dirname, 'fixtures/unit/now-dev-query'),
-    { output }
-  )
+test(
+  '[DevServer] Maintains query when invoking lambda',
+  testFixture('now-dev-query-invoke', async (t, server) => {
+    const res = await fetch(`${server.address}/something?url-param=a`);
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    t.is(parsed.pathname, '/something');
+    t.is(parsed.query['url-param'], 'a');
+    t.is(parsed.query['route-param'], 'b');
+  })
+);
 
-  await server.start()
-  await readyPromise
-})
+test(
+  '[DevServer] Maintains query when proxy passing',
+  testFixture('now-dev-query-proxy', async (t, server) => {
+    const dest = createServer((req, res) => {
+      res.end(req.url);
+    });
+    await listen(dest, 0);
+    const { port } = dest.address();
 
-test.after(() => server.stop())
+    try {
+      const res = await fetch(`${server.address}/${port}?url-param=a`);
+      const text = await res.text();
+      const parsed = url.parse(text, true);
+      t.is(parsed.pathname, '/something');
+      t.is(parsed.query['url-param'], 'a');
+      t.is(parsed.query['route-param'], 'b');
+    } finally {
+      dest.close();
+    }
+  })
+);
 
-test('[DevServer] maintains query when proxying route', async t => {
-  const res = await fetch('http://localhost:3000/_next/webpack-hmr?page=1')
-  const text = await res.text()
-  t.regex(text, /\?page=1/)
-})
-
-test('do not install builders if there are no builds', async t => {
+test('[DevServer] Does not install builders if there are no builds', async t => {
   const handler = data => {
     if (data.includes('installing')) {
       t.fail();
@@ -56,4 +91,4 @@ test('do not install builders if there are no builds', async t => {
   process.stderr.removeListener('data', handler);
 
   t.pass();
-})
+});
