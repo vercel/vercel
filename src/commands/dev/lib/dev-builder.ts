@@ -137,7 +137,7 @@ export async function executeBuild(
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
-      `Using \`${pkg.name}${pkg.version ? `v${pkg.version} ` : ''}\``
+      `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
     );
   }
 
