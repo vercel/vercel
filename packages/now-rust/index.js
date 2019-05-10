@@ -254,10 +254,10 @@ async function buildSingleFile({
 
 exports.build = async (m) => {
   const {
-    files, entrypoint, workPath, config,
+    files, entrypoint, workPath, config, meta,
   } = m;
   console.log('downloading files');
-  const downloadedFiles = await download(files, workPath);
+  const downloadedFiles = await download(files, workPath, meta);
   const entryPath = downloadedFiles[entrypoint].fsPath;
 
   await installRust();
