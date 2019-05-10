@@ -809,6 +809,8 @@ test('ensure the `scope` property works with username', async t => {
 
   t.is(contentType, 'text/html; charset=utf-8');
 });
+
+/*
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
 
@@ -828,6 +830,7 @@ test('try to create a builds deployments with wrong config', async t => {
     )
   );
 });
+*/
 
 test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
