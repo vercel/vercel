@@ -7,7 +7,7 @@
   "repository": "zeit/now-cli",
   "scripts": {
     "test": "yarn test-lint",
-    "test-unit": "nyc ava test/*unit.js --fail-fast",
+    "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build-download && cp download/default.js download/dist/now",
