@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@now/node-bridge": "^1.1.2",
-    "@zeit/ncc": "0.18.3",
+    "@zeit/ncc": "0.18.5",
     "fs-extra": "7.0.1"
   },
   "scripts": {
