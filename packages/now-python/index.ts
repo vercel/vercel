@@ -73,7 +73,7 @@ export const build = async ({
   meta = {},
 }: BuildOptions) => {
   console.log('downloading files...');
-  const downloadedFiles = await download(originalFiles, workPath);
+  const downloadedFiles = await download(originalFiles, workPath, meta);
   const foundLockFile = 'Pipfile.lock' in downloadedFiles;
   const pyUserBase = await getWriteableDirectory();
   process.env.PYTHONUSERBASE = pyUserBase;
