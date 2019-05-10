@@ -138,24 +138,32 @@ func main() {
 	}
 
 	parsed := parse(fileName)
+	offset := parsed.Pos()
+	reqRep := "*http.Request http.ResponseWriter"
+
 	for _, decl := range parsed.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok {
-			// this declaraction is not a function
+			// this declaration is not a function
 			// so we're not interested
 			continue
 		}
 		if fn.Name.IsExported() == true {
-			// we found the first exported function
-			// we're done!
-			analyzed := analyze{
-				PackageName: parsed.Name.Name,
-				FuncName:    fn.Name.Name,
-				Watch:       unique(relatedFiles),
+			// find a valid `net/http` handler function
+			for _, param := range fn.Type.Params.List {
+				if strings.Contains(reqRep, string(rf[param.Type.Pos()-offset:param.Type.End()-offset])) {
+					// we found the first exported function with `net/http`
+					// we're done!
+					analyzed := analyze{
+						PackageName: parsed.Name.Name,
+						FuncName:    fn.Name.Name,
+						Watch:       unique(relatedFiles),
+					}
+					analyzedJSON, _ := json.Marshal(analyzed)
+					fmt.Print(string(analyzedJSON))
+					os.Exit(0)
+				}
 			}
-			json, _ := json.Marshal(analyzed)
-			fmt.Print(string(json))
-			os.Exit(0)
 		}
 	}
 }

@@ -14,6 +14,7 @@ import {
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
 
 interface Analyzed {
+  found?: boolean;
   packageName: string;
   functionName: string;
   watch: string[];
@@ -81,7 +82,9 @@ export async function build({
 
   if (!analyzed) {
     const err = new Error(
-      `Could not find an exported function in "${entrypoint}"`
+      `Could not find an exported function in "${entrypoint}"
+Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#entrypoint
+      `
     );
     console.log(err.message);
     throw err;
