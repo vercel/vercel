@@ -13,11 +13,10 @@ exports.config = {
 };
 
 exports.build = async ({
-  files, entrypoint, workPath, config,
+  files, entrypoint, workPath, config, meta,
 }) => {
   // Download all files to workPath
-  const fileDir = path.join(workPath, 'userfiles');
-  const downloadedFiles = await download(files, fileDir);
+  const downloadedFiles = await download(files, workPath, meta);
 
   let includedFiles = {};
   if (config && config.includeFiles) {
@@ -25,7 +24,7 @@ exports.build = async ({
     // eslint-disable-next-line no-restricted-syntax
     for (const pattern of config.includeFiles) {
       // eslint-disable-next-line no-await-in-loop
-      const matchedFiles = await glob(pattern, fileDir);
+      const matchedFiles = await glob(pattern, workPath);
       Object.assign(includedFiles, matchedFiles);
     }
     // explicit and always include the entrypoint
