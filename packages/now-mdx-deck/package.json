@@ -1,6 +1,6 @@
 {
   "name": "@now/mdx-deck",
-  "version": "0.5.4-canary.0",
+  "version": "0.5.4",
   "license": "MIT",
   "repository": {
     "type": "git",

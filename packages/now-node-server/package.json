@@ -1,6 +1,6 @@
 {
   "name": "@now/node-server",
-  "version": "0.7.2-canary.1",
+  "version": "0.7.2",
   "license": "MIT",
   "repository": {
     "type": "git",
