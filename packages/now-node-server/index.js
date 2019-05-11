@@ -28,11 +28,13 @@ const { shouldServe } = require('@now/build-utils'); // eslint-disable-line impo
  * @param {string[]} [options.npmArguments]
  */
 async function downloadInstallAndBundle(
-  { files, entrypoint, workPath },
+  {
+    files, entrypoint, workPath, meta,
+  },
   { npmArguments = [] } = {},
 ) {
   console.log('downloading user files...');
-  const downloadedFiles = await download(files, workPath);
+  const downloadedFiles = await download(files, workPath, meta);
 
   console.log("installing dependencies for user's code...");
   const entrypointFsDirname = path.join(workPath, path.dirname(entrypoint));
@@ -99,10 +101,12 @@ exports.config = {
  * @returns {Promise<Files>}
  */
 exports.build = async ({
-  files, entrypoint, config, workPath,
+  files, entrypoint, config, workPath, meta,
 }) => {
   const [downloadedFiles, entrypointFsDirname] = await downloadInstallAndBundle(
-    { files, entrypoint, workPath },
+    {
+      files, entrypoint, workPath, meta,
+    },
     { npmArguments: ['--prefer-offline'] },
   );
 
