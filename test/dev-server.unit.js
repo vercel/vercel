@@ -75,6 +75,25 @@ test(
   })
 );
 
+test(
+  '[DevServer] Maintains query when builder defines routes',
+  testFixture('now-dev-next', async (t, server) => {
+    const res = await fetch(`${server.address}/something?url-param=a`);
+    const text = await res.text();
+
+    // Hacky way of getting the page payload from the response
+    // HTML since we don't have a HTML parser handy.
+    const json = text
+      .match(/<div>(.*)<\/div>/)[1]
+      .replace('</div>', '')
+      .replace(/&quot;/g, '"');
+    const parsed = JSON.parse(json);
+
+    t.is(parsed.query['url-param'], 'a');
+    t.is(parsed.query['route-param'], 'b');
+  })
+);
+
 test('[DevServer] Does not install builders if there are no builds', async t => {
   const handler = data => {
     if (data.includes('installing')) {

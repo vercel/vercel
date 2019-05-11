@@ -343,10 +343,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/build-utils@0.5.2-canary.0":
-  version "0.5.2-canary.0"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.5.2-canary.0.tgz#eec8c2b93094188fafdd9af64ec4336110e942d1"
-  integrity sha512-VAnrJNpO8DO2O0YV4I4r7FuEK2hV34OYUJO/9mX/F6bilaVdQN85Ho0STWRnYpMLlgbj/rm4nk7uYaqlgVWhaA==
+"@now/build-utils@0.5.5-canary.1":
+  version "0.5.5-canary.1"
+  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.5.5-canary.1.tgz#85cfb6d5e7d99f8d7e70006d8885573b46b0c447"
+  integrity sha512-z6wX90HBT/BF++vPhNxDsTUGA6xehuXOv+rjsfHNEF/5+qomBwn577nVNcUx93ilFDarlzHZyiqobUK2tiXCUg==
   dependencies:
     "@types/cross-spawn" "6.0.0"
     async-retry "1.2.3"
