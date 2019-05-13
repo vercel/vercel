@@ -101,7 +101,7 @@ exports.build = async ({
       }
       routes.push({
         src: `${srcBase}/(.*)`,
-        dest: `http://localhost:${devPort}${srcBase}/$1`,
+        dest: `http://localhost:${devPort}/$1`,
       });
     } else {
       if (meta.isDev) {
