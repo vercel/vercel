@@ -88,7 +88,7 @@ exports.build = async ({
           );
         } catch (err) {
           throw new Error(
-            `Failed to detect a server running on port ${devPort}`,
+            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now-builders/now-static-build-failed-to-detect-a-server`,
           );
         }
 
