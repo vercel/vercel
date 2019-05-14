@@ -1,12 +1,12 @@
-// @ts-ignore
-import listInput from './input/list'
 import fs from 'fs'
 import { join, parse, relative, sep } from 'path'
 import { promisify } from 'util'
+// @ts-ignore
+import listInput from './input/list'
 import ignore from './ignored'
 import wait from './output/wait'
-import highlight from './output/highlight';
-import { Output } from './output';
+import highlight from './output/highlight'
+import { Output } from './output'
 
 type dirMap = {
   absolute: string,
@@ -21,6 +21,7 @@ type dirMap = {
 type Package = {
   name?: string,
   dependencies?: { [key: string]: string },
+  scripts?: { [key: string]: string }
 }
 type Build = { src: string, use: string }
 type nowJson = {
@@ -29,15 +30,18 @@ type nowJson = {
   builds: Array<Build>
 }
 type Project = { config: nowJson, ignore: string[] }
-type Detector = (contents: Object) => Promise<string | false>
-type NodeDetector = (contents: Package) => Promise<string | false>
+type Detected = { use: string, build?: string, config?: { [key: string]: string }, locale?: string }
+type Detector = (contents: Object) => Promise<Detected | false>
+type NodeDetector = (contents: Package) => Promise<Detected | false>
 
 const ignored = ignore.split('\n')
 const readdir = promisify(fs.readdir)
 const readFile = promisify(fs.readFile)
 const stat = promisify(fs.stat)
 
-const NextDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.next ? '@now/next' : false
+const NextDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.next ? { use: '@now/next', build: 'next build' } : false
+const GatsbyDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.gatsby ? { locale: 'gatsby', use: '@now/static-build', build: 'gatsby build', config: { distDir: 'public' } } : false
+const BuildDetector: NodeDetector = async ({ scripts }) => scripts && scripts.build ? { use: '@now/static-build' } : false
 const locale: {
   [key: string]: {
     single: string,
@@ -48,17 +52,25 @@ const locale: {
     single: 'This is a public static file',
     many: 'These are public static files'
   },
+  '@now/static-build': {
+    single: 'This file needs to be built as static',
+    many: 'These files need to be built as static'
+  },
   '@now/next': {
     single: 'This is a Next.js project',
     many: 'This is a Next.js project'
   },
   '@now/node': {
     single: 'This is a Node.js lambda',
-    many: 'Each of these are indivudual endpoints'
+    many: 'Each of these are indivudual Node.js endpoints'
   },
   '@now/node-server': {
-    single: 'This is monolithic Node.js app',
-    many: 'These form a monolithic Node.js app'
+    single: 'This is Node.js app listening on a port',
+    many: 'These form a Node.js app listening on a port'
+  },
+  'gatsby': {
+    single: 'This is a Gatsby project',
+    many: 'This is a Gatsby project'
   },
   upload: {
     single: 'This is a dependancy of my code',
@@ -83,7 +95,9 @@ const manifests: {
   [key: string]: Detector[]
 } = {
   'package.json': [
-    NextDetector
+    NextDetector,
+    GatsbyDetector,
+    BuildDetector
   ]
 }
 const extensions: {
@@ -196,13 +210,13 @@ function getDepthandBreadth(extension: string, dirMap: dirMap): { depth: number,
     if (typeof extensions === 'string') {
       breadth++
     } else {
-      breadth = breadth + extensions
+      breadth += extensions
     }
 
     Object.keys(dirMap.dir).forEach((dir) => {
       const dive = getDepthandBreadth(extension, dirMap.dir[dir])
-      depth = depth + dive.depth
-      breadth = breadth + dive.breadth
+      depth += dive.depth
+      breadth += dive.breadth
     })
   }
 
@@ -217,25 +231,45 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
     if (detectors) {
       const data = JSON.parse(await readFile(join(dirMap.absolute, dirMap.manifests[i]), { encoding: 'utf8' }))
       const options: {[key: string]: string} = {}
+      const buildCommand: { [key: string]: string | undefined } = {}
+      const conf: { [key: string]: { [key: string]: string } | undefined } = {}
 
       for (let k in detectors) {
         const detector = detectors[k]
         const result = await detector(data)
 
-        if (result && !options[result]) {
-          options[result] = 
-            (locale[result] && locale[result].many)
-            || `This is a ${result} project`
+        if (result && !options[result.use]) {
+          const localeKey = result.locale || result.use
+
+          buildCommand[result.use] = result.build
+          conf[result.use] = result.config
+
+
+          options[result.use] = 
+            (locale[localeKey] && locale[localeKey].many)
+            || `This is a ${localeKey} project`
         }
       }
 
-      options['destructure'] = locale.destructure.many
+      options.destructure = locale.destructure.many
+      options.ignore = `${dirMap.manifests[i]} is not relevant`
 
+      const use = await choose(`What is in .${sep}${rel}?`, options)
       const builds = [{
-        use: await choose(`What is in .${sep}${rel}?`, options),
+        use,
+        config: conf[use],
         src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${dirMap.manifests[i]}`
       }]
-      if (builds[0].use !== 'destructure') return builds
+
+      if (data.dependencies && !data.scripts['now-build']) {
+        data.scripts['now-build'] = buildCommand[builds[0].use] ? buildCommand[builds[0].use] : 'npm run build'
+        outputFile(dirMap.absolute, dirMap.manifests[i], JSON.stringify(data, null, 2), true)
+      }
+
+      if (builds[0].use === 'destructure') break
+      if (builds[0].use === 'ignore') continue
+
+      return builds
     }
   }
 
@@ -243,12 +277,12 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
   const builds: Build[] = []
   const capture: string[] = []
   for (let ext in dirMap.extensions) {
-    if (dirMap.extensions.hasOwnProperty(ext) && !deepCapture.includes(ext)) {
+    if (Object.prototype.hasOwnProperty.call(dirMap.extensions, ext) && !deepCapture.includes(ext)) {
       const { depth, breadth } = getDepthandBreadth(ext, dirMap)
       let use
       let src
 
-      if (1 < depth) {
+      if (depth > 1) {
         use = await choose(
           `What are the ${breadth} ${ext} files in .${sep}${rel} (${depth} deep)?`,
           {
@@ -283,7 +317,7 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
 
   // Check directories
   for (let dir in dirMap.dir) {
-    if (dirMap.dir.hasOwnProperty(dir)) {
+    if (Object.prototype.hasOwnProperty.call(dirMap.dir, dir)) {
       builds.push(...await processDir(root, dirMap.dir[dir], capture.concat(deepCapture)))
     }
   }
@@ -291,10 +325,11 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
   return builds
 }
 
-function outputFile(dir: string, name: string, contents: string): Promise<boolean> {
+function outputFile(dir: string, name: string, contents: string, overwrite: boolean = false): Promise<boolean> {
   return new Promise((resolve) => {
     const file = new Uint8Array(Buffer.from(contents))
-    fs.writeFile(join(dir, name), file, { flag: 'wx', encoding: 'utf8' }, (err) => {
+    const flag = overwrite ? 'w' : 'wx'
+    fs.writeFile(join(dir, name), file, { flag, encoding: 'utf8' }, (err) => {
       if (err) {
         if (err.code !== 'EEXIST') throw err
         resolve(false)
