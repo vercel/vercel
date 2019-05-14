@@ -44,6 +44,7 @@ function getExtensionOptions(extension: string, isSingle: boolean) {
 
   return {
     ...options,
+    '@now/static': locale['@now/static'][type],
     upload,
     ignore
   }

@@ -61,27 +61,29 @@ export async function detectFromManifests(manifests: string[], absolute: string,
       options.destructure = locale.destructure.many
       options.ignore = `The file ${manifests[i]} is not relevant`
 
-      const use = await choose(`What is in .${sep}${rel}?`, options)
-      const builds = [{
-        use,
-        config: conf[use],
-        src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${manifests[i]}`
-      }]
+      const use = Object.keys(options).length > 2
+        ? await choose(`What is in .${sep}${rel}?`, options)
+        : null
 
-      if (data.dependencies && devCommand[builds[0].use]) {
-        data.scripts['now-dev'] = devCommand[builds[0].use]
+      if (!data.scripts) data.scripts = {}
+      if (use && data.dependencies && !data.scripts['now-dev'] && devCommand[use]) {
+        data.scripts['now-dev'] = devCommand[use]
         needsUpdate = true
       }
       if (data.dependencies && !data.scripts['now-build']) {
-        data.scripts['now-build'] = buildCommand[builds[0].use] ? buildCommand[builds[0].use] : 'npm run build'
+        data.scripts['now-build'] = use && buildCommand[use] ? buildCommand[use] : 'npm run build'
         needsUpdate = true
       }
       if (needsUpdate) outputFile(absolute, manifests[i], JSON.stringify(data, null, 2), true)
 
-      if (builds[0].use === 'destructure') break
-      if (builds[0].use === 'ignore') continue
+      if (use === 'destructure') break
+      if (use === 'ignore') continue
 
-      return builds
+      if (use) return [{
+        use,
+        config: conf[use],
+        src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${manifests[i]}`
+      }]
     }
   }
 }

@@ -22,6 +22,7 @@ export const extensions: {
   '.rs': ['@now/rust'],
   '.md': ['@now/md'],
   '.markdown': ['@now/md'],
+  '.mdx': ['@now/mdx-deck'],
   '.go': ['@now/go'],
   '.php': ['@now/php'],
   '.py': ['@now/python']
@@ -52,6 +53,10 @@ export const locale: {
   '@now/node-server': {
     single: 'This is Node.js app listening on a port',
     many: 'These form a Node.js app listening on a port'
+  },
+  '@now/mdx-deck': {
+    single: 'This is an MDX Deck Slide',
+    many: 'These are MDX Deck Slides'
   },
   'gatsby': {
     single: 'This is a Gatsby project',
