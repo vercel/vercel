@@ -1,23 +1,21 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import ms from 'ms';
 import bytes from 'bytes';
-import { tmpdir } from 'os';
-import { dirname, join, relative } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { readFile, mkdirp } from 'fs-extra';
-import ignore, { Ignore } from '@zeit/dockerignore';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 
-import { globBuilderInputs } from './glob';
 import DevServer from './dev-server';
-import IGNORED from '../../../util/ignored';
 import { Output } from '../../../util/output';
+import { relative } from '../../../util/path-helpers';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
+import { staticFiles as getFiles } from '../../../util/get-files';
 import {
   EnvConfig,
   NowConfig,
@@ -28,42 +26,62 @@ import {
   BuilderOutputs
 } from './types';
 
-const tmpDir = tmpdir();
-const getWorkPath = () =>
-  join(
-    tmpDir,
-    'co.zeit.now',
-    'dev',
-    'workPaths',
-    Math.random()
-      .toString(32)
-      .slice(-8)
-  );
+interface BuildMessage {
+  type: string;
+}
 
-const nodeBinPromise = (async () => {
+interface BuildMessageResult extends BuildMessage {
+  type: 'buildResult';
+  result?: BuilderOutputs | BuildResult;
+  error?: object;
+}
+
+const isLogging = new WeakSet<ChildProcess>();
+
+let nodeBinPromise: Promise<string>;
+
+async function getNodeBin(): Promise<string> {
   const runtime = await initializeRuntime('nodejs8.10');
   if (!runtime.cacheDir) {
     throw new Error('nodejs8.10 runtime failed to initialize');
   }
   const nodeBin = join(runtime.cacheDir, 'bin', 'node');
   return nodeBin;
-})();
+}
+
+function pipeChildLogging(child: ChildProcess): void {
+  if (!isLogging.has(child)) {
+    child.stdout!.pipe(process.stdout);
+    child.stderr!.pipe(process.stderr);
+    isLogging.add(child);
+  }
+}
 
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
-  output: Output
+  workPath: string,
+  output: Output,
+  yarnPath?: string
 ): Promise<ChildProcess> {
+  if (!nodeBinPromise) {
+    nodeBinPromise = getNodeBin();
+  }
   const [execPath, modulePath] = await Promise.all([
     nodeBinPromise,
     builderModulePathPromise
   ]);
+  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+  if (yarnPath) {
+    PATH = `${yarnPath}${delimiter}${PATH}`;
+  }
   const buildProcess = fork(modulePath, [], {
-    cwd: match.workPath,
+    cwd: workPath,
     env: {
       ...process.env,
-      PATH: `${dirname(execPath)}:${process.env.PATH}`,
-      ...buildEnv
+      PATH,
+      ...buildEnv,
+      NOW_REGION: 'dev1'
     },
     execPath,
     execArgv: [],
@@ -78,7 +96,11 @@ async function createBuildProcess(
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
     );
+    match.buildProcess = undefined;
   });
+
+  buildProcess.stdout!.setEncoding('utf8');
+  buildProcess.stderr!.setEncoding('utf8');
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
@@ -98,21 +120,30 @@ export async function executeBuild(
   files: BuilderInputs,
   match: BuildMatch,
   requestPath: string | null,
+  isInitialBuild: boolean,
   filesChanged?: string[],
   filesRemoved?: string[]
 ): Promise<void> {
   const {
     builderWithPkg: { runInProcess, builder, package: pkg }
   } = match;
-  const { env } = devServer;
-  const { src: entrypoint, workPath } = match;
-  await mkdirp(workPath);
+  const { src: entrypoint } = match;
+  const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
-  devServer.output.debug(`Building ${entrypoint} with "${match.use
-    }"${pkg.version ? ` v${pkg.version}` : ''} (workPath = ${workPath})`);
+  const startTime = Date.now();
+  const showBuildTimestamp =
+    match.use !== '@now/static' && (!isInitialBuild || debug);
+
+  if (showBuildTimestamp) {
+    devServer.output.log(`Building ${match.use}:${entrypoint}`);
+    devServer.output.debug(
+      `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
+    );
+  }
 
   const builderConfig = builder.config || {};
   const config = match.config || {};
+
   let result: BuildResult;
 
   let { buildProcess } = match;
@@ -120,43 +151,11 @@ export async function executeBuild(
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
-      devServer.buildEnv,
-      devServer.output
+      buildEnv,
+      workPath,
+      devServer.output,
+      yarnPath
     );
-
-    if (!devServer.debug && process.stdout.isTTY) {
-      const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
-      const fullLogs: string[] = [];
-      const spinner = ora(logTitle).start();
-
-      buildProcess.on('message', ({ type }) => {
-        if (type === 'buildResult') {
-          spinner.stop();
-        }
-      });
-
-      buildProcess.on('error', () => {
-        spinner.stop();
-        console.error(fullLogs.join('\n'));
-      });
-
-      const spinLogger = (data: Buffer) => {
-        const rawLog = stripAnsi(data.toString());
-        fullLogs.push(rawLog);
-
-        const lines = rawLog.replace(/\s+$/, '').split('\n');
-        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
-        const maxCols = process.stdout.columns || 80;
-        const overflow = stripAnsi(spinText).length + 3 - maxCols;
-        spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
-      };
-
-      buildProcess!.stdout!.on('data', spinLogger);
-      buildProcess!.stderr!.on('data', spinLogger);
-    } else {
-      buildProcess!.stdout!.on('data', devServer.output.debug);
-      buildProcess!.stderr!.on('data', devServer.output.debug);
-    }
   }
 
   const buildParams = {
@@ -164,26 +163,97 @@ export async function executeBuild(
     entrypoint,
     workPath,
     config,
-    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+    meta: {
+      isDev: true,
+      requestPath,
+      filesChanged,
+      filesRemoved,
+      env,
+      buildEnv
+    }
   };
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
-    buildProcess.send({
-      type: 'build',
-      builderName: pkg.name,
-      buildParams
-    });
+    let spinLogger;
+    let spinner: Ora | undefined;
+    const fullLogs: string[] = [];
 
-    buildResultOrOutputs = await new Promise((resolve, reject) => {
-      buildProcess!.once('message', ({ type, result }) => {
-        if (type === 'buildResult') {
-          resolve(result);
-        } else {
-          reject(new Error(`Got unexpected message type: ${type}`));
-        }
+    if (isInitialBuild && !debug && process.stdout.isTTY) {
+      const logTitle = `${chalk.bold(
+        `Setting up Builder for ${chalk.underline(entrypoint)}`
+      )}:`;
+      spinner = ora(logTitle).start();
+
+      spinLogger = (data: Buffer) => {
+        const rawLog = stripAnsi(data.toString());
+        fullLogs.push(rawLog);
+
+        const lines = rawLog.replace(/\s+$/, '').split('\n');
+        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
+        const maxCols = process.stdout.columns || 80;
+        const overflow = stripAnsi(spinText).length + 2 - maxCols;
+        spinner!.text =
+          overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
+      };
+
+      buildProcess!.stdout!.on('data', spinLogger);
+      buildProcess!.stderr!.on('data', spinLogger);
+    } else {
+      pipeChildLogging(buildProcess!);
+    }
+
+    try {
+      buildProcess.send({
+        type: 'build',
+        builderName: pkg.name,
+        buildParams
       });
-    });
+
+      buildResultOrOutputs = await new Promise((resolve, reject) => {
+        function onMessage({ type, result, error }: BuildMessageResult) {
+          cleanup();
+          if (type === 'buildResult') {
+            if (result) {
+              resolve(result);
+            } else if (error) {
+              reject(Object.assign(new Error(), error));
+            }
+          } else {
+            reject(new Error(`Got unexpected message type: ${type}`));
+          }
+        }
+        function onExit(code: number | null, signal: string | null) {
+          cleanup();
+          const err = new Error(
+            `Builder exited with ${signal || code} before sending build result`
+          );
+          reject(err);
+        }
+        function cleanup() {
+          buildProcess!.removeListener('exit', onExit);
+          buildProcess!.removeListener('message', onMessage);
+        }
+        buildProcess!.on('exit', onExit);
+        buildProcess!.on('message', onMessage);
+      });
+    } catch (err) {
+      if (spinner) {
+        spinner.stop();
+        spinner = undefined;
+        console.log(fullLogs.join(''));
+      }
+      throw err;
+    } finally {
+      if (spinLogger) {
+        buildProcess.stdout!.removeListener('data', spinLogger);
+        buildProcess.stderr!.removeListener('data', spinLogger);
+      }
+      if (spinner) {
+        spinner.stop();
+      }
+      pipeChildLogging(buildProcess!);
+    }
   } else {
     buildResultOrOutputs = await builder.build(buildParams);
   }
@@ -298,11 +368,19 @@ export async function executeBuild(
 
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
+
+  if (showBuildTimestamp) {
+    const endTime = Date.now();
+    devServer.output.log(
+      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
+    );
+  }
 }
 
 export async function getBuildMatches(
   nowJson: NowConfig,
-  cwd: string
+  cwd: string,
+  output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
   const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
@@ -316,10 +394,11 @@ export async function getBuildMatches(
     }
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
-    const entries = Object.values(await collectProjectFiles(src, cwd));
+    const opts = { output, src, isBuilds: true };
+    const files = await getFiles(cwd, nowJson, opts);
 
-    for (const fileRef of entries) {
-      src = relative(cwd, fileRef.fsPath);
+    for (const file of files) {
+      src = relative(cwd, file);
       const builderWithPkg = await getBuilder(use);
       matches.push({
         ...buildConfig,
@@ -327,46 +406,9 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0,
-        workPath: getWorkPath()
+        buildTimestamp: 0
       });
     }
   }
   return matches;
-}
-
-/**
- * Collect project files, with `.nowignore` honored.
- */
-export async function collectProjectFiles(
-  pattern: string,
-  cwd: string
-): Promise<BuilderInputs> {
-  const ignore = await createIgnoreList(cwd);
-  const files = await globBuilderInputs(pattern, { cwd, ignore });
-  return files;
-}
-
-/**
- * Create ignore list according `.nowignore` in cwd.
- */
-export async function createIgnoreList(cwd: string): Promise<Ignore> {
-  const ig = ignore();
-
-  // Add the default ignored files
-  ig.add(IGNORED);
-
-  // Special case for now-cli's usage
-  ig.add('.nowignore');
-
-  try {
-    const nowignore = join(cwd, '.nowignore');
-    ig.add(await readFile(nowignore, 'utf8'));
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-
-  return ig;
 }

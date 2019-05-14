@@ -269,6 +269,8 @@ const main = async argv_ => {
 
   let authConfig = null;
 
+  const subcommandsWithoutToken = ['login', 'help', 'init', 'dev'];
+
   if (authConfigExists) {
     try {
       authConfig = configFiles.readAuthConfigFile();
@@ -282,8 +284,6 @@ const main = async argv_ => {
 
       return 1;
     }
-
-    const subcommandsWithoutToken = ['config', 'login', 'help', 'init', 'dev'];
 
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
@@ -304,9 +304,7 @@ const main = async argv_ => {
       );
       return 1;
     }
-  }
-
-  if (!authConfigExists) {
+  } else {
     const results = await getDefaultAuthConfig(authConfig);
 
     authConfig = results.config;
@@ -406,7 +404,7 @@ const main = async argv_ => {
     !ctx.argv.includes('-h') &&
     !ctx.argv.includes('--help') &&
     !argv['--token'] &&
-    subcommand !== 'login'
+    !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`));
@@ -472,7 +470,7 @@ const main = async argv_ => {
   if (argv['--team']) {
     output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
   }
-  
+
   if (typeof scope === 'string' && targetCommand !== 'login' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
     const { authConfig: { token } } = ctx;
     const client = new Client({ apiUrl, token });

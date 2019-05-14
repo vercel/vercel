@@ -13,6 +13,10 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${color('>')} ${str}\n`);
   }
 
+  function dim(str: string, color = chalk.grey) {
+    print(`${color(`> ${str}`)}\n`);
+  }
+
   function warn(str: string, slug: string | null = null) {
     log(chalk`{yellow.bold WARN!} ${str}`);
     if (slug !== null) {
@@ -79,6 +83,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     ready,
     success,
     debug,
+    dim,
     time,
     note
   };

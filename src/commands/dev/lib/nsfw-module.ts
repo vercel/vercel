@@ -1,4 +1,3 @@
-import { tmpdir } from 'os';
 import {
   pathExists,
   mkdirp,
@@ -10,13 +9,15 @@ import pipe from 'promisepipe';
 import { join } from 'path';
 import fetch from 'node-fetch';
 import { spawnSync } from 'child_process';
+import { cacheDirPromise } from './builder-cache';
 import { devDependencies } from '../../../../package.json';
 import { Output } from '../../../util/output/create-output';
 
 const platformToName: { [name: string]: string } = {
   alpine: 'nsfw-alpine',
   darwin: 'nsfw-macos',
-  linux: 'nsfw-linux'
+  linux: 'nsfw-linux',
+  win32: 'nsfw-win'
 };
 
 // @ts-ignore
@@ -55,7 +56,7 @@ const plusxSync = (file: string): void => {
 const prepareModule = async (output: Output): Promise<string> => {
   const version = devDependencies['@zeit/nsfw'];
   const fileName = `nsfw-${version}.node`;
-  const dirName = join(tmpdir(), 'co.zeit.now', 'dev');
+  const dirName = await cacheDirPromise;
   const full = join(dirName, fileName);
 
   if (await pathExists(full)) {

@@ -27,6 +27,11 @@ export default routes => {
   const arrow = chalk.grey('->')
 
   for (const item of routes) {
+    if (item.handle) {
+      toPrint += `${chalk.grey('╶')} ${chalk.cyan(item.handle)}`;
+      continue;
+    }
+
     const { src, dest, status, headers } = item;
     const last = routes.indexOf(item) === (routes.length - 1);
     const suffix = last ? '' : `\n`;
