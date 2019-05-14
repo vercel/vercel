@@ -101,19 +101,19 @@ export default async ctx => {
   const file = highlight('now.json');
   const prop = code('version');
 
-  if (!localConfig) {
-    if (!isFile && !versionFlag) {
-      output.debug(`${file} not found, generating...`);
-      const { config } = await generateProject(paths[0], output);
-
-      if (await promptBool('Would you like to deploy?', { defaultValue: true })) {
-        localConfig = config;
-      } else {
-        return 0;
-      }
-    } else if (!versionFlag) {
+  if (!versionFlag && !localConfig && process.stdout.isTTY) {
+    if (isFile) {
       output.error(`There was an issue parsing ${file}`);
       return 1;
+    }
+
+    output.debug(`${file} not found, generating...`);
+    const { config } = await generateProject(paths[0], output);
+
+    if (await promptBool('Would you like to deploy?', { defaultValue: true })) {
+      localConfig = config;
+    } else {
+      return 0;
     }
   }
 

@@ -200,27 +200,29 @@ async function choose(message: string, options: {[key: string]: string}) {
   })
 }
 
-function getDepthandBreadth(extension: string, dirMap: dirMap): { depth: number, breadth: number } {
-  const extensions = dirMap.extensions[extension]
-  let depth = 0;
-  let breadth = 0;
+function getCountAndDepth(extension: string, dirMap: dirMap): { depth: number, count: number } {
+  let depth = 0
+  let diveDepth = 0
+  let count = 0
 
+  const extensions = dirMap.extensions[extension]
   if (extensions) {
     depth++
     if (typeof extensions === 'string') {
-      breadth++
+      count++
     } else {
-      breadth += extensions
+      count += extensions
     }
 
     Object.keys(dirMap.dir).forEach((dir) => {
-      const dive = getDepthandBreadth(extension, dirMap.dir[dir])
-      depth += dive.depth
-      breadth += dive.breadth
+      const dive = getCountAndDepth(extension, dirMap.dir[dir])
+      if (diveDepth < dive.depth) diveDepth = dive.depth
+      count += dive.count
     })
+    depth += diveDepth
   }
 
-  return { depth, breadth }
+  return { depth, count }
 }
 
 async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = []): Promise<Build[]> {
@@ -244,8 +246,8 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
           const localeKey = result.locale || result.use
 
           buildCommand[result.use] = result.build
+          devCommand[result.use] = result.dev
           conf[result.use] = result.config
-
 
           options[result.use] = 
             (locale[localeKey] && locale[localeKey].many)
@@ -254,7 +256,7 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
       }
 
       options.destructure = locale.destructure.many
-      options.ignore = `${dirMap.manifests[i]} is not relevant`
+      options.ignore = `The file ${dirMap.manifests[i]} is not relevant`
 
       const use = await choose(`What is in .${sep}${rel}?`, options)
       const builds = [{
@@ -285,13 +287,13 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
   const capture: string[] = []
   for (let ext in dirMap.extensions) {
     if (Object.prototype.hasOwnProperty.call(dirMap.extensions, ext) && !deepCapture.includes(ext)) {
-      const { depth, breadth } = getDepthandBreadth(ext, dirMap)
+      const { depth, count } = getCountAndDepth(ext, dirMap)
       let use
       let src
 
       if (depth > 1) {
         use = await choose(
-          `What are the ${breadth} ${ext} files in .${sep}${rel} (${depth} deep)?`,
+          `What are the ${count} ${ext} files in .${sep}${rel} (${depth} deep)?`,
           {
             ...getExtensionOptions(ext, false),
             destructure: locale.destructure.many
@@ -334,7 +336,7 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
 
 function outputFile(dir: string, name: string, contents: string, overwrite: boolean = false): Promise<boolean> {
   return new Promise((resolve) => {
-    const file = new Uint8Array(Buffer.from(contents))
+    const file = new Uint8Array(Buffer.from(`${contents}\n`))
     const flag = overwrite ? 'w' : 'wx'
     fs.writeFile(join(dir, name), file, { flag, encoding: 'utf8' }, (err) => {
       if (err) {

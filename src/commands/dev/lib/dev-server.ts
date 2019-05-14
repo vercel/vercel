@@ -16,6 +16,7 @@ import { basename, dirname, extname, join, relative } from 'path';
 
 import { Output } from '../../../util/output';
 import getNowJsonPath from '../../../util/config/local-path';
+import generateProject from '../../../util/generate-project';
 import isURL from './is-url';
 import devRouter from './dev-router';
 import getMimeType from './mime-type';
@@ -315,21 +316,28 @@ export default class DevServer {
     this.output.debug('Reading `now.json` file');
     const nowJsonPath = getNowJsonPath(this.cwd);
 
-    // The default empty `now.json` is used to serve all files as static
-    // when no `now.json` is present
-    let config: NowConfig = { version: 2 };
-
+    let config: NowConfig = {};
     try {
       config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.note(
-          'No `now.json` file present, serving all files as static'
-        );
+        if (process.stdout.isTTY) {
+          this.output.debug('No `now.json` file present, generating...');
+
+          config = (await generateProject(this.cwd, this.output)).config;
+        } else {
+          this.output.note(
+            'No `now.json` file present, serving all files as static'
+          );
+        }
       } else {
         throw err;
       }
     }
+
+    // The default empty `now.json` is used to serve all files as static
+    // when no `now.json` is present
+    if (!config.version) config.version = 2;
 
     this.validateNowConfig(config);
     this.cachedNowJson = config;
