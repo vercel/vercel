@@ -102,7 +102,7 @@ export default async ctx => {
   const prop = code('version');
 
   if (!localConfig) {
-    if (!isFile) {
+    if (!isFile && !versionFlag) {
       output.debug(`${file} not found, generating...`);
       const { config } = await generateProject(paths[0], output);
 
@@ -111,13 +111,13 @@ export default async ctx => {
       } else {
         return 0;
       }
-    } else {
+    } else if (!versionFlag) {
       output.error(`There was an issue parsing ${file}`);
       return 1;
     }
   }
 
-  const { version } = localConfig;
+  const { version } = localConfig || { version: null };
 
   if (version) {
     if (typeof version === 'number') {
@@ -138,9 +138,13 @@ export default async ctx => {
       );
       return 1;
     }
-  } else {
+  } else if (localConfig) {
     output.warn(
       `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
+    );
+  } else {
+    output.warn(
+      `Your project is missing a ${file} file with a ${prop} property. More: https://zeit.co/docs/version-config`
     );
   }
 

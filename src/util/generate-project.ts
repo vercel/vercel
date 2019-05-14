@@ -30,7 +30,7 @@ type nowJson = {
   builds: Array<Build>
 }
 type Project = { config: nowJson, ignore: string[] }
-type Detected = { use: string, build?: string, config?: { [key: string]: string }, locale?: string }
+type Detected = { use: string, build?: string, config?: { [key: string]: string }, locale?: string, dev?: string }
 type Detector = (contents: Object) => Promise<Detected | false>
 type NodeDetector = (contents: Package) => Promise<Detected | false>
 
@@ -40,7 +40,7 @@ const readFile = promisify(fs.readFile)
 const stat = promisify(fs.stat)
 
 const NextDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.next ? { use: '@now/next', build: 'next build' } : false
-const GatsbyDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.gatsby ? { locale: 'gatsby', use: '@now/static-build', build: 'gatsby build', config: { distDir: 'public' } } : false
+const GatsbyDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.gatsby ? { locale: 'gatsby', use: '@now/static-build', dev: 'gatsby develop -p $PORT', build: 'gatsby build', config: { distDir: 'public' } } : false
 const BuildDetector: NodeDetector = async ({ scripts }) => scripts && scripts.build ? { use: '@now/static-build' } : false
 const locale: {
   [key: string]: {
@@ -229,9 +229,11 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
   for (let i = 0; i < dirMap.manifests.length; i++) {
     const detectors = manifests[dirMap.manifests[i]]
     if (detectors) {
+      let needsUpdate = false
       const data = JSON.parse(await readFile(join(dirMap.absolute, dirMap.manifests[i]), { encoding: 'utf8' }))
       const options: {[key: string]: string} = {}
       const buildCommand: { [key: string]: string | undefined } = {}
+      const devCommand: { [key: string]: string | undefined } = {}
       const conf: { [key: string]: { [key: string]: string } | undefined } = {}
 
       for (let k in detectors) {
@@ -261,10 +263,15 @@ async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = 
         src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${dirMap.manifests[i]}`
       }]
 
+      if (data.dependencies && devCommand[builds[0].use]) {
+        data.scripts['now-dev'] = devCommand[builds[0].use]
+        needsUpdate = true
+      }
       if (data.dependencies && !data.scripts['now-build']) {
         data.scripts['now-build'] = buildCommand[builds[0].use] ? buildCommand[builds[0].use] : 'npm run build'
-        outputFile(dirMap.absolute, dirMap.manifests[i], JSON.stringify(data, null, 2), true)
+        needsUpdate = true
       }
+      if (needsUpdate) outputFile(dirMap.absolute, dirMap.manifests[i], JSON.stringify(data, null, 2), true)
 
       if (builds[0].use === 'destructure') break
       if (builds[0].use === 'ignore') continue
