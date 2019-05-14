@@ -10,7 +10,7 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
-import generateProject from '../../util/generate-project'
+import { generateProject } from '../../util/generate/generate-project'
 import promptBool from '../../util/input/prompt-bool';
 
 export default async ctx => {

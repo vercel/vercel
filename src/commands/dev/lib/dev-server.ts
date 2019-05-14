@@ -17,7 +17,7 @@ import { basename, dirname, extname, join } from 'path';
 import { Output } from '../../../util/output';
 import { relative } from '../../../util/path-helpers';
 import getNowJsonPath from '../../../util/config/local-path';
-import generateProject from '../../../util/generate-project';
+import { generateProject } from '../../../util/generate/generate-project';
 import isURL from './is-url';
 import devRouter from './dev-router';
 import getMimeType from './mime-type';
