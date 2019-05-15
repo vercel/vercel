@@ -12,6 +12,7 @@ export const getDefaultConfig = async existingCopy => {
       'currentTeam',
       'desktop',
       'updateChannel',
+      'noMetrics',
       'api',
       // This is deleted later in the code
       'shownTips'

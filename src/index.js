@@ -8,6 +8,7 @@ import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
+import UsageStats from 'usage-stats';
 import error from './util/output/error';
 import param from './util/output/param.ts';
 import info from './util/output/info';
@@ -37,6 +38,7 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+const GA_TRACKING_ID = '';
 const insidePkg = process.pkg;
 
 epipebomb();
@@ -55,6 +57,8 @@ Sentry.init({
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
 
+const usageStats = new UsageStats(GA_TRACKING_ID);
+
 let debug = () => {};
 let apiUrl = 'https://api.zeit.co';
 
@@ -70,7 +74,8 @@ const main = async argv_ => {
         '--version': Boolean,
         '-v': '--version',
         '--debug': Boolean,
-        '-d': '--debug'
+        '-d': '--debug',
+        '--no-metrics': Boolean
       },
       { permissive: true }
     );
@@ -249,6 +254,19 @@ const main = async argv_ => {
       );
 
       return 1;
+    }
+  }
+
+  // Handle disable metrics
+  if (!targetOrSubcommand) {
+    if (argv['--no-metrics']) {
+      config.noMetrics = true;
+      configFiles.writeToConfigFile(config);
+
+      console.log(
+        info(`Disabled anonymous metrics collection.`)
+      );
+      return 0;
     }
   }
 
@@ -548,6 +566,11 @@ const main = async argv_ => {
   try {
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(ctx);
+
+    if (config.noMetrics === undefined) {
+      usageStats.event(pkg.version, targetCommand);
+      usageStats.send();
+    }
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
       output.error(
