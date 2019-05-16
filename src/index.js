@@ -32,7 +32,7 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import { GA_TRACKING_ID, dsn } from './util/constants';
+import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -52,7 +52,7 @@ if (!insidePkg) {
 
 // Configure the error reporting system
 Sentry.init({
-  dsn,
+  dsn: SENTRY_DSN,
   release: `now-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
