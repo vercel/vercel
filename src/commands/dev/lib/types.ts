@@ -132,6 +132,7 @@ export interface Package {
   name?: string;
   version: string;
   dependencies?: { [name: string]: string };
+  devDependencies?: { [name: string]: string };
 }
 
 export interface BuilderWithPackage {
