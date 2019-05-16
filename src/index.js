@@ -32,13 +32,13 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
+import { GA_TRACKING_ID, dsn } from './util/constant';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
-const GA_TRACKING_ID = 'UA-117491914-3';
 const insidePkg = process.pkg;
 
 epipebomb();
@@ -52,7 +52,7 @@ if (!insidePkg) {
 
 // Configure the error reporting system
 Sentry.init({
-  dsn: 'https://26a24e59ba954011919a524b341b6ab5@sentry.io/1323225',
+  dsn,
   release: `now-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
