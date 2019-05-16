@@ -1,7 +1,6 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
-import nsfw from '@zeit/nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -10,10 +9,12 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import { watch, FSWatcher } from 'chokidar';
 import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
 
+import { once } from '../../../util/once';
 import { Output } from '../../../util/output';
 import { relative } from '../../../util/path-helpers';
 import getNowJsonPath from '../../../util/config/local-path';
@@ -21,13 +22,12 @@ import isURL from './is-url';
 import devRouter from './dev-router';
 import getMimeType from './mime-type';
 import { installBuilders } from './builder-cache';
-import getModuleForNSFW from './nsfw-module';
 import { getYarnPath } from './yarn-installer';
 
 import { executeBuild, getBuildMatches } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
-import { staticFiles as getFiles } from '../../../util/get-files';
+import { createIgnore, staticFiles as getFiles } from '../../../util/get-files';
 
 import {
   EnvConfig,
@@ -45,6 +45,11 @@ import {
   RouteResult
 } from './types';
 
+interface FSEvent {
+  type: string;
+  path: string;
+}
+
 export default class DevServer {
   public cwd: string;
   public debug: boolean;
@@ -61,7 +66,10 @@ export default class DevServer {
   private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
-  private nsfw?: nsfw.Watcher;
+  private watcher?: FSWatcher;
+  private watchAggregationId: NodeJS.Timer | null;
+  private watchAggregationEvents: FSEvent[];
+  private watchAggregationTimeout: number;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -81,9 +89,28 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+
+    this.watchAggregationId = null;
+    this.watchAggregationEvents = [];
+    this.watchAggregationTimeout = 500;
   }
 
-  async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
+  enqueueFsEvent(type: string, path: string): void {
+    this.watchAggregationEvents.push({ type, path });
+    if (this.watchAggregationId === null) {
+      this.watchAggregationId = setTimeout(
+        () => {
+          const events = this.watchAggregationEvents.slice();
+          this.watchAggregationEvents.length = 0;
+          this.watchAggregationId = null;
+          this.handleFilesystemEvents(events);
+        },
+        this.watchAggregationTimeout
+      );
+    }
+  }
+
+  async handleFilesystemEvents(events: FSEvent[]): Promise<void> {
     this.output.debug(`Filesystem watcher notified of ${events.length} events`);
 
     const filesChanged: Set<string> = new Set();
@@ -92,27 +119,21 @@ export default class DevServer {
     // First, update the `files` mapping of source files
     for (const event of events) {
       // TODO: for some reason the type inference isn't working, hence the casting
-      if (event.action === nsfw.actions.CREATED) {
+      if (event.type === 'add') {
         await this.handleFileCreated(
-          event as nsfw.CreatedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
-      } else if (event.action === nsfw.actions.DELETED) {
+      } else if (event.type === 'unlink') {
         this.handleFileDeleted(
-          event as nsfw.DeletedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
-      } else if (event.action === nsfw.actions.MODIFIED) {
+      } else if (event.type === 'change') {
         await this.handleFileModified(
-          event as nsfw.ModifiedEvent,
-          filesChanged,
-          filesRemoved
-        );
-      } else if (event.action === nsfw.actions.RENAMED) {
-        await this.handleFileRenamed(
-          event as nsfw.RenamedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
@@ -194,11 +215,10 @@ export default class DevServer {
   }
 
   async handleFileCreated(
-    event: nsfw.CreatedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): Promise<void> {
-    const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
@@ -215,21 +235,20 @@ export default class DevServer {
   }
 
   handleFileDeleted(
-    event: nsfw.DeletedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): void {
-    const name = relative(this.cwd, join(event.directory, event.file));
+    const name = relative(this.cwd, fsPath);
     this.output.debug(`File deleted: ${name}`);
     fileRemoved(name, this.files, changed, removed);
   }
 
   async handleFileModified(
-    event: nsfw.ModifiedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): Promise<void> {
-    const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
@@ -239,33 +258,6 @@ export default class DevServer {
       if (err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  async handleFileRenamed(
-    event: nsfw.RenamedEvent,
-    changed: Set<string>,
-    removed: Set<string>
-  ): Promise<void> {
-    const oldName = relative(this.cwd, join(event.directory, event.oldFile));
-    fileRemoved(oldName, this.files, changed, removed);
-
-    const fsPath = join(event.newDirectory, event.newFile);
-    const name = relative(this.cwd, fsPath);
-
-    try {
-      this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-      fileChanged(name, changed, removed);
-      this.output.debug(`File renamed: ${oldName} -> ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug(
-          `File renamed, but has since been deleted: ${oldName} -> ${name}`
-        );
-        fileRemoved(oldName, this.files, changed, removed);
       } else {
         throw err;
       }
@@ -392,7 +384,6 @@ export default class DevServer {
     this.yarnPath = await getYarnPath(this.output);
 
     // Retrieve the path of the native module
-    const modulePath = await getModuleForNSFW(this.output);
     const nowJson = await this.getNowJson();
     const nowJsonBuild = nowJson.build || {};
     const [env, buildEnv] = await Promise.all([
@@ -412,11 +403,6 @@ export default class DevServer {
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;
-
-    // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
-      modulePath
-    });
 
     const builders: Set<string> = new Set(
       (nowJson.builds || []).map((b: BuildConfig) => b.use)
@@ -448,7 +434,32 @@ export default class DevServer {
       this.output.success('Builder setup complete');
     }
 
-    await this.nsfw.start();
+    // Start the filesystem watcher
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    const filter = ig.createFilter();
+
+    this.watcher = watch(this.cwd, {
+      ignored: (path: string) => !filter(path),
+      ignoreInitial: true,
+      useFsEvents: false,
+      usePolling: false,
+      persistent: true
+    });
+    this.watcher.on('add', (path: string) => {
+      this.enqueueFsEvent('add', path);
+    });
+    this.watcher.on('change', (path: string) => {
+      this.enqueueFsEvent('change', path);
+    });
+    this.watcher.on('unlink', (path: string) => {
+      this.enqueueFsEvent('unlink', path);
+    });
+    this.watcher.on('error', (err: Error) => {
+      this.output.error(`Watcher error: ${err}`);
+    });
+
+    // Wait for "ready" event of the watcher
+    await once(this.watcher, 'ready');
 
     let address: string | null = null;
     while (typeof address !== 'string') {
@@ -500,8 +511,8 @@ export default class DevServer {
 
     ops.push(close(this.server));
 
-    if (this.nsfw) {
-      ops.push(this.nsfw.stop());
+    if (this.watcher) {
+      this.watcher.close();
     }
 
     await Promise.all(ops);
