@@ -38,7 +38,7 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
-const GA_TRACKING_ID = '';
+const GA_TRACKING_ID = 'UA-117491914-3';
 const insidePkg = process.pkg;
 
 epipebomb();
