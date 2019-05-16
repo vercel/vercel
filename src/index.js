@@ -32,7 +32,7 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import { GA_TRACKING_ID, dsn } from './util/constant';
+import { GA_TRACKING_ID, dsn } from './util/constants';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
