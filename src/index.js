@@ -8,7 +8,9 @@ import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
-import * as UA from 'universal-analytics';
+import ua from 'universal-analytics';
+import { platform, release, userInfo } from 'os'
+import crypto from 'crypto';
 import error from './util/output/error';
 import param from './util/output/param.ts';
 import info from './util/output/info';
@@ -56,8 +58,6 @@ Sentry.init({
   release: `now-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
-
-const metrics = new UA(GA_TRACKING_ID);
 
 let debug = () => {};
 let apiUrl = 'https://api.zeit.co';
@@ -547,6 +547,10 @@ const main = async argv_ => {
     return 1;
   }
 
+  const token = typeof config.token === 'string' ? config.token : platform() + release();
+  const salt = userInfo().username;
+  const hash = crypto.pbkdf2Sync(token, salt, 1000, 64, 'sha512').toString('hex').substring(0, 24);
+  const metrics = ua(GA_TRACKING_ID, hash);
   let exitCode;
 
   try {
@@ -560,7 +564,8 @@ const main = async argv_ => {
 
       metrics
         .timing(category, targetCommand, end, pkg.version)
-        .event(category, targetCommand, pkg.version).send();
+        .event(category, targetCommand, pkg.version)
+        .send();
     }
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
