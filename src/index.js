@@ -8,7 +8,7 @@ import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
-import UsageStats from 'usage-stats';
+import * as UA from 'universal-analytics';
 import error from './util/output/error';
 import param from './util/output/param.ts';
 import info from './util/output/info';
@@ -57,7 +57,7 @@ Sentry.init({
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
 
-const usageStats = new UsageStats(GA_TRACKING_ID);
+const metrics = new UA(GA_TRACKING_ID);
 
 let debug = () => {};
 let apiUrl = 'https://api.zeit.co';
@@ -550,17 +550,17 @@ const main = async argv_ => {
   let exitCode;
 
   try {
+    const start = new Date();
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(ctx);
+    const end = new Date() - start;
 
     if (config.collectMetrics === undefined || config.collectMetrics === true) {
       // The first argument is the event category,
       // the second one the event action
-      usageStats.event(targetCommand, 'invocation', {
-        // Event label
-        el: pkg.version
-      });
-      usageStats.send();
+      // the last one is event label
+      metrics.timing('Command Invocation', targetCommand, end).send();
+      metrics.event(targetCommand, 'invocation', pkg.version).send();
     }
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
