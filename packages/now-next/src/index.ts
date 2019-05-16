@@ -191,6 +191,10 @@ export const build = async ({
       console.log(`${name} Installing dependencies...`);
       await runNpmInstall(entryPath, ['--prefer-offline']);
 
+      if (!process.env.NODE_ENV) {
+        process.env.NODE_ENV = 'development';
+      }
+
       // The runtime env vars consist of the base `process.env` vars, but with the
       // build env vars removed, and the runtime env vars mixed in afterwards
       const runtimeEnv: EnvConfig = Object.assign({}, process.env);
