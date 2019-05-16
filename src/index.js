@@ -568,7 +568,14 @@ const main = async argv_ => {
     exitCode = await full(ctx);
 
     if (config.noMetrics === undefined) {
-      usageStats.event(pkg.version, targetCommand);
+      // The first argument is the event category,
+      // the second one the event action
+      usageStats.event('command', 'invocation', {
+        // Event label
+        el: pkg.version,
+        // Event value
+        ev: targetCommand
+      });
       usageStats.send();
     }
   } catch (err) {
