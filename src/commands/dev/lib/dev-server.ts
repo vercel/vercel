@@ -27,7 +27,7 @@ import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
-import { staticFiles as getFiles } from '../../../util/get-files';
+import { createIgnore, staticFiles as getFiles } from '../../../util/get-files';
 
 import {
   EnvConfig,
@@ -435,9 +435,11 @@ export default class DevServer {
     }
 
     // Start the filesystem watcher
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    const filter = ig.createFilter();
+
     this.watcher = watch(this.cwd, {
-      // TODO: get real ignore filter from `.nowignore`
-      ignored: [/node_modules/, /.git/],
+      ignored: (path: string) => !filter(path),
       ignoreInitial: true,
       useFsEvents: false,
       usePolling: false,
