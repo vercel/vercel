@@ -260,7 +260,7 @@ const main = async argv_ => {
   // Handle disable metrics
   if (!targetOrSubcommand) {
     if (argv['--no-metrics']) {
-      config.noMetrics = true;
+      config.collectMetrics = false;
       configFiles.writeToConfigFile(config);
 
       console.log(
@@ -567,14 +567,12 @@ const main = async argv_ => {
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(ctx);
 
-    if (config.noMetrics === undefined) {
+    if (config.collectMetrics !== undefined && config.collectMetrics === true) {
       // The first argument is the event category,
       // the second one the event action
-      usageStats.event('command', 'invocation', {
+      usageStats.event(pkg.version, 'invocation' , {
         // Event label
-        el: pkg.version,
-        // Event value
-        ev: targetCommand
+        el: targetCommand
       });
       usageStats.send();
     }
