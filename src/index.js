@@ -556,11 +556,11 @@ const main = async argv_ => {
     const end = new Date() - start;
 
     if (config.collectMetrics === undefined || config.collectMetrics === true) {
-      // The first argument is the event category,
-      // the second one the event action
-      // the last one is event label
-      metrics.timing('Command Invocation', targetCommand, end).send();
-      metrics.event(targetCommand, 'invocation', pkg.version).send();
+      const category = 'Command Invocation';
+
+      metrics
+        .timing(category, targetCommand, end, pkg.version)
+        .event(category, targetCommand, pkg.version).send();
     }
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
