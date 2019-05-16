@@ -556,7 +556,7 @@ const main = async argv_ => {
     if (config.collectMetrics === undefined || config.collectMetrics === true) {
       // The first argument is the event category,
       // the second one the event action
-      usageStats.event('command', targetCommand , {
+      usageStats.event('command', targetCommand, {
         // Event label
         el: pkg.version
       });
