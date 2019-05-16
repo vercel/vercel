@@ -74,8 +74,7 @@ const main = async argv_ => {
         '--version': Boolean,
         '-v': '--version',
         '--debug': Boolean,
-        '-d': '--debug',
-        '--no-metrics': Boolean
+        '-d': '--debug'
       },
       { permissive: true }
     );
@@ -254,19 +253,6 @@ const main = async argv_ => {
       );
 
       return 1;
-    }
-  }
-
-  // Handle disable metrics
-  if (!targetOrSubcommand) {
-    if (argv['--no-metrics']) {
-      config.collectMetrics = false;
-      configFiles.writeToConfigFile(config);
-
-      console.log(
-        info(`Disabled anonymous metrics collection.`)
-      );
-      return 0;
     }
   }
 
@@ -567,7 +553,7 @@ const main = async argv_ => {
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(ctx);
 
-    if (config.collectMetrics !== undefined && config.collectMetrics === true) {
+    if (config.collectMetrics === undefined || config.collectMetrics === true) {
       // The first argument is the event category,
       // the second one the event action
       usageStats.event(pkg.version, 'invocation' , {

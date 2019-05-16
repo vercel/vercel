@@ -69,7 +69,6 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --target                       Deploy to either 'staging' or 'production' aliases
-    --no-metrics                   Disable anonymous metrics collection
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -104,7 +103,6 @@ export const latestArgs = {
   '--force': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
-  '--no-metrics': Boolean,
   '--env': [String],
   '--build-env': [String],
   '--meta': [String],
