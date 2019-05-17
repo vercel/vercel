@@ -8,9 +8,6 @@ import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
 import * as Sentry from '@sentry/node';
-import ua from 'universal-analytics';
-import { platform, release, userInfo } from 'os'
-import crypto from 'crypto';
 import error from './util/output/error';
 import param from './util/output/param.ts';
 import info from './util/output/info';
@@ -34,6 +31,7 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
+import { analytics } from './util/metrics';
 import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
 
 const NOW_DIR = getNowDir();
@@ -547,14 +545,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  const token = typeof config.token === 'string' ? config.token : platform() + release();
-  const salt = userInfo().username;
-  const hash = crypto.pbkdf2Sync(token, salt, 1000, 64, 'sha512').toString('hex').substring(0, 24);
-  const metrics = ua(GA_TRACKING_ID, {
-    cid: hash,
-    strictCidFormat: false,
-    uid: hash
-  });
+  const metrics = analytics(GA_TRACKING_ID, config.token);
   let exitCode;
 
   try {
