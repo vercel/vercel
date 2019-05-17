@@ -237,9 +237,9 @@ async function run({ token, contextName, currentTeam }) {
       );
 
       if (args.length > 2) {
-        const example = chalk.cyan(`$ now secret add ${args[0]}`);
+        const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
         console.log(
-          `> If your secret has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
+          `> If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
       }
 
