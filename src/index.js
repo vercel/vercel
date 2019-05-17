@@ -550,7 +550,11 @@ const main = async argv_ => {
   const token = typeof config.token === 'string' ? config.token : platform() + release();
   const salt = userInfo().username;
   const hash = crypto.pbkdf2Sync(token, salt, 1000, 64, 'sha512').toString('hex').substring(0, 24);
-  const metrics = ua(GA_TRACKING_ID, hash);
+  const metrics = ua(GA_TRACKING_ID, {
+    cid: hash,
+    strictCidFormat: false,
+    uid: hash
+  });
   let exitCode;
 
   try {
