@@ -1299,7 +1299,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
-    await sleep(10000);
+    await sleep(20000);
 
     const result = await fetch(url).then(r => r.json());
 
@@ -1315,7 +1315,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
-    await sleep(10000);
+    await sleep(20000);
 
     const result = await fetch(url).then(r => r.json());
 
@@ -1331,7 +1331,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
-    await sleep(10000);
+    await sleep(20000);
 
     const result = await fetch(url).then(r => r.json());
 
