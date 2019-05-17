@@ -196,6 +196,7 @@
     "tmp-promise": "1.0.3",
     "ts-node": "7.0.1",
     "typescript": "3.2.4",
+    "universal-analytics": "0.4.20",
     "update-check": "1.5.3",
     "utility-types": "2.1.0",
     "which-promise": "1.0.0",
