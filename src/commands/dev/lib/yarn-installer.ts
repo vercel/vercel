@@ -4,6 +4,7 @@ import { createHash } from 'crypto';
 import {
   mkdirp,
   createWriteStream,
+  writeFile,
   statSync,
   chmodSync,
   createReadStream
@@ -75,6 +76,17 @@ async function installYarn(output: Output): Promise<string> {
   output.debug(`Making the yarn binary executable`);
   plusxSync(yarnBin);
   output.debug(`Finished making the yarn binary executable`);
+
+  if (process.platform === 'win32') {
+    // The `yarn.cmd` file is necessary for `yarn` to be executable
+    // when running `now dev` through cmd.exe
+    await writeFile(`${yarnBin}.cmd`, [
+      '@echo off',
+      '@SETLOCAL',
+      '@SET PATHEXT=%PATHEXT:;.JS;=;%',
+      'node "%~dp0\\yarn" %*'
+    ].join('\r\n'));
+  }
 
   return dirName;
 }
