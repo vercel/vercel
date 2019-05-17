@@ -10,8 +10,21 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var ignoredFoldersRegex []*regexp.Regexp
+
+func init() {
+	ignoredFolders := []string{"vendor", "testdata"}
+
+	// Build the regex that matches if a path contains the respective ignored folder
+	// The pattern will look like: (.*/)?vendor/.*, which matches every path that contains a vendor folder
+	for _, folder := range ignoredFolders {
+		ignoredFoldersRegex = append(ignoredFoldersRegex, regexp.MustCompile("(.*/)?"+folder+"/.*"))
+	}
+}
 
 type analyze struct {
 	PackageName string   `json:"packageName"`
@@ -40,14 +53,28 @@ func visit(files *[]string) filepath.WalkFunc {
 		}
 
 		// we don't need Dirs, or test files
-		// we only want `.go` files
-		if info.IsDir() || itf || filepath.Ext(path) != ".go" {
+		// we only want `.go` files. Further, we ignore
+		// every file that is in one of the ignored folders.
+		if info.IsDir() || itf || filepath.Ext(path) != ".go" || isInIgnoredFolder(path) {
 			return nil
 		}
 
 		*files = append(*files, path)
 		return nil
 	}
+}
+
+// isInIgnoredFolder checks if the given path is in one of the ignored folders.
+func isInIgnoredFolder(path string) bool {
+	// Make sure the regex works for Windows paths
+	path = filepath.ToSlash(path)
+
+	for _, pattern := range ignoredFoldersRegex {
+		if pattern.MatchString(path) {
+			return true
+		}
+	}
+	return false
 }
 
 // return unique file
