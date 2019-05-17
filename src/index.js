@@ -31,7 +31,7 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import { analytics } from './util/metrics';
+import metrics from './util/metrics';
 import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
 
 const NOW_DIR = getNowDir();
@@ -545,7 +545,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  const metrics = analytics(GA_TRACKING_ID, config.token);
+  const metric = metrics(GA_TRACKING_ID, config.token);
   let exitCode;
 
   try {
@@ -557,7 +557,7 @@ const main = async argv_ => {
     if (config.collectMetrics === undefined || config.collectMetrics === true) {
       const category = 'Command Invocation';
 
-      metrics
+      metric
         .timing(category, targetCommand, end, pkg.version)
         .event(category, targetCommand, pkg.version)
         .send();
