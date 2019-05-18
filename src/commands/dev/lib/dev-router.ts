@@ -32,7 +32,12 @@ export default async function(
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-  const { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+  let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+
+  // If the pathname starts with a `/` then strip it
+  if (reqPathname.startsWith('/')) {
+    reqPathname = reqPathname.substring(1);
+  }
 
   // try route match
   if (routes) {
@@ -53,13 +58,13 @@ export default async function(
         continue;
       }
 
-      if (!src.startsWith('^')) {
-        src = `^${src}`;
-      }
-
-      if (!src.endsWith('$')) {
-        src = `${src}$`;
-      }
+      src = src.replace(/^\^?\/?(.*)$/, (_, path) => {
+        let p = path;
+        if (!p.endsWith('$')) {
+          p += '$';
+        }
+        return `^${p}`;
+      });
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
