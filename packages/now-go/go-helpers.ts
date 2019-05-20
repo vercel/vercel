@@ -125,7 +125,15 @@ export async function downloadGo(
   // If we found GOPATH in ENV, or default `Go` path exists
   // asssume that user have `Go` installed
   if (isUserGo || process.env.GOPATH !== undefined) {
-    return createGo(dir, platform, arch);
+    const { stdout } = await execa('go', ['version']);
+
+    if (parseInt(stdout.split('.')[1]) >= 11) {
+      return createGo(dir, platform, arch);
+    }
+
+    throw new Error(
+      `Your current ${stdout} doesn't support Go Modules. Please update.`
+    );
   } else {
     // Check `Go` bin in builder CWD
     const isGoExist = await pathExists(join(dir, 'bin'));
