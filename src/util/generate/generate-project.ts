@@ -15,19 +15,19 @@ type nowJson = {
 }
 type Project = { config: nowJson, ignore: string[] }
 
-async function processDir(root: string, dirMap: dirMap, deepCapture: string[] = []): Promise<Build[]> {
-  const rel = relative(root, dirMap.absolute)
+async function processDir(root: string, map: dirMap, deepCapture: string[] = []): Promise<Build[]> {
+  const rel = relative(root, map.absolute)
   
-  const manifestBuilds = await detectFromManifests(dirMap.manifests, dirMap.absolute, rel)
+  const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel)
   if (manifestBuilds) return manifestBuilds
 
   // Check extension groups
-  const { builds, capture } = await detectFromExtensions(dirMap, deepCapture, rel)
+  const { builds, capture } = await detectFromExtensions(map, deepCapture, rel)
 
   // Check directories
-  for (let dir in dirMap.dir) {
-    if (Object.prototype.hasOwnProperty.call(dirMap.dir, dir)) {
-      builds.push(...await processDir(root, dirMap.dir[dir], capture.concat(deepCapture)))
+  for (let name in map.dir) {
+    if (Object.prototype.hasOwnProperty.call(map.dir, name)) {
+      builds.push(...await processDir(root, map.dir[name], capture.concat(deepCapture)))
     }
   }
 

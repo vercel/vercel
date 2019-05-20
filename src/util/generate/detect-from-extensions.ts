@@ -4,12 +4,12 @@ import { dirMap } from './generate-dir-map'
 import { choose } from './helpers'
 import { locale, extensions, builders } from './metadata'
 
-export function getCountAndDepth(extension: string, dirMap: dirMap): { depth: number, count: number } {
+export function getCountAndDepth(extension: string, map: dirMap): { depth: number, count: number } {
   let depth = 0
   let diveDepth = 0
   let count = 0
 
-  const extensions = dirMap.extensions[extension]
+  const extensions = map.extensions[extension]
   if (extensions) {
     depth++
     if (typeof extensions === 'string') {
@@ -18,8 +18,8 @@ export function getCountAndDepth(extension: string, dirMap: dirMap): { depth: nu
       count += extensions
     }
 
-    Object.keys(dirMap.dir).forEach((dir) => {
-      const dive = getCountAndDepth(extension, dirMap.dir[dir])
+    Object.keys(map.dir).forEach((name) => {
+      const dive = getCountAndDepth(extension, map.dir[name])
       if (diveDepth < dive.depth) diveDepth = dive.depth
       count += dive.count
     })
@@ -60,13 +60,13 @@ function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
   return options
 }
 
-export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[], rel: string) {
+export async function detectFromExtensions(map: dirMap, deepCapture: string[], rel: string) {
   const builds: Build[] = []
   const capture: string[] = []
 
-  for (let ext in dirMap.extensions) {
-    if (Object.prototype.hasOwnProperty.call(dirMap.extensions, ext) && !deepCapture.includes(ext)) {
-      const { depth, count } = getCountAndDepth(ext, dirMap)
+  for (let ext in map.extensions) {
+    if (Object.prototype.hasOwnProperty.call(map.extensions, ext) && !deepCapture.includes(ext)) {
+      const { depth, count } = getCountAndDepth(ext, map)
       let use
       let src
 
@@ -82,8 +82,8 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
         src = `${rel ? `${rel.replace('\\', '/')}/` : ''}**/*${ext}`
       } else {
         src = `${rel ? `${rel.replace('\\', '/')}/` : ''}*${ext}`
-        if (typeof dirMap.extensions[ext] === 'string') {
-          const question = `What is .${sep}${join(rel, dirMap.extensions[ext] as string)}?`
+        if (typeof map.extensions[ext] === 'string') {
+          const question = `What is .${sep}${join(rel, map.extensions[ext] as string)}?`
 
           use = await choose(
             question,
@@ -97,7 +97,7 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
             )
           }
         } else {
-          const question = `What are the ${dirMap.extensions[ext]} ${ext} files in .${sep}${rel} (shallow)?`
+          const question = `What are the ${map.extensions[ext]} ${ext} files in .${sep}${rel} (shallow)?`
           use = await choose(
             question,
             getExtensionOptions(ext, 'many', 'manual')
