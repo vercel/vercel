@@ -50,27 +50,27 @@ export const locale: {
     many: string
   }
 } = {
-  [builders.static]: {
+  '@now/static': {
     single: 'This is a public static file',
     many: 'These are public static files'
   },
-  [builders.staticBuild]: {
+  '@now/static-build': {
     single: 'This file needs to be built as static',
     many: 'These files need to be built as static'
   },
-  [builders.next]: {
+  '@now/next': {
     single: 'This is a Next.js project',
     many: 'This is a Next.js project'
   },
-  [builders.node]: {
+  '@now/node': {
     single: 'This is a Node.js lambda',
     many: 'Each of these are indivudual Node.js endpoints'
   },
-  [builders.nodeServer]: {
+  '@now/node-server': {
     single: 'This is Node.js app listening on a port',
     many: 'These form a Node.js app listening on a port'
   },
-  [builders.mdxDeck]: {
+  '@now/mdx-deck': {
     single: 'This is an MDX Deck Slide',
     many: 'These are MDX Deck Slides'
   },
@@ -78,19 +78,19 @@ export const locale: {
     single: 'This is a Gatsby project',
     many: 'This is a Gatsby project'
   },
-  [internal.upload]: {
+  upload: {
     single: 'This is a dependancy of my code',
     many: 'These are dependancies of my code'
   },
-  [internal.ignore]: {
+  ignore: {
     single: 'This is a meta file',
     many: 'These are meta files'
   },
-  [internal.destructure]: {
+  destructure: {
     single: 'This file is built with multiple builders',
     many: 'These files are built with multiple builders'
   },
-  [internal.manual]: {
+  manual: {
     single: 'This file was not detected properly',
     many: 'These files were not detected properly'
   }
