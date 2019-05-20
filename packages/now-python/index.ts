@@ -1,4 +1,4 @@
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import execa from 'execa';
 import fs from 'fs';
 import { promisify } from 'util';
@@ -73,7 +73,16 @@ export const build = async ({
   meta = {},
 }: BuildOptions) => {
   console.log('downloading files...');
-  const downloadedFiles = await download(originalFiles, workPath, meta);
+  let downloadedFiles = await download(originalFiles, workPath, meta);
+
+  if (meta.isDev) {
+    const base = dirname(downloadedFiles['now.json'].fsPath);
+    const destNow = join(base, '.now', 'cache', basename(entrypoint, '.py'));
+    await download(downloadedFiles, destNow);
+    downloadedFiles = await glob('**', destNow);
+    workPath = destNow;
+  }
+
   const foundLockFile = 'Pipfile.lock' in downloadedFiles;
   const pyUserBase = await getWriteableDirectory();
   process.env.PYTHONUSERBASE = pyUserBase;
