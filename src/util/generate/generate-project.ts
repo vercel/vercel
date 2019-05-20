@@ -45,7 +45,7 @@ export async function generateProject(dir: string, output: Output): Promise<Proj
     config: {
       version: 2,
       name: 'experiment',
-      builds: builds.filter((val) => !internal.includes(val.use))
+      builds: builds.filter((val) => !Object.keys(internal).includes(val.use))
     },
     ignore: Object.keys(ignore)
   }

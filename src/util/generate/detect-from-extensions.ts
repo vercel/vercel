@@ -3,7 +3,7 @@ import highlight from '../output/highlight'
 import { Build } from './generate-project'
 import { dirMap } from './generate-dir-map'
 import { choose } from './helpers'
-import { locale, extensions } from './metadata'
+import { locale, extensions, builders } from './metadata'
 
 export function getCountAndDepth(extension: string, dirMap: dirMap): { depth: number, count: number } {
   let depth = 0
@@ -30,8 +30,7 @@ export function getCountAndDepth(extension: string, dirMap: dirMap): { depth: nu
   return { depth, count }
 }
 
-function getExtensionOptions(extension: string, isSingle: boolean) {
-  const type = isSingle ? 'single' : 'many'
+function getExtensionOptions(extension: string, type: 'single' | 'many', recovery: 'destructure' | 'manual') {
   const upload = locale.upload[type]
   const ignore = locale.ignore[type]
   const options = extensions[extension]
@@ -46,8 +45,20 @@ function getExtensionOptions(extension: string, isSingle: boolean) {
     ...options,
     '@now/static': locale['@now/static'][type],
     upload,
-    ignore
+    ignore,
+    [recovery]: locale[recovery][type]
   }
+}
+
+function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
+  let options: { [key: string]: string } = {}
+  Object.values(builders).forEach((builder) => {
+    options[builder] = locale[builder]
+      ? locale[builder][type]
+      : `${type === 'single' ? 'This file' : 'These files'} should be built by ${builder}`
+  })
+
+  return options
 }
 
 export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[], rel: string) {
@@ -63,10 +74,7 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
       if (depth > 1) {
         use = await choose(
           `What are the ${count} ${ext} files in .${sep}${rel} (${depth} deep)?`,
-          {
-            ...getExtensionOptions(ext, false),
-            destructure: locale.destructure.many
-          }
+          getExtensionOptions(ext, 'many', 'destructure')
         )
       }
 
@@ -77,15 +85,32 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
         src = `${rel ? `${rel.replace('\\', '/')}/` : ''}*${ext}`
         if (typeof dirMap.extensions[ext] === 'string') {
           const fileName = highlight(`.${sep}${join(rel, dirMap.extensions[ext] as string)}`)
+          const question = `What is ${fileName}?`
+
           use = await choose(
-            `What is ${fileName}?`,
-            getExtensionOptions(ext, true)
+            question,
+            getExtensionOptions(ext, 'single', 'manual')
           )
+
+          if (use === 'manual') {
+            use = await choose(
+              question,
+              getManualOptions('single')
+            )
+          }
         } else {
+          const question = `What are the ${dirMap.extensions[ext]} ${highlight(ext)} files in .${highlight(sep + rel)} (shallow)?`
           use = await choose(
-            `What are the ${dirMap.extensions[ext]} ${ext} files in .${sep}${rel} (shallow)?`,
-            getExtensionOptions(ext, false)
+            question,
+            getExtensionOptions(ext, 'many', 'manual')
           )
+
+          if (use === 'manual') {
+            use = await choose(
+              question,
+              getManualOptions('many')
+            )
+          }
         }
       }
 
