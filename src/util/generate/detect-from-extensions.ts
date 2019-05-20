@@ -42,14 +42,13 @@ export function getExtensionOptions(extension: string, type: 'single' | 'many', 
 
   return {
     ...options,
-    '@now/static': locale['@now/static'][type],
     upload,
     ignore,
     [recovery]: locale[recovery][type]
   }
 }
 
-function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
+export function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
   let options: { [key: string]: string } = {}
   Object.values(builders).forEach((builder) => {
     options[builder] = locale[builder]

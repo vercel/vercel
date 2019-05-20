@@ -20,7 +20,8 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
-import { getCountAndDepth } from '../src/util/generate/detect-from-extensions';
+import { builders, locale, extensions } from '../src/util/generate/metadata';
+import { getCountAndDepth, getManualOptions, getExtensionOptions } from '../src/util/generate/detect-from-extensions';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -899,7 +900,7 @@ test('guess user\'s intention with custom didYouMean', async t => {
   t.is(didYouMean('12345', examples, 0.7), undefined);
 });
 
-test('get count and depth from dirMap', async t => {
+test('[now/gen] get count and depth from dirMap', async t => {
   const fiveFiles = (types, path, children = {}) => {
     const extensions = {}
     types.forEach((type) => {
@@ -1002,4 +1003,49 @@ test('get count and depth from dirMap', async t => {
   countAndDepth = getCountAndDepth('.fake', files);
   t.is(countAndDepth.count, 0);
   t.is(countAndDepth.depth, 0);
+})
+
+test('[now/gen] get manual options', async t => {
+  let options = getManualOptions('single');
+  let firstOption = Object.keys(options)[0];
+
+  t.deepEqual(Object.keys(options), Object.values(builders));
+  t.is(options[firstOption], locale[firstOption].single);
+  t.is(options['@now/rust'], 'This file should be built by @now/rust');
+
+  options = getManualOptions('many');
+  firstOption = Object.keys(options)[0];
+
+  t.deepEqual(Object.keys(options), Object.values(builders));
+  t.is(options[firstOption], locale[firstOption].many);
+  t.is(options['@now/rust'], 'These files should be built by @now/rust');
+})
+
+test('[now/gen] get extension options', async t => {
+  let recovery = 'manual';
+  let type = '.js';
+  let size = 'single'
+  let options = getExtensionOptions(type, size, recovery);
+
+  t.deepEqual(Object.keys(options), [
+    ...extensions[type],
+    'upload',
+    'ignore',
+    recovery
+  ])
+  t.is(options.upload, locale.upload[size])
+  t.is(options[extensions[type][0]], locale[extensions[type][0]][size])
+
+  recovery = 'destructure';
+  type = '.ts';
+  size = 'many'
+  options = getExtensionOptions(type, size, recovery);
+
+  t.deepEqual(Object.keys(options), [
+    ...extensions[type],
+    'upload',
+    'ignore',
+    recovery
+  ])
+  t.is(options.ignore, locale.ignore[size])
 })
