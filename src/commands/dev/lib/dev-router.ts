@@ -71,7 +71,7 @@ export default async function(
       const match = matcher.exec(reqPathname);
 
       if (match) {
-        let destPath: string = reqPathname;
+        let destPath: string = `/${reqPathname}`;
 
         if (routeConfig.dest) {
           destPath = resolveRouteParameters(routeConfig.dest, match, keys);
@@ -118,7 +118,7 @@ export default async function(
   if (!found) {
     found = {
       found: false,
-      dest: reqPathname,
+      dest: `/${reqPathname}`,
       uri_args: query
     };
   }
