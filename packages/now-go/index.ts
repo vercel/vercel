@@ -1,5 +1,5 @@
-import { join, sep, dirname } from 'path';
-import { readFile, writeFile, pathExists, move } from 'fs-extra';
+import { join, sep, dirname, basename } from 'path';
+import { readFile, writeFile, pathExists, move, copy } from 'fs-extra';
 
 import {
   glob,
@@ -39,6 +39,7 @@ export async function build({
   files,
   entrypoint,
   config,
+  workPath,
   meta = {} as BuildParamsMeta,
 }: BuildParamsType) {
   console.log('Downloading user files...');
@@ -49,26 +50,12 @@ export async function build({
     getWriteableDirectory(),
   ]);
 
-  if (meta.isDev) {
-    const devGoPath = `dev${entrypointArr[entrypointArr.length - 1]}`;
-    const goPathArr = goPath.split(sep);
-    goPathArr.pop();
-    goPathArr.push(devGoPath);
-    goPath = goPathArr.join(sep);
-  }
-
   const srcPath = join(goPath, 'src', 'lambda');
-  const downloadedFiles = await download(files, srcPath);
-  const input = dirname(downloadedFiles[entrypoint].fsPath);
-  var includedFiles: Files = {};
-
-  if (config && config.includeFiles) {
-    for (const pattern of config.includeFiles) {
-      const files = await glob(pattern, input);
-      for (const assetName of Object.keys(files)) {
-        includedFiles[assetName] = files[assetName];
-      }
-    }
+  let downloadedFiles;
+  if (meta.isDev) {
+    downloadedFiles = await download(files, workPath, meta);
+  } else {
+    downloadedFiles = await download(files, srcPath);
   }
 
   console.log(`Parsing AST for "${entrypoint}"`);
@@ -90,18 +77,71 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
     throw err;
   }
 
+  const entrypointDirnameDev = dirname(downloadedFiles[entrypoint].fsPath);
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
+
+  if (meta.isDev) {
+    const base = dirname(downloadedFiles['now.json'].fsPath);
+    const destNow = join(
+      base,
+      '.now',
+      'cache',
+      basename(entrypoint, '.go'),
+      'src',
+      'lambda'
+    );
+    const goMod = await pathExists(join(entrypointDirnameDev, 'go.mod'));
+
+    // this will ensure Go rebuilt fast
+    goPath = join(base, '.now', 'cache', basename(entrypoint, '.go'));
+
+    for (const file of parsedAnalyzed.watch) {
+      if (entrypointArr.length > 0) {
+        await copy(
+          join(base, dirname(entrypoint), file),
+          join(destNow, dirname(entrypoint), file)
+        );
+
+        if (goMod) {
+          await copy(
+            join(entrypointDirnameDev, 'go.mod'),
+            join(destNow, dirname(entrypoint), 'go.mod')
+          );
+        }
+      } else {
+        await copy(join(base, file), join(destNow, file));
+
+        if (goMod) {
+          await copy(
+            join(entrypointDirnameDev, 'go.mod'),
+            join(destNow, 'go.mod')
+          );
+        }
+      }
+    }
+    downloadedFiles = await glob('**', destNow);
+  }
+
+  const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
+  const input = entrypointDirname;
+  var includedFiles: Files = {};
+
+  if (config && config.includeFiles) {
+    for (const pattern of config.includeFiles) {
+      const files = await glob(pattern, input);
+      for (const assetName of Object.keys(files)) {
+        includedFiles[assetName] = files[assetName];
+      }
+    }
+  }
 
   const handlerFunctionName = parsedAnalyzed.functionName;
   console.log(
     `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
   );
 
-  // we need `main.go` in the same dir as the entrypoint,
-  // otherwise `go build` will refuse to build
-  const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
-
   // check if package name other than main
+  // using `go.mod` way building the handler
   const packageName = parsedAnalyzed.packageName;
   const isGoModExist = await pathExists(join(entrypointDirname, 'go.mod'));
   if (packageName !== 'main') {
@@ -228,6 +268,9 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
       );
     }
   } else {
+    // legacy mode
+    // we need `main.go` in the same dir as the entrypoint,
+    // otherwise `go build` will refuse to build
     const go = await createGo(
       goPath,
       process.platform,
