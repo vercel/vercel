@@ -6,6 +6,7 @@ export default `.hg
 .svn
 .cache
 .next
+.now
 .npmignore
 .dockerignore
 .gitignore
