@@ -1,7 +1,7 @@
 import { sep, join } from 'path'
 import { Build } from './generate-project'
 import { dirMap } from './generate-dir-map'
-import { choose } from './helpers'
+import { chooseType } from './helpers'
 import { locale, extensions, builders } from './metadata'
 
 export function getCountAndDepth(extension: string, map: dirMap): { depth: number, count: number } {
@@ -12,10 +12,10 @@ export function getCountAndDepth(extension: string, map: dirMap): { depth: numbe
   const extensions = map.extensions[extension]
   if (extensions) {
     depth++
-    if (typeof extensions === 'string') {
-      count++
-    } else {
+    if (typeof extensions === 'number') {
       count += extensions
+    } else {
+      count++
     }
 
     Object.keys(map.dir).forEach((name) => {
@@ -29,7 +29,7 @@ export function getCountAndDepth(extension: string, map: dirMap): { depth: numbe
   return { depth, count }
 }
 
-function getExtensionOptions(extension: string, type: 'single' | 'many', recovery: 'destructure' | 'manual') {
+export function getExtensionOptions(extension: string, type: 'single' | 'many', recovery: 'destructure' | 'manual') {
   const upload = locale.upload[type]
   const ignore = locale.ignore[type]
   const options = extensions[extension]
@@ -60,7 +60,8 @@ function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
   return options
 }
 
-export async function detectFromExtensions(map: dirMap, deepCapture: string[], rel: string) {
+type helpers = { choose: chooseType }
+export async function detectFromExtensions(map: dirMap, deepCapture: string[], rel: string, { choose }: helpers) {
   const builds: Build[] = []
   const capture: string[] = []
 

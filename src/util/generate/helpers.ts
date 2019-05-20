@@ -3,7 +3,8 @@ import { join } from 'path'
 // @ts-ignore
 import listInput from '../input/list'
 
-export function outputFile(dir: string, name: string, contents: string, overwrite: boolean = false): Promise<boolean> {
+export type outputFileType = (dir: string, name: string, contents: string, overwrite?: boolean) => Promise<boolean>
+export const outputFile: outputFileType = (dir, name, contents, overwrite) => {
   return new Promise((resolve) => {
     const file = new Uint8Array(Buffer.from(`${contents}\n`))
     const flag = overwrite ? 'w' : 'wx'
@@ -18,7 +19,8 @@ export function outputFile(dir: string, name: string, contents: string, overwrit
   })
 }
 
-export async function choose(message: string, options: {[key: string]: string}) {
+export type chooseType = (message: string, options: {[key: string]: string}) => Promise<string>
+export const choose: chooseType = async (message, options) => {
   const choices = Object.keys(options).map(name => ({
     name: `${options[name]} (${name})`,
     value: name,

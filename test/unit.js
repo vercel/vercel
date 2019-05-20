@@ -20,6 +20,7 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
+import { getCountAndDepth } from '../src/util/generate/detect-from-extensions';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -897,3 +898,108 @@ test('guess user\'s intention with custom didYouMean', async t => {
   t.is(didYouMean('node', examples, 0.7), 'nodejs');
   t.is(didYouMean('12345', examples, 0.7), undefined);
 });
+
+test('get count and depth from dirMap', async t => {
+  const fiveFiles = (types, path, children = {}) => {
+    const extensions = {}
+    types.forEach((type) => {
+      extensions[type] = 5
+    })
+
+    return {
+      absolute: path,
+      dir: children,
+      extensions,
+      manifests: []
+    }
+  };
+
+  const type = {
+    A: '.js',
+    B: '.ts',
+    C: '.go',
+    D: '.py',
+    E: '.txt'
+  };
+
+  const files = fiveFiles([type.A, type.B, type.C, type.D, type.E], '/root', {
+    one: fiveFiles([type.A, type.B], '/root/one', {
+      a: fiveFiles([type.A, type.B], '/root/one/a', {
+        a: fiveFiles([type.A, type.B], '/root/one/a/a', {
+          a: fiveFiles([type.A, type.B], '/root/one/a/a/a', {
+            a: fiveFiles([type.A], '/root/one/a/a/a/a', {
+              a: fiveFiles([type.A], '/root/one/a/a/a/a/a', {
+                a: fiveFiles([type.A], '/root/one/a/a/a/a/a/a'), // Deepest type.A
+                b: fiveFiles([type.B], '/root/one/a/a/a/a/a/b', { // Unchained type.B, not counted
+                  a: fiveFiles([type.A], '/root/one/a/a/a/a/a/b/a'), // Unchained type.A, not counted
+                })
+              }),
+            }),
+            b: fiveFiles([type.B], '/root/one/a/a/a/b') // Deepest type.B
+          }),
+          b: fiveFiles([type.A], '/root/one/a/a/b', {
+            a: fiveFiles([type.A], '/root/one/a/a/b/a'),
+            b: fiveFiles([type.B], '/root/one/a/a/b/b'), // Unchained type.B, not counted
+            c: fiveFiles([type.A], '/root/one/a/a/b/c'),
+          }),
+        }),
+        b: fiveFiles([type.A], '/root/one/a/b'),
+        c: fiveFiles([type.A], '/root/one/a/c'),
+      }),
+      b: fiveFiles([type.A, type.B], '/root/one/b', {
+        a: fiveFiles([type.A, type.B], '/root/one/b/a', {
+          a: fiveFiles([type.A, type.B], '/root/one/b/a/a', {
+            a: fiveFiles([type.A], '/root/one/b/a/a/a'),
+            b: fiveFiles([type.B], '/root/one/b/a/a/b')
+          }),
+          b: fiveFiles([type.A, type.B], '/root/one/b/a/b', {
+            a: fiveFiles([type.A], '/root/one/b/a/b/a'),
+            b: fiveFiles([type.B], '/root/one/b/a/b/b'),
+            c: fiveFiles([type.A], '/root/one/b/a/b/c'),
+          }),
+        }),
+        b: fiveFiles([type.A], '/root/one/b/b'),
+        c: fiveFiles([type.A], '/root/one/b/c'),
+      }),
+    }),
+    two: fiveFiles([type.A], '/root/two'),
+    three: fiveFiles([type.B], '/root/three'),
+    four: fiveFiles([type.B, type.C], '/root/four', {
+      a: fiveFiles([type.B, type.C], '/root/four/a', {
+        a: fiveFiles([type.B, type.C], '/root/four/a/a', { // Deepest type.C
+          a: fiveFiles([type.B], '/root/four/a/a/a', {
+            a: fiveFiles([type.C], '/root/four/a/a/a/a'), // Unchained type.C, not counted
+            b: fiveFiles([type.B], '/root/four/a/a/a/b')
+          })
+        })
+      })
+    }),
+    five: fiveFiles([type.C], '/root/five'),
+    six: fiveFiles([type.B], '/root/six'),
+    seven: fiveFiles([type.D], '/root/seven')
+  });
+
+  let countAndDepth = getCountAndDepth(type.A, files);
+  t.is(countAndDepth.count, 115);
+  t.is(countAndDepth.depth, 8);
+
+  countAndDepth = getCountAndDepth(type.B, files);
+  t.is(countAndDepth.count, 95);
+  t.is(countAndDepth.depth, 6);
+
+  countAndDepth = getCountAndDepth(type.C, files);
+  t.is(countAndDepth.count, 25);
+  t.is(countAndDepth.depth, 4);
+
+  countAndDepth = getCountAndDepth(type.D, files);
+  t.is(countAndDepth.count, 10);
+  t.is(countAndDepth.depth, 2);
+
+  countAndDepth = getCountAndDepth(type.E, files);
+  t.is(countAndDepth.count, 5);
+  t.is(countAndDepth.depth, 1);
+
+  countAndDepth = getCountAndDepth('.fake', files);
+  t.is(countAndDepth.count, 0);
+  t.is(countAndDepth.depth, 0);
+})

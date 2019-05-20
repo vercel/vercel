@@ -2,7 +2,7 @@ import fs from 'fs'
 import { join, sep } from 'path'
 import { promisify } from 'util'
 import { locale } from './metadata'
-import { outputFile, choose } from './helpers'
+import { outputFileType, chooseType } from './helpers'
 
 const readFile = promisify(fs.readFile)
 
@@ -30,7 +30,8 @@ export const allDetectors: {
   ]
 }
 
-export async function detectFromManifests(manifests: string[], absolute: string, rel: string) {
+type helpers = { choose: chooseType, outputFile: outputFileType }
+export async function detectFromManifests(manifests: string[], absolute: string, rel: string, { choose, outputFile }: helpers) {
   for (let i = 0; i < manifests.length; i++) {
     const detectors = allDetectors[manifests[i]]
     if (detectors) {

@@ -2,7 +2,7 @@ import { relative } from 'path'
 import wait from '../output/wait'
 import { Output } from '../output'
 import { detectFromManifests } from './detect-from-manifests';
-import { outputFile } from './helpers'
+import { outputFile, choose } from './helpers'
 import { internal } from './metadata'
 import { dirMap, generateDirMap } from './generate-dir-map'
 import { detectFromExtensions } from './detect-from-extensions';
@@ -18,11 +18,11 @@ type Project = { config: nowJson, ignore: string[] }
 async function processDir(root: string, map: dirMap, deepCapture: string[] = []): Promise<Build[]> {
   const rel = relative(root, map.absolute)
   
-  const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel)
+  const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel, { choose, outputFile })
   if (manifestBuilds) return manifestBuilds
 
   // Check extension groups
-  const { builds, capture } = await detectFromExtensions(map, deepCapture, rel)
+  const { builds, capture } = await detectFromExtensions(map, deepCapture, rel, { choose })
 
   // Check directories
   for (let name in map.dir) {
