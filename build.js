@@ -1,9 +1,16 @@
 const cpy = require('cpy');
 const execa = require('execa');
 const { join } = require('path');
+const { remove } = require('fs-extra');
 
 async function main() {
   const isDev = process.argv[2] === '--dev';
+
+  // `now dev` uses chokidar to watch the filesystem, but opts-out of the
+  // `fsevents` feature using `useFsEvents: false`, so delete the module here so
+  // that it is not compiled by ncc, which makes the pkg'd binary size larger
+  // than necessary.
+  await remove(join(__dirname, 'node_modules/fsevents'));
 
   // Do the initial `ncc` build
   const src = join(__dirname, 'src');

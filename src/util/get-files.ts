@@ -138,6 +138,13 @@ const asAbsolute = function(path: string, parent: string) {
   return resolve(parent, path);
 };
 
+export async function createIgnore(ignoreFilePath: string) {
+  const ignoreFile = await maybeRead(ignoreFilePath, '');
+  const ig = ignore()
+    .add(`${IGNORED}\n${clearRelative(ignoreFile)}`);
+  return ig;
+}
+
 interface StaticFilesOptions {
   output: Output;
   isBuilds: boolean;
@@ -176,11 +183,8 @@ export async function staticFiles(
 
     // Compile list of ignored patterns and files
     const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ignoreFile = await maybeRead(resolve(path, ignoreName), '');
-
-    const filter = ignore()
-      .add(`${IGNORED}\n${clearRelative(ignoreFile)}`)
-      .createFilter();
+    const ig = await createIgnore(resolve(path, ignoreName));
+    const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;
 
