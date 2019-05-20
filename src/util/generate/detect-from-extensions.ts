@@ -1,5 +1,4 @@
 import { sep, join } from 'path'
-import highlight from '../output/highlight'
 import { Build } from './generate-project'
 import { dirMap } from './generate-dir-map'
 import { choose } from './helpers'
@@ -84,8 +83,7 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
       } else {
         src = `${rel ? `${rel.replace('\\', '/')}/` : ''}*${ext}`
         if (typeof dirMap.extensions[ext] === 'string') {
-          const fileName = highlight(`.${sep}${join(rel, dirMap.extensions[ext] as string)}`)
-          const question = `What is ${fileName}?`
+          const question = `What is .${sep}${join(rel, dirMap.extensions[ext] as string)}?`
 
           use = await choose(
             question,
@@ -99,7 +97,7 @@ export async function detectFromExtensions(dirMap: dirMap, deepCapture: string[]
             )
           }
         } else {
-          const question = `What are the ${dirMap.extensions[ext]} ${highlight(ext)} files in .${highlight(sep + rel)} (shallow)?`
+          const question = `What are the ${dirMap.extensions[ext]} ${ext} files in .${sep}${rel} (shallow)?`
           use = await choose(
             question,
             getExtensionOptions(ext, 'many', 'manual')
