@@ -134,7 +134,7 @@ const main = async argv_ => {
       )
     );
     console.log(
-      info(`Read more about how to update here: https://zeit.co/update-cli`)
+      info(`Run npm i -g now OR yarn global add now`)
     );
     console.log(
       info(
