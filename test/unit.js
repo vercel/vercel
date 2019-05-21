@@ -21,7 +21,8 @@ import {
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
 import { builders, locale, extensions } from '../src/util/generate/metadata';
-import { getCountAndDepth, getManualOptions, getExtensionOptions } from '../src/util/generate/detect-from-extensions';
+import { choose } from '../src/util/generate/helpers';
+import { getCountAndDepth, getManualOptions, getExtensionOptions, detectFromExtensions } from '../src/util/generate/detect-from-extensions';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -1037,7 +1038,7 @@ test('[now/gen] get extension options', async t => {
   t.is(options[extensions[type][0]], locale[extensions[type][0]][size])
 
   recovery = 'destructure';
-  type = '.ts';
+  type = '.rs';
   size = 'many'
   options = getExtensionOptions(type, size, recovery);
 
@@ -1048,4 +1049,92 @@ test('[now/gen] get extension options', async t => {
     recovery
   ])
   t.is(options.ignore, locale.ignore[size])
+
+  recovery = 'destructure';
+  type = '.fake';
+  size = 'single'
+  options = getExtensionOptions(type, size, recovery);
+
+  t.deepEqual(Object.keys(options), [
+    'upload',
+    'ignore',
+    recovery
+  ])
+})
+
+test('[now/gen] detect from extensions', async t => {
+  const chooseMock = sinon.stub();
+  const type = {};
+  const built = [];
+  let use;
+
+  type['.js'] = 5;
+  use = '@now/node';
+  chooseMock.onCall(0).resolves(use);
+  built.push({ use, src: '**/*.js' });
+
+  type['.css'] = 'styles.css';
+  use = '@now/static'
+  chooseMock.onCall(1).resolves('destructure'); // .css files
+  chooseMock.onCall(2).resolves(use); // root .css files
+  built.push({ use, src: '*.css' });
+
+  type['.go'] = 5;
+  use = '@now/go';
+  chooseMock.onCall(3).resolves(use); // .go files
+  built.push({ use, src: '*.go' });
+
+  type['.txt'] = 'test.txt';
+  use = 'upload';
+  chooseMock.onCall(4).resolves(use); // .txt files
+  built.push({ use, src: '*.txt' });
+
+  type['.py'] = 5;
+  use = '@now/python';
+  chooseMock.onCall(5).resolves('manual'); // .py files
+  chooseMock.onCall(6).resolves(use); // .py files
+  built.push({ use, src: '*.py' });
+
+  type['.zip'] = 'archive.zip';
+  use = '@now/static';
+  chooseMock.onCall(7).resolves('manual'); // .zip files
+  chooseMock.onCall(8).resolves(use); // .zip files
+  built.push({ use, src: '*.zip' });
+
+  type['.md'] = 5;
+  use = '@now/md';
+  chooseMock.onCall(9).resolves(use); // .md files
+  built.push({ use, src: '*.md' });
+
+  type['.html'] = 5;
+  use = '@now/static';
+  chooseMock.onCall(10).resolves(use); // .html files
+  built.push({ use, src: '**/*.html' });
+
+  chooseMock.resolves('null');
+
+  const detected = await detectFromExtensions({
+    dir: {
+      blog: {
+        dir: {},
+        extensions: {
+          '.html': type['.html'],
+          '.js': type['.js'],
+          '.css': type['.css']
+        },
+        absolute: 'blog',
+        manifests: []
+      },
+    },
+    extensions: type,
+    absolute: '',
+    manifests: []
+  }, [], '', { choose: chooseMock });
+
+  detected.builds.forEach((build, i) => {
+    t.is(build.use, built[i].use)
+    t.is(build.src, built[i].src)
+  })
+
+  t.deepEqual(detected.capture, ['.js', '.html'])
 })
