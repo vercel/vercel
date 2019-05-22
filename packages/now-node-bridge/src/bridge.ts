@@ -1,10 +1,10 @@
 import { AddressInfo } from 'net';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import {
   Server,
   IncomingHttpHeaders,
   OutgoingHttpHeaders,
-  request
+  request,
 } from 'http';
 
 interface NowProxyEvent {
@@ -133,25 +133,25 @@ export class Bridge {
 
     return this.server.listen({
       host: '127.0.0.1',
-      port: 0
+      port: 0,
     });
   }
 
   async launcher(
-    event: NowProxyEvent | APIGatewayProxyEvent
+    event: NowProxyEvent | APIGatewayProxyEvent,
+    context: Context
   ): Promise<NowProxyResponse> {
+    context.callbackWaitsForEmptyEventLoop = false;
     const { port } = await this.listening;
 
-    const { isApiGateway, method, path, headers, body } = normalizeEvent(
-      event
-    );
+    const { isApiGateway, method, path, headers, body } = normalizeEvent(event);
 
     const opts = {
       hostname: '127.0.0.1',
       port,
       path,
       method,
-      headers
+      headers,
     };
 
     // eslint-disable-next-line consistent-return
@@ -175,7 +175,7 @@ export class Bridge {
             statusCode: response.statusCode || 200,
             headers: response.headers,
             body: bodyBuffer.toString('base64'),
-            encoding: 'base64'
+            encoding: 'base64',
           });
         });
       });
