@@ -79,8 +79,8 @@ export const locale: {
     many: 'This is a Gatsby project'
   },
   [internal.upload]: {
-    single: 'This is a dependancy of my code',
-    many: 'These are dependancies of my code'
+    single: 'This is a dependency of my code',
+    many: 'These are dependencies of my code'
   },
   [internal.ignore]: {
     single: 'This is a meta file',
