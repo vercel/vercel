@@ -21,7 +21,6 @@ import {
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
 import { builders, locale, extensions } from '../src/util/generate/metadata';
-import { choose } from '../src/util/generate/helpers';
 import { getCountAndDepth, getManualOptions, getExtensionOptions, detectFromExtensions } from '../src/util/generate/detect-from-extensions';
 
 const output = createOutput({ debug: false });
