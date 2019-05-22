@@ -1,6 +1,6 @@
 {
   "name": "@now/python",
-  "version": "0.2.3",
+  "version": "0.2.4-canary.0",
   "main": "index.js",
   "license": "MIT",
   "repository": {
