@@ -73,7 +73,7 @@ export async function detectFromExtensions(map: DirMap, deepCapture: string[], r
 
       if (depth > 1) {
         use = await choose(
-          `What are the ${count} ${ext} files in .${sep}${rel} (${depth} deep)?`,
+          `What are the ${count} ${ext || 'extensionless'} files in .${sep}${rel} (${depth} deep)?`,
           getExtensionOptions(ext, 'many', 'destructure')
         )
       }
@@ -98,7 +98,7 @@ export async function detectFromExtensions(map: DirMap, deepCapture: string[], r
             )
           }
         } else {
-          const question = `What are the ${map.extensions[ext]} ${ext} files in .${sep}${rel} (shallow)?`
+          const question = `What are the ${map.extensions[ext]} ${ext || 'extensionless'} files in .${sep}${rel} (shallow)?`
           use = await choose(
             question,
             getExtensionOptions(ext, 'many', 'manual')
