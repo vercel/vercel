@@ -52,6 +52,25 @@ test('[dev-router] named groups', async t => {
   });
 });
 
+test('[dev-router] optional named groups', async t => {
+  const routesConfig = [{
+    src: '/api/hello(/(?<name>[^/]+))?',
+    dest: '/api/functions/hello/index.js?name=$name'
+  }];
+  const result = await devRouter('/api/hello', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/api/functions/hello/index.js',
+    status: undefined,
+    headers: undefined,
+    uri_args: { name: '' },
+    matched_route: routesConfig[0],
+    matched_route_idx: 0,
+    userDest: true
+  });
+});
+
 test('[dev-router] proxy_pass', async t => {
   const routesConfig = [{ src: '/proxy', dest: 'https://zeit.co' }];
 

@@ -21,7 +21,7 @@ export function resolveRouteParameters(
       // match up with the RegExp group matches
       matchIndex++;
     }
-    return match[matchIndex];
+    return match[matchIndex] || '';
   });
 }
 
