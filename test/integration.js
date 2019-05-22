@@ -530,7 +530,7 @@ test('set platform version using `--platform-version` to `1`', async t => {
 test('set platform version using `-V` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    '> Error! The "--platform-version" option can only be one of the following: `1, 2`.';
 
   const { stderr, code } = await execa(
     binaryPath,
@@ -550,7 +550,7 @@ test('set platform version using `-V` to invalid number', async t => {
 test('set platform version using `--platform-version` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    '> Error! The "--platform-version" option can only be one of the following: `1, 2`.';
 
   const { stderr, code } = await execa(
     binaryPath,
