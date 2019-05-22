@@ -66,22 +66,22 @@ export async function detectFromManifests(manifests: string[], absolute: string,
         ? await choose(`What is in .${sep}${rel}?`, options)
         : null
 
-      if (!data.scripts) data.scripts = {}
-      if (use && data.dependencies && !data.scripts['now-dev'] && devCommand[use]) {
-        data.scripts['now-dev'] = devCommand[use]
-        needsUpdate = true
-      }
-      if (data.dependencies && !data.scripts['now-build']) {
-        data.scripts['now-build'] = use && buildCommand[use] ? buildCommand[use] : 'npm run build'
-        needsUpdate = true
-      }
-      if (needsUpdate) outputFile(absolute, manifests[i], JSON.stringify(data, null, 2), true)
-
       if (use === 'destructure') break
       if (use === 'ignore') {
         ignore.add(manifests[i])
         continue
       }
+
+      if (!data.scripts) data.scripts = {}
+      if (use && data.dependencies && !data.scripts['now-dev'] && devCommand[use]) {
+        data.scripts['now-dev'] = devCommand[use]
+        needsUpdate = true
+      }
+      if (use && data.dependencies && !data.scripts['now-build']) {
+        data.scripts['now-build'] = use && buildCommand[use] ? buildCommand[use] : 'npm run build'
+        needsUpdate = true
+      }
+      if (needsUpdate) outputFile(absolute, manifests[i], JSON.stringify(data, null, 2), true)
 
       if (use) return [{
         use,
