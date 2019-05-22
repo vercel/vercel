@@ -35,7 +35,7 @@ async function processDir(root: string, map: DirMap, deepCapture: string[] = [])
 }
 
 export async function generateProject(dir: string, output: Output): Promise<Project> {
-  const stopSpinner = wait(`Loooking for code to build...`)
+  const stopSpinner = wait(`Looking for code to build...`)
   const ignore: {[key: string]: true} = {}
   const contents = await generateDirMap(dir, ignore)
   stopSpinner()
