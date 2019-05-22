@@ -42,6 +42,7 @@ export function getExtensionOptions(extension: string, type: 'single' | 'many', 
 
   return {
     ...options,
+    '@now/static': locale['@now/static'][type],
     upload,
     ignore,
     [recovery]: locale[recovery][type]

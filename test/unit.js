@@ -1043,6 +1043,7 @@ test('[now/gen] get extension options', async t => {
 
   t.deepEqual(Object.keys(options), [
     ...extensions[type],
+    '@now/static',
     'upload',
     'ignore',
     recovery
@@ -1055,6 +1056,7 @@ test('[now/gen] get extension options', async t => {
   options = getExtensionOptions(type, size, recovery);
 
   t.deepEqual(Object.keys(options), [
+    '@now/static',
     'upload',
     'ignore',
     recovery

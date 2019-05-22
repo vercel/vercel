@@ -114,11 +114,6 @@ export default async ctx => {
 
     platformVersion = versionFlag;
   } else if (!localConfig) {
-    if (isFile) {
-      output.error(`There was an issue parsing ${fileText}`);
-      return 1;
-    }
-
     if (process.stdout.isTTY) {
       output.debug(`${fileText} not found, generating...`);
       const { config } = await generateProject(paths[0], output);
@@ -126,7 +121,7 @@ export default async ctx => {
       if (!await promptBool('Would you like to deploy?', { defaultValue: true })) return 0;
 
       localConfig = config;
-    } else {
+    } else if (!isFile) {
       output.warn(
         `Your project is missing a ${fileText} file with a ${versionText} property. More: https://zeit.co/docs/version-config`
       );
