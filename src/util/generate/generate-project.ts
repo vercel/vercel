@@ -4,7 +4,7 @@ import { Output } from '../output'
 import { detectFromManifests } from './detect-from-manifests';
 import { outputFile, choose } from './helpers'
 import { internal } from './metadata'
-import { dirMap, generateDirMap } from './generate-dir-map'
+import { DirMap, generateDirMap } from './generate-dir-map'
 import { detectFromExtensions } from './detect-from-extensions';
 
 export type Build = { src: string, use: string }
@@ -15,7 +15,7 @@ type nowJson = {
 }
 type Project = { config: nowJson, ignore: string[] }
 
-async function processDir(root: string, map: dirMap, deepCapture: string[] = []): Promise<Build[]> {
+async function processDir(root: string, map: DirMap, deepCapture: string[] = []): Promise<Build[]> {
   const rel = relative(root, map.absolute)
   
   const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel, { choose, outputFile })

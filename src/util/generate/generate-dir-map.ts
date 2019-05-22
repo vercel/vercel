@@ -2,16 +2,16 @@ import fs from 'fs'
 import { promisify } from 'util'
 import { join, parse } from 'path'
 import { allDetectors } from './detect-from-manifests'
-import ignore from '../ignored'
+import IGNORED from '../ignored'
 
-const ignored = ignore.split('\n')
+const ignored = IGNORED.split('\n')
 const readdir = promisify(fs.readdir)
 const stat = promisify(fs.stat)
 
-export type dirMap = {
+export type DirMap = {
   absolute: string,
   dir: {
-    [key: string]: dirMap
+    [key: string]: DirMap
   }
   extensions: {
     [type: string]: number | string
@@ -19,9 +19,9 @@ export type dirMap = {
   manifests: string[]
 }
 
-export async function generateDirMap(dir: string, ignore: { [key: string]: true }, rootDir: string = dir): Promise<dirMap> {
+export async function generateDirMap(dir: string, ignore: { [key: string]: true }, rootDir: string = dir): Promise<DirMap> {
   const result = await readdir(dir)
-  const map: dirMap = {
+  const map: DirMap = {
     absolute: dir,
     dir: {},
     extensions: {},
