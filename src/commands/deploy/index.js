@@ -98,67 +98,61 @@ export default async ctx => {
     }
   }
 
-  const file = highlight('now.json');
-  const prop = code('version');
-
-  if (!versionFlag && !localConfig && process.stdout.isTTY) {
-    if (isFile) {
-      output.error(`There was an issue parsing ${file}`);
-      return 1;
-    }
-
-    output.debug(`${file} not found, generating...`);
-    const { config } = await generateProject(paths[0], output);
-
-    if (await promptBool('Would you like to deploy?', { defaultValue: true })) {
-      localConfig = config;
-    } else {
-      return 0;
-    }
-  }
-
-  const { version } = localConfig || { version: null };
-
-  if (version) {
-    if (typeof version === 'number') {
-      if (version !== 1 && version !== 2) {
-        const first = code(1);
-        const second = code(2);
-
-        output.error(
-          `The value of the ${prop} property within ${file} can only be ${first} or ${second}.`
-        );
-        return 1;
-      }
-
-      platformVersion = version;
-    } else {
-      output.error(
-        `The ${prop} property inside your ${file} file must be a number.`
-      );
-      return 1;
-    }
-  } else if (localConfig) {
-    output.warn(
-      `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
-    );
-  } else {
-    output.warn(
-      `Your project is missing a ${file} file with a ${prop} property. More: https://zeit.co/docs/version-config`
-    );
-  }
+  const versions = [ 1, 2 ];
+  const fileText = highlight('now.json');
+  const versionText = code('version');
+  const versionsText = code(versions.join(', '));
 
   if (versionFlag) {
-    if (versionFlag !== 1 && versionFlag !== 2) {
+    if (!versions.includes(versionFlag)) {
       output.error(
-        `The ${param('--platform-version')} option must be either ${code(
-          '1'
-        )} or ${code('2')}.`
+        `The ${param('--platform-version')} option can only be one of the following: ${versionsText}.`
       );
+
       return 1;
     }
 
     platformVersion = versionFlag;
+  } else if (!localConfig) {
+    if (isFile) {
+      output.error(`There was an issue parsing ${fileText}`);
+      return 1;
+    }
+
+    if (process.stdout.isTTY) {
+      output.debug(`${fileText} not found, generating...`);
+      const { config } = await generateProject(paths[0], output);
+
+      if (!await promptBool('Would you like to deploy?', { defaultValue: true })) return 0;
+
+      localConfig = config;
+    } else {
+      output.warn(
+        `Your project is missing a ${fileText} file with a ${versionText} property. More: https://zeit.co/docs/version-config`
+      );
+    }
+  }
+
+  if (localConfig) {
+    if (!localConfig.version) {
+      output.warn(
+        `Your project is missing ${versionText} in ${fileText}. More: https://zeit.co/docs/version-config`
+      );
+    } else if (typeof localConfig.version !== 'number') {
+      output.error(
+        `The ${versionText} property inside your ${fileText} file must be a number.`
+      );
+
+      return 1;
+    } else if (!versions.includes(localConfig.version)) {
+      output.error(
+        `The value of the ${versionText} property within ${fileText} can only be one of the following: ${versionsText}.`
+      );
+
+      return 1;
+    } else {
+      platformVersion = localConfig.version;
+    }
   }
 
   if (platformVersion === null || platformVersion > 1) {
