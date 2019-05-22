@@ -133,7 +133,8 @@ export default async ctx => {
     }
   }
 
-  if (localConfig) {
+  // This is a new if statement because the above has the chance to set localConfig
+  if (!versionFlag && localConfig) {
     if (!localConfig.version) {
       output.warn(
         `Your project is missing ${versionText} in ${fileText}. More: https://zeit.co/docs/version-config`
