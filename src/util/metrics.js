@@ -1,7 +1,7 @@
 import ua from 'universal-analytics';
-import { platform, release, userInfo } from 'os'
+import { platform, release, userInfo } from 'os';
 import crypto from 'crypto';
-import * as userAgent from './ua.ts'
+import userAgent from './ua-browser.ts';
 
 export default (GA_TRACKING_ID, configToken) => {
   const token = typeof configToken === 'string' ? configToken : platform() + release();
