@@ -2,7 +2,7 @@ import fs from 'fs'
 import { join, sep } from 'path'
 import { promisify } from 'util'
 import { locale } from './metadata'
-import { outputFileType, chooseType } from './helpers'
+import { outputFileType, chooseType, IgnoreType } from './helpers'
 
 const readFile = promisify(fs.readFile)
 
@@ -31,7 +31,7 @@ export const allDetectors: {
 }
 
 type helpers = { choose: chooseType, outputFile: outputFileType }
-export async function detectFromManifests(manifests: string[], absolute: string, rel: string, { choose, outputFile }: helpers) {
+export async function detectFromManifests(manifests: string[], absolute: string, rel: string, ignore: IgnoreType, { choose, outputFile }: helpers) {
   for (let i = 0; i < manifests.length; i++) {
     const detectors = allDetectors[manifests[i]]
     if (detectors) {
@@ -78,7 +78,10 @@ export async function detectFromManifests(manifests: string[], absolute: string,
       if (needsUpdate) outputFile(absolute, manifests[i], JSON.stringify(data, null, 2), true)
 
       if (use === 'destructure') break
-      if (use === 'ignore') continue
+      if (use === 'ignore') {
+        ignore.add(manifests[i])
+        continue
+      }
 
       if (use) return [{
         use,

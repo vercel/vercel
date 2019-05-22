@@ -3,6 +3,8 @@ import { join } from 'path'
 // @ts-ignore
 import listInput from '../input/list'
 
+export type IgnoreType = Set<string>
+
 export type outputFileType = (dir: string, name: string, contents: string, overwrite?: boolean) => Promise<boolean>
 export const outputFile: outputFileType = (dir, name, contents, overwrite) => {
   return new Promise((resolve) => {

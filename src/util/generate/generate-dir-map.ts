@@ -3,6 +3,7 @@ import { promisify } from 'util'
 import { join, parse } from 'path'
 import { allDetectors } from './detect-from-manifests'
 import IGNORED from '../ignored'
+import { IgnoreType } from './helpers'
 
 const ignored = IGNORED.split('\n')
 const readdir = promisify(fs.readdir)
@@ -19,7 +20,7 @@ export type DirMap = {
   manifests: string[]
 }
 
-export async function generateDirMap(dir: string, ignore: { [key: string]: true }, rootDir: string = dir): Promise<DirMap> {
+export async function generateDirMap(dir: string, ignore: IgnoreType, rootDir: string = dir): Promise<DirMap> {
   const result = await readdir(dir)
   const map: DirMap = {
     absolute: dir,
@@ -34,7 +35,7 @@ export async function generateDirMap(dir: string, ignore: { [key: string]: true 
     if (['.nowignore', 'now.json'].includes(part)) return
 
     if (ignored.includes(part)) {
-      ignore[part] = true
+      ignore.add(part)
       return
     }
 

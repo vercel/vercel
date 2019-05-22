@@ -1130,7 +1130,7 @@ test('[now/gen] detect from extensions', async t => {
     extensions: type,
     absolute: '',
     manifests: []
-  }, [], '', { choose: chooseMock });
+  }, [], '', new Set(), { choose: chooseMock });
 
   detected.builds.forEach((build, i) => {
     t.is(build.use, built[i].use)

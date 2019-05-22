@@ -2,7 +2,7 @@ import { relative } from 'path'
 import wait from '../output/wait'
 import { Output } from '../output'
 import { detectFromManifests } from './detect-from-manifests';
-import { outputFile, choose } from './helpers'
+import { outputFile, choose, IgnoreType } from './helpers'
 import { internal } from './metadata'
 import { DirMap, generateDirMap } from './generate-dir-map'
 import { detectFromExtensions } from './detect-from-extensions';
@@ -15,19 +15,19 @@ type nowJson = {
 }
 type Project = { config: nowJson, ignore: string[] }
 
-async function processDir(root: string, map: DirMap, deepCapture: string[] = []): Promise<Build[]> {
+async function processDir(root: string, map: DirMap, ignore: IgnoreType, deepCapture: string[] = []): Promise<Build[]> {
   const rel = relative(root, map.absolute)
   
-  const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel, { choose, outputFile })
+  const manifestBuilds = await detectFromManifests(map.manifests, map.absolute, rel, ignore, { choose, outputFile })
   if (manifestBuilds) return manifestBuilds
 
   // Check extension groups
-  const { builds, capture } = await detectFromExtensions(map, deepCapture, rel, { choose })
+  const { builds, capture } = await detectFromExtensions(map, deepCapture, rel, ignore, { choose })
 
   // Check directories
   for (let name in map.dir) {
     if (Object.prototype.hasOwnProperty.call(map.dir, name)) {
-      builds.push(...await processDir(root, map.dir[name], capture.concat(deepCapture)))
+      builds.push(...await processDir(root, map.dir[name], new Set(capture.concat(deepCapture))))
     }
   }
 
@@ -36,18 +36,18 @@ async function processDir(root: string, map: DirMap, deepCapture: string[] = [])
 
 export async function generateProject(dir: string, output: Output): Promise<Project> {
   const stopSpinner = wait(`Looking for code to build...`)
-  const ignore: {[key: string]: true} = {}
+  const ignore: IgnoreType = new Set()
   const contents = await generateDirMap(dir, ignore)
   stopSpinner()
 
-  const builds = await processDir(dir, contents)
+  const builds = await processDir(dir, contents, ignore)
   const project: Project = {
     config: {
       version: 2,
       name: 'experiment',
       builds: builds.filter((val) => !Object.keys(internal).includes(val.use))
     },
-    ignore: Object.keys(ignore)
+    ignore: Array.from(ignore.values())
   }
 
   if (await outputFile(dir, 'now.json', JSON.stringify(project.config, null, 2))) {

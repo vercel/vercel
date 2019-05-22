@@ -1,7 +1,7 @@
 import { sep, join } from 'path'
 import { Build } from './generate-project'
 import { DirMap } from './generate-dir-map'
-import { chooseType } from './helpers'
+import { chooseType, IgnoreType } from './helpers'
 import { locale, extensions, builders } from './metadata'
 
 export function getCountAndDepth(extension: string, map: DirMap): { depth: number, count: number } {
@@ -61,7 +61,7 @@ export function getManualOptions(type: 'single' | 'many'): { [key: string]: stri
 }
 
 type helpers = { choose: chooseType }
-export async function detectFromExtensions(map: DirMap, deepCapture: string[], rel: string, { choose }: helpers) {
+export async function detectFromExtensions(map: DirMap, deepCapture: string[], rel: string, ignore: IgnoreType, { choose }: helpers) {
   const builds: Build[] = []
   const capture: string[] = []
 
@@ -113,7 +113,11 @@ export async function detectFromExtensions(map: DirMap, deepCapture: string[], r
         }
       }
 
-      builds.push({ use, src })
+      if (use === 'ignore') {
+        ignore.add(src)
+      } else {
+        builds.push({ use, src })
+      }
     }
   }
 
