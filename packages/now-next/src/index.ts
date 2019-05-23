@@ -393,8 +393,8 @@ export const build = async ({
 
       const pathname = page.replace(/\.html$/, '');
       routes.push({
-        src: path.join(entryDirectory, pathname),
-        dest: staticRoute,
+        src: `^${path.join('/', entryDirectory, pathname)}$`,
+        dest: path.join('/', staticRoute),
       });
     });
 
