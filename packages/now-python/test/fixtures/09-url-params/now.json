@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.py", "use": "@now/python" }
+  ],
+  "routes": [
+    { "src": "/custom", "dest": "custom.py" }
+  ],
+  "probes": [
+    { "path": "/?hello=/", "mustContain": "path=?hello=/" },
+    { "path": "/custom?hello=/", "mustContain": "path=custom?hello=/" }
+  ]
+}
