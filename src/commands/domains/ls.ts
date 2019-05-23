@@ -21,10 +21,7 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const {
-    authConfig: { token },
-    config
-  } = ctx;
+  const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -34,7 +31,7 @@ export default async function ls(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -77,10 +74,9 @@ function formatDomainsTable(domains: Domain[]) {
         chalk.gray('age')
       ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
-        const cdnEnabled = domain.cdnEnabled || false;
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, domain.serviceType, domain.verified, cdnEnabled, time];
+        return ['', url, domain.serviceType, domain.verified, true, time];
       })
     ],
     {

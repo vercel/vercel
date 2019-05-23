@@ -1,7 +1,6 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
-
 import { AliasRecord } from '../../util/alias/create-alias';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
@@ -36,8 +35,10 @@ export default async function set(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
+    localConfig
   } = ctx;
+
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const setStamp = stamp();
@@ -60,7 +61,7 @@ export default async function set(
   try {
     ({ contextName, user } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -105,22 +106,10 @@ export default async function set(
   }
 
   // Find the targets to perform the alias
-  const targets = await getTargetsForAlias(
-    output,
-    args,
-    opts['--local-config']
-  );
-  if (targets instanceof ERRORS.CantFindConfig) {
-    output.error(
-      `Couldn't find a project configuration file at \n    ${targets.meta.paths.join(
-        ' or\n    '
-      )}`
-    );
-    return 1;
-  }
+  const targets = await getTargetsForAlias(output, args, localConfig);
 
   if (targets instanceof ERRORS.NoAliasInConfig) {
-    output.error(`Couldn't find a an alias in config`);
+    output.error(`Couldn't find an alias in config`);
     return 1;
   }
 
@@ -128,11 +117,6 @@ export default async function set(
     output.error(
       `Wrong value for alias found in config. It must be a string or array of string.`
     );
-    return 1;
-  }
-
-  if (targets instanceof ERRORS.CantParseJSONFile) {
-    output.error(`Couldn't parse JSON file ${targets.meta.file}.`);
     return 1;
   }
 
@@ -171,8 +155,10 @@ export default async function set(
     args,
     opts['--local-config'],
     user,
-    contextName
+    contextName,
+    localConfig
   );
+
   if (deployment instanceof ERRORS.DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(
@@ -191,6 +177,11 @@ export default async function set(
     return 1;
   }
 
+  if (deployment instanceof ERRORS.InvalidDeploymentId) {
+    output.error(deployment.message);
+    return 1;
+  }
+
   if (deployment === null) {
     output.error(
       `Couldn't find a deployment to alias. Please provide one as an argument.`
@@ -201,6 +192,7 @@ export default async function set(
   // Assign the alias for each of the targets in the array
   for (const target of targets) {
     output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
+
     const record = await assignAlias(
       output,
       client,
@@ -215,13 +207,12 @@ export default async function set(
     );
     if (handleResult === 1) {
       return 1;
-    } else {
-      console.log(
-        `${chalk.cyan('> Success!')} ${
-          handleResult.alias
-        } now points to ${chalk.bold(deployment.url)} ${setStamp()}`
-      );
     }
+    console.log(
+      `${chalk.cyan('> Success!')} ${chalk.bold(
+        `https://${handleResult.alias}`
+      )} now points to https://${deployment.url} ${setStamp()}`
+    );
   }
 
   return 0;
@@ -281,11 +272,6 @@ function handleSetupDomainError<T>(
         error.meta.domain
       )} under ${chalk.bold(error.meta.context)}.`
     );
-    return 1;
-  }
-
-  if (error instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan`);
     return 1;
   }
 
@@ -353,7 +339,15 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.SourceNotFound) {
     output.error(
-      `You can't purchase the domain your aliasing to since you have no valid payment method.`
+      `You can't purchase the domain you're aliasing to since you have no valid payment method.`
+    );
+    output.print(`  Please add a valid payment method and retry.\n`);
+    return 1;
+  }
+
+  if (error instanceof ERRORS.DomainPaymentError) {
+    output.error(
+      `You can't purchase the domain you're aliasing to since your card was declined.`
     );
     output.print(`  Please add a valid payment method and retry.\n`);
     return 1;
@@ -392,7 +386,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.InvalidAlias) {
     output.error(
-      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: Nested domains are not supported.`
+      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`now.sh\`, only sub and sub-sub domains are supported.`
     );
     return 1;
   }
@@ -402,10 +396,6 @@ function handleCreateAliasError<T>(
         error.meta.id
       )} under ${chalk.bold(error.meta.context)}`
     );
-    return 1;
-  }
-  if (error instanceof ERRORS.CDNNeedsUpgrade) {
-    output.error(`You can't add domains with CDN enabled from an OSS plan.`);
     return 1;
   }
   if (error instanceof ERRORS.DomainConfigurationError) {
@@ -528,16 +518,9 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.ForbiddenScaleMinInstances) {
     output.error(
-      `Scale rules from previous aliased deployment ${chalk.dim(
-        error.meta.url
-      )} could not be copied since the given number of min instances (${
-        error.meta.min
-      }) is not allowed.`
-    );
-    output.log(
-      `Update the scale settings on ${chalk.dim(
-        error.meta.url
-      )} with \`now scale\` and try again`
+      `You can't scale to more than ${
+        error.meta.max
+      } min instances with your current plan.`
     );
     return 1;
   }
@@ -570,5 +553,44 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
+  if (error instanceof ERRORS.InvalidDomain) {
+    output.error(
+      `The domain ${error.meta.domain} used for the alias is not valid.`
+    );
+    return 1;
+  }
+
+  if (error instanceof ERRORS.WildcardNotAllowed) {
+    output.error(
+      `Custom suffixes are only allowed for domains in ${chalk.underline(
+        'zeit.world'
+      )}`
+    );
+    return 1;
+  }
+
+  if (
+    error instanceof ERRORS.ConflictingCAARecord ||
+    error instanceof ERRORS.DomainPermissionDenied ||
+    error instanceof ERRORS.DeploymentFailedAliasImpossible ||
+    error instanceof ERRORS.InvalidDeploymentId ||
+    error instanceof ERRORS.UnauthorizedCertsRequestError
+  ) {
+    output.error(error.message);
+    return 1;
+  }
+
+  if (error instanceof ERRORS.CertsDNSError) {
+    output.error(
+      `We could not solve the dns-01 challenge for cns ${error.meta.cns.join(
+        ', '
+      )}.`
+    );
+    output.log(
+      `The certificate provider could not resolve the required DNS record queries.`
+    );
+    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
+    return 1;
+  }
   return error;
 }

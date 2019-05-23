@@ -1,6 +1,6 @@
+import chalk from 'chalk';
 import { DomainConfigurationError } from './errors-ts';
 import { Output } from './output';
-import chalk from 'chalk';
 import dnsTable from './format-dns-table';
 
 export function handleDomainConfigurationError(
@@ -17,7 +17,7 @@ export function handleDomainConfigurationError(
       `  The propagation may take a few minutes, but please verify your settings:\n\n`
     );
     output.print(
-      `${  dnsTable([
+      `${dnsTable([
         error.meta.subdomain === null
           ? ['', 'ALIAS', 'alias.zeit.co']
           : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']

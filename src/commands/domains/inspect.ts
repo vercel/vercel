@@ -21,7 +21,10 @@ export default async function inspect(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -32,7 +35,7 @@ export default async function inspect(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -77,20 +80,42 @@ export default async function inspect(
     return 1;
   }
 
-  output.log(`Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(inspectStamp())}`);
+  output.log(
+    `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
+      inspectStamp()
+    )}`
+  );
   output.print('\n');
   output.print(chalk.bold('  General\n\n'));
-  output.print(`    ${chalk.cyan('name')}\t\t${domain.name}\n`);
-  output.print(`    ${chalk.cyan('serviceType')}\t\t${domain.serviceType}\n`);
-  output.print(`    ${chalk.cyan('orderedAt')}\t\t${formatDate(domain.orderedAt)}\n`);
-  output.print(`    ${chalk.cyan('createdAt')}\t\t${formatDate(domain.createdAt)}\n`);
-  output.print(`    ${chalk.cyan('boughtAt')}\t\t${formatDate(domain.boughtAt)}\n`);
-  output.print(`    ${chalk.cyan('expiresAt')}\t\t${formatDate(domain.expiresAt)}\n`);
-  output.print(`    ${chalk.cyan('nsVerifiedAt')}\t${formatDate(domain.nsVerifiedAt)}\n`);
+  output.print(`    ${chalk.cyan('Name')}\t\t\t${domain.name}\n`);
+  output.print(`    ${chalk.cyan('Service Type')}\t\t${domain.serviceType}\n`);
   output.print(
-    `    ${chalk.cyan('txtVerifiedAt')}\t${formatDate(domain.txtVerifiedAt)}\n`
+    `    ${chalk.cyan('Ordered At')}\t\t\t${formatDate(domain.orderedAt)}\n`
   );
-  output.print(`    ${chalk.cyan('cdnEnabled')}\t\t${domain.cdnEnabled}\n`);
+  output.print(
+    `    ${chalk.cyan('Transfer Started At')}\t\t${formatDate(
+      domain.transferStartedAt
+    )}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Bought At')}\t\t\t${formatDate(domain.boughtAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(domain.transferredAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(domain.nsVerifiedAt)}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
+  );
+  output.print(`    ${chalk.cyan('CDN Enabled')}\t\t${true}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));

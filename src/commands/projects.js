@@ -10,6 +10,8 @@ import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 
+const e = encodeURIComponent
+
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} now projects`)} [options] <command>
@@ -26,7 +28,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
@@ -143,6 +145,17 @@ async function run({ client, contextName }) {
     }
 
     const name = args[0];
+
+    // Check the existence of the project
+    try {
+      await client.fetch(`/projects/info/${e(name)}`)
+    } catch(err) {
+      if (err.status === 404) {
+        console.error(error('No such project exists'))
+        return exit(1)
+      }
+    }
+
     const yes = await readConfirmation(name);
     if (!yes) {
       console.error(error('User abort'));

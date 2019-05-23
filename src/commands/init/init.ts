@@ -6,14 +6,15 @@ import fetch from 'node-fetch';
 
 // @ts-ignore
 import listInput from '../../util/input/list';
+import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
 import toHumanPath from '../../util/humanize-path';
 import wait from '../../util/output/wait';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
-// @ts-ignore
 import success from '../../util/output/success';
 import info from '../../util/output/info';
+import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 
 type Options = {
@@ -49,7 +50,6 @@ export default async function init(
 
     return extractExample(chosen, dir, force);
   }
-
 
   if (exampleList.includes(name)) {
     return extractExample(name, dir, force);
@@ -128,9 +128,23 @@ async function extractExample(name: string, dir: string, force?: boolean) {
         resp.body.pipe(extractor);
       });
 
-      console.log(success(
-        `Initialized "${chalk.bold(name)}" example in ${chalk.bold(toHumanPath(folder))}.`
-      ));
+      const successLog = `Initialized "${chalk.bold(
+        name
+      )}" example in ${chalk.bold(toHumanPath(folder))}.`;
+      const folderRel = path.relative(process.cwd(), folder);
+      const developHint =
+        folderRel === ''
+          ? listItem(`To develop, run ${cmd('now dev')}.`)
+          : listItem(
+              `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd('now dev')}.`
+            );
+      const deployHint =
+        folderRel === ''
+          ? listItem(`To deploy, run ${cmd('now')}.`)
+          : listItem(
+              `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`
+            );
+      console.log(success(`${successLog}\n${developHint}\n${deployHint}`));
       return 0;
     })
     .catch(e => {
@@ -148,21 +162,25 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   if (fs.existsSync(dest)) {
     if (!fs.lstatSync(dest).isDirectory()) {
       throw new Error(
-        `Destination path "${chalk.bold(folder)}" already exists and is not a directory.`
+        `Destination path "${chalk.bold(
+          folder
+        )}" already exists and is not a directory.`
       );
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
       throw new Error(
-        `Destination path "${chalk.bold(folder)}" already exists and is not an empty directory.`
+        `Destination path "${chalk.bold(
+          folder
+        )}" already exists and is not an empty directory. You may use ${cmd(
+          '--force'
+        )} or ${cmd('--f')} to override it.`
       );
     }
-  } else {
-    if (dest !== cwd) {
-      try {
-        fs.mkdirSync(dest);
-      } catch (e) {
-        throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
-      }
+  } else if (dest !== cwd) {
+    try {
+      fs.mkdirSync(dest);
+    } catch (e) {
+      throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
     }
   }
 

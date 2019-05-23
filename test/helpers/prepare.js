@@ -81,6 +81,19 @@ http_request(
 <marquee>Thanks for your feedback!</marquee>
 `;
 
+const getRevertAliasConfigFile = () => {
+  return JSON.stringify({
+      'version': 2,
+      'name': 'now-revert-alias',
+      'builds': [
+        {
+          'src': '*.json',
+          'use': '@now/static'
+        }
+      ]
+  });
+};
+
 module.exports = async session => {
   const files = {
     Dockerfile: getDockerFile(session),
@@ -104,14 +117,41 @@ module.exports = async session => {
     builds: ['index.html', 'now.json-builds'],
     'static-single-file': ['first.png', 'now.json'],
     'static-multiple-files': ['first.png', 'second.png', 'now.json'],
+    'single-dotfile': {
+      '.testing': 'i am a dotfile'
+    },
     'config-alias-property': {
       'now.json':
         '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
       'index.html': '<span>test alias</span'
     },
+    'config-scope-property-email': {
+      'now.json':
+        `{ "scope": "now-cli-${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'index.html': '<span>test scope email</span'
+    },
+    'config-scope-property-username': {
+      'now.json':
+        `{ "scope": "now-cli-${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'index.html': '<span>test scope username</span'
+    },
     'builds-wrong': {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span'
+    },
+    'builds-no-list': {
+      'now.json': `{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "status": 301,
+      "headers": {
+        "Location": "https://google.com"
+      }
+    }
+  ]
+}`,
     },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
@@ -147,6 +187,14 @@ ARG NONCE
 RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `
+    },
+    'now-revert-alias-1': {
+      'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
+      'now.json': getRevertAliasConfigFile()
+    },
+    'now-revert-alias-2': {
+      'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
+      'now.json': getRevertAliasConfigFile()
     }
   };
 

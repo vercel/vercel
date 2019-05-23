@@ -6,7 +6,7 @@ After the deployment build completed and the deployment state was set to `READY`
 instances failed to initialize properly.
 
 The CLI attempted to verify that the scale settings of your instances matched,
-but it couldn't do so within the alloted time (defaults to 2 minutes).
+but it couldn't do so within the allotted time (defaults to 2 minutes).
 
 #### Possible Ways to Fix It
 

@@ -8,6 +8,7 @@ import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
 import add from './add';
+import importZone from './import';
 import ls from './ls';
 import rm from './rm';
 
@@ -17,9 +18,10 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    add   [details]    Add a new DNS entry (see below for examples)
-    rm    [id]         Remove a DNS entry using its ID
-    ls    [domain]     List all DNS entries for a domain
+    add     [details]             Add a new DNS entry (see below for examples)
+    import  [domain] [zonefile]   Import a DNS zone file (see below for examples)
+    rm      [id]                  Remove a DNS entry using its ID
+    ls      [domain]              List all DNS entries for a domain
 
   ${chalk.dim('Options:')}
 
@@ -34,7 +36,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
@@ -63,11 +65,19 @@ const help = () => {
         `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
       ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
+
+  ${chalk.gray('–')} Import a Zone file
+
+      ${chalk.cyan('$ now dns import <DOMAIN> <FILE>')}
+      ${chalk.cyan(`$ now dns import zeit.rocks ./zonefile.txt`)}
+
+
 `);
 };
 
 const COMMAND_CONFIG = {
   add: ['add'],
+  import: ['import'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove']
 };
@@ -92,6 +102,8 @@ export default async function main(ctx: NowContext) {
   switch (subcommand) {
     case 'add':
       return add(ctx, argv, args, output);
+    case 'import':
+      return importZone(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
     default:

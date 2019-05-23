@@ -130,7 +130,7 @@ async function download() {
   fs.renameSync(partial, target);
 }
 
-function modifyGitBashFile(content) {
+function modifyGitBashFile() {
   return (
     '#!/bin/sh\n' +
     'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
@@ -139,7 +139,8 @@ function modifyGitBashFile(content) {
     '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
     'esac\n' +
     '\n' +
-    content.replace('download/dist/now"', 'download/dist/now.exe"')
+    '"$basedir/node_modules/now/download/dist/now.exe" "$@"\n' +
+    'exit $?'
   );
 }
 
@@ -156,9 +157,16 @@ async function main() {
         gitBashFile = path.join(process.env.APPDATA, 'npm/now');
       }
 
+      fs.writeFileSync(gitBashFile, modifyGitBashFile());
+
+      let npmCmdFile = path.join(globalPath, 'now.cmd');
+      if (!fs.existsSync(npmCmdFile)) {
+        npmCmdFile = path.join(process.env.APPDATA, 'npm/now.cmd');
+      }
+
       fs.writeFileSync(
-        gitBashFile,
-        modifyGitBashFile(fs.readFileSync(gitBashFile, 'utf8'))
+        npmCmdFile,
+        '@\"%~dp0\\node_modules\\now\\download\\dist\\now.exe\" %*'
       );
     } catch (err) {
       if (err.code !== 'ENOENT') {
