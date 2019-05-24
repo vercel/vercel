@@ -4,10 +4,10 @@
     { "src": "*.py", "use": "@now/python" }
   ],
   "routes": [
-    { "src": "/custom", "dest": "custom.py" }
+    { "src": "/another", "dest": "custom.py" }
   ],
   "probes": [
     { "path": "/?hello=/", "mustContain": "path=?hello=/" },
-    { "path": "/custom?hello=/", "mustContain": "path=custom?hello=/" }
+    { "path": "/another?hello=/", "mustContain": "path=another?hello=/" }
   ]
 }
