@@ -12,8 +12,8 @@
   "scripts": {
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
-    "publish-stable": "lerna version",
-    "publish-canary": "lerna version prerelease --preid canary",
+    "publish-stable": "git checkout master && git pull && lerna version",
+    "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary",
     "build": "./.circleci/build.sh",
     "lint": "eslint .",
     "codecov": "codecov",
