@@ -24,4 +24,4 @@ CircleCI will take care of publishing the updated packages to npm from there.
 
 If for some reason CircleCI fails to publish the npm package, you may do so
 manually by running `npm publish` from the package directory. Make sure to
-include the `--tag canary` parameter if you are publishing a canary release!
+use `npm publish --tag canary` if you are publishing a canary release!
