@@ -118,3 +118,19 @@ test('[dev-router] methods', async t => {
     userDest: true
   });
 });
+
+test('[dev-router] match without prefix slash', async t => {
+  const routesConfig = [{ src: 'api/(.*)', dest: 'endpoints/$1.js' }];
+  const result = await devRouter('/api/user', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/endpoints/user.js',
+    status: undefined,
+    headers: undefined,
+    uri_args: {},
+    matched_route: routesConfig[0],
+    matched_route_idx: 0,
+    userDest: true
+  });
+});

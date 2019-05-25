@@ -101,6 +101,9 @@ export default async function(
           };
           break;
         } else {
+          if (!destPath.startsWith('/')) {
+            destPath = `/${destPath}`;
+          }
           const { pathname, query } = url.parse(destPath, true);
           found = {
             found: true,
