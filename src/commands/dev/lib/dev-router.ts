@@ -39,7 +39,7 @@ export default async function(
     reqPathname = reqPathname.substring(1);
   }
 
-  // try route match
+  // Try route match
   if (routes) {
     let idx = -1;
     for (const routeConfig of routes) {
@@ -58,13 +58,16 @@ export default async function(
         continue;
       }
 
-      src = src.replace(/^\^?\/?(.*)$/, (_, path) => {
-        let p = path;
-        if (!p.endsWith('$')) {
-          p += '$';
-        }
-        return `^${p}`;
-      });
+      // Strip leading [^/] if they exist
+      src = src.replace(/^\^?\/?/, '');
+
+      if (!src.startsWith('^')) {
+        src = `^${src}`;
+      }
+
+      if (!src.endsWith('$')) {
+        src = `${src}$`;
+      }
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
