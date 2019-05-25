@@ -107,18 +107,18 @@ async function chooseFromDropdown(exampleList: string[]) {
  * Extract example to directory
  */
 async function extractExample(name: string, dir: string, force?: boolean) {
+  const folder = prepareFolder(process.cwd(), dir || name, force);
   const stopSpinner = wait(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/download/${name}.tar.gz`;
+
   return fetch(url)
     .then(async resp => {
+      stopSpinner();
+
       if (resp.status !== 200) {
         throw new Error(`Could not get ${name}.tar.gz`);
       }
-
-      stopSpinner();
-
-      const folder = prepareFolder(process.cwd(), dir || name, force);
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
