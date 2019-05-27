@@ -29,7 +29,7 @@ function testFixture(name, fn) {
       };
 
       const fixturePath = path.join(__dirname, `fixtures/unit/${name}`);
-      server = new DevServer(fixturePath, { output, debug });
+      server = new DevServer(fixturePath, { output, debug, ssl: null });
 
       await server.start(0);
       await readyPromise;
