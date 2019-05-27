@@ -42,7 +42,8 @@ import {
   InvokePayload,
   InvokeResult,
   RouteConfig,
-  RouteResult
+  RouteResult,
+  SSLOptions
 } from './types';
 
 interface FSEvent {
@@ -70,19 +71,23 @@ export default class DevServer {
   private watchAggregationId: NodeJS.Timer | null;
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
+  private sslOptions: SSLOptions | boolean;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
+    this.sslOptions = options.ssl;
     this.env = {};
     this.buildEnv = {};
     this.files = {};
     this.address = '';
-
+    
+    console.log(this.sslOptions);
+    
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
-
+    
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;

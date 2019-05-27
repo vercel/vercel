@@ -12,6 +12,10 @@ type Options = {
   '-d': boolean;
   '--port': number;
   '-p': number;
+  '--cert': string;
+  '-c': string;
+  '--key': string;
+  '-k': string;
 };
 
 export default async function dev(
@@ -26,7 +30,9 @@ export default async function dev(
   const cwd = path.join(process.cwd(), dir);
   const port = opts['-p'] || opts['--port'];
   const debug = opts['-d'] || opts['--debug'];
-  const devServer = new DevServer(cwd, { output, debug });
+  const cert = opts['-c'] || opts['--cert'];
+  const key = opts['-k'] || opts['--key'];
+  const devServer = new DevServer(cwd, { output, debug, ssl: cert && key ? { cert, key } : false });
 
   process.once('SIGINT', devServer.stop.bind(devServer));
 

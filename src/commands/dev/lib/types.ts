@@ -4,9 +4,15 @@ import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
 import { Output } from '../../../util/output';
 
+export type SSLOptions = {
+  key: string,
+  cert: string
+}
+
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
+  ssl: SSLOptions | boolean
 }
 
 export interface EnvConfig {
