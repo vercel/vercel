@@ -109,7 +109,7 @@ export async function installDependencies(
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
       'npm',
-      ['install'].concat(commandArgs),
+      ['install', '--unsafe-perm'].concat(commandArgs),
       destPath,
       opts as SpawnOptions
     );
