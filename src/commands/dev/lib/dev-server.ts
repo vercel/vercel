@@ -487,7 +487,7 @@ export default class DevServer {
     }
 
     this.address = address.replace('[::]', 'localhost');
-    this.address = this.sslOptions !== null ? this.address.replace('http', 'https') : address;
+    this.address = this.sslOptions !== null ? this.address.replace('http', 'https') : this.address;
     this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
 
     this.serverUrlPrinted = true;
