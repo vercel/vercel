@@ -12,7 +12,7 @@ export type SSLOptions = {
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
-  ssl: SSLOptions | boolean
+  ssl: SSLOptions | null
 }
 
 export interface EnvConfig {

@@ -1,5 +1,4 @@
 import path from 'path';
-import chalk from 'chalk';
 
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
@@ -32,7 +31,7 @@ export default async function dev(
   const debug = opts['-d'] || opts['--debug'];
   const cert = opts['-c'] || opts['--cert'];
   const key = opts['-k'] || opts['--key'];
-  const devServer = new DevServer(cwd, { output, debug, ssl: cert && key ? { cert, key } : false });
+  const devServer = new DevServer(cwd, { output, debug, ssl: cert && key ? { cert, key } : null });
 
   process.once('SIGINT', devServer.stop.bind(devServer));
 

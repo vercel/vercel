@@ -1,6 +1,7 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
+import https from 'https';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -62,7 +63,7 @@ export default class DevServer {
   public address: string;
 
   private cachedNowJson: NowConfig | null;
-  private server: http.Server;
+  private server: http.Server | https.Server;
   private stopping: boolean;
   private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
@@ -71,7 +72,7 @@ export default class DevServer {
   private watchAggregationId: NodeJS.Timer | null;
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
-  private sslOptions: SSLOptions | boolean;
+  private sslOptions: SSLOptions | null;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -83,13 +84,16 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     
-    console.log(this.sslOptions);
-    
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
     
     this.cachedNowJson = null;
-    this.server = http.createServer(this.devServerHandler);
+    this.server = this.sslOptions !== null ?
+      https.createServer({
+        key: fs.readFileSync(this.sslOptions.key),
+        cert: fs.readFileSync(this.sslOptions.cert)        
+      }, this.devServerHandler) :
+      http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
@@ -483,6 +487,7 @@ export default class DevServer {
     }
 
     this.address = address.replace('[::]', 'localhost');
+    this.address = this.sslOptions !== null ? this.address.replace('http', 'https') : address;
     this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
 
     this.serverUrlPrinted = true;
@@ -1005,7 +1010,7 @@ function serveStaticFile(
   });
 }
 
-function close(server: http.Server): Promise<void> {
+function close(server: http.Server | https.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((err?: Error) => {
       if (err) {

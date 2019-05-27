@@ -25,14 +25,18 @@ const help = () => {
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
     -p, --port        Port [3000]
-    -k, --key
-    -c, --cert
+    -k, --key         Path to SSL key file
+    -c, --cert        Path to SSL cert file
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Start the \`now dev\` server on port 8080
 
       ${chalk.cyan('$ now dev --port 8080')}
+  
+  ${chalk.gray('–')} Start the \`now dev\` server with SSL support
+
+      ${chalk.cyan('$ now dev -c ./cert.pem -k ./key.pem')}
   `);
 };
 
