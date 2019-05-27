@@ -256,11 +256,15 @@ exports.build = async (m) => {
   const {
     files, entrypoint, workPath, config, meta,
   } = m;
+  const { isDev } = meta || {};
   console.log('downloading files');
   const downloadedFiles = await download(files, workPath, meta);
   const entryPath = downloadedFiles[entrypoint].fsPath;
 
-  await installRust();
+  if (!isDev) {
+    await installRust();
+  }
+
   const { PATH, HOME } = process.env;
   const rustEnv = {
     ...process.env,
