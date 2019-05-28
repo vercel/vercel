@@ -5,3 +5,5 @@
 /packages/now-node      @styfle @tootallnate
 /packages/now-next      @styfle @dav-is
 /packages/now-go        @styfle @sophearak
+/packages/now-python    @styfle @sophearak
+/packages/now-rust      @styfle @mike-engel @anmonteiro
