@@ -163,6 +163,11 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
   // using `go.mod` way building the handler
   const packageName = parsedAnalyzed.packageName;
   const isGoModExist = await pathExists(join(entrypointDirname, 'go.mod'));
+
+  if (isGoModExist && packageName === 'main') {
+    throw new Error('Please change `package main` to `package handler`');
+  }
+
   if (packageName !== 'main') {
     const go = await createGo(
       goPath,
