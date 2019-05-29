@@ -139,11 +139,9 @@ async function updateNowCli(src: string, dest: string): Promise<number> {
 async function removeAndMove({ debug, error }: Output, src: string, dest: string): Promise<number> {
   try {
     const { mode, uid, gid } = await stat(dest);
-    console.error('before', { mode, uid, gid });
     await remove(dest);
     await move(src, dest);
     const afterStat = await stat(dest);
-    console.error('after', stat);
     if (mode !== afterStat.mode) {
       debug(`Updating mode to "o${mode.toString(8)}"`);
       await chmod(dest, mode);
