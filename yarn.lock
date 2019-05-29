@@ -692,10 +692,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.5.tgz#b12a693f6ee79aaeffd97914457dc874d5f8386e"
   integrity sha512-SQ9/wXM1sjv8HnjbAWVSl6KOgitAWiPpjk5AZFXP6rBpmevsLWqtR1L0COIYnHY2UrHC5yXuUG/jh+Sqq0kK8Q==
 
-"@zeit/fun@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.8.0.tgz#02b4067ef5318064e880ba5a186cf27cfbb5ab09"
-  integrity sha512-oawT161eQb5uoN8BxYzJCKdQM/DX/TBsrRwJEXemxYgyHzeeuKRZaJXdsJkTTxlgTq8iZIERk32ND4wS+Q6NuA==
+"@zeit/fun@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.8.1.tgz#7390303a4094d43d9927de0f3f1083f710efaf18"
+  integrity sha512-06xzRuUOm6rrAchIuFO3GhmZ1RtJsi4YsACDmmmFSFGbdnPmJuVnn+vubmB34b8OytWFHf2NgTIYdzC7T7ow8A==
   dependencies:
     async-listen "1.0.0"
     cache-or-tmp-directory "1.0.0"
