@@ -110,7 +110,7 @@
     "@typescript-eslint/eslint-plugin": "1.6.0",
     "@typescript-eslint/parser": "1.1.0",
     "@zeit/dockerignore": "0.0.5",
-    "@zeit/fun": "0.8.0",
+    "@zeit/fun": "0.8.1",
     "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.18.1",
     "@zeit/source-map-support": "0.6.2",
