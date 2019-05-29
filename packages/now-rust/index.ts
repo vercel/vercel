@@ -1,17 +1,36 @@
-const fs = require('fs-extra');
-const path = require('path');
-const execa = require('execa');
-const toml = require('@iarna/toml');
-const { createLambda } = require('@now/build-utils/lambda.js'); // eslint-disable-line import/no-extraneous-dependencies
-const download = require('@now/build-utils/fs/download.js'); // eslint-disable-line import/no-extraneous-dependencies
-const glob = require('@now/build-utils/fs/glob.js'); // eslint-disable-line import/no-extraneous-dependencies
-const { runShellScript } = require('@now/build-utils/fs/run-user-scripts.js'); // eslint-disable-line import/no-extraneous-dependencies
-const FileFsRef = require('@now/build-utils/file-fs-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
-const FileRef = require('@now/build-utils/file-ref.js'); // eslint-disable-line import/no-extraneous-dependencies
-const { shouldServe } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
-const installRust = require('./install-rust.js');
+import fs from 'fs-extra';
+import path from 'path';
+import execa from 'execa';
+import toml from '@iarna/toml';
+import {
+  glob,
+  createLambda,
+  download,
+  FileRef,
+  FileFsRef,
+  runShellScript,
+  BuildOptions,
+  PrepareCacheOptions,
+  DownloadedFiles,
+  Lambda,
+} from '@now/build-utils'; // eslint-disable-line import/no-extraneous-dependencies
+import installRust from './install-rust';
 
-exports.config = {
+interface PackageManifest {
+  targets: { kind: string; name: string }[];
+}
+
+interface CargoConfig {
+  env: Record<string, any>;
+  cwd: string;
+}
+
+interface CargoToml extends toml.JsonMap {
+  package: toml.JsonMap;
+  dependencies: toml.JsonMap;
+}
+
+export const config = {
   maxLambdaSize: '25mb',
 };
 
@@ -22,15 +41,15 @@ const codegenFlags = [
   'target-feature=-aes,-avx,+fxsr,-popcnt,+sse,+sse2,-sse3,-sse4.1,-sse4.2,-ssse3,-xsave,-xsaveopt',
 ];
 
-async function inferCargoBinaries(config) {
+async function inferCargoBinaries(config: CargoConfig) {
   try {
     const { stdout: manifestStr } = await execa(
       'cargo',
       ['read-manifest'],
-      config,
+      config
     );
 
-    const { targets } = JSON.parse(manifestStr);
+    const { targets } = JSON.parse(manifestStr) as PackageManifest;
 
     return targets
       .filter(({ kind }) => kind.includes('bin'))
@@ -41,17 +60,16 @@ async function inferCargoBinaries(config) {
   }
 }
 
-async function parseTOMLStream(stream) {
+async function parseTOMLStream(stream: NodeJS.ReadableStream) {
   return toml.parse.stream(stream);
 }
 
-async function buildWholeProject({
-  entrypoint,
-  downloadedFiles,
-  extraFiles,
-  rustEnv,
-  config,
-}) {
+async function buildWholeProject(
+  { entrypoint, config }: BuildOptions,
+  downloadedFiles: DownloadedFiles,
+  extraFiles: DownloadedFiles,
+  rustEnv: Record<string, string>
+) {
   const entrypointDirname = path.dirname(downloadedFiles[entrypoint].fsPath);
   const { debug } = config;
   console.log('running `cargo build`...');
@@ -63,7 +81,7 @@ async function buildWholeProject({
         env: rustEnv,
         cwd: entrypointDirname,
         stdio: 'inherit',
-      },
+      }
     );
   } catch (err) {
     console.error('failed to `cargo build`');
@@ -73,17 +91,17 @@ async function buildWholeProject({
   const targetPath = path.join(
     entrypointDirname,
     'target',
-    debug ? 'debug' : 'release',
+    debug ? 'debug' : 'release'
   );
   const binaries = await inferCargoBinaries({
     env: rustEnv,
     cwd: entrypointDirname,
   });
 
-  const lambdas = {};
+  const lambdas: Record<string, Lambda> = {};
   const lambdaPath = path.dirname(entrypoint);
   await Promise.all(
-    binaries.map(async (binary) => {
+    binaries.map(async binary => {
       const fsPath = path.join(targetPath, binary);
       const lambda = await createLambda({
         files: {
@@ -95,13 +113,13 @@ async function buildWholeProject({
       });
 
       lambdas[path.join(lambdaPath, binary)] = lambda;
-    }),
+    })
   );
 
   return lambdas;
 }
 
-async function gatherExtraFiles(globMatcher, entrypoint) {
+async function gatherExtraFiles(globMatcher: string, entrypoint: string) {
   if (!globMatcher) return {};
 
   console.log('gathering extra files for the fs...');
@@ -110,7 +128,7 @@ async function gatherExtraFiles(globMatcher, entrypoint) {
 
   if (Array.isArray(globMatcher)) {
     const allMatches = await Promise.all(
-      globMatcher.map(pattern => glob(pattern, entryDir)),
+      globMatcher.map(pattern => glob(pattern, entryDir))
     );
 
     return allMatches.reduce((acc, matches) => ({ ...acc, ...matches }), {});
@@ -119,10 +137,10 @@ async function gatherExtraFiles(globMatcher, entrypoint) {
   return glob(globMatcher, entryDir);
 }
 
-async function runUserScripts(entrypoint) {
+async function runUserScripts(entrypoint: string) {
   const entryDir = path.dirname(entrypoint);
   const buildScriptPath = path.join(entryDir, 'build.sh');
-  const buildScriptExists = await fs.exists(buildScriptPath);
+  const buildScriptExists = await fs.pathExists(buildScriptPath);
 
   if (buildScriptExists) {
     console.log('running `build.sh`...');
@@ -130,12 +148,12 @@ async function runUserScripts(entrypoint) {
   }
 }
 
-async function cargoLocateProject(config) {
+async function cargoLocateProject(config: CargoConfig) {
   try {
     const { stdout: projectDescriptionStr } = await execa(
       'cargo',
       ['locate-project'],
-      config,
+      config
     );
     const projectDescription = JSON.parse(projectDescriptionStr);
     if (projectDescription != null && projectDescription.root != null) {
@@ -151,14 +169,12 @@ async function cargoLocateProject(config) {
   return null;
 }
 
-async function buildSingleFile({
-  workPath,
-  entrypoint,
-  downloadedFiles,
-  extraFiles,
-  rustEnv,
-  config,
-}) {
+async function buildSingleFile(
+  { workPath, entrypoint, config }: BuildOptions,
+  downloadedFiles: DownloadedFiles,
+  extraFiles: DownloadedFiles,
+  rustEnv: Record<string, string>
+) {
   console.log('building single file');
   const launcherPath = path.join(__dirname, 'launcher.rs');
   let launcherData = await fs.readFile(launcherPath, 'utf8');
@@ -167,7 +183,7 @@ async function buildSingleFile({
   const entrypointDirname = path.dirname(entrypointPath);
   launcherData = launcherData.replace(
     '// PLACEHOLDER',
-    await fs.readFile(path.join(workPath, entrypoint)),
+    await fs.readFile(path.join(workPath, entrypoint), 'utf8')
   );
   // replace the entrypoint with one that includes the the imports + lambda.start
   await fs.remove(entrypointPath);
@@ -181,9 +197,11 @@ async function buildSingleFile({
 
   // TODO: we're assuming there's a Cargo.toml file. We need to create one
   // otherwise
-  let cargoToml;
+  let cargoToml: CargoToml;
   try {
-    cargoToml = await parseTOMLStream(fs.createReadStream(cargoTomlFile));
+    cargoToml = (await parseTOMLStream(
+      fs.createReadStream(cargoTomlFile)
+    )) as CargoToml;
   } catch (err) {
     console.error('Failed to parse TOML from entrypoint:', entrypoint);
     throw err;
@@ -218,13 +236,13 @@ async function buildSingleFile({
     await execa(
       'cargo',
       ['build', '--bin', binName, '--verbose'].concat(
-        debug ? [] : ['--release'],
+        debug ? [] : ['--release']
       ),
       {
         env: rustEnv,
         cwd: entrypointDirname,
         stdio: 'inherit',
-      },
+      }
     );
   } catch (err) {
     console.error('failed to `cargo build`');
@@ -235,7 +253,7 @@ async function buildSingleFile({
     path.dirname(cargoTomlFile),
     'target',
     debug ? 'debug' : 'release',
-    binName,
+    binName
   );
 
   const lambda = await createLambda({
@@ -252,23 +270,20 @@ async function buildSingleFile({
   };
 }
 
-exports.build = async (m) => {
-  const {
-    files, entrypoint, workPath, config, meta,
-  } = m;
-  const { isDev } = meta || {};
+export async function build(opts: BuildOptions) {
+  const { files, entrypoint, workPath, config, meta = {} } = opts;
   console.log('downloading files');
   const downloadedFiles = await download(files, workPath, meta);
   const entryPath = downloadedFiles[entrypoint].fsPath;
 
-  if (!isDev) {
-    await installRust();
+  if (!meta.isDev) {
+    await installRust(config.rust);
   }
 
   const { PATH, HOME } = process.env;
-  const rustEnv = {
+  const rustEnv: Record<string, string> = {
     ...process.env,
-    PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+    PATH: `${path.join(HOME!, '.cargo/bin')}:${PATH}`,
     RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags]
       .filter(Boolean)
       .join(' '),
@@ -277,24 +292,28 @@ exports.build = async (m) => {
   await runUserScripts(entryPath);
   const extraFiles = await gatherExtraFiles(config.includeFiles, entryPath);
 
-  const newM = Object.assign(m, { downloadedFiles, extraFiles, rustEnv });
   if (path.extname(entrypoint) === '.toml') {
-    return buildWholeProject(newM);
+    return buildWholeProject(opts, downloadedFiles, extraFiles, rustEnv);
   }
-  return buildSingleFile(newM);
-};
+  return buildSingleFile(opts, downloadedFiles, extraFiles, rustEnv);
+}
 
-exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
+export async function prepareCache({
+  cachePath,
+  entrypoint,
+  workPath,
+}: PrepareCacheOptions) {
   console.log('preparing cache...');
 
-  let targetFolderDir;
+  let targetFolderDir: string;
+
   if (path.extname(entrypoint) === '.toml') {
     targetFolderDir = path.dirname(path.join(workPath, entrypoint));
   } else {
     const { PATH, HOME } = process.env;
-    const rustEnv = {
+    const rustEnv: Record<string, string> = {
       ...process.env,
-      PATH: `${path.join(HOME, '.cargo/bin')}:${PATH}`,
+      PATH: `${path.join(HOME!, '.cargo/bin')}:${PATH}`,
       RUSTFLAGS: [process.env.RUSTFLAGS, ...codegenFlags]
         .filter(Boolean)
         .join(' '),
@@ -316,7 +335,7 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
 
   const cacheEntrypointDirname = path.join(
     cachePath,
-    path.relative(workPath, targetFolderDir),
+    path.relative(workPath, targetFolderDir)
   );
 
   // Remove the target folder to avoid 'directory already exists' errors
@@ -325,28 +344,32 @@ exports.prepareCache = async ({ cachePath, entrypoint, workPath }) => {
   // Move the target folder to the cache location
   fs.renameSync(
     path.join(targetFolderDir, 'target'),
-    path.join(cacheEntrypointDirname, 'target'),
+    path.join(cacheEntrypointDirname, 'target')
   );
 
   const cacheFiles = await glob('**/**', cachePath);
 
   // eslint-disable-next-line no-restricted-syntax
   for (const f of Object.keys(cacheFiles)) {
-    const accept = /(?:^|\/)target\/release\/\.fingerprint\//.test(f)
-      || /(?:^|\/)target\/release\/build\//.test(f)
-      || /(?:^|\/)target\/release\/deps\//.test(f)
-      || /(?:^|\/)target\/debug\/\.fingerprint\//.test(f)
-      || /(?:^|\/)target\/debug\/build\//.test(f)
-      || /(?:^|\/)target\/debug\/deps\//.test(f);
+    const accept =
+      /(?:^|\/)target\/release\/\.fingerprint\//.test(f) ||
+      /(?:^|\/)target\/release\/build\//.test(f) ||
+      /(?:^|\/)target\/release\/deps\//.test(f) ||
+      /(?:^|\/)target\/debug\/\.fingerprint\//.test(f) ||
+      /(?:^|\/)target\/debug\/build\//.test(f) ||
+      /(?:^|\/)target\/debug\/deps\//.test(f);
     if (!accept) {
       delete cacheFiles[f];
     }
   }
 
   return cacheFiles;
-};
+}
 
-function findCargoToml(files, entrypoint) {
+function findCargoToml(
+  files: BuildOptions['files'],
+  entrypoint: BuildOptions['entrypoint']
+) {
   let currentPath = path.dirname(entrypoint);
   let cargoTomlPath;
 
@@ -362,7 +385,7 @@ function findCargoToml(files, entrypoint) {
   return cargoTomlPath;
 }
 
-exports.getDefaultCache = ({ files, entrypoint }) => {
+export const getDefaultCache = ({ files, entrypoint }: BuildOptions) => {
   const cargoTomlPath = findCargoToml(files, entrypoint);
   if (!cargoTomlPath) return undefined;
   const targetFolderDir = path.dirname(cargoTomlPath);
@@ -373,4 +396,4 @@ exports.getDefaultCache = ({ files, entrypoint }) => {
   return { [targetFolderDir]: defaultCacheRef };
 };
 
-exports.shouldServe = shouldServe;
+export { shouldServe } from '@now/build-utils';

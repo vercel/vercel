@@ -1,24 +1,16 @@
-const tar = require('tar');
-const fetch = require('node-fetch');
-const execa = require('execa');
+import execa from 'execa';
 
-const rustUrl = 'https://dmmcy0pwk6bqi.cloudfront.net/rust.tar.gz';
-
-async function downloadRustToolchain() {
+async function downloadRustToolchain(version: string = 'stable') {
   console.log('downloading the rust toolchain');
-  const res = await fetch(rustUrl);
 
-  if (!res.ok) {
-    throw new Error(`Failed to download: ${rustUrl}`);
+  try {
+    await execa.shell(
+      `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${version}`,
+      { stdio: 'inherit' }
+    );
+  } catch (err) {
+    throw new Error(`Failed to install rust via rustup: ${err.message}`);
   }
-
-  const { HOME } = process.env;
-  return new Promise((resolve, reject) => {
-    res.body
-      .on('error', reject)
-      .pipe(tar.extract({ gzip: true, cwd: HOME }))
-      .on('finish', () => resolve());
-  });
 }
 
 async function installOpenSSL() {
@@ -31,7 +23,7 @@ async function installOpenSSL() {
       ['downgrade', '-y', 'krb5-libs-1.14.1-27.41.amzn1.x86_64'],
       {
         stdio: 'inherit',
-      },
+      }
     );
     await execa('yum', ['install', '-y', 'openssl-devel'], {
       stdio: 'inherit',
@@ -42,7 +34,7 @@ async function installOpenSSL() {
   }
 }
 
-module.exports = async () => {
-  await downloadRustToolchain();
+export default async (version?: string) => {
+  await downloadRustToolchain(version);
   await installOpenSSL();
 };

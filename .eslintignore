@@ -3,9 +3,12 @@
 /**/node_modules/*
 /packages/now-go/go/*
 /packages/now-build-utils/dist/*
+/packages/now-build-utils/src/*.js
+/packages/now-build-utils/src/fs/*.js
 /packages/now-node/dist/*
 /packages/now-next/dist/*
 /packages/now-node-bridge/*
 /packages/now-python/*
 /packages/now-optipng/dist/*
 /packages/now-go/*
+/packages/now-rust/dist/*

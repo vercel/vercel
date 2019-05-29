@@ -7,7 +7,7 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(4 * 60 * 1000);
+jest.setTimeout(6 * 60 * 1000);
 const buildUtilsUrl = '@canary';
 let builderUrl;
 
