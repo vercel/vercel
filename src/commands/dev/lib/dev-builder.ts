@@ -9,6 +9,7 @@ import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
+import dependencyTree from 'dependency-tree';
 
 import DevServer from './dev-server';
 import { Output } from '../../../util/output';
@@ -406,7 +407,11 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0
+        buildTimestamp: 0,
+        dependencyTree: dependencyTree.toList({
+          filename: file,
+          directory: cwd
+        }).map(file => file.replace(`${ cwd }/`, ''))
       });
     }
   }

@@ -160,16 +160,16 @@ export default class DevServer {
       [string | null, BuildMatch]
     > = new Map();
     for (const match of this.buildMatches.values()) {
-      for (const [requestPath, result] of match.buildResults) {
+      for (const [requestPath, result] of match.buildResults) {        
         // If the `BuildResult` is already queued for a re-build,
         // then we can skip subsequent lookups
         if (needsRebuild.has(result)) continue;
 
         if (Array.isArray(result.watch)) {
-          for (const pattern of result.watch) {
+          for (const pattern of result.watch) {       
             if (
-              minimatches(filesChangedArray, pattern) ||
-              minimatches(filesRemovedArray, pattern)
+              minimatches(filesChangedArray, match.dependencyTree, pattern) ||
+              minimatches(filesRemovedArray, match.dependencyTree, pattern)
             ) {
               needsRebuild.set(result, [requestPath, match]);
               break;
@@ -280,8 +280,13 @@ export default class DevServer {
     // Add the new matches to the `buildMatches` map
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
-      if (!currentMatch || currentMatch.use !== match.use) {
+      if (
+        !currentMatch ||
+        currentMatch.use !== match.use ||
+        !areDependencyTreesTheSame(currentMatch.dependencyTree, match.dependencyTree)
+      ) {
         this.output.debug(`Adding build match for "${match.src}"`);
+        
         this.buildMatches.set(match.src, match);
       }
     }
@@ -1141,8 +1146,12 @@ function isIndex(path: string): boolean {
   return name === 'index';
 }
 
-function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => minimatch(file, pattern));
+function minimatches(files: string[], dependencyTree: string[], pattern: string): boolean {
+  console.log('-------------');  
+  console.log(files, dependencyTree, pattern);
+  
+  return files.some(file => minimatch(file, pattern)) ||
+    files.some(file => dependencyTree.some(depFile => minimatch(file, depFile)));
 }
 
 function fileChanged(
@@ -1182,4 +1191,8 @@ function isStaticDeployment(nowJson: NowConfig): boolean {
     return false;
   }
   return true;
+}
+
+function areDependencyTreesTheSame(treeA: string[], treeB: string[]): boolean {
+  return treeA.length === treeB.length && treeA.every((file, index) => file === treeB[index]);
 }

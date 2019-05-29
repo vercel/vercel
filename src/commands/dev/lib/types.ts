@@ -25,6 +25,7 @@ export interface BuildMatch extends BuildConfig {
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
   buildProcess?: ChildProcess;
+  dependencyTree: string[];
 }
 
 export interface RouteConfig {
