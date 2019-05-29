@@ -12,10 +12,12 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'standard'));
     expect(output.index).toBeDefined();
     const filePaths = Object.keys(output);
+    const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
     const hasUnderScoreAppStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_app\.js$/));
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath => filePath.match(/static.*\/pages\/_error\.js$/));
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
   },
   FOUR_MINUTES,
 );

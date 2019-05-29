@@ -429,7 +429,7 @@ export const build = async ({
     await Promise.all(
       pageKeys.map(async page => {
         // These default pages don't have to be handled as they'd always 404
-        if (['_app.js', '_error.js', '_document.js'].includes(page)) {
+        if (['_app.js', '_document.js'].includes(page)) {
           return;
         }
 
