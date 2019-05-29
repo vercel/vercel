@@ -1,8 +1,11 @@
 # now-builders
 
-This is the full list of official Builders provided by the ZEIT team.
+This is a monorepo containing the [Official Builders](https://zeit.co/docs/v2/deployments/builders/overview) provided by the ZEIT team.
 
-More details here: https://zeit.co/docs/v2/deployments/builders/overview/
+There are two branches:
+
+* canary - published to npm as `canary` dist-tag, eg `@now/node@canary`
+* master - published to npm as `latest` dist-tag, eg `@now/node@latest`
 
 ### Publishing to npm
 
@@ -20,8 +23,8 @@ For the canary channel use:
 yarn publish-canary
 ```
 
-CircleCI will take care of publishing the updated packages to npm from there.
+GitHub Actions will take care of publishing the updated packages to npm from there.
 
-If for some reason CircleCI fails to publish the npm package, you may do so
+If for some reason GitHub Actions fails to publish the npm package, you may do so
 manually by running `npm publish` from the package directory. Make sure to
 use `npm publish --tag canary` if you are publishing a canary release!
