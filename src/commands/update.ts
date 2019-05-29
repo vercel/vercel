@@ -10,11 +10,9 @@ import { spawnSync } from 'child_process';
 import { createReadStream, createWriteStream, copyFile, remove } from 'fs-extra';
 
 import pkg from '../util/pkg';
-import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
-import wait from '../util/output/wait';
 import { NowContext } from '../types';
 import createOutput, { Output } from '../util/output';
 
