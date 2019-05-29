@@ -1,12 +1,12 @@
 import chalk from 'chalk';
 import { tmpdir } from 'os';
+import pipe from 'promisepipe';
 import fetch from 'node-fetch';
 import Progress from 'progress';
 import { createGunzip } from 'zlib';
 import { parse, format } from 'url';
 import { basename, join } from 'path';
 import { spawnSync } from 'child_process';
-import pipe, { StreamError } from 'promisepipe';
 import {
   createReadStream,
   createWriteStream,
