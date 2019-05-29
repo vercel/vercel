@@ -1,13 +1,21 @@
 import chalk from 'chalk';
 import { tmpdir } from 'os';
-import pipe from 'promisepipe';
 import fetch from 'node-fetch';
 import Progress from 'progress';
 import { createGunzip } from 'zlib';
 import { parse, format } from 'url';
 import { basename, join } from 'path';
 import { spawnSync } from 'child_process';
-import { createReadStream, createWriteStream, copyFile, remove } from 'fs-extra';
+import pipe, { StreamError } from 'promisepipe';
+import {
+  createReadStream,
+  createWriteStream,
+  chmod,
+  copyFile,
+  move,
+  remove,
+  stat
+} from 'fs-extra';
 
 import pkg from '../util/pkg';
 import logo from '../util/output/logo';
@@ -119,11 +127,28 @@ async function downloadNowCli({ debug, print }: Output, url: string, dest: strin
   await pipePromise;
 }
 
-async function updateNowCli(src: string, dest: string) {
+async function updateNowCli(src: string, dest: string): Promise<number> {
   await pipe(
     createReadStream(src),
     createWriteStream(dest)
   );
+  return 0;
+}
+
+async function removeAndMove({ error }: Output, src: string, dest: string): Promise<number> {
+  try {
+    const { mode } = await stat(dest);
+    await remove(dest);
+    await move(src, dest);
+    await chmod(dest, mode);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EPERM') {
+      error(`Permission denied to modify file "${dest}". Please run again using \`sudo\`.`);
+      return 1;
+    }
+    throw err;
+  }
+  return 0;
 }
 
 export default async function main(ctx: NowContext): Promise<number> {
@@ -165,7 +190,6 @@ export default async function main(ctx: NowContext): Promise<number> {
   }
 
   log('Updating Now CLI...');
-  print('\n');
 
   if (version) {
     explicitVersion = true;
@@ -192,7 +216,7 @@ export default async function main(ctx: NowContext): Promise<number> {
     config.version += ` (latest ${chalk.green(channel)} release)`;
   }
 
-  print(`  ${chalk.bold('Configuration')}\n\n`);
+  print(`\n  ${chalk.bold('Configuration')}\n\n`);
   for (const name of Object.keys(config)) {
     print(`    ${chalk.cyan(name)}\t${config[name]}\n`);
   }
@@ -202,13 +226,21 @@ export default async function main(ctx: NowContext): Promise<number> {
   log(`Binary URL: ${chalk.underline.blue(url)}`);
 
   const tmpBin: string = join(tmpdir(), Math.random().toString(32).slice(-10));
+  let rtn = 0;
   try {
     await downloadNowCli(output, url, tmpBin);
-    await updateNowCli(tmpBin, location);
-    success(`Updated Now CLI to ${chalk.green(version)}`);
+    rtn = await updateNowCli(tmpBin, location);
+  } catch(err) {
+    if (err.message.startsWith('ETXTBSY')) {
+      debug(`Got ETXTBSY error - falling back to unlink + rename method`);
+      rtn = await removeAndMove(output, tmpBin, location);
+    } else {
+      throw err;
+    }
   } finally {
     await remove(tmpBin);
   }
 
-  return 0;
+  success(`Updated Now CLI to ${chalk.green(version)}`);
+  return rtn;
 }
