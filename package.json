@@ -14,6 +14,7 @@
     "bootstrap": "lerna bootstrap",
     "publish-stable": "git checkout master && git pull && lerna version",
     "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary",
+    "publish-from-github": "./.circleci/publish.sh",
     "build": "./.circleci/build.sh",
     "lint": "eslint .",
     "codecov": "codecov",

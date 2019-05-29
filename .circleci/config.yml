@@ -29,12 +29,6 @@ jobs:
       - run:
           name: Tests and Coverage
           command: yarn test-coverage
-      - run:
-          name: Potentially save npm token
-          command: "([[ ! -z $NPM_TOKEN ]] && echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" >> ~/.npmrc) || echo \"Did not write npm token\""
-      - run:
-          name: Potentially publish releases to npm
-          command: ./.circleci/publish.sh
 workflows:
   version: 2
   build-and-deploy:

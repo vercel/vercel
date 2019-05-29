@@ -1,6 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+if [ -z "$NPM_TOKEN" ]; then
+  echo "NPM_TOKEN not found. Did you forget to assign the GitHub Action secret?"
+  exit 1
+fi
+
+echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+
 if [ ! -e ~/.npmrc ]; then
   echo "~/.npmrc file does not exist, skipping publish"
   exit 0
