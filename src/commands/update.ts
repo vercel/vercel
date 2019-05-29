@@ -92,6 +92,9 @@ async function getLatestVersion(
 async function downloadNowCli({ debug, print }: Output, url: string, dest: string) {
   debug(`GET ${url}`);
   const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) {
+    throw new Error(`Got ${res.status} status code while downloading Now CLI`);
+  }
   const total = parseInt(res.headers.get('content-length') || '0', 10);
   const bar = new Progress(':bar :percent', {
     complete: '#',
@@ -142,9 +145,10 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 2;
   }
 
+  let explicitVersion = false;
+  let version: string = argv['--version'];
   const location = process.execPath;
   const debugEnabled = argv['--debug'];
-  let version: string = argv['--version'];
   const channel: string = argv['--channel'] || getDefaultChannel();
   const output = createOutput({ debug: debugEnabled });
   const { log, note, success, print, debug } = output;
@@ -155,9 +159,12 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 1;
   }
 
-  log('Updating Now CLI');
+  log('Updating Now CLI...');
+  print('\n');
 
-  if (!version) {
+  if (version) {
+    explicitVersion = true;
+  } else {
     version = await getLatestVersion(output, channel);
   }
 
@@ -175,6 +182,10 @@ export default async function main(ctx: NowContext): Promise<number> {
     location,
     version
   };
+
+  if (!explicitVersion) {
+    config.version += ` (latest ${chalk.green(channel)} release)`;
+  }
 
   print(`  ${chalk.bold('Configuration')}\n\n`);
   for (const name of Object.keys(config)) {
