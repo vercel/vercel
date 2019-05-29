@@ -60,7 +60,14 @@ function getDefaultChannel(): string {
 }
 
 function getPlatform(nodePlatform: string): string {
-  return 'macos';
+  let platform = platformMap.get(nodePlatform);
+  if (!platform) {
+    throw new Error(`Unsupported platform: ${platform}`);
+  }
+  if (platform === 'linux' && detectAlpine()) {
+    platform = 'alpine';
+  }
+  return platform;
 }
 
 function getReleaseUrl(version: string, platform: string): string {
