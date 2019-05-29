@@ -11,6 +11,7 @@ import {
   createReadStream,
   createWriteStream,
   chmod,
+  chown,
   copyFile,
   move,
   remove,
@@ -83,9 +84,8 @@ function getReleaseUrl(version: string, platform: string): string {
   return `https://github.com/zeit/now-cli/releases/download/${version}/now-${platform}${ext}.gz`;
 }
 
-async function isNpmInstall() {
-  // TODO: check if `now` is a npm/yarn installed binary
-  return false;
+function isNpmInstall(binaryPath: string): boolean {
+  return binaryPath.includes('node_modules');
 }
 
 async function getLatestVersion(
@@ -104,6 +104,7 @@ async function getLatestVersion(
 
 async function downloadNowCli({ debug, print }: Output, url: string, dest: string) {
   debug(`GET ${url}`);
+  debug(`Downloading to path: ${dest}`);
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) {
     throw new Error(`Got ${res.status} status code while downloading Now CLI`);
@@ -135,14 +136,25 @@ async function updateNowCli(src: string, dest: string): Promise<number> {
   return 0;
 }
 
-async function removeAndMove({ error }: Output, src: string, dest: string): Promise<number> {
+async function removeAndMove({ debug, error }: Output, src: string, dest: string): Promise<number> {
   try {
-    const { mode } = await stat(dest);
+    const { mode, uid, gid } = await stat(dest);
+    console.error('before', { mode, uid, gid });
     await remove(dest);
     await move(src, dest);
-    await chmod(dest, mode);
+    const afterStat = await stat(dest);
+    console.error('after', stat);
+    if (mode !== afterStat.mode) {
+      debug(`Updating mode to "o${mode.toString(8)}"`);
+      await chmod(dest, mode);
+    }
+    if (uid !== afterStat.uid || gid !== afterStat.gid) {
+      debug(`Updating ownership to "${uid}:${gid}"`);
+      await chown(dest, uid, gid);
+    }
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'EPERM') {
+    const nodeErr = err as NodeJS.ErrnoException;
+    if (nodeErr.code === 'EPERM' || nodeErr.code === 'EACCES') {
       error(`Permission denied to modify file "${dest}". Please run again using \`sudo\`.`);
       return 1;
     }
@@ -225,14 +237,14 @@ export default async function main(ctx: NowContext): Promise<number> {
   log('Downloading `now` binary...');
   log(`Binary URL: ${chalk.underline.blue(url)}`);
 
-  const tmpBin: string = join(tmpdir(), Math.random().toString(32).slice(-10));
+  const tmpBin: string = join(tmpdir(), `now-${Math.random().toString(32).slice(-10)}`);
   let rtn = 0;
   try {
     await downloadNowCli(output, url, tmpBin);
     rtn = await updateNowCli(tmpBin, location);
   } catch(err) {
     if (err.message.startsWith('ETXTBSY')) {
-      debug(`Got ETXTBSY error - falling back to unlink + rename method`);
+      debug(`Got "ETXTBSY" error - falling back to unlink + rename method`);
       rtn = await removeAndMove(output, tmpBin, location);
     } else {
       throw err;
@@ -241,6 +253,8 @@ export default async function main(ctx: NowContext): Promise<number> {
     await remove(tmpBin);
   }
 
-  success(`Updated Now CLI to ${chalk.green(version)}`);
+  if (rtn === 0) {
+    success(`Updated Now CLI to ${chalk.green(version)}`);
+  }
   return rtn;
 }
