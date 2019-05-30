@@ -25,7 +25,6 @@ export interface BuildMatch extends BuildConfig {
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
   buildProcess?: ChildProcess;
-  workPath: string;
 }
 
 export interface RouteConfig {
@@ -82,6 +81,8 @@ export interface BuilderParamsBase {
     requestPath?: string | null;
     filesChanged?: string[];
     filesRemoved?: string[];
+    env?: EnvConfig;
+    buildEnv?: EnvConfig;
   };
 }
 
@@ -131,6 +132,7 @@ export interface Package {
   name?: string;
   version: string;
   dependencies?: { [name: string]: string };
+  devDependencies?: { [name: string]: string };
 }
 
 export interface BuilderWithPackage {

@@ -7,11 +7,14 @@ type Response = {
   period: number;
 };
 
-export default async function getDomainPrice(client: Client, name: string) {
+export default async function getDomainPrice(
+  client: Client,
+  name: string,
+  type?: 'new' | 'renewal'
+) {
   try {
-    return await client.fetch<Response>(
-      `/v3/domains/price?${stringify({ name })}`
-    );
+    const querystr = type ? stringify({ name, type }) : stringify({ name });
+    return await client.fetch<Response>(`/v3/domains/price?${querystr}`);
   } catch (error) {
     if (error.code === 'unsupported_tld') {
       return new UnsupportedTLD(name);

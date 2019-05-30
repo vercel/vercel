@@ -1,7 +1,6 @@
 import ms from 'ms';
 import url from 'url';
 import http from 'http';
-import nsfw from '@zeit/nsfw';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import rawBody from 'raw-body';
@@ -10,24 +9,25 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
+import { watch, FSWatcher } from 'chokidar';
 import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join, relative } from 'path';
+import { basename, dirname, extname, join } from 'path';
 
+import { once } from '../../../util/once';
 import { Output } from '../../../util/output';
+import { relative } from '../../../util/path-helpers';
 import getNowJsonPath from '../../../util/config/local-path';
 import isURL from './is-url';
 import devRouter from './dev-router';
 import getMimeType from './mime-type';
 import { installBuilders } from './builder-cache';
-import getModuleForNSFW from './nsfw-module';
-import {
-  executeBuild,
-  getBuildMatches
-} from './dev-builder';
+import { getYarnPath } from './yarn-installer';
+
+import { executeBuild, getBuildMatches } from './dev-builder';
 
 import { MissingDotenvVarsError } from '../../../util/errors-ts';
-import { staticFiles as getFiles } from '../../../util/get-files';
+import { createIgnore, staticFiles as getFiles } from '../../../util/get-files';
 
 import {
   EnvConfig,
@@ -45,6 +45,11 @@ import {
   RouteResult
 } from './types';
 
+interface FSEvent {
+  type: string;
+  path: string;
+}
+
 export default class DevServer {
   public cwd: string;
   public debug: boolean;
@@ -52,6 +57,8 @@ export default class DevServer {
   public env: EnvConfig;
   public buildEnv: EnvConfig;
   public files: BuilderInputs;
+  public yarnPath: string;
+  public address: string;
 
   private cachedNowJson: NowConfig | null;
   private server: http.Server;
@@ -59,7 +66,10 @@ export default class DevServer {
   private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
-  private nsfw?: nsfw.Watcher;
+  private watcher?: FSWatcher;
+  private watchAggregationId: NodeJS.Timer | null;
+  private watchAggregationEvents: FSEvent[];
+  private watchAggregationTimeout: number;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -68,6 +78,10 @@ export default class DevServer {
     this.env = {};
     this.buildEnv = {};
     this.files = {};
+    this.address = '';
+
+    // This gets updated when `start()` is invoked
+    this.yarnPath = '/';
 
     this.cachedNowJson = null;
     this.server = http.createServer(this.devServerHandler);
@@ -75,9 +89,28 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+
+    this.watchAggregationId = null;
+    this.watchAggregationEvents = [];
+    this.watchAggregationTimeout = 500;
   }
 
-  async handleFilesystemEvents(events: nsfw.Event[]): Promise<void> {
+  enqueueFsEvent(type: string, path: string): void {
+    this.watchAggregationEvents.push({ type, path });
+    if (this.watchAggregationId === null) {
+      this.watchAggregationId = setTimeout(
+        () => {
+          const events = this.watchAggregationEvents.slice();
+          this.watchAggregationEvents.length = 0;
+          this.watchAggregationId = null;
+          this.handleFilesystemEvents(events);
+        },
+        this.watchAggregationTimeout
+      );
+    }
+  }
+
+  async handleFilesystemEvents(events: FSEvent[]): Promise<void> {
     this.output.debug(`Filesystem watcher notified of ${events.length} events`);
 
     const filesChanged: Set<string> = new Set();
@@ -86,27 +119,21 @@ export default class DevServer {
     // First, update the `files` mapping of source files
     for (const event of events) {
       // TODO: for some reason the type inference isn't working, hence the casting
-      if (event.action === nsfw.actions.CREATED) {
+      if (event.type === 'add') {
         await this.handleFileCreated(
-          event as nsfw.CreatedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
-      } else if (event.action === nsfw.actions.DELETED) {
+      } else if (event.type === 'unlink') {
         this.handleFileDeleted(
-          event as nsfw.DeletedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
-      } else if (event.action === nsfw.actions.MODIFIED) {
+      } else if (event.type === 'change') {
         await this.handleFileModified(
-          event as nsfw.ModifiedEvent,
-          filesChanged,
-          filesRemoved
-        );
-      } else if (event.action === nsfw.actions.RENAMED) {
-        await this.handleFileRenamed(
-          event as nsfw.RenamedEvent,
+          event.path,
           filesChanged,
           filesRemoved
         );
@@ -121,9 +148,7 @@ export default class DevServer {
 
     // Update the build matches in case an entrypoint was created or deleted
     const nowJson = await this.getNowJson();
-    if (nowJson) {
-      await this.updateBuildMatches(nowJson);
-    }
+    await this.updateBuildMatches(nowJson);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -190,11 +215,10 @@ export default class DevServer {
   }
 
   async handleFileCreated(
-    event: nsfw.CreatedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): Promise<void> {
-    const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
@@ -211,21 +235,20 @@ export default class DevServer {
   }
 
   handleFileDeleted(
-    event: nsfw.DeletedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): void {
-    const name = relative(this.cwd, join(event.directory, event.file));
+    const name = relative(this.cwd, fsPath);
     this.output.debug(`File deleted: ${name}`);
     fileRemoved(name, this.files, changed, removed);
   }
 
   async handleFileModified(
-    event: nsfw.ModifiedEvent,
+    fsPath: string,
     changed: Set<string>,
     removed: Set<string>
   ): Promise<void> {
-    const fsPath = join(event.directory, event.file);
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
@@ -235,33 +258,6 @@ export default class DevServer {
       if (err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  async handleFileRenamed(
-    event: nsfw.RenamedEvent,
-    changed: Set<string>,
-    removed: Set<string>
-  ): Promise<void> {
-    const oldName = relative(this.cwd, join(event.directory, event.oldFile));
-    fileRemoved(oldName, this.files, changed, removed);
-
-    const fsPath = join(event.newDirectory, event.newFile);
-    const name = relative(this.cwd, fsPath);
-
-    try {
-      this.files[name] = await FileFsRef.fromFsPath({ fsPath });
-      fileChanged(name, changed, removed);
-      this.output.debug(`File renamed: ${oldName} -> ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug(
-          `File renamed, but has since been deleted: ${oldName} -> ${name}`
-        );
-        fileRemoved(oldName, this.files, changed, removed);
       } else {
         throw err;
       }
@@ -291,7 +287,7 @@ export default class DevServer {
     }
   }
 
-  async getLocalEnv(fileName: string): Promise<EnvConfig> {
+  async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
     const filePath = join(this.cwd, fileName);
@@ -305,7 +301,8 @@ export default class DevServer {
         throw err;
       }
     }
-    return env;
+    this.validateEnvConfig(fileName, base || {}, env);
+    return { ...base, ...env };
   }
 
   async getNowJson(): Promise<NowConfig> {
@@ -352,12 +349,6 @@ export default class DevServer {
     if (config.version !== 2) {
       throw new Error('Only `version: 2` is supported by `now dev`');
     }
-    this.validateEnvConfig('.env', config.env, this.env);
-    this.validateEnvConfig(
-      '.env.build',
-      config.build && config.build.env,
-      this.buildEnv
-    );
   }
 
   validateEnvConfig(
@@ -390,18 +381,21 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
+    this.yarnPath = await getYarnPath(this.output);
+
     // Retrieve the path of the native module
-    const modulePath = await getModuleForNSFW(this.output);
+    const nowJson = await this.getNowJson();
+    const nowJsonBuild = nowJson.build || {};
     const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env'),
-      this.getLocalEnv('.env.build')
+      this.getLocalEnv('.env', nowJson.env),
+      this.getLocalEnv('.env.build', nowJsonBuild.env)
     ]);
+    Object.assign(process.env, buildEnv);
     this.env = env;
     this.buildEnv = buildEnv;
-    const nowJson = await this.getNowJson();
 
     const opts = { output: this.output, isBuilds: true };
-    const files =  await getFiles(this.cwd, nowJson, opts);
+    const files = await getFiles(this.cwd, nowJson, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
       const path = relative(this.cwd, fsPath);
@@ -410,16 +404,11 @@ export default class DevServer {
     }
     this.files = results;
 
-    // Start the filesystem watcher
-    this.nsfw = await nsfw(this.cwd, this.handleFilesystemEvents.bind(this), {
-      modulePath
-    });
-
     const builders: Set<string> = new Set(
       (nowJson.builds || []).map((b: BuildConfig) => b.use)
     );
 
-    await installBuilders(builders);
+    await installBuilders(builders, this.yarnPath);
     await this.updateBuildMatches(nowJson);
 
     // Now Builders that do not define a `shouldServe()` function need to be
@@ -445,7 +434,32 @@ export default class DevServer {
       this.output.success('Builder setup complete');
     }
 
-    await this.nsfw.start();
+    // Start the filesystem watcher
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    const filter = ig.createFilter();
+
+    this.watcher = watch(this.cwd, {
+      ignored: (path: string) => !filter(path),
+      ignoreInitial: true,
+      useFsEvents: false,
+      usePolling: false,
+      persistent: true
+    });
+    this.watcher.on('add', (path: string) => {
+      this.enqueueFsEvent('add', path);
+    });
+    this.watcher.on('change', (path: string) => {
+      this.enqueueFsEvent('change', path);
+    });
+    this.watcher.on('unlink', (path: string) => {
+      this.enqueueFsEvent('unlink', path);
+    });
+    this.watcher.on('error', (err: Error) => {
+      this.output.error(`Watcher error: ${err}`);
+    });
+
+    // Wait for "ready" event of the watcher
+    await once(this.watcher, 'ready');
 
     let address: string | null = null;
     while (typeof address !== 'string') {
@@ -463,11 +477,8 @@ export default class DevServer {
       }
     }
 
-    this.output.ready(
-      `Available at ${chalk.cyan.underline(
-        address.replace('[::]', 'localhost')
-      )}`
-    );
+    this.address = address.replace('[::]', 'localhost');
+    this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
 
     this.serverUrlPrinted = true;
   }
@@ -500,8 +511,8 @@ export default class DevServer {
 
     ops.push(close(this.server));
 
-    if (this.nsfw) {
-      ops.push(this.nsfw.stop());
+    if (this.watcher) {
+      this.watcher.close();
     }
 
     await Promise.all(ops);
@@ -703,11 +714,11 @@ export default class DevServer {
 
     const {
       dest,
-      status = 200,
+      status,
       headers = {},
       uri_args,
       matched_route
-    } = await devRouter(req.url, routes, this);
+    } = await devRouter(req.url, req.method, routes, this);
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -715,27 +726,27 @@ export default class DevServer {
     });
 
     if (isURL(dest)) {
-      let destUrl = dest
-      let decodedUrl = dest
-      // make sure original query wasn't stripped
-      if (!destUrl.includes('?') && (req.url || '').includes('?')) {
-        destUrl = url.format(
-          Object.assign(
-            url.parse(destUrl),
-            { query: uri_args || {} }
-          )
-        )
-        // this is just for nice logs
-        decodedUrl = decodeURIComponent(destUrl)
-      }
-      this.output.debug(`ProxyPass: ${decodedUrl}`);
+      // Mix the `routes` result dest query params into the req path
+      const parsed = url.parse(dest, true);
+      delete parsed.search;
+      Object.assign(parsed.query, uri_args);
+      const destUrl = url.format(parsed);
+
+      this.output.debug(`ProxyPass: ${destUrl}`);
       return proxyPass(req, res, destUrl, this.output);
     }
 
-    if ([301, 302, 303].includes(status)) {
-      this.output.debug(`Redirect: ${matched_route}`);
+    if (status) {
       res.statusCode = status;
-      return res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
+      if ([301, 302, 303].includes(status)) {
+        this.output.debug(`Redirect: ${matched_route}`);
+        res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
+      } else if (status === 404) {
+        await this.send404(req, res, nowRequestId);
+      } else {
+        res.end(`${status} status code from routes config`);
+      }
+      return;
     }
 
     const requestPath = dest.replace(/^\//, '');
@@ -758,18 +769,22 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '')
-      const newUrl = url.format(
-        Object.assign(origUrl, {
-          pathname: `/${requestPath}`
-        })
-      );
+      const origUrl = url.parse(req.url || '/', true);
+      delete origUrl.search;
+      origUrl.pathname = dest;
+      Object.assign(origUrl.query, uri_args);
+      const newUrl = url.format(origUrl);
       this.output.debug(
         `Checking build result's ${
           buildResult.routes.length
         } \`routes\` to match ${newUrl}`
       );
-      const matchedRoute = await devRouter(newUrl, buildResult.routes, this);
+      const matchedRoute = await devRouter(
+        newUrl,
+        req.method,
+        buildResult.routes,
+        this
+      );
       if (matchedRoute.found) {
         this.output.debug(
           `Found matching route ${matchedRoute.dest} for ${newUrl}`
@@ -910,7 +925,7 @@ export default class DevServer {
   /**
    * Serve project directory as a static deployment.
    */
-   serveProjectAsStatic = async (
+  serveProjectAsStatic = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string
@@ -923,7 +938,7 @@ export default class DevServer {
     }
 
     this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd);
+    return serveStaticFile(req, res, this.cwd, { cleanUrls: true });
   };
 
   async hasFilesystem(dest: string): Promise<boolean> {
@@ -1039,7 +1054,6 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
-    workPath,
     builderWithPkg: { builder, package: pkg }
   } = match;
   if (typeof builder.shouldServe === 'function') {
@@ -1048,7 +1062,7 @@ async function shouldServe(
       files,
       config,
       requestPath,
-      workPath
+      workPath: devServer.cwd
     });
     if (shouldServe) {
       return true;
@@ -1074,7 +1088,12 @@ async function findMatchingRoute(
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
     if (!Array.isArray(buildResult.routes)) continue;
-    const route = await devRouter(reqUrl, buildResult.routes, devServer);
+    const route = await devRouter(
+      reqUrl,
+      undefined,
+      buildResult.routes,
+      devServer
+    );
     if (route.found) {
       return route;
     }
@@ -1151,13 +1170,13 @@ function fileRemoved(
  *   - no `builds`
  *   - all `builds` have `@now/static` as `use`
  */
-function isStaticDeployment(
-  nowJson: NowConfig
-): boolean {
+function isStaticDeployment(nowJson: NowConfig): boolean {
   if (nowJson.builds instanceof Array) {
-    if (nowJson.builds.every(build => {
-      return build.use.split('@')[1] === 'now/static';
-    })) {
+    if (
+      nowJson.builds.every(build => {
+        return build.use.split('@')[1] === 'now/static';
+      })
+    ) {
       return true;
     }
     return false;

@@ -2,18 +2,17 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
-import { tmpdir } from 'os';
-import { dirname, join, relative } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { readFile, mkdirp } from 'fs-extra';
 import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 
 import DevServer from './dev-server';
 import { Output } from '../../../util/output';
+import { relative } from '../../../util/path-helpers';
 import { LambdaSizeExceededError } from '../../../util/errors-ts';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
 import { staticFiles as getFiles } from '../../../util/get-files';
@@ -29,25 +28,13 @@ import {
 
 interface BuildMessage {
   type: string;
-};
+}
 
 interface BuildMessageResult extends BuildMessage {
   type: 'buildResult';
   result?: BuilderOutputs | BuildResult;
   error?: object;
-};
-
-const tmpDir = tmpdir();
-const getWorkPath = () =>
-  join(
-    tmpDir,
-    'co.zeit.now',
-    'dev',
-    'workPaths',
-    Math.random()
-      .toString(32)
-      .slice(-8)
-  );
+}
 
 const isLogging = new WeakSet<ChildProcess>();
 
@@ -73,7 +60,9 @@ function pipeChildLogging(child: ChildProcess): void {
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
-  output: Output
+  workPath: string,
+  output: Output,
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -82,12 +71,17 @@ async function createBuildProcess(
     nodeBinPromise,
     builderModulePathPromise
   ]);
+  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+  if (yarnPath) {
+    PATH = `${yarnPath}${delimiter}${PATH}`;
+  }
   const buildProcess = fork(modulePath, [], {
-    cwd: match.workPath,
+    cwd: workPath,
     env: {
       ...process.env,
-      PATH: `${dirname(execPath)}:${process.env.PATH}`,
-      ...buildEnv
+      PATH,
+      ...buildEnv,
+      NOW_REGION: 'dev1'
     },
     execPath,
     execArgv: [],
@@ -133,18 +127,17 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg }
   } = match;
-  const { env } = devServer;
-  const { src: entrypoint, workPath } = match;
-  await mkdirp(workPath);
+  const { src: entrypoint } = match;
+  const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
-    match.use !== '@now/static' && (!isInitialBuild || devServer.debug);
+    match.use !== '@now/static' && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
     devServer.output.debug(
-      `${pkg.version ? `v${pkg.version} ` : ''}(workPath = ${workPath})`
+      `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
     );
   }
 
@@ -158,8 +151,10 @@ export async function executeBuild(
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
-      devServer.buildEnv,
-      devServer.output
+      buildEnv,
+      workPath,
+      devServer.output,
+      yarnPath
     );
   }
 
@@ -168,28 +163,27 @@ export async function executeBuild(
     entrypoint,
     workPath,
     config,
-    meta: { isDev: true, requestPath, filesChanged, filesRemoved }
+    meta: {
+      isDev: true,
+      requestPath,
+      filesChanged,
+      filesRemoved,
+      env,
+      buildEnv
+    }
   };
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
     let spinLogger;
+    let spinner: Ora | undefined;
+    const fullLogs: string[] = [];
 
-    if (isInitialBuild && !devServer.debug && process.stdout.isTTY) {
-      const logTitle = `${chalk.bold(`Setting up Builder for ${chalk.underline(entrypoint)}`)}:`;
-      const fullLogs: string[] = [];
-      const spinner = ora(logTitle).start();
-
-      buildProcess!.on('message', ({ type }) => {
-        if (type === 'buildResult') {
-          spinner.stop();
-        }
-      });
-
-      buildProcess!.on('error', () => {
-        spinner.stop();
-        console.error(fullLogs.join('\n'));
-      });
+    if (isInitialBuild && !debug && process.stdout.isTTY) {
+      const logTitle = `${chalk.bold(
+        `Setting up Builder for ${chalk.underline(entrypoint)}`
+      )}:`;
+      spinner = ora(logTitle).start();
 
       spinLogger = (data: Buffer) => {
         const rawLog = stripAnsi(data.toString());
@@ -199,7 +193,8 @@ export async function executeBuild(
         const spinText = `${logTitle} ${lines[lines.length - 1]}`;
         const maxCols = process.stdout.columns || 80;
         const overflow = stripAnsi(spinText).length + 2 - maxCols;
-        spinner.text = overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
+        spinner!.text =
+          overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
       };
 
       buildProcess!.stdout!.on('data', spinLogger);
@@ -230,7 +225,9 @@ export async function executeBuild(
         }
         function onExit(code: number | null, signal: string | null) {
           cleanup();
-          const err = new Error(`Builder exited with ${signal || code} before sending build result`);
+          const err = new Error(
+            `Builder exited with ${signal || code} before sending build result`
+          );
           reject(err);
         }
         function cleanup() {
@@ -240,10 +237,20 @@ export async function executeBuild(
         buildProcess!.on('exit', onExit);
         buildProcess!.on('message', onMessage);
       });
+    } catch (err) {
+      if (spinner) {
+        spinner.stop();
+        spinner = undefined;
+        console.log(fullLogs.join(''));
+      }
+      throw err;
     } finally {
       if (spinLogger) {
         buildProcess.stdout!.removeListener('data', spinLogger);
         buildProcess.stderr!.removeListener('data', spinLogger);
+      }
+      if (spinner) {
+        spinner.stop();
       }
       pipeChildLogging(buildProcess!);
     }
@@ -388,7 +395,7 @@ export async function getBuildMatches(
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
-    const files =  await getFiles(cwd, nowJson, opts);
+    const files = await getFiles(cwd, nowJson, opts);
 
     for (const file of files) {
       src = relative(cwd, file);
@@ -399,8 +406,7 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0,
-        workPath: getWorkPath()
+        buildTimestamp: 0
       });
     }
   }

@@ -6,12 +6,8 @@
   ],
   "routes": [
     {
-      "src": "/_next/webpack-hmr",
-      "dest": "http://localhost:3000/"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "src": "/(.*)",
+      "dest": "/index.js?route-param=b"
     }
   ]
 }

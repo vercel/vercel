@@ -31,6 +31,8 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
+import metrics from './util/metrics';
+import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -50,7 +52,7 @@ if (!insidePkg) {
 
 // Configure the error reporting system
 Sentry.init({
-  dsn: 'https://26a24e59ba954011919a524b341b6ab5@sentry.io/1323225',
+  dsn: SENTRY_DSN,
   release: `now-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable'
 });
@@ -269,6 +271,8 @@ const main = async argv_ => {
 
   let authConfig = null;
 
+  const subcommandsWithoutToken = ['login', 'help', 'init', 'dev'];
+
   if (authConfigExists) {
     try {
       authConfig = configFiles.readAuthConfigFile();
@@ -282,8 +286,6 @@ const main = async argv_ => {
 
       return 1;
     }
-
-    const subcommandsWithoutToken = ['config', 'login', 'help', 'init', 'dev'];
 
     // This is from when Now CLI supported
     // multiple providers. In that case, we really
@@ -304,9 +306,7 @@ const main = async argv_ => {
       );
       return 1;
     }
-  }
-
-  if (!authConfigExists) {
+  } else {
     const results = await getDefaultAuthConfig(authConfig);
 
     authConfig = results.config;
@@ -406,7 +406,7 @@ const main = async argv_ => {
     !ctx.argv.includes('-h') &&
     !ctx.argv.includes('--help') &&
     !argv['--token'] &&
-    subcommand !== 'login'
+    !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
       console.log(info(`No existing credentials found. Please log in:`));
@@ -472,7 +472,7 @@ const main = async argv_ => {
   if (argv['--team']) {
     output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
   }
-  
+
   if (typeof scope === 'string' && targetCommand !== 'login' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
     const { authConfig: { token } } = ctx;
     const client = new Client({ apiUrl, token });
@@ -545,11 +545,23 @@ const main = async argv_ => {
     return 1;
   }
 
+  const metric = metrics(GA_TRACKING_ID, config.token);
   let exitCode;
 
   try {
+    const start = new Date();
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(ctx);
+    const end = new Date() - start;
+
+    if (config.collectMetrics === undefined || config.collectMetrics === true) {
+      const category = 'Command Invocation';
+
+      metric
+        .timing(category, targetCommand, end, pkg.version)
+        .event(category, targetCommand, pkg.version)
+        .send();
+    }
   } catch (err) {
     if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
       output.error(

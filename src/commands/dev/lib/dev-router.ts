@@ -21,24 +21,30 @@ export function resolveRouteParameters(
       // match up with the RegExp group matches
       matchIndex++;
     }
-    return match[matchIndex];
+    return match[matchIndex] || '';
   });
 }
 
 export default async function(
-  reqPath = '',
+  reqPath: string = '/',
+  reqMethod?: string,
   routes?: RouteConfig[],
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-  const { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+  let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
 
-  // try route match
+  // If the pathname starts with a `/` then strip it
+  if (reqPathname.startsWith('/')) {
+    reqPathname = reqPathname.substring(1);
+  }
+
+  // Try route match
   if (routes) {
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
-      let { src, headers, handle } = routeConfig;
+      let { src, headers, methods, handle } = routeConfig;
       if (handle) {
         if (handle === 'filesystem' && devServer) {
           if (await devServer.hasFilesystem(reqPathname)) {
@@ -47,6 +53,13 @@ export default async function(
         }
         continue;
       }
+
+      if (Array.isArray(methods) && reqMethod && !methods.includes(reqMethod)) {
+        continue;
+      }
+
+      // Strip leading [^/] if they exist
+      src = src.replace(/^\^?\/?/, '');
 
       if (!src.startsWith('^')) {
         src = `^${src}`;
@@ -61,7 +74,7 @@ export default async function(
       const match = matcher.exec(reqPathname);
 
       if (match) {
-        let destPath: string = reqPathname;
+        let destPath: string = `/${reqPathname}`;
 
         if (routeConfig.dest) {
           destPath = resolveRouteParameters(routeConfig.dest, match, keys);
@@ -88,6 +101,9 @@ export default async function(
           };
           break;
         } else {
+          if (!destPath.startsWith('/')) {
+            destPath = `/${destPath}`;
+          }
           const { pathname, query } = url.parse(destPath, true);
           found = {
             found: true,
@@ -108,7 +124,7 @@ export default async function(
   if (!found) {
     found = {
       found: false,
-      dest: reqPathname,
+      dest: `/${reqPathname}`,
       uri_args: query
     };
   }

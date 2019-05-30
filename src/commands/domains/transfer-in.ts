@@ -65,7 +65,7 @@ export default async function transferIn(
 
   const availableStamp = stamp();
   const [domainPrice, { transferable }] = await Promise.all([
-    getDomainPrice(client, domainName),
+    getDomainPrice(client, domainName, 'renewal'),
     checkTransfer(client, domainName)
   ]);
 

@@ -130,35 +130,17 @@ async function download() {
   fs.renameSync(partial, target);
 }
 
-function modifyGitBashFile(content) {
-  const initContent = (
+function modifyGitBashFile() {
+  return (
     '#!/bin/sh\n' +
     'basedir=$(dirname "$(echo "$0" | sed -e \'s,\\\\,/,g\')")\n' +
     '\n' +
     'case `uname` in\n' +
     '    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;\n' +
     'esac\n' +
-    '\n'
-  );
-
-  // Older files could contain this multiple times
-  // since it just got appended every time
-  if (content.split(initContent).length > 2) {
-    const defaultContent = content
-      .replace(new RegExp(initContent, 'g'), '')
-      .replace('download/dist/now"', 'download/dist/now.exe"')
-      .trim();
-
-    return initContent + defaultContent;
-  }
-
-  if (content.startsWith(initContent)) {
-    return content.replace('download/dist/now"', 'download/dist/now.exe"');
-  }
-
-  return (
-    initContent +
-    content.replace('download/dist/now"', 'download/dist/now.exe"')
+    '\n' +
+    '"$basedir/node_modules/now/download/dist/now.exe" "$@"\n' +
+    'exit $?'
   );
 }
 
@@ -175,10 +157,7 @@ async function main() {
         gitBashFile = path.join(process.env.APPDATA, 'npm/now');
       }
 
-      fs.writeFileSync(
-        gitBashFile,
-        modifyGitBashFile(fs.readFileSync(gitBashFile, 'utf8'))
-      );
+      fs.writeFileSync(gitBashFile, modifyGitBashFile());
 
       let npmCmdFile = path.join(globalPath, 'now.cmd');
       if (!fs.existsSync(npmCmdFile)) {
@@ -187,7 +166,7 @@ async function main() {
 
       fs.writeFileSync(
         npmCmdFile,
-        '@\"%~dp0node_modules\\now\\download\\dist\\now.exe\" %*'
+        '@\"%~dp0\\node_modules\\now\\download\\dist\\now.exe\" %*'
       );
     } catch (err) {
       if (err.code !== 'ENOENT') {
