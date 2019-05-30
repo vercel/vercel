@@ -145,7 +145,7 @@ export default async function main(ctx) {
   }
 
   matches = matches.filter((match, i) => {
-    if (argv.safe && match.state === 'INITIALIZING') {
+    if (argv.safe && match.state !== 'READY' || match.state !== 'ERROR') {
       return false;
     }
 
