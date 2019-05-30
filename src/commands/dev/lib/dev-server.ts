@@ -168,13 +168,21 @@ export default class DevServer {
         if (Array.isArray(result.watch)) {
           for (const pattern of result.watch) {       
             if (
-              minimatches(filesChangedArray, match.dependencyTree, pattern) ||
-              minimatches(filesRemovedArray, match.dependencyTree, pattern)
+              minimatches(filesChangedArray, pattern) ||
+              minimatches(filesRemovedArray, pattern)
             ) {
               needsRebuild.set(result, [requestPath, match]);
               break;
             }
           }
+        }
+
+        if (
+          isADependencyChange(filesChangedArray, match.dependencyTree) ||
+          isADependencyChange(filesRemovedArray, match.dependencyTree)
+        ) {
+          needsRebuild.set(result, [requestPath, match]);
+          break;
         }
       }
     }
@@ -1146,12 +1154,8 @@ function isIndex(path: string): boolean {
   return name === 'index';
 }
 
-function minimatches(files: string[], dependencyTree: string[], pattern: string): boolean {
-  console.log('-------------');  
-  console.log(files, dependencyTree, pattern);
-  
-  return files.some(file => minimatch(file, pattern)) ||
-    files.some(file => dependencyTree.some(depFile => minimatch(file, depFile)));
+function minimatches(files: string[], pattern: string): boolean {
+  return files.some(file => minimatch(file, pattern));
 }
 
 function fileChanged(
@@ -1191,6 +1195,10 @@ function isStaticDeployment(nowJson: NowConfig): boolean {
     return false;
   }
   return true;
+}
+
+function isADependencyChange(files: string[], dependencyTree: string[]): boolean {
+  return files.some(file => dependencyTree.some(depFile => minimatch(file, depFile)));
 }
 
 function areDependencyTreesTheSame(treeA: string[], treeB: string[]): boolean {
