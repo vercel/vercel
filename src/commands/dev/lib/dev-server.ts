@@ -160,13 +160,13 @@ export default class DevServer {
       [string | null, BuildMatch]
     > = new Map();
     for (const match of this.buildMatches.values()) {
-      for (const [requestPath, result] of match.buildResults) {        
+      for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
         // then we can skip subsequent lookups
         if (needsRebuild.has(result)) continue;
 
         if (Array.isArray(result.watch)) {
-          for (const pattern of result.watch) {       
+          for (const pattern of result.watch) {
             if (
               minimatches(filesChangedArray, pattern) ||
               minimatches(filesRemovedArray, pattern)
