@@ -112,7 +112,7 @@
     "@zeit/dockerignore": "0.0.5",
     "@zeit/fun": "0.8.1",
     "@zeit/git-hooks": "0.1.4",
-    "@zeit/ncc": "0.18.1",
+    "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
