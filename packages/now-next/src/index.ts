@@ -155,7 +155,7 @@ export const build = async ({
   entrypoint,
   meta = {} as BuildParamsMeta,
 }: BuildParamsType): Promise<{
-  routes?: { src: string; dest: string }[];
+  routes?: ({ src?: string; dest?: string } | { handle: string })[];
   output: Files;
   watch?: string[];
   childProcesses: ChildProcess[];
@@ -288,7 +288,7 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const routes: { src: string; dest: string }[] = [];
+  const exportedPageRoutes: { src: string; dest: string }[] = [];
   const lambdas: { [key: string]: Lambda } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
 
@@ -392,7 +392,7 @@ export const build = async ({
       staticPages[staticRoute] = staticPageFiles[page];
 
       const pathname = page.replace(/\.html$/, '');
-      routes.push({
+      exportedPageRoutes.push({
         src: `^${path.join('/', entryDirectory, pathname)}$`,
         dest: path.join('/', staticRoute),
       });
@@ -489,7 +489,13 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
-    routes,
+    routes: [
+      // Static exported pages (.html rewrites)
+      ...exportedPageRoutes,
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+    ],
     watch: [],
     childProcesses: [],
   };
