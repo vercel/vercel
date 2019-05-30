@@ -40,7 +40,7 @@ export default async function transferIn(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized') {
+    if (err.code === 'NOT_AUTHORIZED') {
       output.error(err.message);
       return 1;
     }
@@ -65,7 +65,7 @@ export default async function transferIn(
 
   const availableStamp = stamp();
   const [domainPrice, { transferable }] = await Promise.all([
-    getDomainPrice(client, domainName),
+    getDomainPrice(client, domainName, 'renewal'),
     checkTransfer(client, domainName)
   ]);
 

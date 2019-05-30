@@ -4,6 +4,7 @@ import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
+import Client from '../../util/client';
 import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
@@ -22,19 +23,24 @@ import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
 import {
+  UserAborted,
   WildcardNotAllowed,
   CantSolveChallenge,
   DomainConfigurationError,
   DomainNotFound,
+  DomainNotVerified,
   DomainPermissionDenied,
   DomainsShouldShareRoot,
   DomainValidationRunning,
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  InvalidDomain
+  InvalidDomain,
+  DeploymentNotFound,
+  BuildsRateLimited
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
+import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -65,32 +71,58 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now-cli/deployment-error`;
+const prepareAlias = input => `https://${input}`;
 
-const parseFinalAliases = (aliasFinal) => {
-  const last = aliasFinal.length - 1;
-
-  if (last === 0) {
-    // Only one item
-    return aliasFinal[0];
-  }
-
-  return `${aliasFinal.slice(0, last).join(', ')} and ${aliasFinal[last]}`;
-};
-
-const printDeploymentStatus = (
+const printDeploymentStatus = async (
   output,
-  { url, readyState, aliasFinal },
+  { url, readyState, alias: aliasList },
   deployStamp,
+  clipboardEnabled,
+  localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
-    if (aliasFinal && Array.isArray(aliasFinal) && aliasFinal.length) {
-      output.success(`Your deployment is now available on ${
-        parseFinalAliases(aliasFinal)
-      } ${deployStamp()}`);
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
+      if (aliasList.length === 1) {
+        if (clipboardEnabled) {
+          try {
+            await copy(`https://${aliasList[0]}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+          } catch (err) {
+            output.debug(`Error copying to clipboard: ${err}`);
+            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${deployStamp()}`);
+          }
+        }
+      } else {
+        output.ready(`Aliases assigned ${deployStamp()}`);
+
+        // If `alias` is defined in the config, we need to
+        // copy the first one to the clipboard.
+        const matching = (localConfig.alias || [])[0];
+
+        for (const alias of aliasList) {
+          const index = aliasList.indexOf(alias);
+          const isLast = index === (aliasList.length - 1);
+          const shouldCopy = matching ? alias === matching : isLast;
+
+          if (shouldCopy && clipboardEnabled) {
+            try {
+              await copy(`https://${alias}`);
+              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
+
+              continue;
+            } catch (err) {
+              output.debug(`Error copying to clipboard: ${err}`);
+            }
+          }
+
+          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
+        }
+      }
     } else {
       output.success(`Deployment ready ${deployStamp()}`);
     }
+
     return 0;
   }
 
@@ -185,6 +217,10 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
+  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
+    const flag = param('--target production');
+    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
+  }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
@@ -289,8 +325,10 @@ export default async function main(
     // $FlowFixMe
     const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
     log(`Using project ${chalk.bold(project)}`);
-    const createArgs = Object.assign(
-      {
+
+    const createArgs = {
+        name: project,
+        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -301,18 +339,18 @@ export default async function main(
         nowConfig: localConfig,
         regions,
         meta
-      },
-      {
-        name: project,
-        target: argv['--target']
-      }
-    );
+    };
 
-    if (createArgs.target && createArgs.target !== 'production') {
-      error(`The specified ${param('--target')} ${
-        code(createArgs.target)
-      } is not valid`);
-      return 1;
+    if (createArgs.target) {
+      const allowedValues = [
+        'staging',
+        'production'
+      ];
+
+      if (!allowedValues.includes(createArgs.target)) {
+        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+        return 1;
+      }
     }
 
     deployStamp = stamp();
@@ -322,14 +360,54 @@ export default async function main(
       now,
       contextName,
       paths,
-      createArgs
+      createArgs,
+      ctx
     );
+
+    if (
+      firstDeployCall instanceof DomainNotFound &&
+      firstDeployCall.meta && firstDeployCall.meta.domain
+    ) {
+      output.debug(`The domain ${
+        firstDeployCall.meta.domain
+      } was not found, trying to purchase it`);
+
+      const purchase = await purchaseDomainIfAvailable(
+        output,
+        new Client({
+          apiUrl: ctx.apiUrl,
+          token: ctx.authConfig.token,
+          currentTeam: ctx.config.currentTeam
+        }),
+        firstDeployCall.meta.domain,
+        contextName
+      );
+
+      if (purchase === true) {
+        output.success(`Successfully purchased the domain ${
+          firstDeployCall.meta.domain
+        }!`);
+
+        // We exit if the purchase is completed since
+        // the domain verification can take some time
+        return 0;
+      }
+
+      if (purchase === false || purchase instanceof UserAborted) {
+        handleCreateDeployError(output, firstDeployCall);
+        return 1;
+      }
+
+      handleCreateDeployError(output, purchase);
+      return 1;
+    }
 
     if (
       firstDeployCall instanceof WildcardNotAllowed ||
       firstDeployCall instanceof CantSolveChallenge ||
       firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainNotVerified ||
       firstDeployCall instanceof DomainPermissionDenied ||
       firstDeployCall instanceof DomainsShouldShareRoot ||
       firstDeployCall instanceof DomainValidationRunning ||
@@ -337,7 +415,9 @@ export default async function main(
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof TooManyCertificates ||
       firstDeployCall instanceof TooManyRequests ||
-      firstDeployCall instanceof InvalidDomain
+      firstDeployCall instanceof InvalidDomain ||
+      firstDeployCall instanceof DeploymentNotFound ||
+      firstDeployCall instanceof BuildsRateLimited
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -412,7 +492,8 @@ export default async function main(
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
           secondDeployCall instanceof TooManyCertificates ||
-          secondDeployCall instanceof TooManyRequests
+          secondDeployCall instanceof TooManyRequests ||
+          secondDeployCall instanceof DeploymentNotFound
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -438,6 +519,13 @@ export default async function main(
       error(message);
     }
 
+    if (err.code === 'size_limit_exceeded') {
+      const { sizeLimit = 0 } = err;
+      const message = `File size limit exceeded (${bytes(sizeLimit)})`;
+      error(message);
+      return 1;
+    }
+
     handleError(err);
     return 1;
   }
@@ -445,23 +533,7 @@ export default async function main(
   const { url } = now;
 
   if (isTTY) {
-    if (!argv['--no-clipboard']) {
-      try {
-        await copy(url);
-        log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${chalk.gray(
-            '[in clipboard]'
-          )} ${deployStamp()}`
-        );
-      } catch (err) {
-        debug(`Error copying to clipboard: ${err}`);
-        log(
-          `${chalk.bold(chalk.cyan(url))} ${chalk.gray(`[v2]`)} ${deployStamp()}`
-        );
-      }
-    } else {
-      log(`${chalk.bold(chalk.cyan(url))} ${deployStamp()}`);
-    }
+    log(`${url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
   } else {
     process.stdout.write(url);
   }
@@ -469,14 +541,14 @@ export default async function main(
   // If an error occured, we want to let it fall down to rendering
   // builds so the user can see in which build the error occured.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp);
+    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
   }
 
   const sleepingTime = ms('1.5s');
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v8/now/deployments/${deployment.id}`;
+  const deploymentUrl = `/v9/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
@@ -489,39 +561,42 @@ export default async function main(
     if (!buildsCompleted) {
       const { builds: freshBuilds } = await now.fetch(buildsUrl);
 
-      for (const build of freshBuilds) {
-        const id = build.id;
-        const done = isDone(build);
+      // If there are no builds, we need to exit.
+      if (freshBuilds.length === 0) {
+        buildsCompleted = true;
+      } else {
+        for (const build of freshBuilds) {
+          const id = build.id;
+          const done = isDone(build);
 
-        if (times[id]) {
-          if (done && typeof times[id] === 'function') {
-            times[id] = times[id]();
+          if (times[id]) {
+            if (done && typeof times[id] === 'function') {
+              times[id] = times[id]();
+            }
+          } else {
+            times[id] = done ? allBuildsTime() : stamp();
+          }
+        }
+
+        if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
+          builds = freshBuilds;
+
+          debug(`Re-rendering builds, because their state changed.`);
+
+          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
+          buildsCompleted = builds.every(isDone);
+
+          if (builds.some(isFailed)) {
+            break;
           }
         } else {
-          times[id] = done ? allBuildsTime() : stamp();
+          debug(`Not re-rendering, as the build states did not change.`);
         }
       }
-
-      if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
-        builds = freshBuilds;
-
-        debug(`Re-rendering builds, because their state changed.`);
-
-        linesPrinted = renderBuilds(print, builds, times, linesPrinted);
-        buildsCompleted = builds.every(isDone);
-
-        if (builds.some(isFailed)) {
-          break;
-        }
-      } else {
-        debug(`Not re-rendering, as the build states did not change.`);
-      }
-    }
-
-    if (buildsCompleted) {
+    } else {
       const deploymentResponse = await now.fetch(deploymentUrl);
 
-      if (isDone(deploymentResponse)) {
+      if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
         if (typeof deploymentSpinner === 'function') {
@@ -538,7 +613,7 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, builds);
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {
@@ -629,14 +704,17 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { params, keyword, dataPath } = error.meta;
+    const { message, params, keyword, dataPath } = error.meta;
+
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
+
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
           'now.json'
         )} when using Now 2.0 – please remove it.`
       );
+
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(
           `Do you mean ${code('build')} (object) with a property ${code(
@@ -644,23 +722,30 @@ function handleCreateDeployError(output, error) {
           )} (object) instead of ${code(prop)}?`
         );
       }
+
       return 1;
     }
+
     if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
+
       output.error(
         `The property ${code(prop)} in ${highlight(
           'now.json'
         )} can only be of type ${code(title(params.type))}.`
       );
+
       return 1;
     }
+
     const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}. Only use properties mentioned here: ${link}`
+      )}: ${message}\nDocumentation: ${link}`
     );
+
     return 1;
   }
   if (error instanceof TooManyCertificates) {
@@ -681,11 +766,24 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof DomainNotFound) {
+    output.error(error.message);
+    return 1;
+  }
+  if (error instanceof DomainNotVerified) {
     output.error(
-      `The domain used as a suffix ${chalk.underline(
-        error.meta.domain
-      )} no longer exists. Please update or remove your custom suffix.`
+      `The domain used as an alias ${
+        chalk.underline(error.meta.domain)
+      } is not verified yet. Please verify it.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
+    return 1;
+  }
+  if (error instanceof BuildsRateLimited) {
+    output.error(error.message);
+    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
     return 1;
   }
 

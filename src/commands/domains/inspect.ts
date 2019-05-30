@@ -35,7 +35,7 @@ export default async function inspect(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -115,7 +115,7 @@ export default async function inspect(
   output.print(
     `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
   );
-  output.print(`    ${chalk.cyan('Cloudfare Enabled')}\t\t${domain.cdnEnabled}\n`);
+  output.print(`    ${chalk.cyan('CDN Enabled')}\t\t${true}\n`);
   output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));

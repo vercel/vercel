@@ -39,7 +39,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -T, --team                     Set a custom team scope
+    -S, --scope                    Set a custom scope
     --challenge-only               Only show challenges needed to issue a cert
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline(
@@ -59,7 +59,7 @@ const help = () => {
 
   ${chalk.gray('–')} Remove a certificate
 
-      ${chalk.cyan('$ now certs rm acme.com')}
+      ${chalk.cyan('$ now certs rm id')}
   `);
 };
 

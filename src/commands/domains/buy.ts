@@ -38,7 +38,7 @@ export default async function buy(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -113,6 +113,13 @@ export default async function buy(
     return 1;
   }
 
+  if (buyResult instanceof ERRORS.UnsupportedTLD) {
+    output.error(
+      `The TLD for domain name ${buyResult.meta.domain} is not supported.`
+    );
+    return 1;
+  }
+
   if (buyResult instanceof ERRORS.InvalidDomain) {
     output.error(`The domain ${buyResult.meta.domain} is not valid.`);
     return 1;
@@ -132,6 +139,11 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.UnexpectedDomainPurchaseError) {
     output.error(`An unexpected error happened while performing the purchase.`);
+    return 1;
+  }
+
+  if (buyResult instanceof ERRORS.DomainPaymentError) {
+    output.error(`Your card was declined.`);
     return 1;
   }
 

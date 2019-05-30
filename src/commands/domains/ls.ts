@@ -31,7 +31,7 @@ export default async function ls(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -70,14 +70,13 @@ function formatDomainsTable(domains: Domain[]) {
         chalk.gray('domain'),
         chalk.gray('serviceType'),
         chalk.gray('verified'),
-        chalk.gray('cf'),
+        chalk.gray('cdn'),
         chalk.gray('age')
       ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
-        const cf = domain.cdnEnabled || false;
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, domain.serviceType, domain.verified, cf, time];
+        return ['', url, domain.serviceType, domain.verified, true, time];
       })
     ],
     {

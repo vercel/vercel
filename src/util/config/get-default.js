@@ -3,7 +3,8 @@ export const getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. For more information see the global configuration documentation: https://bit.ly/2qAK8bb'
+      'This is your Now config file. For more information see the global configuration documentation: https://bit.ly/2qAK8bb',
+    collectMetrics: true
   };
 
   if (existingCopy) {
@@ -12,6 +13,7 @@ export const getDefaultConfig = async existingCopy => {
       'currentTeam',
       'desktop',
       'updateChannel',
+      'collectMetrics',
       'api',
       // This is deleted later in the code
       'shownTips'
@@ -64,7 +66,7 @@ export const getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      "This is your Now credentials file. DON'T SHARE! More: https://bit.ly/2qAK8bb"
+      'This is your Now credentials file. DON\'T SHARE! More: https://bit.ly/2qAK8bb'
   };
 
   if (existing) {

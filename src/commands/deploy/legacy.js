@@ -52,7 +52,8 @@ import {
   DomainVerificationFailed,
   TooManyCertificates,
   TooManyRequests,
-  VerifyScaleTimeout
+  VerifyScaleTimeout,
+  DeploymentNotFound
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -227,7 +228,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   const { authConfig: { token }, config } = ctx;
 
   try {
-    return sync({
+    return await sync({
       contextName,
       output,
       token,
@@ -421,7 +422,7 @@ async function sync({
           'multiple_manifests'
         ];
 
-        if (err.code && print.includes(err.code)) {
+        if (err.code && print.includes(err.code) || err.name === 'JSONError') {
           error(err.message);
           return 1;
         }
@@ -453,7 +454,7 @@ async function sync({
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
       error(
-        "Can't set both `regions` and `scale` options simultaneously",
+        'Can\'t set both `regions` and `scale` options simultaneously',
         'regions-and-scale-at-once'
       );
       await exit(1);
@@ -701,7 +702,8 @@ async function sync({
         firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof SchemaValidationFailed ||
         firstDeployCall instanceof TooManyCertificates ||
-        firstDeployCall instanceof TooManyRequests
+        firstDeployCall instanceof TooManyRequests ||
+        firstDeployCall instanceof DeploymentNotFound
       ) {
         handleCreateDeployError(output, firstDeployCall);
         await exit(1);
@@ -778,7 +780,8 @@ async function sync({
             secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyCertificates ||
-            secondDeployCall instanceof TooManyRequests
+            secondDeployCall instanceof TooManyRequests ||
+            secondDeployCall instanceof DeploymentNotFound
           ) {
             handleCreateDeployError(output, secondDeployCall);
             await exit(1);
@@ -844,7 +847,7 @@ async function sync({
 
         wantsPublic = true;
 
-        sync({
+        return sync({
           contextName,
           output,
           token,
@@ -854,8 +857,6 @@ async function sync({
           firstRun: false,
           deploymentType
         });
-
-        return;
       }
 
       debug(`Error: ${err}\n${err.stack}`);
@@ -1052,10 +1053,14 @@ async function readMeta(
         )}] to deploy or re-run with --flag`
       );
 
-      deploymentType = await promptOptions([
-        ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
-        ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
-      ]);
+      try {
+        deploymentType = await promptOptions([
+          ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
+          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+        ]);
+      } catch (_) {
+        throw err;
+      }
 
       debug(`Selected \`deploymentType\` = "${deploymentType}"`);
       return readMeta(_path, _deploymentName, deploymentType);
@@ -1201,14 +1206,17 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { params, keyword, dataPath } = error.meta;
+    const { message, params, keyword, dataPath } = error.meta;
+
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
+
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
           'now.json'
         )} when using Now 1.0 – please remove it.`
       );
+
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(
           `Do you mean ${code('build')} (object) with a property ${code(
@@ -1216,23 +1224,30 @@ function handleCreateDeployError(output, error) {
           )} (object) instead of ${code(prop)}?`
         );
       }
+
       return 1;
     }
+
     if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
+
       output.error(
         `The property ${code(prop)} in ${highlight(
           'now.json'
         )} can only be of type ${code(title(params.type))}.`
       );
+
       return 1;
     }
-    const link = 'https://zeit.co/docs/v1/features/configuration/#settings';
+
+    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}. Only use properties mentioned here: ${link}`
+      )}: ${message}\nDocumentation: ${link}`
     );
+
     return 1;
   }
   if (error instanceof TooManyCertificates) {
@@ -1258,6 +1273,10 @@ function handleCreateDeployError(output, error) {
         error.meta.domain
       )} no longer exists. Please update or remove your custom suffix.`
     );
+    return 1;
+  }
+  if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
     return 1;
   }
 

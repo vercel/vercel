@@ -61,7 +61,7 @@ export default async function issue(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'not_authorized' || err.code === 'team_deleted') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -88,13 +88,22 @@ export default async function issue(
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(
-      client,
-      keyPath,
-      crtPath,
-      caPath,
-      contextName
-    );
+    try {
+      cert = await createCertFromFile(
+        client,
+        keyPath,
+        crtPath,
+        caPath,
+        contextName
+      );
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        output.error(`The specified file "${err.path}" doesn't exist.`);
+        return 1;
+      }
+      throw err;
+    }
+
     if (cert instanceof ERRORS.InvalidCert) {
       output.error(
         `The provided certificate is not valid and cannot be added.`
@@ -178,6 +187,10 @@ export default async function issue(
     }
     return 1;
   }
+  if (cert instanceof ERRORS.ConflictingCAARecord) {
+    output.error(cert.message);
+    return 1;
+  }
   if (cert instanceof ERRORS.TooManyRequests) {
     output.error(
       `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(
@@ -224,6 +237,25 @@ export default async function issue(
         cert.meta.domain
       )} under ${chalk.bold(cert.meta.context)}.`
     );
+    return 1;
+  }
+  if (
+    cert instanceof ERRORS.DomainNotFound ||
+    cert instanceof ERRORS.UnauthorizedCertsRequestError
+  ) {
+    output.error(cert.message);
+    return 1;
+  }
+  if (cert instanceof ERRORS.CertsDNSError) {
+    output.error(
+      `We could not solve the dns-01 challenge for cns ${cert.meta.cns.join(
+        ', '
+      )}.`
+    );
+    output.log(
+      `The certificate provider could not resolve the required DNS record queries.`
+    );
+    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
   }
 

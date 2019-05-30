@@ -1,5 +1,13 @@
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
+export interface Config {
+  alias?: string[] | string;
+  aliases?: string[] | string;
+  name?: string;
+  type?: string;
+  scope?: string;
+}
+
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -10,13 +18,7 @@ export interface NowContext {
     currentTeam: string;
     updateChannel: string;
   };
-}
-
-export interface Config {
-  alias?: string[] | string;
-  aliases?: string[] | string;
-  name?: string;
-  type?: string;
+  localConfig: Config;
 }
 
 type Billing = {
@@ -73,7 +75,6 @@ export type Domain = {
   transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
-  cdnEnabled: boolean;
   verified: boolean;
   nsVerifiedAt: number | null;
   txtVerifiedAt: number | null;
