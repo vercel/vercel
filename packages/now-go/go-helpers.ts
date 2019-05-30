@@ -23,7 +23,7 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
   return `https://dl.google.com/go/go${version}.${goPlatform}-${goArch}.${ext}`;
 };
 
-export async function getAnalyzedEntrypoint(filePath: string) {
+export async function getAnalyzedEntrypoint(filePath: string, modulePath = '') {
   debug('Analyzing entrypoint %o', filePath);
   const bin = join(__dirname, 'analyze');
 
@@ -35,7 +35,8 @@ export async function getAnalyzedEntrypoint(filePath: string) {
     await go.build(src, dest);
   }
 
-  const args = [filePath];
+  const args = [`-modpath=${modulePath}`, filePath];
+
   const analyzed = await execa.stdout(bin, args);
   debug('Analyzed entrypoint %o', analyzed);
   return analyzed;

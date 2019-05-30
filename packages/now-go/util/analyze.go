@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -92,13 +93,13 @@ func unique(files []string) []string {
 }
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) != 3 {
 		// Args should have the program name on `0`
 		// and the file name on `1`
-		fmt.Println("Wrong number of args; Usage is:\n  ./go-analyze file_name.go")
+		fmt.Println("Wrong number of args; Usage is:\n  ./go-analyze -modpath=module-path file_name.go")
 		os.Exit(1)
 	}
-	fileName := os.Args[1]
+	fileName := os.Args[2]
 	rf, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		log.Fatal(err)
@@ -120,6 +121,17 @@ func main() {
 	err = filepath.Walk(filepath.Dir(fileName), visit(&files))
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// looking related packages
+	var modPath string
+	flag.StringVar(&modPath, "modpath", "", "module path")
+	flag.Parse()
+	if len(modPath) > 1 {
+		err = filepath.Walk(modPath, visit(&files))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	for _, file := range files {
@@ -154,7 +166,7 @@ func main() {
 			for _, ed := range exportedDecl {
 				if strings.Contains(se, ed) {
 					// find relative path of related file
-					rel, err := filepath.Rel(filepath.Dir(fileName), file)
+					rel, err := filepath.Rel(modPath, file)
 					if err != nil {
 						log.Fatal(err)
 					}
