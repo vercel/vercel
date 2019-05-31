@@ -3,6 +3,10 @@
   "version": "0.2.4",
   "main": "index.js",
   "license": "MIT",
+  "files": [
+    "dist",
+    "now_init.py"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now-builders.git",

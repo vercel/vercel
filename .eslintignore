@@ -8,7 +8,7 @@
 /packages/now-node/dist/*
 /packages/now-next/dist/*
 /packages/now-node-bridge/*
-/packages/now-python/*
+/packages/now-python/dist/*
 /packages/now-optipng/dist/*
 /packages/now-go/*
 /packages/now-rust/dist/*
