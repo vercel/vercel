@@ -16,12 +16,21 @@ import {
 async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   const target = '.';
   console.log(
-    `running "pip install --target ${target} --upgrade ${args.join(' ')}"...`
+    `running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
+      ' '
+    )}"...`
   );
   try {
     await execa(
       pipPath,
-      ['install', '--target', target, '--upgrade', ...args],
+      [
+        'install',
+        '--disable-pip-version-check',
+        '--target',
+        target,
+        '--upgrade',
+        ...args,
+      ],
       {
         cwd: workDir,
         stdio: 'inherit',
@@ -29,7 +38,7 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
     );
   } catch (err) {
     console.log(
-      `failed to run "pip install --target ${target} --upgrade ${args.join(
+      `failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
         ' '
       )}"...`
     );
@@ -38,13 +47,25 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
 }
 
 async function pipInstallUser(pipPath: string, ...args: string[]) {
-  console.log(`running "pip install --user ${args.join(' ')}"...`);
+  console.log(
+    `running "pip install --disable-pip-version-check --user ${args.join(
+      ' '
+    )}"...`
+  );
   try {
-    await execa(pipPath, ['install', '--user', ...args], {
-      stdio: 'inherit',
-    });
+    await execa(
+      pipPath,
+      ['install', '--disable-pip-version-check', '--user', ...args],
+      {
+        stdio: 'inherit',
+      }
+    );
   } catch (err) {
-    console.log(`failed to run "pip install --user ${args.join(' ')}"`);
+    console.log(
+      `failed to run "pip install --disable-pip-version-check --user ${args.join(
+        ' '
+      )}"`
+    );
     throw err;
   }
 }
