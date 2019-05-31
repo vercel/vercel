@@ -1,9 +1,10 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.py", "use": "@now/python" }
+    { "src": "**/**.py", "use": "@now/python" }
   ],
   "probes": [
-    { "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/another", "mustContain": "upper:RANDOMNESS_PLACEHOLDER" }
   ]
 }

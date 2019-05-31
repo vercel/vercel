@@ -3,29 +3,24 @@ from http.server import BaseHTTPRequestHandler
 import base64
 import json
 
-def _now_get_import():
-    try:
-        from __NOW_HANDLER_FILENAME import Handler
-        assert issubclass(Handler, BaseHTTPRequestHandler)
-        return Handler, True
-    except:
-        try:
-            from __NOW_HANDLER_FILENAME import handler
-            assert issubclass(handler, BaseHTTPRequestHandler)
-            return handler, True
-        except:
-            from __NOW_HANDLER_FILENAME import app
-            return app, False
+import __NOW_HANDLER_FILENAME
+__now_variables = dir(__NOW_HANDLER_FILENAME)
 
-_now_imported, _now_is_legacy = _now_get_import()
 
-if _now_is_legacy:
+if 'handler' in __now_variables or 'Handler' in __now_variables:
+    base = __NOW_HANDLER_FILENAME.handler if ('handler' in __now_variables) else  __NOW_HANDLER_FILENAME.Handler
+    if not issubclass(base, BaseHTTPRequestHandler):
+        print('Handler must inherit from BaseHTTPRequestHandler')
+        print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+        exit(1)
+    
     print('using HTTP Handler')
     from http.server import HTTPServer
     from urllib.parse import unquote
     import requests
     import _thread
-    server = HTTPServer(('', 0), _now_imported)
+    
+    server = HTTPServer(('', 0), base)
     port = server.server_address[1]
     def now_handler(event, context):
         _thread.start_new_thread(server.handle_request, ())
@@ -51,7 +46,7 @@ if _now_is_legacy:
             'headers': dict(res.headers),
             'body': res.text,
         }
-else:
+elif 'app' in __now_variables:
     print('using Web Server Gateway Interface (WSGI)')
     import sys
     from urllib.parse import urlparse, unquote
@@ -109,7 +104,7 @@ else:
             if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                 environ[key] = value
 
-        response = Response.from_app(_now_imported, environ)
+        response = Response.from_app(__NOW_HANDLER_FILENAME.app, environ)
 
         return_dict = {
             'statusCode': response.status_code,
@@ -121,4 +116,8 @@ else:
             return_dict['encoding'] = 'base64'
 
         return return_dict
+else:
+    print('Missing variable `handler` or `app` in file __NOW_HANDLER_FILENAME.py')
+    print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+    exit(1)
 
