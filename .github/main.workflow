@@ -8,9 +8,15 @@ action "0. Canary filter" {
   args = "branch canary"
 }
 
+action "0. Canary PR not deleted" {
+  uses = "actions/bin/filter@3c0b4f0e63ea54ea5df2914b4fabf383368cd0da"
+  needs = ["0. Canary filter"]
+  args = "not deleted"
+}
+
 action "1. Canary yarn install" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
-  needs = ["0. Canary filter"]
+  needs = ["0. Canary PR not deleted"]
   runs = "yarn"
   args = "install"
 }
@@ -41,9 +47,15 @@ action "0. Master filter" {
   args = "branch master"
 }
 
+action "0. Master PR not deleted" {
+  uses = "actions/bin/filter@3c0b4f0e63ea54ea5df2914b4fabf383368cd0da"
+  needs = ["0. Master filter"]
+  args = "not deleted"
+}
+
 action "1. Master yarn install" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
-  needs = ["0. Master filter"]
+  needs = ["0. Master PR not deleted"]
   runs = "yarn"
   args = "install"
 }
