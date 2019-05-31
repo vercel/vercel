@@ -31,6 +31,6 @@ jobs:
           command: yarn test-coverage
 workflows:
   version: 2
-  build-and-deploy:
+  build-and-test:
     jobs:
       - build
