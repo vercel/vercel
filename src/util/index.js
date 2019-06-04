@@ -583,7 +583,18 @@ export default class Now extends EventEmitter {
       const query = new URLSearchParams({ limit: 50 });
       const projects = await fetchRetry(`/projects/list?${query}`);
 
-      const deployments = await Promise.all(projects.map(async ({ id: projectId }) => {
+      const deployments = await Promise.all(projects.map(async ({ id: projectId, name, recentDeployments }) => {
+        if (recentDeployments && recentDeployments.length) {
+          const [deployment] = recentDeployments;
+
+          // These properties are needed in addition
+          // since recentDeployment only contains a few
+          return Object.assign(deployment, {
+            name,
+            created: deployment.createdAt
+          });
+        }
+
         const query = new URLSearchParams({ limit: 1, projectId });
         const { deployments } = await fetchRetry(`/v${version}/now/deployments?${query}`);
         return deployments[0];
