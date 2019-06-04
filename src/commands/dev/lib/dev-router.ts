@@ -71,8 +71,7 @@ export default async function(
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
-      let match = matcher.exec(reqPathname);
-      match = match || matcher.exec(`/${reqPathname}`)
+      const match = matcher.exec(reqPathname) || matcher.exec(`/${reqPathname}`);
 
       if (match) {
         let destPath: string = `/${reqPathname}`;
