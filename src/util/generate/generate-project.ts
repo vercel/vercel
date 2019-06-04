@@ -3,7 +3,7 @@ import wait from '../output/wait'
 import { Output } from '../output'
 import { detectFromManifests } from './detect-from-manifests';
 import { outputFile, choose, IgnoreType } from './helpers'
-import { internal } from './metadata'
+import * as Tasks from './metadata/tasks'
 import { DirMap, generateDirMap } from './generate-dir-map'
 import { detectFromExtensions } from './detect-from-extensions';
 
@@ -45,7 +45,7 @@ export async function generateProject(dir: string, output: Output): Promise<Proj
     config: {
       version: 2,
       name: 'experiment',
-      builds: builds.filter((val) => !Object.keys(internal).includes(val.use))
+      builds: builds.filter((val) => !Object.keys(Tasks).includes(val.use))
     },
     ignore: Array.from(ignore.values())
   }

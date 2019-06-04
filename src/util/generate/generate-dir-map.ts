@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { promisify } from 'util'
 import { join, parse } from 'path'
-import { allDetectors } from './detect-from-manifests'
+import Manifests from './metadata/manifests'
 import IGNORED from '../ignored'
 import { IgnoreType } from './helpers'
 
@@ -44,12 +44,12 @@ export async function generateDirMap(dir: string, ignore: IgnoreType, rootDir: s
       return
     }
 
-    if (Object.keys(allDetectors).includes(part)) {
+    if (Object.keys(Manifests).includes(part)) {
       map.manifests.push(part)
       return
     }
 
-    const ext = parse(part).ext
+    const ext = parse(part).ext.replace(/^\./, '')
     if (map.extensions[ext]) {
       if (typeof map.extensions[ext] === 'number') {
         map.extensions[ext] = Number(map.extensions[ext]) + 1

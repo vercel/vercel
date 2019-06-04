@@ -4,6 +4,10 @@ import { join } from 'path'
 import listInput from '../input/list'
 
 export type IgnoreType = Set<string>
+export type Locale = {
+  single: string
+  many: string
+}
 
 export type outputFileType = (dir: string, name: string, contents: string, overwrite?: boolean) => Promise<boolean>
 export const outputFile: outputFileType = (dir, name, contents, overwrite) => {

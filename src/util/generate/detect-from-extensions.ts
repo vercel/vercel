@@ -2,7 +2,9 @@ import { sep, join } from 'path'
 import { Build } from './generate-project'
 import { DirMap } from './generate-dir-map'
 import { chooseType, IgnoreType } from './helpers'
-import { locale, extensions, builders } from './metadata'
+import * as Tasks from './metadata/tasks'
+import * as Builders from './metadata/builders'
+import Extensions from './metadata/extensions'
 
 export function getCountAndDepth(extension: string, map: DirMap): { depth: number, count: number } {
   let depth = 0
@@ -30,31 +32,29 @@ export function getCountAndDepth(extension: string, map: DirMap): { depth: numbe
 }
 
 export function getExtensionOptions(extension: string, type: 'single' | 'many', recovery: 'destructure' | 'manual') {
-  const upload = locale.upload[type]
-  const ignore = locale.ignore[type]
-  const options = extensions[extension]
-    ? extensions[extension].map((builder) => ({
-        [builder]: locale[builder]
-          ? locale[builder][type]
+  const options = Extensions[extension]
+    ? Extensions[extension].builders.map((builder) => ({
+        [builder.use]: builder.locale
+          ? builder.locale[type]
           : `${type === 'single' ? 'This file' : 'These files'} should be built`
       })).reduce((acc, val) => Object.assign(acc, val, {}))
     : {}
 
   return {
     ...options,
-    '@now/static': locale['@now/static'][type],
-    upload,
-    ignore,
-    [recovery]: locale[recovery][type]
+    '@now/static': Builders.noop.locale ? Builders.noop.locale[type] : Builders.noop.use,
+    upload: Tasks.upload.locale[type],
+    ignore: Tasks.ignore.locale[type],
+    [recovery]: Tasks[recovery].locale[type]
   }
 }
 
 export function getManualOptions(type: 'single' | 'many'): { [key: string]: string } {
   let options: { [key: string]: string } = {}
-  Object.values(builders).forEach((builder) => {
-    options[builder] = locale[builder]
-      ? locale[builder][type]
-      : `${type === 'single' ? 'This file' : 'These files'} should be built by ${builder}`
+  Object.values(Builders).forEach((builder) => {
+    options[builder.use] = builder.locale
+      ? builder.locale[type]
+      : `${type === 'single' ? 'This file' : 'These files'} should be built by ${builder.use}`
   })
 
   return options
@@ -73,16 +73,16 @@ export async function detectFromExtensions(map: DirMap, deepCapture: string[], r
 
       if (depth > 1) {
         use = await choose(
-          `What are the ${count} ${ext || 'extensionless'} files in .${sep}${rel} (${depth} deep)?`,
+          `What are the ${count} ${ext ? `.${ext}` : 'extensionless'} files in .${sep}${rel} (${depth} deep)?`,
           getExtensionOptions(ext, 'many', 'destructure')
         )
       }
 
       if (use && use !== 'destructure') {
         capture.push(ext)
-        src = `${rel ? `${rel.replace('\\', '/')}/` : ''}**/*${ext}`
+        src = `${rel ? `${rel.replace('\\', '/')}/` : ''}**/*${ext ? `.${ext}` : ''}`
       } else {
-        src = `${rel ? `${rel.replace('\\', '/')}/` : ''}*${ext}`
+        src = `${rel ? `${rel.replace('\\', '/')}/` : ''}*${ext ? `.${ext}` : ''}`
         if (typeof map.extensions[ext] === 'string') {
           const question = `What is .${sep}${join(rel, map.extensions[ext] as string)}?`
 
@@ -98,7 +98,7 @@ export async function detectFromExtensions(map: DirMap, deepCapture: string[], r
             )
           }
         } else {
-          const question = `What are the ${map.extensions[ext]} ${ext || 'extensionless'} files in .${sep}${rel} (shallow)?`
+          const question = `What are the ${map.extensions[ext]} ${ext ? `.${ext}` : 'extensionless'} files in .${sep}${rel} (shallow)?`
           use = await choose(
             question,
             getExtensionOptions(ext, 'many', 'manual')

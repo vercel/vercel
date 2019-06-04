@@ -20,7 +20,9 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
-import { builders, locale, extensions } from '../src/util/generate/metadata';
+import * as Builders from '../src/util/generate/metadata/builders';
+import Extensions from '../src/util/generate/metadata/extensions';
+import * as Tasks from '../src/util/generate/metadata/tasks';
 import { getCountAndDepth, getManualOptions, getExtensionOptions, detectFromExtensions } from '../src/util/generate/detect-from-extensions';
 
 const output = createOutput({ debug: false });
@@ -916,11 +918,11 @@ test('[now/gen] get count and depth from dirMap', async t => {
   };
 
   const type = {
-    A: '.js',
-    B: '.ts',
-    C: '.go',
-    D: '.py',
-    E: '.txt'
+    A: 'js',
+    B: 'ts',
+    C: 'go',
+    D: 'py',
+    E: 'txt'
   };
 
   const files = fiveFiles([type.A, type.B, type.C, type.D, type.E], '/root', {
@@ -1000,7 +1002,7 @@ test('[now/gen] get count and depth from dirMap', async t => {
   t.is(countAndDepth.count, 5);
   t.is(countAndDepth.depth, 1);
 
-  countAndDepth = getCountAndDepth('.fake', files);
+  countAndDepth = getCountAndDepth('fake', files);
   t.is(countAndDepth.count, 0);
   t.is(countAndDepth.depth, 0);
 })
@@ -1009,49 +1011,49 @@ test('[now/gen] get manual options', async t => {
   let options = getManualOptions('single');
   let firstOption = Object.keys(options)[0];
 
-  t.deepEqual(Object.keys(options), Object.values(builders));
-  t.is(options[firstOption], locale[firstOption].single);
+  t.deepEqual(Object.keys(options), Object.keys(Builders).map((key) => Builders[key].use));
+  t.is(options[firstOption], 'This is a public static file');
   t.is(options['@now/rust'], 'This file should be built by @now/rust');
 
   options = getManualOptions('many');
   firstOption = Object.keys(options)[0];
 
-  t.deepEqual(Object.keys(options), Object.values(builders));
-  t.is(options[firstOption], locale[firstOption].many);
+  t.deepEqual(Object.keys(options), Object.keys(Builders).map((key) => Builders[key].use));
+  t.is(options[firstOption], 'These are public static files');
   t.is(options['@now/rust'], 'These files should be built by @now/rust');
 })
 
 test('[now/gen] get extension options', async t => {
   let recovery = 'manual';
-  let type = '.js';
+  let type = 'js';
   let size = 'single'
   let options = getExtensionOptions(type, size, recovery);
 
   t.deepEqual(Object.keys(options), [
-    ...extensions[type],
+    ...Extensions[type] ? Extensions[type].builders.map((builder) => builder.use) : {},
     'upload',
     'ignore',
     recovery
   ])
-  t.is(options.upload, locale.upload[size])
-  t.is(options[extensions[type][0]], locale[extensions[type][0]][size])
+  t.is(options.upload, Tasks.upload.locale[size])
+  t.is(options[Extensions[type].builders[0].use], Extensions[type].builders[0].locale[size])
 
   recovery = 'destructure';
-  type = '.rs';
+  type = 'rs';
   size = 'many'
   options = getExtensionOptions(type, size, recovery);
 
   t.deepEqual(Object.keys(options), [
-    ...extensions[type],
+    ...Extensions[type] ? Extensions[type].builders.map((builder) => builder.use) : {},
     '@now/static',
     'upload',
     'ignore',
     recovery
   ])
-  t.is(options.ignore, locale.ignore[size])
+  t.is(options.ignore, Tasks.ignore.locale[size])
 
   recovery = 'destructure';
-  type = '.fake';
+  type = 'fake';
   size = 'single'
   options = getExtensionOptions(type, size, recovery);
 
@@ -1069,45 +1071,45 @@ test('[now/gen] detect from extensions', async t => {
   const built = [];
   let use;
 
-  type['.js'] = 5;
+  type.js = 5;
   use = '@now/node';
   chooseMock.onCall(0).resolves(use);
   built.push({ use, src: '**/*.js' });
 
-  type['.css'] = 'styles.css';
+  type.css = 'styles.css';
   use = '@now/static'
   chooseMock.onCall(1).resolves('destructure'); // .css files
   chooseMock.onCall(2).resolves(use); // root .css files
   built.push({ use, src: '*.css' });
 
-  type['.go'] = 5;
+  type.go = 5;
   use = '@now/go';
   chooseMock.onCall(3).resolves(use); // .go files
   built.push({ use, src: '*.go' });
 
-  type['.txt'] = 'test.txt';
+  type.txt = 'test.txt';
   use = 'upload';
   chooseMock.onCall(4).resolves(use); // .txt files
   built.push({ use, src: '*.txt' });
 
-  type['.py'] = 5;
+  type.py = 5;
   use = '@now/python';
   chooseMock.onCall(5).resolves('manual'); // .py files
   chooseMock.onCall(6).resolves(use); // .py files
   built.push({ use, src: '*.py' });
 
-  type['.zip'] = 'archive.zip';
+  type.zip = 'archive.zip';
   use = '@now/static';
   chooseMock.onCall(7).resolves('manual'); // .zip files
   chooseMock.onCall(8).resolves(use); // .zip files
   built.push({ use, src: '*.zip' });
 
-  type['.md'] = 5;
+  type.md = 5;
   use = '@now/md';
   chooseMock.onCall(9).resolves(use); // .md files
   built.push({ use, src: '*.md' });
 
-  type['.html'] = 5;
+  type.html = 5;
   use = '@now/static';
   chooseMock.onCall(10).resolves(use); // .html files
   built.push({ use, src: '**/*.html' });
@@ -1119,9 +1121,9 @@ test('[now/gen] detect from extensions', async t => {
       blog: {
         dir: {},
         extensions: {
-          '.html': type['.html'],
-          '.js': type['.js'],
-          '.css': type['.css']
+          'html': type.html,
+          'js': type.js,
+          'css': type.css
         },
         absolute: 'blog',
         manifests: []
@@ -1137,5 +1139,5 @@ test('[now/gen] detect from extensions', async t => {
     t.is(build.src, built[i].src)
   })
 
-  t.deepEqual(detected.capture, ['.js', '.html'])
+  t.deepEqual(detected.capture, ['js', 'html'])
 })

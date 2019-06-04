@@ -1,49 +1,26 @@
 import fs from 'fs'
 import { join, sep } from 'path'
 import { promisify } from 'util'
-import { locale } from './metadata'
 import { outputFileType, chooseType, IgnoreType } from './helpers'
+import Manifests from './metadata/manifests'
+import * as Tasks from './metadata/tasks'
 
 const readFile = promisify(fs.readFile)
-
-type Package = {
-  name?: string,
-  dependencies?: { [key: string]: string },
-  scripts?: { [key: string]: string }
-}
-type Detected = { use: string, build?: string, config?: { [key: string]: string }, locale?: string, dev?: string }
-type Detector = (contents: Object) => Promise<Detected | false>
-type NodeDetector = (contents: Package) => Promise<Detected | false>
-
-const NextDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.next ? { use: '@now/next', build: 'next build' } : false
-const GatsbyDetector: NodeDetector = async ({ dependencies }) => dependencies && dependencies.gatsby ? { locale: 'gatsby', use: '@now/static-build', dev: 'gatsby develop -p $PORT', build: 'gatsby build', config: { distDir: 'public' } } : false
-const BuildDetector: NodeDetector = async ({ scripts }) => scripts && scripts.build ? { use: '@now/static-build' } : false
-
-export const allDetectors: {
-  'package.json': NodeDetector[],
-  [key: string]: Detector[]
-} = {
-  'package.json': [
-    NextDetector,
-    GatsbyDetector,
-    BuildDetector
-  ]
-}
 
 type helpers = { choose: chooseType, outputFile: outputFileType }
 export async function detectFromManifests(manifests: string[], absolute: string, rel: string, ignore: IgnoreType, { choose, outputFile }: helpers) {
   for (let i = 0; i < manifests.length; i++) {
-    const detectors = allDetectors[manifests[i]]
+    const detectors = Manifests[manifests[i]]
     if (detectors) {
       let needsUpdate = false
-      const data = JSON.parse(await readFile(join(absolute, manifests[i]), { encoding: 'utf8' }))
+      const data = detectors.parseManifest(readFile(join(absolute, manifests[i]), { encoding: 'utf8' }))
       const options: {[key: string]: string} = {}
       const buildCommand: { [key: string]: string | undefined } = {}
       const devCommand: { [key: string]: string | undefined } = {}
       const conf: { [key: string]: { [key: string]: string } | undefined } = {}
 
-      for (let k in detectors) {
-        const detector = detectors[k]
+      for (let k in detectors.detectors) {
+        const detector = detectors.detectors[k]
         const result = await detector(data)
 
         if (result && !options[result.use]) {
@@ -53,13 +30,11 @@ export async function detectFromManifests(manifests: string[], absolute: string,
           devCommand[result.use] = result.dev
           conf[result.use] = result.config
 
-          options[result.use] = 
-            (locale[localeKey] && locale[localeKey].many)
-            || `This is a ${localeKey} project`
+          options[result.use] = result.locale || `This is a ${localeKey} project`
         }
       }
 
-      options.destructure = locale.destructure.many
+      options.destructure = Tasks.destructure.locale.many
       options.ignore = `The file ${manifests[i]} is not relevant`
 
       const use = Object.keys(options).length > 2
@@ -72,22 +47,16 @@ export async function detectFromManifests(manifests: string[], absolute: string,
         continue
       }
 
-      if (!data.scripts) data.scripts = {}
-      if (use && data.dependencies && !data.scripts['now-dev'] && devCommand[use]) {
-        data.scripts['now-dev'] = devCommand[use]
-        needsUpdate = true
-      }
-      if (use && data.dependencies && !data.scripts['now-build']) {
-        data.scripts['now-build'] = use && buildCommand[use] ? buildCommand[use] : 'npm run build'
-        needsUpdate = true
-      }
-      if (needsUpdate) outputFile(absolute, manifests[i], JSON.stringify(data, null, 2), true)
+      if (use) {
+        const update = detectors.addScripts(data, { build: buildCommand[use], dev: devCommand[use] })
+        if (update) outputFile(absolute, manifests[i], update, true)
 
-      if (use) return [{
-        use,
-        config: conf[use],
-        src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${manifests[i]}`
-      }]
+        return [{
+          use,
+          config: conf[use],
+          src: `${rel ? `${rel.replace('\\', '/')}/` : ''}${manifests[i]}`
+        }]
+      }
     }
   }
 }
