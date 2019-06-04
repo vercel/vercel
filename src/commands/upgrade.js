@@ -144,6 +144,9 @@ export default async function main(ctx) {
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
   const { log, success, warn } = output;
+  if (type === 'upgrade') {
+    log(`Are you trying to upgrade Now CLI? Run ${cmd('now update')}!`);
+  }
   warn(`${cmd(`now ${type}`)} is deprecated and will soon be removed.`);
   log(`Change your plan here: ${chalk.cyan('https://zeit.co/account/plan')}\n`);
 
