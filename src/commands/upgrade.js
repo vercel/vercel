@@ -143,7 +143,9 @@ export default async function main(ctx) {
   const apiUrl = ctx.apiUrl;
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
-  const { log, success } = output;
+  const { log, success, warn } = output;
+  warn(`${cmd(`now ${type}`)} is deprecated and will soon be removed.`);
+  log(`Change your plan here: ${chalk.cyan('https://zeit.co/account/plan')}\n`);
 
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
