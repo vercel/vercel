@@ -161,6 +161,19 @@ export class InvalidTransferAuthCode extends NowError<
   }
 }
 
+export class DomainRegistrationFailed extends NowError<
+  'DOMAIN_REGISTRATION_FAILED',
+  { domain: string }
+> {
+  constructor(domain: string, message: string) {
+    super({
+      code: 'DOMAIN_REGISTRATION_FAILED',
+      meta: { domain },
+      message
+    });
+  }
+}
+
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
@@ -1121,10 +1134,7 @@ export class CertsDNSError extends NowError<
   }
 }
 
-export class BuildsRateLimited extends NowError<
-  'BUILDS_RATE_LIMITED',
-  { }
-> {
+export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
   constructor(message: string) {
     super({
       code: 'BUILDS_RATE_LIMITED',
