@@ -193,6 +193,8 @@ export default async function main(ctx: NowContext): Promise<number> {
   const output = createOutput({ debug: debugEnabled });
   const { log, note, success, print, debug } = output;
 
+  output.dim(`Now CLI ${pkg.version} update (beta) — https://zeit.co/feedback/update`);
+
   // Don't update if executing with `node` (i.e. during development)
   if (!basename(location).startsWith('now')) {
     note(`Refusing to update file "${location}" because it does not appear to be a \`now\` binary`);
