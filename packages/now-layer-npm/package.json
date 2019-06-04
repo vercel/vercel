@@ -1,5 +1,5 @@
 {
-  "name": "@now/layer-node",
+  "name": "@now/layer-npm",
   "version": "0.0.1",
   "main": "./dist/src/index",
   "license": "MIT",
@@ -9,7 +9,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now-builders.git",
-    "directory": "packages/now-layer-node"
+    "directory": "packages/now-layer-npm"
   },
   "scripts": {
     "build": "tsc",
@@ -20,13 +20,10 @@
     "fs-extra": "7.0.1",
     "node-fetch": "2.6.0",
     "promisepipe": "3.0.0",
-    "stream-to-promise": "2.2.0",
-    "tar": "4.4.6",
-    "yauzl-promise": "2.1.3"
+    "tar": "4.4.6"
   },
   "devDependencies": {
     "@types/tar": "4.0.0",
-    "@types/yauzl-promise": "2.1.0",
     "typescript": "3.3.3"
   }
 }

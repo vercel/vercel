@@ -17,19 +17,16 @@ export async function buildLayer({
 }: LayerConfig) {
 	const dir = join(
 		tmpdir(),
-		`now-layer-node-${runtimeVersion}-${platform}-${arch}`
+		`now-layer-npm-${runtimeVersion}-${platform}-${arch}`
 	);
 	const exists = await pathExists(dir);
 	if (exists) {
 		await remove(dir);
 	}
 	await mkdir(dir);
-	await install(dir, runtimeVersion, platform, arch);
-	const files = await glob(
-		'{bin/node,bin/node.exe,include/**,now-metadata.json}',
-		{
-			cwd: dir,
-		}
-	);
+	await install(dir, runtimeVersion);
+	const files = await glob('{bin/**,lib/**,node_modules/**}', {
+		cwd: dir,
+	});
 	return { files };
 }
