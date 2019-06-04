@@ -9,6 +9,7 @@ import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import { createReadStream, promises } from 'fs';
 import ms from 'ms';
+import { URLSearchParams } from 'url';
 import {
   staticFiles as getFiles,
   npm as getNpmFiles,
@@ -553,36 +554,64 @@ export default class Now extends EventEmitter {
     return secrets;
   }
 
-  async list(app, { version = 2, meta = {} } = {}) {
-    const metaQs = Object.keys(meta)
-      .map(key => `meta-${key}=${encodeURIComponent(meta[key])}`)
-      .join('&');
-    const query = app
-      ? `?app=${encodeURIComponent(app)}&${metaQs}`
-      : `?${metaQs}`;
+  async list(app, { version = 4, meta = {} } = {}) {
+    const fetchRetry = async (url, options = {}) => {
+      return this.retry(async bail => {
+          const res = await this._fetch(url, options);
 
-    const { deployments } = await this.retry(
-      async bail => {
-        const res = await this._fetch(`/v${version}/now/deployments${query}`);
+          if (res.status === 200) {
+            return res.json();
+          }
 
-        if (res.status === 200) {
-          // What we want
-          return res.json();
-        }
-        if (res.status > 200 && res.status < 500) {
-          // If something is wrong with our request, we don't retry
-          return bail(await responseError(res, 'Failed to list deployments'));
-        }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list deployments');
+          if (res.status > 200 && res.status < 500) {
+            // If something is wrong with our request, we don't retry
+            return bail(await responseError(res, 'Failed to list deployments'));
+          }
+
+          // If something is wrong with the server, we retry
+          throw await responseError(res, 'Failed to list deployments');
       },
       {
         retries: 3,
         minTimeout: 2500,
         onRetry: this._onRetry
-      }
-    );
+      });
+    };
 
+    if (!app && !Object.keys(meta).length) {
+      // Get the 50 latest projects and their latest deployment
+      const query = new URLSearchParams({ limit: 50 });
+      const projects = await fetchRetry(`/projects/list?${query}`);
+
+      const deployments = await Promise.all(projects.map(async ({ id: projectId, name, recentDeployments }) => {
+        if (recentDeployments && recentDeployments.length) {
+          const [deployment] = recentDeployments;
+
+          // These properties are needed in addition
+          // since recentDeployment only contains a few
+          return Object.assign(deployment, {
+            name,
+            created: deployment.createdAt
+          });
+        }
+
+        const query = new URLSearchParams({ limit: 1, projectId });
+        const { deployments } = await fetchRetry(`/v${version}/now/deployments?${query}`);
+        return deployments[0];
+      }));
+
+      return deployments.filter(x => x);
+    }
+
+    const query = new URLSearchParams();
+
+    if (app) {
+      query.set('app', app);
+    }
+
+    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
+
+    const { deployments } = await fetchRetry(`/v${version}/now/deployments?${query}`);
     return deployments;
   }
 
