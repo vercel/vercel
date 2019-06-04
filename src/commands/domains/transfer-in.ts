@@ -132,6 +132,11 @@ export default async function transferIn(
     return 1;
   }
 
+  if (transferInResult instanceof ERRORS.DomainRegistrationFailed) {
+    output.error(`Could not transfer domain. ${transferInResult.message}`);
+    return 1;
+  }
+
   console.log(
     `${chalk.cyan('> Success!')} Domain ${param(
       domainName
