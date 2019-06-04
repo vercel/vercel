@@ -25,6 +25,7 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user.ts';
 import Client from './util/client.ts';
 import NowTeams from './util/teams';
+import cmd from './util/output/cmd';
 import highlight from './util/output/highlight';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
@@ -134,7 +135,7 @@ const main = async argv_ => {
       )
     );
     console.log(
-      info(`Read more about how to update here: https://zeit.co/update-cli`)
+      info(`Run the ${cmd('now update')} command to update to the latest version`)
     );
     console.log(
       info(
@@ -540,8 +541,8 @@ const main = async argv_ => {
   }
 
   if (!targetCommand) {
-    const cmd = param(subcommand);
-    console.error(error(`The ${cmd} subcommand does not exist`));
+    const sub = param(subcommand);
+    console.error(error(`The ${sub} subcommand does not exist`));
     return 1;
   }
 
