@@ -20,7 +20,7 @@ npm install next --save
 {
   "scripts": {
     "now-build": "next build"
-  },
+  }
 }
 ```
 
@@ -28,9 +28,9 @@ npm install next --save
 
 ```js
 module.exports = {
-  target: 'serverless'
+  target: 'serverless',
   // Other options
-}
+};
 ```
 
 4. Remove `distDir` from `next.config.js` as `@now/next` can't parse this file and expects your build output at `/.next`

@@ -4,8 +4,8 @@ This is a monorepo containing the [Official Builders](https://zeit.co/docs/v2/de
 
 There are two branches:
 
-* canary - published to npm as `canary` dist-tag, eg `@now/node@canary`
-* master - published to npm as `latest` dist-tag, eg `@now/node@latest`
+- canary - published to npm as `canary` dist-tag, eg `@now/node@canary`
+- master - published to npm as `latest` dist-tag, eg `@now/node@latest`
 
 ### Publishing to npm
 

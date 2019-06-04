@@ -5,6 +5,6 @@
 export = OptiPng;
 
 declare class OptiPng {
-    constructor(bindArgs: string[]);
-    bindArgs: string[];
+  constructor(bindArgs: string[]);
+  bindArgs: string[];
 }

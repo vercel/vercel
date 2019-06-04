@@ -5,7 +5,7 @@ import FileFsRef from './file-fs-ref';
 export default function shouldServe({
   entrypoint,
   files,
-  requestPath
+  requestPath,
 }: ShouldServeOptions): boolean {
   requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
   entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility
@@ -23,5 +23,5 @@ export default function shouldServe({
 }
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
-  return Object.hasOwnProperty.call(obj, key)
+  return Object.hasOwnProperty.call(obj, key);
 }

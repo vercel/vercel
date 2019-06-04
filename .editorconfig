@@ -1,9 +1,6 @@
 root = true
 
 [*]
-indent_style = tab
-indent_size = 4
-tab_width = 4
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -24,10 +21,19 @@ indent_size = 8
 
 [*.md]
 trim_trailing_whitespace = false
+indent_style = space
+indent_size = 2
 
-# Ideal settings - some plugins might support these.
-[*.js,*.ts]
+# Ideal settings - some plugins might support these
+[*.js,*.jsx,*.ts,*.tsx]
 quote_type = single
+indent_style = space
+indent_size = 2
+
+[{*.c,*.cc,*.h,*.hh,*.cpp,*.hpp,*.m,*.mm,*.mpp,*.java,*.go,*.rs,*.php,*.ng,*.d,*.cs,*.swift}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
 
 [{*.c,*.cc,*.h,*.hh,*.cpp,*.hpp,*.m,*.mm,*.mpp,*.js,*.java,*.go,*.rs,*.php,*.ng,*.jsx,*.ts,*.tsx,*.d,*.cs,*.swift}]
 curly_bracket_next_line = false

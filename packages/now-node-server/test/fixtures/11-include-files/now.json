@@ -5,9 +5,7 @@
       "src": "index.js",
       "use": "@now/node-server",
       "config": {
-        "includeFiles": [
-          "templates/**"
-        ]
+        "includeFiles": ["templates/**"]
       }
     },
     {

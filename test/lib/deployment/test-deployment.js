@@ -10,7 +10,7 @@ const { nowDeploy } = require('./now-deploy.js');
 async function packAndDeploy (builderPath) {
   await spawnAsync('npm', [ '--loglevel', 'warn', 'pack' ], {
     stdio: 'inherit',
-    cwd: builderPath
+    cwd: builderPath,
   });
   const tarballs = await glob('*.tgz', { cwd: builderPath });
   const tgzPath = path.join(builderPath, tarballs[0]);
@@ -86,8 +86,8 @@ async function testDeployment (
       method: probe.method,
       body: probe.body ? JSON.stringify(probe.body) : undefined,
       headers: {
-        'content-type': 'application/json'
-      }
+        'content-type': 'application/json',
+      },
     });
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
@@ -117,7 +117,7 @@ async function testDeployment (
 async function nowDeployIndexTgz (file) {
   const bodies = {
     'index.tgz': await fs.readFile(file),
-    'now.json': Buffer.from(JSON.stringify({ version: 2 }))
+    'now.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
   return (await nowDeploy(bodies)).deploymentUrl;
@@ -183,5 +183,5 @@ async function spawnAsync (...args) {
 
 module.exports = {
   packAndDeploy,
-  testDeployment
+  testDeployment,
 };

@@ -4,7 +4,8 @@ import url from 'url';
 import { Bridge } from './now__bridge';
 
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+  process.env.NODE_ENV =
+    process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
 }
 
 const app = next({});

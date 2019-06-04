@@ -7,7 +7,7 @@ requests to the server that is created by the `now-dev` script in the
 `package.json` file.
 
 In order for `now dev` to know which port the server is running on, the builder
-is provided a `$PORT` environment variable that the server *must* bind to. The
+is provided a `$PORT` environment variable that the server _must_ bind to. The
 error "Failed to detect a server running on port" is printed if the builder fails
 to detect a server listening on that specific port within five minutes.
 

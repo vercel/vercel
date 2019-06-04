@@ -5,18 +5,14 @@
       "src": "index.js",
       "use": "@now/node",
       "config": {
-        "includeFiles": [
-          "templates/**"
-        ]
+        "includeFiles": ["templates/**"]
       }
     },
     {
       "src": "root.js",
       "use": "@now/node",
       "config": {
-        "includeFiles": [
-          "root.edge"
-        ]
+        "includeFiles": ["root.edge"]
       }
     },
     {

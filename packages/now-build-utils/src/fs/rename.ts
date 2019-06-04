@@ -7,6 +7,6 @@ export default function rename(files: Files, delegate: Delegate): Files {
       ...newFiles,
       [delegate(name)]: files[name],
     }),
-    {},
+    {}
   );
 }

@@ -2,7 +2,8 @@ const assert = require('assert');
 
 async function test1({ deploymentUrl, fetch }) {
   const resp = await fetch(
-    `https://${deploymentUrl}/index.php?get1=foo&get1=bar&get2[]=bim&get2[]=bom`, {
+    `https://${deploymentUrl}/index.php?get1=foo&get1=bar&get2[]=bim&get2[]=bom`,
+    {
       headers: {
         'X-Some-Header': 'x-some-header-value',
       },
@@ -50,15 +51,13 @@ async function test1({ deploymentUrl, fetch }) {
 }
 
 async function test2({ deploymentUrl, fetch }) {
-  const resp = await fetch(
-    `https://${deploymentUrl}/index.php`, {
-      method: 'POST',
-      body: 'post1=baz&post1=bat&post2[]=pim&post2[]=pom',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+  const resp = await fetch(`https://${deploymentUrl}/index.php`, {
+    method: 'POST',
+    body: 'post1=baz&post1=bat&post2[]=pim&post2[]=pom',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-  );
+  });
   assert(resp.status === 200);
   const text = await resp.text();
   const lines = text.trim().split('\n');
@@ -101,14 +100,14 @@ async function test2({ deploymentUrl, fetch }) {
 }
 
 async function test3({ deploymentUrl, fetch }) {
-  const resp = await fetch(
-    `https://${deploymentUrl}/index.php`, {
-      method: 'GET',
-      headers: {
-        Cookie: `cookie1=foo; cookie1=${escape('bar|bar')}; ${escape('cookie2[]')}=dim; ${escape('cookie2[]')}=${escape('dom|dom')}`,
-      },
+  const resp = await fetch(`https://${deploymentUrl}/index.php`, {
+    method: 'GET',
+    headers: {
+      Cookie: `cookie1=foo; cookie1=${escape('bar|bar')}; ${escape(
+        'cookie2[]',
+      )}=dim; ${escape('cookie2[]')}=${escape('dom|dom')}`,
     },
-  );
+  });
   assert(resp.status === 200);
   const text = await resp.text();
   const lines = text.trim().split('\n');

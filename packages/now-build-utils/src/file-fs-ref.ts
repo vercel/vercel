@@ -31,7 +31,10 @@ class FileFsRef implements File {
     this.fsPath = fsPath;
   }
 
-  static async fromFsPath({ mode, fsPath }: FileFsRefOptions): Promise<FileFsRef> {
+  static async fromFsPath({
+    mode,
+    fsPath,
+  }: FileFsRefOptions): Promise<FileFsRef> {
     let m = mode;
     if (!m) {
       const stat = await fs.lstat(fsPath);
@@ -40,7 +43,11 @@ class FileFsRef implements File {
     return new FileFsRef({ mode: m, fsPath });
   }
 
-  static async fromStream({ mode = 0o100644, stream, fsPath }: FromStreamOptions): Promise<FileFsRef> {
+  static async fromStream({
+    mode = 0o100644,
+    stream,
+    fsPath,
+  }: FromStreamOptions): Promise<FileFsRef> {
     assert(typeof mode === 'number');
     assert(typeof stream.pipe === 'function'); // is-stream
     assert(typeof fsPath === 'string');
@@ -48,7 +55,7 @@ class FileFsRef implements File {
 
     await new Promise<void>((resolve, reject) => {
       const dest = fs.createWriteStream(fsPath, {
-        mode: mode & 0o777
+        mode: mode & 0o777,
       });
       stream.pipe(dest);
       stream.on('error', reject);
@@ -72,15 +79,15 @@ class FileFsRef implements File {
     let flag = false;
 
     // eslint-disable-next-line consistent-return
-    return multiStream((cb) => {
+    return multiStream(cb => {
       if (flag) return cb(null, null);
       flag = true;
 
       this.toStreamAsync()
-        .then((stream) => {
+        .then(stream => {
           cb(null, stream);
         })
-        .catch((error) => {
+        .catch(error => {
           cb(error, null);
         });
     });

@@ -52,6 +52,10 @@
     "lint-staged": "^8.0.4",
     "node-fetch": "^2.3.0",
     "pre-commit": "^1.2.2",
-    "prettier": "^1.15.2"
+    "prettier": "1.17.1"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "es5"
   }
 }

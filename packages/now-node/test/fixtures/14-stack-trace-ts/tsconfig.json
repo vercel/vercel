@@ -1,14 +1,11 @@
 {
-    "compilerOptions": {
-      "strict": true,
-      "esModuleInterop": true,
-      "sourceMap": true,
-      "lib": ["esnext"],
-      "target": "esnext",
-      "module": "commonjs"
-    },
-    "include": [
-      "index.ts"
-    ]
-  }
-  
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "lib": ["esnext"],
+    "target": "esnext",
+    "module": "commonjs"
+  },
+  "include": ["index.ts"]
+}

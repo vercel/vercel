@@ -29,12 +29,11 @@ Serverless:
 - No runtime dependencies, meaning smaller lambda functions
 - Optimized for fast [cold start](https://zeit.co/blog/serverless-ssr#cold-start)
 
-
 #### Possible Ways to Fix It
 
 In order to create the smallest possible lambdas Next.js has to be configured to build for the `serverless` target.
 
-1. Serverless Next.js requires Next.js 8 or later, to upgrade you can install the `latest` version: 
+1. Serverless Next.js requires Next.js 8 or later, to upgrade you can install the `latest` version:
 
 ```
 npm install next --save
@@ -46,7 +45,7 @@ npm install next --save
 {
   "scripts": {
     "now-build": "next build"
-  },
+  }
 }
 ```
 
@@ -54,9 +53,9 @@ npm install next --save
 
 ```js
 module.exports = {
-  target: 'serverless'
+  target: 'serverless',
   // Other options are still valid
-}
+};
 ```
 
 4. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
@@ -70,4 +69,4 @@ module.exports = {
 
 ### Useful Links
 
-- [Serverless target implementation](https://github.com/zeit/now-builders/pull/150) 
+- [Serverless target implementation](https://github.com/zeit/now-builders/pull/150)

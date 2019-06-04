@@ -32,9 +32,7 @@ export class Lambda {
   public runtime: string;
   public environment: Environment;
 
-  constructor({
-    zipBuffer, handler, runtime, environment,
-  }: LambdaOptions) {
+  constructor({ zipBuffer, handler, runtime, environment }: LambdaOptions) {
     this.type = 'Lambda';
     this.zipBuffer = zipBuffer;
     this.handler = handler;
@@ -47,7 +45,10 @@ const sema = new Sema(10);
 const mtime = new Date(1540000000000);
 
 export async function createLambda({
-  files, handler, runtime, environment = {},
+  files,
+  handler,
+  runtime,
+  environment = {},
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
@@ -97,7 +98,9 @@ export async function createZip(files: Files): Promise<Buffer> {
     }
 
     zipFile.end();
-    streamToBuffer(zipFile.outputStream).then(resolve).catch(reject);
+    streamToBuffer(zipFile.outputStream)
+      .then(resolve)
+      .catch(reject);
   });
 
   return zipBuffer;

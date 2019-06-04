@@ -105,7 +105,10 @@ exports.build = async ({
 }) => {
   const [downloadedFiles, entrypointFsDirname] = await downloadInstallAndBundle(
     {
-      files, entrypoint, workPath, meta,
+      files,
+      entrypoint,
+      workPath,
+      meta,
     },
     { npmArguments: ['--prefer-offline'] },
   );

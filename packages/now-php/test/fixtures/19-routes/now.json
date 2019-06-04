@@ -1,13 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "index.php", "use": "@now/php" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "index.php" }
-  ],
+  "builds": [{ "src": "index.php", "use": "@now/php" }],
+  "routes": [{ "src": "/(.*)", "dest": "index.php" }],
   "probes": [
     { "path": "/any", "mustContain": "cow:RANDOMNESS_PLACEHOLDER:/any" },
-    { "path": "/any?type=some", "mustContain": "cow:RANDOMNESS_PLACEHOLDER:/any?type=some" }
+    {
+      "path": "/any?type=some",
+      "mustContain": "cow:RANDOMNESS_PLACEHOLDER:/any?type=some"
+    }
   ]
 }

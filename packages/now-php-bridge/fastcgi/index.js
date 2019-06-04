@@ -21,9 +21,7 @@ async function startPhp() {
 
   const child = spawn(
     './php-fpm',
-    ['-c', 'php.ini',
-      '--fpm-config', 'php-fpm.ini',
-      '--nodaemonize'],
+    ['-c', 'php.ini', '--fpm-config', 'php-fpm.ini', '--nodaemonize'],
     {
       stdio: 'inherit',
       cwd: '/var/task/native',
@@ -75,9 +73,7 @@ async function query({ params, stdin }) {
   return new Promise((resolve) => {
     assert(connection);
 
-    const chunks = [
-      Buffer.from('HTTP/1.1 200 MAKES-PARSER-WORK\n'),
-    ];
+    const chunks = [Buffer.from('HTTP/1.1 200 MAKES-PARSER-WORK\n')];
 
     function onError(error) {
       console.error(error);
@@ -128,7 +124,11 @@ async function query({ params, stdin }) {
 
     curReqId += 1;
     // TODO these things have callbacks. what to do with them?
-    connection.send(MSG_TYPE.FCGI_BEGIN_REQUEST, curReqId, BEGIN_REQUEST_DATA_KEEP_CONN);
+    connection.send(
+      MSG_TYPE.FCGI_BEGIN_REQUEST,
+      curReqId,
+      BEGIN_REQUEST_DATA_KEEP_CONN,
+    );
     connection.send(MSG_TYPE.FCGI_PARAMS, curReqId, params);
     connection.send(MSG_TYPE.FCGI_PARAMS, curReqId, null);
     if (stdin) connection.send(MSG_TYPE.FCGI_STDIN, curReqId, stdin);

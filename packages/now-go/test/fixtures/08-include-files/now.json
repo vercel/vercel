@@ -5,9 +5,7 @@
       "src": "index.go",
       "use": "@now/go",
       "config": {
-        "includeFiles": [
-          "templates/**"
-        ]
+        "includeFiles": ["templates/**"]
       }
     }
   ],

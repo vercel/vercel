@@ -27,7 +27,10 @@ function normalizeEvent(event) {
     }
 
     return {
-      method, path, headers, body,
+      method,
+      path,
+      headers,
+      body,
     };
   }
 
@@ -36,7 +39,10 @@ function normalizeEvent(event) {
   } = event;
 
   return {
-    method, path, headers, body,
+    method,
+    path,
+    headers,
+    body,
   };
 }
 
@@ -64,8 +70,10 @@ async function transformFromAwsRequest({
   const { pathname, search, query: queryString } = parseUrl(path);
   let requestUri = pathname + (search || '');
 
-  let filename = pathJoin('/var/task/user',
-    process.env.NOW_ENTRYPOINT || pathname);
+  let filename = pathJoin(
+    '/var/task/user',
+    process.env.NOW_ENTRYPOINT || pathname,
+  );
   if (await isDirectory(filename)) {
     if (!filename.endsWith('/')) {
       filename += '/';
@@ -89,8 +97,7 @@ async function transformFromAwsRequest({
     params[`HTTP_${camel}`] = v;
     if (camel === 'HOST') {
       params.SERVER_NAME = v;
-    } else
-    if (['CONTENT_TYPE', 'CONTENT_LENGTH'].includes(camel)) {
+    } else if (['CONTENT_TYPE', 'CONTENT_LENGTH'].includes(camel)) {
       params[camel] = v; // without HOST_ prepended
     }
   }

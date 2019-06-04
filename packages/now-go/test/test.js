@@ -26,8 +26,8 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture),
-      ),
+        path.join(fixturesPath, fixture)
+      )
     ).resolves.toBeDefined();
   });
 }
