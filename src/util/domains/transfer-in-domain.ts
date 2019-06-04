@@ -33,6 +33,9 @@ export default async function transferInDomain(
     if (error.code === 'source_not_found') {
       return new ERRORS.SourceNotFound();
     }
+    if (error.code === 'registration_failed') {
+      return new ERRORS.DomainRegistrationFailed(name, error.message);
+    }
     throw error;
   }
 }
