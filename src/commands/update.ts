@@ -20,6 +20,7 @@ import {
 
 import pkg from '../util/pkg';
 import logo from '../util/output/logo';
+import promptBool from '../util/prompt-bool';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
@@ -44,7 +45,7 @@ const help = () => {
     -c ${chalk.bold.underline('NAME')}, --channel=${chalk.bold.underline(
     'NAME'
   )}        Specify which release channel to install [stable]
-    -V ${chalk.bold.underline('VERSION')}, --version=${chalk.bold.underline(
+    -r ${chalk.bold.underline('VERSION')}, --release=${chalk.bold.underline(
     'VERSION'
   )}  Specfic version to install (overrides \`--channel\`)
     -y, --yes                      Skip the confirmation prompt
@@ -168,8 +169,8 @@ export default async function main(ctx: NowContext): Promise<number> {
     argv = getArgs(ctx.argv.slice(2), {
       '--channel': String,
       '-c': '--channel',
-      '--version': String,
-      '-V': '--version',
+      '--release': String,
+      '-V': '--release',
       '--yes': Boolean,
       '-y': '--yes'
     });
@@ -186,10 +187,11 @@ export default async function main(ctx: NowContext): Promise<number> {
   }
 
   let explicitVersion = false;
-  let version: string = argv['--version'];
+  let version: string = argv['--release'];
   const location = process.execPath;
+  const { updateChannel = '' } = ctx.config || {};
   const debugEnabled = argv['--debug'];
-  const channel: string = argv['--channel'] || getDefaultChannel();
+  const channel: string = argv['--channel'] || updateChannel || getDefaultChannel();
   const output = createOutput({ debug: debugEnabled });
   const { log, note, success, print, debug } = output;
 
@@ -236,6 +238,12 @@ export default async function main(ctx: NowContext): Promise<number> {
   print('\n');
   log('Downloading `now` binary...');
   log(`Binary URL: ${chalk.underline.blue(url)}`);
+
+  const confirmed = skipConfirmation || await promptBool(output, 'Update Now CLI?');
+  if (!confirmed) {
+    log('Aborting');
+    return 0;
+  }
 
   const tmpBin: string = join(tmpdir(), `now-${Math.random().toString(32).slice(-10)}`);
   let rtn = 0;
