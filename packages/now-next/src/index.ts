@@ -405,6 +405,11 @@ export const build = async ({
       staticPages[staticRoute] = staticPageFiles[page];
 
       const pathname = page.replace(/\.html$/, '');
+
+      if (pathname.startsWith('$') || pathname.includes('/$')) {
+        dynamicPages.push(pathname);
+      }
+
       exportedPageRoutes.push({
         src: `^${path.join('/', entryDirectory, pathname)}$`,
         dest: path.join('/', staticRoute),
@@ -498,6 +503,19 @@ export const build = async ({
     {}
   );
 
+  let dynamicRoutes = getDynamicRoutes(
+    entryPath,
+    entryDirectory,
+    dynamicPages
+  ).map(route => {
+    // make sure .html is added to dest for now until
+    // outputting static files to clean routes is available
+    if (staticPages[route.dest]) {
+      route.dest += '.html';
+    }
+    return route;
+  });
+
   return {
     output: {
       ...publicFiles,
@@ -510,7 +528,7 @@ export const build = async ({
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
       // Dynamic routes
-      ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages),
+      ...dynamicRoutes,
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
