@@ -124,7 +124,7 @@ export default async function main(ctx) {
   const findStart = Date.now();
 
   try {
-    deployments = await now.list(null, { version: 3 });
+    deployments = await now.list(null, { version: 4 });
   } catch (err) {
     cancelWait();
     throw err;
