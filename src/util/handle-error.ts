@@ -35,8 +35,7 @@ export default function handleError(
           `Rate limit exceeded error. Try again in ${ms(
             ((<APIError>error).retryAfter as number) * 1000,
             { long: true }
-          )}, or upgrade your account by running ` +
-            `${chalk.gray('`')}${chalk.cyan('now upgrade')}${chalk.gray('`')}`
+          )}, or upgrade your plan here: ${chalk.cyan('https://zeit.co/account/plan')}`
         )
       );
     }

@@ -429,7 +429,7 @@ export default class Now extends EventEmitter {
 
       if (sizeExceeded > 0) {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(`Please run ${cmd('now upgrade')} to upgrade.`);
+        log(`Please upgrade your plan here: ${chalk.cyan('https://zeit.co/account/plan')}`);
       }
     }
 

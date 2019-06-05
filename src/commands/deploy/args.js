@@ -29,11 +29,11 @@ export const latestHelp = () => `
     ${chalk.dim('Administrative')}
 
       billing | cc         [cmd]       Manages your credit cards and billing methods
-      upgrade | downgrade  [plan]      Upgrades or downgrades your plan
       teams                            Manages your teams
       switch               [scope]     Switches between teams and your personal account
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      update                           Updates Now CLI to the latest version
       whoami                           Shows the username of the currently logged in user
 
   ${chalk.dim('Options:')}
