@@ -1348,7 +1348,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 });
 
-test.only('try to update now to canary', async t => {
+test('try to update now to canary', async t => {
   const { code } = await execute(['update', '--channel', 'canary', '--yes']);
   t.is(code, 0);
 });
