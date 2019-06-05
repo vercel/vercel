@@ -1348,6 +1348,14 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 });
 
+test('try to update now to canary', async t => {
+  const { code } = await execute(['update', '--channel', 'canary', '--yes']);
+  t.is(code, 0);
+  
+  const { stdout } = await execute(['--version']);
+  t.true(stdout.includes('canary'));
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
