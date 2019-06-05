@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import resolveFrom from 'resolve-from';
 import { Files } from '@now/build-utils';
 
 type stringMap = { [key: string]: string };
@@ -168,7 +169,18 @@ function getPathsInside(entryDirectory: string, files: Files) {
   return watch;
 }
 
+function normalizePage(page: string): string {
+  // remove '/index' from the end
+  page = page.replace(/\/index$/, '/');
+  // Resolve on anything that doesn't start with `/`
+  if (!page.startsWith('/')) {
+    page = `/${page}`;
+  }
+  return page;
+}
+
 function getRoutes(
+  entryPath: string,
   entryDirectory: string,
   pathsInside: string[],
   files: Files,
@@ -196,6 +208,7 @@ function getRoutes(
     },
   ];
   const filePaths = Object.keys(filesInside);
+  const dynamicPages = [];
 
   for (const file of filePaths) {
     const relativePath = path.relative(entryDirectory, file);
@@ -213,6 +226,10 @@ function getRoutes(
       continue;
     }
 
+    if (pageName.startsWith('$') || pageName.includes('/$')) {
+      dynamicPages.push(normalizePage(pageName));
+    }
+
     routes.push({
       src: `${prefix}${pageName}`,
       dest: `${url}/${pageName}`,
@@ -227,6 +244,17 @@ function getRoutes(
       });
     }
   }
+
+  routes.push(
+    ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages).map(
+      (route: { src: string; dest: string }) => {
+        // convert to make entire RegExp match as one group
+        route.src = route.src.replace('^', '^(').replace('$', ')$');
+        route.dest = `${url}/$1`;
+        return route;
+      }
+    )
+  );
 
   // Add public folder routes
   for (const file of filePaths) {
@@ -247,6 +275,52 @@ function getRoutes(
     }
   }
 
+  return routes;
+}
+
+export function getDynamicRoutes(
+  entryPath: string,
+  entryDirectory: string,
+  dynamicPages: string[]
+): { src: string; dest: string }[] {
+  if (!dynamicPages.length) {
+    return [];
+  }
+
+  let getRouteRegex:
+    | ((pageName: string) => { re: RegExp })
+    | undefined = undefined;
+
+  let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
+
+  try {
+    ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
+      entryPath,
+      'next-server/dist/lib/router/utils'
+    )));
+    if (typeof getRouteRegex !== 'function') {
+      getRouteRegex = undefined;
+    }
+  } catch (_) {}
+
+  if (!getRouteRegex || !getSortedRoutes) {
+    throw new Error(
+      'Found usage of dynamic routes but not on a new enough version of Next.js.'
+    );
+  }
+
+  const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
+    pageName,
+    matcher: getRouteRegex!(pageName).re,
+  }));
+
+  const routes: { src: string; dest: string }[] = [];
+  pageMatchers.forEach(pageMatcher => {
+    routes.push({
+      src: pageMatcher.matcher.source,
+      dest: path.join('/', entryDirectory, pageMatcher.pageName),
+    });
+  });
   return routes;
 }
 
@@ -276,4 +350,5 @@ export {
   getRoutes,
   stringMap,
   syncEnvVars,
+  normalizePage,
 };
