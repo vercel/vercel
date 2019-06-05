@@ -159,7 +159,7 @@ export default async function main(ctx) {
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 3, meta });
+    deployments = await now.list(app, { version: 4, meta });
   } catch (err) {
     stopSpinner();
     throw err;
@@ -230,11 +230,11 @@ export default async function main(ctx) {
 
   stopSpinner();
   log(
-    `${plural(
-      'total deployment',
+    `Fetched ${plural(
+      'deployment',
       deployments.length,
       true
-    )} found under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -244,9 +244,9 @@ export default async function main(ctx) {
 
   // information to help the user find other deployments or instances
   if (app == null) {
-    log(`To list more deployments for an app run ${cmd('now ls [app]')}`);
+    log(`To list more deployments for a project run ${cmd('now ls [project]')}`);
   } else if (!argv['--all']) {
-    log(`To list deployment instances run ${cmd('now ls --all [app]')}`);
+    log(`To list deployment instances run ${cmd('now ls --all [project]')}`);
   }
 
   print('\n');
@@ -254,7 +254,7 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['project', 'url', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
         ...deployments
           .sort(sortRecent())
           .map(dep => [

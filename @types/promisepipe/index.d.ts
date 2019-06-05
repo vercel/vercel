@@ -1,8 +1,5 @@
 declare module 'promisepipe' {
-  import { ReadableStream, WritableStream } from 'stream'
-
   export default function (
-    stream: ReadableStream,
-    anotherStream: WritableStream,
+    ...streams: Array<NodeJS.ReadableStream | NodeJS.WritableStream | NodeJS.ReadWriteStream>
   ): Promise<void>
 }
