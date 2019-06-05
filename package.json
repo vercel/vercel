@@ -103,6 +103,7 @@
     "@types/node-fetch": "2.1.4",
     "@types/npm-package-arg": "6.1.0",
     "@types/pluralize": "0.0.29",
+    "@types/progress": "2.0.3",
     "@types/psl": "1.1.0",
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
