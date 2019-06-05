@@ -510,8 +510,8 @@ export const build = async ({
   ).map(route => {
     // make sure .html is added to dest for now until
     // outputting static files to clean routes is available
-    if (staticPages[route.dest]) {
-      route.dest += '.html';
+    if (staticPages[`${route.dest}.html`]) {
+      route.dest = `${route.dest}.html`;
     }
     return route;
   });
@@ -527,11 +527,11 @@ export const build = async ({
     routes: [
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
-      // Dynamic routes
-      ...dynamicRoutes,
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+      // Dynamic routes
+      ...dynamicRoutes,
     ],
     watch: [],
     childProcesses: [],
