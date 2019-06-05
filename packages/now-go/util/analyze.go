@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flag"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -166,7 +166,14 @@ func main() {
 			for _, ed := range exportedDecl {
 				if strings.Contains(se, ed) {
 					// find relative path of related file
-					rel, err := filepath.Rel(modPath, file)
+					var basePath string
+					if modPath == "" {
+						basePath = filepath.Dir(fileName)
+					} else {
+						basePath = modPath
+					}
+
+					rel, err := filepath.Rel(basePath, file)
 					if err != nil {
 						log.Fatal(err)
 					}
