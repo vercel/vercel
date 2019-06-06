@@ -1,7 +1,7 @@
 {
   "name": "@now/python",
   "version": "0.2.5",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "license": "MIT",
   "files": [
     "dist",
@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc && jest",
-    "prepublish": "tsc"
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "execa": "^1.0.0",
