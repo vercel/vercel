@@ -32,6 +32,10 @@
     "*.ts": [
       "prettier --write",
       "git add"
+    ],
+    "*.md": [
+      "prettier --write",
+      "git add"
     ]
   },
   "devDependencies": {
