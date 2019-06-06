@@ -9,14 +9,6 @@ export interface EnvConfig {
   [name: string]: string | undefined;
 }
 
-interface IScopeToEntry extends Function {
-  (this: string, route: string): string;
-}
-
-const scopeToEntry: IScopeToEntry = function(route) {
-  return path.join('/', this, route);
-};
-
 /**
  * Validate if the entrypoint is allowed to be used
  */
@@ -359,5 +351,4 @@ export {
   stringMap,
   syncEnvVars,
   normalizePage,
-  scopeToEntry,
 };
