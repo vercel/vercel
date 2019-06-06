@@ -1,6 +1,6 @@
 {
   "name": "@now/php",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
     "directory": "packages/now-php"
   },
   "dependencies": {
-    "@now/php-bridge": "^0.5.2"
+    "@now/php-bridge": "^0.5.3"
   },
   "scripts": {
     "test": "jest"

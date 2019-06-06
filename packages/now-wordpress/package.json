@@ -1,6 +1,6 @@
 {
   "name": "@now/wordpress",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
     "directory": "packages/now-wordpress"
   },
   "dependencies": {
-    "@now/php-bridge": "^0.5.2",
+    "@now/php-bridge": "^0.5.3",
     "node-fetch": "2.3.0",
     "yauzl": "2.10.0"
   },
