@@ -532,6 +532,14 @@ export const build = async ({
       { handle: 'filesystem' },
       // Dynamic routes
       ...dynamicRoutes,
+      ...(isLegacy
+        ? []
+        : [
+            {
+              src: path.join('/', entryDirectory, '.*'),
+              dest: path.join('/', entryDirectory, '_error'),
+            },
+          ]),
     ],
     watch: [],
     childProcesses: [],
