@@ -4,13 +4,14 @@ const { buildLayer } = require('../');
 
 describe('buildLayer', () => {
   it('should get npm 6 but not npm for windows', async () => {
-    const { files } = await buildLayer({
+    const { files, entrypoint } = await buildLayer({
       runtimeVersion: '6.9.0',
       platform: 'win32',
       arch: 'x64',
     });
     const names = new Set(Object.keys(files));
     expect(names).toBeTruthy();
+    expect(entrypoint).toBe('./bin/npm-cli.js');
     expect(names.size).toBeGreaterThan(0);
     expect(names.has('bin/npm.cmd')).toBeTruthy();
     expect(names.has('bin/npx.cmd')).toBeTruthy();
@@ -18,13 +19,14 @@ describe('buildLayer', () => {
   });
 
   it('should get npm 6 but not npm for macos', async () => {
-    const { files } = await buildLayer({
+    const { files, entrypoint } = await buildLayer({
       runtimeVersion: '6.9.0',
       platform: 'darwin',
       arch: 'x64',
     });
     const names = new Set(Object.keys(files));
     expect(names).toBeTruthy();
+    expect(entrypoint).toBe('./bin/npm-cli.js');
     expect(names.size).toBeGreaterThan(0);
     expect(names.has('bin/npm')).toBeTruthy();
     expect(names.has('bin/npx')).toBeTruthy();
@@ -32,13 +34,14 @@ describe('buildLayer', () => {
   });
 
   it('should get npm 6 but not npm for linux', async () => {
-    const { files } = await buildLayer({
+    const { files, entrypoint } = await buildLayer({
       runtimeVersion: '6.9.0',
       platform: 'linux',
       arch: 'x64',
     });
     const names = new Set(Object.keys(files));
     expect(names).toBeTruthy();
+    expect(entrypoint).toBe('./bin/npm-cli.js');
     expect(names.size).toBeGreaterThan(0);
     expect(names.has('bin/npm')).toBeTruthy();
     expect(names.has('bin/npx')).toBeTruthy();

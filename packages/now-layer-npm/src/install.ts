@@ -1,3 +1,4 @@
+import { join } from 'path';
 import fetch from 'node-fetch';
 import { extract } from 'tar';
 import pipe from 'promisepipe';
@@ -20,4 +21,9 @@ export async function install(dest: string, version: string) {
     res.body,
     extractStream
   );
+
+  const pathToManifest = join(dest, 'package.json');
+  const manifest = require(pathToManifest);
+  const entrypoint = manifest.bin.npm;
+  return { entrypoint };
 }
