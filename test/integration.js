@@ -1348,10 +1348,16 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 });
 
+test('whoami', async t => {
+  const { code, stdout, stderr } = await execute(['whoami']);
+  t.is(code, 0);
+  t.is(stdout, contextName);
+});
+
 test('try to update now to canary', async t => {
   const { code } = await execute(['update', '--channel', 'canary', '--yes']);
   t.is(code, 0);
-  
+
   const { stdout } = await execute(['--version']);
   t.true(stdout.includes('canary'));
 });
