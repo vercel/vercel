@@ -1158,7 +1158,14 @@
     globby "8.0.0"
     signal-exit "3.0.2"
 
-"@zeit/ncc@0.18.5":
+"@zeit/ncc-watcher@1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@zeit/ncc-watcher/-/ncc-watcher-1.0.3.tgz#c4569d13db7b80a96a7672047c069400e69913ae"
+  integrity sha512-367wm9bGMBCwT8kHQckw8UY/iYhC9rdzj357FBoM0SjVvWv53yziEmd12RkeF1EsBs0F2a1uBYdUaUvGo6LfkA==
+  dependencies:
+    "@zeit/ncc" "^0.18.5"
+
+"@zeit/ncc@0.18.5", "@zeit/ncc@^0.18.5":
   version "0.18.5"
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.18.5.tgz#5687df6c32f1a2e2486aa110b3454ccebda4fb9c"
   integrity sha512-F+SbvEAh8rchiRXqQbmD1UmbePY7dCOKTbvfFtbVbK2xMH/tyri5YKfNxXKK7eL9EWkkbqB3NTVQO6nokApeBA==

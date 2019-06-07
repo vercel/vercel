@@ -12,7 +12,7 @@ it(
   'Should build the airtable folder',
   async () => {
     const { buildResult } = await runBuildForFolder('airtable');
-    expect(buildResult['index.js']).toBeDefined();
+    expect(buildResult.output['index.js']).toBeDefined();
   },
   TWO_MINUTES,
 );
@@ -21,7 +21,7 @@ it(
   'Should build the aws-sdk folder',
   async () => {
     const { buildResult } = await runBuildForFolder('aws-sdk');
-    expect(buildResult['index.js']).toBeDefined();
+    expect(buildResult.output['index.js']).toBeDefined();
   },
   TWO_MINUTES,
 );
@@ -30,7 +30,7 @@ it(
   'Should build the axios folder',
   async () => {
     const { buildResult } = await runBuildForFolder('axios');
-    expect(buildResult['index.js']).toBeDefined();
+    expect(buildResult.output['index.js']).toBeDefined();
   },
   TWO_MINUTES,
 );
@@ -39,7 +39,7 @@ it(
   'Should build the mongoose folder',
   async () => {
     const { buildResult } = await runBuildForFolder('mongoose');
-    expect(buildResult['index.js']).toBeDefined();
+    expect(buildResult.output['index.js']).toBeDefined();
   },
   TWO_MINUTES,
 );
