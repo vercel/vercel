@@ -82,13 +82,13 @@ async function testDeployment (
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
-    const { text, resp } = await fetchDeploymentUrl(probeUrl, {
-      method: probe.method,
-      body: probe.body ? JSON.stringify(probe.body) : undefined,
-      headers: {
-        'content-type': 'application/json',
-      },
-    });
+    const fetchOpts = { method: probe.method, headers: { ...probe.headers } };
+    if (probe.body) {
+      fetchOpts.headers['content-type'] = 'application/json';
+      fetchOpts.body = JSON.stringify(probe.body);
+    }
+    const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
+
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
         await fs.writeFile(path.join(__dirname, 'failed-page.txt'), text);
