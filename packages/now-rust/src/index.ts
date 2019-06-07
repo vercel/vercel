@@ -179,7 +179,7 @@ async function buildSingleFile(
   rustEnv: Record<string, string>
 ) {
   console.log('building single file');
-  const launcherPath = path.join(__dirname, 'launcher.rs');
+  const launcherPath = path.join(__dirname, '..', 'launcher.rs');
   let launcherData = await fs.readFile(launcherPath, 'utf8');
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
