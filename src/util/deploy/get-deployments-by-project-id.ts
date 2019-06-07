@@ -30,7 +30,7 @@ export default async function getDeploymentsByProjectId(
   const limit = options.limit || 100;
 
   const query = new URLSearchParams();
-  query.set('projcetId', projectId);
+  query.set('projectId', projectId);
   query.set('limit', limit.toString());
 
   if (options.from) {
