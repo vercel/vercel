@@ -119,7 +119,10 @@ async function buildWholeProject(
   return lambdas;
 }
 
-async function gatherExtraFiles(globMatcher: string, entrypoint: string) {
+async function gatherExtraFiles(
+  globMatcher: string | string[] | undefined,
+  entrypoint: string
+) {
   if (!globMatcher) return {};
 
   console.log('gathering extra files for the fs...');
