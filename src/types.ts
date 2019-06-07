@@ -215,3 +215,11 @@ export type DNSRecordData = {
   type: string,
   value: string,
 } | SRVRecordData | MXRecordData;
+
+export interface Project {
+  id: string;
+  name: string;
+  accountId: string;
+  updatedAt: number;
+  createdAt: number;
+}

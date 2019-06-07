@@ -13,6 +13,10 @@ import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
+import { NowError } from '../util/now-error';
+import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
+import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
+import { getAllDeploymentsByProjectId } from '../util/deploy/get-deployments-by-project-id';
 
 const help = () => {
   console.log(`
@@ -124,7 +128,30 @@ export default async function main(ctx) {
   const findStart = Date.now();
 
   try {
-    deployments = await now.list(null, { version: 4 });
+    const deploymentListPromise = ids.map((idOrHost) => getDeploymentByIdOrHost(now, contextName, idOrHost));
+    const projectListPromise = ids.map(async (projectName) => {
+      try {
+        const project = await getProjectByIdOrName(now, projectName);
+
+        if (project && project.id) {
+          const deployments = await getAllDeploymentsByProjectId(now, project.id);
+          return deployments;
+        }
+      } catch (err) {
+        if (err.status !== 404) {
+          throw err;
+        }
+      }
+    });
+
+    const [deploymentList, projectList] = await Promise.all([
+      Promise.all(deploymentListPromise),
+      Promise.all(projectListPromise)
+    ]);
+
+    deployments = [...deploymentList, ...(projectList.flat())].filter((deployment) => {
+      return deployment && (deployment instanceof NowError) === false
+    });
   } catch (err) {
     cancelWait();
     throw err;
