@@ -134,3 +134,25 @@ test('[dev-router] match without prefix slash', async t => {
     userDest: true
   });
 });
+
+test('[dev-router] match with needed prefixed slash', async t => {
+  const routesConfig = [{
+    src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
+    dest: '/some/dest'
+  }];
+  const result = await devRouter('/post-1/comments', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/some/dest',
+    userDest: true,
+    status: undefined,
+    headers: undefined,
+    uri_args: {},
+    matched_route: {
+      src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
+      dest: '/some/dest'
+    },
+    matched_route_idx: 0
+  })
+})
