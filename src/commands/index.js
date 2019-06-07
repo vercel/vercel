@@ -33,5 +33,6 @@ export default {
   team: 'teams',
   teams: 'teams',
   update: 'update',
-  upgrade: 'upgrade'
+  upgrade: 'upgrade',
+  whoami: 'whoami'
 };
