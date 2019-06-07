@@ -16,7 +16,14 @@ export interface Files {
 }
 
 export interface Config {
-  [key: string]: string;
+  [key: string]: string | string[] | boolean | number | undefined;
+  maxLambdaSize?: string;
+  includeFiles?: string | string[];
+  bundle?: boolean;
+  ldsflags?: string;
+  helpers?: boolean;
+  rust?: string;
+  debug?: boolean;
 }
 
 export interface Meta {

@@ -16,6 +16,7 @@ import {
   BuildOptions,
   shouldServe,
 } from '@now/build-utils';
+export { NowRequest, NowResponse } from './types';
 
 interface CompilerConfig {
   includeFiles?: string | string[];
@@ -174,6 +175,8 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
+  const shouldAddHelpers = !(config && config.helpers === false);
+
   const {
     entrypointPath,
     entrypointFsDirname,
@@ -204,13 +207,22 @@ export async function build({
     [
       `listener = require("./${entrypoint}");`,
       'if (listener.default) listener = listener.default;',
+      shouldAddHelpers
+        ? 'listener = require("./helpers").addHelpers(listener)'
+        : '',
     ].join(' ')
   );
 
-  const launcherFiles = {
+  const launcherFiles: Files = {
     'launcher.js': new FileBlob({ data: launcherData }),
     'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
   };
+
+  if (shouldAddHelpers) {
+    launcherFiles['helpers.js'] = new FileFsRef({
+      fsPath: join(__dirname, 'helpers.js'),
+    });
+  }
 
   const lambda = await createLambda({
     files: { ...preparedFiles, ...launcherFiles },
