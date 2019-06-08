@@ -510,7 +510,7 @@ export const build = async ({
   ).map(route => {
     // make sure .html is added to dest for now until
     // outputting static files to clean routes is available
-    if (staticPages[`${route.dest}.html`]) {
+    if (staticPages[`${route.dest}.html`.substr(1)]) {
       route.dest = `${route.dest}.html`;
     }
     return route;
