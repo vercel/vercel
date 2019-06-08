@@ -156,3 +156,25 @@ test('[dev-router] match with needed prefixed slash', async t => {
     matched_route_idx: 0
   })
 })
+
+test('[dev-router] `continue: true`', async t => {
+  const routesConfig = [
+    {
+      src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
+      continue: true,
+      headers: {
+        'cache-control': 'immutable,max-age=31536000'
+      }
+    }
+  ];
+  const result = await devRouter('/_next/static/chunks/0.js', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: false,
+    dest: '/_next/static/chunks/0.js',
+    uri_args: {},
+    headers: {
+      'cache-control': 'immutable,max-age=31536000'
+    }
+  })
+})
