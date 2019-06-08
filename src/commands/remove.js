@@ -149,7 +149,7 @@ export default async function main(ctx) {
       Promise.all(projectListPromise)
     ]);
 
-    deployments = [...deploymentList, ...(projectList.flat())].filter((deployment) => {
+    deployments = [...deploymentList, ...([].concat(...projectList))].filter((deployment) => {
       return deployment && (deployment instanceof NowError) === false
     });
   } catch (err) {
