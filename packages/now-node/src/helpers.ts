@@ -3,6 +3,7 @@ import { Stream } from 'stream';
 import getRawBody from 'raw-body';
 import { URL } from 'url';
 import { parse as parseCT } from 'content-type';
+import { RequestListener } from 'http';
 import { NowRequest, NowResponse } from './types';
 
 type NowListener = (req: NowRequest, res: NowResponse) => void | Promise<void>;
@@ -125,8 +126,11 @@ export function sendError(
   res.end();
 }
 
-export function addHelpers(listener: NowListener): NowListener {
-  return async function(req, res) {
+export function addHelpers(listener: NowListener): RequestListener {
+  return async function(_req, _res) {
+    const req = _req as NowRequest;
+    const res = _res as NowResponse;
+
     try {
       req.cookies = parseCookies(req.headers.cookie || '');
       req.query = parseQuery(req);
