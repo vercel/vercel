@@ -210,6 +210,9 @@ export default async function main(ctx) {
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
       now.close();
+
+      // Hangs otherwise
+      process.exit(1);
       return 1;
     }
   }
