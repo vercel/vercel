@@ -28,7 +28,7 @@ test('[dev-router] captured groups', async t => {
     found: true,
     dest: '/endpoints/user.js',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -44,7 +44,7 @@ test('[dev-router] named groups', async t => {
     found: true,
     dest: '/user.js',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: { id: '123' },
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -53,17 +53,19 @@ test('[dev-router] named groups', async t => {
 });
 
 test('[dev-router] optional named groups', async t => {
-  const routesConfig = [{
-    src: '/api/hello(/(?<name>[^/]+))?',
-    dest: '/api/functions/hello/index.js?name=$name'
-  }];
+  const routesConfig = [
+    {
+      src: '/api/hello(/(?<name>[^/]+))?',
+      dest: '/api/functions/hello/index.js?name=$name'
+    }
+  ];
   const result = await devRouter('/api/hello', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
     dest: '/api/functions/hello/index.js',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: { name: '' },
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -80,7 +82,7 @@ test('[dev-router] proxy_pass', async t => {
     found: true,
     dest: 'https://zeit.co',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -99,7 +101,7 @@ test('[dev-router] methods', async t => {
     found: true,
     dest: '/get',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: routesConfig[1],
     matched_route_idx: 1,
@@ -111,7 +113,7 @@ test('[dev-router] methods', async t => {
     found: true,
     dest: '/post',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -127,7 +129,7 @@ test('[dev-router] match without prefix slash', async t => {
     found: true,
     dest: '/endpoints/user.js',
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -136,10 +138,12 @@ test('[dev-router] match without prefix slash', async t => {
 });
 
 test('[dev-router] match with needed prefixed slash', async t => {
-  const routesConfig = [{
-    src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
-    dest: '/some/dest'
-  }];
+  const routesConfig = [
+    {
+      src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
+      dest: '/some/dest'
+    }
+  ];
   const result = await devRouter('/post-1/comments', 'GET', routesConfig);
 
   t.deepEqual(result, {
@@ -147,12 +151,75 @@ test('[dev-router] match with needed prefixed slash', async t => {
     dest: '/some/dest',
     userDest: true,
     status: undefined,
-    headers: undefined,
+    headers: {},
     uri_args: {},
     matched_route: {
       src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
       dest: '/some/dest'
     },
     matched_route_idx: 0
-  })
-})
+  });
+});
+
+test('[dev-router] `continue: true` with fallthrough', async t => {
+  const routesConfig = [
+    {
+      src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
+      continue: true,
+      headers: {
+        'cache-control': 'immutable,max-age=31536000'
+      }
+    }
+  ];
+  const result = await devRouter(
+    '/_next/static/chunks/0.js',
+    'GET',
+    routesConfig
+  );
+
+  t.deepEqual(result, {
+    found: false,
+    dest: '/_next/static/chunks/0.js',
+    uri_args: {},
+    headers: {
+      'cache-control': 'immutable,max-age=31536000'
+    }
+  });
+});
+
+test('[dev-router] `continue: true` with match', async t => {
+  const routesConfig = [
+    {
+      src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
+      continue: true,
+      headers: {
+        'cache-control': 'immutable,max-age=31536000'
+      }
+    },
+    {
+      src: '/(.*)',
+      dest: '/hi'
+    }
+  ];
+  const result = await devRouter(
+    '/_next/static/chunks/0.js',
+    'GET',
+    routesConfig
+  );
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/hi',
+    status: undefined,
+    userDest: true,
+    uri_args: {},
+    headers: {
+      'cache-control': 'immutable,max-age=31536000'
+    },
+    matched_route: {
+      src: '/(.*)',
+      dest: '/hi'
+    },
+    matched_route_idx: 1
+  });
+});

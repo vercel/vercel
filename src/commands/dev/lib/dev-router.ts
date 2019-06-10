@@ -4,7 +4,12 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './dev-server';
 
-import { BuilderInputs, RouteConfig, RouteResult } from './types';
+import {
+  BuilderInputs,
+  HttpHeadersConfig,
+  RouteConfig,
+  RouteResult
+} from './types';
 
 export function resolveRouteParameters(
   str: string,
@@ -33,6 +38,7 @@ export default async function(
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+  const combinedHeaders: HttpHeadersConfig = {};
 
   // If the pathname starts with a `/` then strip it
   if (reqPathname.startsWith('/')) {
@@ -71,7 +77,8 @@ export default async function(
 
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
-      const match = matcher.exec(reqPathname) || matcher.exec(`/${reqPathname}`);
+      const match =
+        matcher.exec(reqPathname) || matcher.exec(`/${reqPathname}`);
 
       if (match) {
         let destPath: string = `/${reqPathname}`;
@@ -86,6 +93,12 @@ export default async function(
           for (const key of Object.keys(headers)) {
             headers[key] = resolveRouteParameters(headers[key], match, keys);
           }
+
+          Object.assign(combinedHeaders, headers);
+        }
+
+        if (routeConfig.continue) {
+          continue;
         }
 
         if (isURL(destPath)) {
@@ -94,7 +107,7 @@ export default async function(
             dest: destPath,
             userDest: false,
             status: routeConfig.status,
-            headers,
+            headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
@@ -110,7 +123,7 @@ export default async function(
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
             status: routeConfig.status,
-            headers,
+            headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx
@@ -125,7 +138,8 @@ export default async function(
     found = {
       found: false,
       dest: `/${reqPathname}`,
-      uri_args: query
+      uri_args: query,
+      headers: combinedHeaders
     };
   }
 
