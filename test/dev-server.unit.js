@@ -5,8 +5,8 @@ import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { createServer } from 'http';
 import createOutput from '../src/util/output';
-import DevServer from '../src/commands/dev/lib/dev-server';
-import { installBuilders } from '../src/commands/dev/lib/builder-cache';
+import DevServer from '../src/util/dev/server';
+import { installBuilders } from '../src/util/dev/builder-cache';
 
 function testFixture(name, fn) {
   return async t => {

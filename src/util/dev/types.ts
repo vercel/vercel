@@ -2,7 +2,7 @@ import http from 'http';
 import { ChildProcess } from 'child_process';
 import { Lambda as FunLambda } from '@zeit/fun';
 import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
-import { Output } from '../../../util/output';
+import { Output } from '../output';
 
 export interface DevServerOptions {
   output: Output;

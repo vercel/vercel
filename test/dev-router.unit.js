@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import devRouter from '../src/commands/dev/lib/dev-router';
+import devRouter from '../src/util/dev/router';
 
 test('[dev-router] 301 redirection', async t => {
   const routesConfig = [

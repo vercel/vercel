@@ -1,11 +1,10 @@
 import path from 'path';
 import chalk from 'chalk';
 
+import pkg from '../../../package.json';
+import DevServer from '../../util/dev/server';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
-import pkg from '../../../package.json';
-
-import DevServer from './lib/dev-server';
 
 type Options = {
   '--debug': boolean;
