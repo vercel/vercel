@@ -119,12 +119,15 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 /**
  * Install a list of builders to the cache directory.
  */
-export async function installBuilders(packagesSet: Set<string>, yarnDir: string): Promise<void> {
+export async function installBuilders(
+  packagesSet: Set<string>,
+  yarnDir: string
+): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
-    packages.length === 0 || (
-    packages.length === 1 &&
-    Object.hasOwnProperty.call(localBuilders, packages[0]))
+    packages.length === 0 ||
+    (packages.length === 1 &&
+      Object.hasOwnProperty.call(localBuilders, packages[0]))
   ) {
     // Static deployment, no builders to install
     return;

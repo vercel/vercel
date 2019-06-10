@@ -6,7 +6,7 @@
  */
 const { FileFsRef } = require('@now/build-utils');
 
-process.on('unhandledRejection', (err) => {
+process.on('unhandledRejection', err => {
   console.error('Exiting builder due to build error:');
   console.error(err);
   process.exit(1);
