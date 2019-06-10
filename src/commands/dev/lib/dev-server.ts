@@ -143,11 +143,10 @@ export default class DevServer {
     if (filesChanged.has('now.json') || filesRemoved.has('now.json')) {
       // The `now.json` file was changed, so invalidate the in-memory copy
       this.output.debug('Invalidating cached `now.json`');
-      this.cachedNowJson = null;
     }
 
     // Update the build matches in case an entrypoint was created or deleted
-    const nowJson = await this.getNowJson();
+    const nowJson = await this.getNowJson(false);
     await this.updateBuildMatches(nowJson);
 
     const filesChangedArray = [...filesChanged];
@@ -305,8 +304,8 @@ export default class DevServer {
     return { ...base, ...env };
   }
 
-  async getNowJson(): Promise<NowConfig> {
-    if (this.cachedNowJson) {
+  async getNowJson(canUseCache: boolean = true): Promise<NowConfig> {
+    if (canUseCache && this.cachedNowJson) {
       return this.cachedNowJson;
     }
 
@@ -315,7 +314,7 @@ export default class DevServer {
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
-    let config: NowConfig = { version: 2 };
+    let config: NowConfig = this.cachedNowJson || { version: 2 };
 
     try {
       config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
@@ -323,6 +322,10 @@ export default class DevServer {
       if (err.code === 'ENOENT') {
         this.output.note(
           'No `now.json` file present, serving all files as static'
+        );
+      } else if (err.name === 'SyntaxError') {
+        this.output.warn(
+          `There is a syntax error in the \`now.json\` file: ${err.message}`
         );
       } else {
         throw err;
