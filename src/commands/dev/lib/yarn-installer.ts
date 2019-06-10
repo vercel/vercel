@@ -35,7 +35,7 @@ function getSha1(filePath: string): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const hash = createHash('sha1');
     const stream = createReadStream(filePath);
-    stream.on('error', (err) => {
+    stream.on('error', err => {
       if (err.code === 'ENOENT') {
         resolve(null);
       } else {
@@ -63,14 +63,20 @@ async function installYarn(output: Output): Promise<string> {
   output.debug(`Finished creating ${dirName}`);
 
   output.debug(`Downloading ${YARN_URL}`);
-  const response = await fetch(YARN_URL, { compress: false, redirect: 'follow' });
+  const response = await fetch(YARN_URL, {
+    compress: false,
+    redirect: 'follow'
+  });
 
   if (response.status !== 200) {
     throw new Error(`Received invalid response: ${await response.text()}`);
   }
 
   const target = createWriteStream(yarnBin);
-  await pipe(response.body, target);
+  await pipe(
+    response.body,
+    target
+  );
   output.debug(`Finished downloading yarn ${yarnBin}`);
 
   output.debug(`Making the yarn binary executable`);
@@ -80,12 +86,15 @@ async function installYarn(output: Output): Promise<string> {
   if (process.platform === 'win32') {
     // The `yarn.cmd` file is necessary for `yarn` to be executable
     // when running `now dev` through cmd.exe
-    await writeFile(`${yarnBin}.cmd`, [
-      '@echo off',
-      '@SETLOCAL',
-      '@SET PATHEXT=%PATHEXT:;.JS;=;%',
-      'node "%~dp0\\yarn" %*'
-    ].join('\r\n'));
+    await writeFile(
+      `${yarnBin}.cmd`,
+      [
+        '@echo off',
+        '@SETLOCAL',
+        '@SET PATHEXT=%PATHEXT:;.JS;=;%',
+        'node "%~dp0\\yarn" %*'
+      ].join('\r\n')
+    );
   }
 
   return dirName;

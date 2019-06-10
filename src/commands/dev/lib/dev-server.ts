@@ -98,15 +98,12 @@ export default class DevServer {
   enqueueFsEvent(type: string, path: string): void {
     this.watchAggregationEvents.push({ type, path });
     if (this.watchAggregationId === null) {
-      this.watchAggregationId = setTimeout(
-        () => {
-          const events = this.watchAggregationEvents.slice();
-          this.watchAggregationEvents.length = 0;
-          this.watchAggregationId = null;
-          this.handleFilesystemEvents(events);
-        },
-        this.watchAggregationTimeout
-      );
+      this.watchAggregationId = setTimeout(() => {
+        const events = this.watchAggregationEvents.slice();
+        this.watchAggregationEvents.length = 0;
+        this.watchAggregationId = null;
+        this.handleFilesystemEvents(events);
+      }, this.watchAggregationTimeout);
     }
   }
 
@@ -118,25 +115,12 @@ export default class DevServer {
 
     // First, update the `files` mapping of source files
     for (const event of events) {
-      // TODO: for some reason the type inference isn't working, hence the casting
       if (event.type === 'add') {
-        await this.handleFileCreated(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        await this.handleFileCreated(event.path, filesChanged, filesRemoved);
       } else if (event.type === 'unlink') {
-        this.handleFileDeleted(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        this.handleFileDeleted(event.path, filesChanged, filesRemoved);
       } else if (event.type === 'change') {
-        await this.handleFileModified(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        await this.handleFileModified(event.path, filesChanged, filesRemoved);
       }
     }
 
