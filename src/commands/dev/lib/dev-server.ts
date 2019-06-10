@@ -576,11 +576,11 @@ export default class DevServer {
     const { host } = req.headers;
     return {
       ...req.headers,
-      'X-Forwarded-Host': host,
-      'X-Forwarded-Proto': 'http',
-      'X-Forwarded-For': ip,
-      'X-Real-IP': ip,
       Connection: 'close',
+      'x-forwarded-host': host,
+      'x-forwarded-proto': 'http',
+      'x-forwarded-for': ip,
+      'x-real-ip': ip,
       'x-now-trace': 'dev1',
       'x-now-deployment-url': host,
       'x-now-id': nowRequestId,
