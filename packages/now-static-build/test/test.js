@@ -18,10 +18,15 @@ beforeAll(async () => {
 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
+const testsThatFailToBuild = new Set([
+  '04-wrong-dist-dir',
+  '05-empty-dist-dir',
+  '06-missing-script',
+]);
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (fixture === '04-wrong-dist-dir') {
+  if (testsThatFailToBuild.has(fixture)) {
     // eslint-disable-next-line no-loop-func
     it(`should not build ${fixture}`, async () => {
       try {
