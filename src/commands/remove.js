@@ -14,9 +14,9 @@ import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { NowError } from '../util/now-error';
+import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
-import { getAllDeploymentsByProjectId } from '../util/deploy/get-deployments-by-project-id';
 
 const help = () => {
   console.log(`
@@ -124,54 +124,38 @@ export default async function main(ctx) {
       .join(' ')} in ${chalk.bold(contextName)}`
   );
 
+  let aliases;
+  let projects;
   let deployments;
   const findStart = Date.now();
 
   try {
-    const deploymentListPromise = ids.map((idOrHost) => getDeploymentByIdOrHost(now, contextName, idOrHost));
-    const projectListPromise = ids.map(async (projectName) => {
-      try {
-        const project = await getProjectByIdOrName(now, projectName);
-
-        if (project && project.id) {
-          const deployments = await getAllDeploymentsByProjectId(now, project.id);
-          return deployments;
-        }
-      } catch (err) {
-        if (err.status !== 404) {
-          throw err;
-        }
-      }
-    });
+    const searchFilter = (d) => ids.some((id) => (
+      (d && !(d instanceof NowError)) && (
+      d.uid === id ||
+      d.name === id ||
+      d.url === normalizeURL(id)
+    )));
 
     const [deploymentList, projectList] = await Promise.all([
-      Promise.all(deploymentListPromise),
-      Promise.all(projectListPromise)
+      Promise.all(ids.map((idOrHost) => getDeploymentByIdOrHost(now, contextName, idOrHost))),
+      Promise.all(ids.map(async (idOrName) => getProjectByIdOrName(now, idOrName)))
     ]);
 
-    deployments = [...deploymentList, ...([].concat(...projectList))].filter((deployment) => {
-      return deployment && (deployment instanceof NowError) === false
-    });
-  } catch (err) {
-    cancelWait();
-    throw err;
-  }
+    deployments = deploymentList.filter(searchFilter);
+    projects = projectList.filter(searchFilter);
 
-  let matches = deployments.filter(d =>
-    ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id))
-  );
+    // Remove all deployments that are included in the projects
+    deployments = deployments.filter((d) => !projects.some((p) => p.name === d.name));
 
-  let aliases;
-
-  try {
-    aliases = await Promise.all(matches.map(depl => getAliases(now, depl.uid)));
+    aliases = await Promise.all(deployments.map(depl => getAliases(now, depl.uid)));
     cancelWait();
   } catch (err) {
     cancelWait();
     throw err;
   }
 
-  matches = matches.filter((match, i) => {
+  deployments = deployments.filter((match, i) => {
     if (argv.safe && aliases[i].length > 0) {
       return false;
     }
@@ -180,30 +164,25 @@ export default async function main(ctx) {
     return true;
   });
 
-  if (matches.length === 0) {
+  if (deployments.length === 0 && projects.length === 0) {
     log(
-      `Could not find ${argv.safe
-        ? 'unaliased'
-        : 'any'} deployments matching ${ids
-        .map(id => chalk.bold(`"${id}"`))
-        .join(', ')}. Run ${cmd('now ls')} to list.`
+      `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
+      `or projects matching ` +
+      `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd('now ls')} to list.`
     );
     return 0;
   }
 
   log(
-    `Found ${plural(
-      'deployment',
-      matches.length,
-      true
-    )} for removal in ${chalk.bold(contextName)} ${elapsed(
-      Date.now() - findStart
-    )}`
+    `Found ${plural('deployment', deployments.length, true)} and ` +
+    `${plural('project', projects.length, true)} for removal in ` +
+    `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
 
   if (!skipConfirmation) {
     const confirmation = (await readConfirmation(
-      matches,
+      deployments,
+      projects,
       output
     )).toLowerCase();
 
@@ -219,15 +198,23 @@ export default async function main(ctx) {
 
   const start = new Date();
 
-  await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })));
+  await Promise.all([
+    ...deployments.map(depl => now.remove(depl.uid, { hard })),
+    ...projects.map(project => removeProject(now, project.id))
+  ]);
 
   success(
-    `${plural('deployment', matches.length, true)} removed ${elapsed(
-      Date.now() - start
-    )}`
+    `${plural('deployment', deployments.length, true)} ` +
+    `and ${plural('project', projects.length, true)} ` +
+    `removed ${elapsed(Date.now() - start)}`
   );
-  matches.forEach(depl => {
+
+  deployments.forEach(depl => {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
+  });
+
+  projects.forEach(project => {
+    console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
   });
 
   // if we close normally, we get a really odd error:
@@ -241,35 +228,39 @@ export default async function main(ctx) {
   return 0;
 }
 
-function readConfirmation(matches, output) {
+function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
     output.log(
-      `The following ${plural(
-        'deployment',
-        matches.length,
-        true
-      )} will be permanently removed:`
+      `The following ${plural('deployment', deployments.length, true)} ` +
+      `and ${plural('project', projects.length, true)} will be permanently removed:`
     );
 
-    const tbl = table(
-      matches.map(depl => {
-        const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
-        const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return [`  ${depl.uid}`, url, time];
-      }),
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
-    output.print(`${tbl}\n`);
+    if (deployments.length > 0) {
+      const deploymentTable = table(
+        deployments.map(depl => {
+          const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
+          const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
+          return [`  ${depl.uid}`, url, time];
+        }),
+        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+      );
+      output.print(`${deploymentTable}\n`);
+    }
 
-    for (const depl of matches) {
-      for (const alias of depl.aliases) {
+    for (const depl of deployments) {
+      for (const {alias} of depl.aliases) {
         output.warn(
-          `Deployment ${chalk.bold(depl.url)} ` +
-            `is an alias for ${chalk.underline(
-              `https://${alias.alias}`
-            )} and will be removed.`
+          `${chalk.underline(`https://${alias}`)} is an alias for ` +
+          `${chalk.bold(depl.url)} and will be removed`
         );
       }
+    }
+
+    for (const project of projects) {
+      output.warn(
+        `The project ${chalk.bold(project.name)} will be permanently removed, ` +
+        `including all of its deployments and aliases`
+      );
     }
 
     output.print(
