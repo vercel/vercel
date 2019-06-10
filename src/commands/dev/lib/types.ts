@@ -34,6 +34,7 @@ export interface RouteConfig {
   headers?: HttpHeadersConfig;
   status?: number;
   handle?: string;
+  continue?: boolean;
 }
 
 export interface NowConfig {
