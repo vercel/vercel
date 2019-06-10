@@ -10,12 +10,13 @@ import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
-import DevServer from './dev-server';
-import { Output } from '../../../util/output';
-import { relative } from '../../../util/path-helpers';
-import { LambdaSizeExceededError } from '../../../util/errors-ts';
+import { Output } from '../output';
+import { relative } from '../path-helpers';
+import { LambdaSizeExceededError } from '../errors-ts';
+import { staticFiles as getFiles } from '../get-files';
+
+import DevServer from './server';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
-import { staticFiles as getFiles } from '../../../util/get-files';
 import {
   EnvConfig,
   NowConfig,

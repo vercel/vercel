@@ -2,7 +2,7 @@ import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
-import DevServer from './dev-server';
+import DevServer from './server';
 
 import {
   BuilderInputs,
