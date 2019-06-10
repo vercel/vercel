@@ -1,22 +1,23 @@
 import chalk from 'chalk';
 import execa from 'execa';
-import { createHash } from 'crypto';
-import { join, resolve } from 'path';
 import npa from 'npm-package-arg';
 import mkdirp from 'mkdirp-promise';
+import { createHash } from 'crypto';
+import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
 import { readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
 
-import * as staticBuilder from './static-builder';
-import { BuilderWithPackage, Package } from './types';
-import wait from '../../../util/output/wait';
-import { Output } from '../../../util/output';
-import { devDependencies as nowCliDeps } from '../../../../package.json';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
-} from '../../../util/errors-ts';
+} from '../errors-ts';
+import wait from '../output/wait';
+import { Output } from '../output';
+import { devDependencies as nowCliDeps } from '../../../package.json';
+
+import * as staticBuilder from './static-builder';
+import { BuilderWithPackage, Package } from './types';
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
@@ -71,7 +72,7 @@ export async function prepareBuilderDir() {
 export async function prepareBuilderModulePath() {
   const [builderDir, builderContents] = await Promise.all([
     builderDirPromise,
-    readFile(join(__dirname, 'builder.js'))
+    readFile(join(__dirname, 'builder-worker.js'))
   ]);
   let needsWrite = false;
   const builderSha = getSha(builderContents);

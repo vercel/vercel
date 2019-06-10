@@ -14,20 +14,19 @@ import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
 
-import { once } from '../../../util/once';
-import { Output } from '../../../util/output';
-import { relative } from '../../../util/path-helpers';
-import getNowJsonPath from '../../../util/config/local-path';
+import { once } from '../once';
+import { Output } from '../output';
+import { relative } from '../path-helpers';
+import getNowJsonPath from '../config/local-path';
+import { MissingDotenvVarsError } from '../errors-ts';
+import { createIgnore, staticFiles as getFiles } from '../get-files';
+
 import isURL from './is-url';
-import devRouter from './dev-router';
+import devRouter from './router';
 import getMimeType from './mime-type';
-import { installBuilders } from './builder-cache';
 import { getYarnPath } from './yarn-installer';
-
-import { executeBuild, getBuildMatches } from './dev-builder';
-
-import { MissingDotenvVarsError } from '../../../util/errors-ts';
-import { createIgnore, staticFiles as getFiles } from '../../../util/get-files';
+import { installBuilders } from './builder-cache';
+import { executeBuild, getBuildMatches } from './builder';
 
 import {
   EnvConfig,

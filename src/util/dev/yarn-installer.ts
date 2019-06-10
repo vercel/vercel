@@ -12,7 +12,7 @@ import {
 import pipe from 'promisepipe';
 import { dirname, join } from 'path';
 import fetch from 'node-fetch';
-import { Output } from '../../../util/output/create-output';
+import { Output } from '../output/create-output';
 import { builderDirPromise } from './builder-cache';
 
 const YARN_VERSION = '1.15.2';
