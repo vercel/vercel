@@ -68,8 +68,9 @@ elif 'app' in __now_variables:
         if isinstance(body, string_types):
             body = to_bytes(body, charset='utf-8')
 
-        path = unquote(payload['path'])
-        query = urlparse(path).query
+        url = urlparse(unquote(payload['path']))
+        query = url.query
+        path = url.path
 
         environ = {
             'CONTENT_LENGTH': str(len(body)),
