@@ -132,10 +132,8 @@ export function createServerWithHelpers(
 
       const event = bridge.consumeEvent(reqId);
 
-      let cookies = req.headers.cookie;
-      if (Array.isArray(cookies)) {
-        cookies = cookies.join(';');
-      }
+      const c: undefined | string | string[] = req.headers.cookie;
+      const cookies = Array.isArray(c) ? c.join(';') : c;
 
       req.cookies = parseCookies(cookies || '');
       req.query = parseQuery(req);
