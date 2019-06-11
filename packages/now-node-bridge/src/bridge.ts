@@ -95,9 +95,13 @@ export class Bridge {
   private server: Server | null;
   private listening: Promise<AddressInfo>;
   private resolveListening: (info: AddressInfo) => void;
+  private events: { [key: string]: NowProxyRequest } = {};
+  private reqIdSeed: number = 1;
+  private shouldStoreEvents: boolean = false;
 
-  constructor(server?: Server) {
+  constructor(server?: Server, shouldStoreEvents: boolean = false) {
     this.server = null;
+    this.shouldStoreEvents = shouldStoreEvents;
     if (server) {
       this.setServer(server);
     }
@@ -144,15 +148,16 @@ export class Bridge {
     context.callbackWaitsForEmptyEventLoop = false;
     const { port } = await this.listening;
 
-    const { isApiGateway, method, path, headers, body } = normalizeEvent(event);
+    const normalizedEvent = normalizeEvent(event);
+    const { isApiGateway, method, path, headers, body } = normalizedEvent;
 
-    const opts = {
-      hostname: '127.0.0.1',
-      port,
-      path,
-      method,
-      headers,
-    };
+    if (this.shouldStoreEvents) {
+      const reqId = `${this.reqIdSeed++}`;
+      this.events[reqId] = normalizedEvent;
+      headers['x-now-bridge-request-id'] = reqId;
+    }
+
+    const opts = { hostname: '127.0.0.1', port, path, method, headers };
 
     // eslint-disable-next-line consistent-return
     return new Promise((resolve, reject) => {
@@ -191,5 +196,11 @@ export class Bridge {
       if (body) req.write(body);
       req.end();
     });
+  }
+
+  consumeEvent(reqId: string) {
+    const event = this.events[reqId];
+    delete this.events[reqId];
+    return event;
   }
 }
