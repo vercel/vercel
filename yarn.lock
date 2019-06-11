@@ -885,11 +885,6 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/node-bridge@^1.1.4-canary.1":
-  version "1.1.4"
-  resolved "https://registry.yarnpkg.com/@now/node-bridge/-/node-bridge-1.1.4.tgz#80b3311d90b1bf2d7e1fec4ad9f5b98bd1192dd6"
-  integrity sha512-P9hsw8EphqWxrD8hSBz8lq4O95R3Sbr2id5gKnjmX0b+coi1l0jiNAEgt9zWL6v44touQLDf4ed42HF+solAqA==
-
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@samverschueren/stream-to-observable/-/stream-to-observable-0.3.0.tgz#ecdf48d532c58ea477acfcab80348424f8d0662f"

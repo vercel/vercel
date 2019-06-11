@@ -8,7 +8,7 @@
     "directory": "packages/now-node-server"
   },
   "dependencies": {
-    "@now/node-bridge": "^1.1.4",
+    "@now/node-bridge": "1.1.4",
     "@zeit/ncc": "0.18.5",
     "fs-extra": "7.0.1"
   },
