@@ -3,16 +3,22 @@
   "builds": [
     { "src": "index.js", "use": "@now/node", "config": { "helpers": true } },
     { "src": "ts/index.ts", "use": "@now/node", "config": { "helpers": true } },
+    {
+      "src": "express-compat/index.js",
+      "use": "@now/node",
+      "config": { "helpers": true }
+    },
+    {
+      "src": "micro-compat/index.js",
+      "use": "@now/node",
+      "config": { "helpers": true }
+    },
     { "src": "no-helpers/index.js", "use": "@now/node" }
   ],
   "probes": [
     {
       "path": "/",
       "mustContain": "hello anonymous:RANDOMNESS_PLACEHOLDER"
-    },
-    {
-      "path": "/ts",
-      "mustContain": "hello:RANDOMNESS_PLACEHOLDER"
     },
     {
       "path": "/?who=bill",
@@ -28,6 +34,22 @@
       "path": "/",
       "headers": { "cookie": "who=chris" },
       "mustContain": "hello chris:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/ts",
+      "mustContain": "hello:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/express-compat",
+      "method": "POST",
+      "body": { "who": "sara" },
+      "mustContain": "hello sara:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/micro-compat",
+      "method": "POST",
+      "body": { "who": "katie" },
+      "mustContain": "hello katie:RANDOMNESS_PLACEHOLDER"
     },
     {
       "path": "/no-helpers/",

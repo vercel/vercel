@@ -9,6 +9,8 @@ if [ ! -e "$bridge_defs" ]; then
 fi
 
 cp -v "$bridge_defs" src
+
+# build ts files
 tsc
 
 # bundle helpers.ts with ncc
