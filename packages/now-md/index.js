@@ -39,4 +39,7 @@ exports.build = async ({ files, entrypoint, config }) => {
   return { [replacedEntrypoint]: result };
 };
 
-exports.shouldServe = shouldServe;
+exports.shouldServe = (options) => {
+  const requestPath = options.requestPath.replace(/\.html$/, '.md');
+  return shouldServe({ ...options, requestPath });
+};
