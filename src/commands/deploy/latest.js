@@ -46,7 +46,7 @@ const addProcessEnv = async (log, env) => {
   let val;
 
   for (const key of Object.keys(env)) {
-    if (typeof env[key] !== 'undefined') {
+    if (typeof env[key] !== 'undefined' && env[key] !== null) {
       continue;
     }
 

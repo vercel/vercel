@@ -95,7 +95,7 @@ const getNullFields = o => Object.keys(o).filter(k => o[k] === null);
 const addProcessEnv = async env => {
   let val;
   for (const key of Object.keys(env)) {
-    if (typeof env[key] !== 'undefined') continue;
+    if (typeof env[key] !== 'undefined' && env[key] !== null) continue;
     val = process.env[key];
     if (typeof val === 'string') {
       log(
