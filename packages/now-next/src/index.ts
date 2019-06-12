@@ -166,7 +166,7 @@ export const build = async ({
 
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const dotNext = path.join(entryPath, '.next');
+  const dotNextStatic = path.join(entryPath, '.next/static');
 
   console.log(`${name} Downloading user files...`);
   await download(files, workPath, meta);
@@ -227,7 +227,7 @@ export const build = async ({
     };
   }
 
-  if (await pathExists(dotNext)) {
+  if (await pathExists(dotNextStatic)) {
     console.warn(
       'WARNING: You should not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more details.'
     );
