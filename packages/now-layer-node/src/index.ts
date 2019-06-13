@@ -1,19 +1,9 @@
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { glob, Files } from '@now/build-utils';
-import { mkdir, remove, pathExists } from 'fs-extra';
+import { glob, BuildLayerConfig, BuildLayerResult } from '@now/build-utils';
+import { mkdir, remove, pathExists, copy, writeFile } from 'fs-extra';
 import { install } from './install';
-
-interface BuildLayerConfig {
-  runtimeVersion: string;
-  platform: string;
-  arch: string;
-}
-
-interface BuildLayerResult {
-  files: Files;
-  entrypoint: string;
-}
+import { bash, javascript } from '../bootstrap/contents';
 
 export async function buildLayer({
   runtimeVersion,
@@ -30,8 +20,17 @@ export async function buildLayer({
   }
   await mkdir(dir);
   const { entrypoint } = await install(dir, runtimeVersion, platform, arch);
-  const files = await glob('{bin/node,bin/node.exe,include/**}', {
-    cwd: dir,
-  });
+
+  const bootstrapDir = join(__dirname, '..', 'bootstrap');
+  const contents = platform === 'win32' ? javascript : bash;
+  await writeFile(join(dir, 'bootstrap'), contents);
+  await copy(join(bootstrapDir, 'now_init.js'), join(dir, 'now_init.js'));
+
+  const files = await glob(
+    '{bin/node,bin/node.exe,include/**,bootstrap,now_init.js}',
+    {
+      cwd: dir,
+    }
+  );
   return { files, entrypoint };
 }

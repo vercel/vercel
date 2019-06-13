@@ -52,8 +52,8 @@ export async function install(
 
 export function getUrl(
   version: string,
-  platform: string = process.platform,
-  arch: string = process.arch
+  platform: string,
+  arch: string
 ): string {
   let ext: string;
   let plat: string;

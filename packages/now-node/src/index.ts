@@ -12,7 +12,10 @@ import {
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
+  hasPackageLockJson,
+  PrepareLayersOptions,
   PrepareCacheOptions,
+  BuildLayerConfig,
   BuildOptions,
   shouldServe,
 } from '@now/build-utils';
@@ -27,7 +30,8 @@ interface DownloadOptions {
   entrypoint: string;
   workPath: string;
   meta: Meta;
-  npmArguments?: string[];
+  packageManagerArgs: string[];
+  packageManagerCmd: string | undefined;
 }
 
 const watchers: Map<string, NccWatcher> = new Map();
@@ -53,14 +57,19 @@ async function downloadInstallAndBundle({
   entrypoint,
   workPath,
   meta,
-  npmArguments = [],
+  packageManagerArgs,
+  packageManagerCmd,
 }: DownloadOptions) {
   console.log('downloading user files...');
   const downloadedFiles = await download(files, workPath, meta);
 
   console.log("installing dependencies for user's code...");
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  await runNpmInstall(entrypointFsDirname, npmArguments);
+  await runNpmInstall(
+    entrypointFsDirname,
+    packageManagerArgs,
+    packageManagerCmd
+  );
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname };
@@ -162,20 +171,76 @@ async function compile(
   return { preparedFiles, watch };
 }
 
+const layerNames = {
+  node: '@now/layer-node@0.0.2',
+  npm: '@now/layer-npm@0.0.2',
+  yarn: '@now/layer-yarn@0.0.2',
+};
+
 export const version = 2;
 
 export const config = {
   maxLambdaSize: '5mb',
 };
 
+export async function prepareLayers({
+  entrypoint,
+  config,
+}: PrepareLayersOptions) {
+  const { node = '8.10.0', npm = '5.6.0', yarn = '1.13.0' } = config;
+  const { platform, arch } = process;
+
+  if (typeof node !== 'string') {
+    throw new Error(`Expected a string for \`config.node\`, but found ${node}`);
+  }
+  if (typeof npm !== 'string') {
+    throw new Error(`Expected a string for \`config.npm\`, but found ${npm}`);
+  }
+  if (typeof yarn !== 'string') {
+    throw new Error(`Expected a string for \`config.yarn\`, but found ${yarn}`);
+  }
+
+  const layerDefinitions: { [key: string]: BuildLayerConfig } = {
+    [layerNames.node]: { runtimeVersion: node, platform, arch },
+  };
+
+  if (await hasPackageLockJson(entrypoint)) {
+    layerDefinitions[layerNames.npm] = {
+      runtimeVersion: npm,
+      platform,
+      arch,
+    };
+  } else {
+    layerDefinitions[layerNames.yarn] = {
+      runtimeVersion: yarn,
+      platform,
+      arch,
+    };
+  }
+
+  return layerDefinitions;
+}
+
 export async function build({
   files,
   entrypoint,
   workPath,
   config,
+  layers,
   meta = {},
 }: BuildOptions) {
   const shouldAddHelpers = !(config && config.helpers === false);
+
+  let packageManagerCmd: string | undefined;
+  let packageManagerArgs = ['--prefer-offline'];
+
+  if (layers) {
+    console.log('using experimental layers');
+    packageManagerCmd = await layers[layerNames.node].getEntrypoint();
+    const pmLayer = layers[layerNames.npm] || layers[layerNames.yarn];
+    const packageManagerScript = await pmLayer.getEntrypoint();
+    packageManagerArgs = [packageManagerScript, '--prefer-offline'];
+  }
 
   const {
     entrypointPath,
@@ -185,7 +250,8 @@ export async function build({
     entrypoint,
     workPath,
     meta,
-    npmArguments: ['--prefer-offline'],
+    packageManagerArgs,
+    packageManagerCmd,
   });
 
   console.log('running user script...');
@@ -231,9 +297,13 @@ export async function build({
   }
 
   const lambda = await createLambda({
-    files: { ...preparedFiles, ...launcherFiles },
+    files: {
+      ...preparedFiles,
+      ...launcherFiles,
+    },
+    layers: layers ? { [layerNames.node]: layers[layerNames.node] } : {},
     handler: 'launcher.launcher',
-    runtime: 'nodejs8.10',
+    runtime: layers ? 'provided' : 'nodejs8.10',
   });
 
   const output = { [entrypoint]: lambda };

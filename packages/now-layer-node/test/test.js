@@ -17,6 +17,8 @@ describe('buildLayer', () => {
     expect(names.has('bin/npm.cmd')).toBeFalsy();
     expect(names.has('bin/npx.cmd')).toBeFalsy();
     expect(names.has('bin/node_modules')).toBeFalsy();
+    expect(names.has('bootstrap')).toBeTruthy();
+    expect(names.has('now_init.js')).toBeTruthy();
   });
 
   it('should get node 10 and metadata for macos', async () => {
@@ -33,6 +35,8 @@ describe('buildLayer', () => {
     expect(names.has('bin/npm')).toBeFalsy();
     expect(names.has('bin/npx')).toBeFalsy();
     expect(names.has('lib/node_modules')).toBeFalsy();
+    expect(names.has('bootstrap')).toBeTruthy();
+    expect(names.has('now_init.js')).toBeTruthy();
   });
 
   it('should get node 10 and metadata for linux', async () => {
@@ -50,5 +54,7 @@ describe('buildLayer', () => {
     expect(names.has('bin/npm')).toBeFalsy();
     expect(names.has('bin/npx')).toBeFalsy();
     expect(names.has('lib/node_modules')).toBeFalsy();
+    expect(names.has('bootstrap')).toBeTruthy();
+    expect(names.has('now_init.js')).toBeTruthy();
   });
 });

@@ -1,19 +1,8 @@
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { glob, Files } from '@now/build-utils';
+import { glob, BuildLayerConfig, BuildLayerResult } from '@now/build-utils';
 import { mkdir, remove, pathExists } from 'fs-extra';
 import { install } from './install';
-
-interface BuildLayerConfig {
-  runtimeVersion: string;
-  platform: string;
-  arch: string;
-}
-
-interface BuildLayerResult {
-  files: Files;
-  entrypoint: string;
-}
 
 export async function buildLayer({
   runtimeVersion,

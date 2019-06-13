@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
+import { deprecate } from 'util';
 
 function spawnAsync(
   command: string,
@@ -51,6 +52,11 @@ export async function runShellScript(fsPath: string) {
   return true;
 }
 
+export async function hasPackageLockJson(destPath: string) {
+  const { hasPackageLockJson } = await scanParentDirs(destPath);
+  return hasPackageLockJson;
+}
+
 async function scanParentDirs(destPath: string, scriptName?: string) {
   assert(path.isAbsolute(destPath));
 
@@ -64,12 +70,14 @@ async function scanParentDirs(destPath: string, scriptName?: string) {
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(packageJsonPath)) {
       // eslint-disable-next-line no-await-in-loop
-      const packageJson = JSON.parse(
-        await fs.readFile(packageJsonPath, 'utf8')
-      );
-      hasScript = Boolean(
-        packageJson.scripts && scriptName && packageJson.scripts[scriptName]
-      );
+      if (scriptName) {
+        const packageJson = JSON.parse(
+          await fs.readFile(packageJsonPath, 'utf8')
+        );
+        hasScript = Boolean(
+          packageJson.scripts && scriptName && packageJson.scripts[scriptName]
+        );
+      }
       // eslint-disable-next-line no-await-in-loop
       hasPackageLockJson = await fs.pathExists(
         path.join(currentDestPath, 'package-lock.json')
@@ -85,9 +93,10 @@ async function scanParentDirs(destPath: string, scriptName?: string) {
   return { hasScript, hasPackageLockJson };
 }
 
-export async function installDependencies(
+export async function runNpmInstall(
   destPath: string,
-  args: string[] = []
+  args: string[] = [],
+  cmd?: string
 ) {
   assert(path.isAbsolute(destPath));
 
@@ -95,30 +104,26 @@ export async function installDependencies(
   console.log(`installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
-  const opts = {
+  const opts: SpawnOptions = {
     env: {
       ...process.env,
-      // This is a little hack to force `node-gyp` to build for the
-      // Node.js version that `@now/node` and `@now/node-server` use
-      npm_config_target: '8.10.0',
     },
-    stdio: 'pipe',
   };
 
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
-      'npm',
-      ['install', '--unsafe-perm'].concat(commandArgs),
+      cmd || 'npm',
+      commandArgs.concat(['install', '--unsafe-perm']),
       destPath,
-      opts as SpawnOptions
+      opts
     );
   } else {
     await spawnAsync(
-      'yarn',
-      ['--ignore-engines', '--cwd', destPath].concat(commandArgs),
+      cmd || 'yarn',
+      commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
       destPath,
-      opts as SpawnOptions
+      opts
     );
   }
 }
@@ -151,4 +156,11 @@ export async function runPackageJsonScript(
   return true;
 }
 
-export const runNpmInstall = installDependencies;
+/**
+ * installDependencies() is deprecated.
+ * Please use runNpmInstall() instead.
+ */
+export const installDependencies = deprecate(
+  runNpmInstall,
+  'installDependencies() is deprecated. Please use runNpmInstall() instead.'
+);
