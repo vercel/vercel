@@ -172,9 +172,9 @@ async function compile(
 }
 
 const layerNames = {
-  node: '@now/layer-node@0.0.2',
-  npm: '@now/layer-npm@0.0.2',
-  yarn: '@now/layer-yarn@0.0.2',
+  node: '@now/layer-node@0.0.2-canary.4',
+  npm: '@now/layer-npm@0.0.2-canary.3',
+  yarn: '@now/layer-yarn@0.0.2-canary.3',
 };
 
 export const version = 2;
