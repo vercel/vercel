@@ -251,7 +251,7 @@ export default async function main(ctx: NowContext): Promise<number> {
     await downloadNowCli(output, url, tmpBin);
     rtn = await updateNowCli(tmpBin, location);
   } catch(err) {
-    if (err.message.startsWith('ETXTBSY')) {
+    if (err.message.startsWith('ETXTBSY') || err.message.startsWith('EBUSY')) {
       debug(`Got "ETXTBSY" error - falling back to unlink + rename method`);
       rtn = await removeAndMove(output, tmpBin, location);
     } else {
