@@ -1,13 +1,15 @@
-const childProcess = require('child_process');
-const path = require('path');
+const { execSync } = require('child_process');
+const { relative } = require('path');
 
-const command = 'git diff HEAD~1 --name-only';
-const diff = childProcess.execSync(command).toString();
+const branch = execSync('git branch | grep "*" | cut -d " " -f2').toString();
+console.log(`Running tests on branch "${branch}"`);
+const base = branch === 'master' ? 'HEAD~1' : 'origin/canary';
+const diff = execSync(`git diff ${base} --name-only`).toString();
 
 const changed = diff
   .split('\n')
   .filter(item => Boolean(item) && item.includes('packages/'))
-  .map(item => path.relative('packages', item).split('/')[0]);
+  .map(item => relative('packages', item).split('/')[0]);
 
 const matches = [];
 
