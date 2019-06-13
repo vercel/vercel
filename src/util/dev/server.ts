@@ -14,20 +14,19 @@ import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
 
-import { once } from '../../../util/once';
-import { Output } from '../../../util/output';
-import { relative } from '../../../util/path-helpers';
-import getNowJsonPath from '../../../util/config/local-path';
+import { once } from '../once';
+import { Output } from '../output';
+import { relative } from '../path-helpers';
+import getNowJsonPath from '../config/local-path';
+import { MissingDotenvVarsError } from '../errors-ts';
+import { createIgnore, staticFiles as getFiles } from '../get-files';
+
 import isURL from './is-url';
-import devRouter from './dev-router';
+import devRouter from './router';
 import getMimeType from './mime-type';
-import { installBuilders } from './builder-cache';
 import { getYarnPath } from './yarn-installer';
-
-import { executeBuild, getBuildMatches } from './dev-builder';
-
-import { MissingDotenvVarsError } from '../../../util/errors-ts';
-import { createIgnore, staticFiles as getFiles } from '../../../util/get-files';
+import { installBuilders } from './builder-cache';
+import { executeBuild, getBuildMatches } from './builder';
 
 import {
   EnvConfig,
@@ -98,15 +97,12 @@ export default class DevServer {
   enqueueFsEvent(type: string, path: string): void {
     this.watchAggregationEvents.push({ type, path });
     if (this.watchAggregationId === null) {
-      this.watchAggregationId = setTimeout(
-        () => {
-          const events = this.watchAggregationEvents.slice();
-          this.watchAggregationEvents.length = 0;
-          this.watchAggregationId = null;
-          this.handleFilesystemEvents(events);
-        },
-        this.watchAggregationTimeout
-      );
+      this.watchAggregationId = setTimeout(() => {
+        const events = this.watchAggregationEvents.slice();
+        this.watchAggregationEvents.length = 0;
+        this.watchAggregationId = null;
+        this.handleFilesystemEvents(events);
+      }, this.watchAggregationTimeout);
     }
   }
 
@@ -118,36 +114,22 @@ export default class DevServer {
 
     // First, update the `files` mapping of source files
     for (const event of events) {
-      // TODO: for some reason the type inference isn't working, hence the casting
       if (event.type === 'add') {
-        await this.handleFileCreated(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        await this.handleFileCreated(event.path, filesChanged, filesRemoved);
       } else if (event.type === 'unlink') {
-        this.handleFileDeleted(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        this.handleFileDeleted(event.path, filesChanged, filesRemoved);
       } else if (event.type === 'change') {
-        await this.handleFileModified(
-          event.path,
-          filesChanged,
-          filesRemoved
-        );
+        await this.handleFileModified(event.path, filesChanged, filesRemoved);
       }
     }
 
     if (filesChanged.has('now.json') || filesRemoved.has('now.json')) {
       // The `now.json` file was changed, so invalidate the in-memory copy
       this.output.debug('Invalidating cached `now.json`');
-      this.cachedNowJson = null;
     }
 
     // Update the build matches in case an entrypoint was created or deleted
-    const nowJson = await this.getNowJson();
+    const nowJson = await this.getNowJson(false);
     await this.updateBuildMatches(nowJson);
 
     const filesChangedArray = [...filesChanged];
@@ -305,8 +287,8 @@ export default class DevServer {
     return { ...base, ...env };
   }
 
-  async getNowJson(): Promise<NowConfig> {
-    if (this.cachedNowJson) {
+  async getNowJson(canUseCache: boolean = true): Promise<NowConfig> {
+    if (canUseCache && this.cachedNowJson) {
       return this.cachedNowJson;
     }
 
@@ -315,7 +297,7 @@ export default class DevServer {
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
-    let config: NowConfig = { version: 2 };
+    let config: NowConfig = this.cachedNowJson || { version: 2 };
 
     try {
       config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
@@ -323,6 +305,10 @@ export default class DevServer {
       if (err.code === 'ENOENT') {
         this.output.note(
           'No `now.json` file present, serving all files as static'
+        );
+      } else if (err.name === 'SyntaxError') {
+        this.output.warn(
+          `There is a syntax error in the \`now.json\` file: ${err.message}`
         );
       } else {
         throw err;
@@ -589,11 +575,11 @@ export default class DevServer {
     const { host } = req.headers;
     return {
       ...req.headers,
-      'X-Forwarded-Host': host,
-      'X-Forwarded-Proto': 'http',
-      'X-Forwarded-For': ip,
-      'X-Real-IP': ip,
       Connection: 'close',
+      'x-forwarded-host': host,
+      'x-forwarded-proto': 'http',
+      'x-forwarded-for': ip,
+      'x-real-ip': ip,
       'x-now-trace': 'dev1',
       'x-now-deployment-url': host,
       'x-now-id': nowRequestId,
