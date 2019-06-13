@@ -174,8 +174,7 @@ export default async function main(ctx) {
   }
 
   log(
-    `Found ${plural('deployment', deployments.length, true)} and ` +
-    `${plural('project', projects.length, true)} for removal in ` +
+    `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
     `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
 
@@ -204,9 +203,8 @@ export default async function main(ctx) {
   ]);
 
   success(
-    `${plural('deployment', deployments.length, true)} ` +
-    `and ${plural('project', projects.length, true)} ` +
-    `removed ${elapsed(Date.now() - start)}`
+    `Removed ${deploymentsAndProjects(deployments, projects)} ` +
+    `${elapsed(Date.now() - start)}`
   );
 
   deployments.forEach(depl => {
@@ -231,8 +229,7 @@ export default async function main(ctx) {
 function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
     output.log(
-      `The following ${plural('deployment', deployments.length, true)} ` +
-      `and ${plural('project', projects.length, true)} will be permanently removed:`
+      `The following ${deploymentsAndProjects(deployments, projects)} will be permanently removed:`
     );
 
     if (deployments.length > 0) {
@@ -274,4 +271,19 @@ function readConfirmation(deployments, projects, output) {
       })
       .resume();
   });
+}
+
+function deploymentsAndProjects(deployments = [], projects = [], conjunction = 'and') {
+  if (!projects || projects.length === 0) {
+    return `${plural('deployment', deployments.length, true)}`
+  }
+
+  if (!deployments || deployments.length === 0) {
+    return `${plural('project', projects.length, true)}`;
+  }
+
+  return (
+    `${plural('deployment', deployments.length, true)} ` +
+    `${conjunction} ${plural('project', projects.length, true)}`
+  );
 }
