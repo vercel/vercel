@@ -159,6 +159,21 @@ it('req.body should be an object when content-type is `application/json`', async
   expect(mockListener.mock.calls[0][0].body).toMatchObject(json);
 });
 
+it('should throw error when body is empty and content-type is `application/json`', async () => {
+  mockListener.mockImplementation((req, res) => {
+    console.log(req.body);
+    res.end();
+  });
+
+  const res = await fetchWithProxyReq(url, {
+    method: 'POST',
+    body: '',
+    headers: { 'content-type': 'application/json' },
+  });
+
+  expect(res.status).toBe(400);
+});
+
 it('should not recalculate req properties twice', async () => {
   const bodySpy = jest.fn(() => {});
 

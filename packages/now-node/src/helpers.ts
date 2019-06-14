@@ -9,9 +9,9 @@ import { Stream } from 'stream';
 import { Server } from 'http';
 import { Bridge } from './bridge';
 
-function getBodyParser(req: NowRequest, body?: Buffer) {
+function getBodyParser(req: NowRequest, body: Buffer) {
   return function parseBody(): NowRequestBody {
-    if (!body || !req.headers['content-type']) {
+    if (!req.headers['content-type']) {
       return undefined;
     }
 
