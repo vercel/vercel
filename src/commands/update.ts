@@ -270,6 +270,9 @@ export default async function main(ctx: NowContext): Promise<number> {
     } else if (isPermissionsError(err)) {
       error(permError(location));
       rtn = 1;
+    } else if (err.message.includes('unexpected end of file')) {
+      error('The file download failed. Please check your internet connection and try again.');
+      rtn = 1;
     } else {
       throw err;
     }
