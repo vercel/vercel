@@ -52,11 +52,6 @@ export async function runShellScript(fsPath: string) {
   return true;
 }
 
-export async function hasPackageLockJson(destPath: string) {
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
-  return hasPackageLockJson;
-}
-
 async function scanParentDirs(destPath: string, scriptName?: string) {
   assert(path.isAbsolute(destPath));
 

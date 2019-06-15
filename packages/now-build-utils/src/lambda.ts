@@ -2,7 +2,7 @@ import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import { readlink } from 'fs-extra';
-import { Files, Layer } from './types';
+import { Files } from './types';
 import FileFsRef from './file-fs-ref';
 import { isSymbolicLink } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
@@ -16,7 +16,6 @@ interface LambdaOptions {
   handler: string;
   runtime: string;
   environment: Environment;
-  layers: { [use: string]: Layer };
 }
 
 interface CreateLambdaOptions {
@@ -24,7 +23,6 @@ interface CreateLambdaOptions {
   handler: string;
   runtime: string;
   environment?: Environment;
-  layers?: { [use: string]: Layer };
 }
 
 export class Lambda {
@@ -33,21 +31,13 @@ export class Lambda {
   public handler: string;
   public runtime: string;
   public environment: Environment;
-  public layers: { [use: string]: Layer };
 
-  constructor({
-    zipBuffer,
-    handler,
-    runtime,
-    environment,
-    layers,
-  }: LambdaOptions) {
+  constructor({ zipBuffer, handler, runtime, environment }: LambdaOptions) {
     this.type = 'Lambda';
     this.zipBuffer = zipBuffer;
     this.handler = handler;
     this.runtime = runtime;
     this.environment = environment;
-    this.layers = layers;
   }
 }
 
@@ -59,10 +49,8 @@ export async function createLambda({
   handler,
   runtime,
   environment = {},
-  layers = {},
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
-  assert(typeof layers === 'object', '"layers" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
   assert(typeof runtime === 'string', '"runtime" is not a string');
   assert(typeof environment === 'object', '"environment" is not an object');
@@ -76,7 +64,6 @@ export async function createLambda({
       handler,
       runtime,
       environment,
-      layers,
     });
   } finally {
     sema.release();
