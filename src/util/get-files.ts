@@ -7,7 +7,7 @@ import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
 import { Output } from './output/create-output';
-import { NowConfig } from '../commands/dev/lib/types';
+import { NowConfig } from './dev/types';
 
 type NullableString = string | null;
 
