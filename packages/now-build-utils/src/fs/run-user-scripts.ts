@@ -4,6 +4,7 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import { intersects } from 'semver';
 
 function spawnAsync(
   command: string,
@@ -52,11 +53,41 @@ export async function runShellScript(fsPath: string) {
   return true;
 }
 
-async function scanParentDirs(destPath: string, scriptName?: string) {
+interface PackageJson {
+  name: string;
+  version: string;
+  engines?: {
+    [key: string]: string;
+    node: string;
+    npm: string;
+  };
+  scripts?: {
+    [key: string]: string;
+  };
+  dependencies?: {
+    [key: string]: string;
+  };
+  devDependencies?: {
+    [key: string]: string;
+  };
+}
+
+export async function enginesMatch(
+  destPath: string,
+  nodeVersion: string
+): Promise<boolean> {
+  const { packageJson } = await scanParentDirs(destPath, true);
+
+  const engineVersion =
+    packageJson && packageJson.engines && packageJson.engines.node;
+  return intersects(nodeVersion, engineVersion || '0.0.0');
+}
+
+async function scanParentDirs(destPath: string, readPackageJson = false) {
   assert(path.isAbsolute(destPath));
 
-  let hasScript = false;
   let hasPackageLockJson = false;
+  let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
 
   // eslint-disable-next-line no-constant-condition
@@ -65,13 +96,8 @@ async function scanParentDirs(destPath: string, scriptName?: string) {
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(packageJsonPath)) {
       // eslint-disable-next-line no-await-in-loop
-      if (scriptName) {
-        const packageJson = JSON.parse(
-          await fs.readFile(packageJsonPath, 'utf8')
-        );
-        hasScript = Boolean(
-          packageJson.scripts && scriptName && packageJson.scripts[scriptName]
-        );
+      if (readPackageJson) {
+        packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
       // eslint-disable-next-line no-await-in-loop
       hasPackageLockJson = await fs.pathExists(
@@ -85,14 +111,10 @@ async function scanParentDirs(destPath: string, scriptName?: string) {
     currentDestPath = newDestPath;
   }
 
-  return { hasScript, hasPackageLockJson };
+  return { hasPackageLockJson, packageJson };
 }
 
-export async function runNpmInstall(
-  destPath: string,
-  args: string[] = [],
-  cmd?: string
-) {
+export async function runNpmInstall(destPath: string, args: string[] = []) {
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
@@ -108,14 +130,14 @@ export async function runNpmInstall(
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
-      cmd || 'npm',
+      'npm',
       commandArgs.concat(['install', '--unsafe-perm']),
       destPath,
       opts
     );
   } else {
     await spawnAsync(
-      cmd || 'yarn',
+      'yarn',
       commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
       destPath,
       opts
@@ -129,9 +151,15 @@ export async function runPackageJsonScript(
   opts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
-  const { hasScript, hasPackageLockJson } = await scanParentDirs(
+  const { packageJson, hasPackageLockJson } = await scanParentDirs(
     destPath,
-    scriptName
+    true
+  );
+  const hasScript = Boolean(
+    packageJson &&
+      packageJson.scripts &&
+      scriptName &&
+      packageJson.scripts[scriptName]
   );
   if (!hasScript) return false;
 
