@@ -26,6 +26,7 @@ import getArgs from '../util/get-args';
 import { NowContext } from '../types';
 import createOutput, { Output } from '../util/output';
 
+const isWin = process.platform.startsWith('win');
 const versionEndpoint = 'https://install-now-cli.zeit.sh/version';
 
 const platformMap: Map<string, string> = new Map([
@@ -56,6 +57,19 @@ const help = () => {
 
       ${chalk.cyan(`$ now update --channel=canary`)}
   `);
+};
+
+const permError = (dest: string): string => {
+  const admin = isWin ? 'an Administrator Command Prompt' : '`sudo`';
+  return `Permission denied to modify file "${dest}". Please run again with ${admin}.`;
+};
+
+const isBusyError = ({ message }: Error): boolean => {
+  return message.startsWith('ETXTBSY') || message.startsWith('EBUSY');
+};
+
+const isPermissionsError = ({ message }: Error): boolean => {
+  return message.startsWith('EACCES') || message.startsWith('EPERM');
 };
 
 function detectAlpine() {
@@ -152,9 +166,8 @@ async function removeAndMove({ debug, error }: Output, src: string, dest: string
       await chown(dest, uid, gid);
     }
   } catch (err) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code === 'EPERM' || nodeErr.code === 'EACCES') {
-      error(`Permission denied to modify file "${dest}". Please run again using \`sudo\`.`);
+    if (isPermissionsError(err)) {
+      error(permError(dest));
       return 1;
     }
     throw err;
@@ -193,7 +206,7 @@ export default async function main(ctx: NowContext): Promise<number> {
   const debugEnabled = argv['--debug'];
   const channel: string = argv['--channel'] || updateChannel || getDefaultChannel();
   const output = createOutput({ debug: debugEnabled });
-  const { log, note, success, print, debug } = output;
+  const { log, error, note, success, print, debug } = output;
 
   output.dim(`Now CLI ${pkg.version} update (beta) — https://zeit.co/feedback/update`);
 
@@ -251,9 +264,15 @@ export default async function main(ctx: NowContext): Promise<number> {
     await downloadNowCli(output, url, tmpBin);
     rtn = await updateNowCli(tmpBin, location);
   } catch(err) {
-    if (err.message.startsWith('ETXTBSY')) {
-      debug(`Got "ETXTBSY" error - falling back to unlink + rename method`);
+    if (isBusyError(err)) {
+      debug(`Got busy error - falling back to unlink + rename method`);
       rtn = await removeAndMove(output, tmpBin, location);
+    } else if (isPermissionsError(err)) {
+      error(permError(location));
+      rtn = 1;
+    } else if (err.message.includes('unexpected end of file')) {
+      error('The file download failed. Please check your internet connection and try again.');
+      rtn = 1;
     } else {
       throw err;
     }
