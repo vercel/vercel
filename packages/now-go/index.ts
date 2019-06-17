@@ -128,18 +128,17 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
   const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
   let isGoModExist = false;
   let goModPath = '';
-  let goModPathArr: string[] = [];
+  let isGoModInRootDir = false;
   for (const file of Object.keys(downloadedFiles)) {
     const fileDirname = dirname(downloadedFiles[file].fsPath);
     if (file === 'go.mod') {
       isGoModExist = true;
+      isGoModInRootDir = true;
       goModPath = fileDirname;
-      goModPathArr = goModPath.split(sep);
     } else if (file.includes('go.mod')) {
       isGoModExist = true;
       if (entrypointDirname === fileDirname) {
         goModPath = fileDirname;
-        goModPathArr = goModPath.split(sep);
       }
     }
   }
@@ -202,14 +201,28 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
     if (isGoModExist) {
       const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
       const usrModName = goModContents.split('\n')[0].split(' ')[1];
-      goPackageName = `${usrModName}/${packageName}`;
+
+      if (entrypointArr.length > 1 && isGoModInRootDir) {
+        let cleanPackagePath = [...entrypointArr];
+        cleanPackagePath.pop();
+        goPackageName = `${usrModName}/${cleanPackagePath.join('/')}`;
+      } else {
+        goPackageName = `${usrModName}/${packageName}`;
+      }
     }
 
     const mainModGoContents = modMainGoContents
       .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
       .replace('__NOW_HANDLER_FUNC_NAME', goFuncName);
 
-    if (goModPathArr.length > 1) {
+    if (meta.isDev && isGoModExist && isGoModInRootDir) {
+      await writeFile(
+        join(dirname(downloadedFiles['now.json'].fsPath), mainModGoFileName),
+        mainModGoContents
+      );
+    } else if (isGoModExist && isGoModInRootDir) {
+      await writeFile(join(srcPath, mainModGoFileName), mainModGoContents);
+    } else if (isGoModExist && !isGoModInRootDir) {
       // using `go.mod` path to write main__mod__.go
       await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
     } else {
@@ -252,21 +265,28 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
       throw err;
     }
 
+    let baseGoModPath = '';
+    if (meta.isDev && isGoModExist && isGoModInRootDir) {
+      baseGoModPath = dirname(downloadedFiles['now.json'].fsPath);
+    } else if (isGoModExist && isGoModInRootDir) {
+      baseGoModPath = srcPath;
+    } else if (isGoModExist && !isGoModInRootDir) {
+      baseGoModPath = goModPath;
+    } else {
+      baseGoModPath = entrypointDirname;
+    }
+
     if (meta.isDev) {
-      let entrypointDir = entrypointDirname;
-      if (goModPathArr.length > 1) {
-        entrypointDir = goModPath;
-      }
-      const isGoModBk = await pathExists(join(entrypointDir, 'go.mod.bk'));
+      const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
       if (isGoModBk) {
         await move(
-          join(entrypointDir, 'go.mod.bk'),
-          join(entrypointDir, 'go.mod'),
+          join(baseGoModPath, 'go.mod.bk'),
+          join(baseGoModPath, 'go.mod'),
           { overwrite: true }
         );
         await move(
-          join(entrypointDir, 'go.sum.bk'),
-          join(entrypointDir, 'go.sum'),
+          join(baseGoModPath, 'go.sum.bk'),
+          join(baseGoModPath, 'go.sum'),
           { overwrite: true }
         );
       }
@@ -283,8 +303,7 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
 
     console.log('Running `go build`...');
     const destPath = join(outDir, 'handler');
-    const isGoModInRootDir = goModPathArr.length === 1;
-    const baseGoModPath = isGoModInRootDir ? entrypointDirname : goModPath;
+
     try {
       let src = [join(baseGoModPath, mainModGoFileName)];
 
