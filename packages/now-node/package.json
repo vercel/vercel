@@ -31,6 +31,6 @@
     "cookie": "0.4.0",
     "node-fetch": "2.6.0",
     "test-listen": "1.1.0",
-    "typescript": "3.3.3"
+    "typescript": "3.5.2"
   }
 }

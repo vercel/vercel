@@ -21,6 +21,6 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "11.9.4",
     "jest": "24.1.0",
-    "typescript": "3.3.3"
+    "typescript": "3.5.2"
   }
 }
