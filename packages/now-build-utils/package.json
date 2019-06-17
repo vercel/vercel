@@ -1,6 +1,6 @@
 {
   "name": "@now/build-utils",
-  "version": "0.5.8",
+  "version": "0.6.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
