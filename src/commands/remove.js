@@ -228,11 +228,11 @@ export default async function main(ctx) {
 
 function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
-    output.log(
-      `The following ${deploymentsAndProjects(deployments, projects)} will be permanently removed:`
-    );
-
     if (deployments.length > 0) {
+      output.log(
+        `The following ${plural('deployment', deployments.length, true)} will be permanently removed:`
+      );
+
       const deploymentTable = table(
         deployments.map(depl => {
           const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
@@ -253,11 +253,15 @@ function readConfirmation(deployments, projects, output) {
       }
     }
 
-    for (const project of projects) {
-      output.warn(
-        `The project ${chalk.bold(project.name)} will be permanently removed, ` +
-        `including all of its deployments and aliases`
+    if (projects.length > 0) {
+      console.log(
+        `The following ${plural('project', projects.length, true)} will be permantly removed, ` +
+        `including all ${projects.length > 1 ? 'their' : 'its'} deployments and aliases:`
       );
+
+      for (const project of projects) {
+        console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+      }
     }
 
     output.print(
