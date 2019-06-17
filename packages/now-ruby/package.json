@@ -1,0 +1,25 @@
+{
+  "name": "@now/ruby",
+  "author": "Nathan Cahill <nathan@nathancahill.com>",
+  "version": "0.1.0-canary.2",
+  "main": "./dist/index",
+  "files": [
+    "dist",
+    "now_init.rb"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-ruby"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && jest",
+    "prepublish": "tsc"
+  },
+  "dependencies": {
+    "execa": "^1.0.0",
+    "fs-extra": "^7.0.1"
+  }
+}
