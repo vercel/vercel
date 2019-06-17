@@ -230,7 +230,8 @@ function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
     if (deployments.length > 0) {
       output.log(
-        `The following ${plural('deployment', deployments.length, true)} will be permanently removed:`
+        `The following ${plural('deployment', deployments.length, deployments.length > 1)} ` +
+        `will be permanently removed:`
       );
 
       const deploymentTable = table(
@@ -255,7 +256,7 @@ function readConfirmation(deployments, projects, output) {
 
     if (projects.length > 0) {
       console.log(
-        `The following ${plural('project', projects.length, true)} will be permantly removed, ` +
+        `The following ${plural('project', projects.length, projects.length > 1)} will be permanently removed, ` +
         `including all ${projects.length > 1 ? 'their' : 'its'} deployments and aliases:`
       );
 
