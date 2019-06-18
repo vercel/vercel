@@ -18,7 +18,6 @@ export const latestHelp = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       switch               [scope]     Switches between teams and your personal account
-      whoami                           Shows the username of the currently logged in user
       help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
@@ -32,6 +31,7 @@ export const latestHelp = () => `
       logs                 [url]       Displays the logs for a deployment
       scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
+      whoami                           Shows the username of the currently logged in user
 
   ${chalk.dim('Options:')}
 
