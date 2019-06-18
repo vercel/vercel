@@ -136,9 +136,10 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
       isGoModInRootDir = true;
       goModPath = fileDirname;
     } else if (file.includes('go.mod')) {
-      isGoModExist = true;
       if (entrypointDirname === fileDirname) {
+        isGoModExist = true;
         goModPath = fileDirname;
+        break;
       }
     }
   }
