@@ -114,18 +114,18 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
   return { hasPackageLockJson, packageJson };
 }
 
-export async function runNpmInstall(destPath: string, args: string[] = []) {
+export async function runNpmInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions
+) {
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
   console.log(`installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
-  const opts: SpawnOptions = {
-    env: {
-      ...process.env,
-    },
-  };
+  const opts = spawnOpts || { env: process.env };
 
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
