@@ -15,10 +15,10 @@ export const latestHelp = () => `
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
-      update                           Updates Now CLI to the latest version
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       switch               [scope]     Switches between teams and your personal account
+      update                           Updates Now CLI to the latest version
       help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
