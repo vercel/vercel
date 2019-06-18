@@ -48,7 +48,6 @@ import {
   DeploymentNotFound,
   DomainNotFound,
   DomainPermissionDenied,
-  DomainValidationRunning,
   DomainVerificationFailed,
   TooManyRequests,
   VerifyScaleTimeout,
@@ -691,17 +690,11 @@ async function sync({
         createArgs
       );
 
-      if (
-        firstDeployCall instanceof CertError ||
-        firstDeployCall instanceof TooManyRequests ||
-        firstDeployCall instanceof DomainValidationRunning ||
-        firstDeployCall instanceof CertConfigurationError ||
-        firstDeployCall instanceof DomainNotFound ||
-        firstDeployCall instanceof CertsDNSError
-      ) {
-        return handleCertError(output, firstDeployCall);
+      const handledResult = handleCertError(output, firstDeployCall);
+      if (handledResult === 1) {
+        return handledResult
       }
-  
+
       if (
         firstDeployCall instanceof DomainNotFound ||
         firstDeployCall instanceof DomainPermissionDenied ||
@@ -774,21 +767,14 @@ async function sync({
             createArgs
           );
           
-          if (
-            secondDeployCall instanceof CertError ||
-            secondDeployCall instanceof TooManyRequests ||
-            secondDeployCall instanceof DomainValidationRunning ||
-            secondDeployCall instanceof CertConfigurationError ||
-            secondDeployCall instanceof DomainNotFound ||
-            secondDeployCall instanceof CertsDNSError
-          ) {
-            return handleCertError(output, secondDeployCall);
+          const handledResult = handleCertError(output, secondDeployCall);
+          if (handledResult === 1) {
+            return handledResult
           }
-    
+        
           if (
             secondDeployCall instanceof DomainNotFound ||
             secondDeployCall instanceof DomainPermissionDenied ||
-            secondDeployCall instanceof DomainValidationRunning ||
             secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyRequests ||

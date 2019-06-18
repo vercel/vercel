@@ -465,25 +465,6 @@ export class TooManyRequests extends NowError<
 }
 
 /**
- * This error is returned when the user requests a certificate but there is a pending
- * certificate order being processed in the server.
- */
-export class DomainValidationRunning extends NowError<
-  'DOMAIN_VALIDATION_RUNNING',
-  { cns: string[] }
-> {
-  constructor(cns: string[], message?: string) {
-    super({
-      code: 'DOMAIN_VALIDATION_RUNNING',
-      meta: { cns },
-      message:
-        message ||
-        `A domain verification is already in course for ${cns.join(',')}`
-    });
-  }
-}
-
-/**
  * Generic cert error that utilizes the API's response message
  * for more information
  */
@@ -499,7 +480,8 @@ type CertErrorCode =
   | 'should_share_root_domain'
   | 'unauthorized_request_error'
   | 'unsupported_challenge_priority'
-  | 'wildcard_not_allowed';
+  | 'wildcard_not_allowed'
+  | 'validation_running';
 export class CertError extends NowError<
   'CERT_ERROR',
   { cns: string[]; code: CertErrorCode; helpUrl?: string }

@@ -366,8 +366,13 @@ type RemainingAssignAliasErrors = SetDifference<
 
 function handleCreateAliasError<T>(
   output: Output,
-  error: RemainingAssignAliasErrors | T
+  errorOrResult: RemainingAssignAliasErrors | T
 ): 1 | T {
+  const error = handleCertError(output, errorOrResult);
+  if (error === 1) {
+    return error;
+  }
+
   if (error instanceof ERRORS.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(
@@ -400,31 +405,9 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
-  if (
-    error instanceof ERRORS.CertError ||
-    error instanceof ERRORS.TooManyRequests ||
-    error instanceof ERRORS.DomainValidationRunning ||
-    error instanceof ERRORS.CertConfigurationError ||
-    error instanceof ERRORS.DomainNotFound ||
-    error instanceof ERRORS.CertsDNSError
-  ) {
-    return handleCertError(output, error);
-  }
-
   if (error instanceof ERRORS.RuleValidationFailed) {
     output.error(`Rule validation error: ${error.meta.message}.`);
     output.print(`  Make sure your rules file is written correctly.\n`);
-    return 1;
-  }
-  if (error instanceof ERRORS.TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
-        error.meta.retryAfter * 1000,
-        {
-          long: true
-        }
-      )}.`
-    );
     return 1;
   }
   if (error instanceof ERRORS.VerifyScaleTimeout) {

@@ -29,7 +29,8 @@ export default function mapCertError(cns: string[], error: any) {
     error.code === 'should_share_root_domain' ||
     error.code === 'unauthorized_request_error' ||
     error.code === 'unsupported_challenge_priority' ||
-    error.code === 'wildcard_not_allowed'
+    error.code === 'wildcard_not_allowed' ||
+    error.code === 'validation_running'
   ) {
     return new ERRORS.CertError({
       cns,
@@ -39,9 +40,6 @@ export default function mapCertError(cns: string[], error: any) {
     });
   }
 
-  if (error.code === 'validation_running') {
-    return new ERRORS.DomainValidationRunning(cns);
-  }
   if (error.code === 'dns_error') {
     return new ERRORS.CertsDNSError(error.detail, cns);
   }

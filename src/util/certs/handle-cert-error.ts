@@ -5,16 +5,16 @@ import * as ERRORS from '../errors-ts';
 import { Output } from '../output';
 import dnsTable from '../format-dns-table';
 
-export default function handleCertError(
+export default function handleCertError<T>(
   output: Output,
   error:
     | ERRORS.CertError
     | ERRORS.TooManyRequests
     | ERRORS.DomainNotFound
-    | ERRORS.DomainValidationRunning
     | ERRORS.CertsDNSError
     | ERRORS.CertConfigurationError
-): 1 | never {
+    | T
+): 1 | T {
   if (error instanceof ERRORS.TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
@@ -27,26 +27,24 @@ export default function handleCertError(
     return 1;
   }
 
+  if (error instanceof ERRORS.CertError) {
+    output.error(error.message);
+    if (error.meta.helpUrl) {
+      output.print(`  Read more: ${error.meta.helpUrl}\n`);
+    }
+    return 1;
+  }
+
   if (error instanceof ERRORS.DomainNotFound) {
     output.error(error.message);
     return 1;
   }
-  if (error instanceof ERRORS.DomainValidationRunning) {
-    output.error(
-      `There is a validation in course for ${error.meta.cns
-        .map(cn => chalk.underline(cn))
-        .join(', ')}. Please wait for it to complete.`
-    );
-    return 1;
-  }
+
   if (error instanceof ERRORS.CertsDNSError) {
     output.error(
       `We could not solve the dns-01 challenge for cns ${error.meta.cns
         .map(cn => chalk.underline(cn))
         .join(', ')}.`
-    );
-    output.log(
-      `The certificate provider could not resolve the required DNS record queries.`
     );
     output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
@@ -89,14 +87,6 @@ export default function handleCertError(
       output.print(
         '  Read more: https://err.sh/now-cli/dns-configuration-error\n\n'
       );
-    }
-    return 1;
-  }
-
-  if (error instanceof ERRORS.CertError) {
-    output.error(error.message);
-    if (error.meta.helpUrl) {
-      output.print(`  Read more: ${error.meta.helpUrl}\n`);
     }
     return 1;
   }

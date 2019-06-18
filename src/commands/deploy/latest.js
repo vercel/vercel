@@ -31,7 +31,6 @@ import {
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
-  DomainValidationRunning,
   DomainVerificationFailed,
   InvalidDomain,
   TooManyRequests,
@@ -401,15 +400,9 @@ export default async function main(
       return 1;
     }
 
-    if (
-      firstDeployCall instanceof CertError ||
-      firstDeployCall instanceof TooManyRequests ||
-      firstDeployCall instanceof DomainValidationRunning ||
-      firstDeployCall instanceof CertConfigurationError ||
-      firstDeployCall instanceof DomainNotFound ||
-      firstDeployCall instanceof CertsDNSError
-    ) {
-      return handleCertError(output, firstDeployCall);
+    const handledResult = handleCertError(output, firstDeployCall);
+    if (handledResult === 1) {
+      return handledResult
     }
   
     if (
@@ -485,15 +478,9 @@ export default async function main(
           createArgs
         );
 
-        if (
-          secondDeployCall instanceof CertError ||
-          secondDeployCall instanceof TooManyRequests ||
-          secondDeployCall instanceof DomainValidationRunning ||
-          secondDeployCall instanceof CertConfigurationError ||
-          secondDeployCall instanceof DomainNotFound ||
-          secondDeployCall instanceof CertsDNSError
-        ) {
-          return handleCertError(output, secondDeployCall);
+        const handledResult = handleCertError(output, secondDeployCall);
+        if (handledResult === 1) {
+          return handledResult
         }
     
         if (

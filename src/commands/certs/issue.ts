@@ -159,30 +159,25 @@ export default async function issue(
         fallingBack: true
       });
     }
-    return handleCertError(output, cert);
-  }
-  if (
-    cert instanceof ERRORS.TooManyRequests ||
-    cert instanceof ERRORS.DomainValidationRunning ||
-    cert instanceof ERRORS.CertConfigurationError ||
-    cert instanceof ERRORS.DomainNotFound ||
-    cert instanceof ERRORS.CertsDNSError
-  ) {
-    return handleCertError(output, cert);
   }
 
-  if (cert instanceof ERRORS.DomainPermissionDenied) {
+  const handledResult = handleCertError(output, cert);
+  if (handledResult === 1) {
+    return handledResult;
+  }
+
+  if (handledResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
-        cert.meta.domain
-      )} under ${chalk.bold(cert.meta.context)}.`
+        handledResult.meta.domain
+      )} under ${chalk.bold(handledResult.meta.context)}.`
     );
     return 1;
   }
 
   output.success(
     `Certificate entry for ${chalk.bold(
-      cert.cns.join(', ')
+      handledResult.cns.join(', ')
     )} created ${addStamp()}`
   );
   return 0;
