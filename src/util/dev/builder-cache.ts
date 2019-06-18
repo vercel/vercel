@@ -135,7 +135,9 @@ export async function installBuilders(
   const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
 
-  const buildUtilsVersion = packages.some(p => p.includes('@canary')) ? 'canary' : 'latest';
+  const buildUtilsVersion = packages
+    .map(use => use.split('@').pop())
+    .some(ver => (ver || '').includes('canary')) ? 'canary' : 'latest';
 
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`
