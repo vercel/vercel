@@ -8,33 +8,30 @@ export const latestHelp = () => `
 
   ${chalk.dim('Commands:')}
 
-    ${chalk.dim('Cloud')}
+    ${chalk.dim('Basic')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold(
-        '(default)'
-      )}
+      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      dev                              Start a local development server
       ls | list            [app]       Lists deployments
-      rm | remove          [id]        Removes a deployment
-      ln | alias           [id] [url]  Configures aliases for deployments
       inspect              [id]        Displays information related to a deployment
-      domains              [name]      Manages your domain names
-      certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
-      dns                  [name]      Manages your DNS records
-      logs                 [url]       Displays the logs for a deployment
-      scale                [args]      Scales the instance count of a deployment
-      init                 [example]   Initialize an example project
-      help                 [cmd]       Displays complete help for [cmd]
-
-    ${chalk.dim('Administrative')}
-
-      billing | cc         [cmd]       Manages your credit cards and billing methods
-      teams                            Manages your teams
-      switch               [scope]     Switches between teams and your personal account
+      update                           Updates Now CLI to the latest version
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      update                           Updates Now CLI to the latest version
+      switch               [scope]     Switches between teams and your personal account
       whoami                           Shows the username of the currently logged in user
+      help                 [cmd]       Displays complete help for [cmd]
+
+    ${chalk.dim('Advanced')}
+
+      init                 [example]   Initialize an example project
+      rm | remove          [id]        Removes a deployment
+      domains              [name]      Manages your domain names
+      dns                  [name]      Manages your DNS records
+      certs                [cmd]       Manages your SSL certificates
+      secrets              [name]      Manages your secret environment variables
+      logs                 [url]       Displays the logs for a deployment
+      scale                [args]      Scales the instance count of a deployment
+      teams                            Manages your teams
 
   ${chalk.dim('Options:')}
 
