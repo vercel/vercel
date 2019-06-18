@@ -116,6 +116,12 @@ export async function cleanCacheDir(output: Output): Promise<void> {
   }
 }
 
+export function getBuildUtils(packages: string[]) {
+  return packages
+    .map(use => use.split('@').pop() || '')
+    .some(ver => ver.includes('canary')) ? '@now/build-utils@canary' : '@now/build-utils';
+}
+
 /**
  * Install a list of builders to the cache directory.
  */
@@ -136,11 +142,8 @@ export async function installBuilders(
   const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
 
-  const buildUtilsVersion = packages
-    .map(use => use.split('@').pop() || '')
-    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
-
-  output.debug(`Using build-utils tag: ${buildUtilsVersion}`);
+  const buildUtils = getBuildUtils(packages);
+  output.debug(`Installing ${buildUtils}`);
 
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`
@@ -153,7 +156,7 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        `@now/build-utils@${buildUtilsVersion}`,
+        buildUtils,
         ...packages.filter(p => p !== '@now/static')
       ],
       {
