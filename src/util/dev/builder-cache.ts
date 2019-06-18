@@ -14,7 +14,6 @@ import {
 } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
-import { devDependencies as nowCliDeps } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage, Package } from './types';
@@ -117,12 +116,21 @@ export async function cleanCacheDir(output: Output): Promise<void> {
   }
 }
 
+export function getBuildUtils(packages: string[]) {
+  const version = packages
+    .map(use => use.split('@').pop() || '')
+    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+
+    return `@now/build-utils@${version}`;
+}
+
 /**
  * Install a list of builders to the cache directory.
  */
 export async function installBuilders(
   packagesSet: Set<string>,
-  yarnDir: string
+  yarnDir: string,
+  output: Output
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -135,11 +143,10 @@ export async function installBuilders(
   }
   const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
-  const buildersPkg = join(cacheDir, 'package.json');
 
-  // Pull the same version of `@now/build-utils` that now-cli is using
-  const buildUtils = '@now/build-utils';
-  const buildUtilsVersion = nowCliDeps[buildUtils];
+  const buildUtils = getBuildUtils(packages);
+  output.debug(`Installing ${buildUtils}`);
+
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`
   );
@@ -151,7 +158,7 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        `${buildUtils}@${buildUtilsVersion}`,
+        buildUtils,
         ...packages.filter(p => p !== '@now/static')
       ],
       {

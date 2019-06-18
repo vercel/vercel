@@ -6,7 +6,7 @@ import listen from 'async-listen';
 import { createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
-import { installBuilders } from '../src/util/dev/builder-cache';
+import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
 
 function testFixture(name, fn) {
   return async t => {
@@ -104,10 +104,21 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
   process.stdout.addListener('data', handler);
   process.stderr.addListener('data', handler);
 
-  await installBuilders(new Set());
+  const output = createOutput({ debug: false });
+  await installBuilders(new Set(), undefined, output);
 
   process.stdout.removeListener('data', handler);
   process.stderr.removeListener('data', handler);
 
   t.pass();
+});
+
+test('[DevServer] Installs canary build-utils if one more more builders is canary', async t => {
+  t.is(getBuildUtils(['@now/static', '@now/node@canary']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['@now/static', '@now/node@0.7.4-canary.0']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['@now/static', '@now/node@0.8.0']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['@now/static', '@now/node']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['@now/static']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['@now/md@canary']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['custom-builder']), '@now/build-utils@latest');
 });
