@@ -12,6 +12,7 @@ export const latestHelp = () => `
 
       deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       dev                              Start a local development server
+      init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
       update                           Updates Now CLI to the latest version
@@ -22,7 +23,6 @@ export const latestHelp = () => `
 
     ${chalk.dim('Advanced')}
 
-      init                 [example]   Initialize an example project
       rm | remove          [id]        Removes a deployment
       domains              [name]      Manages your domain names
       dns                  [name]      Manages your DNS records
