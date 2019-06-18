@@ -117,9 +117,11 @@ export async function cleanCacheDir(output: Output): Promise<void> {
 }
 
 export function getBuildUtils(packages: string[]) {
-  return packages
+  const version = packages
     .map(use => use.split('@').pop() || '')
-    .some(ver => ver.includes('canary')) ? '@now/build-utils@canary' : '@now/build-utils';
+    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+
+    return `@now/build-utils@${version}`;
 }
 
 /**
