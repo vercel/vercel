@@ -8,7 +8,6 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
 
-import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
@@ -96,14 +95,13 @@ export default async function main(ctx) {
   const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
+    case 'add':
     case 'issue':
       return issue(ctx, argv, args, output);
     case 'ls':
       return ls(ctx, argv, args, output);
     case 'rm':
       return rm(ctx, argv, args, output);
-    case 'add':
-      return add(ctx, argv, args, output);
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.');
       return 1;
