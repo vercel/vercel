@@ -121,7 +121,8 @@ export async function cleanCacheDir(output: Output): Promise<void> {
  */
 export async function installBuilders(
   packagesSet: Set<string>,
-  yarnDir: string
+  yarnDir: string,
+  output: Output
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -136,8 +137,10 @@ export async function installBuilders(
   const yarnPath = join(yarnDir, 'yarn');
 
   const buildUtilsVersion = packages
-    .map(use => use.split('@').pop())
-    .some(ver => (ver || '').includes('canary')) ? 'canary' : 'latest';
+    .map(use => use.split('@').pop() || '')
+    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+
+  output.debug(`Using build-utils tag: ${buildUtilsVersion}`);
 
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`

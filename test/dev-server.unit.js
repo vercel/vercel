@@ -104,7 +104,8 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
   process.stdout.addListener('data', handler);
   process.stderr.addListener('data', handler);
 
-  await installBuilders(new Set());
+  const output = createOutput({ debug: false });
+  await installBuilders(new Set(), undefined, output);
 
   process.stdout.removeListener('data', handler);
   process.stderr.removeListener('data', handler);
