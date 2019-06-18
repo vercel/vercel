@@ -153,7 +153,7 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        `$@now/build-utils@${buildUtilsVersion}`,
+        `@now/build-utils@${buildUtilsVersion}`,
         ...packages.filter(p => p !== '@now/static')
       ],
       {
