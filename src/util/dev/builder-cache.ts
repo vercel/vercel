@@ -14,7 +14,6 @@ import {
 } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
-import { devDependencies as nowCliDeps } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage, Package } from './types';
@@ -135,11 +134,9 @@ export async function installBuilders(
   }
   const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
-  const buildersPkg = join(cacheDir, 'package.json');
 
-  // Pull the same version of `@now/build-utils` that now-cli is using
-  const buildUtils = '@now/build-utils';
-  const buildUtilsVersion = nowCliDeps[buildUtils];
+  const buildUtilsVersion = packages.some(p => p.includes('@canary')) ? 'canary' : 'latest';
+
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`
   );
@@ -151,7 +148,7 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        `${buildUtils}@${buildUtilsVersion}`,
+        `$@now/build-utils@${buildUtilsVersion}`,
         ...packages.filter(p => p !== '@now/static')
       ],
       {
