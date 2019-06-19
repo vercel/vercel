@@ -16,10 +16,11 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc && jest",
-    "prepublish": "tsc"
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "execa": "^1.0.0",
-    "fs-extra": "^7.0.1"
+    "fs-extra": "^7.0.1",
+    "typescript": "3.5.2"
   }
 }
