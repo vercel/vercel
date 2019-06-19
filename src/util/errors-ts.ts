@@ -1083,3 +1083,13 @@ export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
     });
   }
 }
+
+export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
+  constructor(nameOrId: string) {
+    super({
+      code: 'PROJECT_NOT_FOUND',
+      meta: {},
+      message: `There is no project for "${nameOrId}"`
+    });
+  }
+}

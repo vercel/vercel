@@ -13,6 +13,10 @@ import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
+import { NowError } from '../util/now-error';
+import removeProject from '../util/projects/remove-project';
+import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
+import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 
 const help = () => {
   console.log(`
@@ -120,31 +124,38 @@ export default async function main(ctx) {
       .join(' ')} in ${chalk.bold(contextName)}`
   );
 
+  let aliases;
+  let projects;
   let deployments;
   const findStart = Date.now();
 
   try {
-    deployments = await now.list(null, { version: 4 });
+    const searchFilter = (d) => ids.some((id) => (
+      (d && !(d instanceof NowError)) && (
+      d.uid === id ||
+      d.name === id ||
+      d.url === normalizeURL(id)
+    )));
+
+    const [deploymentList, projectList] = await Promise.all([
+      Promise.all(ids.map((idOrHost) => getDeploymentByIdOrHost(now, contextName, idOrHost))),
+      Promise.all(ids.map(async (idOrName) => getProjectByIdOrName(now, idOrName)))
+    ]);
+
+    deployments = deploymentList.filter(searchFilter);
+    projects = projectList.filter(searchFilter);
+
+    // Remove all deployments that are included in the projects
+    deployments = deployments.filter((d) => !projects.some((p) => p.name === d.name));
+
+    aliases = await Promise.all(deployments.map(depl => getAliases(now, depl.uid)));
+    cancelWait();
   } catch (err) {
     cancelWait();
     throw err;
   }
 
-  let matches = deployments.filter(d =>
-    ids.some(id => d.uid === id || d.name === id || d.url === normalizeURL(id))
-  );
-
-  let aliases;
-
-  try {
-    aliases = await Promise.all(matches.map(depl => getAliases(now, depl.uid)));
-    cancelWait();
-  } catch (err) {
-    cancelWait();
-    throw err;
-  }
-
-  matches = matches.filter((match, i) => {
+  deployments = deployments.filter((match, i) => {
     if (argv.safe && aliases[i].length > 0) {
       return false;
     }
@@ -153,51 +164,55 @@ export default async function main(ctx) {
     return true;
   });
 
-  if (matches.length === 0) {
+  if (deployments.length === 0 && projects.length === 0) {
     log(
-      `Could not find ${argv.safe
-        ? 'unaliased'
-        : 'any'} deployments matching ${ids
-        .map(id => chalk.bold(`"${id}"`))
-        .join(', ')}. Run ${cmd('now ls')} to list.`
+      `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
+      `or projects matching ` +
+      `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd('now ls')} to list.`
     );
     return 0;
   }
 
   log(
-    `Found ${plural(
-      'deployment',
-      matches.length,
-      true
-    )} for removal in ${chalk.bold(contextName)} ${elapsed(
-      Date.now() - findStart
-    )}`
+    `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
+    `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
 
   if (!skipConfirmation) {
     const confirmation = (await readConfirmation(
-      matches,
+      deployments,
+      projects,
       output
     )).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
       now.close();
+
+      // Hangs otherwise
+      process.exit(1);
       return 1;
     }
   }
 
   const start = new Date();
 
-  await Promise.all(matches.map(depl => now.remove(depl.uid, { hard })));
+  await Promise.all([
+    ...deployments.map(depl => now.remove(depl.uid, { hard })),
+    ...projects.map(project => removeProject(now, project.id))
+  ]);
 
   success(
-    `${plural('deployment', matches.length, true)} removed ${elapsed(
-      Date.now() - start
-    )}`
+    `Removed ${deploymentsAndProjects(deployments, projects)} ` +
+    `${elapsed(Date.now() - start)}`
   );
-  matches.forEach(depl => {
+
+  deployments.forEach(depl => {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
+  });
+
+  projects.forEach(project => {
+    console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
   });
 
   // if we close normally, we get a really odd error:
@@ -211,34 +226,42 @@ export default async function main(ctx) {
   return 0;
 }
 
-function readConfirmation(matches, output) {
+function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
-    output.log(
-      `The following ${plural(
-        'deployment',
-        matches.length,
-        true
-      )} will be permanently removed:`
-    );
+    if (deployments.length > 0) {
+      output.log(
+        `The following ${plural('deployment', deployments.length, deployments.length > 1)} ` +
+        `will be permanently removed:`
+      );
 
-    const tbl = table(
-      matches.map(depl => {
-        const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
-        const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-        return [`  ${depl.uid}`, url, time];
-      }),
-      { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
-    );
-    output.print(`${tbl}\n`);
+      const deploymentTable = table(
+        deployments.map(depl => {
+          const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
+          const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
+          return [`  ${depl.uid}`, url, time];
+        }),
+        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+      );
+      output.print(`${deploymentTable}\n`);
+    }
 
-    for (const depl of matches) {
-      for (const alias of depl.aliases) {
+    for (const depl of deployments) {
+      for (const {alias} of depl.aliases) {
         output.warn(
-          `Deployment ${chalk.bold(depl.url)} ` +
-            `is an alias for ${chalk.underline(
-              `https://${alias.alias}`
-            )} and will be removed.`
+          `${chalk.underline(`https://${alias}`)} is an alias for ` +
+          `${chalk.bold(depl.url)} and will be removed`
         );
+      }
+    }
+
+    if (projects.length > 0) {
+      console.log(
+        `The following ${plural('project', projects.length, projects.length > 1)} will be permanently removed, ` +
+        `including all ${projects.length > 1 ? 'their' : 'its'} deployments and aliases:`
+      );
+
+      for (const project of projects) {
+        console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
       }
     }
 
@@ -253,4 +276,19 @@ function readConfirmation(matches, output) {
       })
       .resume();
   });
+}
+
+function deploymentsAndProjects(deployments = [], projects = [], conjunction = 'and') {
+  if (!projects || projects.length === 0) {
+    return `${plural('deployment', deployments.length, true)}`
+  }
+
+  if (!deployments || deployments.length === 0) {
+    return `${plural('project', projects.length, true)}`;
+  }
+
+  return (
+    `${plural('deployment', deployments.length, true)} ` +
+    `${conjunction} ${plural('project', projects.length, true)}`
+  );
 }
