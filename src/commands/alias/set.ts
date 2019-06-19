@@ -19,6 +19,7 @@ import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
+import handleCertError from '../../util/certs/handle-cert-error';
 
 type Options = {
   '--debug': boolean;
@@ -365,8 +366,13 @@ type RemainingAssignAliasErrors = SetDifference<
 
 function handleCreateAliasError<T>(
   output: Output,
-  error: RemainingAssignAliasErrors | T
+  errorOrResult: RemainingAssignAliasErrors | T
 ): 1 | T {
+  const error = handleCertError(output, errorOrResult);
+  if (error === 1) {
+    return error;
+  }
+
   if (error instanceof ERRORS.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(
@@ -398,93 +404,15 @@ function handleCreateAliasError<T>(
     );
     return 1;
   }
-  if (error instanceof ERRORS.DomainConfigurationError) {
-    output.error(
-      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
-    if (error.meta.external) {
-      output.print(
-        `  The propagation may take a few minutes, but please verify your settings:\n\n`
-      );
-      output.print(
-        `${dnsTable([
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ])}\n`
-      );
-    } else {
-      output.print(
-        `  We configured them for you, but the propagation may take a few minutes.\n`
-      );
-      output.print(`  Please try again later.\n`);
-    }
-    return 1;
-  }
-  if (error instanceof ERRORS.TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
-        ', '
-      )}`
-    );
-    return 1;
-  }
-  if (error instanceof ERRORS.CantSolveChallenge) {
-    if (error.meta.type === 'dns-01') {
-      output.error(
-        `The certificate provider could not resolve the DNS queries for ${
-          error.meta.domain
-        }.`
-      );
-      output.print(
-        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
-      );
-    } else {
-      output.error(
-        `The certificate provider could not resolve the HTTP queries for ${
-          error.meta.domain
-        }.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
-    }
-    return 1;
-  }
-  if (error instanceof ERRORS.DomainValidationRunning) {
-    output.error(
-      `There is a validation in course for ${chalk.underline(
-        error.meta.domain
-      )}. Wait until it finishes.`
-    );
-    return 1;
-  }
+
   if (error instanceof ERRORS.RuleValidationFailed) {
     output.error(`Rule validation error: ${error.meta.message}.`);
     output.print(`  Make sure your rules file is written correctly.\n`);
     return 1;
   }
-  if (error instanceof ERRORS.TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
-        error.meta.retryAfter * 1000,
-        {
-          long: true
-        }
-      )}.`
-    );
-    return 1;
-  }
   if (error instanceof ERRORS.VerifyScaleTimeout) {
     output.error(`Instance verification timed out (${ms(error.meta.timeout)})`);
     output.log('Read more: https://err.sh/now-cli/verification-timeout');
-    return 1;
-  }
-  if (error instanceof ERRORS.DomainsShouldShareRoot) {
-    output.error(`All given common names should share the same root domain.`);
     return 1;
   }
   if (error instanceof ERRORS.NotSupportedMinScaleSlots) {
@@ -560,37 +488,14 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
-  if (error instanceof ERRORS.WildcardNotAllowed) {
-    output.error(
-      `Custom suffixes are only allowed for domains in ${chalk.underline(
-        'zeit.world'
-      )}`
-    );
-    return 1;
-  }
-
   if (
-    error instanceof ERRORS.ConflictingCAARecord ||
     error instanceof ERRORS.DomainPermissionDenied ||
     error instanceof ERRORS.DeploymentFailedAliasImpossible ||
-    error instanceof ERRORS.InvalidDeploymentId ||
-    error instanceof ERRORS.UnauthorizedCertsRequestError
+    error instanceof ERRORS.InvalidDeploymentId
   ) {
     output.error(error.message);
     return 1;
   }
 
-  if (error instanceof ERRORS.CertsDNSError) {
-    output.error(
-      `We could not solve the dns-01 challenge for cns ${error.meta.cns.join(
-        ', '
-      )}.`
-    );
-    output.log(
-      `The certificate provider could not resolve the required DNS record queries.`
-    );
-    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
-    return 1;
-  }
   return error;
 }
