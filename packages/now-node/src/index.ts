@@ -17,6 +17,7 @@ import {
   BuildOptions,
   shouldServe,
 } from '@now/build-utils';
+import { SpawnOptions } from 'child_process';
 export { NowRequest, NowResponse } from './types';
 
 interface CompilerConfig {
@@ -48,6 +49,22 @@ function toBuffer(data: string | Buffer): Buffer {
   return data;
 }
 
+function getSpawnOptions(meta: Meta, useNode10: boolean): SpawnOptions {
+  const opts = {
+    env: { ...process.env },
+  };
+
+  if (!meta.isDev) {
+    if (useNode10) {
+      opts.env.PATH = '/node10/bin:' + opts.env.PATH;
+    } else {
+      opts.env.PATH = '/node8/bin:' + opts.env.PATH;
+    }
+  }
+
+  return opts;
+}
+
 async function downloadInstallAndBundle({
   files,
   entrypoint,
@@ -59,10 +76,12 @@ async function downloadInstallAndBundle({
 
   console.log("installing dependencies for user's code...");
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  await runNpmInstall(entrypointFsDirname, ['--prefer-offline']);
+  const useNode10 = await enginesMatch(entrypointFsDirname, '10.x');
+  const spawnOpts = getSpawnOptions(meta, useNode10);
+  await runNpmInstall(entrypointFsDirname, ['--prefer-offline'], spawnOpts);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname };
+  return { entrypointPath, entrypointFsDirname, useNode10, spawnOpts };
 }
 
 async function compile(
@@ -179,6 +198,8 @@ export async function build({
   const {
     entrypointPath,
     entrypointFsDirname,
+    useNode10,
+    spawnOpts,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -187,7 +208,7 @@ export async function build({
   });
 
   console.log('running user script...');
-  await runPackageJsonScript(entrypointFsDirname, 'now-build');
+  await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
 
   console.log('compiling entrypoint with ncc...');
   const { preparedFiles, watch } = await compile(
@@ -227,8 +248,6 @@ export async function build({
       fsPath: join(__dirname, 'helpers.js'),
     });
   }
-
-  const useNode10 = await enginesMatch(entrypointFsDirname, '10.x');
 
   const lambda = await createLambda({
     files: {
