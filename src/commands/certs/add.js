@@ -11,7 +11,6 @@ import dnsTable from '../../util/format-dns-table.ts';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 
-// todo remove
 import {
   DomainPermissionDenied,
   InvalidCert,
