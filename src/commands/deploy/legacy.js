@@ -44,7 +44,6 @@ import getProjectName from '../../util/get-project-name';
 import {
   CertConfigurationError,
   CertError,
-  CertsDNSError,
   DeploymentNotFound,
   DomainNotFound,
   DomainPermissionDenied,
