@@ -26,7 +26,6 @@ import {
   BuildsRateLimited,
   CertConfigurationError,
   CertError,
-  CertsDNSError,
   DeploymentNotFound,
   DomainNotFound,
   DomainNotVerified,
