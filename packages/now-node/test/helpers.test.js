@@ -1,7 +1,8 @@
-/* global beforeAll, beforeEach, afterAll, expect, it, jest */
+/* global beforeEach, afterEach, expect, it, jest */
 const fetch = require('node-fetch');
 const listen = require('test-listen');
 const qs = require('querystring');
+const express = require('express');
 
 const { createServerWithHelpers } = require('../dist/helpers');
 
@@ -37,17 +38,14 @@ async function fetchWithProxyReq(_url, opts = {}) {
   });
 }
 
-beforeAll(async () => {
+beforeEach(async () => {
+  mockListener.mockClear();
+  consumeEventMock.mockClear();
   server = createServerWithHelpers(mockListener, mockBridge);
   url = await listen(server);
 });
 
-beforeEach(() => {
-  mockListener.mockClear();
-  consumeEventMock.mockClear();
-});
-
-afterAll(async () => {
+afterEach(async () => {
   await server.close();
 });
 
@@ -195,7 +193,7 @@ it('should not recalculate req properties twice', async () => {
   }
 });
 
-it('should be able to overwrite request properties', async () => {
+it('should be able to overwrite req/res properties', async () => {
   const spy = jest.fn(() => {});
 
   mockListener.mockImplementation((...args) => {
@@ -214,15 +212,13 @@ it('should be able to overwrite request properties', async () => {
   nowProps.forEach((_, i) => expect(spy.mock.calls[i][0]).toBe('ok2'));
 });
 
-// we test that properties are configurable
-// because expressjs (or some other api frameworks) needs that to work
 it('should be able to reconfig request properties', async () => {
   const spy = jest.fn(() => {});
 
   mockListener.mockImplementation((...args) => {
     nowProps.forEach(([prop, n]) => {
       // eslint-disable-next-line
-      Object.defineProperty(args[n], prop, { value: 'ok' });
+      Object.defineProperty(args[n], prop, { value: 'ok', configurable: true });
       Object.defineProperty(args[n], prop, { value: 'ok2' });
       spy(args[n][prop]);
     });
@@ -233,6 +229,22 @@ it('should be able to reconfig request properties', async () => {
   await fetchWithProxyReq(url);
 
   nowProps.forEach((_, i) => expect(spy.mock.calls[i][0]).toBe('ok2'));
+});
+
+// specific test to test that express can overwrite our helpers
+it('express should be able to override req and res helpers methods', async () => {
+  const app = express();
+  app.get('*', (req, res) => {
+    res.send('hello world');
+  });
+
+  mockListener.mockImplementation(app);
+
+  const res = await fetchWithProxyReq(url);
+  const text = await res.text();
+
+  expect(text).toMatch(/hello world/);
+  expect(res.headers.get('content-type')).toMatch(/html/);
 });
 
 it('should be able to try/catch parse errors', async () => {
