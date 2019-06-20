@@ -11,7 +11,6 @@ export default function handleCertError<T>(
     | ERRORS.CertError
     | ERRORS.TooManyRequests
     | ERRORS.DomainNotFound
-    | ERRORS.CertsDNSError
     | ERRORS.CertConfigurationError
     | T
 ): 1 | T {
@@ -37,16 +36,6 @@ export default function handleCertError<T>(
 
   if (error instanceof ERRORS.DomainNotFound) {
     output.error(error.message);
-    return 1;
-  }
-
-  if (error instanceof ERRORS.CertsDNSError) {
-    output.error(
-      `We could not solve the dns-01 challenge for cns ${error.meta.cns
-        .map(cn => chalk.underline(cn))
-        .join(', ')}.`
-    );
-    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
   }
 

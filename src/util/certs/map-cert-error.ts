@@ -30,7 +30,8 @@ export default function mapCertError(cns: string[], error: any) {
     error.code === 'unauthorized_request_error' ||
     error.code === 'unsupported_challenge_priority' ||
     error.code === 'wildcard_not_allowed' ||
-    error.code === 'validation_running'
+    error.code === 'validation_running' ||
+    error.code === 'dns_error'
   ) {
     return new ERRORS.CertError({
       cns,
@@ -38,10 +39,6 @@ export default function mapCertError(cns: string[], error: any) {
       message: error.message,
       helpUrl: error.helpUrl
     });
-  }
-
-  if (error.code === 'dns_error') {
-    return new ERRORS.CertsDNSError(error.detail, cns);
   }
 
   return null;

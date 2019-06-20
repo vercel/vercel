@@ -481,7 +481,8 @@ type CertErrorCode =
   | 'unauthorized_request_error'
   | 'unsupported_challenge_priority'
   | 'wildcard_not_allowed'
-  | 'validation_running';
+  | 'validation_running'
+  | 'dns_error';
 export class CertError extends NowError<
   'CERT_ERROR',
   { cns: string[]; code: CertErrorCode; helpUrl?: string }
@@ -1056,20 +1057,6 @@ export class MissingDotenvVarsError extends NowError<
       code: 'MISSING_DOTENV_VARS',
       message,
       meta: { type, missing }
-    });
-  }
-}
-
-export class CertsDNSError extends NowError<
-  'CERTS_DNS_ERROR',
-  { detail: string; cns: string[] }
-> {
-  constructor(detail: string, cns: string[]) {
-    super({
-      code: 'CERTS_DNS_ERROR',
-      meta: { detail, cns },
-      message:
-        'There was a problem with a DNS query during identifier validation'
     });
   }
 }
