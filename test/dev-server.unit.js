@@ -121,4 +121,13 @@ test('[DevServer] Installs canary build-utils if one more more builders is canar
   t.is(getBuildUtils(['@now/static']), '@now/build-utils@latest');
   t.is(getBuildUtils(['@now/md@canary']), '@now/build-utils@canary');
   t.is(getBuildUtils(['custom-builder']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['custom-builder@canary']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['canary-bird']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['canary-bird@4.0.0']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['canary-bird@canary']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['@canary/bird']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['@canary/bird@0.1.0']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['@canary/bird@canary']), '@now/build-utils@canary');
+  t.is(getBuildUtils(['https://example.com']), '@now/build-utils@latest');
+  t.is(getBuildUtils(['']), '@now/build-utils@latest');
 });
