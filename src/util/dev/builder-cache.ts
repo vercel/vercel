@@ -116,9 +116,17 @@ export async function cleanCacheDir(output: Output): Promise<void> {
   }
 }
 
-export function getBuildUtils(packages: string[]) {
+function getNpmVersion(use = ''): string {
+  const parsed = npa(use);
+  if (registryTypes.has(parsed.type)) {
+    return parsed.fetchSpec || '';
+  }
+  return '';
+}
+
+export function getBuildUtils(packages: string[]): string {
   const version = packages
-    .map(use => use.split('@').pop() || '')
+    .map(getNpmVersion)
     .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
 
     return `@now/build-utils@${version}`;
