@@ -41,3 +41,7 @@ After running this publish step, GitHub Actions will take care of publishing the
 If for some reason GitHub Actions fails to publish the npm package, you may do so
 manually by running `npm publish` from the package directory. Make sure to
 use `npm publish --tag canary` if you are publishing a canary release!
+
+### Contributing
+
+See the [Contribution guidelines for this project](CONTRIBUTING.md), it also contains guidance on interpreting tests failures.
