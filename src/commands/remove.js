@@ -153,7 +153,9 @@ export default async function main(ctx) {
         return getDeploymentsByProjectId(client, project.id, { max: 201, continue: true });
       }));
 
-      projectDeployments.map((pDeployments) => deployments.push(...pDeployments));
+      projectDeployments
+        .slice(0, 201)
+        .map((pDeployments) => deployments.push(...pDeployments));
 
       projects = [];
     } else {

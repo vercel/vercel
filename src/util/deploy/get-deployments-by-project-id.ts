@@ -42,7 +42,7 @@ export default async function getDeploymentsByProjectId(
   const { deployments } = await client.fetch<Response>(`/v4/now/deployments?${query}`);
   total += deployments.length;
 
-  if (options.max && total > options.max) {
+  if (options.max && total >= options.max) {
     return deployments;
   }
 
