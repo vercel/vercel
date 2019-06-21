@@ -1,5 +1,5 @@
 const path = require('path');
-const { spawn } = require('child_process');
+const spawn = require('cross-spawn');
 const getPort = require('get-port');
 const { timeout } = require('promise-timeout');
 const {
@@ -80,7 +80,7 @@ exports.build = async ({
           cwd: entrypointFsDirname,
           env: { ...process.env, PORT: String(devPort) },
         };
-        const child = spawn('yarn', ['run', 'now-dev'], opts);
+        const child = spawn('npm', ['run', 'now-dev'], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         child.stdout.setEncoding('utf8');
         child.stdout.pipe(process.stdout);
