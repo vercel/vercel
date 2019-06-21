@@ -20,12 +20,14 @@ interface Options {
   from: number | null;
   limit: number | null;
   continue: boolean;
+  max?: number;
 }
 
 export default async function getDeploymentsByProjectId(
   client: Client,
   projectId: string,
-  options: Options = { from: null, limit: 100, continue: false }
+  options: Options = { from: null, limit: 100, continue: false },
+  total: number = 0
 ) {
   const limit = options.limit || 100;
 
@@ -38,11 +40,16 @@ export default async function getDeploymentsByProjectId(
   }
 
   const { deployments } = await client.fetch<Response>(`/v4/now/deployments?${query}`);
+  total += deployments.length;
+
+  if (options.max && total > options.max) {
+    return deployments;
+  }
 
   if (options.continue && deployments.length === limit) {
     const nextFrom = deployments[deployments.length - 1].created;
     const nextOptions = Object.assign({}, options, { from: nextFrom });
-    deployments.push(...(await getDeploymentsByProjectId(client, projectId, nextOptions)));
+    deployments.push(...(await getDeploymentsByProjectId(client, projectId, nextOptions, total)));
   }
 
   return deployments;

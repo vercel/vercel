@@ -17,6 +17,7 @@ import { NowError } from '../util/now-error';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
+import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 
 const help = () => {
   console.log(`
@@ -145,8 +146,20 @@ export default async function main(ctx) {
     deployments = deploymentList.filter(searchFilter);
     projects = projectList.filter(searchFilter);
 
-    // Remove all deployments that are included in the projects
-    deployments = deployments.filter((d) => !projects.some((p) => p.name === d.name));
+    // When `--safe` is set we want to replace all projects
+    // with with deployments to verify the aliases
+    if (argv.safe) {
+      const projectDeployments = await Promise.all(projects.map((project) => {
+        return getDeploymentsByProjectId(client, project.id, { max: 201, continue: true });
+      }));
+
+      projectDeployments.map((pDeployments) => deployments.push(...pDeployments));
+
+      projects = [];
+    } else {
+      // Remove all deployments that are included in the projects
+      deployments = deployments.filter((d) => !projects.some((p) => p.name === d.name));
+    }
 
     aliases = await Promise.all(deployments.map(depl => getAliases(now, depl.uid)));
     cancelWait();
@@ -177,6 +190,13 @@ export default async function main(ctx) {
     `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
     `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
+
+  if (deployments.length > 200) {
+    output.warn(
+      `Only 200 deployments can get deleted at once. ` +
+      `Please continue 10 minutes after deletion to remove the rest.`
+    );
+  }
 
   if (!skipConfirmation) {
     const confirmation = (await readConfirmation(
