@@ -23,7 +23,10 @@ For the Canary Channel, publish the modified Builders to npm with the following:
 yarn publish-canary
 ```
 
-For the Stable Channel, you must cherry pick each commit from canary to master and then deploy the modified Builders:
+For the Stable Channel, you must do the following:
+- Cherry pick each commit from canary to master
+- Verify that you are *in-sync* with canary (with the exception of the `version` line in `package.json`)
+- Deploy the modified Builders
 
 ```
 git checkout master
@@ -33,6 +36,7 @@ git cherry-pick <PR502_COMMIT_SHA>
 git cherry-pick <PR503_COMMIT_SHA>
 git cherry-pick <PR504_COMMIT_SHA>
 # ... etc ...
+git diff origin/canary
 yarn publish-stable
 ```
 
