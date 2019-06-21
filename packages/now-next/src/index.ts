@@ -21,6 +21,8 @@ import {
   PrepareCacheOptions,
   runNpmInstall,
   runPackageJsonScript,
+  getNodeVersion,
+  getSpawnOptions,
 } from '@now/build-utils';
 
 import nextLegacyVersions from './legacy-versions';
@@ -171,6 +173,9 @@ export const build = async ({
   console.log(`${name} Downloading user files...`);
   await download(files, workPath, meta);
 
+  const nodeVersion = await getNodeVersion(entryPath);
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
 
@@ -190,7 +195,7 @@ export const build = async ({
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
       console.log(`${name} Installing dependencies...`);
-      await runNpmInstall(entryPath, ['--prefer-offline']);
+      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
 
       if (!process.env.NODE_ENV) {
         process.env.NODE_ENV = 'development';
@@ -277,20 +282,22 @@ export const build = async ({
   }
 
   console.log('installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline']);
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
 
   console.log('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  await runPackageJsonScript(entryPath, 'now-build', {
-    env: {
-      ...process.env,
-      NODE_OPTIONS: `--max_old_space_size=${memoryToConsume}`,
-    },
-  } as SpawnOptions);
+  const buildSpawnOptions = { ...spawnOpts };
+  const env = { ...buildSpawnOptions.env } as any;
+  env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
+  await runPackageJsonScript(entryPath, 'now-build', buildSpawnOptions);
 
   if (isLegacy) {
     console.log('running npm install --production...');
-    await runNpmInstall(entryPath, ['--prefer-offline', '--production']);
+    await runNpmInstall(
+      entryPath,
+      ['--prefer-offline', '--production'],
+      spawnOpts
+    );
   }
 
   if (process.env.NPM_AUTH_TOKEN) {

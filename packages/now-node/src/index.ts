@@ -12,12 +12,12 @@ import {
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
-  enginesMatch,
+  getNodeVersion,
+  getSpawnOptions,
   PrepareCacheOptions,
   BuildOptions,
   shouldServe,
 } from '@now/build-utils';
-import { SpawnOptions } from 'child_process';
 export { NowRequest, NowResponse } from './types';
 
 interface CompilerConfig {
@@ -49,22 +49,6 @@ function toBuffer(data: string | Buffer): Buffer {
   return data;
 }
 
-function getSpawnOptions(meta: Meta, useNode10: boolean): SpawnOptions {
-  const opts = {
-    env: { ...process.env },
-  };
-
-  if (!meta.isDev) {
-    if (useNode10) {
-      opts.env.PATH = '/node10/bin:' + opts.env.PATH;
-    } else {
-      opts.env.PATH = '/node8/bin:' + opts.env.PATH;
-    }
-  }
-
-  return opts;
-}
-
 async function downloadInstallAndBundle({
   files,
   entrypoint,
@@ -76,12 +60,12 @@ async function downloadInstallAndBundle({
 
   console.log("installing dependencies for user's code...");
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const useNode10 = await enginesMatch(entrypointFsDirname, '10.x');
-  const spawnOpts = getSpawnOptions(meta, useNode10);
+  const nodeVersion = await getNodeVersion(entrypointFsDirname);
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   await runNpmInstall(entrypointFsDirname, ['--prefer-offline'], spawnOpts);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, useNode10, spawnOpts };
+  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
 
 async function compile(
@@ -198,7 +182,7 @@ export async function build({
   const {
     entrypointPath,
     entrypointFsDirname,
-    useNode10,
+    nodeVersion,
     spawnOpts,
   } = await downloadInstallAndBundle({
     files,
@@ -255,7 +239,7 @@ export async function build({
       ...launcherFiles,
     },
     handler: 'launcher.launcher',
-    runtime: useNode10 ? 'nodejs10.x' : 'nodejs8.10',
+    runtime: nodeVersion.runtime,
   });
 
   const output = { [entrypoint]: lambda };
