@@ -6,6 +6,10 @@ const execa = require('execa');
 const assert = require('assert');
 const { glob, download } = require('../');
 const { createZip } = require('../dist/lambda');
+const {
+  getSupportedNodeVersion,
+  defaultSelection,
+} = require('../dist/fs/node-version');
 
 const {
   packAndDeploy,
@@ -62,6 +66,34 @@ it('should create zip files with symlinks properly', async () => {
   ]);
   assert(linkStat.isSymbolicLink());
   assert(aStat.isFile());
+});
+
+async function getNodeMajor(engines) {
+  const o = await getSupportedNodeVersion(engines);
+  return o.major;
+}
+
+it('should only match supported node versions or fallback to default', async () => {
+  expect(await getNodeMajor('10.x')).toBe(10);
+  expect(await getNodeMajor('8.x')).toBe(8);
+  expect(await getSupportedNodeVersion('6.x')).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion('64.x')).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion('')).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion(null)).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion(undefined)).toBe(defaultSelection);
+});
+
+it('should match all semver ranges', async () => {
+  // See https://docs.npmjs.com/files/package.json#engines
+  expect(await getNodeMajor('10.0.0')).toBe(10);
+  expect(await getNodeMajor('10.x')).toBe(10);
+  expect(await getNodeMajor('>=10')).toBe(10);
+  expect(await getNodeMajor('>=10.3.0')).toBe(10);
+  expect(await getNodeMajor('8.5.0 - 10.5.0')).toBe(10);
+  expect(await getNodeMajor('>=9.0.0')).toBe(10);
+  expect(await getNodeMajor('>=9.5.0 <=10.5.0')).toBe(10);
+  expect(await getNodeMajor('~10.5.0')).toBe(10);
+  expect(await getNodeMajor('^10.5.0')).toBe(10);
 });
 
 // own fixtures

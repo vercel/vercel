@@ -5,6 +5,8 @@ import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import { intersects } from 'semver';
+import { Meta, PackageJson, NodeVersion } from '../types';
+import { getSupportedNodeVersion } from './node-version';
 
 function spawnAsync(
   command: string,
@@ -53,25 +55,31 @@ export async function runShellScript(fsPath: string) {
   return true;
 }
 
-interface PackageJson {
-  name: string;
-  version: string;
-  engines?: {
-    [key: string]: string;
-    node: string;
-    npm: string;
+export function getSpawnOptions(
+  meta: Meta,
+  nodeVersion: NodeVersion
+): SpawnOptions {
+  const opts = {
+    env: { ...process.env },
   };
-  scripts?: {
-    [key: string]: string;
-  };
-  dependencies?: {
-    [key: string]: string;
-  };
-  devDependencies?: {
-    [key: string]: string;
-  };
+
+  if (!meta.isDev) {
+    opts.env.PATH = `/node${nodeVersion.major}/bin:${opts.env.PATH}`;
+  }
+
+  return opts;
 }
 
+export async function getNodeVersion(destPath: string): Promise<NodeVersion> {
+  const { packageJson } = await scanParentDirs(destPath, true);
+  const range = packageJson && packageJson.engines && packageJson.engines.node;
+  return getSupportedNodeVersion(range);
+}
+
+/**
+ * @deprecate enginesMatch() is deprecated.
+ * Please use getNodeMajorVersion() instead.
+ */
 export async function enginesMatch(
   destPath: string,
   nodeVersion: string
@@ -180,7 +188,7 @@ export async function runPackageJsonScript(
 }
 
 /**
- * installDependencies() is deprecated.
+ * @deprecate installDependencies() is deprecated.
  * Please use runNpmInstall() instead.
  */
 export const installDependencies = deprecate(

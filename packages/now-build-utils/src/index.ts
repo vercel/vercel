@@ -21,6 +21,8 @@ import {
   runNpmInstall,
   runShellScript,
   enginesMatch,
+  getNodeVersion,
+  getSpawnOptions,
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
@@ -44,6 +46,8 @@ export {
   runNpmInstall,
   runShellScript,
   enginesMatch,
+  getNodeVersion,
+  getSpawnOptions,
   streamToBuffer,
   AnalyzeOptions,
   BuildOptions,

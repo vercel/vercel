@@ -162,3 +162,28 @@ export interface ShouldServeOptions {
    */
   config: Config;
 }
+
+export interface PackageJson {
+  name: string;
+  version: string;
+  engines?: {
+    [key: string]: string;
+    node: string;
+    npm: string;
+  };
+  scripts?: {
+    [key: string]: string;
+  };
+  dependencies?: {
+    [key: string]: string;
+  };
+  devDependencies?: {
+    [key: string]: string;
+  };
+}
+
+export interface NodeVersion {
+  major: number;
+  range: string;
+  runtime: string;
+}
