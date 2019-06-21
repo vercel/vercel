@@ -4,7 +4,6 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
-import { intersects } from 'semver';
 import { Meta, PackageJson, NodeVersion } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
@@ -74,21 +73,6 @@ export async function getNodeVersion(destPath: string): Promise<NodeVersion> {
   const { packageJson } = await scanParentDirs(destPath, true);
   const range = packageJson && packageJson.engines && packageJson.engines.node;
   return getSupportedNodeVersion(range);
-}
-
-/**
- * @deprecate enginesMatch() is deprecated.
- * Please use getNodeMajorVersion() instead.
- */
-export async function enginesMatch(
-  destPath: string,
-  nodeVersion: string
-): Promise<boolean> {
-  const { packageJson } = await scanParentDirs(destPath, true);
-
-  const engineVersion =
-    packageJson && packageJson.engines && packageJson.engines.node;
-  return intersects(nodeVersion, engineVersion || '0.0.0');
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {

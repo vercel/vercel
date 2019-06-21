@@ -20,7 +20,6 @@ import {
   runPackageJsonScript,
   runNpmInstall,
   runShellScript,
-  enginesMatch,
   getNodeVersion,
   getSpawnOptions,
 } from './fs/run-user-scripts';
@@ -45,7 +44,6 @@ export {
   runPackageJsonScript,
   runNpmInstall,
   runShellScript,
-  enginesMatch,
   getNodeVersion,
   getSpawnOptions,
   streamToBuffer,
