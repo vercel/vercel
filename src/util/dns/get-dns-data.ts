@@ -14,71 +14,75 @@ export default async function getDNSData(
     return data;
   }
 
-  // first ask for type, branch from there
-  const possibleTypes = new Set(RECORD_TYPES);
-  const type = (await textInput({
-    label: `- Record type (${RECORD_TYPES.join(', ')}): `,
-    validateValue: (v: string) =>
-      Boolean(v && possibleTypes.has(v.trim().toUpperCase()))
-  }))
-    .trim()
-    .toUpperCase();
+  try {
+    // first ask for type, branch from there
+    const possibleTypes = new Set(RECORD_TYPES);
+    const type = (await textInput({
+      label: `- Record type (${RECORD_TYPES.join(', ')}): `,
+      validateValue: (v: string) =>
+        Boolean(v && possibleTypes.has(v.trim().toUpperCase()))
+    }))
+      .trim()
+      .toUpperCase();
 
-  const name = await getRecordName(type);
+    const name = await getRecordName(type);
 
-  if (type === 'SRV') {
-    const priority = await getNumber(`- ${type} priority: `);
-    const weight = await getNumber(`- ${type} weight: `);
-    const port = await getNumber(`- ${type} port: `);
-    const target = await getTrimmedString(`- ${type} target: `);
-    output.log(
-      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-        `${priority}`
-      )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
-        target
-      )}.`
-    );
-    return (await verifyData())
-      ? {
-          name,
-          type,
-          srv: {
-            priority,
-            weight,
-            port,
-            target
+    if (type === 'SRV') {
+      const priority = await getNumber(`- ${type} priority: `);
+      const weight = await getNumber(`- ${type} weight: `);
+      const port = await getNumber(`- ${type} port: `);
+      const target = await getTrimmedString(`- ${type} target: `);
+      output.log(
+        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+          `${priority}`
+        )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
+          target
+        )}.`
+      );
+      return (await verifyData())
+        ? {
+            name,
+            type,
+            srv: {
+              priority,
+              weight,
+              port,
+              target
+            }
           }
-        }
-      : null;
-  }
+        : null;
+    }
 
-  if (type === 'MX') {
-    const mxPriority = await getNumber(`- ${type} priority: `);
-    const value = await getTrimmedString(`- ${type} host: `);
-    output.log(
-      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-        `${mxPriority}`
-      )} ${chalk.cyan(value)}`
-    );
+    if (type === 'MX') {
+      const mxPriority = await getNumber(`- ${type} priority: `);
+      const value = await getTrimmedString(`- ${type} host: `);
+      output.log(
+        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+          `${mxPriority}`
+        )} ${chalk.cyan(value)}`
+      );
+      return (await verifyData())
+        ? {
+            name,
+            type,
+            value,
+            mxPriority
+          }
+        : null;
+    }
+
+    const value = await getTrimmedString(`- ${type} value: `);
+    output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
     return (await verifyData())
       ? {
           name,
           type,
-          value,
-          mxPriority
+          value
         }
       : null;
+  } catch (error) {
+    return null;
   }
-
-  const value = await getTrimmedString(`- ${type} value: `);
-  output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
-  return (await verifyData())
-    ? {
-        name,
-        type,
-        value
-      }
-    : null;
 }
 
 async function verifyData() {
