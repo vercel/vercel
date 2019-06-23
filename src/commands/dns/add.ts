@@ -57,7 +57,12 @@ export default async function add(
 
   const addStamp = stamp();
   const { domain, data: argData } = parsedParams;
-  const data = await getDNSData(argData);
+  const data = await getDNSData(output, argData);
+  if (!data) {
+    output.log(`Aborted`);
+    return 1;
+  }
+
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {
     output.error(

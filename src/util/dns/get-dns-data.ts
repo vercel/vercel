@@ -1,11 +1,15 @@
+import chalk from 'chalk';
 import { DNSRecordData } from '../../types';
 import textInput from '../input/text';
+import promptBool from '../input/prompt-bool';
+import { Output } from '../output';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
 
 export default async function getDNSData(
+  output: Output,
   data: null | DNSRecordData
-): Promise<DNSRecordData> {
+): Promise<DNSRecordData | null> {
   if (data) {
     return data;
   }
@@ -27,36 +31,58 @@ export default async function getDNSData(
     const weight = await getNumber(`- ${type} weight: `);
     const port = await getNumber(`- ${type} port: `);
     const target = await getTrimmedString(`- ${type} target: `);
-    return {
-      name,
-      type,
-      srv: {
-        priority,
-        weight,
-        port,
+    output.log(
+      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${priority}`
+      )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
         target
-      }
-    };
+      )}.`
+    );
+    return (await verifyData())
+      ? {
+          name,
+          type,
+          srv: {
+            priority,
+            weight,
+            port,
+            target
+          }
+        }
+      : null;
   }
 
   if (type === 'MX') {
-    const value = await getTrimmedString(`- ${type} domain: `);
     const mxPriority = await getNumber(`- ${type} priority: `);
-    return {
-      name,
-      type,
-      value,
-      mxPriority
-    };
+    const value = await getTrimmedString(`- ${type} host: `);
+    output.log(
+      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${mxPriority}`
+      )} ${chalk.cyan(value)}`
+    );
+    return (await verifyData())
+      ? {
+          name,
+          type,
+          value,
+          mxPriority
+        }
+      : null;
   }
 
   const value = await getTrimmedString(`- ${type} value: `);
-  console.log(name, type, value);
-  return {
-    name,
-    type,
-    value
-  };
+  output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
+  return (await verifyData())
+    ? {
+        name,
+        type,
+        value
+      }
+    : null;
+}
+
+async function verifyData() {
+  return promptBool('Is this correct?');
 }
 
 async function getRecordName(type: string) {
