@@ -104,7 +104,6 @@ export const build = async ({
     workPath = destNow;
   }
 
-  const foundLockFile = 'Pipfile.lock' in downloadedFiles;
   const pyUserBase = await getWriteableDirectory();
   process.env.PYTHONUSERBASE = pyUserBase;
   const pipPath = 'pip3';
@@ -129,17 +128,25 @@ export const build = async ({
   await pipInstall(pipPath, workPath, 'werkzeug');
   await pipInstall(pipPath, workPath, 'requests');
 
-  if (foundLockFile) {
+  let fsFiles = await glob('**', workPath);
+  const entryDirectory = dirname(entrypoint);
+
+  const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
+    ? join(workPath, entryDirectory)
+    : fsFiles['Pipfile.lock']
+    ? workPath
+    : null;
+
+  if (pipfileLockDir) {
     console.log('found "Pipfile.lock"');
 
     // Install pipenv.
     await pipInstallUser(pipPath, ' pipenv_to_requirements');
 
-    await pipenvInstall(pyUserBase, workPath);
+    await pipenvInstall(pyUserBase, pipfileLockDir);
   }
 
-  const fsFiles = await glob('**', workPath);
-  const entryDirectory = dirname(entrypoint);
+  fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
   if (fsFiles[requirementsTxt]) {
