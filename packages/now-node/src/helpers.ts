@@ -4,9 +4,6 @@ import {
   NowRequestCookies,
   NowRequestQuery,
   NowRequestBody,
-  NowResponseJson,
-  NowResponseSend,
-  NowResponseStatus,
 } from './types';
 import { Stream } from 'stream';
 import { Server } from 'http';
@@ -151,8 +148,7 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
   const opts = { configurable: true, enumerable: true };
   const optsReset = { ...opts, writable: true };
 
-  // @ts-ignore: __proto__ is always defined on an object
-  Object.defineProperty(req.__proto__, prop, {
+  Object.defineProperty(req, prop, {
     ...opts,
     get: () => {
       const value = getter();
@@ -164,11 +160,6 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
       Object.defineProperty(req, prop, { ...optsReset, value });
     },
   });
-}
-
-function setOnProto<T>(res: NowResponse, prop: string, fn: T) {
-  // @ts-ignore: __proto__ is always defined on an object
-  res.__proto__[prop] = fn;
 }
 
 export function createServerWithHelpers(
@@ -195,11 +186,9 @@ export function createServerWithHelpers(
       setLazyProp<NowRequestQuery>(req, 'query', getQueryParser(req));
       setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
 
-      setOnProto<NowResponseStatus>(res, 'status', statusCode =>
-        sendStatusCode(res, statusCode)
-      );
-      setOnProto<NowResponseSend>(res, 'send', data => sendData(res, data));
-      setOnProto<NowResponseJson>(res, 'json', data => sendJson(res, data));
+      res.status = statusCode => sendStatusCode(res, statusCode);
+      res.send = data => sendData(res, data);
+      res.json = data => sendJson(res, data);
 
       await listener(req, res);
     } catch (err) {
