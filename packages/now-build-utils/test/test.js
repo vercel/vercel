@@ -68,32 +68,50 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-async function getNodeMajor(engines) {
-  const o = await getSupportedNodeVersion(engines);
-  return o.major;
-}
-
-it('should only match supported node versions or fallback to default', async () => {
-  expect(await getNodeMajor('10.x')).toBe(10);
-  expect(await getNodeMajor('8.x')).toBe(8);
-  expect(await getSupportedNodeVersion('6.x')).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion('64.x')).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion('')).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion(null)).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion(undefined)).toBe(defaultSelection);
+it('should only match supported node versions', () => {
+  expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
+  expect(getSupportedNodeVersion('8.10.x')).resolves.toHaveProperty('major', 8);
+  expect(getSupportedNodeVersion('8.11.x')).rejects.toThrow();
+  expect(getSupportedNodeVersion('6.x')).rejects.toThrow();
+  expect(getSupportedNodeVersion('999.x')).rejects.toThrow();
+  expect(getSupportedNodeVersion('foo')).rejects.toThrow();
+  expect(getSupportedNodeVersion('')).resolves.toBe(defaultSelection);
+  expect(getSupportedNodeVersion(null)).resolves.toBe(defaultSelection);
+  expect(getSupportedNodeVersion(undefined)).resolves.toBe(defaultSelection);
 });
 
-it('should match all semver ranges', async () => {
+it('should match all semver ranges', () => {
   // See https://docs.npmjs.com/files/package.json#engines
-  expect(await getNodeMajor('10.0.0')).toBe(10);
-  expect(await getNodeMajor('10.x')).toBe(10);
-  expect(await getNodeMajor('>=10')).toBe(10);
-  expect(await getNodeMajor('>=10.3.0')).toBe(10);
-  expect(await getNodeMajor('8.5.0 - 10.5.0')).toBe(10);
-  expect(await getNodeMajor('>=9.0.0')).toBe(10);
-  expect(await getNodeMajor('>=9.5.0 <=10.5.0')).toBe(10);
-  expect(await getNodeMajor('~10.5.0')).toBe(10);
-  expect(await getNodeMajor('^10.5.0')).toBe(10);
+  expect(getSupportedNodeVersion('10.0.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
+  expect(getSupportedNodeVersion('>=10')).resolves.toHaveProperty('major', 10);
+  expect(getSupportedNodeVersion('>=10.3.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('8.5.0 - 10.5.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('>=9.0.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('>=9.5.0 <=10.5.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('~10.5.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
+  expect(getSupportedNodeVersion('^10.5.0')).resolves.toHaveProperty(
+    'major',
+    10,
+  );
 });
 
 // own fixtures
