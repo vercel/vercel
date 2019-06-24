@@ -1,6 +1,6 @@
 import * as ERRORS from '../errors-ts';
 
-export default function mapCertError(cns: string[], error: any) {
+export default function mapCertError(error: any, cns?: string[]) {
   if (error.code === 'too_many_requests') {
     return new ERRORS.TooManyRequests('certificates', error.retryAfter);
   }
@@ -10,7 +10,7 @@ export default function mapCertError(cns: string[], error: any) {
 
   if (error.code === 'configuration_error') {
     return new ERRORS.CertConfigurationError({
-      cns,
+      cns: cns || error.cns || [],
       message: error.message,
       external: error.external,
       helpUrl: error.helpUrl,
@@ -34,7 +34,7 @@ export default function mapCertError(cns: string[], error: any) {
     error.code === 'dns_error'
   ) {
     return new ERRORS.CertError({
-      cns,
+      cns: cns || error.cns || [],
       code: error.code,
       message: error.message,
       helpUrl: error.helpUrl

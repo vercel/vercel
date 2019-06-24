@@ -3,6 +3,7 @@ import purchaseDomainIfAvailable from '../domains/purchase-domain-if-available';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
+import mapCertError from '../certs/map-cert-error';
 
 export default async function createDeploy(
   output,
@@ -67,7 +68,12 @@ export default async function createDeploy(
     }
 
     if (error.code === 'not_found') {
-      return new ERRORS_TS.DeploymentNotFound({ context: contextName })
+      return new ERRORS_TS.DeploymentNotFound({ context: contextName });
+    }
+
+    const certError = mapCertError(error)
+    if (certError) {
+      return certError;
     }
 
     // If the error is unknown, we just throw
