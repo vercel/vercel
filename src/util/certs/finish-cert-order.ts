@@ -31,7 +31,7 @@ export default async function startCertOrder(
       return new ERRORS.CertOrderNotFound(cns);
     }
 
-    const mappedError = mapCertError(cns, error);
+    const mappedError = mapCertError(error, cns);
     if (mappedError) {
       return mappedError;
     }
