@@ -12,7 +12,6 @@ import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import dnsTable from '../../util/format-dns-table.ts';
@@ -38,6 +37,8 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
+import getLogs from '../../util/logs/get-logs';
+import printLog from '../../util/logs/print-log';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -136,7 +137,7 @@ const printDeploymentStatus = async (
 
     output.error(`${amount} build ${name} occured.`);
     output.error(
-      `Check your logs at https://${url}/_logs or run ${code(
+      `Check your logs above, at https://${url}/_logs or run ${code(
         `now logs ${url}`
       )}.`
     );
@@ -146,17 +147,6 @@ const printDeploymentStatus = async (
 
   output.error(deploymentErrorMsg);
   return 1;
-};
-
-const renderBuilds = (print, list, times, linesPrinted) => {
-  if (linesPrinted !== null) {
-    print(eraseLines(linesPrinted));
-  }
-
-  const { lines, toPrint } = buildsList(list, times, false);
-  print(toPrint);
-
-  return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -318,6 +308,13 @@ export default async function main(
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    currentTeam: ctx.config.currentTeam,
+    debug: debugEnabled
+  });
+
   try {
     // $FlowFixMe
     const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
@@ -371,11 +368,7 @@ export default async function main(
 
       const purchase = await purchaseDomainIfAvailable(
         output,
-        new Client({
-          apiUrl: ctx.apiUrl,
-          token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam
-        }),
+        client,
         firstDeployCall.meta.domain,
         contextName
       );
@@ -403,7 +396,7 @@ export default async function main(
     if (handledResult === 1) {
       return handledResult
     }
-  
+
     if (
       firstDeployCall instanceof DomainNotFound ||
       firstDeployCall instanceof DomainNotVerified ||
@@ -481,7 +474,7 @@ export default async function main(
         if (handledResult === 1) {
           return handledResult
         }
-    
+
         if (
           secondDeployCall instanceof DomainPermissionDenied ||
           secondDeployCall instanceof DomainVerificationFailed ||
@@ -548,42 +541,60 @@ export default async function main(
 
   let deploymentSpinner = null;
   let linesPrinted = null;
+  let logsSince = 0;
+  let longestBuild = null;
+  let finishLogs = null;
+
+  let printedEvents = new Set();
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (!buildsCompleted) {
+    if (!buildsCompleted || finishLogs === true) {
       const { builds: freshBuilds } = await now.fetch(buildsUrl);
+
+      if (!longestBuild) {
+        longestBuild = freshBuilds.reduce((prev, currBuild) => {
+          const curr = currBuild.entrypoint.length;
+          return prev > curr ? prev : curr;
+        }, 0);
+      }
 
       // If there are no builds, we need to exit.
       if (freshBuilds.length === 0) {
         buildsCompleted = true;
       } else {
-        for (const build of freshBuilds) {
-          const id = build.id;
-          const done = isDone(build);
+        // Fetch the logs of the deployment including all builds
+        const nextLogs = await getLogs(client, {
+          deploymentId: deployment.id,
+          since: logsSince
+        });
 
-          if (times[id]) {
-            if (done && typeof times[id] === 'function') {
-              times[id] = times[id]();
+        const lastLogEvent = nextLogs[nextLogs.length - 1];
+
+        if (lastLogEvent) {
+          logsSince = lastLogEvent.created;
+
+          for (const event of nextLogs) {
+            if (printedEvents.has(event.payload.id)) {
+              continue;
             }
-          } else {
-            times[id] = done ? allBuildsTime() : stamp();
+
+            printLog(event, output, longestBuild);
+            printedEvents.add(event.payload.id);
           }
         }
 
-        if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
-          builds = freshBuilds;
+        if (finishLogs && lastLogEvent && lastLogEvent.created === logsSince) {
+          // `logsSince` to prevent the first time
+          break;
+        }
 
-          debug(`Re-rendering builds, because their state changed.`);
+        builds = freshBuilds;
+        buildsCompleted = builds.every(isDone);
 
-          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
-          buildsCompleted = builds.every(isDone);
-
-          if (builds.some(isFailed)) {
-            break;
-          }
-        } else {
-          debug(`Not re-rendering, as the build states did not change.`);
+        if (builds.some(isFailed) && finishLogs === null) {
+          // If an error occures we want to show all logs
+          finishLogs = true;
         }
       }
     } else {

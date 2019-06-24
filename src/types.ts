@@ -223,3 +223,12 @@ export interface Project {
   updatedAt: number;
   createdAt: number;
 }
+
+export interface Event {
+  id: string;
+  type: string;
+  created: number;
+  payload: {
+    [key: string]: any;
+  };
+}
