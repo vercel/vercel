@@ -2,12 +2,19 @@ import { DNSRecordData } from '../../types';
 
 export default function parseAddArgs(
   args: string[]
-): null | { domain: string, data: DNSRecordData } {
-  if (!args || args.length < 4) {
+): null | { domain: string; data: DNSRecordData | null } {
+  if (!args || args.length < 1) {
     return null;
   }
 
-  const domain = args[0];
+  const [domain, ...rest] = args;
+  if (domain && rest.length === 0) {
+    return {
+      domain,
+      data: null
+    };
+  }
+
   const name = args[1] === '@' ? '' : args[1].toString();
   const type = args[2];
   const value = args[3];
