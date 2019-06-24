@@ -585,7 +585,6 @@ export default async function main(
         }
 
         if (finishLogs && lastLogEvent && lastLogEvent.created === logsSince) {
-          // `logsSince` to prevent the first time
           break;
         }
 
