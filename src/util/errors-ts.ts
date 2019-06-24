@@ -482,7 +482,9 @@ type CertErrorCode =
   | 'unsupported_challenge_priority'
   | 'wildcard_not_allowed'
   | 'validation_running'
-  | 'dns_error';
+  | 'dns_error'
+  | 'challenge_error'
+  | 'txt_record_not_found';
 export class CertError extends NowError<
   'CERT_ERROR',
   { cns: string[]; code: CertErrorCode; helpUrl?: string }
