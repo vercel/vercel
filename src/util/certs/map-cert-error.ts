@@ -1,41 +1,45 @@
 import * as ERRORS from '../errors-ts';
 
-export default function mapCertError(cns: string[], error: any) {
-  if (error.code === 'too_many_requests') {
+export default function mapCertError(error: any, cns?: string[]) {
+  const errorCode: string = error.code;
+  if (errorCode === 'too_many_requests') {
     return new ERRORS.TooManyRequests('certificates', error.retryAfter);
   }
-  if (error.code === 'not_found') {
+  if (errorCode === 'not_found') {
     return new ERRORS.DomainNotFound(error.domain);
   }
 
-  if (error.code === 'configuration_error') {
+  if (errorCode === 'configuration_error') {
     return new ERRORS.CertConfigurationError({
-      cns,
+      cns: cns || error.cns || [],
       message: error.message,
       external: error.external,
       helpUrl: error.helpUrl,
       type: error.statusCode === 449 ? 'http-01' : 'dns-01'
     });
   }
+
   if (
-    error.code === 'bad_domains' ||
-    error.code === 'challenge_still_pending' ||
-    error.code === 'common_name_domain_name_mismatch' ||
-    error.code === 'conflicting_caa_record' ||
-    error.code === 'domain_not_verified' ||
-    error.code === 'invalid_cn' ||
-    error.code === 'invalid_domain' ||
-    error.code === 'rate_limited' ||
-    error.code === 'should_share_root_domain' ||
-    error.code === 'unauthorized_request_error' ||
-    error.code === 'unsupported_challenge_priority' ||
-    error.code === 'wildcard_not_allowed' ||
-    error.code === 'validation_running' ||
-    error.code === 'dns_error'
+    errorCode === 'bad_domains' ||
+    errorCode === 'challenge_still_pending' ||
+    errorCode === 'common_name_domain_name_mismatch' ||
+    errorCode === 'conflicting_caa_record' ||
+    errorCode === 'domain_not_verified' ||
+    errorCode === 'invalid_cn' ||
+    errorCode === 'invalid_domain' ||
+    errorCode === 'rate_limited' ||
+    errorCode === 'should_share_root_domain' ||
+    errorCode === 'unauthorized_request_error' ||
+    errorCode === 'unsupported_challenge_priority' ||
+    errorCode === 'wildcard_not_allowed' ||
+    errorCode === 'validation_running' ||
+    errorCode === 'dns_error' ||
+    errorCode === 'challenge_error' ||
+    errorCode === 'txt_record_not_found'
   ) {
     return new ERRORS.CertError({
-      cns,
-      code: error.code,
+      cns: cns || error.cns || [],
+      code: errorCode,
       message: error.message,
       helpUrl: error.helpUrl
     });

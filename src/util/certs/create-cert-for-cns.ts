@@ -26,7 +26,7 @@ export default async function createCertForCns(
       return new ERRORS.DomainPermissionDenied(error.domain, context);
     }
 
-    const mappedError = mapCertError(cns, error);
+    const mappedError = mapCertError(error, cns);
     if (mappedError) {
       return mappedError;
     }
