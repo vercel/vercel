@@ -2492,10 +2492,10 @@ eslint@5.16.0:
     table "^5.2.3"
     text-table "^0.2.0"
 
-esm@3.2.25:
-  version "3.2.25"
-  resolved "https://registry.yarnpkg.com/esm/-/esm-3.2.25.tgz#342c18c29d56157688ba5ce31f8431fbb795cc10"
-  integrity sha512-U1suiZ2oDVWv4zPO56S0NcR5QriEahGtdN2OR6FiOG4WJvcjBVFB0qI4+eKoWFH483PKGuLuu6V8Z4T5g63UVA==
+esm@3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/esm/-/esm-3.1.0.tgz#89eb950b3f04b691b12f96a0d9c8de93039a1a26"
+  integrity sha512-r4Go7Wh7Wh0WPinRXeeM9PIajRsUdt8SAyki5R1obVc0+BwtqvtjbngVSSdXg0jCe2xZkY8hyBMx6q/uymUkPw==
 
 esm@^3.2.20:
   version "3.2.22"
