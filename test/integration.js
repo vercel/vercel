@@ -718,11 +718,6 @@ test('ensure the `alias` property is not sent to the API', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
@@ -751,11 +746,6 @@ test('ensure the `scope` property works with email', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
@@ -783,11 +773,6 @@ test('ensure the `scope` property works with username', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -852,11 +837,6 @@ test('create a builds deployments without platform version flag', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
