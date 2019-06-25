@@ -57,10 +57,10 @@ export default async function printLog(event: Event, options: Options) {
 
   // @ts-ignore
   const sourceOutput = source ? (`${chalk[getColor(event.payload.info.name)](`[${source}]`)  } `) : '';
-  const prefix = `${chalk.grey(time)} ${sourceOutput}`;
+  const prefix = `${chalk.grey(`[${time}]`)} ${sourceOutput}`;
 
-  const currentPrefixLength = time.length + (source ? (source.length + 3) : 0) + 1;
-  const prefixLength = time.length + (source ? ((longestBuild || source.length) + 3) : 0) + 1;
+  const currentPrefixLength = time.length + (source ? (source.length + 3) : 0) + 3;
+  const prefixLength = time.length + (source ? ((longestBuild || source.length) + 3) : 0) + 3;
 
   const content = text.split('\n').map((line: string, index: number) => {
     return `${(index === 0

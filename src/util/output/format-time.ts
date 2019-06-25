@@ -1,13 +1,12 @@
-function prefix(number: number) {
+function prefix(number: number | string) {
+  number = parseInt(number.toString(), 10);
   return number >= 10 ? number : `0${number}`;
 }
 
 export function shortTimeFormat(date: number | Date) {
   date = typeof date === 'number' ? new Date(date) : date;
-
-  const hours = prefix(date.getHours());
-  const minutes = prefix(date.getMinutes());
-  const seconds = prefix(date.getSeconds());
-
-  return `${hours}:${minutes}:${seconds}`;
+  const string = date.toLocaleTimeString();
+  const [time, suffix] = string.split(' ');
+  const [hour, minute, seconds] = time.split(':');
+  return `${prefix(hour)}:${prefix(minute)}:${prefix(seconds)} ${suffix}`;
 }
