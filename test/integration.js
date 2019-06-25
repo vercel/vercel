@@ -665,11 +665,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
-  t.true(wanted.every(item => stderr.includes(item)));
-
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
