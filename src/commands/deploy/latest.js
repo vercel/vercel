@@ -579,7 +579,7 @@ export default async function main(
               continue;
             }
 
-            printLog(event, output, longestBuild);
+            printLog(event, { output, longestBuild, timeFormat: 'short' });
             printedEvents.add(event.payload.id);
           }
         }

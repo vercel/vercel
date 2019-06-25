@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { Output } from '../output';
 import { Event } from '../../types';
+import { shortTimeFormat } from '../output/format-time';
 
 const colorMap = new Map();
 
@@ -33,14 +34,24 @@ function getColor(buildId: string) {
   return color;
 }
 
-export default async function printLog(event: Event, output: Output, longestBuild?: number) {
+interface Options {
+  output: Output;
+  longestBuild?: number;
+  timeFormat?: 'short' | 'long' | null;
+}
+
+export default async function printLog(event: Event, options: Options) {
   if (event.type !== 'stdout' && event.type !== 'stderr') {
     throw new Error(`Event must be either of type "stdout" or "stderr" but received "${event.type}" instead`);
   }
 
+  const { output, longestBuild, timeFormat } = options;
   const isBuild = event.payload.info.type === 'build';
 
-  const time = new Date(event.payload.date).toISOString();
+  const time = timeFormat === 'short'
+    ? shortTimeFormat(event.payload.date)
+    : new Date(event.payload.date).toISOString();
+
   const source = isBuild ? event.payload.info.entrypoint : null;
   const text = event.payload.text;
 
