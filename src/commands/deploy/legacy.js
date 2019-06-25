@@ -50,6 +50,7 @@ import {
   DomainVerificationFailed,
   TooManyRequests,
   VerifyScaleTimeout,
+  DeploymentsRateLimited
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -691,7 +692,7 @@ async function sync({
 
       const handledResult = handleCertError(output, firstDeployCall);
       if (handledResult === 1) {
-        return handledResult
+        return handledResult;
       }
 
       if (
@@ -699,7 +700,8 @@ async function sync({
         firstDeployCall instanceof DomainPermissionDenied ||
         firstDeployCall instanceof DomainVerificationFailed ||
         firstDeployCall instanceof SchemaValidationFailed ||
-        firstDeployCall instanceof DeploymentNotFound
+        firstDeployCall instanceof DeploymentNotFound ||
+        firstDeployCall instanceof DeploymentsRateLimited
       ) {
         handleCreateDeployError(output, firstDeployCall);
         await exit(1);
@@ -765,19 +767,20 @@ async function sync({
             paths,
             createArgs
           );
-          
+
           const handledResult = handleCertError(output, secondDeployCall);
           if (handledResult === 1) {
             return handledResult
           }
-        
+
           if (
             secondDeployCall instanceof DomainNotFound ||
             secondDeployCall instanceof DomainPermissionDenied ||
             secondDeployCall instanceof DomainVerificationFailed ||
             secondDeployCall instanceof SchemaValidationFailed ||
             secondDeployCall instanceof TooManyRequests ||
-            secondDeployCall instanceof DeploymentNotFound
+            secondDeployCall instanceof DeploymentNotFound ||
+            secondDeployCall instanceof DeploymentsRateLimited
           ) {
             handleCreateDeployError(output, secondDeployCall);
             await exit(1);
@@ -1198,6 +1201,10 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof DeploymentNotFound) {
+    output.error(error.message);
+    return 1;
+  }
+  if (error instanceof DeploymentsRateLimited) {
     output.error(error.message);
     return 1;
   }

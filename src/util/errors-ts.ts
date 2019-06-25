@@ -1063,6 +1063,16 @@ export class MissingDotenvVarsError extends NowError<
   }
 }
 
+export class DeploymentsRateLimited extends NowError<'DEPLOYMENTS_RATE_LIMITED', {}> {
+  constructor(message: string) {
+    super({
+      code: 'DEPLOYMENTS_RATE_LIMITED',
+      meta: {},
+      message
+    });
+  }
+}
+
 export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
   constructor(message: string) {
     super({
