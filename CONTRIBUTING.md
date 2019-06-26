@@ -6,7 +6,7 @@ Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your 
 
 ## Local development
 
-This project is configured in a monorepo pattern where one repo contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI. 
+This project is configured in a monorepo pattern where one repo contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
 
 To get started, execute the following:
 
@@ -42,7 +42,7 @@ The pull request will be reviewed by the maintainers and the tests will be check
 ## Interpreting test errors
 
 There are 2 kinds of tests in this repository – Unit tests and Integration tests.
- 
+
 Unit tests are run locally with `jest` and execute quickly because they are testing the smallest units of code.
 
 ### Integration tests

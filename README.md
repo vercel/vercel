@@ -24,8 +24,9 @@ yarn publish-canary
 ```
 
 For the Stable Channel, you must do the following:
+
 - Cherry pick each commit from canary to master
-- Verify that you are *in-sync* with canary (with the exception of the `version` line in `package.json`)
+- Verify that you are _in-sync_ with canary (with the exception of the `version` line in `package.json`)
 - Deploy the modified Builders
 
 ```
