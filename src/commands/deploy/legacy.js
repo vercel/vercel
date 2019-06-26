@@ -571,11 +571,11 @@ async function sync({
       nowConfig.build.env = deploymentBuildEnv;
     }
 
-    let secrets;
+    const hasSecrets = Object.keys(deploymentEnv).some(key => deploymentEnv[key].startsWith('@'));
+    const secretsPromise = hasSecrets ? now.listSecrets() : null;
+
     const findSecret = async uidOrName => {
-      if (!secrets) {
-        secrets = await now.listSecrets();
-      }
+      const secrets = await Promise.resolve(secretsPromise);
 
       return secrets.filter(
         secret => secret.name === uidOrName || secret.uid === uidOrName
