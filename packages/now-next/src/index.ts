@@ -40,6 +40,7 @@ import {
   validateEntrypoint,
   normalizePage,
   getDynamicRoutes,
+  isDynamicRoute,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -414,7 +415,7 @@ export const build = async ({
 
       const pathname = page.replace(/\.html$/, '');
 
-      if (pathname.startsWith('$') || pathname.includes('/$')) {
+      if (isDynamicRoute(pathname)) {
         dynamicPages.push(pathname);
       }
 
@@ -461,7 +462,7 @@ export const build = async ({
 
         const pathname = page.replace(/\.js$/, '');
 
-        if (pathname.startsWith('$') || pathname.includes('/$')) {
+        if (isDynamicRoute(pathname)) {
           dynamicPages.push(normalizePage(pathname));
         }
 

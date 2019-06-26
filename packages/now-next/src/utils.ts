@@ -9,6 +9,14 @@ export interface EnvConfig {
   [name: string]: string | undefined;
 }
 
+// Identify /[param]/ in route string
+const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
+
+function isDynamicRoute(route: string): boolean {
+  route = route.startsWith('/') ? route : `/${route}`;
+  return TEST_DYNAMIC_ROUTE.test(route);
+}
+
 /**
  * Validate if the entrypoint is allowed to be used
  */
@@ -226,7 +234,7 @@ function getRoutes(
       continue;
     }
 
-    if (pageName.startsWith('$') || pageName.includes('/$')) {
+    if (isDynamicRoute(pageName)) {
       dynamicPages.push(normalizePage(pageName));
     }
 
@@ -351,4 +359,5 @@ export {
   stringMap,
   syncEnvVars,
   normalizePage,
+  isDynamicRoute,
 };
