@@ -15,6 +15,10 @@ export default async function createDeploy(
   try {
     return await now.create(paths, createArgs);
   } catch (error) {
+    if (error.code === 'rate_limited') {
+      return new ERRORS_TS.DeploymentsRateLimited(error.message);
+    }
+
     // Means that the domain used as a suffix no longer exists
     if (error.code === 'domain_missing') {
       return new ERRORS_TS.DomainNotFound(error.value);
