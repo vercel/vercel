@@ -572,7 +572,7 @@ async function sync({
     }
 
     const hasSecrets = Object.keys(deploymentEnv).some(key => deploymentEnv[key].startsWith('@'));
-    let secretsPromise = hasSecrets ? now.listSecrets() : null;
+    const secretsPromise = hasSecrets ? now.listSecrets() : null;
 
     const findSecret = async uidOrName => {
       const secrets = await Promise.resolve(secretsPromise);
