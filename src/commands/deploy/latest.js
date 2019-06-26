@@ -32,7 +32,8 @@ import {
   DomainVerificationFailed,
   InvalidDomain,
   TooManyRequests,
-  UserAborted
+  UserAborted,
+  DeploymentsRateLimited
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -394,7 +395,7 @@ export default async function main(
 
     const handledResult = handleCertError(output, firstDeployCall);
     if (handledResult === 1) {
-      return handledResult
+      return handledResult;
     }
 
     if (
@@ -405,7 +406,8 @@ export default async function main(
       firstDeployCall instanceof SchemaValidationFailed ||
       firstDeployCall instanceof InvalidDomain ||
       firstDeployCall instanceof DeploymentNotFound ||
-      firstDeployCall instanceof BuildsRateLimited
+      firstDeployCall instanceof BuildsRateLimited ||
+      firstDeployCall instanceof DeploymentsRateLimited
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -479,7 +481,8 @@ export default async function main(
           secondDeployCall instanceof DomainPermissionDenied ||
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
-          secondDeployCall instanceof DeploymentNotFound
+          secondDeployCall instanceof DeploymentNotFound ||
+          secondDeployCall instanceof DeploymentsRateLimited
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -709,6 +712,10 @@ function handleCreateDeployError(output, error) {
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
     output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    return 1;
+  }
+  if (error instanceof DeploymentsRateLimited) {
+    output.error(error.message);
     return 1;
   }
 
