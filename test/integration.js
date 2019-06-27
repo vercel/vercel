@@ -1297,7 +1297,8 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  let url = `https://now-cli.user.now.sh`;
+  const { name } = JSON.parse(fs.readFileSync(path.join(firstDeployment, 'now.json')));
+  const url = `https://${name}.user.now.sh`;
 
   {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
