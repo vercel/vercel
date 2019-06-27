@@ -22,6 +22,7 @@ const testsThatFailToBuild = new Set([
   '04-wrong-dist-dir',
   '05-empty-dist-dir',
   '06-missing-script',
+  '07-nonzero-sh',
 ]);
 
 // eslint-disable-next-line no-restricted-syntax
