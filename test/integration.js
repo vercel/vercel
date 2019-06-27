@@ -1295,16 +1295,11 @@ test('try to initialize example "example-404"', async t => {
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
-  const random = randomBytes(6).toString('hex');
-  const projectName = `now-revert-alias-${random}`;
-
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  firstDeployment['now.json'].name = projectName;
-  secondDeployment['now.json'].name = projectName;
-
-  const url = `https://${projectName}.user.now.sh`;
+  const { name } = JSON.parse(fs.readFileSync(path.join(firstDeployment, 'now.json')));
+  const url = `https://${name}.user.now.sh`;
 
   {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
