@@ -73,56 +73,88 @@ function getCookieParser(req: NowRequest) {
   };
 }
 
-function sendStatusCode(res: NowResponse, statusCode: number): NowResponse {
+function status(res: NowResponse, statusCode: number): NowResponse {
   res.statusCode = statusCode;
   return res;
 }
 
-function sendData(res: NowResponse, body: any): NowResponse {
-  if (body === null) {
+function setContentHeaders(
+  res: NowResponse,
+  type: string,
+  length?: number
+): void {
+  if (!res.getHeader('content-type')) {
+    res.setHeader('content-type', type);
+  }
+
+  if (length !== undefined) {
+    res.setHeader('content-length', length);
+  }
+}
+
+function send(res: NowResponse, body: any) {
+  const t = typeof body;
+
+  if (body === null || t === 'undefined') {
     res.end();
     return res;
   }
 
-  const contentType = res.getHeader('Content-Type');
+  if (t === 'string') {
+    setContentHeaders(
+      res,
+      'text/plain; charset=utf-8',
+      Buffer.byteLength(body)
+    );
+    res.end(body);
+    return res;
+  }
 
   if (Buffer.isBuffer(body)) {
-    if (!contentType) {
-      res.setHeader('Content-Type', 'application/octet-stream');
-    }
-    res.setHeader('Content-Length', body.length);
+    setContentHeaders(res, 'application/octet-stream', body.length);
     res.end(body);
     return res;
   }
 
   if (body instanceof Stream) {
-    if (!contentType) {
-      res.setHeader('Content-Type', 'application/octet-stream');
-    }
+    setContentHeaders(res, 'application/octet-stream');
     body.pipe(res);
     return res;
   }
 
-  let str = body;
-
-  // Stringify JSON body
-  if (typeof body === 'object' || typeof body === 'number') {
-    str = JSON.stringify(body);
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  switch (t) {
+    case 'boolean':
+    case 'number':
+    case 'bigint':
+    case 'object':
+      return json(res, body);
   }
 
-  res.setHeader('Content-Length', Buffer.byteLength(str));
-  res.end(str);
-
-  return res;
+  throw new Error(
+    '`body` is not a valid string, object, boolean, number, Stream, or Buffer'
+  );
 }
 
-function sendJson(res: NowResponse, jsonBody: any): NowResponse {
-  // Set header to application/json
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+function json(res: NowResponse, jsonBody: any): NowResponse {
+  switch (typeof jsonBody) {
+    case 'object':
+    case 'boolean':
+    case 'number':
+    case 'bigint':
+    case 'string':
+      const body = JSON.stringify(jsonBody);
+      setContentHeaders(
+        res,
+        'application/json; charset=utf-8',
+        Buffer.byteLength(body)
+      );
+      res.end(body);
+      return res;
+  }
 
-  // Use send to handle request
-  return res.send(jsonBody);
+  throw new Error(
+    '`jsonBody` is not a valid object, boolean, string, number, or null'
+  );
 }
 
 export class ApiError extends Error {
@@ -186,9 +218,9 @@ export function createServerWithHelpers(
       setLazyProp<NowRequestQuery>(req, 'query', getQueryParser(req));
       setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
 
-      res.status = statusCode => sendStatusCode(res, statusCode);
-      res.send = data => sendData(res, data);
-      res.json = data => sendJson(res, data);
+      res.status = statusCode => status(res, statusCode);
+      res.send = body => send(res, body);
+      res.json = jsonBody => json(res, jsonBody);
 
       await listener(req, res);
     } catch (err) {

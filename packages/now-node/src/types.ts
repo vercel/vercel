@@ -12,6 +12,6 @@ export type NowRequest = IncomingMessage & {
 
 export type NowResponse = ServerResponse & {
   send: (body: any) => NowResponse;
-  json: (body: any) => NowResponse;
+  json: (jsonBody: any) => NowResponse;
   status: (statusCode: number) => NowResponse;
 };
