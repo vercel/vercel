@@ -6,7 +6,6 @@ import fs from 'fs';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
-import { randomBytes } from 'crypto';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
