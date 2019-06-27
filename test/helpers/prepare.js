@@ -1,5 +1,6 @@
 // Native
 const { join } = require('path');
+const { randomBytes } = require('crypto');
 
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
@@ -81,10 +82,12 @@ http_request(
 <marquee>Thanks for your feedback!</marquee>
 `;
 
+const randomAliasSuffix = randomBytes(6).toString('hex');
+
 const getRevertAliasConfigFile = () => {
   return JSON.stringify({
       'version': 2,
-      'name': 'now-revert-alias',
+      'name': `now-revert-alias-${randomAliasSuffix}`,
       'builds': [
         {
           'src': '*.json',
