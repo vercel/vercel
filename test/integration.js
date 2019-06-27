@@ -6,6 +6,7 @@ import fs from 'fs';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
+import { randomBytes } from 'crypto';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -1294,10 +1295,16 @@ test('try to initialize example "example-404"', async t => {
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
+  const random = randomBytes(6).toString('hex');
+  const projectName = `now-revert-alias-${random}`;
+
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  let url = `https://now-cli.user.now.sh`;
+  firstDeployment['now.json'].name = projectName;
+  secondDeployment['now.json'].name = projectName;
+
+  const url = `https://${projectName}.user.now.sh`;
 
   {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
