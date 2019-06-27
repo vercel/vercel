@@ -15,6 +15,12 @@ import {
   BuildOptions,
 } from '@now/build-utils';
 
+interface PackageJson {
+  scripts?: {
+    [key: string]: string;
+  };
+}
+
 function validateDistDir(distDir: string, isDev: boolean | undefined) {
   const hash = isDev
     ? '#local-development'
@@ -42,6 +48,21 @@ function validateDistDir(distDir: string, isDev: boolean | undefined) {
       `\nMake sure you configure the the correct distDir: ${docsUrl}`;
     throw new Error(message);
   }
+}
+
+function getCommand(pkg: PackageJson, cmd: string) {
+  const scripts = (pkg && pkg.scripts) || {};
+  const nowCmd = `now-${cmd}`;
+
+  if (scripts[nowCmd]) {
+    return nowCmd;
+  }
+
+  if (scripts[cmd]) {
+    return cmd;
+  }
+
+  return nowCmd;
 }
 
 export const version = 2;
@@ -85,13 +106,18 @@ export async function build({
 
     let output: Files = {};
     const routes: { src: string; dest: string }[] = [];
+    const devScript = getCommand(pkg, 'dev');
 
-    if (meta.isDev && pkg.scripts && pkg.scripts['now-dev']) {
+    if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort = nowDevScriptPorts.get(entrypoint);
       if (typeof devPort === 'number') {
-        console.log('`now-dev` server already running for %j', entrypoint);
+        console.log(
+          '`%s` server already running for %j',
+          devScript,
+          entrypoint
+        );
       } else {
-        // Run the `now-dev` script out-of-bounds, since it is assumed that
+        // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
         // it will launch a dev server that never "completes"
         devPort = await getPort();
         nowDevScriptPorts.set(entrypoint, devPort);
@@ -99,7 +125,7 @@ export async function build({
           cwd: entrypointFsDirname,
           env: { ...process.env, PORT: String(devPort) },
         };
-        const child = spawn('npm', ['run', 'now-dev'], opts);
+        const child = spawn('npm', ['run', devScript], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         child.stdout.setEncoding('utf8');
         child.stdout.pipe(process.stdout);
@@ -143,20 +169,21 @@ export async function build({
       });
     } else {
       if (meta.isDev) {
-        console.log('WARN: "now-dev" script is missing from package.json');
+        console.log('WARN: "${devScript}" script is missing from package.json');
         console.log(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
-      console.log(`Running "now-build" script in "${entrypoint}"`);
+      const buildScript = getCommand(pkg, 'build');
+      console.log(`Running "${buildScript}" script in "${entrypoint}"`);
       const found = await runPackageJsonScript(
         entrypointFsDirname,
-        'now-build',
+        buildScript,
         spawnOpts
       );
       if (!found) {
         throw new Error(
-          `Missing required "now-build" script in "${entrypoint}"`
+          `Missing required "${buildScript}" script in "${entrypoint}"`
         );
       }
       validateDistDir(distPath, meta.isDev);
