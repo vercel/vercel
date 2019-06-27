@@ -1,11 +1,9 @@
-const path = require('path');
-const spawn = require('cross-spawn');
-const getPort = require('get-port');
-const { timeout } = require('promise-timeout');
-const {
-  existsSync, readFileSync, statSync, readdirSync,
-} = require('fs');
-const {
+import path from 'path';
+import spawn from 'cross-spawn';
+import getPort from 'get-port';
+import { timeout } from 'promise-timeout';
+import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
+import {
   glob,
   download,
   runNpmInstall,
@@ -13,41 +11,50 @@ const {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
-} = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
+  Files,
+  BuildOptions,
+} from '@now/build-utils';
 
-function validateDistDir(distDir, isDev) {
+function validateDistDir(distDir: string, isDev: boolean | undefined) {
   const hash = isDev
     ? '#local-development'
     : '#configuring-the-build-output-directory';
   const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
   const distDirName = path.basename(distDir);
   if (!existsSync(distDir)) {
-    const message = `Build was unable to create the distDir: "${distDirName}".`
-      + `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+    const message =
+      `Build was unable to create the distDir: "${distDirName}".` +
+      `\nMake sure you configure the the correct distDir: ${docsUrl}`;
     throw new Error(message);
   }
   const stat = statSync(distDir);
   if (!stat.isDirectory()) {
-    const message = `Build failed because distDir is not a directory: "${distDirName}".`
-      + `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+    const message =
+      `Build failed because distDir is not a directory: "${distDirName}".` +
+      `\nMake sure you configure the the correct distDir: ${docsUrl}`;
     throw new Error(message);
   }
 
   const contents = readdirSync(distDir);
   if (contents.length === 0) {
-    const message = `Build failed because distDir is empty: "${distDirName}".`
-      + `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+    const message =
+      `Build failed because distDir is empty: "${distDirName}".` +
+      `\nMake sure you configure the the correct distDir: ${docsUrl}`;
     throw new Error(message);
   }
 }
 
-exports.version = 2;
+export const version = 2;
 
 const nowDevScriptPorts = new Map();
 
-exports.build = async ({
-  files, entrypoint, workPath, config, meta = {},
-}) => {
+export async function build({
+  files,
+  entrypoint,
+  workPath,
+  config,
+  meta = {},
+}: BuildOptions) {
   console.log('downloading user files...');
   await download(files, workPath, meta);
 
@@ -58,7 +65,7 @@ exports.build = async ({
   const distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && config.distDir) || 'dist',
+    (config && (config.distDir as string)) || 'dist'
   );
 
   const entrypointName = path.basename(entrypoint);
@@ -68,8 +75,8 @@ exports.build = async ({
     const pkgPath = path.join(workPath, entrypoint);
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 
-    let output = {};
-    const routes = [];
+    let output: Files = {};
+    const routes: { src: string; dest: string }[] = [];
 
     if (meta.isDev && pkg.scripts && pkg.scripts['now-dev']) {
       let devPort = nowDevScriptPorts.get(entrypoint);
@@ -96,8 +103,8 @@ exports.build = async ({
         // for this builder.
         try {
           await timeout(
-            new Promise((resolve) => {
-              const checkForPort = (data) => {
+            new Promise(resolve => {
+              const checkForPort = (data: string) => {
                 // Check the logs for the URL being printed with the port number
                 // (i.e. `http://localhost:47521`).
                 if (data.indexOf(`:${devPort}`) !== -1) {
@@ -107,11 +114,11 @@ exports.build = async ({
               child.stdout.on('data', checkForPort);
               child.stderr.on('data', checkForPort);
             }),
-            5 * 60 * 1000,
+            5 * 60 * 1000
           );
         } catch (err) {
           throw new Error(
-            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now-builders/now-static-build-failed-to-detect-a-server`,
+            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now-builders/now-static-build-failed-to-detect-a-server`
           );
         }
 
@@ -130,7 +137,7 @@ exports.build = async ({
       if (meta.isDev) {
         console.log('WARN: "now-dev" script is missing from package.json');
         console.log(
-          'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development',
+          'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
       // Run the `now-build` script and wait for completion to collect the build
@@ -140,14 +147,14 @@ exports.build = async ({
         !(await runPackageJsonScript(
           entrypointFsDirname,
           'now-build',
-          spawnOpts,
+          spawnOpts
         ))
       ) {
         throw new Error(
-          `An error running "now-build" script in "${entrypoint}"`,
+          `An error running "now-build" script in "${entrypoint}"`
         );
       }
-      validateDistDir(distPath);
+      validateDistDir(distPath, meta.isDev);
       output = await glob('**', distPath, mountpoint);
     }
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
@@ -156,9 +163,9 @@ exports.build = async ({
 
   if (path.extname(entrypoint) === '.sh') {
     await runShellScript(path.join(workPath, entrypoint));
-    validateDistDir(distPath);
+    validateDistDir(distPath, meta.isDev);
     return glob('**', distPath, mountpoint);
   }
 
   throw new Error('Proper build script must be specified as entrypoint');
-};
+}

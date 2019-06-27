@@ -13,3 +13,4 @@
 /packages/now-go/*
 /packages/now-rust/dist/*
 /packages/now-ruby/dist/*
+/packages/now-static-build/dist/*
