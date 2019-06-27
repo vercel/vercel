@@ -2,6 +2,7 @@
   "name": "@now/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
   "version": "0.1.0",
+  "license": "MIT",
   "main": "./dist/index",
   "files": [
     "dist",
@@ -12,7 +13,6 @@
     "url": "https://github.com/zeit/now-builders.git",
     "directory": "packages/now-ruby"
   },
-  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "test": "tsc && jest",
@@ -20,7 +20,9 @@
   },
   "dependencies": {
     "execa": "^1.0.0",
-    "fs-extra": "^7.0.1",
+    "fs-extra": "^7.0.1"
+  },
+  "devDependencies": {
     "typescript": "3.5.2"
   }
 }
