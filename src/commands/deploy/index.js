@@ -99,13 +99,7 @@ export default async ctx => {
   const file = highlight('now.json');
   const prop = code('version');
 
-  if (!localConfig) {
-    if (!isFile) {
-      output.warn(
-        `Your project is missing a ${file} file with a ${prop} property. More: https://zeit.co/docs/version-config`
-      );
-    }
-  } else {
+  if (localConfig) {
     const { version } = localConfig;
 
     if (version) {
