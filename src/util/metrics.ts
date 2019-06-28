@@ -1,9 +1,9 @@
 import ua from 'universal-analytics';
 import { platform, release, userInfo } from 'os';
 import crypto from 'crypto';
-import userAgent from './ua-browser.ts';
+import userAgent from './ua-browser';
 
-export default (GA_TRACKING_ID, configToken) => {
+export default (GA_TRACKING_ID: string, configToken: string) => {
   const token = typeof configToken === 'string' ? configToken : platform() + release();
   const salt = userInfo().username;
   const hash = crypto.pbkdf2Sync(token, salt, 1000, 64, 'sha512').toString('hex').substring(0, 24);

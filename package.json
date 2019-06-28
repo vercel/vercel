@@ -107,6 +107,7 @@
     "@types/psl": "1.1.0",
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
+    "@types/universal-analytics": "0.4.2",
     "@types/write-json-file": "2.2.1",
     "@typescript-eslint/eslint-plugin": "1.6.0",
     "@typescript-eslint/parser": "1.1.0",

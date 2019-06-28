@@ -32,8 +32,8 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import metrics from './util/metrics';
-import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
+import metrics from './util/metrics.ts';
+import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants.ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
