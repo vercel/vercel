@@ -547,7 +547,12 @@ const main = async argv_ => {
   }
 
   const metric = metrics(GA_TRACKING_ID, config.token);
+  const shouldCollectMetrics = (
+    config.collectMetrics === undefined
+    || config.collectMetrics === true)
+    && process.env.NOW_CLI_COLLECT_METRICS !== '0';
   let exitCode;
+  const eventCategory = 'Exit Code';
 
   try {
     const start = new Date();
@@ -555,9 +560,7 @@ const main = async argv_ => {
     exitCode = await full(ctx);
     const end = new Date() - start;
 
-    if ((config.collectMetrics === undefined || config.collectMetrics === true)
-      && process.env.NOW_CLI_COLLECT_METRICS !== '0'
-    ) {
+    if (shouldCollectMetrics) {
       const category = 'Command Invocation';
 
       metric
@@ -587,13 +590,30 @@ const main = async argv_ => {
       output.debug(err.stack);
       output.error(err.message);
 
+      if (shouldCollectMetrics) {
+        metric
+          .event(eventCategory, '1', pkg.version)
+          .exception(err.message).send()
+      }
+
       return 1;
+    }
+
+    const unexpectedError = `An unexpected error occurred in ${subcommand}`
+    if (shouldCollectMetrics) {
+      metric
+        .event(eventCategory, '1', pkg.version)
+        .exception(unexpectedError).send()
     }
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
-    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
+    output.error(`${unexpectedError}: ${err.stack}`);
     return 1;
+  }
+
+  if (shouldCollectMetrics) {
+    metric.event(eventCategory, exitCode, pkg.version).send()
   }
 
   return exitCode;
