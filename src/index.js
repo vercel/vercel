@@ -599,16 +599,15 @@ const main = async argv_ => {
       return 1;
     }
 
-    const unexpectedError = `An unexpected error occurred in ${subcommand}`
     if (shouldCollectMetrics) {
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(unexpectedError).send();
+        .exception(err.message).send();
     }
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
-    output.error(`${unexpectedError}: ${err.stack}`);
+    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
     return 1;
   }
 
