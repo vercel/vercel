@@ -5,7 +5,7 @@ const { randomBytes } = require('crypto');
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
 const { promises: { writeFile } } = require('fs');
-const ensureDir = require('mkdirp-promise');
+const { mkdirp } = require('fs-extra');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest
@@ -204,7 +204,7 @@ RUN echo $NONCE > /public/index.html
   for (const type of Object.keys(spec)) {
     const needed = spec[type];
     const directory = join(__dirname, '..', 'fixtures', 'integration', type);
-    await ensureDir(directory);
+    await mkdirp(directory);
 
     if (Array.isArray(needed)) {
       // Get content from the defined files
