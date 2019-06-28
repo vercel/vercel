@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "license": "MIT",
   "main": "./dist/index",
   "repository": {
@@ -9,7 +9,7 @@
     "directory": "packages/now-node"
   },
   "dependencies": {
-    "@now/node-bridge": "^1.2.1",
+    "@now/node-bridge": "1.2.2",
     "@types/node": "*",
     "@zeit/ncc": "0.18.5",
     "@zeit/ncc-watcher": "1.0.3",

@@ -1,6 +1,6 @@
 {
   "name": "@now/python",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "main": "./dist/index.js",
   "license": "MIT",
   "files": [
