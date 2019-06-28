@@ -101,7 +101,8 @@ async function compile(
     assets = result.assets;
     watch = [...result.files, ...result.dirs, ...result.missing]
       .filter(f => f.startsWith(workPath))
-      .map(f => relative(workPath, f));
+      .map(f => relative(workPath, f))
+      .concat(Object.keys(assets || {}));
   } else {
     const ncc = require('@zeit/ncc');
     const result = await ncc(input, {
