@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import getDeploymentContentsByUrl from '../../util/deploy/get-deployment-contents-by-url';
+import getDeploymentById from '../../util/deploy/get-deployment-by-id';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -28,6 +28,8 @@ import {
   CertConfigurationError,
   CertError,
   DeploymentNotFound,
+  DeploymentPermissionDenied,
+  InvalidDeploymentId,
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
@@ -543,7 +545,6 @@ export default async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v9/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
@@ -591,8 +592,16 @@ export default async function main(
     } else {
       const deploymentResponse = handleCertError(
         output,
-        await getDeploymentContentsByUrl(now, deploymentUrl)
-      );
+        await getDeploymentById(now, contextName, deployment.id)
+      )
+      if (
+        deploymentResponse instanceof DeploymentNotFound ||
+        deploymentResponse instanceof DeploymentPermissionDenied ||
+        deploymentResponse instanceof InvalidDeploymentId
+      ) {
+        output.error(deploymentResponse.message);
+        return 1;
+      }
 
       if (deploymentResponse === 1) {
         return deploymentResponse;
