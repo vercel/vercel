@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import getDeploymentByUrl from '../../util/deploy/get-deployment-by-url';
+import getDeploymentContentsByUrl from '../../util/deploy/get-deployment-contents-by-url';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -401,9 +401,8 @@ export default async function main(
       return 1;
     }
 
-    const handledResult1 = handleCertError(output, firstDeployCall);
-    if (handledResult1 === 1) {
-      return handledResult1;
+    if (handleCertError(output, firstDeployCall) === 1) {
+      return 1;
     }
 
     if (
@@ -480,9 +479,8 @@ export default async function main(
           createArgs
         );
 
-        const handledResult2 = handleCertError(output, secondDeployCall);
-        if (handledResult2 === 1) {
-          return handledResult2;
+        if (handleCertError(output, secondDeployCall) === 1) {
+          return 1;
         }
 
         if (
@@ -591,11 +589,10 @@ export default async function main(
         }
       }
     } else {
-      const deploymentResponse = await getDeploymentByUrl(now, deploymentUrl);
+      const deploymentResponse = await getDeploymentContentsByUrl(now,deploymentUrl);
 
-      const handledDeploymentResponse = handleCertError(output, deploymentResponse);
-      if (handledDeploymentResponse === 1) {
-        return handledDeploymentResponse;
+      if (handleCertError(output, deploymentResponse) === 1) {
+        return 1;
       }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
