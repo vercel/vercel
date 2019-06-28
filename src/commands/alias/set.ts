@@ -106,8 +106,6 @@ export default async function set(
     return 1;
   }
 
-  output.warn(`The ${cmd('now alias')} command was deprecated in favour of ${cmd('now --target production')}.`);
-
   // Find the targets to perform the alias
   const targets = await getTargetsForAlias(output, args, localConfig);
 
