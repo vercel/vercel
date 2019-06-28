@@ -589,10 +589,13 @@ export default async function main(
         }
       }
     } else {
-      const deploymentResponse = await getDeploymentContentsByUrl(now,deploymentUrl);
+      const deploymentResponse = handleCertError(
+        output,
+        await getDeploymentContentsByUrl(now, deploymentUrl)
+      );
 
-      if (handleCertError(output, deploymentResponse) === 1) {
-        return 1;
+      if (deploymentResponse === 1) {
+        return deploymentResponse;
       }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
