@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
-import getDeploymentById from '../../util/deploy/get-deployment-by-id';
+import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -592,8 +592,13 @@ export default async function main(
     } else {
       const deploymentResponse = handleCertError(
         output,
-        await getDeploymentById(now, contextName, deployment.id)
+        await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
       )
+
+      if (deploymentResponse === 1) {
+        return deploymentResponse;
+      }
+
       if (
         deploymentResponse instanceof DeploymentNotFound ||
         deploymentResponse instanceof DeploymentPermissionDenied ||
@@ -601,10 +606,6 @@ export default async function main(
       ) {
         output.error(deploymentResponse.message);
         return 1;
-      }
-
-      if (deploymentResponse === 1) {
-        return deploymentResponse;
       }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {

@@ -1,18 +1,30 @@
 import Client from '../client';
 import toHost from '../to-host';
 import { Deployment } from '../../types';
-import { DeploymentNotFound, DeploymentPermissionDenied, InvalidDeploymentId } from '../errors-ts';
+import {
+  DeploymentNotFound,
+  DeploymentPermissionDenied,
+  InvalidDeploymentId
+} from '../errors-ts';
+import mapCertError from '../certs/map-cert-error';
+
+type APIVersion = 'v5' | 'v9';
 
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
-  idOrHost: string
+  idOrHost: string,
+  apiVersion: APIVersion = 'v5'
 ) {
   try {
     const { deployment } =
       idOrHost.indexOf('.') !== -1
-        ? await getDeploymentByHost(client, toHost(idOrHost) as string)
-        : await getDeploymentById(client, idOrHost);
+        ? await getDeploymentByHost(
+            client,
+            toHost(idOrHost) as string,
+            apiVersion
+          )
+        : await getDeploymentById(client, idOrHost, apiVersion);
     return deployment;
   } catch (error) {
     if (error.status === 404) {
@@ -24,13 +36,23 @@ export default async function getDeploymentByIdOrHost(
     if (error.status === 400 && error.message.includes('`id`')) {
       return new InvalidDeploymentId(idOrHost);
     }
+
+    const certError = mapCertError(error);
+    if (certError) {
+      return certError;
+    }
+
     throw error;
   }
 }
 
-async function getDeploymentById(client: Client, id: string) {
+async function getDeploymentById(
+  client: Client,
+  id: string,
+  apiVersion: APIVersion
+) {
   const deployment = await client.fetch<Deployment>(
-    `/v5/now/deployments/${encodeURIComponent(id)}`
+    `/${apiVersion}/now/deployments/${encodeURIComponent(id)}`
   );
   return { deployment };
 }
@@ -41,9 +63,13 @@ type Response = {
   };
 };
 
-async function getDeploymentByHost(client: Client, host: string) {
+async function getDeploymentByHost(
+  client: Client,
+  host: string,
+  apiVersion: APIVersion
+) {
   const response = await client.fetch<Response>(
     `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
   );
-  return getDeploymentById(client, response.deployment.id);
+  return getDeploymentById(client, response.deployment.id, apiVersion);
 }
