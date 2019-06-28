@@ -555,7 +555,9 @@ const main = async argv_ => {
     exitCode = await full(ctx);
     const end = new Date() - start;
 
-    if (config.collectMetrics === undefined || config.collectMetrics === true) {
+    if ((config.collectMetrics === undefined || config.collectMetrics === true)
+      && process.env.NOW_CLI_COLLECT_METRICS !== '0'
+    ) {
       const category = 'Command Invocation';
 
       metric
