@@ -80,6 +80,11 @@
   },
   "devDependencies": {
     "@now/build-utils": "0.7.0",
+    "@now/go": "latest",
+    "@now/next": "latest",
+    "@now/node": "latest",
+    "@now/php": "latest",
+    "@now/static-build": "latest",
     "@sentry/node": "4.5.3",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",

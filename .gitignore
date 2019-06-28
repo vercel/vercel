@@ -8,3 +8,6 @@ yarn-error.log
 .nyc_output
 coverage
 *.swp
+.builders
+builders.tar.gz
+builders.tar.gz.sha

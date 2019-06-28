@@ -1,11 +1,22 @@
 import chalk from 'chalk';
 import execa from 'execa';
+import pipe from 'promisepipe';
 import npa from 'npm-package-arg';
+import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
+import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
-import { mkdirp, readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
+import {
+  createReadStream,
+  mkdirp,
+  readFile,
+  readJSON,
+  writeFile,
+  writeJSON,
+  remove
+} from 'fs-extra';
 
 import {
   NoBuilderCacheError,
@@ -31,6 +42,22 @@ export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
 export const builderModulePathPromise = prepareBuilderModulePath();
 
+function readFileOrNull(filePath: string, encoding?: null): Promise<Buffer | null>;
+function readFileOrNull(filePath: string, encoding: string): Promise<string | null>;
+async function readFileOrNull(filePath: string, encoding?: string | null): Promise<Buffer | string | null> {
+  try {
+    if (encoding) {
+      return await readFile(filePath, encoding);
+    }
+    return await readFile(filePath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
+
 /**
  * Prepare cache directory for installing now-builders
  */
@@ -53,15 +80,24 @@ export async function prepareBuilderDir() {
   const builderDir = join(await cacheDirPromise, 'builders');
   await mkdirp(builderDir);
 
-  // Create an empty private `package.json`,
-  // but only if one does not already exist
-  try {
-    const buildersPkg = join(builderDir, 'package.json');
-    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
+  // Extract the bundled `builders.tar.gz` file, if necessary
+  const bundledTarballPath = join(__dirname, '../../../builders.tar.gz')
+  const bundledShaPath = join(__dirname, '../../../builders.tar.gz.sha');
+  const cacheShaPath = join(builderDir, '.builders.sha');
+
+  const [ bundledSha, cachedSha ] = await Promise.all([
+    readFile(bundledShaPath, 'utf8'),
+    readFileOrNull(cacheShaPath, 'utf8')
+  ]);
+
+  if (bundledSha !== cachedSha) {
+    const extractor = extract(builderDir);
+    await pipe(
+      createReadStream(bundledTarballPath),
+      createGunzip(),
+      extractor
+    );
+    await writeFile(cacheShaPath, bundledSha);
   }
 
   return builderDir;
@@ -76,18 +112,14 @@ export async function prepareBuilderModulePath() {
   const builderSha = getSha(builderContents);
   const cachedBuilderPath = join(builderDir, 'builder.js');
 
-  try {
-    const cachedBuilderContents = await readFile(cachedBuilderPath);
+  const cachedBuilderContents = await readFileOrNull(cachedBuilderPath);
+  if (cachedBuilderContents) {
     const cachedBuilderSha = getSha(cachedBuilderContents);
     if (builderSha !== cachedBuilderSha) {
       needsWrite = true;
     }
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      needsWrite = true;
-    } else {
-      throw err;
-    }
+  } else {
+    needsWrite = true;
   }
 
   if (needsWrite) {
