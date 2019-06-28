@@ -482,7 +482,7 @@ export default async function main(
 
         const handledResult2 = handleCertError(output, secondDeployCall);
         if (handledResult2 === 1) {
-          return handledResult2
+          return handledResult2;
         }
 
         if (
@@ -595,7 +595,7 @@ export default async function main(
 
       const handledDeploymentResponse = handleCertError(output, deploymentResponse);
       if (handledDeploymentResponse === 1) {
-        return handledDeploymentResponse
+        return handledDeploymentResponse;
       }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
