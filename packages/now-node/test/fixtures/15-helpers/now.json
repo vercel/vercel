@@ -3,7 +3,6 @@
   "builds": [
     { "src": "index.js", "use": "@now/node" },
     { "src": "ts/index.ts", "use": "@now/node" },
-    { "src": "express-compat/index.js", "use": "@now/node" },
     { "src": "micro-compat/index.js", "use": "@now/node" },
     {
       "src": "no-helpers/index.js",
@@ -34,12 +33,6 @@
     {
       "path": "/ts",
       "mustContain": "hello:RANDOMNESS_PLACEHOLDER"
-    },
-    {
-      "path": "/express-compat",
-      "method": "POST",
-      "body": { "who": "sara" },
-      "mustContain": "hello sara:RANDOMNESS_PLACEHOLDER"
     },
     {
       "path": "/micro-compat",

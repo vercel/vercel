@@ -12,8 +12,7 @@
     "@now/node-bridge": "1.2.2",
     "@types/node": "*",
     "@zeit/ncc": "0.18.5",
-    "@zeit/ncc-watcher": "1.0.3",
-    "fs-extra": "7.0.1"
+    "@zeit/ncc-watcher": "1.0.3"
   },
   "scripts": {
     "build": "./build.sh",

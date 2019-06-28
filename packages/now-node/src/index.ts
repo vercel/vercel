@@ -1,4 +1,3 @@
-import { readFile } from 'fs-extra';
 import { Assets, NccOptions } from '@zeit/ncc';
 import { join, dirname, relative, sep } from 'path';
 import { NccWatcher, WatcherResult } from '@zeit/ncc-watcher';
@@ -19,6 +18,7 @@ import {
   shouldServe,
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
+import { makeLauncher } from './launcher';
 
 interface CompilerConfig {
   includeFiles?: string | string[];
@@ -202,28 +202,11 @@ export async function build({
     config,
     meta
   );
-  const launcherPath = join(__dirname, 'launcher.js');
-  let launcherData = await readFile(launcherPath, 'utf8');
-
-  launcherData = launcherData.replace(
-    '// PLACEHOLDER:shouldStoreProxyRequests',
-    shouldAddHelpers ? 'shouldStoreProxyRequests = true;' : ''
-  );
-
-  launcherData = launcherData.replace(
-    '// PLACEHOLDER:setServer',
-    [
-      `let listener = require("./${entrypoint}");`,
-      'if (listener.default) listener = listener.default;',
-      shouldAddHelpers
-        ? 'const server = require("./helpers").createServerWithHelpers(listener, bridge);'
-        : 'const server = require("http").createServer(listener);',
-      'bridge.setServer(server);',
-    ].join(' ')
-  );
 
   const launcherFiles: Files = {
-    'launcher.js': new FileBlob({ data: launcherData }),
+    'launcher.js': new FileBlob({
+      data: makeLauncher(entrypoint, shouldAddHelpers),
+    }),
     'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
   };
 
