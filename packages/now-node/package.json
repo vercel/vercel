@@ -26,9 +26,11 @@
   "devDependencies": {
     "@types/content-type": "1.1.3",
     "@types/cookie": "0.3.3",
+    "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
+    "etag": "1.8.1",
     "node-fetch": "2.6.0",
     "test-listen": "1.1.0",
     "typescript": "3.5.2"
