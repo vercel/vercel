@@ -8,7 +8,9 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
+import _which from 'which';
 import ora, { Ora } from 'ora';
+import { promisify } from 'util';
 
 import { Output } from '../output';
 import { relative } from '../path-helpers';
@@ -27,6 +29,8 @@ import {
   BuilderOutputs
 } from './types';
 
+const which = promisify(_which);
+
 interface BuildMessage {
   type: string;
 }
@@ -42,11 +46,19 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  const runtime = await initializeRuntime('nodejs8.10');
-  if (!runtime.cacheDir) {
-    throw new Error('nodejs8.10 runtime failed to initialize');
+  let nodeBin: string | undefined;
+  try {
+    nodeBin = await which('node');
+  } catch (err) {
+    if (err.message.startsWith('not found')) {
+      nodeBin = process.execPath;
+    } else {
+      throw err;
+    }
   }
-  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
+  if (typeof nodeBin !== 'string') {
+    throw new Error('Could not determine location of `node` binary');
+  }
   return nodeBin;
 }
 
@@ -90,9 +102,6 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('message', m => {
-    // console.log('got message from builder:', m);
-  });
   buildProcess.on('exit', (code, signal) => {
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
