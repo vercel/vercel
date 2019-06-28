@@ -31,6 +31,7 @@ import {
   NotSupportedMinScaleSlots
 } from '../util/errors-ts';
 import { InvalidAllForScale, InvalidRegionOrDCForScale } from '../util/errors';
+import handleCertError from '../util/certs/handle-cert-error';
 
 const help = () => {
   console.log(`
@@ -199,7 +200,14 @@ export default async function main(ctx) {
 
   // Fetch the deployment
   const deploymentStamp = stamp();
-  const deployment = await getDeploymentByIdOrHost(now, contextName, argv._[1]);
+  const deployment = handleCertError(
+    output,
+    await getDeploymentByIdOrHost(now, contextName, argv._[1])
+  );
+
+  if (deployment === 1) {
+    return deployment;
+  }
   if (deployment instanceof DeploymentPermissionDenied) {
     output.error(
       `No permission to access deployment ${chalk.dim(
