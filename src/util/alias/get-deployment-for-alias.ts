@@ -20,27 +20,27 @@ export default async function getDeploymentForAlias(
   const cancelWait = wait(
     `Fetching deployment to alias in ${chalk.bold(contextName)}`
   );
-  let deployment;
 
   // When there are no args at all we try to get the targets from the config
   if (args.length === 2) {
     const [deploymentId] = args;
-    deployment = await fetchDeploymentByIdOrHost(
+    const deployment = await fetchDeploymentByIdOrHost(
       client,
       contextName,
       deploymentId
     );
-  } else {
-    const appName = await getAppName(output, localConfig, localConfigPath);
-    deployment = await getAppLastDeployment(
-      output,
-      client,
-      appName,
-      user,
-      contextName
-    );
+    cancelWait();
+    return deployment;
   }
 
+  const appName = await getAppName(output, localConfig, localConfigPath);
+  const deployment = await getAppLastDeployment(
+    output,
+    client,
+    appName,
+    user,
+    contextName
+  );
   cancelWait();
   return deployment;
 }
