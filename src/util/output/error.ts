@@ -24,7 +24,7 @@ export default function error(
   }
 
   if (shouldCollectMetrics) {
-    metric.exception(messages.join('\n')).send()
+    metric.exception(messages.join('\n')).send();
   }
 
   return `${chalk.red('> Error!')} ${messages.join('\n')}`;

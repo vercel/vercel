@@ -593,7 +593,7 @@ const main = async argv_ => {
       if (shouldCollectMetrics) {
         metric
           .event(eventCategory, '1', pkg.version)
-          .exception(err.message).send()
+          .exception(err.message).send();
       }
 
       return 1;
@@ -603,7 +603,7 @@ const main = async argv_ => {
     if (shouldCollectMetrics) {
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(unexpectedError).send()
+        .exception(unexpectedError).send();
     }
 
     // Otherwise it is an unexpected error and we should show the trace
@@ -613,7 +613,7 @@ const main = async argv_ => {
   }
 
   if (shouldCollectMetrics) {
-    metric.event(eventCategory, exitCode, pkg.version).send()
+    metric.event(eventCategory, exitCode, pkg.version).send();
   }
 
   return exitCode;
