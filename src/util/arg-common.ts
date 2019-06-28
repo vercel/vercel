@@ -23,7 +23,9 @@ const ARG_COMMON = {
   '--global-config': String,
   '-Q': '--global-config',
 
-  '--api': String
+  '--api': String,
+
+  '--target': String
 };
 
 export default () => ARG_COMMON;
