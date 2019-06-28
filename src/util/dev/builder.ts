@@ -46,20 +46,7 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  let nodeBin: string | undefined;
-  try {
-    nodeBin = await which('node');
-  } catch (err) {
-    if (err.message.startsWith('not found')) {
-      nodeBin = process.execPath;
-    } else {
-      throw err;
-    }
-  }
-  if (typeof nodeBin !== 'string') {
-    throw new Error('Could not determine location of `node` binary');
-  }
-  return nodeBin;
+  return (await which('node', { nothrow: true })) || process.execPath;
 }
 
 function pipeChildLogging(child: ChildProcess): void {
