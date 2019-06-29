@@ -1,8 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@now/static-build" },
-    { "src": "subdirectory/package.json", "use": "@now/static-build" }
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    },
+    {
+      "src": "subdirectory/package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    }
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },

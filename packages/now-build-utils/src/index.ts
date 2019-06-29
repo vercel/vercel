@@ -9,6 +9,7 @@ import {
   PrepareCacheOptions,
   ShouldServeOptions,
   Meta,
+  Config,
 } from './types';
 import { Lambda, createLambda } from './lambda';
 import download, { DownloadedFiles } from './fs/download';
@@ -52,4 +53,5 @@ export {
   PrepareCacheOptions,
   ShouldServeOptions,
   shouldServe,
+  Config,
 };

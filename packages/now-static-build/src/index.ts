@@ -13,6 +13,7 @@ import {
   getSpawnOptions,
   Files,
   BuildOptions,
+  Config,
 } from '@now/build-utils';
 
 interface PackageJson {
@@ -50,9 +51,16 @@ function validateDistDir(distDir: string, isDev: boolean | undefined) {
   }
 }
 
-function getCommand(pkg: PackageJson, cmd: string) {
-  const scripts = (pkg && pkg.scripts) || {};
+function getCommand(pkg: PackageJson, cmd: string, config: Config) {
+  // The `dev` script can be `now dev`
   const nowCmd = `now-${cmd}`;
+  const { zeroConfig } = config;
+
+  if (!zeroConfig && cmd === 'dev') {
+    return nowCmd;
+  }
+
+  const scripts = (pkg && pkg.scripts) || {};
 
   if (scripts[nowCmd]) {
     return nowCmd;
@@ -106,7 +114,7 @@ export async function build({
 
     let output: Files = {};
     const routes: { src: string; dest: string }[] = [];
-    const devScript = getCommand(pkg, 'dev');
+    const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort = nowDevScriptPorts.get(entrypoint);
@@ -174,7 +182,7 @@ export async function build({
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
-      const buildScript = getCommand(pkg, 'build');
+      const buildScript = getCommand(pkg, 'build', config as Config);
       console.log(`Running "${buildScript}" script in "${entrypoint}"`);
       const found = await runPackageJsonScript(
         entrypointFsDirname,
