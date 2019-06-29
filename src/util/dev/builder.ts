@@ -8,9 +8,8 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
-import _which from 'which';
+import which from 'which';
 import ora, { Ora } from 'ora';
-import { promisify } from 'util';
 
 import { Output } from '../output';
 import { relative } from '../path-helpers';
@@ -29,8 +28,6 @@ import {
   BuilderOutputs
 } from './types';
 
-const which = promisify(_which);
-
 interface BuildMessage {
   type: string;
 }
@@ -46,7 +43,7 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  return (await which('node', { nothrow: true })) || process.execPath;
+  return which.sync('node', { nothrow: true }) || process.execPath;
 }
 
 function pipeChildLogging(child: ChildProcess): void {
