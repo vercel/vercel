@@ -2,7 +2,7 @@ import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
-import mkdirp from 'mkdirp-promise';
+import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
