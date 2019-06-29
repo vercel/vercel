@@ -164,7 +164,6 @@
     "mime-types": "2.1.18",
     "minimatch": "3.0.4",
     "mkdirp": "0.5.1",
-    "mkdirp-promise": "5.0.1",
     "mri": "1.1.0",
     "ms": "2.1.1",
     "node-fetch": "1.7.3",

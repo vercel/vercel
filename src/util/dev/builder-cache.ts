@@ -1,12 +1,11 @@
 import chalk from 'chalk';
 import execa from 'execa';
 import npa from 'npm-package-arg';
-import mkdirp from 'mkdirp-promise';
 import { createHash } from 'crypto';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
-import { readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
+import { mkdirp, readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
 
 import {
   NoBuilderCacheError,
