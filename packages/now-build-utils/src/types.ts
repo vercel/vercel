@@ -24,6 +24,7 @@ export interface Config {
   helpers?: boolean;
   rust?: string;
   debug?: boolean;
+  zeroConfig?: boolean;
 }
 
 export interface Meta {
