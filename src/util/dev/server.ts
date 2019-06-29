@@ -501,7 +501,15 @@ export default class DevServer {
       this.watcher.close();
     }
 
-    await Promise.all(ops);
+    try {
+      await Promise.all(ops);
+    } catch (err) {
+      if (err.code === 'ERR_SERVER_NOT_RUNNING') {
+        process.exit(0);
+      } else {
+        throw err;
+      }
+    }
   }
 
   shouldRebuild(req: http.IncomingMessage): boolean {
