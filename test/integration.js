@@ -882,7 +882,7 @@ test('create a builds deployments without platform version flag', async t => {
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
@@ -891,7 +891,7 @@ test('deploy multiple static files', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(code, 0, `stderr: ${stderr}, stdout: ${stdout}`);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
