@@ -15,6 +15,7 @@ import stamp from '../../util/output/stamp.ts';
 import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
+import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -27,6 +28,8 @@ import {
   CertConfigurationError,
   CertError,
   DeploymentNotFound,
+  DeploymentPermissionDenied,
+  InvalidDeploymentId,
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
@@ -400,9 +403,8 @@ export default async function main(
       return 1;
     }
 
-    const handledResult = handleCertError(output, firstDeployCall);
-    if (handledResult === 1) {
-      return handledResult;
+    if (handleCertError(output, firstDeployCall) === 1) {
+      return 1;
     }
 
     if (
@@ -479,9 +481,8 @@ export default async function main(
           createArgs
         );
 
-        const handledResult = handleCertError(output, secondDeployCall);
-        if (handledResult === 1) {
-          return handledResult
+        if (handleCertError(output, secondDeployCall) === 1) {
+          return 1;
         }
 
         if (
@@ -544,7 +545,6 @@ export default async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v9/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
@@ -590,7 +590,23 @@ export default async function main(
         }
       }
     } else {
-      const deploymentResponse = await now.fetch(deploymentUrl);
+      const deploymentResponse = handleCertError(
+        output,
+        await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
+      )
+
+      if (deploymentResponse === 1) {
+        return deploymentResponse;
+      }
+
+      if (
+        deploymentResponse instanceof DeploymentNotFound ||
+        deploymentResponse instanceof DeploymentPermissionDenied ||
+        deploymentResponse instanceof InvalidDeploymentId
+      ) {
+        output.error(deploymentResponse.message);
+        return 1;
+      }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;

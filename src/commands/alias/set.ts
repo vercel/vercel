@@ -150,15 +150,22 @@ export default async function set(
   }
 
   // If there are no rules for path alias we should find out a deployment and perform the alias
-  const deployment = await getDeploymentForAlias(
-    client,
+  const deployment = handleCertError(
     output,
-    args,
-    opts['--local-config'],
-    user,
-    contextName,
-    localConfig
+    await getDeploymentForAlias(
+      client,
+      output,
+      args,
+      opts['--local-config'],
+      user,
+      contextName,
+      localConfig
+    )
   );
+
+  if (deployment === 1) {
+    return deployment;
+  }
 
   if (deployment instanceof ERRORS.DeploymentNotFound) {
     output.error(

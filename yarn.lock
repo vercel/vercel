@@ -343,10 +343,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/build-utils@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.6.0.tgz#ebdf1f337fc06a9ab97ccddf9fb5bbcab393702f"
-  integrity sha512-VvguSFT5zqQaMLc3+TqrQ7zB/X6VV51c6Hx/MOL5e5fzJ6xrutrooxlkI/0vBnRfsPS9APJrZZCworcbkEMz5A==
+"@now/build-utils@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.7.0.tgz#3f51a2bab8b0b10764a5b92bfec3148b16bf8ecb"
+  integrity sha512-eWSLZj5tROrvZh3b6oQ4fkvwhUt362FjVWh/JpGz6cxkGgOo+p942Erdc6g+ho+uCY5UndCCezzXLrUCsuC4Xg==
   dependencies:
     async-retry "1.2.3"
     async-sema "2.1.4"
@@ -636,6 +636,11 @@
   version "2.3.5"
   resolved "https://registry.yarnpkg.com/@types/tough-cookie/-/tough-cookie-2.3.5.tgz#9da44ed75571999b65c37b60c9b2b88db54c585d"
   integrity sha512-SCcK7mvGi3+ZNz833RRjFIxrn4gI1PPR3NtuIS+6vMkvmsGjosqTJwRt5bAEFLRz+wtJMWv8+uOnZf2hi2QXTg==
+
+"@types/universal-analytics@0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@types/universal-analytics/-/universal-analytics-0.4.2.tgz#d21a122a984bf8261eb206bcb7ccb1c0e8353d04"
+  integrity sha512-ndv0aYA5tNPdl4KYUperlswuiSj49+o7Pwx8hrCiE9x2oeiMrn7A2jXFDdTLFIymiYZImDX02ycq0i6uQ3TL0A==
 
 "@types/write-json-file@2.2.1":
   version "2.2.1"
@@ -4499,14 +4504,7 @@ mixin-deep@^1.2.0:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
 
-mkdirp-promise@5.0.1:
-  version "5.0.1"
-  resolved "https://registry.yarnpkg.com/mkdirp-promise/-/mkdirp-promise-5.0.1.tgz#e9b8f68e552c68a9c1713b84883f7a1dd039b8a1"
-  integrity sha1-6bj2jlUsaKnBcTuEiD96HdA5uKE=
-  dependencies:
-    mkdirp "*"
-
-mkdirp@*, mkdirp@0.5.1, mkdirp@^0.5.0, mkdirp@^0.5.1:
+mkdirp@0.5.1, mkdirp@^0.5.0, mkdirp@^0.5.1:
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-0.5.1.tgz#30057438eac6cf7f8c4767f38648d6697d75c903"
   integrity sha1-MAV0OOrGz3+MR2fzhkjWaX11yQM=

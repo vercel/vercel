@@ -1,4 +1,7 @@
 import chalk from 'chalk';
+import { metrics, shouldCollectMetrics } from '../metrics';
+
+const metric = metrics();
 
 export default function error(
   ...input: string[] | [{ slug: string; message: string }]
@@ -11,5 +14,10 @@ export default function error(
       messages.push(`> More details: https://err.sh/now-cli/${slug}`);
     }
   }
+
+  if (shouldCollectMetrics) {
+    metric.exception(messages.join('\n')).send();
+  }
+
   return `${chalk.red('> Error!')} ${messages.join('\n')}`;
 }
