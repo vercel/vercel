@@ -32,8 +32,8 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import metrics from './util/metrics.ts';
-import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants.ts';
+import { SENTRY_DSN } from './util/constants.ts';
+import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -546,11 +546,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  const metric = metrics(GA_TRACKING_ID, config.token);
-  const shouldCollectMetrics = (
-    config.collectMetrics === undefined
-    || config.collectMetrics === true)
-    && process.env.NOW_CLI_COLLECT_METRICS !== '0';
+  const metric = metrics();
   let exitCode;
   const eventCategory = 'Exit Code';
 

@@ -1,15 +1,7 @@
 import chalk from 'chalk';
-import * as configFiles from '../config/files'
-import metrics from '../metrics';
-import { GA_TRACKING_ID } from '../constants'
+import { metrics, shouldCollectMetrics } from '../metrics';
 
-const config: any = configFiles.getConfigFilePath();
-const shouldCollectMetrics = (
-  config.collectMetrics === undefined
-  || config.collectMetrics === true)
-  && process.env.NOW_CLI_COLLECT_METRICS !== '0';
-
-const metric = metrics(GA_TRACKING_ID, config.token);
+const metric = metrics();
 
 export default function error(
   ...input: string[] | [{ slug: string; message: string }]
