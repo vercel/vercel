@@ -13,6 +13,15 @@ exports.config = {
   maxLambdaSize: '10mb',
 };
 
+// From this list: https://import.pw/importpw/import/docs/config.md
+const allowedConfigImports = new Set([
+  'CACHE',
+  'CURL_OPTS',
+  'DEBUG',
+  'RELOAD',
+  'SERVER',
+]);
+
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
 exports.build = async ({
@@ -24,9 +33,22 @@ exports.build = async ({
   await download(files, srcDir);
 
   const configEnv = Object.keys(config).reduce((o, v) => {
-    o[`IMPORT_${snakeCase(v).toUpperCase()}`] = config[v]; // eslint-disable-line no-param-reassign
+    const name = snakeCase(v).toUpperCase();
+
+    if (allowedConfigImports.has(name)) {
+      o[`IMPORT_${name}`] = config[v]; // eslint-disable-line no-param-reassign
+    }
+
     return o;
   }, {});
+
+  if (config && config.import) {
+    Object.keys(config.import).forEach((key) => {
+      const name = snakeCase(key).toUpperCase();
+      // eslint-disable-next-line no-param-reassign
+      configEnv[`IMPORT_${name}`] = config.import[key];
+    });
+  }
 
   const IMPORT_CACHE = `${workPath}/.import-cache`;
   const env = Object.assign({}, process.env, configEnv, {
