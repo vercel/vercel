@@ -2,6 +2,7 @@
   "name": "@now/mdx-deck",
   "version": "0.5.4",
   "license": "MIT",
+  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/mdx-deck-now-mdx-deck",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now-builders.git",
