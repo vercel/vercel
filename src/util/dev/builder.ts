@@ -8,6 +8,7 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
+import which from 'which';
 import ora, { Ora } from 'ora';
 
 import { Output } from '../output';
@@ -42,12 +43,7 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  const runtime = await initializeRuntime('nodejs8.10');
-  if (!runtime.cacheDir) {
-    throw new Error('nodejs8.10 runtime failed to initialize');
-  }
-  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
-  return nodeBin;
+  return which.sync('node', { nothrow: true }) || process.execPath;
 }
 
 function pipeChildLogging(child: ChildProcess): void {
@@ -90,9 +86,6 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('message', m => {
-    // console.log('got message from builder:', m);
-  });
   buildProcess.on('exit', (code, signal) => {
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
