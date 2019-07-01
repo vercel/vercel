@@ -157,10 +157,13 @@ exports.build = async ({
     'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
   };
 
+  // Use the system-installed version of `node` when running via `now dev`
+  const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
+
   const lambda = await createLambda({
     files: { ...preparedFiles, ...launcherFiles },
     handler: 'launcher.launcher',
-    runtime: nodeVersion.runtime,
+    runtime,
   });
 
   return { [entrypoint]: lambda };

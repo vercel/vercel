@@ -386,7 +386,7 @@ export const build = async ({
             'now__launcher.js': new FileBlob({ data: launcher }),
           },
           handler: 'now__launcher.launcher',
-          runtime: 'nodejs8.10',
+          runtime: nodeVersion.runtime,
         });
         console.log(`Created lambda for page: "${page}"`);
       })
@@ -471,7 +471,7 @@ export const build = async ({
             'page.js': pages[page],
           },
           handler: 'now__launcher.launcher',
-          runtime: 'nodejs8.10',
+          runtime: nodeVersion.runtime,
         });
         console.log(`Created lambda for page: "${page}"`);
       })

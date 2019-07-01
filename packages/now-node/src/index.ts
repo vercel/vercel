@@ -217,13 +217,16 @@ export async function build({
     });
   }
 
+  // Use the system-installed version of `node` when running via `now dev`
+  const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
+
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
       ...launcherFiles,
     },
     handler: 'launcher.launcher',
-    runtime: nodeVersion.runtime,
+    runtime,
   });
 
   const output = { [entrypoint]: lambda };
