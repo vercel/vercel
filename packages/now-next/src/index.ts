@@ -165,6 +165,8 @@ export const build = async ({
   watch?: string[];
   childProcesses: ChildProcess[];
 }> => {
+  process.env.__NEXT_BUILDER_EXPERIMENTAL_TARGET = 'serverless';
+
   validateEntrypoint(entrypoint);
 
   const entryDirectory = path.dirname(entrypoint);
@@ -186,11 +188,7 @@ export const build = async ({
     );
   }
 
-  process.env.__NEXT_BUILDER_EXPERIMENTAL_TARGET = 'serverless';
-
   if (meta.isDev) {
-    // eslint-disable-next-line no-underscore-dangle
-    process.env.__NEXT_BUILDER_EXPERIMENTAL_DEBUG = 'true';
     let childProcess: ChildProcess | undefined;
 
     // If this is the initial build, we want to start the server
@@ -287,10 +285,9 @@ export const build = async ({
 
   console.log('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const buildSpawnOptions = { ...spawnOpts };
-  const env = { ...buildSpawnOptions.env } as any;
+  const env = { ...spawnOpts.env } as any;
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
-  await runPackageJsonScript(entryPath, 'now-build', buildSpawnOptions);
+  await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
   if (isLegacy) {
     console.log('running npm install --production...');

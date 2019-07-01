@@ -1,4 +1,4 @@
 {
   "version": 2,
-  "builds": [{ "src": "next.config.js", "use": "@now/next" }]
+  "builds": [{ "src": "package.json", "use": "@now/next" }]
 }
