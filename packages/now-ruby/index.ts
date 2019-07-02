@@ -64,6 +64,7 @@ async function bundleInstall(
         env: {
           BUNDLE_SILENCE_ROOT_WARNING: '1',
           BUNDLE_APP_CONFIG: bundleAppConfig,
+          BUNDLE_JOBS: '4',
         },
       }
     );
