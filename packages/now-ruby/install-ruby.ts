@@ -2,7 +2,7 @@ import { join } from 'path';
 import execa from 'execa';
 import { getWriteableDirectory } from '@now/build-utils';
 
-const RUBY_VERSION = '2.5.3';
+const RUBY_VERSION = '2.5.5';
 
 async function installRuby(version: string = RUBY_VERSION) {
   const baseDir = await getWriteableDirectory();
