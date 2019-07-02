@@ -53,11 +53,12 @@ async function downloadInstallAndBundle(
 
 async function compile(workPath, downloadedFiles, entrypoint, config) {
   const input = downloadedFiles[entrypoint].fsPath;
-  const inputDir = path.dirname(input);
+
   const ncc = require('@zeit/ncc');
   const { code, map, assets } = await ncc(input, {
     sourceMap: true,
     sourceMapRegister: true,
+    filterAssetBase: path.resolve(workPath),
   });
 
   if (config && config.includeFiles) {
@@ -68,7 +69,7 @@ async function compile(workPath, downloadedFiles, entrypoint, config) {
     // eslint-disable-next-line no-restricted-syntax
     for (const pattern of includeFiles) {
       // eslint-disable-next-line no-await-in-loop
-      const files = await glob(pattern, inputDir);
+      const files = await glob(pattern, workPath);
 
       // eslint-disable-next-line no-restricted-syntax
       for (const assetName of Object.keys(files)) {

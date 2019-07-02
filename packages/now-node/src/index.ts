@@ -1,5 +1,5 @@
 import { Assets, NccOptions } from '@zeit/ncc';
-import { join, dirname, relative, sep } from 'path';
+import { join, dirname, relative, sep, resolve } from 'path';
 import { NccWatcher, WatcherResult } from '@zeit/ncc-watcher';
 import {
   glob,
@@ -76,11 +76,11 @@ async function compile(
   { isDev, filesChanged, filesRemoved }: Meta
 ): Promise<{ preparedFiles: Files; watch: string[] }> {
   const input = entrypointPath;
-  const inputDir = dirname(input);
-  const rootIncludeFiles = inputDir.split(sep).pop() || '';
+
   const options: NccOptions = {
     sourceMap: true,
     sourceMapRegister: true,
+    filterAssetBase: resolve(workPath),
   };
   let code: string;
   let map: string | undefined;
@@ -105,10 +105,7 @@ async function compile(
       .concat(Object.keys(assets || {}));
   } else {
     const ncc = require('@zeit/ncc');
-    const result = await ncc(input, {
-      sourceMap: true,
-      sourceMapRegister: true,
-    });
+    const result = await ncc(input, options);
     code = result.code;
     map = result.map;
     assets = result.assets;
@@ -123,21 +120,14 @@ async function compile(
         : config.includeFiles;
 
     for (const pattern of includeFiles) {
-      const files = await glob(pattern, inputDir);
+      const files = await glob(pattern, workPath);
 
       for (const assetName of Object.keys(files)) {
         const stream = files[assetName].toStream();
         const { mode } = files[assetName];
         const { data } = await FileBlob.fromStream({ stream });
-        let fullPath = join(rootIncludeFiles, assetName);
 
-        // if asset contain directory
-        // no need to use `rootIncludeFiles`
-        if (assetName.includes(sep)) {
-          fullPath = assetName;
-        }
-
-        assets[fullPath] = {
+        assets[assetName] = {
           source: toBuffer(data),
           permissions: mode,
         };

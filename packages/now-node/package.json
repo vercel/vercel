@@ -12,8 +12,8 @@
   "dependencies": {
     "@now/node-bridge": "1.2.2",
     "@types/node": "*",
-    "@zeit/ncc": "0.18.5",
-    "@zeit/ncc-watcher": "1.0.3"
+    "@zeit/ncc": "0.20.3",
+    "@zeit/ncc-watcher": "1.1.0"
   },
   "scripts": {
     "build": "./build.sh",
