@@ -283,7 +283,16 @@ export default class DevServer {
         throw err;
       }
     }
-    this.validateEnvConfig(fileName, base || {}, env);
+    try {
+      this.validateEnvConfig(fileName, base || {}, env);
+    } catch (err) {
+      if (err instanceof MissingDotenvVarsError) {
+        this.output.error(err.message);
+        process.exit(1);
+      } else {
+        throw err;
+      }
+    }
     return { ...base, ...env };
   }
 
@@ -315,19 +324,8 @@ export default class DevServer {
       }
     }
 
-    try {
-      this.validateNowConfig(config);
-    } catch (err) {
-      if (err instanceof MissingDotenvVarsError) {
-        this.output.error(err.message);
-        process.exit(1);
-      } else {
-        throw err;
-      }
-    }
-
+    this.validateNowConfig(config);
     this.cachedNowJson = config;
-
     return config;
   }
 
