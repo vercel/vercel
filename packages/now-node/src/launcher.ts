@@ -1,8 +1,17 @@
-export function makeLauncher(
-  entrypoint: string,
-  shouldAddHelpers: boolean
-): string {
-  return `const { Bridge } = require("./bridge");
+type LauncherConfiguration = {
+  entrypointPath: string;
+  bridgePath: string;
+  helpersPath: string;
+  shouldAddHelpers?: boolean;
+};
+
+export function makeLauncher({
+  entrypointPath,
+  bridgePath,
+  helpersPath,
+  shouldAddHelpers = false,
+}: LauncherConfiguration): string {
+  return `const { Bridge } = require("${bridgePath}");
 const { Server } = require("http");
 
 let isServerListening = false;
@@ -22,7 +31,7 @@ if (!process.env.NODE_ENV) {
 }
 
 try {
-  let listener = require("./${entrypoint}");
+  let listener = require("${entrypointPath}");
   if (listener.default) listener = listener.default;
 
   if (typeof listener.listen === 'function') {
@@ -37,7 +46,7 @@ try {
       shouldAddHelpers
         ? [
             'bridge = new Bridge(undefined, true);',
-            'server = require("./helpers").createServerWithHelpers(listener, bridge);',
+            `server = require("${helpersPath}").createServerWithHelpers(listener, bridge);`,
           ].join('\n')
         : ['server = require("http").createServer(listener);'].join('\n')
     }
@@ -46,13 +55,13 @@ try {
   } else if (typeof listener === 'object' && Object.keys(listener).length === 0) {
     setTimeout(() => {
       if (!isServerListening) {
-        console.error('No exports found in module "${entrypoint}".');
+        console.error('No exports found in module "${entrypointPath}".');
         console.error('Did you forget to export a function or a server?');
         process.exit(1);
       }
     }, 5000);
   } else {
-    console.error('Invalid export found in module "${entrypoint}".');
+    console.error('Invalid export found in module "${entrypointPath}".');
     console.error('The default export must be a function or server.');
   }
 } catch (err) {

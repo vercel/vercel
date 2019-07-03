@@ -1,6 +1,6 @@
 import { Assets, NccOptions } from '@zeit/ncc';
-import { join, dirname, relative, sep, resolve } from 'path';
-import { NccWatcher, WatcherResult } from '@zeit/ncc-watcher';
+import { join, dirname, relative, resolve } from 'path';
+import { NccWatcher } from '@zeit/ncc-watcher';
 import {
   glob,
   download,
@@ -32,6 +32,10 @@ interface DownloadOptions {
 }
 
 const watchers: Map<string, NccWatcher> = new Map();
+
+const LAUNCHER_FILENAME = '___now_launcher';
+const BRIDGE_FILENAME = '___now_bridge';
+const HELPERS_FILENAME = '___now_helpers';
 
 function getWatcher(entrypoint: string, options: NccOptions): NccWatcher {
   let watcher = watchers.get(entrypoint);
@@ -195,14 +199,21 @@ export async function build({
   );
 
   const launcherFiles: Files = {
-    'launcher.js': new FileBlob({
-      data: makeLauncher(entrypoint, shouldAddHelpers),
+    [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
+      data: makeLauncher({
+        entrypointPath: `./${entrypoint}`,
+        bridgePath: `./${BRIDGE_FILENAME}`,
+        helpersPath: `./${HELPERS_FILENAME}`,
+        shouldAddHelpers,
+      }),
     }),
-    'bridge.js': new FileFsRef({ fsPath: require('@now/node-bridge') }),
+    [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
+      fsPath: require('@now/node-bridge'),
+    }),
   };
 
   if (shouldAddHelpers) {
-    launcherFiles['helpers.js'] = new FileFsRef({
+    launcherFiles[`${HELPERS_FILENAME}.js`] = new FileFsRef({
       fsPath: join(__dirname, 'helpers.js'),
     });
   }
@@ -215,7 +226,7 @@ export async function build({
       ...preparedFiles,
       ...launcherFiles,
     },
-    handler: 'launcher.launcher',
+    handler: `${LAUNCHER_FILENAME}.launcher`,
     runtime,
   });
 
