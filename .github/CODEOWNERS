@@ -1,10 +1,11 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                       @styfle
-/packages/now-node      @styfle @tootallnate
-/packages/now-next      @timer  @dav-is
-/packages/now-go        @styfle @sophearak
-/packages/now-python    @styfle @sophearak
-/packages/now-rust      @styfle @mike-engel @anmonteiro
-/packages/now-ruby      @styfle @coetry @nathancahill
+*                         @styfle
+/packages/now-node        @styfle @tootallnate @lucleray
+/packages/now-node-bridge @styfle @tootallnate @lucleray
+/packages/now-next        @timer  @dav-is
+/packages/now-go          @styfle @sophearak
+/packages/now-python      @styfle @sophearak
+/packages/now-rust        @styfle @mike-engel @anmonteiro
+/packages/now-ruby        @styfle @coetry @nathancahill
