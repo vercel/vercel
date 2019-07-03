@@ -3,8 +3,18 @@ export function makeLauncher(
   shouldAddHelpers: boolean
 ): string {
   return `const { Bridge } = require("./bridge");
+const { Server } = require("http");
 
-let bridge;
+let isServerListening = false;
+let bridge = new Bridge();
+const saveListen = Server.prototype.listen;
+Server.prototype.listen = function listen() {
+  isServerListening = true;
+  console.log('Legacy server listening...');
+  bridge.setServer(this);
+  Server.prototype.listen = saveListen;
+  return bridge.listen();
+};
 
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV =
@@ -15,28 +25,36 @@ try {
   let listener = require("./${entrypoint}");
   if (listener.default) listener = listener.default;
 
-  if(typeof listener.listen === 'function') {
+  if (typeof listener.listen === 'function') {
+    Server.prototype.listen = saveListen;
     const server = listener;
-    bridge = new Bridge(server);
-  } else if(typeof listener === 'function') {
+    bridge.setServer(server);
+    bridge.listen();
+  } else if (typeof listener === 'function') {
+    Server.prototype.listen = saveListen;
+    let server;
     ${
       shouldAddHelpers
         ? [
             'bridge = new Bridge(undefined, true);',
-            'const server = require("./helpers").createServerWithHelpers(listener, bridge);',
-            'bridge.setServer(server);',
+            'server = require("./helpers").createServerWithHelpers(listener, bridge);',
           ].join('\n')
-        : [
-            'const server = require("http").createServer(listener);',
-            'bridge = new Bridge(server);',
-          ].join('\n')
+        : ['server = require("http").createServer(listener);'].join('\n')
     }
+    bridge.setServer(server);
+    bridge.listen();
+  } else if (typeof listener === 'object' && Object.keys(listener).length === 0) {
+    setTimeout(() => {
+      if (!isServerListening) {
+        console.error('No exports found in module "${entrypoint}".');
+        console.error('Did you forget to export a function or a server?');
+        process.exit(1);
+      }
+    }, 5000);
   } else {
-    console.error('Export in entrypoint is not valid');
-    console.error('Did you forget to export a function or a server?');
-    process.exit(1);
+    console.error('Invalid export found in module "${entrypoint}".');
+    console.error('The default export must be a function or server.');
   }
-
 } catch (err) {
   if (err.code === 'MODULE_NOT_FOUND') {
     console.error(err.message);
@@ -47,8 +65,6 @@ try {
     process.exit(1);
   }
 }
-
-bridge.listen();
 
 exports.launcher = bridge.launcher;`;
 }
