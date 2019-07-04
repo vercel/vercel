@@ -4,7 +4,7 @@
     {
       "src": "index.js",
       "use": "@now/node",
-      "config": { "maxLambdaSize": "15mb" }
+      "config": { "maxLambdaSize": "18mb" }
     }
   ],
   "probes": [{ "path": "/", "mustContain": "found:RANDOMNESS_PLACEHOLDER" }]
