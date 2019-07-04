@@ -13,15 +13,18 @@ export const defaultSelection = supportedOptions.find(
 ) as NodeVersion;
 
 export async function getSupportedNodeVersion(
-  engineRange?: string
+  engineRange?: string,
+  silent?: boolean
 ): Promise<NodeVersion> {
   let selection = defaultSelection;
 
   if (!engineRange) {
-    console.log(
-      'missing `engines` in `package.json`, using default range: ' +
-        selection.range
-    );
+    if (!silent) {
+      console.log(
+        'missing `engines` in `package.json`, using default range: ' +
+          selection.range
+      );
+    }
   } else {
     const found = supportedOptions.some(o => {
       // the array is already in order so return the first
@@ -30,15 +33,20 @@ export async function getSupportedNodeVersion(
       return intersects(o.range, engineRange);
     });
     if (found) {
-      console.log(
-        'found `engines` in `package.json`, selecting range: ' + selection.range
-      );
+      if (!silent) {
+        console.log(
+          'Found `engines` in `package.json`, selecting range: ' +
+            selection.range
+        );
+      }
     } else {
-      throw new Error(
-        'found `engines` in `package.json` with an unsupported node range: ' +
-          engineRange +
-          '\nplease use `10.x` or `8.10.x` instead'
-      );
+      if (!silent) {
+        throw new Error(
+          'found `engines` in `package.json` with an unsupported node range: ' +
+            engineRange +
+            '\nplease use `10.x` or `8.10.x` instead'
+        );
+      }
     }
   }
   return selection;

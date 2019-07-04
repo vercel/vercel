@@ -8,6 +8,8 @@ import {
   BuildOptions,
   PrepareCacheOptions,
   ShouldServeOptions,
+  PackageJson,
+  Route,
   Meta,
   Config,
 } from './types';
@@ -34,7 +36,9 @@ export {
   Files,
   File,
   Meta,
+  Route,
   Lambda,
+  PackageJson,
   createLambda,
   download,
   DownloadedFiles,

@@ -14,3 +14,4 @@
 /packages/now-rust/dist/*
 /packages/now-ruby/dist/*
 /packages/now-static-build/dist/*
+/packages/now-static-build/test/fixtures/**
