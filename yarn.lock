@@ -5821,10 +5821,10 @@ serialize-error@^2.1.0:
   resolved "https://registry.yarnpkg.com/serialize-error/-/serialize-error-2.1.0.tgz#50b679d5635cdf84667bdc8e59af4e5b81d5f60a"
   integrity sha1-ULZ51WNc34Rme9yOWa9OW4HV9go=
 
-serve-handler@5.0.7:
-  version "5.0.7"
-  resolved "https://registry.yarnpkg.com/serve-handler/-/serve-handler-5.0.7.tgz#317877420925913e99e4dc228e67f6e5774e5387"
-  integrity sha512-PuLoJHAO2jj3p1fYWfXVHsEqNesx1+h+6qj0FIWrCe526ZtpDqeYuKA4knE5pjK9xoOVShoB+qGOP93EY46xEw==
+serve-handler@6.0.3:
+  version "6.0.3"
+  resolved "https://registry.yarnpkg.com/serve-handler/-/serve-handler-6.0.3.tgz#6139dfd70152cdba739b16037a4196eaa6907510"
+  integrity sha512-Y+vA9myB4dOYLRK83G7h775zWUrESFpgDp3iKxca3I+T9Pcb22VSn6jU1wfc3bPk5AT/FKl+GgkgkQJHNP2Lfg==
   dependencies:
     bytes "3.0.0"
     content-disposition "0.5.2"
