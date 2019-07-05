@@ -4,6 +4,15 @@ import { join } from 'path';
 
 const readirPromise = promisify(readdir);
 
+// Please note that is extremely important
+// that the `dependency` property needs
+// to reference a CLI. This is needed because
+// you might want (for example) a Gatsby
+// site that is powered by Preact, so you
+// can't look for the `preact` dependency.
+// Instead, you need to look for `preact-cli`
+// when optimizing Preact CLI projects.
+
 export default [
   {
     name: 'Gatsby.js',
@@ -11,8 +20,27 @@ export default [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Hexo',
+    dependency: 'hexo',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Preact',
+    dependency: 'preact-cli',
+    getOutputDirName: async () => 'build',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Vue.js',
-    dependency: 'vue',
+    dependency: '@vue/cli-service',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -41,7 +69,7 @@ export default [
   },
   {
     name: 'Angular',
-    dependency: '@angular/core',
+    dependency: '@angular/cli',
     minNodeRange: '10.x',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';
@@ -61,8 +89,29 @@ export default [
     ],
   },
   {
+    name: 'Polymer',
+    dependency: 'polymer-cli',
+    getOutputDirName: async (dirPrefix: string) => {
+      const base = 'build';
+      const location = join(dirPrefix, base);
+      const content = await readirPromise(location);
+      const paths = content.filter(item => !item.includes('.'));
+
+      return join(base, paths[0]);
+    },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Svelte',
-    dependency: 'svelte',
+    dependency: 'sirv-cli',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
@@ -112,6 +161,25 @@ export default [
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
+    name: 'Gridsome',
+    dependency: 'gridsome',
+    getOutputDirName: async () => 'dist',
+  },
+  {
+    name: 'UmiJS',
+    dependency: 'umi',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
         dest: '/index.html',
       },
     ],
