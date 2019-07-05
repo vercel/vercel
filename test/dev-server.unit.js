@@ -41,10 +41,22 @@ function testFixture(name, fn) {
   };
 }
 
+function validateResponseHeaders(t, res) {
+  t.is(res.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
+  t.is(res.headers.get('x-now-trace'), 'dev1');
+  t.truthy(
+    /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+      res.headers.get('x-now-id')
+    )
+  );
+}
+
 test(
   '[DevServer] Maintains query when invoking lambda',
   testFixture('now-dev-query-invoke', async (t, server) => {
     const res = await fetch(`${server.address}/something?url-param=a`);
+    validateResponseHeaders(t, res);
+
     const text = await res.text();
     const parsed = url.parse(text, true);
     t.is(parsed.pathname, '/something');
@@ -114,9 +126,18 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
 });
 
 test('[DevServer] Installs canary build-utils if one more more builders is canary', async t => {
-  t.is(getBuildUtils(['@now/static', '@now/node@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['@now/static', '@now/node@0.7.4-canary.0']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['@now/static', '@now/node@0.8.0']), '@now/build-utils@latest');
+  t.is(
+    getBuildUtils(['@now/static', '@now/node@canary']),
+    '@now/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['@now/static', '@now/node@0.7.4-canary.0']),
+    '@now/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['@now/static', '@now/node@0.8.0']),
+    '@now/build-utils@latest'
+  );
   t.is(getBuildUtils(['@now/static', '@now/node']), '@now/build-utils@latest');
   t.is(getBuildUtils(['@now/static']), '@now/build-utils@latest');
   t.is(getBuildUtils(['@now/md@canary']), '@now/build-utils@canary');
