@@ -46,11 +46,15 @@ async function chmodPlusX(fsPath: string) {
   await fs.chmod(fsPath, base8);
 }
 
-export async function runShellScript(fsPath: string) {
+export async function runShellScript(
+  fsPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions
+) {
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
   await chmodPlusX(fsPath);
-  await spawnAsync(`./${path.basename(fsPath)}`, [], destPath);
+  await spawnAsync(`./${path.basename(fsPath)}`, args, destPath, spawnOpts);
   return true;
 }
 
@@ -69,20 +73,15 @@ export function getSpawnOptions(
   return opts;
 }
 
-export async function getNodeVersion(destPath: string, minNodeVersion?: string): Promise<NodeVersion> {
+export async function getNodeVersion(
+  destPath: string,
+  minNodeVersion?: string
+): Promise<NodeVersion> {
   const { packageJson } = await scanParentDirs(destPath, true);
-  const range = (packageJson && packageJson.engines && packageJson.engines.node) || minNodeVersion;
+  const range =
+    (packageJson && packageJson.engines && packageJson.engines.node) ||
+    minNodeVersion;
   return getSupportedNodeVersion(range, typeof minNodeVersion !== 'undefined');
-
-  if (range) {
-    return getSupportedNodeVersion(range);
-  }
-
-  if (minNodeVersion) {
-    return getSupportedNodeVersion(minNodeVersion, true);
-  }
-
-  return getSupportedNodeVersion();
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {
@@ -140,7 +139,13 @@ export async function runNpmInstall(
   } else {
     await spawnAsync(
       'yarn',
-      commandArgs.concat(['--ignore-engines', '--mutex', 'network', '--cwd', destPath]),
+      commandArgs.concat([
+        '--ignore-engines',
+        '--mutex',
+        'network',
+        '--cwd',
+        destPath,
+      ]),
       destPath,
       opts
     );
