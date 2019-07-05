@@ -9,5 +9,4 @@ yarn-error.log
 coverage
 *.swp
 .builders
-builders.tar.gz
-builders.tar.gz.sha
+/assets

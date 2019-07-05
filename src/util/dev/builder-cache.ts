@@ -14,19 +14,18 @@ import {
   readFile,
   readJSON,
   writeFile,
-  writeJSON,
   remove
 } from 'fs-extra';
 
-import {
-  NoBuilderCacheError,
-  BuilderCacheCleanError
-} from '../errors-ts';
+import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
+import { devDependencies } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage, Package } from './types';
+
+const registryTypes = new Set(['version', 'tag', 'range']);
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
@@ -36,15 +35,26 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   }
 };
 
-const registryTypes = new Set(['version', 'tag', 'range']);
+const bundledBuilders = Object.keys(devDependencies).filter(d =>
+  d.startsWith('@now/')
+);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
 export const builderModulePathPromise = prepareBuilderModulePath();
 
-function readFileOrNull(filePath: string, encoding?: null): Promise<Buffer | null>;
-function readFileOrNull(filePath: string, encoding: string): Promise<string | null>;
-async function readFileOrNull(filePath: string, encoding?: string | null): Promise<Buffer | string | null> {
+function readFileOrNull(
+  filePath: string,
+  encoding?: null
+): Promise<Buffer | null>;
+function readFileOrNull(
+  filePath: string,
+  encoding: string
+): Promise<string | null>;
+async function readFileOrNull(
+  filePath: string,
+  encoding?: string | null
+): Promise<Buffer | string | null> {
   try {
     if (encoding) {
       return await readFile(filePath, encoding);
@@ -81,23 +91,21 @@ export async function prepareBuilderDir() {
   await mkdirp(builderDir);
 
   // Extract the bundled `builders.tar.gz` file, if necessary
-  const bundledTarballPath = join(__dirname, '../../../builders.tar.gz')
-  const bundledShaPath = join(__dirname, '../../../builders.tar.gz.sha');
-  const cacheShaPath = join(builderDir, '.builders.sha');
+  const bundledTarballPath = join(__dirname, '../../../assets/builders.tar.gz');
 
-  const [ bundledSha, cachedSha ] = await Promise.all([
-    readFile(bundledShaPath, 'utf8'),
-    readFileOrNull(cacheShaPath, 'utf8')
-  ]);
+  const existingPackageJson =
+    (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
+  const { dependencies = {} } = JSON.parse(existingPackageJson);
 
-  if (bundledSha !== cachedSha) {
+  if (!hasBundledBuilders(dependencies)) {
+    console.time('extracting builders tarball');
     const extractor = extract(builderDir);
     await pipe(
       createReadStream(bundledTarballPath),
       createGunzip(),
       extractor
     );
-    await writeFile(cacheShaPath, bundledSha);
+    console.timeEnd('extracting builders tarball');
   }
 
   return builderDir;
@@ -158,9 +166,11 @@ function getNpmVersion(use = ''): string {
 export function getBuildUtils(packages: string[]): string {
   const version = packages
     .map(getNpmVersion)
-    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+    .some(ver => ver.includes('canary'))
+    ? 'canary'
+    : 'latest';
 
-    return `@now/build-utils@${version}`;
+  return `@now/build-utils@${version}`;
 }
 
 /**
@@ -180,14 +190,42 @@ export async function installBuilders(
     // Static deployment, no builders to install
     return;
   }
-  const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
+  const cacheDir = await builderDirPromise;
+  const buildersPkgPath = join(cacheDir, 'package.json');
+  const buildersPkg = await readJSON(buildersPkgPath);
 
-  const buildUtils = getBuildUtils(packages);
-  output.debug(`Installing ${buildUtils}`);
+  // Filter out any packages that come packaged with `now-cli`
+  const packagesToInstall = packages.filter(p => {
+    if (p in localBuilders) return false;
+    const parsed = npa(p);
+    if (!parsed.name) {
+      return false;
+    }
+    if (
+      parsed.type === 'tag' &&
+      parsed.fetchSpec === 'latest' &&
+      bundledBuilders.includes(parsed.name)
+    ) {
+      const parsedInstalled = npa(
+        `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
+      );
+      return (
+        parsedInstalled.type === 'version' &&
+        typeof parsedInstalled.fetchSpec === 'string' &&
+        !parsedInstalled.fetchSpec.includes('canary')
+      );
+    }
+    return true;
+  });
+
+  if (packagesToInstall.length === 0) {
+    output.debug('No builders needs to be installed');
+    return;
+  }
 
   const stopSpinner = wait(
-    `Installing builders: ${packages.sort().join(', ')}`
+    `Installing builders: ${packagesToInstall.sort().join(', ')}`
   );
   try {
     await execa(
@@ -197,8 +235,7 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        buildUtils,
-        ...packages.filter(p => p !== '@now/static')
+        ...packagesToInstall
       ],
       {
         cwd: cacheDir
@@ -252,4 +289,13 @@ function getSha(buffer: Buffer): string {
   const hash = createHash('sha256');
   hash.update(buffer);
   return hash.digest('hex');
+}
+
+function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
+  for (const name of bundledBuilders) {
+    if (!(name in dependencies)) {
+      return false;
+    }
+  }
+  return true;
 }

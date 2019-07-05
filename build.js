@@ -4,7 +4,6 @@ const execa = require('execa');
 const { join } = require('path');
 const pipe = require('promisepipe');
 const { createGzip } = require('zlib');
-const { createHash } = require('crypto');
 const {
   createReadStream,
   createWriteStream,
@@ -15,22 +14,6 @@ const {
 } = require('fs-extra');
 const pkg = require('./package.json');
 
-function getSha256(filePath) {
-  return new Promise((resolve, reject) => {
-    const hash = createHash('sha512');
-    const stream = createReadStream(filePath);
-    stream.on('error', err => {
-      if (err.code === 'ENOENT') {
-        resolve(null);
-      } else {
-        reject(err);
-      }
-    });
-    stream.on('data', chunk => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-  });
-}
-
 async function createBuildersTarball() {
   const builders = Object.keys(pkg.devDependencies)
     .filter(d => d.startsWith('@now/'))
@@ -38,8 +21,11 @@ async function createBuildersTarball() {
   console.log(`Creating builders tarball with: ${builders.join(', ')}`);
 
   const buildersDir = join(__dirname, '.builders');
-  const buildersTarballPath = join(__dirname, 'builders.tar.gz');
+  const assetsDir = join(__dirname, 'assets');
   await mkdirp(buildersDir);
+  await mkdirp(assetsDir);
+
+  const buildersTarballPath = join(assetsDir, 'builders.tar.gz');
 
   try {
     const buildersPkg = join(buildersDir, 'package.json');
@@ -59,9 +45,6 @@ async function createBuildersTarball() {
 
   const packer = tar.pack(buildersDir);
   await pipe(packer, createGzip(), createWriteStream(buildersTarballPath));
-
-  const sha = await getSha256(buildersTarballPath);
-  await writeFile(`${buildersTarballPath}.sha`, sha);
 }
 
 async function main() {
