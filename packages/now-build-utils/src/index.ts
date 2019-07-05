@@ -1,18 +1,6 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import {
-  File,
-  Files,
-  AnalyzeOptions,
-  BuildOptions,
-  PrepareCacheOptions,
-  ShouldServeOptions,
-  PackageJson,
-  Route,
-  Meta,
-  Config,
-} from './types';
 import { Lambda, createLambda } from './lambda';
 import download, { DownloadedFiles } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
@@ -28,17 +16,14 @@ import {
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
+import { detectBuilder, detectApiBuilders } from './detect-builder';
+import { detectApiRoutes } from './detect-routes';
 
 export {
   FileBlob,
   FileFsRef,
   FileRef,
-  Files,
-  File,
-  Meta,
-  Route,
   Lambda,
-  PackageJson,
   createLambda,
   download,
   DownloadedFiles,
@@ -52,10 +37,10 @@ export {
   getNodeVersion,
   getSpawnOptions,
   streamToBuffer,
-  AnalyzeOptions,
-  BuildOptions,
-  PrepareCacheOptions,
-  ShouldServeOptions,
   shouldServe,
-  Config,
+  detectBuilder,
+  detectApiBuilders,
+  detectApiRoutes,
 };
+
+export * from './types';

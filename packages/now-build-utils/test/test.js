@@ -16,6 +16,12 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
+const {
+  detectBuilder,
+  detectApiBuilders,
+  detectApiRoutes,
+} = require('../dist');
+
 jest.setTimeout(4 * 60 * 1000);
 const builderUrl = '@canary';
 let buildUtilsUrl;
@@ -158,3 +164,84 @@ for (const builder of buildersToTestWith) {
     }
   }
 }
+
+it('Test `detectBuilder`', async () => {
+  {
+    const pkg = { dependencies: { next: '1.0.0' } };
+    const builder = await detectBuilder(pkg);
+    expect(builder.use).toBe('@now/next');
+  }
+
+  {
+    const pkg = { devDependencies: { next: '1.0.0' } };
+    const builder = await detectBuilder(pkg);
+    expect(builder.use).toBe('@now/next');
+  }
+
+  {
+    const pkg = {};
+    const builder = await detectBuilder(pkg);
+    expect(builder.use).toBe('@now/static-build');
+  }
+});
+
+it('Test `detectApiBuilders`', async () => {
+  {
+    const files = ['package.json', 'api/user.js', 'api/team.js'];
+
+    const builders = await detectApiBuilders(files);
+    expect(builders[0].use).toBe('@now/node');
+  }
+
+  {
+    const files = ['package.json', 'api/user.go', 'api/team.js'];
+
+    const builders = await detectApiBuilders(files);
+    expect(builders.some(({ use }) => use === '@now/go')).toBeTruthy();
+    expect(builders.some(({ use }) => use === '@now/node')).toBeTruthy();
+  }
+
+  {
+    const files = ['package.json'];
+
+    const builders = await detectApiBuilders(files);
+    expect(builders).toBe(null);
+  }
+});
+
+it('Test `detectApiRoutes`', async () => {
+  {
+    const files = ['api/user.go', 'api/team.js'];
+
+    const { defaultRoutes } = await detectApiRoutes(files);
+    expect(defaultRoutes.length).toBe(2);
+  }
+
+  {
+    const files = ['api/user.go', 'api/user.js'];
+
+    const { error } = await detectApiRoutes(files);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
+    const files = ['api/[user].go', 'api/[team]/[id].js'];
+
+    const { error } = await detectApiRoutes(files);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
+    const files = ['api/[team]/[team].js'];
+
+    const { error } = await detectApiRoutes(files);
+    expect(error.code).toBe('conflicting_path_segment');
+  }
+
+  {
+    const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
+
+    const { defaultRoutes } = await detectApiRoutes(files);
+    expect(defaultRoutes.length).toBe(2);
+  }
+});

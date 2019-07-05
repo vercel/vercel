@@ -206,3 +206,9 @@ export interface NodeVersion {
   range: string;
   runtime: string;
 }
+
+export interface Builder {
+  use: string;
+  src: string;
+  config?: Config;
+}
