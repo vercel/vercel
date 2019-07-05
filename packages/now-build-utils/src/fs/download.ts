@@ -39,10 +39,10 @@ export default async function download(
   basePath: string,
   meta?: Meta
 ): Promise<DownloadedFiles> {
-  const { isDev = false, filesChanged = null, filesRemoved = null } =
+  const { isDev = false, skipDownload = false, filesChanged = null, filesRemoved = null } =
     meta || {};
 
-  if (isDev) {
+  if (isDev || skipDownload) {
     // In `now dev`, the `download()` function is a no-op because
     // the `basePath` matches the `cwd` of the dev server, so the
     // source files are already available.

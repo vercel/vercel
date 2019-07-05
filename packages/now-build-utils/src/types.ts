@@ -46,6 +46,7 @@ export interface Config {
 
 export interface Meta {
   isDev?: boolean;
+  skipDownload?: boolean;
   requestPath?: string;
   filesChanged?: string[];
   filesRemoved?: string[];
