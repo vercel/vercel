@@ -290,7 +290,9 @@ export async function build({
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
     console.log(`Running build script "${entrypoint}"`);
-    await runShellScript(path.join(workPath, entrypoint));
+    const nodeVersion = await getNodeVersion(entrypointDir);
+    const spawnOpts = getSpawnOptions(meta, nodeVersion);
+    await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
     validateDistDir(distPath, meta.isDev);
 
     return glob('**', distPath, mountpoint);
