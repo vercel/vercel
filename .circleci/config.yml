@@ -43,8 +43,9 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - packed
+            - assets
             - dist
+            - packed
 
   test-lint:
     docker:
