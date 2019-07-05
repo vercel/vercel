@@ -211,7 +211,7 @@ export default async function main(ctx: NowContext): Promise<number> {
   if (isWin) {
     error('The `now update` command is not supported on Windows.');
     log(`To get the latest version, please re-install Now CLI: ${chalk.cyan.underline('https://zeit.co/download')}`);
-    return 0;
+    return 1;
   }
 
   output.dim(`Now CLI ${pkg.version} update (beta) — https://zeit.co/feedback/update`);
