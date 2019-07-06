@@ -726,6 +726,7 @@ export default class DevServer {
       const destUrl = url.format(parsed);
 
       this.output.debug(`ProxyPass: ${destUrl}`);
+      this.setResponseHeaders(res, nowRequestId);
       return proxyPass(req, res, destUrl, this.output);
     }
 
