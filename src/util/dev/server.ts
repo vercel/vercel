@@ -560,6 +560,7 @@ export default class DevServer {
     headers: http.OutgoingHttpHeaders = {}
   ): void {
     const allHeaders = {
+      'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
@@ -838,7 +839,7 @@ export default class DevServer {
         return;
 
       case 'Lambda':
-        if (!asset.fn) {
+        if (!asset.fn || !asset.sha) {
           // This is mostly to appease TypeScript since `fn` is an optional prop,
           // but this shouldn't really ever happen since we run the builds before
           // responding to HTTP requests.
@@ -893,6 +894,7 @@ export default class DevServer {
 
         res.statusCode = result.statusCode;
         this.setResponseHeaders(res, nowRequestId, result.headers);
+        res.setHeader('etag', `W/"${asset.sha}"`);
 
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {
@@ -1007,16 +1009,16 @@ function close(server: http.Server): Promise<void> {
 /**
  * Generates a (fake) Now tracing ID for an HTTP request.
  *
- * Example: lx24t-1553895116335-784edbc9ef03e2b5534f3dc6f14c90d4
+ * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
 function generateRequestId(): string {
-  return [
+  return `dev1:${[
     Math.random()
       .toString(32)
       .slice(-5),
     Date.now(),
-    randomBytes(16).toString('hex')
-  ].join('-');
+    randomBytes(6).toString('hex')
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
