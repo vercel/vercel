@@ -3,7 +3,7 @@ import test from 'ava';
 import path from 'path';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { createServer } from 'http';
+import { request, createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
@@ -44,11 +44,18 @@ function testFixture(name, fn) {
 function validateResponseHeaders(t, res) {
   t.is(res.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
   t.is(res.headers.get('x-now-trace'), 'dev1');
+  t.truthy(/^W\/"[0-9a-f]{40}"$/.test(res.headers.get('etag')));
   t.truthy(
     /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
       res.headers.get('x-now-id')
     )
   );
+}
+
+function get(url) {
+  return new Promise((resolve, reject) => {
+    request(url, resolve).on('error', reject).end();
+  });
 }
 
 test(
@@ -103,6 +110,14 @@ test(
 
     t.is(parsed.query['url-param'], 'a');
     t.is(parsed.query['route-param'], 'b');
+  })
+);
+
+test(
+  '[DevServer] Allow `cache-control` to be overwritten',
+  testFixture('now-dev-headers', async (t, server) => {
+    const res = await get(`${server.address}/?name=cache-control&value=immutable`);
+    t.is(res.headers['cache-control'], 'immutable');
   })
 );
 
