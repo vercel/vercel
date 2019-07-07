@@ -3,7 +3,7 @@ import test from 'ava';
 import path from 'path';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { createServer } from 'http';
+import { request, createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
@@ -50,6 +50,12 @@ function validateResponseHeaders(t, res) {
       res.headers.get('x-now-id')
     )
   );
+}
+
+function get(url) {
+  return new Promise((resolve, reject) => {
+    request(url, resolve).on('error', reject).end();
+  });
 }
 
 test(
@@ -104,6 +110,14 @@ test(
 
     t.is(parsed.query['url-param'], 'a');
     t.is(parsed.query['route-param'], 'b');
+  })
+);
+
+test(
+  '[DevServer] Allow `cache-control` to be overwritten',
+  testFixture('now-dev-headers', async (t, server) => {
+    const res = await get(`${server.address}/?name=cache-control&value=immutable`);
+    t.is(res.headers['cache-control'], 'immutable');
   })
 );
 

@@ -560,8 +560,8 @@ export default class DevServer {
     headers: http.OutgoingHttpHeaders = {}
   ): void {
     const allHeaders = {
-      ...headers,
       'cache-control': 'public, max-age=0, must-revalidate',
+      ...headers,
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
       'x-now-cache': 'MISS'
