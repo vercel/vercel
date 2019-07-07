@@ -841,7 +841,7 @@ export default class DevServer {
         return;
 
       case 'Lambda':
-        if (!asset.fn) {
+        if (!asset.fn || !asset.sha) {
           // This is mostly to appease TypeScript since `fn` is an optional prop,
           // but this shouldn't really ever happen since we run the builds before
           // responding to HTTP requests.
@@ -896,6 +896,7 @@ export default class DevServer {
 
         res.statusCode = result.statusCode;
         this.setResponseHeaders(res, nowRequestId, result.headers);
+        res.setHeader('etag', `W/"${asset.sha}"`);
 
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {

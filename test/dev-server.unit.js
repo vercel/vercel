@@ -44,6 +44,7 @@ function testFixture(name, fn) {
 function validateResponseHeaders(t, res) {
   t.is(res.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
   t.is(res.headers.get('x-now-trace'), 'dev1');
+  t.truthy(/^W\/"[0-9a-f]{40}"$/.test(res.headers.get('etag')));
   t.truthy(
     /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
       res.headers.get('x-now-id')
