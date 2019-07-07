@@ -8,7 +8,6 @@ declare namespace ncc {
     watch?: any;
     sourceMap?: boolean;
     sourceMapRegister?: boolean;
-    filterAssetBase?: string;
   }
 
   export interface Asset {

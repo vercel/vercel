@@ -12,7 +12,7 @@
     "@now/node-bridge": "1.2.2",
     "@zeit/ncc": "0.18.5",
     "@now/node-bridge": "1.2.0-canary.3",
-    "@zeit/ncc": "0.20.3",
+    "@zeit/ncc": "0.18.5",
     "fs-extra": "7.0.1"
   },
   "scripts": {
