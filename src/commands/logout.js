@@ -74,7 +74,7 @@ const revokeToken = async (token) => {
     }
   };
 
-  const result = await fetch(`${apiUrl}/user/tokens/current`, options);
+  const result = await fetch(`${apiUrl}/v3/user/tokens/current`, options);
 
   if (!result.ok) {
     console.error(error('Not able to log out'));
