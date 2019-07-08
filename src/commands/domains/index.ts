@@ -15,6 +15,7 @@ import ls from './ls';
 import rm from './rm';
 import verify from './verify';
 import move from './move';
+import config from './config';
 
 const help = () => {
   console.log(`
@@ -30,6 +31,7 @@ const help = () => {
     move         [name] [destination]   Move a domain to another user or team.
     transfer-in  [name]                 Transfer in a domain to Zeit
     verify       [name]                 Run a verification for a domain
+    config       [name]                 Check if a domain is configured properly for ZEIT
 
   ${chalk.dim('Options:')}
 
@@ -67,6 +69,7 @@ const help = () => {
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
+  config: ['config'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   move: ['move'],
@@ -112,6 +115,8 @@ export default async function main(ctx: NowContext) {
       return transferIn(ctx, argv, args, output);
     case 'verify':
       return verify(ctx, argv, args, output);
+    case 'config':
+      return config(ctx, argv, args, output);
     default:
       return ls(ctx, argv, args, output);
   }
