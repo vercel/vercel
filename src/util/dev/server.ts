@@ -148,6 +148,7 @@ export default class DevServer {
       BuildResult,
       [string | null, BuildMatch]
     > = new Map();
+
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -314,6 +315,13 @@ export default class DevServer {
     // when no `now.json` is present
     let config: NowConfig = this.cachedNowJson || { version: 2 };
 
+    // We need to delete these properties for zero config to work
+    // with file changes
+    if (this.cachedNowJson) {
+      delete this.cachedNowJson.builds;
+      delete this.cachedNowJson.routes;
+    }
+
     try {
       this.output.debug('Reading `now.json` file');
       const nowJsonPath = getNowJsonPath(this.cwd);
@@ -337,7 +345,7 @@ export default class DevServer {
     const apiFiles = await getApiFiles(this.cwd, this.output);
 
     if (apiFiles.length > 0) {
-      if (!config.builds || config.builds.length > 0) {
+      if (!config.builds || config.builds.length === 0) {
         config.builds = [];
 
         if (pkg) {
@@ -1205,7 +1213,7 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => minimatch(file, pattern));
+  return files.some(file => file === pattern || minimatch(file, pattern));
 }
 
 function fileChanged(
