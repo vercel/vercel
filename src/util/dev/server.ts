@@ -356,12 +356,10 @@ export default class DevServer {
           }
         }
 
-        if (apiFiles && apiFiles.length > 0) {
-          const apiBuilds = await detectApiBuilders(apiFiles);
+        const apiBuilds = await detectApiBuilders(apiFiles);
 
-          if (apiBuilds && apiBuilds.length > 0) {
-            config.builds.push(...apiBuilds);
-          }
+        if (apiBuilds && apiBuilds.length > 0) {
+          config.builds.push(...apiBuilds);
         }
       }
 
