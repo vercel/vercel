@@ -44,7 +44,6 @@ function testFixture(name, fn) {
 function validateResponseHeaders(t, res) {
   t.is(res.headers.get('x-now-trace'), 'dev1');
   t.truthy(res.headers.get('cache-control').length > 0);
-  t.truthy(/^W\/"[0-9a-f]{40}"$/.test(res.headers.get('etag')));
   t.truthy(
     /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
       res.headers.get('x-now-id')
@@ -63,6 +62,7 @@ test(
   testFixture('now-dev-query-invoke', async (t, server) => {
     const res = await fetch(`${server.address}/something?url-param=a`);
     validateResponseHeaders(t, res);
+    t.truthy(/^W\/"[0-9a-f]{40}"$/.test(res.headers.get('etag')));
 
     const text = await res.text();
     const parsed = url.parse(text, true);
