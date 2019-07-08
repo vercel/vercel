@@ -247,7 +247,12 @@ export default class DevServer {
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
-    const matches = await getBuildMatches(nowJson, this.cwd, this.output);
+    const matches = await getBuildMatches(
+      nowJson,
+      this.cwd,
+      this.yarnPath,
+      this.output
+    );
     const sources = matches.map(m => m.src);
 
     // Delete build matches that no longer exists
