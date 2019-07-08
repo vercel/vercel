@@ -1,8 +1,17 @@
-import path from 'path';
 import { Route } from './types';
+import { parse as parsePath } from 'path';
 import { ignoreApiFilter } from './detect-builder';
 
+function joinPath(...segments: string[]) {
+  const joinedPath = segments.join('/');
+  return joinedPath.replace(/\/{2,}/g, '/');
+}
+
 function concatArrayOfText(texts: string[]): string {
+  if (texts.length <= 2) {
+    return texts.join(' and ');
+  }
+
   const last = texts.pop();
   return `${texts.join(', ')}, and ${last}`;
 }
@@ -12,7 +21,7 @@ function concatArrayOfText(texts: string[]): string {
 // It will return `null` if there are no brackets
 // and therefore no segment.
 function getSegmentName(segment: string): string | null {
-  const { name } = path.parse(segment);
+  const { name } = parsePath(segment);
 
   if (name.startsWith('[') && name.endsWith(']')) {
     return name.slice(1, -1);
@@ -48,7 +57,7 @@ function createRouteFromPath(filePath: string): Route {
       } else if (isLast) {
         // If it is the last part we want to remove the extension
         // and capture everything after that as regex group and append it
-        const { name: fileName } = path.parse(segment);
+        const { name: fileName } = parsePath(segment);
         append += `$${counter++}`;
         return `${fileName}(.*)`;
       }
@@ -102,8 +111,8 @@ function partiallyMatches(pathA: string, pathB: string): boolean {
 // got resolved, so we can check if they have conflicts
 function pathOccurrences(filePath: string, files: string[]): string[] {
   const getAbsolutePath = (unresolvedPath: string): string => {
-    const { dir, name } = path.parse(unresolvedPath);
-    const parts = path.join(dir, name).split('/');
+    const { dir, name } = parsePath(unresolvedPath);
+    const parts = joinPath(dir, name).split('/');
     return parts.map(part => part.replace(/\[.*\]/, '1')).join('/');
   };
 
