@@ -1198,6 +1198,11 @@ const verifyExampleApollo = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'now.json')) &&
   fs.existsSync(path.join(cwd, dir, 'index.js'));
+const verifyExampleAmp = (cwd, dir) =>
+  fs.existsSync(path.join(cwd, dir, 'favicon.png')) &&
+  fs.existsSync(path.join(cwd, dir, 'index.html')) &&
+  fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
+  fs.existsSync(path.join(cwd, dir, 'now.json'));
 
 test('initialize example "apollo"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
@@ -1223,16 +1228,16 @@ test('initialize example ("apollo") to specified directory', async t => {
   t.true(verifyExampleApollo(cwd, 'apo'));
 });
 
-test('initialize selected example ("apollo")', async t => {
+test('initialize selected example ("amp")', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example in';
+  const goal = '> Success! Initialized "amp" example in';
 
   const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd, 'apollo'));
+  t.true(verifyExampleAmp(cwd, 'amp'));
 });
 
 test('initialize example to existing directory with "-f"', async t => {
@@ -1292,7 +1297,8 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  let url = `https://now-cli.user.now.sh`;
+  const { name } = JSON.parse(fs.readFileSync(path.join(firstDeployment, 'now.json')));
+  const url = `https://${name}.user.now.sh`;
 
   {
     const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
@@ -1341,6 +1347,20 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       `[Third run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
+});
+
+test('whoami', async t => {
+  const { code, stdout, stderr } = await execute(['whoami']);
+  t.is(code, 0);
+  t.is(stdout, contextName);
+});
+
+test('try to update now to canary', async t => {
+  const { code } = await execute(['update', '--channel', 'canary', '--yes']);
+  t.is(code, 0);
+
+  const { stdout } = await execute(['--version']);
+  t.true(stdout.includes('canary'));
 });
 
 test.after.always(async () => {

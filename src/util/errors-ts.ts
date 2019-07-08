@@ -161,6 +161,19 @@ export class InvalidTransferAuthCode extends NowError<
   }
 }
 
+export class DomainRegistrationFailed extends NowError<
+  'DOMAIN_REGISTRATION_FAILED',
+  { domain: string }
+> {
+  constructor(domain: string, message: string) {
+    super({
+      code: 'DOMAIN_REGISTRATION_FAILED',
+      meta: { domain },
+      message
+    });
+  }
+}
+
 /**
  * When information about a domain is requested but the domain doesn't exist
  */
@@ -397,24 +410,6 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
   }
 }
 
-/**
- * This error is returned when we try to create a certificate and the API responds
- * with a configuration error that means that the HTTP challenge couldn't be solved
- * for the domain so it is misconfigured.
- */
-export class DomainConfigurationError extends NowError<
-  'DOMAIN_CONFIGURATION_ERROR',
-  { domain: string; subdomain: string | null; external: boolean }
-> {
-  constructor(domain: string, subdomain: string | null, external: boolean) {
-    super({
-      code: 'DOMAIN_CONFIGURATION_ERROR',
-      meta: { domain, subdomain, external },
-      message: `The domain is unreachable to solve the HTTP challenge needed for the certificate.`
-    });
-  }
-}
-
 export class CertNotFound extends NowError<'CERT_NOT_FOUND', { id: string }> {
   constructor(id: string) {
     super({
@@ -452,42 +447,6 @@ export class CertOrderNotFound extends NowError<
 }
 
 /**
- * Returned when the user tries to create a wildcard certificate but LE API returns
- * a rate limit error because there were too many certificates created already.
- */
-export class TooManyCertificates extends NowError<
-  'TOO_MANY_CERTIFICATES',
-  { domains: string[] }
-> {
-  constructor(domains: string[]) {
-    super({
-      code: 'TOO_MANY_CERTIFICATES',
-      meta: { domains },
-      message: `Too many certificates already issued for exact set of domains: ${domains.join(
-        ', '
-      )}`
-    });
-  }
-}
-
-/**
- * Returned when the user tries to create a certificate but LE API returns
- * a CAA conflict error, preventing cert issuance.
- */
-export class ConflictingCAARecord extends NowError<
-  'CONFLICTING_CAA_RECORD',
-  { domains: string[] }
-> {
-  constructor(domains: string[], message: string) {
-    super({
-      code: 'CONFLICTING_CAA_RECORD',
-      meta: { domains },
-      message
-    });
-  }
-}
-
-/**
  * This error is returned when consuming an API that got rate limited because too
  * many requests where performed already. It gives a retryAfter parameter with the
  * time the user needs to wait.
@@ -506,52 +465,75 @@ export class TooManyRequests extends NowError<
 }
 
 /**
- * This error is returned when the user requests a certificate but there is a pending
- * certificate order being processed in the server.
+ * Generic cert error that utilizes the API's response message
+ * for more information
  */
-export class DomainValidationRunning extends NowError<
-  'DOMAIN_VALIDATION_RUNNING',
-  { domain: string }
+type CertErrorCode =
+  | 'bad_domains'
+  | 'challenge_still_pending'
+  | 'common_name_domain_name_mismatch'
+  | 'conflicting_caa_record'
+  | 'domain_not_verified'
+  | 'invalid_cn'
+  | 'invalid_domain'
+  | 'rate_limited'
+  | 'should_share_root_domain'
+  | 'unauthorized_request_error'
+  | 'unsupported_challenge_priority'
+  | 'wildcard_not_allowed'
+  | 'validation_running'
+  | 'dns_error'
+  | 'challenge_error'
+  | 'txt_record_not_found';
+export class CertError extends NowError<
+  'CERT_ERROR',
+  { cns: string[]; code: CertErrorCode; helpUrl?: string }
 > {
-  constructor(domain: string) {
+  constructor({
+    cns,
+    code,
+    message,
+    helpUrl
+  }: {
+    cns: string[];
+    code: CertErrorCode;
+    message: string;
+    helpUrl?: string;
+  }) {
     super({
-      code: 'DOMAIN_VALIDATION_RUNNING',
-      meta: { domain },
-      message: `A domain verification is already in course for ${domain}`
+      code: `CERT_ERROR`,
+      meta: { cns, code, helpUrl },
+      message
     });
   }
 }
 
-/**
- * Returned when there was a attempt to create a certiicate for a set of
- * common names where the root domain is not shared between them.
- */
-export class DomainsShouldShareRoot extends NowError<
-  'CNS_SHOULD_SHARE_ROOT',
-  { domains: string[] }
-> {
-  constructor(domains: string[]) {
-    super({
-      code: 'CNS_SHOULD_SHARE_ROOT',
-      meta: { domains },
-      message: `All domains for a certificate should share the same root domain`
-    });
+export class CertConfigurationError extends NowError<
+  'CERT_CONFIGURATION_ERROR',
+  {
+    cns: string[];
+    type: 'http-01' | 'dns-01';
+    external: boolean | null;
+    helpUrl?: string;
   }
-}
-
-/**
- * Returned when in an attempt to create a certificate, the challenge could not
- * be solved by LE. It could be the dns or the http challenge.
- */
-export class CantSolveChallenge extends NowError<
-  'CANT_SOLVE_CHALLENGE',
-  { domain: string; type: string }
 > {
-  constructor(domain: string, type: string) {
+  constructor({
+    cns,
+    message,
+    external,
+    type,
+    helpUrl
+  }: {
+    cns: string[];
+    message: string;
+    external: boolean | null;
+    type: 'http-01' | 'dns-01';
+    helpUrl?: string;
+  }) {
     super({
-      code: 'CANT_SOLVE_CHALLENGE',
-      meta: { domain, type },
-      message: `Can't solve ${type} challenge for domain ${domain}`
+      code: `CERT_CONFIGURATION_ERROR`,
+      meta: { cns, helpUrl, external, type },
+      message
     });
   }
 }
@@ -848,19 +830,6 @@ export class InvalidMaxForScale extends NowError<
   }
 }
 
-export class WildcardNotAllowed extends NowError<
-  'WILDCARD_NOT_ALLOWED',
-  { domain: string }
-> {
-  constructor(domain: string) {
-    super({
-      code: 'WILDCARD_NOT_ALLOWED',
-      meta: { domain },
-      message: `We can't generate a certificate for an external domain`
-    });
-  }
-}
-
 export class InvalidCert extends NowError<'INVALID_CERT', {}> {
   constructor() {
     super({
@@ -1094,42 +1063,32 @@ export class MissingDotenvVarsError extends NowError<
   }
 }
 
-export class UnauthorizedCertsRequestError extends NowError<
-  'UNAUTHORIZED_CERTS_REQUEST_ERROR',
-  { detail: string; type: string; domain: string }
-> {
-  constructor(detail: string, type: string, domain: string) {
+export class DeploymentsRateLimited extends NowError<'DEPLOYMENTS_RATE_LIMITED', {}> {
+  constructor(message: string) {
     super({
-      code: 'UNAUTHORIZED_CERTS_REQUEST_ERROR',
-      meta: { detail, type, domain },
-      message: 'ACME request was unauthorized'
+      code: 'DEPLOYMENTS_RATE_LIMITED',
+      meta: {},
+      message
     });
   }
 }
 
-export class CertsDNSError extends NowError<
-  'CERTS_DNS_ERROR',
-  { detail: string; cns: string[] }
-> {
-  constructor(detail: string, cns: string[]) {
-    super({
-      code: 'CERTS_DNS_ERROR',
-      meta: { detail, cns },
-      message:
-        'There was a problem with a DNS query during identifier validation'
-    });
-  }
-}
-
-export class BuildsRateLimited extends NowError<
-  'BUILDS_RATE_LIMITED',
-  { }
-> {
+export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
   constructor(message: string) {
     super({
       code: 'BUILDS_RATE_LIMITED',
       meta: {},
       message
+    });
+  }
+}
+
+export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
+  constructor(nameOrId: string) {
+    super({
+      code: 'PROJECT_NOT_FOUND',
+      meta: {},
+      message: `There is no project for "${nameOrId}"`
     });
   }
 }

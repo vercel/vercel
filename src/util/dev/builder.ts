@@ -8,14 +8,17 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
+import which from 'which';
 import ora, { Ora } from 'ora';
 
-import DevServer from './dev-server';
-import { Output } from '../../../util/output';
-import { relative } from '../../../util/path-helpers';
-import { LambdaSizeExceededError } from '../../../util/errors-ts';
+import { getSha } from '../sha';
+import { Output } from '../output';
+import { relative } from '../path-helpers';
+import { LambdaSizeExceededError } from '../errors-ts';
+import { staticFiles as getFiles } from '../get-files';
+
+import DevServer from './server';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
-import { staticFiles as getFiles } from '../../../util/get-files';
 import {
   EnvConfig,
   NowConfig,
@@ -41,12 +44,7 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  const runtime = await initializeRuntime('nodejs8.10');
-  if (!runtime.cacheDir) {
-    throw new Error('nodejs8.10 runtime failed to initialize');
-  }
-  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
-  return nodeBin;
+  return which.sync('node', { nothrow: true }) || process.execPath;
 }
 
 function pipeChildLogging(child: ChildProcess): void {
@@ -89,9 +87,6 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('message', m => {
-    // console.log('got message from builder:', m);
-  });
   buildProcess.on('exit', (code, signal) => {
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
@@ -360,6 +355,7 @@ export async function executeBuild(
             }
           }
         });
+        asset.sha = getSha(asset.zipBuffer, 'sha1');
       }
 
       match.buildTimestamp = Date.now();
@@ -380,6 +376,7 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowJson: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -399,7 +396,7 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,

@@ -2,7 +2,6 @@ import { parse } from 'psl';
 import chalk from 'chalk';
 import ms from 'ms';
 
-import { handleDomainConfigurationError } from '../../util/error-handlers';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
@@ -15,6 +14,7 @@ import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
+import handleCertError from '../../util/certs/handle-cert-error';
 
 type Options = {
   '--ca': string;
@@ -133,7 +133,7 @@ export default async function issue(
     output.error(
       `Invalid number of arguments to create a custom certificate entry. Usage:`
     );
-    output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`);
+    output.print(`  ${chalk.cyan(`now certs issue <cn>[, <cn>]`)}\n`);
     return 1;
   }
 
@@ -152,116 +152,32 @@ export default async function issue(
     cert = await createCertForCns(client, cns, contextName);
   }
 
-  if (cert instanceof ERRORS.CantSolveChallenge) {
-    output.error(
-      `We could not solve the ${cert.meta.type} challenge for domain ${
-        cert.meta.domain
-      }.`
-    );
-    if (cert.meta.type === 'dns-01') {
-      output.log(
-        `The certificate provider could not resolve the required DNS record queries.`
-      );
-      output.print(
-        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n'
-      );
-    } else {
-      output.log(
-        `The certificate provider could not resolve the HTTP queries for ${
-          cert.meta.domain
-        }.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
-      output.print(`  ${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n\n`);
-      output.log(
-        `Alternatively, you can solve DNS challenges manually after running:\n`
-      );
-      output.print(
-        `  ${chalk.cyan(`now certs issue --challenge-only ${cns.join(' ')}`)}\n`
-      );
-      output.print(
-        '  Read more: https://err.sh/now-cli/cant-solve-challenge\n\n'
-      );
+  if (cert instanceof ERRORS.CertError) {
+    if (cert.meta.code === 'wildcard_not_allowed') {
+      // Fallback to start cert order when receiving a wildcard_not_allowed error
+      return runStartOrder(output, client, cns, contextName, addStamp, {
+        fallingBack: true
+      });
     }
-    return 1;
   }
-  if (cert instanceof ERRORS.ConflictingCAARecord) {
-    output.error(cert.message);
-    return 1;
+
+  const handledResult = handleCertError(output, cert);
+  if (handledResult === 1) {
+    return handledResult;
   }
-  if (cert instanceof ERRORS.TooManyRequests) {
-    output.error(
-      `Too many requests detected for ${cert.meta.api} API. Try again in ${ms(
-        cert.meta.retryAfter * 1000,
-        {
-          long: true
-        }
-      )}.`
-    );
-    return 1;
-  }
-  if (cert instanceof ERRORS.TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${cert.meta.domains.join(
-        ', '
-      )}`
-    );
-    return 1;
-  }
-  if (cert instanceof ERRORS.DomainValidationRunning) {
-    output.error(
-      `There is a validation in course for ${chalk.underline(
-        cert.meta.domain
-      )}. Please wait for it to complete.`
-    );
-    return 1;
-  }
-  if (cert instanceof ERRORS.DomainConfigurationError) {
-    handleDomainConfigurationError(output, cert);
-    return 1;
-  }
-  if (cert instanceof ERRORS.WildcardNotAllowed) {
-    return runStartOrder(output, client, cns, contextName, addStamp, {
-      fallingBack: true
-    });
-  }
-  if (cert instanceof ERRORS.DomainsShouldShareRoot) {
-    output.error(`All given common names should share the same root domain.`);
-    return 1;
-  }
-  if (cert instanceof ERRORS.DomainPermissionDenied) {
+
+  if (handledResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
-        cert.meta.domain
-      )} under ${chalk.bold(cert.meta.context)}.`
+        handledResult.meta.domain
+      )} under ${chalk.bold(handledResult.meta.context)}.`
     );
-    return 1;
-  }
-  if (
-    cert instanceof ERRORS.DomainNotFound ||
-    cert instanceof ERRORS.UnauthorizedCertsRequestError
-  ) {
-    output.error(cert.message);
-    return 1;
-  }
-  if (cert instanceof ERRORS.CertsDNSError) {
-    output.error(
-      `We could not solve the dns-01 challenge for cns ${cert.meta.cns.join(
-        ', '
-      )}.`
-    );
-    output.log(
-      `The certificate provider could not resolve the required DNS record queries.`
-    );
-    output.print('  Read more: https://err.sh/now-cli/cant-solve-challenge\n');
     return 1;
   }
 
   output.success(
     `Certificate entry for ${chalk.bold(
-      cert.cns.join(', ')
+      handledResult.cns.join(', ')
     )} created ${addStamp()}`
   );
   return 0;

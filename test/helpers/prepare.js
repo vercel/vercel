@@ -1,10 +1,11 @@
 // Native
 const { join } = require('path');
+const { randomBytes } = require('crypto');
 
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
 const { promises: { writeFile } } = require('fs');
-const ensureDir = require('mkdirp-promise');
+const { mkdirp } = require('fs-extra');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest
@@ -81,10 +82,12 @@ http_request(
 <marquee>Thanks for your feedback!</marquee>
 `;
 
+const randomAliasSuffix = randomBytes(6).toString('hex');
+
 const getRevertAliasConfigFile = () => {
   return JSON.stringify({
       'version': 2,
-      'name': 'now-revert-alias',
+      'name': `now-revert-alias-${randomAliasSuffix}`,
       'builds': [
         {
           'src': '*.json',
@@ -201,7 +204,7 @@ RUN echo $NONCE > /public/index.html
   for (const type of Object.keys(spec)) {
     const needed = spec[type];
     const directory = join(__dirname, '..', 'fixtures', 'integration', type);
-    await ensureDir(directory);
+    await mkdirp(directory);
 
     if (Array.isArray(needed)) {
       // Get content from the defined files

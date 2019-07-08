@@ -1,22 +1,21 @@
 import chalk from 'chalk';
 import execa from 'execa';
-import { createHash } from 'crypto';
-import { join, resolve } from 'path';
 import npa from 'npm-package-arg';
-import mkdirp from 'mkdirp-promise';
+import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
-import { readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
+import { mkdirp, readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
 
-import * as staticBuilder from './static-builder';
-import { BuilderWithPackage, Package } from './types';
-import wait from '../../../util/output/wait';
-import { Output } from '../../../util/output';
-import { devDependencies as nowCliDeps } from '../../../../package.json';
 import {
   NoBuilderCacheError,
   BuilderCacheCleanError
-} from '../../../util/errors-ts';
+} from '../errors-ts';
+import wait from '../output/wait';
+import { getSha } from '../sha';
+import { Output } from '../output';
+
+import * as staticBuilder from './static-builder';
+import { BuilderWithPackage, Package } from './types';
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
@@ -71,7 +70,7 @@ export async function prepareBuilderDir() {
 export async function prepareBuilderModulePath() {
   const [builderDir, builderContents] = await Promise.all([
     builderDirPromise,
-    readFile(join(__dirname, 'builder.js'))
+    readFile(join(__dirname, 'builder-worker.js'))
   ]);
   let needsWrite = false;
   const builderSha = getSha(builderContents);
@@ -116,26 +115,45 @@ export async function cleanCacheDir(output: Output): Promise<void> {
   }
 }
 
+function getNpmVersion(use = ''): string {
+  const parsed = npa(use);
+  if (registryTypes.has(parsed.type)) {
+    return parsed.fetchSpec || '';
+  }
+  return '';
+}
+
+export function getBuildUtils(packages: string[]): string {
+  const version = packages
+    .map(getNpmVersion)
+    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+
+    return `@now/build-utils@${version}`;
+}
+
 /**
  * Install a list of builders to the cache directory.
  */
-export async function installBuilders(packagesSet: Set<string>, yarnDir: string): Promise<void> {
+export async function installBuilders(
+  packagesSet: Set<string>,
+  yarnDir: string,
+  output: Output
+): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
-    packages.length === 0 || (
-    packages.length === 1 &&
-    Object.hasOwnProperty.call(localBuilders, packages[0]))
+    packages.length === 0 ||
+    (packages.length === 1 &&
+      Object.hasOwnProperty.call(localBuilders, packages[0]))
   ) {
     // Static deployment, no builders to install
     return;
   }
   const cacheDir = await builderDirPromise;
   const yarnPath = join(yarnDir, 'yarn');
-  const buildersPkg = join(cacheDir, 'package.json');
 
-  // Pull the same version of `@now/build-utils` that now-cli is using
-  const buildUtils = '@now/build-utils';
-  const buildUtilsVersion = nowCliDeps[buildUtils];
+  const buildUtils = getBuildUtils(packages);
+  output.debug(`Installing ${buildUtils}`);
+
   const stopSpinner = wait(
     `Installing builders: ${packages.sort().join(', ')}`
   );
@@ -147,7 +165,7 @@ export async function installBuilders(packagesSet: Set<string>, yarnDir: string)
         'add',
         '--exact',
         '--no-lockfile',
-        `${buildUtils}@${buildUtilsVersion}`,
+        buildUtils,
         ...packages.filter(p => p !== '@now/static')
       ],
       {
@@ -163,7 +181,9 @@ export async function installBuilders(packagesSet: Set<string>, yarnDir: string)
  * Get a builder from the cache directory.
  */
 export async function getBuilder(
-  builderPkg: string
+  builderPkg: string,
+  yarnDir: string,
+  output: Output
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
@@ -172,12 +192,26 @@ export async function getBuilder(
     const buildersPkg = await readJSON(join(cacheDir, 'package.json'));
     const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
     const dest = join(cacheDir, 'node_modules', pkgName);
-    const mod = require(dest);
-    const pkg = require(join(dest, 'package.json'));
-    builderWithPkg = Object.freeze({
-      builder: mod,
-      package: pkg
-    });
+    try {
+      const mod = require(dest);
+      const pkg = require(join(dest, 'package.json'));
+      builderWithPkg = Object.freeze({
+        builder: mod,
+        package: pkg
+      });
+    } catch (err) {
+      if (err.code === 'MODULE_NOT_FOUND') {
+        output.debug(
+          `Attempted to require ${builderPkg}, but it is not installed`
+        );
+        const pkgSet = new Set([builderPkg]);
+        await installBuilders(pkgSet, yarnDir, output);
+
+        // Run `getBuilder()` again now that the builder has been installed
+        return getBuilder(builderPkg, yarnDir, output);
+      }
+      throw err;
+    }
   }
   return builderWithPkg;
 }
@@ -196,10 +230,4 @@ function getPackageName(
     }
   }
   return null;
-}
-
-function getSha(buffer: Buffer): string {
-  const hash = createHash('sha256');
-  hash.update(buffer);
-  return hash.digest('hex');
 }
