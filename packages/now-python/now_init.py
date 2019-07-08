@@ -47,7 +47,10 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
             'body': res.text,
         }
 elif 'app' in __now_variables:
-    if not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app.__call__):
+    if (
+        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app) and
+        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app.__call__)
+    ):
         print('using Web Server Gateway Interface (WSGI)')
         import sys
         from urllib.parse import urlparse, unquote

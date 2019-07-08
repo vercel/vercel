@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.py",
+      "use": "@now/python",
+      "config": { "maxLambdaSize": "10mb" }
+    }
+  ],
+  "probes": [{ "path": "/", "mustContain": "asgi-function:RANDOMNESS_PLACEHOLDER" }]
+}
