@@ -344,6 +344,24 @@ test('try to purchase a domain', async t => {
   );
 });
 
+test('check domain configuration', async t => {
+  const domainName = `${session}-test.org`
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['domains', 'config', domainName, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.true(
+    stderr.includes(
+      `> Error! "${domainName}" is not properly configured for now.`
+    )
+  );
+  t.is(code, 1);
+});
+
 test('try to transfer-in a domain with "--code" option', async t => {
   const { stderr, code } = await execa(
     binaryPath,

@@ -86,5 +86,5 @@ export default async function config(
   domainConfig.misconfiguredReasons.forEach((reason, index) => {
     output.print(`> ${reason}\n`);
   });
-  return 0;
+  return 1;
 }
