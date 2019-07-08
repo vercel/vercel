@@ -1,5 +1,6 @@
 import path from 'path';
 import { Route } from './types';
+import { ignoreApiFilter } from './detect-builder';
 
 function concatArrayOfText(texts: string[]): string {
   const last = texts.pop();
@@ -183,7 +184,9 @@ export async function detectApiRoutes(
 
   // The deepest routes need to be
   // the first ones to get handled
-  const sortedFiles = files.sort(sortFilesBySegmentCount);
+  const sortedFiles = files
+    .filter(ignoreApiFilter)
+    .sort(sortFilesBySegmentCount);
 
   const defaultRoutes: Route[] = [];
 
@@ -195,8 +198,6 @@ export async function detectApiRoutes(
     }
 
     const conflictingSegment = getConflictingSegment(file);
-
-    console.log({ file, conflictingSegment });
 
     if (conflictingSegment) {
       return {

@@ -207,6 +207,18 @@ it('Test `detectApiBuilders`', async () => {
     const builders = await detectApiBuilders(files);
     expect(builders).toBe(null);
   }
+
+  {
+    const files = [
+      'api/users/[id].js',
+      'api/_utils/handler.js',
+      'api/users/.helper.js',
+      'api/teams/_helper.js',
+    ];
+
+    const builders = await detectApiBuilders(files);
+    expect(builders.length).toBe(1);
+  }
 });
 
 it('Test `detectApiRoutes`', async () => {
@@ -243,5 +255,16 @@ it('Test `detectApiRoutes`', async () => {
 
     const { defaultRoutes } = await detectApiRoutes(files);
     expect(defaultRoutes.length).toBe(2);
+  }
+
+  {
+    const files = [
+      'api/_utils/handler.js',
+      'api/[endpoint]/.helper.js',
+      'api/[endpoint]/[id].js',
+    ];
+
+    const builders = await detectApiBuilders(files);
+    expect(builders.length).toBe(1);
   }
 });
