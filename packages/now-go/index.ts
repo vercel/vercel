@@ -120,7 +120,14 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
   if (meta.isDev) {
-    const base = dirname(downloadedFiles['now.json'].fsPath);
+    let base = null;
+
+    if (config && config.zeroConfig) {
+      base = workPath;
+    } else {
+      base = dirname(downloadedFiles['now.json'].fsPath);
+    }
+
     const destNow = join(
       base,
       '.now',

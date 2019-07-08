@@ -92,12 +92,20 @@ export const build = async ({
   files: originalFiles,
   entrypoint,
   meta = {},
+  config,
 }: BuildOptions) => {
   console.log('downloading files...');
   let downloadedFiles = await download(originalFiles, workPath, meta);
 
   if (meta.isDev) {
-    const base = dirname(downloadedFiles['now.json'].fsPath);
+    let base = null;
+
+    if (config && config.zeroConfig) {
+      base = workPath;
+    } else {
+      base = dirname(downloadedFiles['now.json'].fsPath);
+    }
+
     const destNow = join(base, '.now', 'cache', basename(entrypoint, '.py'));
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);

@@ -10,7 +10,7 @@ const {
 } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 
 exports.config = {
-  maxLambdaSize: '10mb',
+  maxLambdaSize: '30mb',
 };
 
 // From this list: https://import.pw/importpw/import/docs/config.md
