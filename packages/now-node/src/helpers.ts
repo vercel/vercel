@@ -31,7 +31,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
 
     if (type === 'application/x-www-form-urlencoded') {
       const { parse: parseQS } = require('querystring');
-      // remark : querystring.parse does not produce an iterable object
+      // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
       return parseQS(body.toString());
     }
