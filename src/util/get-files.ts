@@ -1,4 +1,4 @@
-import { resolve } from 'path';
+import { resolve, join } from 'path';
 import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob, { IOptions } from 'glob';
@@ -398,6 +398,25 @@ export async function docker(
 
   // Get files
   return uniqueStrings(files);
+}
+
+/**
+ * Get a list of all files inside the `api` directory of the
+ * the given path.
+ *
+ * @param {String} of the current working directory
+ * @param {Object} output instance
+ * @return {Array} of {String}s with the found files
+ */
+export async function getApiFiles(cwd: string, { debug }: Output) {
+  // We need a slash at the end to remove it later on from the matched files
+  const current = join(resolve(cwd), '/');
+  debug(`Searching files in the \`api\` directory inside of ${current}`);
+
+  const list = await glob('api/**/*', { cwd: current, absolute: true, nodir: true });
+
+  // We need to replace \ with / for windows
+  return list.map((file) => file.replace(current.replace(/\\/g, '/'), ''));
 }
 
 interface ExplodeOptions {

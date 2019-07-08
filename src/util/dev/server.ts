@@ -10,16 +10,23 @@ import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
-import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+
+import {
+  FileFsRef,
+  PackageJson,
+  detectBuilder,
+  detectApiBuilders,
+  detectApiRoutes
+} from '@now/build-utils';
 
 import { once } from '../once';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowJsonPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { createIgnore, staticFiles as getFiles } from '../get-files';
+import { createIgnore, staticFiles as getFiles, getApiFiles } from '../get-files';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -141,6 +148,7 @@ export default class DevServer {
       BuildResult,
       [string | null, BuildMatch]
     > = new Map();
+
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -306,20 +314,30 @@ export default class DevServer {
       return this.cachedNowJson;
     }
 
-    this.output.debug('Reading `now.json` file');
-    const nowJsonPath = getNowJsonPath(this.cwd);
+    const pkg = await this.getPackageJson();
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
     let config: NowConfig = this.cachedNowJson || { version: 2 };
 
+    // We need to delete these properties for zero config to work
+    // with file changes
+    if (this.cachedNowJson) {
+      delete this.cachedNowJson.builds;
+      delete this.cachedNowJson.routes;
+    }
+
     try {
+      this.output.debug('Reading `now.json` file');
+      const nowJsonPath = getNowJsonPath(this.cwd);
       config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.note(
-          'No `now.json` file present, serving all files as static'
-        );
+        if (pkg === null) {
+          this.output.note(
+            'No `now.json` file present, serving all files as static'
+          );
+        }
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
           `There is a syntax error in the \`now.json\` file: ${err.message}`
@@ -329,9 +347,66 @@ export default class DevServer {
       }
     }
 
+    const apiFiles = await getApiFiles(this.cwd, this.output);
+
+    if (apiFiles.length > 0) {
+      if (!config.builds || config.builds.length === 0) {
+        config.builds = [];
+
+        if (pkg) {
+          const staticBuilder = await detectBuilder(pkg);
+
+          if (staticBuilder) {
+            config.builds.push(staticBuilder);
+          }
+        }
+
+        const apiBuilds = await detectApiBuilders(apiFiles);
+
+        if (apiBuilds && apiBuilds.length > 0) {
+          config.builds.push(...apiBuilds);
+        }
+      }
+
+      const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
+
+      if (error) {
+        this.output.error(error.message);
+      } else if (defaultRoutes && defaultRoutes.length > 0) {
+        this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
+        config.routes = config.routes || [];
+        config.routes.push(...(defaultRoutes as RouteConfig[]));
+      }
+    }
+
     this.validateNowConfig(config);
     this.cachedNowJson = config;
     return config;
+  }
+
+  async getPackageJson(): Promise<PackageJson | null> {
+    const pkgPath = join(this.cwd, 'package.json');
+    let pkg: PackageJson | null = null;
+
+    this.output.debug('Reading `package.json` file');
+
+    try {
+      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        this.output.note(
+          'No `package.json` file present, trying to find `now.json`'
+        );
+      } else if (err.name === 'SyntaxError') {
+        this.output.warn(
+          `There is a syntax error in the \`package.json\` file: ${err.message}`
+        );
+      } else {
+        throw err;
+      }
+    }
+
+    return pkg;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -1142,7 +1217,7 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => minimatch(file, pattern));
+  return files.some(file => file === pattern || minimatch(file, pattern));
 }
 
 function fileChanged(

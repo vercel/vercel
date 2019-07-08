@@ -390,6 +390,10 @@ export async function getBuildMatches(
       src = src.substring(1);
     }
 
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
+
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
     const files = await getFiles(cwd, nowJson, opts);
