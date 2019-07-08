@@ -2,18 +2,22 @@ type LauncherConfiguration = {
   entrypointPath: string;
   bridgePath: string;
   helpersPath: string;
+  sourcemapSupportPath: string;
   shouldAddHelpers?: boolean;
+  shouldAddSourcemapSupport?: boolean;
 };
 
 export function makeLauncher({
   entrypointPath,
   bridgePath,
   helpersPath,
+  sourcemapSupportPath,
   shouldAddHelpers = false,
+  shouldAddSourcemapSupport = false,
 }: LauncherConfiguration): string {
   return `const { Bridge } = require("${bridgePath}");
 const { Server } = require("http");
-
+${shouldAddSourcemapSupport ? `require("${sourcemapSupportPath}");\n` : ''}
 let isServerListening = false;
 let bridge = new Bridge();
 const saveListen = Server.prototype.listen;

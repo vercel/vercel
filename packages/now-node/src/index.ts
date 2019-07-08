@@ -1,9 +1,9 @@
-import { Assets, NccOptions } from '@zeit/ncc';
-import { join, dirname, relative, sep } from 'path';
-import { NccWatcher, WatcherResult } from '@zeit/ncc-watcher';
+import { basename, dirname, join, relative, resolve } from 'path';
+import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
   download,
+  File,
   FileBlob,
   FileFsRef,
   Files,
@@ -19,9 +19,13 @@ import {
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
 import { makeLauncher } from './launcher';
+import { readFileSync, statSync } from 'fs';
+import { Compile } from './typescript';
 
 interface CompilerConfig {
+  debug?: boolean;
   includeFiles?: string | string[];
+  excludeFiles?: string | string[];
 }
 
 interface DownloadOptions {
@@ -31,27 +35,12 @@ interface DownloadOptions {
   meta: Meta;
 }
 
-const watchers: Map<string, NccWatcher> = new Map();
+const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
 const LAUNCHER_FILENAME = '___now_launcher';
 const BRIDGE_FILENAME = '___now_bridge';
 const HELPERS_FILENAME = '___now_helpers';
-
-function getWatcher(entrypoint: string, options: NccOptions): NccWatcher {
-  let watcher = watchers.get(entrypoint);
-  if (!watcher) {
-    watcher = new NccWatcher(entrypoint, options);
-    watchers.set(entrypoint, watcher);
-  }
-  return watcher;
-}
-
-function toBuffer(data: string | Buffer): Buffer {
-  if (typeof data === 'string') {
-    return Buffer.from(data, 'utf8');
-  }
-  return data;
-}
+const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
 
 async function downloadInstallAndBundle({
   files,
@@ -78,95 +67,172 @@ async function compile(
   entrypoint: string,
   config: CompilerConfig,
   { isDev, filesChanged, filesRemoved }: Meta
-): Promise<{ preparedFiles: Files; watch: string[] }> {
-  const input = entrypointPath;
-  const inputDir = dirname(input);
-  const rootIncludeFiles = inputDir.split(sep).pop() || '';
-  const options: NccOptions = {
-    sourceMap: true,
-    sourceMapRegister: true,
-  };
-  let code: string;
-  let map: string | undefined;
-  let assets: Assets | undefined;
-  let watch: string[] = [];
-  if (isDev) {
-    const watcher = getWatcher(entrypointPath, options);
-    const result = await watcher.build(
-      Array.isArray(filesChanged)
-        ? filesChanged.map(f => join(workPath, f))
-        : undefined,
-      Array.isArray(filesRemoved)
-        ? filesRemoved.map(f => join(workPath, f))
-        : undefined
-    );
-    code = result.code;
-    map = result.map;
-    assets = result.assets;
-    watch = [...result.files, ...result.dirs, ...result.missing]
-      .filter(f => f.startsWith(workPath))
-      .map(f => relative(workPath, f))
-      .concat(Object.keys(assets || {}));
-  } else {
-    const ncc = require('@zeit/ncc');
-    const result = await ncc(input, {
-      sourceMap: true,
-      sourceMapRegister: true,
-    });
-    code = result.code;
-    map = result.map;
-    assets = result.assets;
-  }
+): Promise<{
+  preparedFiles: Files;
+  shouldAddSourcemapSupport: boolean;
+  watch: string[];
+}> {
+  const inputFiles = new Set<string>([entrypointPath]);
 
-  if (!assets) assets = {};
+  const sourceCache = new Map<string, string | Buffer | null>();
+  const fsCache = new Map<string, File>();
+  const tsCompiled = new Set<String>();
 
-  if (config && config.includeFiles) {
+  let shouldAddSourcemapSupport = false;
+
+  if (config.includeFiles) {
     const includeFiles =
       typeof config.includeFiles === 'string'
         ? [config.includeFiles]
         : config.includeFiles;
 
     for (const pattern of includeFiles) {
-      const files = await glob(pattern, inputDir);
-
-      for (const assetName of Object.keys(files)) {
-        const stream = files[assetName].toStream();
-        const { mode } = files[assetName];
-        const { data } = await FileBlob.fromStream({ stream });
-        let fullPath = join(rootIncludeFiles, assetName);
-
-        // if asset contain directory
-        // no need to use `rootIncludeFiles`
-        if (assetName.includes(sep)) {
-          fullPath = assetName;
-        }
-
-        assets[fullPath] = {
-          source: toBuffer(data),
-          permissions: mode,
-        };
-      }
+      const files = await glob(pattern, workPath);
+      await Promise.all(
+        Object.keys(files).map(async file => {
+          const entry: FileFsRef = files[file];
+          fsCache.set(file, entry);
+          const stream = entry.toStream();
+          const { data } = await FileBlob.fromStream({ stream });
+          if (file.endsWith('.ts')) {
+            sourceCache.set(
+              file,
+              compileTypeScript(resolve(workPath, file), data.toString())
+            );
+          } else {
+            sourceCache.set(file, data);
+          }
+          inputFiles.add(resolve(workPath, file));
+        })
+      );
     }
   }
 
+  if (config.debug) {
+    console.log(
+      'tracing input files: ' +
+        [...inputFiles].map(p => relative(workPath, p)).join(', ')
+    );
+  }
+
   const preparedFiles: Files = {};
-  preparedFiles[entrypoint] = new FileBlob({ data: code });
 
-  if (map) {
-    preparedFiles[`${entrypoint.replace('.ts', '.js')}.map`] = new FileBlob({
-      data: toBuffer(map),
+  let tsCompile: Compile;
+  function compileTypeScript(path: string, source: string): string {
+    const relPath = relative(workPath, path);
+    if (config.debug) {
+      console.log('compiling typescript file ' + relPath);
+    }
+    if (!tsCompile) {
+      tsCompile = require('./typescript').init({
+        basePath: workPath,
+        logError: true,
+      });
+    }
+    try {
+      var { code, map } = tsCompile(source, path);
+    } catch (e) {
+      // If TypeScript compile fails, attempt a direct non-typecheck compile
+      try {
+        var { code, map } = tsCompile(source, path, true);
+      } catch (e) {
+        return source;
+      }
+    }
+    tsCompiled.add(relPath);
+    preparedFiles[relPath.slice(0, -3) + '.js.map'] = new FileBlob({
+      data: JSON.stringify(map),
     });
+    source = code;
+    shouldAddSourcemapSupport = true;
+    return source;
   }
 
-  // move all user code to 'user' subdirectory
-  // eslint-disable-next-line no-restricted-syntax
-  for (const assetName of Object.keys(assets)) {
-    const { source: data, permissions: mode } = assets[assetName];
-    const blob2 = new FileBlob({ data, mode });
-    preparedFiles[join(dirname(entrypoint), assetName)] = blob2;
+  const { fileList, esmFileList } = await nodeFileTrace([...inputFiles], {
+    base: workPath,
+    filterBase: true,
+    ts: true,
+    ignore: config.excludeFiles,
+    readFile(path: string): Buffer | string | null {
+      const relPath = relative(workPath, path);
+      const cached = sourceCache.get(relPath);
+      if (cached) return cached.toString();
+      // null represents a not found
+      if (cached === null) return null;
+      try {
+        let source: string | Buffer = readFileSync(path);
+        if (path.endsWith('.ts')) {
+          source = compileTypeScript(path, source.toString());
+        }
+        const stats = statSync(path);
+        fsCache.set(relPath, new FileBlob({ data: source, mode: stats.mode }));
+        sourceCache.set(relPath, source);
+        return source.toString();
+      } catch (e) {
+        if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+          sourceCache.set(relPath, null);
+          return null;
+        }
+        throw e;
+      }
+    },
+  });
+
+  if (config.debug) {
+    console.log('traced files:');
+    console.log('\t' + fileList.join('\n\t'));
   }
 
-  return { preparedFiles, watch };
+  for (const path of fileList) {
+    let entry = fsCache.get(path);
+    if (!entry) {
+      const resolved = resolve(workPath, path);
+      const source = readFileSync(resolved);
+      const stats = statSync(resolved);
+      if (stats.isSymbolicLink()) {
+        // TODO: handle asset symlinks
+      }
+      entry = new FileBlob({ data: source, mode: stats.mode });
+    }
+    // Rename .ts -> .js (except for entry)
+    if (path !== entrypoint && tsCompiled.has(path)) {
+      preparedFiles[path.slice(0, -3) + '.js'] = entry;
+    } else preparedFiles[path] = entry;
+  }
+
+  // Compile ES Modules into CommonJS
+  const esmPaths = esmFileList.filter(
+    file => !file.endsWith('.ts') && !file.match(libPathRegEx)
+  );
+  if (esmPaths.length) {
+    const babelCompile = require('./babel').compile;
+    for (const path of esmPaths) {
+      if (config.debug) {
+        console.log('compiling es module file ' + path);
+      }
+
+      const filename = basename(path);
+      const { data: source } = await FileBlob.fromStream({
+        stream: preparedFiles[path].toStream(),
+      });
+
+      const { code, map } = babelCompile(filename, source);
+      shouldAddSourcemapSupport = true;
+      preparedFiles[path] = new FileBlob({
+        data: `${code}\n//# sourceMappingURL=${filename}.map`,
+      });
+      delete map.sourcesContent;
+      preparedFiles[path + '.map'] = new FileBlob({
+        data: JSON.stringify(map),
+      });
+    }
+  }
+
+  return {
+    preparedFiles,
+    shouldAddSourcemapSupport,
+    watch: fileList,
+  };
 }
 
 export const version = 2;
@@ -179,10 +245,10 @@ export async function build({
   files,
   entrypoint,
   workPath,
-  config,
+  config = {},
   meta = {},
 }: BuildOptions) {
-  const shouldAddHelpers = !(config && config.helpers === false);
+  const shouldAddHelpers = config.helpers !== false;
 
   const {
     entrypointPath,
@@ -199,8 +265,8 @@ export async function build({
   console.log('running user script...');
   await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
 
-  console.log('compiling entrypoint with ncc...');
-  const { preparedFiles, watch } = await compile(
+  console.log('tracing input files...');
+  const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
     workPath,
     entrypointPath,
     entrypoint,
@@ -214,13 +280,21 @@ export async function build({
         entrypointPath: `./${entrypoint}`,
         bridgePath: `./${BRIDGE_FILENAME}`,
         helpersPath: `./${HELPERS_FILENAME}`,
+        sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
         shouldAddHelpers,
+        shouldAddSourcemapSupport,
       }),
     }),
     [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
       fsPath: require('@now/node-bridge'),
     }),
   };
+
+  if (shouldAddSourcemapSupport) {
+    launcherFiles[`${SOURCEMAP_SUPPORT_FILENAME}.js`] = new FileFsRef({
+      fsPath: join(__dirname, 'source-map-support.js'),
+    });
+  }
 
   if (shouldAddHelpers) {
     launcherFiles[`${HELPERS_FILENAME}.js`] = new FileFsRef({
