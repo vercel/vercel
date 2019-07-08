@@ -414,7 +414,9 @@ export async function getApiFiles(cwd: string, { debug }: Output) {
   debug(`Searching files in the \`api\` directory inside of ${current}`);
 
   const list = await glob('api/**/*', { cwd: current, absolute: true, nodir: true });
-  return list.map((file) => file.replace(current, ''));
+
+  // We need to replace \ with / for windows
+  return list.map((file) => file.replace(current.replace(/\\/g, '/'), ''));
 }
 
 interface ExplodeOptions {
