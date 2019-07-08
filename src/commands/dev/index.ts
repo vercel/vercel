@@ -9,6 +9,7 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
+import readPackage from '../../util/read-package'
 
 const COMMAND_CONFIG = {
   dev: ['dev']
@@ -54,6 +55,17 @@ export default async function main(ctx: NowContext) {
   if (argv['--help']) {
     help();
     return 2;
+  }
+
+  const pkg = await readPackage();
+  if (pkg) {
+    // @ts-ignore
+    const { scripts } = pkg;
+
+    if (scripts.dev && scripts.dev === 'now dev') {
+      output.error(`package.json ${chalk.gray('dev')} scripts must not contain ${chalk.gray('now dev')}`);
+      return 1;
+    }
   }
 
   if (argv._.length > 2) {
