@@ -376,6 +376,7 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowJson: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -395,7 +396,7 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,
