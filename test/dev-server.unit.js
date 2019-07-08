@@ -172,25 +172,25 @@ test(
   '[DevServer] Test default builds and routes',
   testFixture('now-dev-default-builds-and-routes', async (t, server) => {
     {
-      const res = await get(`${server.address}/`);
+      const res = await fetch(`${server.address}/`);
       const body = await res.text();
       t.is(body.includes('hello, this is the frontend'), true);
     }
 
     {
-      const res = await get(`${server.address}/api/users`);
+      const res = await fetch(`${server.address}/api/users`);
       const body = await res.text();
       t.is(body, 'users');
     }
 
     {
-      const res = await get(`${server.address}/api/users/1`);
+      const res = await fetch(`${server.address}/api/users/1`);
       const body = await res.text();
       t.is(body, 'users/1');
     }
 
     {
-      const res = await get(`${server.address}/api/welcome`);
+      const res = await fetch(`${server.address}/api/welcome`);
       const body = await res.text();
       t.is(body, 'hello and welcome');
     }
