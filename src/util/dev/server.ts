@@ -388,6 +388,22 @@ export default class DevServer {
       }
     }
 
+    if (Array.isArray(config.builds)) {
+      // `@now/static-build` needs to be the last builder
+      // since it might catch all other requests
+      config.builds.sort((buildA, buildB) => {
+        if (buildA.use.startsWith('@now/static-build')) {
+          return 1;
+        }
+
+        if (buildB.use.startsWith('@now/static-build')) {
+          return -1;
+        }
+
+        return 0;
+      });
+    }
+
     this.validateNowConfig(config);
     this.cachedNowJson = config;
     return config;
