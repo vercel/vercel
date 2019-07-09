@@ -132,12 +132,14 @@ async function compile(
     try {
       var { code, map } = tsCompile(source, path);
     } catch (e) {
-      // If TypeScript compile fails, attempt a direct non-typecheck compile
-      try {
-        var { code, map } = tsCompile(source, path, true);
-      } catch (e) {
-        return source;
+      if (config.debug) {
+        console.error(e);
+        console.log(
+          'TypeScript compilation failed, falling back to basic transformModule'
+        );
       }
+      // If TypeScript compile fails, attempt a direct non-typecheck compile
+      var { code, map } = tsCompile(source, path, true);
     }
     tsCompiled.add(relPath);
     preparedFiles[relPath.slice(0, -3) + '.js.map'] = new FileBlob({

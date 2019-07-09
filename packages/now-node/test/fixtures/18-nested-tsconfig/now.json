@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "functions/referer-redirect.ts", "use": "@now/node" },
+    { "src": "functions/double-redirect.ts", "use": "@now/node" },
+    { "src": "functions/trailing-redirect.ts", "use": "@now/node" },
+    { "src": "index.ts", "use": "@now/node" }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "index.ts"
+    },
+    {
+      "src": "(/.*)/$",
+      "dest": "/functions/trailing-redirect.ts"
+    },
+    {
+      "src": "^.*?//.*$",
+      "dest": "/functions/double-redirect.ts"
+    },
+    {
+      "handle": "filesystem"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "root:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "//",
+      "mustContain": "trailing-redirect:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

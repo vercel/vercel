@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "name": "nested-tsconfig",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {
+    "typescript": "3.5.3"
+  }
+}
