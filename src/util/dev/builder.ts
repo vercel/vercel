@@ -11,7 +11,6 @@ import chalk from 'chalk';
 import which from 'which';
 import ora, { Ora } from 'ora';
 
-import { getSha } from '../sha';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
@@ -355,7 +354,6 @@ export async function executeBuild(
             }
           }
         });
-        asset.sha = getSha(asset.zipBuffer, 'sha1');
       }
 
       match.buildTimestamp = Date.now();
