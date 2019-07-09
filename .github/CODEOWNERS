@@ -2,7 +2,7 @@
 # https://help.github.com/en/articles/about-code-owners
 
 *                       @tootallnate @leo
-/src/commands/dev/      @tootallnate @leo @styfle
-/src/util/dev/          @tootallnate @leo @styfle
+/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
+/src/util/dev/          @tootallnate @leo @styfle @AndyBitz
 /src/commands/domains/  @javivelasco @mglagola @anatrajkovska
 /src/commands/certs/    @javivelasco @mglagola @anatrajkovska
