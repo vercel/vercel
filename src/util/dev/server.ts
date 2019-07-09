@@ -351,19 +351,7 @@ export default class DevServer {
     const apiFiles = await getApiFiles(this.cwd, this.output);
     const hasNoBuilds = !config.builds || config.builds.length === 0;
 
-    if (pkg && hasNoBuilds) {
-      config.builds = config.builds || [];
-
-      const staticBuilder = await detectBuilder(pkg);
-
-      if (staticBuilder) {
-        config.builds.push(staticBuilder);
-      }
-    }
-
     if (apiFiles.length > 0) {
-      // We need to use `hasNoBuilds` because it was created
-      // before `staticBuilder` was added
       if (hasNoBuilds) {
         const apiBuilds = await detectApiBuilders(apiFiles);
 
@@ -381,6 +369,22 @@ export default class DevServer {
         this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
         config.routes = config.routes || [];
         config.routes.push(...(defaultRoutes as RouteConfig[]));
+      }
+    }
+
+    /**
+     * We need to use `hasNoBuilds` because it was created
+     * before the api builders were added.
+     * We also have to add this builder after all
+     * the others to prevent catch all routes etc.
+     */
+    if (pkg && hasNoBuilds) {
+      config.builds = config.builds || [];
+
+      const staticBuilder = await detectBuilder(pkg);
+
+      if (staticBuilder) {
+        config.builds.push(staticBuilder);
       }
     }
 
