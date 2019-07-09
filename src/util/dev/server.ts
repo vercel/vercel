@@ -486,13 +486,11 @@ export default class DevServer {
       }
     );
     if (needsInitialBuild.length > 0) {
-      const stopSpinner =  wait('Building...');
+      this.output.log('Creating initial build');
 
       for (const match of needsInitialBuild) {
         await executeBuild(nowJson, this, this.files, match, null, true);
       }
-
-      stopSpinner();
 
       this.output.success('Build completed');
     }
