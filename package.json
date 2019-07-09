@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "15.7.0-canary.9",
+  "version": "15.7.0-canary.10",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -79,7 +79,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.7.0",
+    "@now/build-utils": "0.8.2",
     "@sentry/node": "4.5.3",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
