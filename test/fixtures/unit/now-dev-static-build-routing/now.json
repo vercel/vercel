@@ -14,6 +14,6 @@
     }
   ],
   "routes": [
-    { "src": "^/api/date(.*)$", "dest": "api/date.js$1" }
+    { "src": "^/api/date$", "dest": "api/date.js" }
   ]
 }
