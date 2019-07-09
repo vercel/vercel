@@ -52,6 +52,7 @@ async function runBuildLambda(inputPath) {
   return {
     analyzeResult,
     buildResult,
+    workPath,
   };
 }
 

@@ -42,6 +42,7 @@ import {
   getDynamicRoutes,
   isDynamicRoute,
 } from './utils';
+import createServerlessConfig from './create-serverless-config';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -165,8 +166,6 @@ export const build = async ({
   watch?: string[];
   childProcesses: ChildProcess[];
 }> => {
-  process.env.__NEXT_BUILDER_EXPERIMENTAL_TARGET = 'serverless';
-
   validateEntrypoint(entrypoint);
 
   const entryDirectory = path.dirname(entrypoint);
@@ -176,11 +175,15 @@ export const build = async ({
   console.log(`${name} Downloading user files...`);
   await download(files, workPath, meta);
 
-  const nodeVersion = await getNodeVersion(entryPath);
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
-
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
+
+  if (!meta.isDev) {
+    await createServerlessConfig(workPath);
+  }
+
+  const nodeVersion = await getNodeVersion(entryPath);
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   if (!nextVersion) {
     throw new Error(
