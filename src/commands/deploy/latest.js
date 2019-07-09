@@ -603,10 +603,6 @@ export default async function main(
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
-        if (typeof buildSpinner === 'function') {
-          buildSpinner();
-        }
-
         if (typeof deploymentSpinner === 'function') {
           // This stops it
           deploymentSpinner();
@@ -619,6 +615,10 @@ export default async function main(
     }
 
     await sleep(sleepingTime);
+  }
+
+  if (typeof buildSpinner === 'function') {
+    buildSpinner();
   }
 
   return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
