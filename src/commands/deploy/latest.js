@@ -137,7 +137,7 @@ const printDeploymentStatus = async (
   if (amount > 0) {
     const name = amount === 1 ? 'failure' : 'failures';
 
-    output.error(`${amount} build ${name} occured.`);
+    output.error('Build failed.');
     output.error(
       `Check your logs at https://${url}/_logs or run ${code(
         `now logs ${url}`
