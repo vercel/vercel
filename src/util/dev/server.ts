@@ -349,22 +349,26 @@ export default class DevServer {
     }
 
     const apiFiles = await getApiFiles(this.cwd, this.output);
+    const hasNoBuilds = !config.builds || config.builds.length === 0;
+
+    if (pkg && hasNoBuilds) {
+      config.builds = config.builds || [];
+
+      const staticBuilder = await detectBuilder(pkg);
+
+      if (staticBuilder) {
+        config.builds.push(staticBuilder);
+      }
+    }
 
     if (apiFiles.length > 0) {
-      if (!config.builds || config.builds.length === 0) {
-        config.builds = [];
-
-        if (pkg) {
-          const staticBuilder = await detectBuilder(pkg);
-
-          if (staticBuilder) {
-            config.builds.push(staticBuilder);
-          }
-        }
-
+      // We need to use `hasNoBuilds` because it was created
+      // before `staticBuilder` was added
+      if (hasNoBuilds) {
         const apiBuilds = await detectApiBuilders(apiFiles);
 
         if (apiBuilds && apiBuilds.length > 0) {
+          config.builds = config.builds || [];
           config.builds.push(...apiBuilds);
         }
       }
