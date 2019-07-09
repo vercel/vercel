@@ -93,6 +93,9 @@ async function performCreateAlias(
         return new ERRORS.DomainPermissionDenied(alias, contextName);
       }
     }
+    if (error.status === 400) {
+      return new ERRORS.DeploymentNotReady({url: deployment.url })
+    }
 
     throw error;
   }

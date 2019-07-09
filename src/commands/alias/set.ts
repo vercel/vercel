@@ -504,5 +504,10 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
+  if (error instanceof ERRORS.DeploymentNotReady) {
+    output.error(error.message);
+    return 1;
+  }
+
   return error;
 }
