@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@now/node",
+      "config": { "maxLambdaSize": "27mb" }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "sharp:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}
