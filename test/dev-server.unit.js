@@ -62,7 +62,6 @@ test(
   testFixture('now-dev-query-invoke', async (t, server) => {
     const res = await fetch(`${server.address}/something?url-param=a`);
     validateResponseHeaders(t, res);
-    t.truthy(/^W\/"[0-9a-f]{40}"$/.test(res.headers.get('etag')));
 
     const text = await res.text();
     const parsed = url.parse(text, true);

@@ -59,7 +59,6 @@ export interface BuilderInputs {
 
 export type BuiltLambda = Lambda & {
   fn?: FunLambda;
-  sha?: string;
 };
 
 export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;

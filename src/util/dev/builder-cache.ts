@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import execa from 'execa';
 import npa from 'npm-package-arg';
+import { createHash } from 'crypto';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
@@ -11,7 +12,6 @@ import {
   BuilderCacheCleanError
 } from '../errors-ts';
 import wait from '../output/wait';
-import { getSha } from '../sha';
 import { Output } from '../output';
 
 import * as staticBuilder from './static-builder';
@@ -236,4 +236,10 @@ function getPackageName(
     }
   }
   return null;
+}
+
+function getSha(buffer: Buffer): string {
+  const hash = createHash('sha256');
+  hash.update(buffer);
+  return hash.digest('hex');
 }
