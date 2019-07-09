@@ -568,7 +568,7 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
-          if (typeof buildSpinner !== 'function') {
+          if (buildSpinner === null) {
             buildSpinner = wait('Building...');
           }
           buildsCompleted = builds.every(isDone);
