@@ -12,7 +12,6 @@ import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
@@ -537,12 +536,10 @@ export default async function main(
 
   let builds = [];
   let buildsCompleted = false;
-  let buildSpinner = wait('Building...');
+  let buildSpinner = null;
 
   let deploymentSpinner = null;
   let linesPrinted = null;
-
-
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -571,6 +568,9 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
+          if (typeof buildSpinner !== 'function') {
+            buildSpinner = wait('Building...');
+          }
           buildsCompleted = builds.every(isDone);
 
           if (builds.some(isFailed)) {
@@ -602,7 +602,9 @@ export default async function main(
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
 
-        buildSpinner();
+        if (typeof buildSpinner === 'function') {
+          buildSpinner();
+        }
 
         if (typeof deploymentSpinner === 'function') {
           // This stops it
