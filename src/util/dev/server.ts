@@ -391,7 +391,7 @@ export default class DevServer {
     if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
-      config.builds = config.builds.sort((buildA, buildB) => {
+      config.builds.sort((buildA, buildB) => {
         if (buildA.use.startsWith('@now/static-build')) {
           return 1;
         }
