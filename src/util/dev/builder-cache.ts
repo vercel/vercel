@@ -137,7 +137,8 @@ export function getBuildUtils(packages: string[]): string {
 export async function installBuilders(
   packagesSet: Set<string>,
   yarnDir: string,
-  output: Output
+  output: Output,
+  builderDir?: string
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -148,7 +149,9 @@ export async function installBuilders(
     // Static deployment, no builders to install
     return;
   }
-  const cacheDir = await builderDirPromise;
+  if (!builderDir) {
+    builderDir = await builderDirPromise;
+  }
   const yarnPath = join(yarnDir, 'yarn');
 
   const buildUtils = getBuildUtils(packages);
@@ -169,7 +172,7 @@ export async function installBuilders(
         ...packages.filter(p => p !== '@now/static')
       ],
       {
-        cwd: cacheDir
+        cwd: builderDir
       }
     );
   } finally {
@@ -183,15 +186,18 @@ export async function installBuilders(
 export async function getBuilder(
   builderPkg: string,
   yarnDir: string,
-  output: Output
+  output: Output,
+  builderDir?: string
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
-    const cacheDir = await builderDirPromise;
+    if (!builderDir) {
+      builderDir = await builderDirPromise;
+    }
     const parsed = npa(builderPkg);
-    const buildersPkg = await readJSON(join(cacheDir, 'package.json'));
+    const buildersPkg = await readJSON(join(builderDir, 'package.json'));
     const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
-    const dest = join(cacheDir, 'node_modules', pkgName);
+    const dest = join(builderDir, 'node_modules', pkgName);
     try {
       const mod = require(dest);
       const pkg = require(join(dest, 'package.json'));
@@ -205,10 +211,10 @@ export async function getBuilder(
           `Attempted to require ${builderPkg}, but it is not installed`
         );
         const pkgSet = new Set([builderPkg]);
-        await installBuilders(pkgSet, yarnDir, output);
+        await installBuilders(pkgSet, yarnDir, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, yarnDir, output);
+        return getBuilder(builderPkg, yarnDir, output, builderDir);
       }
       throw err;
     }
