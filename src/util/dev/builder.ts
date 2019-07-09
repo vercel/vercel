@@ -176,7 +176,7 @@ export async function executeBuild(
 
     if (isInitialBuild && !debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(
-        `Building... ${chalk.underline(entrypoint)}`
+        `Preparing ${chalk.underline(entrypoint)} for build`
       )}:`;
       spinner = ora(logTitle).start();
 
