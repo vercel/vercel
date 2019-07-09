@@ -23,6 +23,7 @@ import {
 
 import { once } from '../once';
 import { Output } from '../output';
+import wait  from '../output/wait';
 import { relative } from '../path-helpers';
 import getNowJsonPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
@@ -485,17 +486,15 @@ export default class DevServer {
       }
     );
     if (needsInitialBuild.length > 0) {
-      this.output.log(
-        `Setting up ${needsInitialBuild.length} Builder${
-          needsInitialBuild.length === 1 ? '' : 's'
-        }`
-      );
+      const stopSpinner =  wait('Building...');
 
       for (const match of needsInitialBuild) {
         await executeBuild(nowJson, this, this.files, match, null, true);
       }
 
-      this.output.success('Builder setup complete');
+      stopSpinner();
+
+      this.output.success('Build completed');
     }
 
     // Start the filesystem watcher
