@@ -200,3 +200,14 @@ test(
     }
   })
 );
+
+test(
+  '[DevServer] Test @now/static-build routing',
+  testFixture('now-dev-static-build-routing', async (t, server) => {
+    {
+      const res = await fetch(`${server.address}/api/date`);
+      const body = await res.text();
+      t.is(body.startsWith('The current date:'), true);
+    }
+  })
+);
