@@ -555,6 +555,23 @@ export class DeploymentNotFound extends NowError<
   }
 }
 
+/**
+ * This error is returned when trying to create an alias and
+ * the deployment isn't ready yet.
+ */
+export class DeploymentNotReady extends NowError<
+  'DEPLOYMENT_NOT_READY',
+  { url: string; }
+> {
+  constructor({ url = '' }: { url: string }) {
+    super({
+      code: 'DEPLOYMENT_NOT_READY',
+      meta: { url },
+      message: `The deployment https://${url} is not ready.`
+    });
+  }
+}
+
 export class DeploymentFailedAliasImpossible extends NowError<
   'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
   {}
