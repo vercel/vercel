@@ -537,9 +537,12 @@ export default async function main(
 
   let builds = [];
   let buildsCompleted = false;
+  let buildSpinner = wait('Building...');
 
   let deploymentSpinner = null;
   let linesPrinted = null;
+
+
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -568,9 +571,7 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
-          const buildSpinner = wait('Building...');
           buildsCompleted = builds.every(isDone);
-          buildSpinner();
 
           if (builds.some(isFailed)) {
             break;
@@ -600,6 +601,8 @@ export default async function main(
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
+
+        buildSpinner();
 
         if (typeof deploymentSpinner === 'function') {
           // This stops it
