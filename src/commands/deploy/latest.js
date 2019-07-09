@@ -152,17 +152,6 @@ const printDeploymentStatus = async (
   return 1;
 };
 
-const renderBuilds = (print, list, times, linesPrinted) => {
-  if (linesPrinted !== null) {
-    print(eraseLines(linesPrinted));
-  }
-
-  const { lines, toPrint } = buildsList(list, times, false);
-  print(toPrint);
-
-  return lines;
-};
-
 // Converts `env` Arrays, Strings and Objects into env Objects.
 const parseEnv = env => {
   if (!env) {
@@ -579,8 +568,9 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
-          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
+          const buildSpinner = wait('Building...');
           buildsCompleted = builds.every(isDone);
+          buildSpinner();
 
           if (builds.some(isFailed)) {
             break;
