@@ -3,6 +3,7 @@ import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
@@ -23,7 +24,6 @@ import {
 
 import { once } from '../once';
 import { Output } from '../output';
-import wait  from '../output/wait';
 import { relative } from '../path-helpers';
 import getNowJsonPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
@@ -486,7 +486,7 @@ export default class DevServer {
       }
     );
     if (needsInitialBuild.length > 0) {
-      this.output.log('Creating initial builds');
+      this.output.log(`Creating initial ${plural('build', needsInitialBuild.length)}`);
 
       for (const match of needsInitialBuild) {
         await executeBuild(nowJson, this, this.files, match, null, true);
