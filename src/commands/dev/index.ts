@@ -63,7 +63,7 @@ export default async function main(ctx: NowContext) {
     const { scripts } = pkg as Package;
 
     if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-      output.error(`package.json ${chalk.gray('dev')} scripts must not contain ${chalk.gray('now dev')}`);
+      output.error(`The ${cmd('dev')} script in ${cmd('package.json')} must not contain ${cmd('now dev')}`);
       return 1;
     }
   }
