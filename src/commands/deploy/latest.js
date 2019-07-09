@@ -571,6 +571,7 @@ export default async function main(
           if (buildSpinner === null) {
             buildSpinner = wait('Building...');
           }
+
           buildsCompleted = builds.every(isDone);
 
           if (builds.some(isFailed)) {
