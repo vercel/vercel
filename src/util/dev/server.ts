@@ -384,7 +384,7 @@ export default class DevServer {
       const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
 
       if (Array.isArray(warnings)) {
-        warnings.map(({ message }) => this.output.warn(message));
+        warnings.forEach(({ message }) => this.output.warn(message));
       }
 
       if (staticBuilder) {
