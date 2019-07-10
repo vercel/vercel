@@ -25,14 +25,14 @@ action "2. Canary yarn run build" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["1. Canary yarn install"]
   runs = "yarn"
-  args = "run build"
+  args = "--pure-lockfile run build"
 }
 
 action "3. Canary yarn run publish" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["2. Canary yarn run build"]
   runs = "yarn"
-  args = "run publish-from-github"
+  args = "--pure-lockfile run publish-from-github"
   secrets = ["NPM_TOKEN"]
 }
 
@@ -64,13 +64,13 @@ action "2. Master yarn run build" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["1. Master yarn install"]
   runs = "yarn"
-  args = "run build"
+  args = "--pure-lockfile run build"
 }
 
 action "3. Master yarn run publish" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["2. Master yarn run build"]
   runs = "yarn"
-  args = "run publish-from-github"
+  args = "--pure-lockfile run publish-from-github"
   secrets = ["NPM_TOKEN"]
 }
