@@ -351,14 +351,12 @@ export default class DevServer {
     const apiFiles = await getApiFiles(this.cwd, this.output);
     const hasNoBuilds = !config.builds || config.builds.length === 0;
 
-    if (apiFiles.length > 0) {
-      if (hasNoBuilds) {
-        const apiBuilds = await detectApiBuilders(apiFiles);
+    if (apiFiles.length > 0 && hasNoBuilds) {
+      const apiBuilds = await detectApiBuilders(apiFiles);
 
-        if (apiBuilds && apiBuilds.length > 0) {
-          config.builds = config.builds || [];
-          config.builds.push(...apiBuilds);
-        }
+      if (apiBuilds && apiBuilds.length > 0) {
+        config.builds = config.builds || [];
+        config.builds.push(...apiBuilds);
       }
 
       const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
