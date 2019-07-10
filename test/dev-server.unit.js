@@ -124,6 +124,14 @@ test(
   })
 );
 
+test(
+  '[DevServer] Sends `etag` header for static files',
+  testFixture('now-dev-headers', async (t, server) => {
+    const res = await get(`${server.address}/foo.txt`);
+    t.is(res.headers.etag, '"55ca6286e3e4f4fba5d0448333fa99fc5a404a73"');
+  })
+);
+
 test('[DevServer] Does not install builders if there are no builds', async t => {
   const handler = data => {
     if (data.includes('installing')) {
