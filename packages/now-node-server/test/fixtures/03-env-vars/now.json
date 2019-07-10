@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "build-env/index.js", "use": "@now/node-server" },
+    { "src": "env/index.js", "use": "@now/node-server" }
+  ],
+  "probes": [
+    { "path": "/build-env", "mustContain": "RANDOMNESS_PLACEHOLDER:build-env" },
+    { "path": "/env", "mustContain": "RANDOMNESS_PLACEHOLDER:env" }
+  ]
+}
