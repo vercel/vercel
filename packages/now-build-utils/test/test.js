@@ -139,7 +139,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
 
 // few foreign tests
 
-const buildersToTestWith = ['now-node-server', 'now-static-build'];
+const buildersToTestWith = ['now-node', 'now-static-build'];
 
 // eslint-disable-next-line no-restricted-syntax
 for (const builder of buildersToTestWith) {
@@ -168,20 +168,21 @@ for (const builder of buildersToTestWith) {
 it('Test `detectBuilder`', async () => {
   {
     const pkg = { dependencies: { next: '1.0.0' } };
-    const builder = await detectBuilder(pkg);
+    const { builder, warnings } = await detectBuilder(pkg);
     expect(builder.use).toBe('@now/next');
+    expect(warnings.length).toBe(1);
   }
 
   {
     const pkg = { devDependencies: { next: '1.0.0' } };
-    const builder = await detectBuilder(pkg);
+    const { builder } = await detectBuilder(pkg);
     expect(builder.use).toBe('@now/next');
   }
 
   {
     const pkg = {};
-    const builder = await detectBuilder(pkg);
-    expect(builder.use).toBe('@now/static-build');
+    const { builder } = await detectBuilder(pkg);
+    expect(builder).toBe(null);
   }
 });
 

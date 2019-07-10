@@ -20,18 +20,50 @@ const API_BUILDERS: Builder[] = [
   { src: 'api/**/*.sh', use: '@now/bash', config },
 ];
 
-export async function detectBuilder(pkg: PackageJson): Promise<Builder> {
+interface Warning {
+  code: string;
+  message: string;
+}
+
+export async function detectBuilder(
+  pkg: PackageJson
+): Promise<{
+  builder: null | Builder;
+  warnings: null | Warning[];
+}> {
+  let warnings: null | Warning[] = null;
+
+  const scripts = pkg.scripts || {};
+
+  if (!scripts.build) {
+    warnings = [
+      {
+        code: 'missing_build_script',
+        message:
+          'Your `package.json` file is missing a `build` property inside the `script` property',
+      },
+    ];
+  }
+
   for (const [dependency, builder] of BUILDERS) {
     const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
 
     // Return the builder when a dependency matches
     if (deps[dependency]) {
-      return builder;
+      return { builder, warnings };
     }
   }
 
+  // If there is no `build` and `now-build` script
+  // we'll not select `@now/static-build`
+  // since it would fail
+  if (!scripts.build) {
+    return { builder: null, warnings };
+  }
+
   // By default we'll choose the `static-build` builder
-  return { src, use: '@now/static-build', config };
+  const builder = { src, use: '@now/static-build', config };
+  return { builder, warnings };
 }
 
 // Files that match a specific pattern will get ignored

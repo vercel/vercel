@@ -33,7 +33,6 @@ function getSegmentName(segment: string): string | null {
 function createRouteFromPath(filePath: string): Route {
   const parts = filePath.split('/');
 
-  let append: string = '';
   let counter: number = 1;
   const query: string[] = [];
 
@@ -43,23 +42,12 @@ function createRouteFromPath(filePath: string): Route {
       const isLast = index === parts.length - 1;
 
       if (name !== null) {
+        // We can't use `URLSearchParams` because `$` would get escaped
         query.push(`${name}=$${counter++}`);
-
-        if (isLast) {
-          // We append this to the last one
-          // to make sure GET params still work
-          // and are just appended to our GET params
-          append += `$${counter++}`;
-          return `([^\\/|\\?]+)\\/?(?:\\?(.*))?`;
-        }
-
         return `([^\\/]+)`;
       } else if (isLast) {
-        // If it is the last part we want to remove the extension
-        // and capture everything after that as regex group and append it
         const { name: fileName } = parsePath(segment);
-        append += `$${counter++}`;
-        return `${fileName}(.*)`;
+        return fileName;
       }
 
       return segment;
@@ -67,9 +55,7 @@ function createRouteFromPath(filePath: string): Route {
   );
 
   const src = `^/${srcParts.join('/')}$`;
-  const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}${
-    query.length ? '&' : ''
-  }${append}`;
+  const dest = `/${filePath}?${query.join('&')}`;
 
   return { src, dest };
 }
