@@ -2,6 +2,7 @@
   "version": 2,
   "name": "now-dev-headers",
   "builds": [
-    { "src": "index.js", "use": "@now/node" }
+    { "src": "index.js", "use": "@now/node" },
+    { "src": "foo.txt", "use": "@now/static" }
   ]
 }
