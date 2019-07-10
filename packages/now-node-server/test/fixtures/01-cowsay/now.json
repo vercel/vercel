@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.js", "use": "@now/node-server" },
+    { "src": "subdirectory/index.js", "use": "@now/node-server" }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
