@@ -14,8 +14,8 @@ function getBodyParser(req: NowRequest, body: Buffer) {
       return undefined;
     }
 
-    const { parse: parseCT } = require('content-type');
-    const { type } = parseCT(req.headers['content-type']);
+    const { parse: parseContentType } = require('content-type');
+    const { type } = parseContentType(req.headers['content-type']);
 
     if (type === 'application/json') {
       try {
