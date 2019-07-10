@@ -1,0 +1,23 @@
+{
+  "name": "@now/md",
+  "version": "0.5.5",
+  "license": "MIT",
+  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/markdown-now-md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-md"
+  },
+  "dependencies": {
+    "rehype-document": "^2.2.0",
+    "rehype-format": "^2.3.0",
+    "rehype-stringify": "^4.0.0",
+    "remark-parse": "^6.0.1",
+    "remark-rehype": "^3.0.1",
+    "unified": "^7.0.0",
+    "unified-stream": "^1.0.2"
+  },
+  "scripts": {
+    "test": "jest"
+  }
+}
