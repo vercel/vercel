@@ -18,7 +18,7 @@ action "1. Canary yarn install" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["0. Canary PR not deleted"]
   runs = "yarn"
-  args = "install"
+  args = "--pure-lockfile install"
 }
 
 action "2. Canary yarn run build" {
@@ -57,7 +57,7 @@ action "1. Master yarn install" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
   needs = ["0. Master PR not deleted"]
   runs = "yarn"
-  args = "install"
+  args = "--pure-lockfile install"
 }
 
 action "2. Master yarn run build" {
