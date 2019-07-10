@@ -381,7 +381,11 @@ export default class DevServer {
     if (pkg && hasNoBuilds) {
       config.builds = config.builds || [];
 
-      const staticBuilder = await detectBuilder(pkg);
+      const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
+
+      if (Array.isArray(warnings)) {
+        warnings.map(({ message }) => this.output.warn(message));
+      }
 
       if (staticBuilder) {
         config.builds.push(staticBuilder);
