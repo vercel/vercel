@@ -403,6 +403,12 @@ export default class Now extends EventEmitter {
         throw new Error(body.error.message);
       }
 
+      for (const [name, value] of res.headers.entries()) {
+        if (name.startsWith('x-now-warning-')) {
+          this._output.warn(value);
+        }
+      }
+
       return body;
     });
 
