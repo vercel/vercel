@@ -45,10 +45,6 @@ async function initPrivateGit(credentials: string) {
 
 export const version = 2;
 
-export const config = {
-  maxLambdaSize: '10mb',
-};
-
 export async function build({
   files,
   entrypoint,

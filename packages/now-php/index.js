@@ -8,10 +8,6 @@ const {
 const path = require('path');
 const { getFiles } = require('@now/php-bridge');
 
-exports.config = {
-  maxLambdaSize: '10mb',
-};
-
 exports.build = async ({
   files, entrypoint, workPath, config, meta,
 }) => {

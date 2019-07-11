@@ -239,10 +239,6 @@ async function compile(
 
 export const version = 2;
 
-export const config = {
-  maxLambdaSize: '5mb',
-};
-
 export async function build({
   files,
   entrypoint,

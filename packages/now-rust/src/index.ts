@@ -30,10 +30,6 @@ interface CargoToml extends toml.JsonMap {
   dependencies: toml.JsonMap;
 }
 
-export const config = {
-  maxLambdaSize: '25mb',
-};
-
 const codegenFlags = [
   '-C',
   'target-cpu=ivybridge',

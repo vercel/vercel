@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "**/*.js",
-      "use": "@now/node",
-      "config": { "maxLambdaSize": "40mb" }
+      "use": "@now/node"
     }
   ],
   "probes": [

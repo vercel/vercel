@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "app/config.ru",
-      "use": "@now/ruby",
-      "config": { "maxLambdaSize": "15mb" }
+      "use": "@now/ruby"
     }
   ],
   "routes": [{ "src": "/", "dest": "app/config.ru" }],

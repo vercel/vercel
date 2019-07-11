@@ -151,10 +151,6 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   return { forked, getUrl };
 }
 
-export const config = {
-  maxLambdaSize: '5mb',
-};
-
 export const build = async ({
   files,
   workPath,

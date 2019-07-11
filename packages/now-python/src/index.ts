@@ -83,10 +83,6 @@ async function pipenvInstall(pyUserBase: string, srcDir: string) {
   }
 }
 
-export const config = {
-  maxLambdaSize: '5mb',
-};
-
 export const build = async ({
   workPath,
   files: originalFiles,

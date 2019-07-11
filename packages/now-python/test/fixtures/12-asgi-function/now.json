@@ -3,9 +3,10 @@
   "builds": [
     {
       "src": "index.py",
-      "use": "@now/python",
-      "config": { "maxLambdaSize": "10mb" }
+      "use": "@now/python"
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "asgi-function:RANDOMNESS_PLACEHOLDER" }]
+  "probes": [
+    { "path": "/", "mustContain": "asgi-function:RANDOMNESS_PLACEHOLDER" }
+  ]
 }

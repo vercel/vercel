@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "index.py",
-      "use": "@now/python",
-      "config": { "maxLambdaSize": "15mb" }
+      "use": "@now/python"
     }
   ],
   "probes": [{ "path": "/", "mustContain": "django:RANDOMNESS_PLACEHOLDER" }]

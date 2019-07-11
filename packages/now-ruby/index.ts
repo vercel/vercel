@@ -74,10 +74,6 @@ async function bundleInstall(
   }
 }
 
-export const config = {
-  maxLambdaSize: '5mb',
-};
-
 export const build = async ({
   workPath,
   files,
