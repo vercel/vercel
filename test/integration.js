@@ -119,6 +119,8 @@ test.before(async () => {
     const token = await fetchTokenWithRetry(
       Buffer.from(str, 'base64').toString()
     );
+
+    await createDirectory(location)
     await fs.promises.writeFile(path.join(location, `auth.json`), JSON.stringify({ token }))
 
     const user = await fetchTokenInformation(token)
