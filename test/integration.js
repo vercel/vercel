@@ -3,6 +3,7 @@ import { URL } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import fs from 'fs';
+import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
@@ -112,7 +113,7 @@ if (!process.env.CI) {
 
 test.before(async () => {
   try {
-    const location = path.join(tmpDir ? tmpDir.name : '~', '.now');
+    const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
     const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
     const token = await fetchTokenWithRetry(
       Buffer.from(str, 'base64').toString()
