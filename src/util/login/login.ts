@@ -33,7 +33,7 @@ export default async function login(
   if (!response.ok) {
     const { error = {} } = body;
     if (error.code === 'not_exists') {
-      throw new AccountNotFound(email, `Account with this email doesn't exist. Create an account on https://zeit.co/signup`)
+      throw new AccountNotFound(email, `Please sign up: https://zeit.co/signup`)
     }
 
     if (error.code === 'invalid_email') {

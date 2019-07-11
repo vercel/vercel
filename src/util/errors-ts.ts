@@ -987,7 +987,7 @@ export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
 }
 
 export class AccountNotFound extends NowError<'ACCOUNT_NOT_FOUND', { email: string }> {
-  constructor(email: string, message: string = `Account with this email doesn't exist. Create an account on https://zeit.co/signup`) {
+  constructor(email: string, message: string = `Please sign up: https://zeit.co/signup`) {
     super({
       code: 'ACCOUNT_NOT_FOUND',
       message,
