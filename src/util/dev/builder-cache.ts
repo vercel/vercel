@@ -204,7 +204,7 @@ export async function installBuilders(
     if (p in localBuilders) return false;
     const parsed = npa(p);
     if (!parsed.name) {
-      return false;
+      return true;
     }
     if (
       parsed.type === 'tag' &&
