@@ -1099,6 +1099,10 @@ export default class DevServer {
     });
     this.setResponseHeaders(res, nowRequestId);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Length',
+      String(Buffer.byteLength(directoryHtml, 'utf8'))
+    );
     res.end(directoryHtml);
     return true;
   }
