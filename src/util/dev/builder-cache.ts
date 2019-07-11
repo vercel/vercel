@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import execa from 'execa';
+import semver from 'semver';
 import pipe from 'promisepipe';
 import npa from 'npm-package-arg';
 import { extract } from 'tar-fs';
@@ -214,17 +215,20 @@ export async function installBuilders(
       const parsedInstalled = npa(
         `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
       );
-      return (
-        parsedInstalled.type === 'version' &&
-        typeof parsedInstalled.fetchSpec === 'string' &&
-        !parsedInstalled.fetchSpec.includes('canary')
-      );
+      if (parsedInstalled.type !== 'version') {
+        return true;
+      }
+      const semverInstalled = semver.parse(parsedInstalled.rawSpec);
+      if (!semverInstalled) {
+        return true;
+      }
+      return semverInstalled.prerelease.length > 0;
     }
     return true;
   });
 
   if (packagesToInstall.length === 0) {
-    output.debug('No builders needs to be installed');
+    output.debug('No builders need to be installed');
     return;
   }
 
@@ -234,13 +238,7 @@ export async function installBuilders(
   try {
     await execa(
       process.execPath,
-      [
-        yarnPath,
-        'add',
-        '--exact',
-        '--no-lockfile',
-        ...packagesToInstall
-      ],
+      [yarnPath, 'add', '--exact', '--no-lockfile', ...packagesToInstall],
       {
         cwd: builderDir
       }

@@ -677,6 +677,11 @@
   resolved "https://registry.yarnpkg.com/@types/psl/-/psl-1.1.0.tgz#390c5df1613b166ce3c3eb9fda4d93dc3eeec7b5"
   integrity sha512-HhZnoLAvI2koev3czVPzBNRYvdrzJGLjQbWZhqFmS9Q6a0yumc5qtfSahBGb5g+6qWvA8iiQktqGkwoIXa/BNQ==
 
+"@types/semver@6.0.1":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@types/semver/-/semver-6.0.1.tgz#a984b405c702fa5a7ec6abc56b37f2ba35ef5af6"
+  integrity sha512-ffCdcrEE5h8DqVxinQjo+2d1q+FV5z7iNtPofw3JsrltSoSVlOGaW0rY8XxtO9XukdTn8TaCGWmk2VFGhI70mg==
+
 "@types/stack-trace@0.0.29":
   version "0.0.29"
   resolved "https://registry.yarnpkg.com/@types/stack-trace/-/stack-trace-0.0.29.tgz#eb7a7c60098edb35630ed900742a5ecb20cfcb4d"

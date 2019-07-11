@@ -110,6 +110,7 @@
     "@types/pluralize": "0.0.29",
     "@types/progress": "2.0.3",
     "@types/psl": "1.1.0",
+    "@types/semver": "6.0.1",
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
     "@types/universal-analytics": "0.4.2",
