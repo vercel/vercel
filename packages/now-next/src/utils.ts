@@ -236,6 +236,7 @@ function getRoutes(
 
     if (isDynamicRoute(pageName)) {
       dynamicPages.push(normalizePage(pageName));
+      continue;
     }
 
     routes.push({
@@ -257,7 +258,10 @@ function getRoutes(
     ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages).map(
       (route: { src: string; dest: string }) => {
         // convert to make entire RegExp match as one group
-        route.src = route.src.replace('^', '^(').replace('$', ')$');
+        route.src = route.src
+          .replace('^', `^${prefix}(`)
+          .replace('(\\/', '(')
+          .replace('$', ')$');
         route.dest = `${url}/$1`;
         return route;
       }
@@ -289,7 +293,8 @@ function getRoutes(
 export function getDynamicRoutes(
   entryPath: string,
   entryDirectory: string,
-  dynamicPages: string[]
+  dynamicPages: string[],
+  isDev?: boolean
 ): { src: string; dest: string }[] {
   if (!dynamicPages.length) {
     return [];
@@ -324,9 +329,14 @@ export function getDynamicRoutes(
 
   const routes: { src: string; dest: string }[] = [];
   pageMatchers.forEach(pageMatcher => {
+    // in `now dev` we don't need to prefix the destination
+    const dest = !isDev
+      ? path.join('/', entryDirectory, pageMatcher.pageName)
+      : pageMatcher.pageName;
+
     routes.push({
       src: pageMatcher.matcher.source,
-      dest: path.join('/', entryDirectory, pageMatcher.pageName),
+      dest,
     });
   });
   return routes;
