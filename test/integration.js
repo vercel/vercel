@@ -63,14 +63,40 @@ function fetchTokenWithRetry (url, retries = 3) {
   });
 }
 
+function fetchTokenInformation (token, retries = 3) {
+  return new Promise(async (resolve, reject) => {
+    const url = `https://api.zeit.co/www/user`
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      resolve(data.user);
+    } catch (error) {
+      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+      if (retries === 0) {
+        reject(error);
+        return;
+      }
+      setTimeout(() => {
+        fetchTokenWithRetry(url, retries - 1)
+          .then(resolve)
+          .catch(reject);
+      }, 500);
+    }
+  });
+}
+
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
 
 const defaultOptions = { reject: false };
 const defaultArgs = [];
-const email = `now-cli-${session}@zeit.pub`;
-const contextName = `now-cli-${session}`;
+let email
+let contextName
 
 let tmpDir;
 
@@ -87,6 +113,18 @@ if (!process.env.CI) {
 test.before(async () => {
   try {
     prepareFixtures(session);
+
+    const location = path.join(tmpDir ? tmpDir.name : '~', '.now');
+    const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+    const token = await fetchTokenWithRetry(
+      Buffer.from(str, 'base64').toString()
+    );
+    await fs.promises.writeFile(path.join(location, `auth.json`), JSON.stringify({ token }))
+
+    const user = await fetchTokenInformation(token)
+
+    email = user.email
+    contextName = `now-cli-${user.email.split('@')[0]}`
   } catch (err) {
     console.error(err);
   }
@@ -132,19 +170,12 @@ test('log in', async t => {
     }
   );
 
-  const location = path.join(tmpDir ? tmpDir.name : '~', '.now');
   const goal = `> Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
   t.is(code, 0);
   t.is(last, goal);
-
-  const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-  const token = await fetchTokenWithRetry(
-    Buffer.from(str, 'base64').toString()
-  );
-  fs.writeFileSync(path.join(location, `auth.json`), JSON.stringify({ token }))
 });
 
 test('deploy a node microservice', async t => {
