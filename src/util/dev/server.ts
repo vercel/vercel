@@ -13,6 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import directoryTemplate from 'serve-handler/src/directory';
 
 import {
   FileFsRef,
@@ -27,7 +28,11 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowJsonPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { createIgnore, staticFiles as getFiles, getApiFiles } from '../get-files';
+import {
+  createIgnore,
+  staticFiles as getFiles,
+  getApiFiles
+} from '../get-files';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -512,7 +517,9 @@ export default class DevServer {
       }
     );
     if (needsInitialBuild.length > 0) {
-      this.output.log(`Creating initial ${plural('build', needsInitialBuild.length)}`);
+      this.output.log(
+        `Creating initial ${plural('build', needsInitialBuild.length)}`
+      );
 
       for (const match of needsInitialBuild) {
         await executeBuild(nowJson, this, this.files, match, null, true);
@@ -779,12 +786,7 @@ export default class DevServer {
 
     try {
       const nowJson = await this.getNowJson();
-
-      if (isStaticDeployment(nowJson)) {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      } else {
-        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
-      }
+      await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -854,7 +856,9 @@ export default class DevServer {
       this
     );
     if (!match) {
-      await this.send404(req, res, nowRequestId);
+      if (!this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
+        await this.send404(req, res, nowRequestId);
+      }
       return;
     }
 
@@ -1018,6 +1022,90 @@ export default class DevServer {
         );
     }
   };
+
+  renderDirectoryListing(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    requestPath: string,
+    nowRequestId: string
+  ): boolean {
+    let prefix = requestPath;
+    if (prefix.length > 0 && !prefix.endsWith('/')) {
+      prefix += '/';
+    }
+
+    const dirs: Set<string> = new Set();
+    const files = Array.from(this.buildMatches.keys())
+      .filter(p => {
+        const base = basename(p);
+        if (
+          base === 'now.json' ||
+          base === '.nowignore' ||
+          !p.startsWith(prefix)
+        ) {
+          return false;
+        }
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          const dir = rel.split('/')[0];
+          if (dirs.has(dir)) {
+            return false;
+          }
+          dirs.add(dir);
+        }
+        return true;
+      })
+      .map(p => {
+        let base = basename(p);
+        let ext = '';
+        let type = 'file';
+        let href: string;
+
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          // Directory
+          type = 'folder';
+          base = rel.split('/')[0];
+          href = `/${prefix}${base}/`;
+        } else {
+          // File / Lambda
+          ext = extname(p).substring(1);
+          href = `/${prefix}${base}`;
+        }
+        return {
+          type,
+          relative: href,
+          ext,
+          title: href,
+          base
+        };
+      });
+
+    if (files.length === 0) {
+      return false;
+    }
+
+    const directory = `/${prefix}`;
+    const paths = [
+      {
+        name: directory,
+        url: requestPath
+      }
+    ];
+    const directoryHtml = directoryTemplate({
+      files,
+      paths,
+      directory
+    });
+    this.setResponseHeaders(res, nowRequestId);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Length',
+      String(Buffer.byteLength(directoryHtml, 'utf8'))
+    );
+    res.end(directoryHtml);
+    return true;
+  }
 
   /**
    * Serve project directory as a static deployment.
@@ -1261,23 +1349,4 @@ function fileRemoved(
   delete files[name];
   changed.delete(name);
   removed.add(name);
-}
-
-/**
- * It is a static deployment if `now.json` match one of these:
- *   - no `builds`
- *   - all `builds` have `@now/static` as `use`
- */
-function isStaticDeployment(nowJson: NowConfig): boolean {
-  if (nowJson.builds instanceof Array) {
-    if (
-      nowJson.builds.every(build => {
-        return build.use.split('@')[1] === 'now/static';
-      })
-    ) {
-      return true;
-    }
-    return false;
-  }
-  return true;
 }

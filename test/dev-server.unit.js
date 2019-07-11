@@ -210,12 +210,52 @@ test(
 );
 
 test(
-  '[DevServer] Test @now/static-build routing',
+  '[DevServer] Test `@now/static` routing',
+  testFixture('now-dev-static-routes', async (t, server) => {
+    {
+      const res = await fetch(`${server.address}/`);
+      const body = await res.text();
+      t.is(body, '<body>Hello!</body>\n');
+    }
+  })
+);
+
+test(
+  '[DevServer] Test `@now/static-build` routing',
   testFixture('now-dev-static-build-routing', async (t, server) => {
     {
       const res = await fetch(`${server.address}/api/date`);
       const body = await res.text();
       t.is(body.startsWith('The current date:'), true);
+    }
+  })
+);
+
+test(
+  '[DevServer] Test directory listing',
+  testFixture('now-dev-directory-listing', async (t, server) => {
+    {
+      // Get directory listing
+      let res = await fetch(`${server.address}/`);
+      let body = await res.text();
+      t.is(res.status, 200);
+      t.truthy(body.includes('Index of'));
+
+      // Get a file
+      res = await fetch(`${server.address}/file.txt`);
+      body = await res.text();
+      t.is(res.status, 200);
+      t.is(body, 'Hello from file!\n');
+
+      // Invoke a lambda
+      res = await fetch(`${server.address}/lambda.js`);
+      body = await res.text();
+      t.is(res.status, 200);
+      t.is(body, 'Hello from Lambda!');
+
+      // Trigger a 404
+      res = await fetch(`${server.address}/does-not-exists`);
+      t.is(res.status, 404);
     }
   })
 );
