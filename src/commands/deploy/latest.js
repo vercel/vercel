@@ -204,10 +204,6 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
-    const flag = param('--target production');
-    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
-  }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
