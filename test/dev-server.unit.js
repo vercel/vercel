@@ -251,7 +251,7 @@ test(
       res = await fetch(`${server.address}/lambda.js`);
       body = await res.text();
       t.is(res.status, 200);
-      t.is(body, 'Hello from lambda!');
+      t.is(body, 'Hello from Lambda!');
 
       // Trigger a 404
       res = await fetch(`${server.address}/does-not-exists`);
