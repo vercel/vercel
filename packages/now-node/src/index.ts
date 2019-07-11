@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative, resolve } from 'path';
+import { basename, dirname, join, relative, resolve, sep } from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
@@ -19,7 +19,7 @@ import {
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
 import { makeLauncher } from './launcher';
-import { readFileSync, statSync } from 'fs';
+import { readFileSync, lstatSync, readlinkSync } from 'fs';
 import { Compile } from './typescript';
 
 interface CompilerConfig {
@@ -41,6 +41,13 @@ const LAUNCHER_FILENAME = '___now_launcher';
 const BRIDGE_FILENAME = '___now_bridge';
 const HELPERS_FILENAME = '___now_helpers';
 const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
+
+const S_IFMT = 61440; /* 0170000 type of file */
+const S_IFLNK = 40960; /* 0120000 symbolic link */
+
+function isSymbolicLink(mode: number): boolean {
+  return (mode & S_IFMT) === S_IFLNK;
+}
 
 async function downloadInstallAndBundle({
   files,
@@ -155,19 +162,25 @@ async function compile(
     filterBase: true,
     ts: true,
     ignore: config.excludeFiles,
-    readFile(path: string): Buffer | string | null {
-      const relPath = relative(workPath, path);
+    readFile(fsPath: string): Buffer | string | null {
+      const relPath = relative(workPath, fsPath);
       const cached = sourceCache.get(relPath);
       if (cached) return cached.toString();
       // null represents a not found
       if (cached === null) return null;
       try {
-        let source: string | Buffer = readFileSync(path);
-        if (path.endsWith('.ts')) {
-          source = compileTypeScript(path, source.toString());
+        let source: string | Buffer = readFileSync(fsPath);
+        if (fsPath.endsWith('.ts')) {
+          source = compileTypeScript(fsPath, source.toString());
         }
-        const stats = statSync(path);
-        fsCache.set(relPath, new FileBlob({ data: source, mode: stats.mode }));
+        const { mode } = lstatSync(fsPath);
+        let entry: File;
+        if (isSymbolicLink(mode)) {
+          entry = new FileFsRef({ fsPath, mode });
+        } else {
+          entry = new FileBlob({ data: source, mode });
+        }
+        fsCache.set(relPath, entry);
         sourceCache.set(relPath, source);
         return source.toString();
       } catch (e) {
@@ -188,13 +201,26 @@ async function compile(
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
-      const resolved = resolve(workPath, path);
-      const source = readFileSync(resolved);
-      const stats = statSync(resolved);
-      if (stats.isSymbolicLink()) {
-        // TODO: handle asset symlinks
+      const fsPath = resolve(workPath, path);
+      const { mode } = lstatSync(fsPath);
+      if (isSymbolicLink(mode)) {
+        entry = new FileFsRef({ fsPath, mode });
+      } else {
+        const source = readFileSync(fsPath);
+        entry = new FileBlob({ data: source, mode });
       }
-      entry = new FileBlob({ data: source, mode: stats.mode });
+    }
+    if (isSymbolicLink(entry.mode) && entry.fsPath) {
+      // ensure the symlink target is added to the file list
+      const symlinkTarget = relative(
+        workPath,
+        resolve(dirname(entry.fsPath), readlinkSync(entry.fsPath))
+      );
+      if (
+        !symlinkTarget.startsWith('..' + sep) &&
+        fileList.indexOf(symlinkTarget) === -1
+      )
+        fileList.push(symlinkTarget);
     }
     // Rename .ts -> .js (except for entry)
     if (path !== entrypoint && tsCompiled.has(path)) {
