@@ -132,6 +132,7 @@ export interface ShouldServeParams {
 export interface Package {
   name?: string;
   version: string;
+  scripts?: { [key: string]: string };
   dependencies?: { [name: string]: string };
   devDependencies?: { [name: string]: string };
 }

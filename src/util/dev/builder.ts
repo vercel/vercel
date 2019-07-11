@@ -175,7 +175,7 @@ export async function executeBuild(
 
     if (isInitialBuild && !debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(
-        `Setting up Builder for ${chalk.underline(entrypoint)}`
+        `Preparing ${chalk.underline(entrypoint)} for build`
       )}:`;
       spinner = ora(logTitle).start();
 
@@ -374,6 +374,7 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowJson: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -387,13 +388,17 @@ export async function getBuildMatches(
       src = src.substring(1);
     }
 
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
+
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
     const files = await getFiles(cwd, nowJson, opts);
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,

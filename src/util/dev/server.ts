@@ -3,6 +3,7 @@ import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
@@ -10,16 +11,28 @@ import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
-import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import directoryTemplate from 'serve-handler/src/directory';
+
+import {
+  FileFsRef,
+  PackageJson,
+  detectBuilder,
+  detectApiBuilders,
+  detectApiRoutes
+} from '@now/build-utils';
 
 import { once } from '../once';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowJsonPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { createIgnore, staticFiles as getFiles } from '../get-files';
+import {
+  createIgnore,
+  staticFiles as getFiles,
+  getApiFiles
+} from '../get-files';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -141,6 +154,7 @@ export default class DevServer {
       BuildResult,
       [string | null, BuildMatch]
     > = new Map();
+
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -247,7 +261,12 @@ export default class DevServer {
   }
 
   async updateBuildMatches(nowJson: NowConfig): Promise<void> {
-    const matches = await getBuildMatches(nowJson, this.cwd, this.output);
+    const matches = await getBuildMatches(
+      nowJson,
+      this.cwd,
+      this.yarnPath,
+      this.output
+    );
     const sources = matches.map(m => m.src);
 
     // Delete build matches that no longer exists
@@ -283,7 +302,16 @@ export default class DevServer {
         throw err;
       }
     }
-    this.validateEnvConfig(fileName, base || {}, env);
+    try {
+      this.validateEnvConfig(fileName, base || {}, env);
+    } catch (err) {
+      if (err instanceof MissingDotenvVarsError) {
+        this.output.error(err.message);
+        process.exit(1);
+      } else {
+        throw err;
+      }
+    }
     return { ...base, ...env };
   }
 
@@ -292,20 +320,30 @@ export default class DevServer {
       return this.cachedNowJson;
     }
 
-    this.output.debug('Reading `now.json` file');
-    const nowJsonPath = getNowJsonPath(this.cwd);
+    const pkg = await this.getPackageJson();
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
     let config: NowConfig = this.cachedNowJson || { version: 2 };
 
+    // We need to delete these properties for zero config to work
+    // with file changes
+    if (this.cachedNowJson) {
+      delete this.cachedNowJson.builds;
+      delete this.cachedNowJson.routes;
+    }
+
     try {
+      this.output.debug('Reading `now.json` file');
+      const nowJsonPath = getNowJsonPath(this.cwd);
       config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.note(
-          'No `now.json` file present, serving all files as static'
-        );
+        if (pkg === null) {
+          this.output.note(
+            'No `now.json` file present, serving all files as static'
+          );
+        }
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
           `There is a syntax error in the \`now.json\` file: ${err.message}`
@@ -315,20 +353,92 @@ export default class DevServer {
       }
     }
 
+    const apiFiles = await getApiFiles(this.cwd, this.output);
+    const hasNoBuilds = !config.builds || config.builds.length === 0;
+
+    if (apiFiles.length > 0 && hasNoBuilds) {
+      const apiBuilds = await detectApiBuilders(apiFiles);
+
+      if (apiBuilds && apiBuilds.length > 0) {
+        config.builds = config.builds || [];
+        config.builds.push(...apiBuilds);
+      }
+
+      const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
+
+      if (error) {
+        this.output.error(error.message);
+      } else if (defaultRoutes && defaultRoutes.length > 0) {
+        this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
+        config.routes = config.routes || [];
+        config.routes.push(...(defaultRoutes as RouteConfig[]));
+      }
+    }
+
+    /**
+     * We need to use `hasNoBuilds` because it was created
+     * before the api builders were added.
+     * We also have to add this builder after all
+     * the others to prevent catch all routes etc.
+     */
+    if (pkg && hasNoBuilds) {
+      config.builds = config.builds || [];
+
+      const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
+
+      if (Array.isArray(warnings)) {
+        warnings.forEach(({ message }) => this.output.warn(message));
+      }
+
+      if (staticBuilder) {
+        config.builds.push(staticBuilder);
+      }
+    }
+
+    if (Array.isArray(config.builds)) {
+      // `@now/static-build` needs to be the last builder
+      // since it might catch all other requests
+      config.builds.sort((buildA, buildB) => {
+        if (buildA.use.startsWith('@now/static-build')) {
+          return 1;
+        }
+
+        if (buildB.use.startsWith('@now/static-build')) {
+          return -1;
+        }
+
+        return 0;
+      });
+    }
+
+    this.validateNowConfig(config);
+    this.cachedNowJson = config;
+    return config;
+  }
+
+  async getPackageJson(): Promise<PackageJson | null> {
+    const pkgPath = join(this.cwd, 'package.json');
+    let pkg: PackageJson | null = null;
+
+    this.output.debug('Reading `package.json` file');
+
     try {
-      this.validateNowConfig(config);
+      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
     } catch (err) {
-      if (err instanceof MissingDotenvVarsError) {
-        this.output.error(err.message);
-        process.exit(1);
+      if (err.code === 'ENOENT') {
+        this.output.note(
+          'No `package.json` file present, trying to find `now.json`'
+        );
+      } else if (err.name === 'SyntaxError') {
+        this.output.warn(
+          `There is a syntax error in the \`package.json\` file: ${err.message}`
+        );
       } else {
         throw err;
       }
     }
 
-    this.cachedNowJson = config;
-
-    return config;
+    return pkg;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -408,16 +518,14 @@ export default class DevServer {
     );
     if (needsInitialBuild.length > 0) {
       this.output.log(
-        `Setting up ${needsInitialBuild.length} Builder${
-          needsInitialBuild.length === 1 ? '' : 's'
-        }`
+        `Creating initial ${plural('build', needsInitialBuild.length)}`
       );
 
       for (const match of needsInitialBuild) {
         await executeBuild(nowJson, this, this.files, match, null, true);
       }
 
-      this.output.success('Builder setup complete');
+      this.output.success('Build completed');
     }
 
     // Start the filesystem watcher
@@ -562,6 +670,7 @@ export default class DevServer {
     headers: http.OutgoingHttpHeaders = {}
   ): void {
     const allHeaders = {
+      'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
@@ -677,12 +786,7 @@ export default class DevServer {
 
     try {
       const nowJson = await this.getNowJson();
-
-      if (isStaticDeployment(nowJson)) {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      } else {
-        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
-      }
+      await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -727,6 +831,7 @@ export default class DevServer {
       const destUrl = url.format(parsed);
 
       this.output.debug(`ProxyPass: ${destUrl}`);
+      this.setResponseHeaders(res, nowRequestId);
       return proxyPass(req, res, destUrl, this.output);
     }
 
@@ -751,7 +856,9 @@ export default class DevServer {
       this
     );
     if (!match) {
-      await this.send404(req, res, nowRequestId);
+      if (!this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
+        await this.send404(req, res, nowRequestId);
+      }
       return;
     }
 
@@ -916,6 +1023,90 @@ export default class DevServer {
     }
   };
 
+  renderDirectoryListing(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    requestPath: string,
+    nowRequestId: string
+  ): boolean {
+    let prefix = requestPath;
+    if (prefix.length > 0 && !prefix.endsWith('/')) {
+      prefix += '/';
+    }
+
+    const dirs: Set<string> = new Set();
+    const files = Array.from(this.buildMatches.keys())
+      .filter(p => {
+        const base = basename(p);
+        if (
+          base === 'now.json' ||
+          base === '.nowignore' ||
+          !p.startsWith(prefix)
+        ) {
+          return false;
+        }
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          const dir = rel.split('/')[0];
+          if (dirs.has(dir)) {
+            return false;
+          }
+          dirs.add(dir);
+        }
+        return true;
+      })
+      .map(p => {
+        let base = basename(p);
+        let ext = '';
+        let type = 'file';
+        let href: string;
+
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          // Directory
+          type = 'folder';
+          base = rel.split('/')[0];
+          href = `/${prefix}${base}/`;
+        } else {
+          // File / Lambda
+          ext = extname(p).substring(1);
+          href = `/${prefix}${base}`;
+        }
+        return {
+          type,
+          relative: href,
+          ext,
+          title: href,
+          base
+        };
+      });
+
+    if (files.length === 0) {
+      return false;
+    }
+
+    const directory = `/${prefix}`;
+    const paths = [
+      {
+        name: directory,
+        url: requestPath
+      }
+    ];
+    const directoryHtml = directoryTemplate({
+      files,
+      paths,
+      directory
+    });
+    this.setResponseHeaders(res, nowRequestId);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Length',
+      String(Buffer.byteLength(directoryHtml, 'utf8'))
+    );
+    res.end(directoryHtml);
+    return true;
+  }
+
   /**
    * Serve project directory as a static deployment.
    */
@@ -990,6 +1181,7 @@ function serveStaticFile(
   return serveHandler(req, res, {
     public: cwd,
     cleanUrls: false,
+    etag: true,
     ...opts
   });
 }
@@ -1009,16 +1201,16 @@ function close(server: http.Server): Promise<void> {
 /**
  * Generates a (fake) Now tracing ID for an HTTP request.
  *
- * Example: lx24t-1553895116335-784edbc9ef03e2b5534f3dc6f14c90d4
+ * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
 function generateRequestId(): string {
-  return [
+  return `dev1:${[
     Math.random()
       .toString(32)
       .slice(-5),
     Date.now(),
-    randomBytes(16).toString('hex')
-  ].join('-');
+    randomBytes(6).toString('hex')
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
@@ -1136,7 +1328,7 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => minimatch(file, pattern));
+  return files.some(file => file === pattern || minimatch(file, pattern));
 }
 
 function fileChanged(
@@ -1157,23 +1349,4 @@ function fileRemoved(
   delete files[name];
   changed.delete(name);
   removed.add(name);
-}
-
-/**
- * It is a static deployment if `now.json` match one of these:
- *   - no `builds`
- *   - all `builds` have `@now/static` as `use`
- */
-function isStaticDeployment(nowJson: NowConfig): boolean {
-  if (nowJson.builds instanceof Array) {
-    if (
-      nowJson.builds.every(build => {
-        return build.use.split('@')[1] === 'now/static';
-      })
-    ) {
-      return true;
-    }
-    return false;
-  }
-  return true;
 }

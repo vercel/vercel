@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "rm -Rf dist && cp -r public dist"
+  }
+}

@@ -12,7 +12,6 @@ import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
@@ -136,13 +135,11 @@ const printDeploymentStatus = async (
   const amount = failedBuils.length;
 
   if (amount > 0) {
-    const name = amount === 1 ? 'failure' : 'failures';
-
-    output.error(`${amount} build ${name} occured.`);
+    output.error('Build failed');
     output.error(
       `Check your logs at https://${url}/_logs or run ${code(
         `now logs ${url}`
-      )}.`
+      )}`
     );
 
     return 1;
@@ -150,17 +147,6 @@ const printDeploymentStatus = async (
 
   output.error(deploymentErrorMsg);
   return 1;
-};
-
-const renderBuilds = (print, list, times, linesPrinted) => {
-  if (linesPrinted !== null) {
-    print(eraseLines(linesPrinted));
-  }
-
-  const { lines, toPrint } = buildsList(list, times, false);
-  print(toPrint);
-
-  return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -548,6 +534,7 @@ export default async function main(
 
   let builds = [];
   let buildsCompleted = false;
+  let buildSpinner = null;
 
   let deploymentSpinner = null;
   let linesPrinted = null;
@@ -579,7 +566,10 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
-          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
+          if (buildSpinner === null) {
+            buildSpinner = wait('Building...');
+          }
+
           buildsCompleted = builds.every(isDone);
 
           if (builds.some(isFailed)) {
@@ -623,6 +613,10 @@ export default async function main(
     }
 
     await sleep(sleepingTime);
+  }
+
+  if (typeof buildSpinner === 'function') {
+    buildSpinner();
   }
 
   return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);

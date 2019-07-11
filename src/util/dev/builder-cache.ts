@@ -179,7 +179,8 @@ export function getBuildUtils(packages: string[]): string {
 export async function installBuilders(
   packagesSet: Set<string>,
   yarnDir: string,
-  output: Output
+  output: Output,
+  builderDir?: string
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -189,6 +190,9 @@ export async function installBuilders(
   ) {
     // Static deployment, no builders to install
     return;
+  }
+  if (!builderDir) {
+    builderDir = await builderDirPromise;
   }
   const yarnPath = join(yarnDir, 'yarn');
   const cacheDir = await builderDirPromise;
@@ -238,7 +242,7 @@ export async function installBuilders(
         ...packagesToInstall
       ],
       {
-        cwd: cacheDir
+        cwd: builderDir
       }
     );
   } finally {
@@ -250,21 +254,40 @@ export async function installBuilders(
  * Get a builder from the cache directory.
  */
 export async function getBuilder(
-  builderPkg: string
+  builderPkg: string,
+  yarnDir: string,
+  output: Output,
+  builderDir?: string
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
-    const cacheDir = await builderDirPromise;
+    if (!builderDir) {
+      builderDir = await builderDirPromise;
+    }
     const parsed = npa(builderPkg);
-    const buildersPkg = await readJSON(join(cacheDir, 'package.json'));
+    const buildersPkg = await readJSON(join(builderDir, 'package.json'));
     const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
-    const dest = join(cacheDir, 'node_modules', pkgName);
-    const mod = require(dest);
-    const pkg = require(join(dest, 'package.json'));
-    builderWithPkg = Object.freeze({
-      builder: mod,
-      package: pkg
-    });
+    const dest = join(builderDir, 'node_modules', pkgName);
+    try {
+      const mod = require(dest);
+      const pkg = require(join(dest, 'package.json'));
+      builderWithPkg = Object.freeze({
+        builder: mod,
+        package: pkg
+      });
+    } catch (err) {
+      if (err.code === 'MODULE_NOT_FOUND') {
+        output.debug(
+          `Attempted to require ${builderPkg}, but it is not installed`
+        );
+        const pkgSet = new Set([builderPkg]);
+        await installBuilders(pkgSet, yarnDir, output, builderDir);
+
+        // Run `getBuilder()` again now that the builder has been installed
+        return getBuilder(builderPkg, yarnDir, output, builderDir);
+      }
+      throw err;
+    }
   }
   return builderWithPkg;
 }
