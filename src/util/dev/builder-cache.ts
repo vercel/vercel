@@ -200,6 +200,8 @@ export async function installBuilders(
   const buildersPkgPath = join(cacheDir, 'package.json');
   const buildersPkg = await readJSON(buildersPkgPath);
 
+  packages.push(getBuildUtils(packages));
+
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p => {
     if (p in localBuilders) return false;
