@@ -99,14 +99,12 @@ export async function prepareBuilderDir() {
   const { dependencies = {} } = JSON.parse(existingPackageJson);
 
   if (!hasBundledBuilders(dependencies)) {
-    console.time('extracting builders tarball');
     const extractor = extract(builderDir);
     await pipe(
       createReadStream(bundledTarballPath),
       createGunzip(),
       extractor
     );
-    console.timeEnd('extracting builders tarball');
   }
 
   return builderDir;
