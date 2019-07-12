@@ -986,6 +986,16 @@ export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
   }
 }
 
+export class AccountNotFound extends NowError<'ACCOUNT_NOT_FOUND', { email: string }> {
+  constructor(email: string, message: string = `Please sign up: https://zeit.co/signup`) {
+    super({
+      code: 'ACCOUNT_NOT_FOUND',
+      message,
+      meta: { email }
+    });
+  }
+}
+
 export class InvalidMoveDestination extends NowError<
   'INVALID_MOVE_DESTINATION',
   { destination: string }

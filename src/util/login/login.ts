@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { hostname } from 'os';
-import { InvalidEmail } from '../errors-ts';
+import { InvalidEmail, AccountNotFound } from '../errors-ts';
 import ua from '../ua';
 
 type LoginData = {
@@ -12,7 +12,7 @@ export default async function login(
   apiUrl: string,
   email: string,
   mode: 'login' | 'signup' = 'login'
-): Promise<LoginData | InvalidEmail> {
+): Promise<LoginData | InvalidEmail | AccountNotFound> {
   const hyphens = new RegExp('-', 'g');
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
   const tokenName = `Now CLI on ${host}`;
@@ -33,7 +33,7 @@ export default async function login(
   if (!response.ok) {
     const { error = {} } = body;
     if (error.code === 'not_exists') {
-      return login(apiUrl, email, 'signup');
+      throw new AccountNotFound(email, `Please sign up: https://zeit.co/signup`)
     }
 
     if (error.code === 'invalid_email') {

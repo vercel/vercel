@@ -3,6 +3,7 @@ import { URL } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import fs from 'fs';
+import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
@@ -42,14 +43,61 @@ const waitForDeployment = async href => {
   }
 };
 
+function fetchTokenWithRetry (url, retries = 3) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      resolve(data.token);
+    } catch (error) {
+      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+      if (retries === 0) {
+        reject(error);
+        return;
+      }
+      setTimeout(() => {
+        fetchTokenWithRetry(url, retries - 1)
+          .then(resolve)
+          .catch(reject);
+      }, 500);
+    }
+  });
+}
+
+function fetchTokenInformation (token, retries = 3) {
+  return new Promise(async (resolve, reject) => {
+    const url = `https://api.zeit.co/www/user`
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      resolve(data.user);
+    } catch (error) {
+      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+      if (retries === 0) {
+        reject(error);
+        return;
+      }
+      setTimeout(() => {
+        fetchTokenWithRetry(url, retries - 1)
+          .then(resolve)
+          .catch(reject);
+      }, 500);
+    }
+  });
+}
+
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
 
 const defaultOptions = { reject: false };
 const defaultArgs = [];
-const email = `now-cli-${session}@zeit.pub`;
-const contextName = `now-cli-${session}`;
+let email
+let contextName
 
 let tmpDir;
 
@@ -65,7 +113,23 @@ if (!process.env.CI) {
 
 test.before(async () => {
   try {
-    prepareFixtures(session);
+    const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+    const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+    const token = await fetchTokenWithRetry(
+      Buffer.from(str, 'base64').toString()
+    );
+
+    if (!fs.existsSync(location)) {
+      await createDirectory(location)
+    }
+    await fs.promises.writeFile(path.join(location, `auth.json`), JSON.stringify({ token }))
+
+    const user = await fetchTokenInformation(token)
+
+    email = user.email
+    contextName = `${user.email.split('@')[0]}`
+
+    prepareFixtures(contextName);
   } catch (err) {
     console.error(err);
   }
@@ -105,18 +169,17 @@ test('output the version', async t => {
 test('log in', async t => {
   const { stdout, code } = await execa(
     binaryPath,
-    ['login', email, ...defaultArgs],
+    ['login', `${session}@${session}.com`, ...defaultArgs],
     {
       reject: false
     }
   );
 
-  const location = path.join(tmpDir ? tmpDir.name : '~', '.now');
-  const goal = `> Ready! Authentication token and personal details saved in "${location}"`;
+  const goal = `> Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
-  t.is(code, 0);
+  t.is(code, 1);
   t.is(last, goal);
 });
 
@@ -146,7 +209,7 @@ test('deploy a node microservice', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, session);
+  t.is(content.id, contextName);
 });
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
@@ -165,7 +228,7 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
-  t.true(host.startsWith(`node-test-${session}`));
+  t.true(host.startsWith(`node-test-${contextName}`));
 });
 
 test('find deployment in list', async t => {
@@ -239,7 +302,7 @@ test('create alias for deployment', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, session);
+  t.is(content.id, contextName);
 
   context.alias = hosts.alias;
 });
@@ -756,7 +819,7 @@ test('ensure the `scope` property works with email', async t => {
   );
 
   // Ensure we're deploying under the right scope
-  t.true(stderr.includes(`now-cli-${session}`));
+  t.true(stderr.includes(session));
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -789,7 +852,7 @@ test('ensure the `scope` property works with username', async t => {
   );
 
   // Ensure we're deploying under the right scope
-  t.true(stderr.includes(`now-cli-${session}`));
+  t.true(stderr.includes(contextName));
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1124,7 +1187,7 @@ test('deploy a dockerfile project', async t => {
   }
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, session);
+  t.is(content.id, contextName);
 });
 
 test('use `--build-env` CLI flag', async t => {
