@@ -566,9 +566,10 @@ export default class DevServer {
       .then(updatedBuilders =>
         this.invalidateBuildMatches(nowJson, updatedBuilders)
       )
-      .catch(err =>
+      .catch(err => {
         this.output.error(`Failed to update builders: ${err.message}`)
-      );
+        this.output.debug(err.stack);
+      });
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
