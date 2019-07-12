@@ -1056,7 +1056,7 @@ export class LambdaSizeExceededError extends NowError<
         size
       ).toLowerCase()}) exceeds the configured limit (${bytes(
         maxLambdaSize
-      ).toLowerCase()}). You may increase this by supplying \`maxLambdaSize\` to the build \`config\``,
+      ).toLowerCase()}). Learn more: https://zeit.co/docs/v2/deployments/concepts/lambdas/#maximum-bundle-size`,
       meta: { size, maxLambdaSize }
     });
   }
