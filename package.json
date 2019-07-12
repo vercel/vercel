@@ -59,7 +59,8 @@
       "dist/*.js"
     ],
     "assets": [
-      "dist/runtimes"
+      "dist/runtimes",
+      "dist/builders.tar.gz"
     ],
     "targets": [
       "node10.4.1-alpine-x64",
