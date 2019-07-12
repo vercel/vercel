@@ -311,13 +311,7 @@ export async function executeBuild(
   }
 
   // Enforce the lambda zip size soft watermark
-  const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
-  let maxLambdaBytes: number;
-  if (typeof maxLambdaSize === 'string') {
-    maxLambdaBytes = bytes(maxLambdaSize);
-  } else {
-    maxLambdaBytes = maxLambdaSize;
-  }
+  const maxLambdaBytes = bytes('50mb');
   for (const asset of Object.values(result.output)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
