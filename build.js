@@ -1,10 +1,58 @@
 const cpy = require('cpy');
+const tar = require('tar-fs');
 const execa = require('execa');
 const { join } = require('path');
-const { remove } = require('fs-extra');
+const pipe = require('promisepipe');
+const { createGzip } = require('zlib');
+const {
+  createReadStream,
+  createWriteStream,
+  mkdirp,
+  remove,
+  writeFile,
+  writeJSON
+} = require('fs-extra');
+const pkg = require('./package.json');
+
+async function createBuildersTarball() {
+  const builders = Object.keys(pkg.devDependencies)
+    .filter(d => d.startsWith('@now/'))
+    .map(d => `${d}@${pkg.devDependencies[d]}`);
+  console.log(`Creating builders tarball with: ${builders.join(', ')}`);
+
+  const buildersDir = join(__dirname, '.builders');
+  const assetsDir = join(__dirname, 'assets');
+  await mkdirp(buildersDir);
+  await mkdirp(assetsDir);
+
+  const buildersTarballPath = join(assetsDir, 'builders.tar.gz');
+
+  try {
+    const buildersPkg = join(buildersDir, 'package.json');
+    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
+  }
+
+  const yarn = join(__dirname, 'node_modules/yarn/bin/yarn.js');
+  await execa(
+    process.execPath,
+    [ yarn, 'add', '--no-lockfile', ...builders ],
+    { cwd: buildersDir, stdio: 'inherit' }
+  );
+
+  const packer = tar.pack(buildersDir);
+  await pipe(packer, createGzip(), createWriteStream(buildersTarballPath));
+}
 
 async function main() {
   const isDev = process.argv[2] === '--dev';
+
+  // Create a tarball from all the `@now` scoped builders which will be bundled
+  // with Now CLI
+  await createBuildersTarball();
 
   // `now dev` uses chokidar to watch the filesystem, but opts-out of the
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so

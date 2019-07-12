@@ -17,7 +17,7 @@ test('[DevBuilder] Lazily installs builders', async t => {
       .slice(-5)}`
   );
   await mkdirp(builderDir);
-  await writeFile(join(builderDir, 'package.json'), '{}');
+  await writeFile(join(builderDir, 'package.json'), '{"dependencies": {}}');
   try {
     const dir = join(builderDir, 'node_modules', '@now', 'bash');
 
