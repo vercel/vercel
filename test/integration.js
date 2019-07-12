@@ -119,7 +119,7 @@ test.before(async () => {
       Buffer.from(str, 'base64').toString()
     );
 
-    if (!process.env.CI) {
+    if (!fs.existsSync(location)) {
       await createDirectory(location)
     }
     await fs.promises.writeFile(path.join(location, `auth.json`), JSON.stringify({ token }))
