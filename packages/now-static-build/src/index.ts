@@ -201,7 +201,7 @@ export async function build({
           env: { ...process.env, PORT: String(devPort) },
         };
 
-        const child = spawn('npm', ['run', devScript], opts);
+        const child = spawn('yarn', ['run', devScript], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         child.stdout.setEncoding('utf8');
         child.stdout.pipe(process.stdout);
