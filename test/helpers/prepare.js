@@ -130,12 +130,12 @@ module.exports = async session => {
     },
     'config-scope-property-email': {
       'now.json':
-        `{ "scope": "now-cli-${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+        `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span'
     },
     'config-scope-property-username': {
       'now.json':
-        `{ "scope": "now-cli-${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+        `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
       'index.html': '<span>test scope username</span'
     },
     'builds-wrong': {
