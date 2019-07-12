@@ -191,7 +191,7 @@ it('Test `detectApiBuilders`', async () => {
     const files = ['package.json', 'api/user.js', 'api/team.js'];
 
     const builders = await detectApiBuilders(files);
-    expect(builders[0].use).toBe('@now/node');
+    expect(builders[0].use).toBe('@now/node@canary');
   }
 
   {
@@ -199,7 +199,7 @@ it('Test `detectApiBuilders`', async () => {
 
     const builders = await detectApiBuilders(files);
     expect(builders.some(({ use }) => use === '@now/go')).toBeTruthy();
-    expect(builders.some(({ use }) => use === '@now/node')).toBeTruthy();
+    expect(builders.some(({ use }) => use === '@now/node@canary')).toBeTruthy();
   }
 
   {

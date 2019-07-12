@@ -1,8 +1,11 @@
-import { readdir } from 'fs';
+import { readdir, stat } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 
 const readirPromise = promisify(readdir);
+const statPromise = promisify(stat);
+const isDir = async (file: string): Promise<boolean> =>
+  (await statPromise(file)).isDirectory();
 
 // Please note that is extremely important
 // that the `dependency` property needs
@@ -76,7 +79,12 @@ export default [
       const location = join(dirPrefix, base);
       const content = await readirPromise(location);
 
-      return join(base, content[0]);
+      // If there is only one file in it that is a dir we'll use it as dist dir
+      if (content.length === 1 && (await isDir(join(location, content[0])))) {
+        return join(base, content[0]);
+      }
+
+      return base;
     },
     defaultRoutes: [
       {
@@ -183,5 +191,21 @@ export default [
         dest: '/index.html',
       },
     ],
+  },
+  {
+    name: 'Docusaurus',
+    dependency: 'docusaurus',
+    getOutputDirName: async (dirPrefix: string) => {
+      const base = 'build';
+      const location = join(dirPrefix, base);
+      const content = await readirPromise(location);
+
+      // If there is only one file in it that is a dir we'll use it as dist dir
+      if (content.length === 1 && (await isDir(join(location, content[0])))) {
+        return join(base, content[0]);
+      }
+
+      return base;
+    },
   },
 ];

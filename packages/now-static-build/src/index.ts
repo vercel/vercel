@@ -248,7 +248,7 @@ export async function build({
       );
     } else {
       if (meta.isDev) {
-        console.log('WARN: "${devScript}" script is missing from package.json');
+        console.log(`WARN: "${devScript}" script is missing from package.json`);
         console.log(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );

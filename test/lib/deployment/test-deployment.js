@@ -88,6 +88,7 @@ async function testDeployment (
       fetchOpts.body = JSON.stringify(probe.body);
     }
     const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
+    console.log('finished testing', JSON.stringify(probe));
 
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
