@@ -32,7 +32,7 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     runInProcess: true,
     builder: Object.freeze(staticBuilder),
-    package: { version: '' }
+    package: Object.freeze({ name: '@now/static', version: '' })
   }
 };
 
@@ -196,8 +196,7 @@ export async function installBuilders(
     builderDir = await builderDirPromise;
   }
   const yarnPath = join(yarnDir, 'yarn');
-  const cacheDir = await builderDirPromise;
-  const buildersPkgPath = join(cacheDir, 'package.json');
+  const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkg = await readJSON(buildersPkgPath);
 
   packages.push(getBuildUtils(packages));
@@ -240,7 +239,14 @@ export async function installBuilders(
   try {
     await execa(
       process.execPath,
-      [yarnPath, 'add', '--exact', '--no-lockfile', ...packagesToInstall],
+      [
+        yarnPath,
+        'add',
+        '--exact',
+        '--no-lockfile',
+        '--non-interactive',
+        ...packagesToInstall
+      ],
       {
         cwd: builderDir
       }
@@ -248,6 +254,49 @@ export async function installBuilders(
   } finally {
     stopSpinner();
   }
+}
+
+export async function updateBuilders(
+  packagesSet: Set<string>,
+  yarnDir: string,
+  output: Output,
+  builderDir?: string
+): Promise<string[]> {
+  if (!builderDir) {
+    builderDir = await builderDirPromise;
+  }
+  const packages = Array.from(packagesSet);
+  const yarnPath = join(yarnDir, 'yarn');
+  const buildersPkgPath = join(builderDir, 'package.json');
+  const buildersPkgBefore = await readJSON(buildersPkgPath);
+
+  packages.push(getBuildUtils(packages));
+
+  await execa(
+    process.execPath,
+    [
+      yarnPath,
+      'add',
+      '--exact',
+      '--no-lockfile',
+      '--non-interactive',
+      ...packages.filter(p => p !== '@now/static')
+    ],
+    {
+      cwd: builderDir
+    }
+  );
+
+  const updatedPackages: string[] = [];
+  const buildersPkgAfter = await readJSON(buildersPkgPath);
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
+      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      updatedPackages.push(name);
+    }
+  }
+
+  return updatedPackages;
 }
 
 /**
@@ -271,10 +320,10 @@ export async function getBuilder(
     try {
       const mod = require(dest);
       const pkg = require(join(dest, 'package.json'));
-      builderWithPkg = Object.freeze({
-        builder: mod,
-        package: pkg
-      });
+      builderWithPkg = {
+        builder: Object.freeze(mod),
+        package: Object.freeze(pkg)
+      };
     } catch (err) {
       if (err.code === 'MODULE_NOT_FOUND') {
         output.debug(
