@@ -139,8 +139,8 @@ export interface Package {
 
 export interface BuilderWithPackage {
   runInProcess?: boolean;
-  builder: Builder;
-  package: Package;
+  builder: Readonly<Builder>;
+  package: Readonly<Package>;
 }
 
 export interface HttpHeadersConfig {
