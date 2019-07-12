@@ -130,7 +130,7 @@ export interface ShouldServeParams {
 }
 
 export interface Package {
-  name?: string;
+  name: string;
   version: string;
   scripts?: { [key: string]: string };
   dependencies?: { [name: string]: string };
@@ -139,8 +139,8 @@ export interface Package {
 
 export interface BuilderWithPackage {
   runInProcess?: boolean;
-  builder: Builder;
-  package: Package;
+  builder: Readonly<Builder>;
+  package: Readonly<Package>;
 }
 
 export interface HttpHeadersConfig {

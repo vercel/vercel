@@ -1,35 +1,73 @@
 import chalk from 'chalk';
 import execa from 'execa';
+import semver from 'semver';
+import pipe from 'promisepipe';
 import npa from 'npm-package-arg';
+import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
+import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
 import cacheDirectory from 'cache-or-tmp-directory';
-import { mkdirp, readFile, writeFile, readJSON, writeJSON, remove } from 'fs-extra';
-
 import {
-  NoBuilderCacheError,
-  BuilderCacheCleanError
-} from '../errors-ts';
+  createReadStream,
+  mkdirp,
+  readFile,
+  readJSON,
+  writeFile,
+  remove
+} from 'fs-extra';
+
+import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
+import { devDependencies } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage, Package } from './types';
+
+const registryTypes = new Set(['version', 'tag', 'range']);
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     runInProcess: true,
     builder: Object.freeze(staticBuilder),
-    package: { version: '' }
+    package: Object.freeze({ name: '@now/static', version: '' })
   }
 };
 
-const registryTypes = new Set(['version', 'tag', 'range']);
+const bundledBuilders = Object.keys(devDependencies).filter(d =>
+  d.startsWith('@now/')
+);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
 export const builderModulePathPromise = prepareBuilderModulePath();
+
+function readFileOrNull(
+  filePath: string,
+  encoding?: null
+): Promise<Buffer | null>;
+function readFileOrNull(
+  filePath: string,
+  encoding: string
+): Promise<string | null>;
+async function readFileOrNull(
+  filePath: string,
+  encoding?: string | null
+): Promise<Buffer | string | null> {
+  try {
+    if (encoding) {
+      return await readFile(filePath, encoding);
+    }
+    return await readFile(filePath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
 
 /**
  * Prepare cache directory for installing now-builders
@@ -53,15 +91,20 @@ export async function prepareBuilderDir() {
   const builderDir = join(await cacheDirPromise, 'builders');
   await mkdirp(builderDir);
 
-  // Create an empty private `package.json`,
-  // but only if one does not already exist
-  try {
-    const buildersPkg = join(builderDir, 'package.json');
-    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
+  // Extract the bundled `builders.tar.gz` file, if necessary
+  const bundledTarballPath = join(__dirname, '../../../assets/builders.tar.gz');
+
+  const existingPackageJson =
+    (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
+  const { dependencies = {} } = JSON.parse(existingPackageJson);
+
+  if (!hasBundledBuilders(dependencies)) {
+    const extractor = extract(builderDir);
+    await pipe(
+      createReadStream(bundledTarballPath),
+      createGunzip(),
+      extractor
+    );
   }
 
   return builderDir;
@@ -76,18 +119,14 @@ export async function prepareBuilderModulePath() {
   const builderSha = getSha(builderContents);
   const cachedBuilderPath = join(builderDir, 'builder.js');
 
-  try {
-    const cachedBuilderContents = await readFile(cachedBuilderPath);
+  const cachedBuilderContents = await readFileOrNull(cachedBuilderPath);
+  if (cachedBuilderContents) {
     const cachedBuilderSha = getSha(cachedBuilderContents);
     if (builderSha !== cachedBuilderSha) {
       needsWrite = true;
     }
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      needsWrite = true;
-    } else {
-      throw err;
-    }
+  } else {
+    needsWrite = true;
   }
 
   if (needsWrite) {
@@ -126,9 +165,11 @@ function getNpmVersion(use = ''): string {
 export function getBuildUtils(packages: string[]): string {
   const version = packages
     .map(getNpmVersion)
-    .some(ver => ver.includes('canary')) ? 'canary' : 'latest';
+    .some(ver => ver.includes('canary'))
+    ? 'canary'
+    : 'latest';
 
-    return `@now/build-utils@${version}`;
+  return `@now/build-utils@${version}`;
 }
 
 /**
@@ -153,12 +194,45 @@ export async function installBuilders(
     builderDir = await builderDirPromise;
   }
   const yarnPath = join(yarnDir, 'yarn');
+  const buildersPkgPath = join(builderDir, 'package.json');
+  const buildersPkg = await readJSON(buildersPkgPath);
 
-  const buildUtils = getBuildUtils(packages);
-  output.debug(`Installing ${buildUtils}`);
+  packages.push(getBuildUtils(packages));
+
+  // Filter out any packages that come packaged with `now-cli`
+  const packagesToInstall = packages.filter(p => {
+    if (p in localBuilders) return false;
+    const parsed = npa(p);
+    if (!parsed.name) {
+      return true;
+    }
+    if (
+      parsed.type === 'tag' &&
+      parsed.fetchSpec === 'latest' &&
+      bundledBuilders.includes(parsed.name)
+    ) {
+      const parsedInstalled = npa(
+        `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
+      );
+      if (parsedInstalled.type !== 'version') {
+        return true;
+      }
+      const semverInstalled = semver.parse(parsedInstalled.rawSpec);
+      if (!semverInstalled) {
+        return true;
+      }
+      return semverInstalled.prerelease.length > 0;
+    }
+    return true;
+  });
+
+  if (packagesToInstall.length === 0) {
+    output.debug('No builders need to be installed');
+    return;
+  }
 
   const stopSpinner = wait(
-    `Installing builders: ${packages.sort().join(', ')}`
+    `Installing builders: ${packagesToInstall.sort().join(', ')}`
   );
   try {
     await execa(
@@ -168,8 +242,8 @@ export async function installBuilders(
         'add',
         '--exact',
         '--no-lockfile',
-        buildUtils,
-        ...packages.filter(p => p !== '@now/static')
+        '--non-interactive',
+        ...packagesToInstall
       ],
       {
         cwd: builderDir
@@ -178,6 +252,49 @@ export async function installBuilders(
   } finally {
     stopSpinner();
   }
+}
+
+export async function updateBuilders(
+  packagesSet: Set<string>,
+  yarnDir: string,
+  output: Output,
+  builderDir?: string
+): Promise<string[]> {
+  if (!builderDir) {
+    builderDir = await builderDirPromise;
+  }
+  const packages = Array.from(packagesSet);
+  const yarnPath = join(yarnDir, 'yarn');
+  const buildersPkgPath = join(builderDir, 'package.json');
+  const buildersPkgBefore = await readJSON(buildersPkgPath);
+
+  packages.push(getBuildUtils(packages));
+
+  await execa(
+    process.execPath,
+    [
+      yarnPath,
+      'add',
+      '--exact',
+      '--no-lockfile',
+      '--non-interactive',
+      ...packages.filter(p => p !== '@now/static')
+    ],
+    {
+      cwd: builderDir
+    }
+  );
+
+  const updatedPackages: string[] = [];
+  const buildersPkgAfter = await readJSON(buildersPkgPath);
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
+      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      updatedPackages.push(name);
+    }
+  }
+
+  return updatedPackages;
 }
 
 /**
@@ -201,10 +318,10 @@ export async function getBuilder(
     try {
       const mod = require(dest);
       const pkg = require(join(dest, 'package.json'));
-      builderWithPkg = Object.freeze({
-        builder: mod,
-        package: pkg
-      });
+      builderWithPkg = {
+        builder: Object.freeze(mod),
+        package: Object.freeze(pkg)
+      };
     } catch (err) {
       if (err.code === 'MODULE_NOT_FOUND') {
         output.debug(
@@ -242,4 +359,13 @@ function getSha(buffer: Buffer): string {
   const hash = createHash('sha256');
   hash.update(buffer);
   return hash.digest('hex');
+}
+
+function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
+  for (const name of bundledBuilders) {
+    if (!(name in dependencies)) {
+      return false;
+    }
+  }
+  return true;
 }

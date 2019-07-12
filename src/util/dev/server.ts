@@ -38,8 +38,12 @@ import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { installBuilders } from './builder-cache';
 import { executeBuild, getBuildMatches } from './builder';
+import {
+  builderDirPromise,
+  installBuilders,
+  updateBuilders
+} from './builder-cache';
 
 import {
   EnvConfig,
@@ -61,6 +65,15 @@ interface FSEvent {
   type: string;
   path: string;
 }
+
+interface NodeRequire {
+  (id: string): any;
+  cache: {
+    [name: string]: any;
+  };
+}
+
+declare const __non_webpack_require__: NodeRequire;
 
 export default class DevServer {
   public cwd: string;
@@ -288,6 +301,46 @@ export default class DevServer {
     }
   }
 
+  async invalidateBuildMatches(
+    nowJson: NowConfig,
+    updatedBuilders: string[]
+  ): Promise<void> {
+    if (updatedBuilders.length === 0) {
+      this.output.debug('No builders were updated');
+      return;
+    }
+
+    // The `require()` cache for the builder's assets must be purged
+    const builderDir = await builderDirPromise;
+    const updatedBuilderPaths = updatedBuilders.map(b =>
+      join(builderDir, 'node_modules', b)
+    );
+    for (const id of Object.keys(__non_webpack_require__.cache)) {
+      for (const path of updatedBuilderPaths) {
+        if (id.startsWith(path)) {
+          this.output.debug(`Purging require cache for "${id}"`);
+          delete __non_webpack_require__.cache[id];
+        }
+      }
+    }
+
+    // Delete any build matches that have the old builder required already
+    for (const buildMatch of this.buildMatches.values()) {
+      const {
+        src,
+        builderWithPkg: { package: pkg }
+      } = buildMatch;
+      if (pkg.name === '@now/static') continue;
+      if (updatedBuilders.includes(pkg.name)) {
+        this.buildMatches.delete(src);
+        this.output.debug(`Invalidated build match for "${src}"`);
+      }
+    }
+
+    // Re-add the build matches that were just removed, but with the new builder
+    await this.updateBuildMatches(nowJson);
+  }
+
   async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
@@ -506,6 +559,17 @@ export default class DevServer {
 
     await installBuilders(builders, this.yarnPath, this.output);
     await this.updateBuildMatches(nowJson);
+
+    // Updating builders happens lazily, and any builders that were updated
+    // get their "build matches" invalidated so that the new version is used.
+    updateBuilders(builders, this.yarnPath, this.output)
+      .then(updatedBuilders =>
+        this.invalidateBuildMatches(nowJson, updatedBuilders)
+      )
+      .catch(err => {
+        this.output.error(`Failed to update builders: ${err.message}`)
+        this.output.debug(err.stack);
+      });
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
