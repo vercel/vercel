@@ -243,6 +243,8 @@ export async function installBuilders(
         '--exact',
         '--no-lockfile',
         '--non-interactive',
+        '--mutex',
+        'file',
         ...packagesToInstall
       ],
       {
@@ -278,6 +280,8 @@ export async function updateBuilders(
       '--exact',
       '--no-lockfile',
       '--non-interactive',
+      '--mutex',
+      'file',
       ...packages.filter(p => p !== '@now/static')
     ],
     {
