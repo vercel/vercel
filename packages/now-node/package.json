@@ -14,7 +14,7 @@
     "@babel/plugin-transform-modules-commonjs": "7.5.0",
     "@now/node-bridge": "1.2.2",
     "@types/node": "*",
-    "@zeit/node-file-trace": "0.1.6",
+    "@zeit/node-file-trace": "0.1.7",
     "typescript": "3.5.2"
   },
   "scripts": {
