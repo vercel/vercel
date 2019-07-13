@@ -141,8 +141,6 @@ export async function runNpmInstall(
       'yarn',
       commandArgs.concat([
         '--ignore-engines',
-        '--mutex',
-        'network',
         '--cwd',
         destPath,
       ]),
