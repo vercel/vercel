@@ -101,7 +101,7 @@ async function compile(
           fsCache.set(file, entry);
           const stream = entry.toStream();
           const { data } = await FileBlob.fromStream({ stream });
-          if (file.endsWith('.ts')) {
+          if (file.endsWith('.ts') || file.endsWith('.tsx')) {
             sourceCache.set(
               file,
               compileTypeScript(resolve(workPath, file), data.toString())
@@ -149,7 +149,9 @@ async function compile(
       var { code, map } = tsCompile(source, path, true);
     }
     tsCompiled.add(relPath);
-    preparedFiles[relPath.slice(0, -3) + '.js.map'] = new FileBlob({
+    preparedFiles[
+      relPath.slice(0, -3 - Number(path.endsWith('x'))) + '.js.map'
+    ] = new FileBlob({
       data: JSON.stringify(map),
     });
     source = code;
@@ -170,7 +172,7 @@ async function compile(
       if (cached === null) return null;
       try {
         let source: string | Buffer = readFileSync(fsPath);
-        if (fsPath.endsWith('.ts')) {
+        if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
           source = compileTypeScript(fsPath, source.toString());
         }
         const { mode } = lstatSync(fsPath);
@@ -224,13 +226,18 @@ async function compile(
     }
     // Rename .ts -> .js (except for entry)
     if (path !== entrypoint && tsCompiled.has(path)) {
-      preparedFiles[path.slice(0, -3) + '.js'] = entry;
+      preparedFiles[
+        path.slice(0, -3 - Number(path.endsWith('x'))) + '.js'
+      ] = entry;
     } else preparedFiles[path] = entry;
   }
 
   // Compile ES Modules into CommonJS
   const esmPaths = esmFileList.filter(
-    file => !file.endsWith('.ts') && !file.match(libPathRegEx)
+    file =>
+      !file.endsWith('.ts') &&
+      !file.endsWith('.tsx') &&
+      !file.match(libPathRegEx)
   );
   if (esmPaths.length) {
     const babelCompile = require('./babel').compile;
