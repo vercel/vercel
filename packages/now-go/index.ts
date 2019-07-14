@@ -237,7 +237,7 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
 
     if (meta.isDev && isGoModExist && isGoModInRootDir) {
       await writeFile(
-        join(dirname(downloadedFiles['now.json'].fsPath), mainModGoFileName),
+        join(dirname(downloadedFiles['go.mod'].fsPath), mainModGoFileName),
         mainModGoContents
       );
     } else if (isGoModExist && isGoModInRootDir) {
@@ -287,7 +287,7 @@ Learn more: https://zeit.co/docs/v2/deployments/official-builders/go-now-go/#ent
 
     let baseGoModPath = '';
     if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      baseGoModPath = dirname(downloadedFiles['now.json'].fsPath);
+      baseGoModPath = dirname(downloadedFiles['go.mod'].fsPath);
     } else if (isGoModExist && isGoModInRootDir) {
       baseGoModPath = srcPath;
     } else if (isGoModExist && !isGoModInRootDir) {
