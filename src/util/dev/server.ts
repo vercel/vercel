@@ -95,7 +95,8 @@ export default class DevServer {
   private watchAggregationId: NodeJS.Timer | null;
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
-  private filter: ((path: string) => boolean);
+  private filter: (path: string) => boolean;
+  private updateBuildersPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -110,6 +111,7 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowJson = null;
+    this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
     this.stopping = false;
@@ -120,7 +122,7 @@ export default class DevServer {
     this.watchAggregationEvents = [];
     this.watchAggregationTimeout = 500;
 
-    this.filter = (path) => Boolean(path);
+    this.filter = path => Boolean(path);
   }
 
   enqueueFsEvent(type: string, path: string): void {
@@ -414,7 +416,7 @@ export default class DevServer {
 
     this.output.debug(
       `Found ${_apiFiles.length} files in \`api\` and ` +
-      `filtered out ${_apiFiles.length - apiFiles.length} files`
+        `filtered out ${_apiFiles.length - apiFiles.length} files`
     );
 
     const hasNoBuilds = !config.builds || config.builds.length === 0;
@@ -575,12 +577,16 @@ export default class DevServer {
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
-    updateBuilders(builders, this.yarnPath, this.output)
+    this.updateBuildersPromise = updateBuilders(
+      builders,
+      this.yarnPath,
+      this.output
+    )
       .then(updatedBuilders =>
         this.invalidateBuildMatches(nowJson, updatedBuilders)
       )
       .catch(err => {
-        this.output.error(`Failed to update builders: ${err.message}`)
+        this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
 
@@ -681,6 +687,10 @@ export default class DevServer {
 
     if (this.watcher) {
       this.watcher.close();
+    }
+
+    if (this.updateBuildersPromise) {
+      ops.push(this.updateBuildersPromise);
     }
 
     try {
