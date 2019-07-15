@@ -364,7 +364,7 @@ test('scale down the deployment directly', async t => {
 });
 
 test('list the scopes', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
     {
@@ -373,6 +373,8 @@ test('list the scopes', async t => {
   );
 
   t.is(code, 0);
+  console.log(stdout);
+  console.log({stdout, stderr});
   t.true(stdout.includes(`✔ ${contextName}     ${email}`));
 });
 
