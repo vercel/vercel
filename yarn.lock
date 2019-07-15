@@ -362,7 +362,7 @@
     semver "6.1.1"
     yazl "2.4.3"
 
-"@now/go@0.5.5":
+"@now/go@latest":
   version "0.5.5"
   resolved "https://registry.yarnpkg.com/@now/go/-/go-0.5.5.tgz#859eaf7ebc1a36ee89927c62741c2c60f9bbc781"
   integrity sha512-NVAdnPuqVIw0iwChuwTUtyn4QnqTYTz94/rCWpEgKS0RZDm2P4P47P8Xn+4d48K5W6Y/JKHQiRkRelxOqA6lSw==
@@ -373,7 +373,7 @@
     node-fetch "^2.2.1"
     tar "4.4.6"
 
-"@now/next@0.5.4":
+"@now/next@latest":
   version "0.5.4"
   resolved "https://registry.yarnpkg.com/@now/next/-/next-0.5.4.tgz#5537ffd73908c1d5732b2d10a348a0a31dd6622c"
   integrity sha512-8enX2nLlxnKjtCNVPuyvpcJKKtu6GUkJps0Y9wVnJLCZn8i3BTH9gN7i3rQuE6jW/lNjnK+t0ozUkDpTtmibJg==
@@ -389,7 +389,7 @@
   resolved "https://registry.yarnpkg.com/@now/node-bridge/-/node-bridge-1.2.2.tgz#b4740d8806227b8dd1d4d8481e21b3b30ad299b4"
   integrity sha512-E5xqal3QRN8RvcQ4Q82vtg/hvWmQWaIYp2bJHd550Ps/kemGabcwAAQsP/TUM/4b5oYlOmjrfuYPq9AhMvFqkQ==
 
-"@now/node@0.11.1":
+"@now/node@latest":
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/@now/node/-/node-0.11.1.tgz#f0d2fa43ee3ded69341763b7b1c890227e90ab13"
   integrity sha512-2nGzxozS6aH3vIOOX6xggnHNiBLuc9awAPTP2w1DGu5LWU8Jg48y8U53Hlk4/zTWqdpByw9zwndNgzyFOVQOAA==
@@ -406,14 +406,14 @@
   dependencies:
     fastcgi-client "0.0.1"
 
-"@now/php@0.5.6":
+"@now/php@latest":
   version "0.5.6"
   resolved "https://registry.yarnpkg.com/@now/php/-/php-0.5.6.tgz#9fe3c387ea3e90f417b56ae5cb5fc67537293d71"
   integrity sha512-E/O4DfqOH5/BWhoS3Tmc4c23v8e8BKtcEoJvgiC0AgvLbjkWTmlar32QHVUaiOG5Z+iG5TBsBzj4nOelf9I5NQ==
   dependencies:
     "@now/php-bridge" "^0.5.3"
 
-"@now/static-build@0.7.1":
+"@now/static-build@latest":
   version "0.7.1"
   resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.7.1.tgz#dc29949b8672cb02360eb75b19c7c5138696b797"
   integrity sha512-7bcaeQW/4041+s/bkAh22CzU3VLTu2iJw4PdtRRhqUEQ1aNMRiB7A+31O/PFaUduiGh773GDC8kbI4CMWpidKg==
