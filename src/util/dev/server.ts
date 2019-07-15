@@ -315,16 +315,21 @@ export default class DevServer {
       return;
     }
 
+    const _require =
+      typeof __non_webpack_require__ === 'function'
+        ? __non_webpack_require__
+        : require;
+
     // The `require()` cache for the builder's assets must be purged
     const builderDir = await builderDirPromise;
     const updatedBuilderPaths = updatedBuilders.map(b =>
       join(builderDir, 'node_modules', b)
     );
-    for (const id of Object.keys(__non_webpack_require__.cache)) {
+    for (const id of Object.keys(_require.cache)) {
       for (const path of updatedBuilderPaths) {
         if (id.startsWith(path)) {
           this.output.debug(`Purging require cache for "${id}"`);
-          delete __non_webpack_require__.cache[id];
+          delete _require.cache[id];
         }
       }
     }
