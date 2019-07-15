@@ -28,7 +28,6 @@ export interface NowProxyResponse {
 }
 
 interface ServerLike {
-  setTimeout(msecs?: number, callback?: () => void): this;
   listen: (
     opts: {
       host?: string;
@@ -138,11 +137,7 @@ export class Bridge {
 
     const resolveListening = this.resolveListening;
 
-    // The default timeout is two minutes so we increase
-    // to ten minutes and let now-proxy handle timeouts
-    // at about five minutes.
-    // See https://nodejs.org/docs/latest/api/http.html#http_server_settimeout_msecs_callback
-    return this.server.setTimeout(10 * 60 * 1000).listen(
+    return this.server.listen(
       {
         host: '127.0.0.1',
         port: 0,
