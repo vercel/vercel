@@ -95,6 +95,7 @@ export default class DevServer {
   private watchAggregationId: NodeJS.Timer | null;
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
+  private filter: ((path: string) => boolean);
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -118,6 +119,8 @@ export default class DevServer {
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
     this.watchAggregationTimeout = 500;
+
+    this.filter = (path) => Boolean(path);
   }
 
   enqueueFsEvent(type: string, path: string): void {
@@ -406,7 +409,14 @@ export default class DevServer {
       }
     }
 
-    const apiFiles = await getApiFiles(this.cwd, this.output);
+    const _apiFiles = await getApiFiles(this.cwd, this.output);
+    const apiFiles = _apiFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${_apiFiles.length} files in \`api\` and ` +
+      `filtered out ${_apiFiles.length - apiFiles.length} files`
+    );
+
     const hasNoBuilds = !config.builds || config.builds.length === 0;
 
     if (apiFiles.length > 0 && hasNoBuilds) {
@@ -532,6 +542,9 @@ export default class DevServer {
 
     this.yarnPath = await getYarnPath(this.output);
 
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    this.filter = ig.createFilter();
+
     // Retrieve the path of the native module
     const nowJson = await this.getNowJson();
     const nowJsonBuild = nowJson.build || {};
@@ -593,11 +606,8 @@ export default class DevServer {
     }
 
     // Start the filesystem watcher
-    const ig = await createIgnore(join(this.cwd, '.nowignore'));
-    const filter = ig.createFilter();
-
     this.watcher = watch(this.cwd, {
-      ignored: (path: string) => !filter(path),
+      ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
       useFsEvents: false,
       usePolling: false,
