@@ -374,7 +374,7 @@ test('list the scopes', async t => {
 
   t.is(code, 0);
   console.log(stdout);
-  console.log({stdout, stderr});
+  console.log({stdout, stderr, contextName, email});
   t.true(stdout.includes(`✔ ${contextName}     ${email}`));
 });
 
