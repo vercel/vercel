@@ -36,7 +36,7 @@ function testFixture(name, fn) {
 
       await fn(t, server);
     } finally {
-      server.stop();
+      await server.stop();
     }
   };
 }
