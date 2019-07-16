@@ -26,7 +26,7 @@ import {
 import { once } from '../once';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
-import getNowJsonPath from '../config/local-path';
+import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import {
   createIgnore,
@@ -85,7 +85,7 @@ export default class DevServer {
   public yarnPath: string;
   public address: string;
 
-  private cachedNowJson: NowConfig | null;
+  private cachedNowConfig: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
   private serverUrlPrinted: boolean;
@@ -110,7 +110,7 @@ export default class DevServer {
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
 
-    this.cachedNowJson = null;
+    this.cachedNowConfig = null;
     this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
@@ -160,8 +160,8 @@ export default class DevServer {
     }
 
     // Update the build matches in case an entrypoint was created or deleted
-    const nowJson = await this.getNowJson(false);
-    await this.updateBuildMatches(nowJson);
+    const nowConfig = await this.getNowConfig(false);
+    await this.updateBuildMatches(nowConfig);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -278,9 +278,9 @@ export default class DevServer {
     }
   }
 
-  async updateBuildMatches(nowJson: NowConfig): Promise<void> {
+  async updateBuildMatches(nowConfig: NowConfig): Promise<void> {
     const matches = await getBuildMatches(
-      nowJson,
+      nowConfig,
       this.cwd,
       this.yarnPath,
       this.output
@@ -307,7 +307,7 @@ export default class DevServer {
   }
 
   async invalidateBuildMatches(
-    nowJson: NowConfig,
+    nowConfig: NowConfig,
     updatedBuilders: string[]
   ): Promise<void> {
     if (updatedBuilders.length === 0) {
@@ -348,7 +348,7 @@ export default class DevServer {
     }
 
     // Re-add the build matches that were just removed, but with the new builder
-    await this.updateBuildMatches(nowJson);
+    await this.updateBuildMatches(nowConfig);
   }
 
   async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
@@ -378,28 +378,29 @@ export default class DevServer {
     return { ...base, ...env };
   }
 
-  async getNowJson(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowJson) {
-      return this.cachedNowJson;
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+    if (canUseCache && this.cachedNowConfig) {
+      this.output.debug('Using cached `now.json` config');
+      return this.cachedNowConfig;
     }
 
     const pkg = await this.getPackageJson();
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
-    let config: NowConfig = this.cachedNowJson || { version: 2 };
+    let config: NowConfig = this.cachedNowConfig || { version: 2 };
 
     // We need to delete these properties for zero config to work
     // with file changes
-    if (this.cachedNowJson) {
-      delete this.cachedNowJson.builds;
-      delete this.cachedNowJson.routes;
+    if (this.cachedNowConfig) {
+      delete this.cachedNowConfig.builds;
+      delete this.cachedNowConfig.routes;
     }
 
     try {
       this.output.debug('Reading `now.json` file');
-      const nowJsonPath = getNowJsonPath(this.cwd);
-      config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
+      const nowConfigPath = getNowConfigPath(this.cwd);
+      config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
         if (pkg === null) {
@@ -482,7 +483,7 @@ export default class DevServer {
     }
 
     this.validateNowConfig(config);
-    this.cachedNowJson = config;
+    this.cachedNowConfig = config;
     return config;
   }
 
@@ -553,18 +554,18 @@ export default class DevServer {
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowJson = await this.getNowJson();
-    const nowJsonBuild = nowJson.build || {};
+    const nowConfig = await this.getNowConfig();
+    const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowJson.env),
-      this.getLocalEnv('.env.build', nowJsonBuild.env)
+      this.getLocalEnv('.env', nowConfig.env),
+      this.getLocalEnv('.env.build', nowConfigBuild.env)
     ]);
     Object.assign(process.env, buildEnv);
     this.env = env;
     this.buildEnv = buildEnv;
 
     const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowJson, opts);
+    const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
       const path = relative(this.cwd, fsPath);
@@ -574,11 +575,11 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowJson.builds || []).map((b: BuildConfig) => b.use)
+      (nowConfig.builds || []).map((b: BuildConfig) => b.use)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
-    await this.updateBuildMatches(nowJson);
+    await this.updateBuildMatches(nowConfig);
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
@@ -588,7 +589,7 @@ export default class DevServer {
       this.output
     )
       .then(updatedBuilders =>
-        this.invalidateBuildMatches(nowJson, updatedBuilders)
+        this.invalidateBuildMatches(nowConfig, updatedBuilders)
       )
       .catch(err => {
         this.output.error(`Failed to update builders: ${err.message}`);
@@ -610,7 +611,7 @@ export default class DevServer {
       );
 
       for (const match of needsInitialBuild) {
-        await executeBuild(nowJson, this, this.files, match, null, true);
+        await executeBuild(nowConfig, this, this.files, match, null, true);
       }
 
       this.output.success('Build completed');
@@ -822,7 +823,7 @@ export default class DevServer {
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
     } else {
-      const nowJson = await this.getNowJson();
+      const nowConfig = await this.getNowConfig();
       if (previousBuildResult) {
         // Tear down any `output` assets from a previous build, so that they
         // are not available to be served while the rebuild is in progress.
@@ -836,7 +837,7 @@ export default class DevServer {
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
       buildPromise = executeBuild(
-        nowJson,
+        nowConfig,
         this,
         this.files,
         match,
@@ -874,8 +875,8 @@ export default class DevServer {
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
     try {
-      const nowJson = await this.getNowJson();
-      await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
+      const nowConfig = await this.getNowConfig();
+      await this.serveProjectAsNowV2(req, res, nowRequestId, nowConfig);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -894,10 +895,10 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    nowJson: NowConfig,
-    routes: RouteConfig[] | undefined = nowJson.routes
+    nowConfig: NowConfig,
+    routes: RouteConfig[] | undefined = nowConfig.routes
   ) => {
-    await this.updateBuildMatches(nowJson);
+    await this.updateBuildMatches(nowConfig);
 
     const {
       dest,
@@ -984,7 +985,7 @@ export default class DevServer {
           req,
           res,
           nowRequestId,
-          nowJson,
+          nowConfig,
           buildResult.routes
         );
         return;
