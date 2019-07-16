@@ -451,7 +451,7 @@ function fixConfig(ts: TSCommon, config: _ts.ParsedCommandLine) {
 
   // Target ES5 output by default (instead of ES3).
   if (config.options.target === undefined) {
-    config.options.target = ts.ScriptTarget.ES5;
+    config.options.target = ts.ScriptTarget.ESNext;
   }
 
   // Target CommonJS, always!
