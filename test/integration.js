@@ -31,6 +31,9 @@ const pickUrl = stdout => {
   return lines[lines.length - 1];
 };
 
+const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
+const createDirectory = dest => fs.mkdirSync(dest);
+
 const waitForDeployment = async href => {
   // eslint-disable-next-line
   while (true) {
@@ -1255,8 +1258,6 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest);
 const verifyExampleApollo = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'now.json')) &&
@@ -1424,6 +1425,14 @@ test('try to update now to canary', async t => {
 
   const { stdout } = await execute(['--version']);
   t.true(stdout.includes('canary'));
+});
+
+test('fail `now dev` dev script without now.json', async t => {
+  const deploymentPath = fixture('now-dev-fail-dev-script');
+  const { code, stderr } = await execute(['dev', deploymentPath]);
+
+  t.is(code, 1);
+  t.true(stderr.includes('must not contain `now dev`'), `Received instead: "${stderr}"`);
 });
 
 test.after.always(async () => {

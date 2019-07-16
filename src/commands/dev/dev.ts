@@ -24,7 +24,7 @@ export default async function dev(
   );
 
   const [dir = '.'] = args;
-  const cwd = path.join(process.cwd(), dir);
+  const cwd = path.resolve(dir);
   const port = opts['-p'] || opts['--port'];
   const debug = opts['-d'] || opts['--debug'];
   const devServer = new DevServer(cwd, { output, debug });
