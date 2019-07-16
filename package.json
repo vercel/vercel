@@ -80,7 +80,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.8.4",
+    "@now/build-utils": "0.8.7",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
