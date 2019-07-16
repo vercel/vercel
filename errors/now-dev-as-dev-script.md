@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-The `package.json` file of the used project invokes `now dev` as `dev` script. This can lead to `now dev` recursively calling itself.
+The `package.json` file of the used project invokes `now dev` as `dev` script. This would cause `now dev` to recursively invoke itself.
 
 #### Possible Ways to Fix It
 
