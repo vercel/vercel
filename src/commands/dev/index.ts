@@ -2,15 +2,16 @@ import chalk from 'chalk';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { NowContext } from '../../types';
+import { NowContext, Config } from '../../types';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
-import readPackage from '../../util/read-package'
+import readPackage from '../../util/read-package';
 import { Package } from '../../util/dev/types';
+import readConfig from '../../util/config/read-config';
 
 const COMMAND_CONFIG = {
   dev: ['dev']
@@ -58,13 +59,23 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const pkg = await readPackage();
-  if (pkg) {
-    const { scripts } = pkg as Package;
+  const nowJson = await readConfig();
 
-    if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-      output.error(`The ${cmd('dev')} script in ${cmd('package.json')} must not contain ${cmd('now dev')}`);
-      return 1;
+  if (nowJson) {
+    const { builds } = nowJson as Config;
+
+    if (builds && builds.length > 0) {
+      const pkg = await readPackage();
+
+      if (pkg) {
+        const { scripts } = pkg as Package;
+
+        if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
+          output.error(`The ${cmd('dev')} script in ${cmd('package.json')} must not contain ${cmd('now dev')}`);
+          output.error(`More details: http://err.sh/now-cli/now-dev-as-dev-script`);
+          return 1;
+        }
+      }
     }
   }
 

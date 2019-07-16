@@ -1,3 +1,5 @@
+import { Builder } from '@now/build-utils';
+
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
 export interface Config {
@@ -6,6 +8,7 @@ export interface Config {
   name?: string;
   type?: string;
   scope?: string;
+  builds?: Builder[];
 }
 
 export interface NowContext {
