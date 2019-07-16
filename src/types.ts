@@ -1,14 +1,13 @@
-import { Builder } from '@now/build-utils';
+import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export interface Config {
+export interface Config extends NowConfig {
   alias?: string[] | string;
   aliases?: string[] | string;
   name?: string;
   type?: string;
   scope?: string;
-  builds?: Builder[];
 }
 
 export interface NowContext {
