@@ -411,7 +411,6 @@ export default class DevServer {
         throw err;
       }
     }
-    console.error({ isZeroConfig });
 
     if (isZeroConfig) {
       // We need to delete these properties for zero config to work
