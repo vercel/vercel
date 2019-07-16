@@ -228,6 +228,8 @@ it('Test `detectApiRoutes`', async () => {
 
     const { defaultRoutes } = await detectApiRoutes(files);
     expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes[0].dest).toBe('/api/team.js');
+    expect(defaultRoutes[1].dest).toBe('/api/user.go');
   }
 
   {

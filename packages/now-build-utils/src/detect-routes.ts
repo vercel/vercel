@@ -1,6 +1,6 @@
 import { Route } from './types';
 import { parse as parsePath } from 'path';
-import { ignoreApiFilter } from './detect-builder';
+import { ignoreApiFilter, sortFiles } from './detect-builder';
 
 function joinPath(...segments: string[]) {
   const joinedPath = segments.join('/');
@@ -55,7 +55,7 @@ function createRouteFromPath(filePath: string): Route {
   );
 
   const src = `^/${srcParts.join('/')}$`;
-  const dest = `/${filePath}?${query.join('&')}`;
+  const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}`;
 
   return { src, dest };
 }
@@ -181,6 +181,7 @@ export async function detectApiRoutes(
   // the first ones to get handled
   const sortedFiles = files
     .filter(ignoreApiFilter)
+    .sort(sortFiles)
     .sort(sortFilesBySegmentCount);
 
   const defaultRoutes: Route[] = [];

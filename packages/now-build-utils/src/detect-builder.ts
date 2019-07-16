@@ -85,16 +85,25 @@ export function ignoreApiFilter(file: string) {
   return true;
 }
 
+// We need to sort the file paths by alphabet to make
+// sure the routes stay in the same order e.g. for deduping
+export function sortFiles(fileA: string, fileB: string) {
+  return fileA.localeCompare(fileB);
+}
+
 export async function detectApiBuilders(
   files: string[]
 ): Promise<Builder[] | null> {
-  const builds = files.filter(ignoreApiFilter).map(file => {
-    const result = API_BUILDERS.find(
-      ({ src }): boolean => minimatch(file, src)
-    );
+  const builds = files
+    .sort(sortFiles)
+    .filter(ignoreApiFilter)
+    .map(file => {
+      const result = API_BUILDERS.find(
+        ({ src }): boolean => minimatch(file, src)
+      );
 
-    return result ? { ...result, src: file } : null;
-  });
+      return result ? { ...result, src: file } : null;
+    });
 
   const finishedBuilds = builds.filter(Boolean);
   return finishedBuilds.length > 0 ? (finishedBuilds as Builder[]) : null;
