@@ -3,6 +3,7 @@ import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
@@ -10,23 +11,39 @@ import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
-import { FileFsRef } from '@now/build-utils';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import directoryTemplate from 'serve-handler/src/directory';
+
+import {
+  FileFsRef,
+  PackageJson,
+  detectBuilder,
+  detectApiBuilders,
+  detectApiRoutes
+} from '@now/build-utils';
 
 import { once } from '../once';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
-import getNowJsonPath from '../config/local-path';
+import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { createIgnore, staticFiles as getFiles } from '../get-files';
+import {
+  createIgnore,
+  staticFiles as getFiles,
+  getApiFiles
+} from '../get-files';
 
 import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { installBuilders } from './builder-cache';
 import { executeBuild, getBuildMatches } from './builder';
+import {
+  builderDirPromise,
+  installBuilders,
+  updateBuilders
+} from './builder-cache';
 
 import {
   EnvConfig,
@@ -49,6 +66,15 @@ interface FSEvent {
   path: string;
 }
 
+interface NodeRequire {
+  (id: string): any;
+  cache: {
+    [name: string]: any;
+  };
+}
+
+declare const __non_webpack_require__: NodeRequire;
+
 export default class DevServer {
   public cwd: string;
   public debug: boolean;
@@ -59,7 +85,7 @@ export default class DevServer {
   public yarnPath: string;
   public address: string;
 
-  private cachedNowJson: NowConfig | null;
+  private cachedNowConfig: NowConfig | null;
   private server: http.Server;
   private stopping: boolean;
   private serverUrlPrinted: boolean;
@@ -69,6 +95,8 @@ export default class DevServer {
   private watchAggregationId: NodeJS.Timer | null;
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
+  private filter: (path: string) => boolean;
+  private updateBuildersPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -82,7 +110,8 @@ export default class DevServer {
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
 
-    this.cachedNowJson = null;
+    this.cachedNowConfig = null;
+    this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
     this.stopping = false;
@@ -92,6 +121,8 @@ export default class DevServer {
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
     this.watchAggregationTimeout = 500;
+
+    this.filter = path => Boolean(path);
   }
 
   enqueueFsEvent(type: string, path: string): void {
@@ -129,8 +160,8 @@ export default class DevServer {
     }
 
     // Update the build matches in case an entrypoint was created or deleted
-    const nowJson = await this.getNowJson(false);
-    await this.updateBuildMatches(nowJson);
+    const nowConfig = await this.getNowConfig(false);
+    await this.updateBuildMatches(nowConfig);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -141,6 +172,7 @@ export default class DevServer {
       BuildResult,
       [string | null, BuildMatch]
     > = new Map();
+
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
         // If the `BuildResult` is already queued for a re-build,
@@ -246,8 +278,13 @@ export default class DevServer {
     }
   }
 
-  async updateBuildMatches(nowJson: NowConfig): Promise<void> {
-    const matches = await getBuildMatches(nowJson, this.cwd, this.output);
+  async updateBuildMatches(nowConfig: NowConfig): Promise<void> {
+    const matches = await getBuildMatches(
+      nowConfig,
+      this.cwd,
+      this.yarnPath,
+      this.output
+    );
     const sources = matches.map(m => m.src);
 
     // Delete build matches that no longer exists
@@ -269,6 +306,51 @@ export default class DevServer {
     }
   }
 
+  async invalidateBuildMatches(
+    nowConfig: NowConfig,
+    updatedBuilders: string[]
+  ): Promise<void> {
+    if (updatedBuilders.length === 0) {
+      this.output.debug('No builders were updated');
+      return;
+    }
+
+    const _require =
+      typeof __non_webpack_require__ === 'function'
+        ? __non_webpack_require__
+        : require;
+
+    // The `require()` cache for the builder's assets must be purged
+    const builderDir = await builderDirPromise;
+    const updatedBuilderPaths = updatedBuilders.map(b =>
+      join(builderDir, 'node_modules', b)
+    );
+    for (const id of Object.keys(_require.cache)) {
+      for (const path of updatedBuilderPaths) {
+        if (id.startsWith(path)) {
+          this.output.debug(`Purging require cache for "${id}"`);
+          delete _require.cache[id];
+        }
+      }
+    }
+
+    // Delete any build matches that have the old builder required already
+    for (const buildMatch of this.buildMatches.values()) {
+      const {
+        src,
+        builderWithPkg: { package: pkg }
+      } = buildMatch;
+      if (pkg.name === '@now/static') continue;
+      if (updatedBuilders.includes(pkg.name)) {
+        this.buildMatches.delete(src);
+        this.output.debug(`Invalidated build match for "${src}"`);
+      }
+    }
+
+    // Re-add the build matches that were just removed, but with the new builder
+    await this.updateBuildMatches(nowConfig);
+  }
+
   async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
@@ -283,29 +365,49 @@ export default class DevServer {
         throw err;
       }
     }
-    this.validateEnvConfig(fileName, base || {}, env);
+    try {
+      this.validateEnvConfig(fileName, base || {}, env);
+    } catch (err) {
+      if (err instanceof MissingDotenvVarsError) {
+        this.output.error(err.message);
+        process.exit(1);
+      } else {
+        throw err;
+      }
+    }
     return { ...base, ...env };
   }
 
-  async getNowJson(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowJson) {
-      return this.cachedNowJson;
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+    if (canUseCache && this.cachedNowConfig) {
+      this.output.debug('Using cached `now.json` config');
+      return this.cachedNowConfig;
     }
 
-    this.output.debug('Reading `now.json` file');
-    const nowJsonPath = getNowJsonPath(this.cwd);
+    const pkg = await this.getPackageJson();
 
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
-    let config: NowConfig = this.cachedNowJson || { version: 2 };
+    let config: NowConfig = this.cachedNowConfig || { version: 2 };
+
+    // We need to delete these properties for zero config to work
+    // with file changes
+    if (this.cachedNowConfig) {
+      delete this.cachedNowConfig.builds;
+      delete this.cachedNowConfig.routes;
+    }
 
     try {
-      config = JSON.parse(await fs.readFile(nowJsonPath, 'utf8'));
+      this.output.debug('Reading `now.json` file');
+      const nowConfigPath = getNowConfigPath(this.cwd);
+      config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.note(
-          'No `now.json` file present, serving all files as static'
-        );
+        if (pkg === null) {
+          this.output.note(
+            'No `now.json` file present, serving all files as static'
+          );
+        }
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
           `There is a syntax error in the \`now.json\` file: ${err.message}`
@@ -315,20 +417,99 @@ export default class DevServer {
       }
     }
 
+    const _apiFiles = await getApiFiles(this.cwd, this.output);
+    const apiFiles = _apiFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${_apiFiles.length} files in \`api\` and ` +
+        `filtered out ${_apiFiles.length - apiFiles.length} files`
+    );
+
+    const hasNoBuilds = !config.builds || config.builds.length === 0;
+
+    if (apiFiles.length > 0 && hasNoBuilds) {
+      const apiBuilds = await detectApiBuilders(apiFiles);
+
+      if (apiBuilds && apiBuilds.length > 0) {
+        config.builds = config.builds || [];
+        config.builds.push(...apiBuilds);
+      }
+
+      const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
+
+      if (error) {
+        this.output.error(error.message);
+      } else if (defaultRoutes && defaultRoutes.length > 0) {
+        this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
+        config.routes = config.routes || [];
+        config.routes.push(...(defaultRoutes as RouteConfig[]));
+      }
+    }
+
+    /**
+     * We need to use `hasNoBuilds` because it was created
+     * before the api builders were added.
+     * We also have to add this builder after all
+     * the others to prevent catch all routes etc.
+     */
+    if (pkg && hasNoBuilds) {
+      config.builds = config.builds || [];
+
+      const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
+
+      if (Array.isArray(warnings)) {
+        warnings.forEach(({ message }) => this.output.warn(message));
+      }
+
+      if (staticBuilder) {
+        config.builds.push(staticBuilder);
+      }
+    }
+
+    if (Array.isArray(config.builds)) {
+      // `@now/static-build` needs to be the last builder
+      // since it might catch all other requests
+      config.builds.sort((buildA, buildB) => {
+        if (buildA.use.startsWith('@now/static-build')) {
+          return 1;
+        }
+
+        if (buildB.use.startsWith('@now/static-build')) {
+          return -1;
+        }
+
+        return 0;
+      });
+    }
+
+    this.validateNowConfig(config);
+    this.cachedNowConfig = config;
+    return config;
+  }
+
+  async getPackageJson(): Promise<PackageJson | null> {
+    const pkgPath = join(this.cwd, 'package.json');
+    let pkg: PackageJson | null = null;
+
+    this.output.debug('Reading `package.json` file');
+
     try {
-      this.validateNowConfig(config);
+      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
     } catch (err) {
-      if (err instanceof MissingDotenvVarsError) {
-        this.output.error(err.message);
-        process.exit(1);
+      if (err.code === 'ENOENT') {
+        this.output.note(
+          'No `package.json` file present, trying to find `now.json`'
+        );
+      } else if (err.name === 'SyntaxError') {
+        this.output.warn(
+          `There is a syntax error in the \`package.json\` file: ${err.message}`
+        );
       } else {
         throw err;
       }
     }
 
-    this.cachedNowJson = config;
-
-    return config;
+    return pkg;
   }
 
   validateNowConfig(config: NowConfig): void {
@@ -369,19 +550,22 @@ export default class DevServer {
 
     this.yarnPath = await getYarnPath(this.output);
 
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    this.filter = ig.createFilter();
+
     // Retrieve the path of the native module
-    const nowJson = await this.getNowJson();
-    const nowJsonBuild = nowJson.build || {};
+    const nowConfig = await this.getNowConfig();
+    const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowJson.env),
-      this.getLocalEnv('.env.build', nowJsonBuild.env)
+      this.getLocalEnv('.env', nowConfig.env),
+      this.getLocalEnv('.env.build', nowConfigBuild.env)
     ]);
     Object.assign(process.env, buildEnv);
     this.env = env;
     this.buildEnv = buildEnv;
 
     const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowJson, opts);
+    const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
       const path = relative(this.cwd, fsPath);
@@ -391,11 +575,26 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowJson.builds || []).map((b: BuildConfig) => b.use)
+      (nowConfig.builds || []).map((b: BuildConfig) => b.use)
     );
 
-    await installBuilders(builders, this.yarnPath);
-    await this.updateBuildMatches(nowJson);
+    await installBuilders(builders, this.yarnPath, this.output);
+    await this.updateBuildMatches(nowConfig);
+
+    // Updating builders happens lazily, and any builders that were updated
+    // get their "build matches" invalidated so that the new version is used.
+    this.updateBuildersPromise = updateBuilders(
+      builders,
+      this.yarnPath,
+      this.output
+    )
+      .then(updatedBuilders =>
+        this.invalidateBuildMatches(nowConfig, updatedBuilders)
+      )
+      .catch(err => {
+        this.output.error(`Failed to update builders: ${err.message}`);
+        this.output.debug(err.stack);
+      });
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
@@ -408,24 +607,19 @@ export default class DevServer {
     );
     if (needsInitialBuild.length > 0) {
       this.output.log(
-        `Setting up ${needsInitialBuild.length} Builder${
-          needsInitialBuild.length === 1 ? '' : 's'
-        }`
+        `Creating initial ${plural('build', needsInitialBuild.length)}`
       );
 
       for (const match of needsInitialBuild) {
-        await executeBuild(nowJson, this, this.files, match, null, true);
+        await executeBuild(nowConfig, this, this.files, match, null, true);
       }
 
-      this.output.success('Builder setup complete');
+      this.output.success('Build completed');
     }
 
     // Start the filesystem watcher
-    const ig = await createIgnore(join(this.cwd, '.nowignore'));
-    const filter = ig.createFilter();
-
     this.watcher = watch(this.cwd, {
-      ignored: (path: string) => !filter(path),
+      ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
       useFsEvents: false,
       usePolling: false,
@@ -501,7 +695,19 @@ export default class DevServer {
       this.watcher.close();
     }
 
-    await Promise.all(ops);
+    if (this.updateBuildersPromise) {
+      ops.push(this.updateBuildersPromise);
+    }
+
+    try {
+      await Promise.all(ops);
+    } catch (err) {
+      if (err.code === 'ERR_SERVER_NOT_RUNNING') {
+        process.exit(0);
+      } else {
+        throw err;
+      }
+    }
   }
 
   shouldRebuild(req: http.IncomingMessage): boolean {
@@ -554,6 +760,7 @@ export default class DevServer {
     headers: http.OutgoingHttpHeaders = {}
   ): void {
     const allHeaders = {
+      'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
@@ -616,7 +823,7 @@ export default class DevServer {
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
     } else {
-      const nowJson = await this.getNowJson();
+      const nowConfig = await this.getNowConfig();
       if (previousBuildResult) {
         // Tear down any `output` assets from a previous build, so that they
         // are not available to be served while the rebuild is in progress.
@@ -630,7 +837,7 @@ export default class DevServer {
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
       buildPromise = executeBuild(
-        nowJson,
+        nowConfig,
         this,
         this.files,
         match,
@@ -668,13 +875,8 @@ export default class DevServer {
     this.output.log(`${chalk.bold(method)} ${req.url}`);
 
     try {
-      const nowJson = await this.getNowJson();
-
-      if (isStaticDeployment(nowJson)) {
-        await this.serveProjectAsStatic(req, res, nowRequestId);
-      } else {
-        await this.serveProjectAsNowV2(req, res, nowRequestId, nowJson);
-      }
+      const nowConfig = await this.getNowConfig();
+      await this.serveProjectAsNowV2(req, res, nowRequestId, nowConfig);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -693,10 +895,10 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    nowJson: NowConfig,
-    routes: RouteConfig[] | undefined = nowJson.routes
+    nowConfig: NowConfig,
+    routes: RouteConfig[] | undefined = nowConfig.routes
   ) => {
-    await this.updateBuildMatches(nowJson);
+    await this.updateBuildMatches(nowConfig);
 
     const {
       dest,
@@ -719,6 +921,7 @@ export default class DevServer {
       const destUrl = url.format(parsed);
 
       this.output.debug(`ProxyPass: ${destUrl}`);
+      this.setResponseHeaders(res, nowRequestId);
       return proxyPass(req, res, destUrl, this.output);
     }
 
@@ -743,7 +946,9 @@ export default class DevServer {
       this
     );
     if (!match) {
-      await this.send404(req, res, nowRequestId);
+      if (!this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
+        await this.send404(req, res, nowRequestId);
+      }
       return;
     }
 
@@ -780,7 +985,7 @@ export default class DevServer {
           req,
           res,
           nowRequestId,
-          nowJson,
+          nowConfig,
           buildResult.routes
         );
         return;
@@ -908,6 +1113,90 @@ export default class DevServer {
     }
   };
 
+  renderDirectoryListing(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    requestPath: string,
+    nowRequestId: string
+  ): boolean {
+    let prefix = requestPath;
+    if (prefix.length > 0 && !prefix.endsWith('/')) {
+      prefix += '/';
+    }
+
+    const dirs: Set<string> = new Set();
+    const files = Array.from(this.buildMatches.keys())
+      .filter(p => {
+        const base = basename(p);
+        if (
+          base === 'now.json' ||
+          base === '.nowignore' ||
+          !p.startsWith(prefix)
+        ) {
+          return false;
+        }
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          const dir = rel.split('/')[0];
+          if (dirs.has(dir)) {
+            return false;
+          }
+          dirs.add(dir);
+        }
+        return true;
+      })
+      .map(p => {
+        let base = basename(p);
+        let ext = '';
+        let type = 'file';
+        let href: string;
+
+        const rel = relative(prefix, p);
+        if (rel.includes('/')) {
+          // Directory
+          type = 'folder';
+          base = rel.split('/')[0];
+          href = `/${prefix}${base}/`;
+        } else {
+          // File / Lambda
+          ext = extname(p).substring(1);
+          href = `/${prefix}${base}`;
+        }
+        return {
+          type,
+          relative: href,
+          ext,
+          title: href,
+          base
+        };
+      });
+
+    if (files.length === 0) {
+      return false;
+    }
+
+    const directory = `/${prefix}`;
+    const paths = [
+      {
+        name: directory,
+        url: requestPath
+      }
+    ];
+    const directoryHtml = directoryTemplate({
+      files,
+      paths,
+      directory
+    });
+    this.setResponseHeaders(res, nowRequestId);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Length',
+      String(Buffer.byteLength(directoryHtml, 'utf8'))
+    );
+    res.end(directoryHtml);
+    return true;
+  }
+
   /**
    * Serve project directory as a static deployment.
    */
@@ -982,6 +1271,7 @@ function serveStaticFile(
   return serveHandler(req, res, {
     public: cwd,
     cleanUrls: false,
+    etag: true,
     ...opts
   });
 }
@@ -1001,16 +1291,16 @@ function close(server: http.Server): Promise<void> {
 /**
  * Generates a (fake) Now tracing ID for an HTTP request.
  *
- * Example: lx24t-1553895116335-784edbc9ef03e2b5534f3dc6f14c90d4
+ * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
 function generateRequestId(): string {
-  return [
+  return `dev1:${[
     Math.random()
       .toString(32)
       .slice(-5),
     Date.now(),
-    randomBytes(16).toString('hex')
-  ].join('-');
+    randomBytes(6).toString('hex')
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
@@ -1128,7 +1418,7 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => minimatch(file, pattern));
+  return files.some(file => file === pattern || minimatch(file, pattern));
 }
 
 function fileChanged(
@@ -1149,23 +1439,4 @@ function fileRemoved(
   delete files[name];
   changed.delete(name);
   removed.add(name);
-}
-
-/**
- * It is a static deployment if `now.json` match one of these:
- *   - no `builds`
- *   - all `builds` have `@now/static` as `use`
- */
-function isStaticDeployment(nowJson: NowConfig): boolean {
-  if (nowJson.builds instanceof Array) {
-    if (
-      nowJson.builds.every(build => {
-        return build.use.split('@')[1] === 'now/static';
-      })
-    ) {
-      return true;
-    }
-    return false;
-  }
-  return true;
 }

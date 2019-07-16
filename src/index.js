@@ -2,7 +2,7 @@ import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
-import mkdirp from 'mkdirp-promise';
+import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
@@ -32,8 +32,8 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
-import metrics from './util/metrics';
-import { GA_TRACKING_ID, SENTRY_DSN } from './util/constants';
+import { SENTRY_DSN } from './util/constants.ts';
+import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -474,7 +474,7 @@ const main = async argv_ => {
     output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
   }
 
-  if (typeof scope === 'string' && targetCommand !== 'login' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
+  if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'dev' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
     const { authConfig: { token } } = ctx;
     const client = new Client({ apiUrl, token });
 
@@ -546,8 +546,9 @@ const main = async argv_ => {
     return 1;
   }
 
-  const metric = metrics(GA_TRACKING_ID, config.token);
+  const metric = metrics();
   let exitCode;
+  const eventCategory = 'Exit Code';
 
   try {
     const start = new Date();
@@ -555,7 +556,7 @@ const main = async argv_ => {
     exitCode = await full(ctx);
     const end = new Date() - start;
 
-    if (config.collectMetrics === undefined || config.collectMetrics === true) {
+    if (shouldCollectMetrics) {
       const category = 'Command Invocation';
 
       metric
@@ -585,13 +586,29 @@ const main = async argv_ => {
       output.debug(err.stack);
       output.error(err.message);
 
+      if (shouldCollectMetrics) {
+        metric
+          .event(eventCategory, '1', pkg.version)
+          .exception(err.message).send();
+      }
+
       return 1;
+    }
+
+    if (shouldCollectMetrics) {
+      metric
+        .event(eventCategory, '1', pkg.version)
+        .exception(err.message).send();
     }
 
     // Otherwise it is an unexpected error and we should show the trace
     // and an unexpected error message
     output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
     return 1;
+  }
+
+  if (shouldCollectMetrics) {
+    metric.event(eventCategory, exitCode, pkg.version).send();
   }
 
   return exitCode;

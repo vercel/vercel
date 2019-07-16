@@ -8,6 +8,7 @@ import { createFunction, initializeRuntime } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
+import which from 'which';
 import ora, { Ora } from 'ora';
 
 import { Output } from '../output';
@@ -42,12 +43,7 @@ const isLogging = new WeakSet<ChildProcess>();
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  const runtime = await initializeRuntime('nodejs8.10');
-  if (!runtime.cacheDir) {
-    throw new Error('nodejs8.10 runtime failed to initialize');
-  }
-  const nodeBin = join(runtime.cacheDir, 'bin', 'node');
-  return nodeBin;
+  return which.sync('node', { nothrow: true }) || process.execPath;
 }
 
 function pipeChildLogging(child: ChildProcess): void {
@@ -90,9 +86,6 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('message', m => {
-    // console.log('got message from builder:', m);
-  });
   buildProcess.on('exit', (code, signal) => {
     output.debug(
       `Build process for ${match.src} exited with ${signal || code}`
@@ -116,7 +109,7 @@ async function createBuildProcess(
 }
 
 export async function executeBuild(
-  nowJson: NowConfig,
+  nowConfig: NowConfig,
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
@@ -182,7 +175,7 @@ export async function executeBuild(
 
     if (isInitialBuild && !debug && process.stdout.isTTY) {
       const logTitle = `${chalk.bold(
-        `Setting up Builder for ${chalk.underline(entrypoint)}`
+        `Preparing ${chalk.underline(entrypoint)} for build`
       )}:`;
       spinner = ora(logTitle).start();
 
@@ -318,13 +311,7 @@ export async function executeBuild(
   }
 
   // Enforce the lambda zip size soft watermark
-  const { maxLambdaSize = '5mb' } = { ...builderConfig, ...config };
-  let maxLambdaBytes: number;
-  if (typeof maxLambdaSize === 'string') {
-    maxLambdaBytes = bytes(maxLambdaSize);
-  } else {
-    maxLambdaBytes = maxLambdaSize;
-  }
+  const maxLambdaBytes = bytes('50mb');
   for (const asset of Object.values(result.output)) {
     if (asset.type === 'Lambda') {
       const size = asset.zipBuffer.length;
@@ -354,7 +341,7 @@ export async function executeBuild(
           MemorySize: 3008,
           Environment: {
             Variables: {
-              ...nowJson.env,
+              ...nowConfig.env,
               ...asset.environment,
               ...env,
               NOW_REGION: 'dev1'
@@ -379,12 +366,13 @@ export async function executeBuild(
 }
 
 export async function getBuildMatches(
-  nowJson: NowConfig,
+  nowConfig: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
-  const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
+  const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
     if (src[0] === '/') {
@@ -394,13 +382,17 @@ export async function getBuildMatches(
       src = src.substring(1);
     }
 
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
+
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
-    const files = await getFiles(cwd, nowJson, opts);
+    const files = await getFiles(cwd, nowConfig, opts);
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,

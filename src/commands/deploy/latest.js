@@ -12,9 +12,9 @@ import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import buildsList from '../../util/output/builds';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
+import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
@@ -23,24 +23,24 @@ import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
 import {
-  UserAborted,
-  WildcardNotAllowed,
-  CantSolveChallenge,
-  DomainConfigurationError,
+  BuildsRateLimited,
+  CertConfigurationError,
+  CertError,
+  DeploymentNotFound,
+  DeploymentPermissionDenied,
+  InvalidDeploymentId,
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
-  DomainsShouldShareRoot,
-  DomainValidationRunning,
   DomainVerificationFailed,
-  TooManyCertificates,
-  TooManyRequests,
   InvalidDomain,
-  DeploymentNotFound,
-  BuildsRateLimited
+  TooManyRequests,
+  UserAborted,
+  DeploymentsRateLimited
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
+import handleCertError from '../../util/certs/handle-cert-error';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -135,13 +135,11 @@ const printDeploymentStatus = async (
   const amount = failedBuils.length;
 
   if (amount > 0) {
-    const name = amount === 1 ? 'failure' : 'failures';
-
-    output.error(`${amount} build ${name} occured.`);
+    output.error('Build failed');
     output.error(
       `Check your logs at https://${url}/_logs or run ${code(
         `now logs ${url}`
-      )}.`
+      )}`
     );
 
     return 1;
@@ -149,17 +147,6 @@ const printDeploymentStatus = async (
 
   output.error(deploymentErrorMsg);
   return 1;
-};
-
-const renderBuilds = (print, list, times, linesPrinted) => {
-  if (linesPrinted !== null) {
-    print(eraseLines(linesPrinted));
-  }
-
-  const { lines, toPrint } = buildsList(list, times, false);
-  print(toPrint);
-
-  return lines;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -217,10 +204,6 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  if ((localConfig.alias || []).length === 0 && argv['--target'] === 'production') {
-    const flag = param('--target production');
-    output.warn(`You specified ${flag} but didn't configure a value for the ${code('alias')} configuration property.`);
-  }
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
@@ -402,22 +385,20 @@ export default async function main(
       return 1;
     }
 
+    if (handleCertError(output, firstDeployCall) === 1) {
+      return 1;
+    }
+
     if (
-      firstDeployCall instanceof WildcardNotAllowed ||
-      firstDeployCall instanceof CantSolveChallenge ||
-      firstDeployCall instanceof DomainConfigurationError ||
       firstDeployCall instanceof DomainNotFound ||
       firstDeployCall instanceof DomainNotVerified ||
       firstDeployCall instanceof DomainPermissionDenied ||
-      firstDeployCall instanceof DomainsShouldShareRoot ||
-      firstDeployCall instanceof DomainValidationRunning ||
       firstDeployCall instanceof DomainVerificationFailed ||
       firstDeployCall instanceof SchemaValidationFailed ||
-      firstDeployCall instanceof TooManyCertificates ||
-      firstDeployCall instanceof TooManyRequests ||
       firstDeployCall instanceof InvalidDomain ||
       firstDeployCall instanceof DeploymentNotFound ||
-      firstDeployCall instanceof BuildsRateLimited
+      firstDeployCall instanceof BuildsRateLimited ||
+      firstDeployCall instanceof DeploymentsRateLimited
     ) {
       handleCreateDeployError(output, firstDeployCall);
       return 1;
@@ -481,19 +462,17 @@ export default async function main(
           paths,
           createArgs
         );
+
+        if (handleCertError(output, secondDeployCall) === 1) {
+          return 1;
+        }
+
         if (
-          secondDeployCall instanceof WildcardNotAllowed ||
-          secondDeployCall instanceof CantSolveChallenge ||
-          secondDeployCall instanceof DomainConfigurationError ||
-          secondDeployCall instanceof DomainNotFound ||
           secondDeployCall instanceof DomainPermissionDenied ||
-          secondDeployCall instanceof DomainsShouldShareRoot ||
-          secondDeployCall instanceof DomainValidationRunning ||
           secondDeployCall instanceof DomainVerificationFailed ||
           secondDeployCall instanceof SchemaValidationFailed ||
-          secondDeployCall instanceof TooManyCertificates ||
-          secondDeployCall instanceof TooManyRequests ||
-          secondDeployCall instanceof DeploymentNotFound
+          secondDeployCall instanceof DeploymentNotFound ||
+          secondDeployCall instanceof DeploymentsRateLimited
         ) {
           handleCreateDeployError(output, secondDeployCall);
           return 1;
@@ -548,10 +527,10 @@ export default async function main(
   const allBuildsTime = stamp();
   const times = {};
   const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-  const deploymentUrl = `/v9/now/deployments/${deployment.id}`;
 
   let builds = [];
   let buildsCompleted = false;
+  let buildSpinner = null;
 
   let deploymentSpinner = null;
   let linesPrinted = null;
@@ -583,7 +562,10 @@ export default async function main(
 
           debug(`Re-rendering builds, because their state changed.`);
 
-          linesPrinted = renderBuilds(print, builds, times, linesPrinted);
+          if (buildSpinner === null) {
+            buildSpinner = wait('Building...');
+          }
+
           buildsCompleted = builds.every(isDone);
 
           if (builds.some(isFailed)) {
@@ -594,7 +576,23 @@ export default async function main(
         }
       }
     } else {
-      const deploymentResponse = await now.fetch(deploymentUrl);
+      const deploymentResponse = handleCertError(
+        output,
+        await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
+      )
+
+      if (deploymentResponse === 1) {
+        return deploymentResponse;
+      }
+
+      if (
+        deploymentResponse instanceof DeploymentNotFound ||
+        deploymentResponse instanceof DeploymentPermissionDenied ||
+        deploymentResponse instanceof InvalidDeploymentId
+      ) {
+        output.error(deploymentResponse.message);
+        return 1;
+      }
 
       if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
         deployment = deploymentResponse;
@@ -613,66 +611,16 @@ export default async function main(
     await sleep(sleepingTime);
   }
 
+  if (typeof buildSpinner === 'function') {
+    buildSpinner();
+  }
+
   return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
 };
 
 function handleCreateDeployError(output, error) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
-    return 1;
-  }
-  if (error instanceof WildcardNotAllowed) {
-    output.error(
-      `Custom suffixes are only allowed for domains in ${chalk.underline(
-        'zeit.world'
-      )}`
-    );
-    return 1;
-  }
-  if (error instanceof CantSolveChallenge) {
-    if (error.meta.type === 'dns-01') {
-      output.error(
-        `The certificate provider could not resolve the DNS queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  This might happen to new domains or domains with recent DNS changes. Please retry later.\n`
-      );
-    } else {
-      output.error(
-        `The certificate provider could not resolve the HTTP queries for ${error
-          .meta.domain}.`
-      );
-      output.print(
-        `  The DNS propagation may take a few minutes, please verify your settings:\n\n`
-      );
-      output.print(`${dnsTable([['', 'ALIAS', 'alias.zeit.co']])}\n`);
-    }
-    return 1;
-  }
-  if (error instanceof DomainConfigurationError) {
-    output.error(
-      `We couldn't verify the propagation of the DNS settings for ${chalk.underline(
-        error.meta.domain
-      )}`
-    );
-    if (error.meta.external) {
-      output.print(
-        `  The propagation may take a few minutes, but please verify your settings:\n\n`
-      );
-      output.print(
-        `${dnsTable([
-          error.meta.subdomain === null
-            ? ['', 'ALIAS', 'alias.zeit.co']
-            : [error.meta.subdomain, 'CNAME', 'alias.zeit.co']
-        ])}\n`
-      );
-    } else {
-      output.print(
-        `  We configured them for you, but the propagation may take a few minutes.\n`
-      );
-      output.print(`  Please try again later.\n`);
-    }
     return 1;
   }
   if (error instanceof DomainVerificationFailed) {
@@ -688,18 +636,6 @@ function handleCreateDeployError(output, error) {
       `You don't have permissions to access the domain used as a suffix ${chalk.underline(
         error.meta.domain
       )}.`
-    );
-    return 1;
-  }
-  if (error instanceof DomainsShouldShareRoot) {
-    output.error(`All given common names should share the same root domain.`);
-    return 1;
-  }
-  if (error instanceof DomainValidationRunning) {
-    output.error(
-      `There is a validation in course for ${chalk.underline(
-        error.meta.domain
-      )}. Wait until it finishes.`
     );
     return 1;
   }
@@ -748,14 +684,6 @@ function handleCreateDeployError(output, error) {
 
     return 1;
   }
-  if (error instanceof TooManyCertificates) {
-    output.error(
-      `Too many certificates already issued for exact set of domains: ${error.meta.domains.join(
-        ', '
-      )}`
-    );
-    return 1;
-  }
   if (error instanceof TooManyRequests) {
     output.error(
       `Too many requests detected for ${error.meta
@@ -763,10 +691,6 @@ function handleCreateDeployError(output, error) {
         long: true
       })}.`
     );
-    return 1;
-  }
-  if (error instanceof DomainNotFound) {
-    output.error(error.message);
     return 1;
   }
   if (error instanceof DomainNotVerified) {
@@ -784,6 +708,10 @@ function handleCreateDeployError(output, error) {
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
     output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    return 1;
+  }
+  if (error instanceof DeploymentsRateLimited) {
+    output.error(error.message);
     return 1;
   }
 

@@ -2,7 +2,7 @@ import getDeploymentByIdOrHost from './get-deployment-by-id-or-host';
 import getDeploymentsByAppName from './get-deployments-by-appname';
 import { Output } from '../output';
 import Client from '../client';
-import { User, Deployment } from '../../types';
+import { User } from '../../types';
 
 export default async function getAppLastDeployment(
   output: Output,
@@ -19,11 +19,7 @@ export default async function getAppLastDeployment(
 
   // Try to fetch deployment details
   if (deploymentItem) {
-    return getDeploymentByIdOrHost(
-      client,
-      contextName,
-      deploymentItem.uid
-    ) as Promise<Deployment>;
+    return getDeploymentByIdOrHost(client, contextName, deploymentItem.uid);
   }
 
   return null;

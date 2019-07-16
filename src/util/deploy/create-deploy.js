@@ -2,6 +2,8 @@ import generateCertForDeploy from './generate-cert-for-deploy';
 import purchaseDomainIfAvailable from '../domains/purchase-domain-if-available';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
+import { NowError } from '../now-error';
+import mapCertError from '../certs/map-cert-error';
 
 export default async function createDeploy(
   output,
@@ -13,6 +15,10 @@ export default async function createDeploy(
   try {
     return await now.create(paths, createArgs);
   } catch (error) {
+    if (error.code === 'rate_limited') {
+      return new ERRORS_TS.DeploymentsRateLimited(error.message);
+    }
+
     // Means that the domain used as a suffix no longer exists
     if (error.code === 'domain_missing') {
       return new ERRORS_TS.DomainNotFound(error.value);
@@ -59,25 +65,19 @@ export default async function createDeploy(
         contextName,
         error.value
       );
-      if (
-        result instanceof ERRORS_TS.WildcardNotAllowed ||
-        result instanceof ERRORS_TS.CantSolveChallenge ||
-        result instanceof ERRORS_TS.DomainConfigurationError ||
-        result instanceof ERRORS_TS.DomainPermissionDenied ||
-        result instanceof ERRORS_TS.DomainsShouldShareRoot ||
-        result instanceof ERRORS_TS.DomainValidationRunning ||
-        result instanceof ERRORS_TS.DomainVerificationFailed ||
-        result instanceof ERRORS_TS.TooManyCertificates ||
-        result instanceof ERRORS_TS.TooManyRequests ||
-        result instanceof ERRORS_TS.InvalidDomain
-      ) {
+      if (result instanceof NowError) {
         return result;
       }
       return createDeploy(output, now, contextName, paths, createArgs);
     }
 
     if (error.code === 'not_found') {
-      return new ERRORS_TS.DeploymentNotFound({ context: contextName })
+      return new ERRORS_TS.DeploymentNotFound({ context: contextName });
+    }
+
+    const certError = mapCertError(error)
+    if (certError) {
+      return certError;
     }
 
     // If the error is unknown, we just throw

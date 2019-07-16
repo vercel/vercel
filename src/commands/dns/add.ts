@@ -1,5 +1,10 @@
 import chalk from 'chalk';
-import { DomainNotFound, DNSPermissionDenied, DNSInvalidPort, DNSInvalidType } from '../../util/errors-ts';
+import {
+  DomainNotFound,
+  DNSPermissionDenied,
+  DNSInvalidPort,
+  DNSInvalidType
+} from '../../util/errors-ts';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';
@@ -7,6 +12,7 @@ import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
+import getDNSData from '../../util/dns/get-dns-data';
 
 type Options = {
   '--debug': boolean;
@@ -18,7 +24,10 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -47,7 +56,12 @@ export default async function add(
   }
 
   const addStamp = stamp();
-  const { domain, data } = parsedParams;
+  const { domain, data: argData } = parsedParams;
+  const data = await getDNSData(output, argData);
+  if (!data) {
+    output.log(`Aborted`);
+    return 1;
+  }
 
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {
@@ -70,7 +84,9 @@ export default async function add(
 
   if (record instanceof DNSInvalidPort) {
     output.error(
-      `Invalid <port> parameter. A number was expected ${chalk.gray(addStamp())}`
+      `Invalid <port> parameter. A number was expected ${chalk.gray(
+        addStamp()
+      )}`
     );
     return 1;
   }
@@ -79,9 +95,9 @@ export default async function add(
     output.error(
       `Invalid <type> parameter "${
         record.meta.type
-      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${
-        chalk.gray(addStamp())
-      }`
+      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${chalk.gray(
+        addStamp()
+      )}`
     );
     return 1;
   }

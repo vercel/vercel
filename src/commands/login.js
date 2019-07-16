@@ -23,7 +23,7 @@ import getNowDir from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
-import loginOrSignup from '../util/login/login-or-signup.ts'
+import executeLogin from '../util/login/login.ts'
 
 const debug = debugFactory('now:sh:login');
 
@@ -189,7 +189,7 @@ const login = async ctx => {
   stopSpinner = wait('Sending you an email');
 
   try {
-    const data = await loginOrSignup(apiUrl, email);
+    const data = await executeLogin(apiUrl, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
