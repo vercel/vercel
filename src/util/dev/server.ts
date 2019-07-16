@@ -389,18 +389,13 @@ export default class DevServer {
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
     let config: NowConfig = this.cachedNowConfig || { version: 2 };
-
-    // We need to delete these properties for zero config to work
-    // with file changes
-    if (this.cachedNowConfig) {
-      delete this.cachedNowConfig.builds;
-      delete this.cachedNowConfig.routes;
-    }
+    let isZeroConfig = true;
 
     try {
       this.output.debug('Reading `now.json` file');
       const nowConfigPath = getNowConfigPath(this.cwd);
       config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
+      isZeroConfig = !(config && Array.isArray(config.builds) && config.builds.length > 0);
     } catch (err) {
       if (err.code === 'ENOENT') {
         if (pkg === null) {
@@ -416,53 +411,55 @@ export default class DevServer {
         throw err;
       }
     }
+    console.error({ isZeroConfig });
 
-    const _apiFiles = await getApiFiles(this.cwd, this.output);
-    const apiFiles = _apiFiles.filter(this.filter);
+    if (isZeroConfig) {
+      // We need to delete these properties for zero config to work
+      // with file changes
+      if (this.cachedNowConfig) {
+        delete this.cachedNowConfig.builds;
+        delete this.cachedNowConfig.routes;
+      }
 
-    this.output.debug(
-      `Found ${_apiFiles.length} files in \`api\` and ` +
-        `filtered out ${_apiFiles.length - apiFiles.length} files`
-    );
+      const _apiFiles = await getApiFiles(this.cwd, this.output);
+      const apiFiles = _apiFiles.filter(this.filter);
 
-    const hasNoBuilds = !config.builds || config.builds.length === 0;
+      this.output.debug(
+        `Found ${_apiFiles.length} files in \`api\` and ` +
+          `filtered out ${_apiFiles.length - apiFiles.length} files`
+      );
 
-    if (apiFiles.length > 0 && hasNoBuilds) {
-      const apiBuilds = await detectApiBuilders(apiFiles);
+      if (apiFiles.length > 0) {
+        const apiBuilds = await detectApiBuilders(apiFiles);
 
-      if (apiBuilds && apiBuilds.length > 0) {
+        if (apiBuilds && apiBuilds.length > 0) {
+          config.builds = config.builds || [];
+          config.builds.push(...apiBuilds);
+        }
+
+        const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
+
+        if (error) {
+          this.output.error(error.message);
+        } else if (defaultRoutes && defaultRoutes.length > 0) {
+          this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
+          config.routes = config.routes || [];
+          config.routes.push(...(defaultRoutes as RouteConfig[]));
+        }
+      }
+
+      if (pkg) {
         config.builds = config.builds || [];
-        config.builds.push(...apiBuilds);
-      }
 
-      const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
+        const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
 
-      if (error) {
-        this.output.error(error.message);
-      } else if (defaultRoutes && defaultRoutes.length > 0) {
-        this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
-        config.routes = config.routes || [];
-        config.routes.push(...(defaultRoutes as RouteConfig[]));
-      }
-    }
+        if (Array.isArray(warnings)) {
+          warnings.forEach(({ message }) => this.output.warn(message));
+        }
 
-    /**
-     * We need to use `hasNoBuilds` because it was created
-     * before the api builders were added.
-     * We also have to add this builder after all
-     * the others to prevent catch all routes etc.
-     */
-    if (pkg && hasNoBuilds) {
-      config.builds = config.builds || [];
-
-      const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
-
-      if (Array.isArray(warnings)) {
-        warnings.forEach(({ message }) => this.output.warn(message));
-      }
-
-      if (staticBuilder) {
-        config.builds.push(staticBuilder);
+        if (staticBuilder) {
+          config.builds.push(staticBuilder);
+        }
       }
     }
 
