@@ -1,0 +1,43 @@
+<%- partial('_partial/head') %>
+<body>
+  <h1>Hexo + Node.js API</h1>
+  <h2>
+    Deployed with
+    <a href="https://zeit.co/docs" target="_blank" rel="noreferrer noopener">ZEIT Now</a>!
+  </h2>
+  <p>
+    <a
+      href="https://github.com/zeit/now-examples/blob/master/hexo-nodee"
+      target="_blank"
+      rel="noreferrer noopener"
+    >This project</a> is a
+    <a href="https://hexo.io/">Hexo</a>
+    app with four directories,
+    <code>/scaffolds</code>
+    for post templates,
+    <code>/source</code> for components and content, <code>/themes</code> for adding themes to your app, and
+    <code>/api</code>
+    which contains a serverless
+    <a href="https://nodejs.org/en/">Node.js</a>
+    function. See
+    <a href="/api/date">
+      <code>api/date</code> for the Date API with Node.js
+    </a>.
+  </p>
+  <br />
+  <h2>The date according to Node.js is:</h2>
+  <p class="date">Loading date...</p>
+  <script>
+    function main() {
+      return fetch('/api/date')
+        .then(function(response) {
+          return response.text();
+        })
+        .then(function(date) {
+          document.querySelector('.date').textContent = date;
+        });
+    }
+    main();
+  </script>
+</body>
+</html>

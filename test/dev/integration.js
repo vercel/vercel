@@ -46,7 +46,7 @@ function validateResponseHeaders(t, res) {
 }
 
 function testFixture(directory) {
-  port += port;
+  port = ++port;
   return {
     dev: execa(binaryPath, ['dev', directory, '-p', port], {
       reject: false,
@@ -79,21 +79,105 @@ test('[now dev] 00-list-directory', async t => {
   }
 });
 
-test('[now dev] 01-nodejs', async t => {
-  const directory = fixture('01-nodejs');
+test('[now dev] 01-node', async t => {
+  const directory = fixture('01-node');
   const { dev, port } = testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`);
+    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
     const response = await result;
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /A simple deployment with the Now API!/gm);
+
+  } finally {
+    dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] 02-angular-node', async t => {
+  const directory = fixture('02-angular-node');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Angular \+ Node.js API/gm);
+
+  } finally {
+    dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] 03-aurelia-node', async t => {
+  const directory = fixture('03-aurelia-node');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const result = await fetchWithRetry(`http://localhost:${port}`, 100);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Aurelia \+ Node.js API/gm);
+
+  } finally {
+    dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] 04-create-react-app-node', async t => {
+  const directory = fixture('03-create-react-app-node');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Create React App \+ Node.js API/gm);
+
+  } finally {
+    dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] 05-gatsby-node', async t => {
+  const directory = fixture('03-gatsby-node');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Gatsby \+ Node.js API/gm);
 
   } finally {
     dev.kill('SIGTERM')
