@@ -96,6 +96,7 @@ export default class DevServer {
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
+  private getNowConfigPromise: Promise<NowConfig> | null;
   private updateBuildersPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -111,6 +112,7 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowConfig = null;
+    this.getNowConfigPromise = null;
     this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
@@ -379,6 +381,18 @@ export default class DevServer {
   }
 
   async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+    if (this.getNowConfigPromise) {
+      return this.getNowConfigPromise;
+    }
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
+    try {
+      return await this.getNowConfigPromise;
+    } finally {
+      this.getNowConfigPromise = null;
+    }
+  }
+
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
