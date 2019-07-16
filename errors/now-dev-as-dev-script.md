@@ -6,4 +6,4 @@ The `package.json` file of the used project invokes `now dev` as `dev` script. T
 
 #### Possible Ways to Fix It
 
-Change the `dev` script inside the `package.json` file. Usually framworks have their own way of entering the developing mode, e.g. `next` for Next.js or `gatsby develop` for Gatsby.
+Adjust the `dev` script inside the `package.json` file to match what your framework uses to begin development mode, e.g. `next` for Next.js or `gatsby develop` for Gatsby.
