@@ -16,10 +16,9 @@ export default async function readPackage(file?: string) {
     return result;
   }
 
-  if (result !== null) {
-    const pkg = result as Package;
-    return pkg;
+  if (result){
+    return result as Package
   }
 
-  return result;
+  return null;
 }

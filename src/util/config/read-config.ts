@@ -12,10 +12,9 @@ export default async function readConfig(file?: string) {
     return result;
   }
 
-  if (result !== null) {
-    const pkg = result as Config;
-    return pkg;
+  if (result) {
+    return result as Config;
   }
 
-  return result;
+  return null;
 }
