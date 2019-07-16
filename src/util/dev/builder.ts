@@ -109,7 +109,7 @@ async function createBuildProcess(
 }
 
 export async function executeBuild(
-  nowJson: NowConfig,
+  nowConfig: NowConfig,
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
@@ -341,7 +341,7 @@ export async function executeBuild(
           MemorySize: 3008,
           Environment: {
             Variables: {
-              ...nowJson.env,
+              ...nowConfig.env,
               ...asset.environment,
               ...env,
               NOW_REGION: 'dev1'
@@ -366,13 +366,13 @@ export async function executeBuild(
 }
 
 export async function getBuildMatches(
-  nowJson: NowConfig,
+  nowConfig: NowConfig,
   cwd: string,
   yarnDir: string,
   output: Output
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
-  const builds = nowJson.builds || [{ src: '**', use: '@now/static' }];
+  const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
     if (src[0] === '/') {
@@ -388,7 +388,7 @@ export async function getBuildMatches(
 
     // TODO: use the `files` map from DevServer instead of hitting the filesystem
     const opts = { output, src, isBuilds: true };
-    const files = await getFiles(cwd, nowJson, opts);
+    const files = await getFiles(cwd, nowConfig, opts);
 
     for (const file of files) {
       src = relative(cwd, file);
