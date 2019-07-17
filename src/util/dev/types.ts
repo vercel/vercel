@@ -15,7 +15,7 @@ export interface EnvConfig {
 
 export interface BuildConfig {
   src: string;
-  use: string;
+  use?: string;
   config?: object;
 }
 
