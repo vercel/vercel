@@ -76,11 +76,11 @@ interface NodeRequire {
 declare const __non_webpack_require__: NodeRequire;
 
 function sortBuilders(buildA: BuildConfig, buildB: BuildConfig) {
-  if (buildA.use.startsWith('@now/static-build')) {
+  if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
     return 1;
   }
 
-  if (buildB.use.startsWith('@now/static-build')) {
+  if (buildB && buildB.use && buildB.use.startsWith('@now/static-build')) {
     return -1;
   }
 
