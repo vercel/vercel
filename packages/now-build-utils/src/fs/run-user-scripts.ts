@@ -18,7 +18,7 @@ function spawnAsync(
     opts = { stdio: 'inherit', cwd, ...opts };
     const child = spawn(command, args, opts);
 
-    if (opts.stdio === 'pipe') {
+    if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
     }
 
@@ -139,11 +139,7 @@ export async function runNpmInstall(
   } else {
     await spawnAsync(
       'yarn',
-      commandArgs.concat([
-        '--ignore-engines',
-        '--cwd',
-        destPath,
-      ]),
+      commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
       destPath,
       opts
     );

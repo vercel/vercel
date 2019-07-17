@@ -203,10 +203,14 @@ export async function build({
 
         const child = spawn('yarn', ['run', devScript], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
-        child.stdout.setEncoding('utf8');
-        child.stdout.pipe(process.stdout);
-        child.stderr.setEncoding('utf8');
-        child.stderr.pipe(process.stderr);
+        if (child.stdout) {
+          child.stdout.setEncoding('utf8');
+          child.stdout.pipe(process.stdout);
+        }
+        if (child.stderr) {
+          child.stderr.setEncoding('utf8');
+          child.stderr.pipe(process.stderr);
+        }
 
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
@@ -221,8 +225,12 @@ export async function build({
                   resolve();
                 }
               };
-              child.stdout.on('data', checkForPort);
-              child.stderr.on('data', checkForPort);
+              if (child.stdout) {
+                child.stdout.on('data', checkForPort);
+              }
+              if (child.stderr) {
+                child.stderr.on('data', checkForPort);
+              }
             }),
             5 * 60 * 1000
           );

@@ -44,7 +44,7 @@ interface ServerLike {
  * error here and force the process to exit so that the lambda invocation
  * returns an Unhandled error quickly.
  */
-process.on('unhandledRejection', (err: Error) => {
+process.on('unhandledRejection', err => {
   console.error('Unhandled rejection:', err);
   process.exit(1);
 });

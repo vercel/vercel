@@ -84,7 +84,7 @@ function setCharset(type: string, charset: string) {
   return format(parsed);
 }
 
-function createETag(body: any, encoding: string | undefined) {
+function createETag(body: any, encoding: 'utf8' | undefined) {
   const etag = require('etag');
   const buf = !Buffer.isBuffer(body) ? Buffer.from(body, encoding) : body;
   return etag(buf, { weak: true });
@@ -92,7 +92,7 @@ function createETag(body: any, encoding: string | undefined) {
 
 function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   let chunk: unknown = body;
-  let encoding: string | undefined;
+  let encoding: 'utf8' | undefined;
 
   switch (typeof chunk) {
     // string defaulting to html
@@ -176,9 +176,12 @@ function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   if (req.method === 'HEAD') {
     // skip body for HEAD
     res.end();
-  } else {
-    // respond
+  } else if (encoding) {
+    // respond with encoding
     res.end(chunk, encoding);
+  } else {
+    // respond without encoding
+    res.end(chunk);
   }
 
   return res;
