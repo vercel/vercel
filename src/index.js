@@ -135,7 +135,7 @@ const main = async argv_ => {
       )
     );
     console.log(
-      info(`Run the ${cmd('now update')} command to update to the latest version`)
+      info(`Run ${cmd('npm i -g now')} to update to the latest version`)
     );
     console.log(
       info(
