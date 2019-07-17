@@ -32,7 +32,7 @@ const help = () => {
   `);
 };
 
-async function getUpgradeCommand() {
+export async function getUpgradeCommand() {
   const isYarn = await pathExists(join(process.cwd(), 'yarn.lock'));
 
   return isYarn
