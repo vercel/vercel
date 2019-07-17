@@ -11,12 +11,12 @@ curl -sfLS https://import.pw > "$IMPORT_BIN"
 chmod +x "$IMPORT_BIN"
 
 # For now only the entrypoint file is copied into the lambda
-mkdir -p "$(dirname "$ENTRYPOINT")"
-cp "$SRC/$ENTRYPOINT" "$ENTRYPOINT"
+mkdir -p "$(dirname "$DIST/$ENTRYPOINT")"
+cp "$ENTRYPOINT" "$DIST/$ENTRYPOINT"
 
 # Copy in the runtime
 cp "$BUILDER/runtime.sh" "$IMPORT_CACHE"
-cp "$BUILDER/bootstrap" .
+cp "$BUILDER/bootstrap" "$DIST"
 
 # Load `import`
 . "$(which import)"
@@ -24,7 +24,7 @@ cp "$BUILDER/bootstrap" .
 # Cache runtime and user dependencies
 echo "Caching imports in \"$ENTRYPOINT\"…"
 . "$IMPORT_CACHE/runtime.sh"
-. "$ENTRYPOINT"
+. "$DIST/$ENTRYPOINT"
 echo "Done caching imports"
 
 # Run user build script
