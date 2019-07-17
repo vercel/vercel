@@ -76,11 +76,11 @@ interface NodeRequire {
 declare const __non_webpack_require__: NodeRequire;
 
 function sortBuilders(buildA: BuildConfig, buildB: BuildConfig) {
-  if (buildA.use.startsWith('@now/static-build')) {
+  if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
     return 1;
   }
 
-  if (buildB.use.startsWith('@now/static-build')) {
+  if (buildB && buildB.use && buildB.use.startsWith('@now/static-build')) {
     return -1;
   }
 
@@ -596,7 +596,7 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowConfig.builds || []).map((b: BuildConfig) => b.use)
+      (nowConfig.builds || []).filter((b: BuildConfig) => b.use).map((b: BuildConfig) => b.use as string)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
