@@ -21,20 +21,20 @@
     "@types/node": "*"
   },
   "devDependencies": {
+    "@babel/core": "7.5.0",
+    "@babel/plugin-transform-modules-commonjs": "7.5.0",
     "@types/content-type": "1.1.3",
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@zeit/ncc": "0.20.4",
+    "@zeit/node-file-trace": "0.2.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
     "node-fetch": "2.6.0",
     "source-map-support": "0.5.12",
     "test-listen": "1.1.0",
-    "@babel/core": "7.5.0",
-    "@babel/plugin-transform-modules-commonjs": "7.5.0",
-    "@zeit/node-file-trace": "0.2.1",
     "typescript": "3.5.2"
   }
 }
