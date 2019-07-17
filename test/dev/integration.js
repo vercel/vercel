@@ -226,26 +226,26 @@ test('[now dev] 07-hexo-node', async t => {
 });
 
 
-test('[now dev] 08-hugo-node', async t => {
-  const directory = fixture('08-hugo-node');
-  const { dev, port } = testFixture(directory);
+// test('[now dev] 08-hugo-node', async t => {
+//   const directory = fixture('08-hugo-node');
+//   const { dev, port } = testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+//   try {
+//     // start `now dev` detached in child_process
+//     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 280);
-    const response = await result;
+//     const result = await fetchWithRetry(`http://localhost:${port}`, 280);
+//     const response = await result;
 
-    validateResponseHeaders(t, response);
+//     validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Hugo \+ Node.js API/gm);
+//     const body = await response.text();
+//     t.regex(body, /Hugo \+ Node.js API/gm);
 
-  } finally {
-    dev.kill('SIGTERM')
-  }
-});
+//   } finally {
+//     dev.kill('SIGTERM')
+//   }
+// });
 
 // test('[now dev] 09-jekyll-node', async t => {
 //   const directory = fixture('09-jekyll-node');
