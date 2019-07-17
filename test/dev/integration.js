@@ -65,7 +65,7 @@ test('[now dev] 00-list-directory', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`);
+    const result = await fetchWithRetry(`http://localhost:${port}`, 60);
     const response = await result;
 
     validateResponseHeaders(t, response);
