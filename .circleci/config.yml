@@ -197,9 +197,13 @@ workflows:
           filters:
             tags:
               only: /^.*canary.*($|\b)/
+            branches:
+              ignore: /.*/
       - publish-stable:
           requires:
             - coverage
           filters:
             tags:
               only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
+            branches:
+              ignore: /.*/
