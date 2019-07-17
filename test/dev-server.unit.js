@@ -1,12 +1,15 @@
 import url from 'url';
 import test from 'ava';
 import path from 'path';
+import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { request, createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
+
+const fixtureDirectory = path.join(__dirname, 'fixtures/unit');
 
 function testFixture(name, fn) {
   return async t => {
@@ -28,7 +31,7 @@ function testFixture(name, fn) {
         origReady(msg);
       };
 
-      const fixturePath = path.join(__dirname, `fixtures/unit/${name}`);
+      const fixturePath = path.join(fixtureDirectory, name);
       server = new DevServer(fixturePath, { output, debug });
 
       await server.start(0);
@@ -223,6 +226,28 @@ test(
 test(
   '[DevServer] Test `@now/static-build` routing',
   testFixture('now-dev-static-build-routing', async (t, server) => {
+    const fixtureName = 'now-dev-static-build-routing';
+    const fixturePath = path.join(fixtureDirectory, 'name');
+
+    {
+      const res = await fetch(`${server.address}/api/date`);
+      const body = await res.text();
+      t.is(body.startsWith('The current date:'), true);
+    }
+
+    {
+      const firstName = path.join(fixturePath, '/api/date.js');
+      const secondName = path.join(fixturePath, '/api/hello.js');
+      await fs.rename(firstName, secondName);
+
+      const res = await fetch(`${server.address}/api/hello`);
+      const body = await res.text();
+      t.is(body.startsWith('The current date:'), true);
+
+      // Revert the changes
+      await fs.rename(secondName, firstName);
+    }
+
     {
       const res = await fetch(`${server.address}/api/date`);
       const body = await res.text();
