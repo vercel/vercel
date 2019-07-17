@@ -375,6 +375,11 @@ export async function getBuildMatches(
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
+
+    if (!use) {
+      continue;
+    }
+
     if (src[0] === '/') {
       // Remove a leading slash so that the globbing is relative to `cwd`
       // instead of the root of the filesystem. This matches the behavior
