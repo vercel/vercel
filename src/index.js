@@ -154,10 +154,7 @@ const main = async argv_ => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(
-        `${require('../package').version}${// $FlowFixMe
-        process.pkg ? '' : ''}`
-      );
+      console.log(require('../package').version);
       return 0;
     }
   }
