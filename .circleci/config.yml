@@ -191,31 +191,15 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - compress:
-          requires:
-            - test-lint
-            - test-integration
-            - test-unit
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      - upload:
-          requires:
-            - compress
-          filters:
-            tags:
-              only: /.*/
       - publish-canary:
           requires:
-            - upload
+            - coverage
           filters:
             tags:
               only: /^.*canary.*($|\b)/
       - publish-stable:
           requires:
-            - upload
+            - coverage
           filters:
             tags:
               only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
