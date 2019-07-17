@@ -64,7 +64,7 @@ export default async function transferIn(
   }
 
   const availableStamp = stamp();
-  const [domainPrice, { transferable }] = await Promise.all([
+  const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
     getDomainPrice(client, domainName, 'renewal'),
     checkTransfer(client, domainName)
   ]);
@@ -89,7 +89,9 @@ export default async function transferIn(
   const authCode = await getAuthCode(opts['--code']);
 
   const shouldTransfer = await promptBool(
-    `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
+    transferPolicy === 'no-change'
+      ? `Transfer now for ${chalk.bold(`$${price}`)}?`
+      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
   );
   if (!shouldTransfer) {
     return 0;
