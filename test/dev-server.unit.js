@@ -1,10 +1,8 @@
-import ms from 'ms';
 import url from 'url';
 import test from 'ava';
 import path from 'path';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
-import sleep from 'then-sleep';
 import listen from 'async-listen';
 import { request, createServer } from 'http';
 import createOutput from '../src/util/output';
@@ -241,7 +239,6 @@ test(
       const firstName = path.join(fixturePath, '/api/date.js');
       const secondName = path.join(fixturePath, '/api/hello.js');
       await fs.rename(firstName, secondName);
-      await sleep(ms('8s'));
 
       const res = await fetch(`${server.address}/api/hello`);
       const body = await res.text();
@@ -249,7 +246,6 @@ test(
 
       // Revert the changes
       await fs.rename(secondName, firstName);
-      await sleep(ms('8s'));
     }
 
     {
