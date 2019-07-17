@@ -227,7 +227,7 @@ test(
   '[DevServer] Test `@now/static-build` routing',
   testFixture('now-dev-static-build-routing', async (t, server) => {
     const fixtureName = 'now-dev-static-build-routing';
-    const fixturePath = path.join(fixtureDirectory, 'name');
+    const fixturePath = path.join(fixtureDirectory, fixtureName);
 
     {
       const res = await fetch(`${server.address}/api/date`);
