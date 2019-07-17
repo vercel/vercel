@@ -344,10 +344,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/build-utils@0.8.4":
-  version "0.8.4"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.8.4.tgz#21efa300bc18801d2f55f041fa499e7efdd5592d"
-  integrity sha512-SUcn+JrVAr9Fk2P9x9kmzN9CyZLbzD8S20Q+qJH5CHPv7qCL5TCZF5z0CDW9pQmwsnD62Q5wIbzqbY0K08Bmeg==
+"@now/build-utils@0.8.7":
+  version "0.8.7"
+  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.8.7.tgz#d335c221ef87955111fe680eb346023fd6b662c9"
+  integrity sha512-BoG90ly+7zAxw8bty5Pi2EEXJDTX8xeMwxRRthHcStc6uMs0Olu7OdXIIGCS8J6lXKowl+lrX6ctRjCgzwGLfg==
   dependencies:
     async-retry "1.2.3"
     async-sema "2.1.4"
