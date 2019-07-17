@@ -129,7 +129,7 @@ test('[now dev] 03-aurelia-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 100);
+    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
     const response = await result;
 
     validateResponseHeaders(t, response);
