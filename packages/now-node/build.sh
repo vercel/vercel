@@ -1,12 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-bridge_entrypoint="$(node -p 'require.resolve("@now/node-bridge")')"
-bridge_defs="$(dirname "$bridge_entrypoint")/bridge.d.ts"
-
-if [ ! -e "$bridge_defs" ]; then
-  yarn install
-fi
+bridge_defs="$(dirname $(pwd))/now-node-bridge/src/bridge.ts"
 
 cp -v "$bridge_defs" src
 
@@ -34,3 +29,15 @@ rm -rf dist/helpers
 ncc build node_modules/source-map-support/register -o dist/source-map-support
 mv dist/source-map-support/index.js dist/source-map-support.js
 rm -rf dist/source-map-support
+
+# build typescript
+ncc build ../../node_modules/typescript/lib/typescript -o dist/typescript
+mv dist/typescript/index.js dist/typescript.js
+mkdir -p dist/typescript/lib
+mv dist/typescript/typescript/lib/*.js dist/typescript/lib/
+mv dist/typescript/typescript/lib/*.d.ts dist/typescript/lib/
+rm -r dist/typescript/typescript
+
+ncc build src/index.ts -o dist/main
+mv dist/main/index.js dist/index.js
+rm -rf dist/main
