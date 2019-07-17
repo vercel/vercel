@@ -1427,16 +1427,6 @@ test('fail `now dev` dev script without now.json', async t => {
   t.true(stderr.includes('must not contain `now dev`'), `Received instead: "${stderr}"`);
 });
 
-// Make sure to run this test last,
-// otherwise it will overwrite the currently installed version
-test('try to update now to canary', async t => {
-  const { code } = await execute(['update', '--channel', 'canary', '--yes']);
-  t.is(code, 0);
-
-  const { stdout } = await execute(['--version']);
-  t.true(stdout.includes('canary'));
-});
-
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
