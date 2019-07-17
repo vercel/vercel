@@ -10,13 +10,8 @@
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint . --ext .js,.ts",
-    "prepublishOnly": "yarn build-download && cp download/default.js download/dist/now",
+    "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "postinstall": "node download/install.js",
-    "gzip": "ls packed/now* | xargs gzip",
-    "bundle": "pkg bin/now.js -c package.json -o packed/now --options no-warnings",
-    "pack": "rm -rf packed && yarn build && yarn bundle",
-    "build-download": "ncc build ./download/src --out ./download/dist",
     "link": "yarn run build-dev && cd link && npm link",
     "build": "node build.js",
     "build-dev": "node build.js --dev",
@@ -48,27 +43,12 @@
     ]
   },
   "bin": {
-    "now": "download/dist/now"
+    "now": "./bin/now.js"
   },
   "files": [
-    "download/dist",
-    "download/install.js"
+    "bin",
+    "dist"
   ],
-  "pkg": {
-    "scripts": [
-      "dist/*.js"
-    ],
-    "assets": [
-      "dist/runtimes",
-      "dist/builders.tar.gz"
-    ],
-    "targets": [
-      "node10.4.1-alpine-x64",
-      "node10.4.1-linux-x64",
-      "node10.4.1-macos-x64",
-      "node10.4.1-win-x64"
-    ]
-  },
   "ava": {
     "compileEnhancements": false,
     "extensions": [
@@ -180,7 +160,6 @@
     "nyc": "13.2.0",
     "ora": "3.4.0",
     "pcre-to-regexp": "0.0.5",
-    "pkg": "4.3.8",
     "pluralize": "7.0.0",
     "pre-commit": "1.2.2",
     "prettier": "1.16.2",
