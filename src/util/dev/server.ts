@@ -596,7 +596,7 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowConfig.builds || []).map((b: BuildConfig) => b.use)
+      (nowConfig.builds || []).filter((b: BuildConfig) => b.use).map((b: BuildConfig) => b.use)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
