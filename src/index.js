@@ -156,7 +156,7 @@ const main = async argv_ => {
     if (argv['--version']) {
       console.log(
         `${require('../package').version}${// $FlowFixMe
-        process.pkg ? '' : chalk.magenta(' (dev)')}`
+        process.pkg ? '' : ''}`
       );
       return 0;
     }
