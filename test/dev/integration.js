@@ -141,26 +141,26 @@ test('[now dev] 02-angular-node', async t => {
 //   }
 // });
 
-test('[now dev] 04-create-react-app-node', async t => {
-  const directory = fixture('04-create-react-app-node');
-  const { dev, port } = testFixture(directory);
+// test('[now dev] 04-create-react-app-node', async t => {
+//   const directory = fixture('04-create-react-app-node');
+//   const { dev, port } = testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+//   try {
+//     // start `now dev` detached in child_process
+//     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+//     const response = await result;
 
-    validateResponseHeaders(t, response);
+//     validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Create React App \+ Node.js API/gm);
+//     const body = await response.text();
+//     t.regex(body, /Create React App \+ Node.js API/gm);
 
-  } finally {
-    dev.kill('SIGTERM')
-  }
-});
+//   } finally {
+//     dev.kill('SIGTERM')
+//   }
+// });
 
 // test('[now dev] 05-gatsby-node', async t => {
 //   const directory = fixture('05-gatsby-node');
