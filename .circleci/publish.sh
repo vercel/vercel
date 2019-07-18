@@ -28,4 +28,7 @@ else
   echo "Publishing stable release"
 fi
 
+# Sometimes this is a false alarm and blocks publish
+git checkout yarn.lock
+
 yarn run lerna publish from-git $npm_tag --yes
