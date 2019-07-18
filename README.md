@@ -6,10 +6,10 @@ This is a monorepo containing the [Official Builders](https://zeit.co/docs/v2/de
 
 There are two Channels:
 
-| Channel | Git Branch | npm dist-tag | use example        |
-| ------- | ---------- | ------------ | ------------------ |
-| Canary  | `canary`   | `@canary`    | `@now/node@canary` |
-| Stable  | `master`   | `@latest`    | `@now/node@latest` |
+| Channel | Git Branch                                                    | npm dist-tag | use example        |
+| ------- | ------------------------------------------------------------- | ------------ | ------------------ |
+| Canary  | [canary](https://github.com/zeit/now-builders/commits/canary) | `@canary`    | `@now/node@canary` |
+| Stable  | [master](https://github.com/zeit/now-builders/commits/master) | `@latest`    | `@now/node@latest` |
 
 All PRs should be submitted to the `canary` branch.
 
@@ -30,14 +30,23 @@ For the Stable Channel, you must do the following:
 - Deploy the modified Builders
 
 ```
-git checkout master
-git pull      # make sure you're up to date
+# View differences excluding "Publish" commits
+git checkout canary && git pull
+git log --pretty=format:"$ad- %s [%an]" | grep -v Publish > ~/Desktop/canary.txt
+git checkout master && git pull
+git log --pretty=format:"$ad- %s [%an]" | grep -v Publish > ~/Desktop/master.txt
+diff ~/Desktop/canary.txt ~/Desktop/master.txt
+
+# Cherry pick all PRs from canary into master ...
 git cherry-pick <PR501_COMMIT_SHA>
 git cherry-pick <PR502_COMMIT_SHA>
 git cherry-pick <PR503_COMMIT_SHA>
 git cherry-pick <PR504_COMMIT_SHA>
-# ... etc ...
+
+# Verify the only difference is "version" in package.json
 git diff origin/canary
+
+# Ship it
 yarn publish-stable
 ```
 
