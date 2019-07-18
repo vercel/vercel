@@ -42,10 +42,9 @@
     ]
   },
   "bin": {
-    "now": "./bin/now.js"
+    "now": "./dist/index.js"
   },
   "files": [
-    "bin",
     "dist"
   ],
   "ava": {

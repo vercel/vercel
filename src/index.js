@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
