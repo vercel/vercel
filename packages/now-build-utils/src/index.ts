@@ -16,8 +16,8 @@ import {
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
-import { detectBuilder, detectApiBuilders } from './detect-builder';
-import { detectApiRoutes } from './detect-routes';
+import { detectBuilders } from './detect-builders';
+import { detectRoutes } from './detect-routes';
 
 export {
   FileBlob,
@@ -38,9 +38,8 @@ export {
   getSpawnOptions,
   streamToBuffer,
   shouldServe,
-  detectBuilder,
-  detectApiBuilders,
-  detectApiRoutes,
+  detectBuilders,
+  detectRoutes,
 };
 
 export * from './types';
