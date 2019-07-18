@@ -1371,7 +1371,8 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
 test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = 'No example for example-404';
+  const goal =
+    '> Error! No example found for example-404, run `now init` to see the list of available examples.';
 
   const { stdout, code } = await execute(['init', 'example-404'], { cwd });
 
