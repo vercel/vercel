@@ -604,7 +604,11 @@ export default async function main(
 
         break;
       } else if (!deploymentSpinner) {
-        deploymentSpinner = wait('Waiting for deployment to be ready');
+        if (typeof buildSpinner === 'function') {
+          buildSpinner();
+        }
+
+        deploymentSpinner = wait('Finalizing...');
       }
     }
 
