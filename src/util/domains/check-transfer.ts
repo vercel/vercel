@@ -13,6 +13,12 @@ type Response = {
   transferable: boolean;
   status: Status;
   reason: string;
+  transferPolicy:
+    | 'charge-and-renew'
+    | 'not-supported'
+    | 'no-change'
+    | 'new-term'
+    | null;
 };
 
 export default async function checkTransfer(client: Client, name: string) {
