@@ -5,7 +5,6 @@ import getAppName from '../deploy/get-app-name';
 import fetchDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
 import wait from '../output/wait';
 import Client from '../client';
-import cmd from '../output/cmd';
 import { Output } from '../output';
 import { User, Config } from '../../types';
 
@@ -18,8 +17,6 @@ export default async function getDeploymentForAlias(
   contextName: string,
   localConfig: Config
 ) {
-  output.warn(`The ${cmd('now alias')} command was deprecated in favour of ${cmd('now --target production')}.`);
-
   const cancelWait = wait(
     `Fetching deployment to alias in ${chalk.bold(contextName)}`
   );
