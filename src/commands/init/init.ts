@@ -68,8 +68,7 @@ export default async function init(
     if (oldExample.suggestions.length === 1) {
       return extractExample(oldExample.suggestions[0], dir, force);
     }
-
-    const chosen = await chooseFromDropdown(oldExample.suggestions);
+    const chosen = await chooseFromDropdown(oldExample.suggestions, 'No example found. Suggestions:');
 
     if (!chosen) {
       output.log('Aborted');
@@ -117,7 +116,7 @@ async function fetchExampleList() {
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(exampleList: string[]) {
+async function chooseFromDropdown(exampleList: string[], message='Select example:') {
   const choices = exampleList.map(name => ({
     name,
     value: name,
@@ -125,7 +124,7 @@ async function chooseFromDropdown(exampleList: string[]) {
   }));
 
   return listInput({
-    message: 'Select example:',
+    message,
     separator: false,
     choices
   });
