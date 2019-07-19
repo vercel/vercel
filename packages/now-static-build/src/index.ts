@@ -139,6 +139,9 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
+      // `public` is the default for zero config
+      distPath = path.join(workPath, path.dirname(entrypoint), 'public');
+
       const dependencies = Object.assign(
         {},
         pkg.dependencies,

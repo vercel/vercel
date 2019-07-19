@@ -3,6 +3,6 @@
     "cowsay": "^1.3.1"
   },
   "scripts": {
-    "build": "mkdir dist && cowsay cow:RANDOMNESS_PLACEHOLDER > dist/index.txt"
+    "build": "mkdir public && cowsay cow:RANDOMNESS_PLACEHOLDER > public/index.txt"
   }
 }

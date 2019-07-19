@@ -3,6 +3,6 @@
     "yodasay": "^1.1.6"
   },
   "scripts": {
-    "build": "mkdir dist && yodasay yoda:RANDOMNESS_PLACEHOLDER > dist/index.txt"
+    "build": "mkdir public && yodasay yoda:RANDOMNESS_PLACEHOLDER > public/index.txt"
   }
 }
