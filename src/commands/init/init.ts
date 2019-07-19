@@ -25,11 +25,11 @@ type Options = {
 
 type Example = {
   name: string,
-  found: boolean,
+  visible: boolean,
   suggestions: string[]
 }
 
-const EXAMPLE_API = 'https://api-examples-8n760qy10.zeit.sh'; // TODO revert
+const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
 export default async function init(
   ctx: NowContext,
@@ -46,7 +46,7 @@ export default async function init(
     throw new Error(`Could not fetch example list.`);
   }
 
-  const exampleList = examples.filter(x => x.found).map(x => x.name);
+  const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
     const chosen = await chooseFromDropdown('Select example:', exampleList);
@@ -63,7 +63,7 @@ export default async function init(
     return extractExample(name, dir, force);
   }
 
-  const oldExample = examples.find(x => !x.found && x.name === name);
+  const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
     const chosen = await chooseFromDropdown('Not found. Select a suggestion:', oldExample.suggestions, );
 
