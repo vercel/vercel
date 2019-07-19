@@ -132,19 +132,13 @@ async function extractExample(name: string, dir: string, force?: boolean) {
         name
       )}" example in ${chalk.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
-      const developHint =
-        folderRel === ''
-          ? listItem(`To develop, run ${cmd('now dev')}.`)
-          : listItem(
-              `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd('now dev')}.`
-            );
       const deployHint =
         folderRel === ''
           ? listItem(`To deploy, run ${cmd('now')}.`)
           : listItem(
               `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`
             );
-      console.log(success(`${successLog}\n${developHint}\n${deployHint}`));
+      console.log(success(`${successLog}\n${deployHint}`));
       return 0;
     })
     .catch(e => {
@@ -191,7 +185,11 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
  * Guess which example user try to init
  */
 async function guess(exampleList: string[], name: string, dir: string) {
-  const GuessError = new Error(`No example for ${chalk.bold(name)}.`);
+  const GuessError = new Error(
+    `No example found for ${chalk.bold(name)}, run ${cmd(
+      `now init`
+    )} to see the list of available examples.`
+  );
 
   if (process.stdout.isTTY !== true) {
     throw GuessError;
