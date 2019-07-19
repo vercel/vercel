@@ -65,7 +65,7 @@ export default async function init(
 
   const oldExample = examples.find(x => !x.found && x.name === name);
   if (oldExample) {
-    const chosen = await chooseFromDropdown(oldExample.suggestions, 'No found. Select a suggestion:');
+    const chosen = await chooseFromDropdown(oldExample.suggestions, 'Not found. Select a suggestion:');
 
     if (!chosen) {
       output.log('Aborted');
