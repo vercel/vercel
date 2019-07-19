@@ -1279,38 +1279,39 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-const verifyExampleApollo = (cwd, dir) =>
+const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'now.json')) &&
-  fs.existsSync(path.join(cwd, dir, 'index.js'));
+  fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
+  fs.existsSync(path.join(cwd, dir, 'angular.json'));
 const verifyExampleAmp = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'favicon.png')) &&
   fs.existsSync(path.join(cwd, dir, 'index.html')) &&
   fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
   fs.existsSync(path.join(cwd, dir, 'now.json'));
 
-test('initialize example "apollo"', async t => {
+test('initialize example "angular"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example in';
+  const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, code } = await execute(['init', 'apollo'], { cwd });
+  const { stdout, code } = await execute(['init', 'angular'], { cwd });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd, 'apollo'));
+  t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
-test('initialize example ("apollo") to specified directory', async t => {
+test('initialize example ("angular") to specified directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example in';
+  const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, code } = await execute(['init', 'apollo', 'apo'], { cwd });
+  const { stdout, code } = await execute(['init', 'angular', 'ang'], { cwd });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd, 'apo'));
+  t.true(verifyExampleAngular(cwd, 'ang'));
 });
 
 test('initialize selected example ("amp")', async t => {
@@ -1328,15 +1329,15 @@ test('initialize selected example ("amp")', async t => {
 test('initialize example to existing directory with "-f"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "apollo" example in';
+  const goal = '> Success! Initialized "angular" example in';
 
-  createDirectory(path.join(cwd, 'apollo'));
-  createFile(path.join(cwd, 'apollo', '.gitignore'));
-  const { stdout, code } = await execute(['init', 'apollo', '-f'], { cwd });
+  createDirectory(path.join(cwd, 'angular'));
+  createFile(path.join(cwd, 'angular', '.gitignore'));
+  const { stdout, code } = await execute(['init', 'angular', '-f'], { cwd });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleApollo(cwd, 'apollo'));
+  t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
 test('try to initialize example to existing directory', async t => {
