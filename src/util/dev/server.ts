@@ -474,7 +474,9 @@ export default class DevServer {
       }
     }
 
-    if (Array.isArray(config.builds)) {
+    if (!config.builds || config.builds.length === 0) {
+      this.output.note(`Serving all files as static`);
+    } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
@@ -495,9 +497,7 @@ export default class DevServer {
       pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.note(
-          'No `package.json` file present, trying to find `now.json`'
-        );
+        this.output.debug('No `package.json` file present');
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
           `There is a syntax error in the \`package.json\` file: ${err.message}`
