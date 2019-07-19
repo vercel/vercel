@@ -474,7 +474,9 @@ export default class DevServer {
       }
     }
 
-    if (Array.isArray(config.builds)) {
+    if (!config.builds || config.builds.length === 0) {
+      this.output.note(`Serving all files as static`);
+    } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
