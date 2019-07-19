@@ -23,7 +23,13 @@ type Options = {
   '-f': boolean;
 };
 
-const EXAMPLE_API = 'https://now-example-files.zeit.sh';
+type Example = {
+  name: string,
+  found: boolean,
+  suggestions: string[]
+}
+
+const EXAMPLE_API = 'https://api-examples-527czhfis.zeit.sh'; // TODO revert
 
 export default async function init(
   ctx: NowContext,
@@ -73,14 +79,18 @@ async function fetchExampleList() {
   const url = `${EXAMPLE_API}/list.json`;
 
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, {
+      headers: {
+        'x-api-examples-version': '2'
+      }
+    });
     stopSpinner();
 
     if (resp.status !== 200) {
       throw new Error(`Failed fetching list.json (${resp.statusText}).`);
     }
 
-    return resp.json();
+    return await resp.json() as Example[];
   } catch (e) {
     stopSpinner();
   }
@@ -89,11 +99,11 @@ async function fetchExampleList() {
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(exampleList: string[]) {
-  const choices = exampleList.map(name => ({
-    name,
-    value: name,
-    short: name
+async function chooseFromDropdown(exampleList: Example[]) {
+  const choices = exampleList.filter(example => example.found).map(example => ({
+    name: example.name,
+    value: example.name,
+    short: example.name
   }));
 
   return listInput({
