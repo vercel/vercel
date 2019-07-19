@@ -31,6 +31,9 @@ const pickUrl = stdout => {
   return lines[lines.length - 1];
 };
 
+const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
+const createDirectory = dest => fs.mkdirSync(dest);
+
 const waitForDeployment = async href => {
   // eslint-disable-next-line
   while (true) {
@@ -43,7 +46,7 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenWithRetry (url, retries = 3) {
+function fetchTokenWithRetry(url, retries = 3) {
   return new Promise(async (resolve, reject) => {
     try {
       const res = await fetch(url);
@@ -64,9 +67,9 @@ function fetchTokenWithRetry (url, retries = 3) {
   });
 }
 
-function fetchTokenInformation (token, retries = 3) {
+function fetchTokenInformation(token, retries = 3) {
   return new Promise(async (resolve, reject) => {
-    const url = `https://api.zeit.co/www/user`
+    const url = `https://api.zeit.co/www/user`;
     try {
       const res = await fetch(url, {
         headers: {
@@ -96,8 +99,8 @@ const context = {};
 
 const defaultOptions = { reject: false };
 const defaultArgs = [];
-let email
-let contextName
+let email;
+let contextName;
 
 let tmpDir;
 
@@ -120,14 +123,17 @@ test.before(async () => {
     );
 
     if (!fs.existsSync(location)) {
-      await createDirectory(location)
+      await createDirectory(location);
     }
-    await fs.promises.writeFile(path.join(location, `auth.json`), JSON.stringify({ token }))
+    await fs.promises.writeFile(
+      path.join(location, `auth.json`),
+      JSON.stringify({ token })
+    );
 
-    const user = await fetchTokenInformation(token)
+    const user = await fetchTokenInformation(token);
 
-    email = user.email
-    contextName = `${user.email.split('@')[0]}`
+    email = user.email;
+    contextName = `${user.email.split('@')[0]}`;
 
     prepareFixtures(contextName);
   } catch (err) {
@@ -291,7 +297,9 @@ test('create alias for deployment', async t => {
     }
   );
 
-  const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
+  const goal = `> Success! https://${hosts.alias} now points to https://${
+    hosts.deployment
+  }`;
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
@@ -761,7 +769,11 @@ test('ensure we render a warning for deployments with no files', async t => {
   );
 
   // Ensure the warning is printed
-  t.true(stderr.includes('> WARN! There are no files (or only files starting with a dot) inside your deployment.'));
+  t.true(
+    stderr.includes(
+      '> WARN! There are no files (or only files starting with a dot) inside your deployment.'
+    )
+  );
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -986,7 +998,11 @@ test('ensure we are getting a warning for the old team flag', async t => {
   );
 
   // Ensure the warning is printed
-  t.true(stderr.includes('WARN! The "--team" flag is deprecated. Please use "--scope" instead.'));
+  t.true(
+    stderr.includes(
+      'WARN! The "--team" flag is deprecated. Please use "--scope" instead.'
+    )
+  );
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1014,7 +1030,15 @@ test('deploy multiple static files with custom scope', async t => {
 
   const { stdout, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, '--scope', email, ...defaultArgs],
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '--scope',
+      email,
+      ...defaultArgs
+    ],
     {
       reject: false
     }
@@ -1255,8 +1279,6 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest);
 const verifyExampleApollo = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'now.json')) &&
@@ -1337,7 +1359,8 @@ test('try to initialize example to existing directory', async t => {
 test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Error! No example for noce.';
+  const goal =
+    '> Error! No example found for noce, run `now init` to see the list of available examples.';
 
   const { stdout, code } = await execute(['init', 'noce'], { cwd });
 
@@ -1348,7 +1371,8 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
 test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = 'No example for example-404';
+  const goal =
+    '> Error! No example found for example-404, run `now init` to see the list of available examples.';
 
   const { stdout, code } = await execute(['init', 'example-404'], { cwd });
 
@@ -1360,7 +1384,9 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
-  const { name } = JSON.parse(fs.readFileSync(path.join(firstDeployment, 'now.json')));
+  const { name } = JSON.parse(
+    fs.readFileSync(path.join(firstDeployment, 'now.json'))
+  );
   const url = `https://${name}.user.now.sh`;
 
   {
@@ -1391,7 +1417,9 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(
       result.name,
       'now-revert-alias-2',
-      `[Second run] Received ${result.name} instead on ${url} (${deploymentUrl})`
+      `[Second run] Received ${
+        result.name
+      } instead on ${url} (${deploymentUrl})`
     );
   }
 
@@ -1418,12 +1446,15 @@ test('whoami', async t => {
   t.is(stdout, contextName);
 });
 
-test('try to update now to canary', async t => {
-  const { code } = await execute(['update', '--channel', 'canary', '--yes']);
-  t.is(code, 0);
+test('fail `now dev` dev script without now.json', async t => {
+  const deploymentPath = fixture('now-dev-fail-dev-script');
+  const { code, stderr } = await execute(['dev', deploymentPath]);
 
-  const { stdout } = await execute(['--version']);
-  t.true(stdout.includes('canary'));
+  t.is(code, 1);
+  t.true(
+    stderr.includes('must not contain `now dev`'),
+    `Received instead: "${stderr}"`
+  );
 });
 
 test.after.always(async () => {

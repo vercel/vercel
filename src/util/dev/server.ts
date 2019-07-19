@@ -75,6 +75,18 @@ interface NodeRequire {
 
 declare const __non_webpack_require__: NodeRequire;
 
+function sortBuilders(buildA: BuildConfig, buildB: BuildConfig) {
+  if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
+    return 1;
+  }
+
+  if (buildB && buildB.use && buildB.use.startsWith('@now/static-build')) {
+    return -1;
+  }
+
+  return 0;
+}
+
 export default class DevServer {
   public cwd: string;
   public debug: boolean;
@@ -96,6 +108,7 @@ export default class DevServer {
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
+  private getNowConfigPromise: Promise<NowConfig> | null;
   private updateBuildersPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -111,6 +124,7 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowConfig = null;
+    this.getNowConfigPromise = null;
     this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
@@ -304,6 +318,11 @@ export default class DevServer {
         this.buildMatches.set(match.src, match);
       }
     }
+
+    // Sort build matches to make sure `@now/static-build` is always last
+    this.buildMatches = new Map([...this.buildMatches.entries()].sort((matchA, matchB) => {
+      return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
+    }));
   }
 
   async invalidateBuildMatches(
@@ -379,6 +398,18 @@ export default class DevServer {
   }
 
   async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+    if (this.getNowConfigPromise) {
+      return this.getNowConfigPromise;
+    }
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
+    try {
+      return await this.getNowConfigPromise;
+    } finally {
+      this.getNowConfigPromise = null;
+    }
+  }
+
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
@@ -469,17 +500,7 @@ export default class DevServer {
     if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
-      config.builds.sort((buildA, buildB) => {
-        if (buildA.use.startsWith('@now/static-build')) {
-          return 1;
-        }
-
-        if (buildB.use.startsWith('@now/static-build')) {
-          return -1;
-        }
-
-        return 0;
-      });
+      config.builds.sort(sortBuilders);
     }
 
     this.validateNowConfig(config);
@@ -575,7 +596,7 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowConfig.builds || []).map((b: BuildConfig) => b.use)
+      (nowConfig.builds || []).filter((b: BuildConfig) => b.use).map((b: BuildConfig) => b.use as string)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
@@ -945,6 +966,7 @@ export default class DevServer {
       requestPath,
       this
     );
+
     if (!match) {
       if (!this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
         await this.send404(req, res, nowRequestId);

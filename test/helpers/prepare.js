@@ -198,6 +198,13 @@ RUN echo $NONCE > /public/index.html
     'now-revert-alias-2': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
       'now.json': getRevertAliasConfigFile()
+    },
+    'now-dev-fail-dev-script': {
+      'package.json': JSON.stringify({
+        scripts: {
+          dev: 'now dev'
+        }
+      }, null, 2)
     }
   };
 

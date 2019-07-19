@@ -11,14 +11,14 @@ type Package = {
 export default async function readPackage(file?: string) {
   const pkgFilePath = file || path.resolve(process.cwd(), 'package.json');
   const result = await readJSONFile(pkgFilePath);
+
   if (result instanceof CantParseJSONFile) {
     return result;
   }
 
-  if (result !== null) {
-    const pkg = result as Package;
-    return pkg;
+  if (result){
+    return result as Package
   }
 
-  return result;
+  return null;
 }
