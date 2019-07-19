@@ -1284,11 +1284,6 @@ const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'now.json')) &&
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
   fs.existsSync(path.join(cwd, dir, 'angular.json'));
-const verifyExampleAmp = (cwd, dir) =>
-  fs.existsSync(path.join(cwd, dir, 'favicon.png')) &&
-  fs.existsSync(path.join(cwd, dir, 'index.html')) &&
-  fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
-  fs.existsSync(path.join(cwd, dir, 'now.json'));
 
 test('initialize example "angular"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
@@ -1314,16 +1309,16 @@ test('initialize example ("angular") to specified directory', async t => {
   t.true(verifyExampleAngular(cwd, 'ang'));
 });
 
-test('initialize selected example ("amp")', async t => {
+test('initialize selected example ("angular")', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "amp" example in';
+  const goal = '> Success! Initialized "angular" example in';
 
   const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
-  t.true(verifyExampleAmp(cwd, 'amp'));
+  t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
 test('initialize example to existing directory with "-f"', async t => {
@@ -1344,11 +1339,11 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! Destination path "apollo" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    '> Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
 
-  createDirectory(path.join(cwd, 'apollo'));
-  createFile(path.join(cwd, 'apollo', '.gitignore'));
-  const { stdout, code } = await execute(['init', 'apollo'], {
+  createDirectory(path.join(cwd, 'angular'));
+  createFile(path.join(cwd, 'angular', '.gitignore'));
+  const { stdout, code } = await execute(['init', 'angular'], {
     cwd,
     input: '\n'
   });
