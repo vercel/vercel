@@ -56,13 +56,17 @@ async function downloadInstallAndBundle({
   meta,
 }: DownloadOptions) {
   console.log('downloading user files...');
+  const downloadTime = Date.now();
   const downloadedFiles = await download(files, workPath, meta);
+  console.log(`download complete [${Date.now() - downloadTime}ms]`);
 
   console.log("installing dependencies for user's code...");
+  const installTime = Date.now();
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(entrypointFsDirname);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   await runNpmInstall(entrypointFsDirname, ['--prefer-offline'], spawnOpts);
+  console.log(`install complete [${Date.now() - installTime}ms]`);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
@@ -72,8 +76,7 @@ async function compile(
   workPath: string,
   entrypointPath: string,
   entrypoint: string,
-  config: CompilerConfig,
-  { isDev, filesChanged, filesRemoved }: Meta
+  config: CompilerConfig
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -294,16 +297,19 @@ export async function build({
   });
 
   console.log('running user script...');
+  const runScriptTime = Date.now();
   await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
+  console.log(`script complete [${Date.now() - runScriptTime}ms]`);
 
   console.log('tracing input files...');
+  const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
     workPath,
     entrypointPath,
     entrypoint,
-    config,
-    meta
+    config
   );
+  console.log(`trace complete [${Date.now() - traceTime}ms]`);
 
   const launcherFiles: Files = {
     [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
