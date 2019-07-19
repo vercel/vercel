@@ -1281,7 +1281,6 @@ test('try to deploy with non-existing team', async t => {
 
 const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
-  fs.existsSync(path.join(cwd, dir, 'now.json')) &&
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
   fs.existsSync(path.join(cwd, dir, 'angular.json'));
 
