@@ -23,6 +23,12 @@ type Options = {
   '-f': boolean;
 };
 
+type Example = {
+  name: string,
+  visible: boolean,
+  suggestions: string[]
+}
+
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
 export default async function init(
@@ -34,14 +40,16 @@ export default async function init(
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 
-  const exampleList = await fetchExampleList();
+  const examples = await fetchExampleList();
 
-  if (!exampleList) {
-    throw new Error(`Could not get examle list.`);
+  if (!examples) {
+    throw new Error(`Could not fetch example list.`);
   }
 
+  const exampleList = examples.filter(x => x.visible).map(x => x.name);
+
   if (!name) {
-    const chosen = await chooseFromDropdown(exampleList);
+    const chosen = await chooseFromDropdown('Select example:', exampleList);
 
     if (!chosen) {
       output.log('Aborted');
@@ -55,7 +63,19 @@ export default async function init(
     return extractExample(name, dir, force);
   }
 
-  const found = await guess(exampleList, name, dir);
+  const oldExample = examples.find(x => !x.visible && x.name === name);
+  if (oldExample) {
+    const chosen = await chooseFromDropdown('Not found. Select a suggestion:', oldExample.suggestions, );
+
+    if (!chosen) {
+      output.log('Aborted');
+      return 0;
+    }
+
+    return extractExample(chosen, dir, force);
+  }
+
+  const found = await guess(exampleList, name);
 
   if (typeof found === 'string') {
     return extractExample(found, dir, force);
@@ -70,7 +90,7 @@ export default async function init(
  */
 async function fetchExampleList() {
   const stopSpinner = wait('Fetching examples');
-  const url = `${EXAMPLE_API}/list.json`;
+  const url = `${EXAMPLE_API}/v2/list.json`;
 
   try {
     const resp = await fetch(url);
@@ -80,7 +100,7 @@ async function fetchExampleList() {
       throw new Error(`Failed fetching list.json (${resp.statusText}).`);
     }
 
-    return resp.json();
+    return await resp.json() as Example[];
   } catch (e) {
     stopSpinner();
   }
@@ -89,7 +109,7 @@ async function fetchExampleList() {
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(exampleList: string[]) {
+async function chooseFromDropdown(message: string, exampleList: string[]) {
   const choices = exampleList.map(name => ({
     name,
     value: name,
@@ -97,7 +117,7 @@ async function chooseFromDropdown(exampleList: string[]) {
   }));
 
   return listInput({
-    message: 'Select example:',
+    message,
     separator: false,
     choices
   });
@@ -110,7 +130,7 @@ async function extractExample(name: string, dir: string, force?: boolean) {
   const folder = prepareFolder(process.cwd(), dir || name, force);
   const stopSpinner = wait(`Fetching ${name}`);
 
-  const url = `${EXAMPLE_API}/download/${name}.tar.gz`;
+  const url = `${EXAMPLE_API}/v2/download/${name}.tar.gz`;
 
   return fetch(url)
     .then(async resp => {
@@ -184,7 +204,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 /**
  * Guess which example user try to init
  */
-async function guess(exampleList: string[], name: string, dir: string) {
+async function guess(exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${cmd(
       `now init`
