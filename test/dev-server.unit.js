@@ -259,3 +259,37 @@ test(
     }
   })
 );
+
+test(
+  '[DevServer] Test `public` directory with zero config',
+  testFixture('now-dev-api-with-public', async (t, server) => {
+    {
+      const res = await fetch(`${server.address}/api/user`);
+      const body = await res.text();
+      t.is(body, 'hello:user');
+    }
+
+    {
+      const res = await fetch(`${server.address}/`);
+      const body = await res.text();
+      t.is(body.startsWith('<h1>hello world</h1>'), true);
+    }
+  })
+);
+
+test(
+  '[DevServer] Test static files with zero config',
+  testFixture('now-dev-api-with-static', async (t, server) => {
+    {
+      const res = await fetch(`${server.address}/api/user`);
+      const body = await res.text();
+      t.is(body, 'bye:user');
+    }
+
+    {
+      const res = await fetch(`${server.address}/`);
+      const body = await res.text();
+      t.is(body.startsWith('<h1>goodbye world</h1>'), true);
+    }
+  })
+);

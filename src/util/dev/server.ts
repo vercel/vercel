@@ -18,9 +18,8 @@ import directoryTemplate from 'serve-handler/src/directory';
 import {
   FileFsRef,
   PackageJson,
-  detectBuilder,
-  detectApiBuilders,
-  detectApiRoutes
+  detectBuilders,
+  detectRoutes
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -31,7 +30,7 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import {
   createIgnore,
   staticFiles as getFiles,
-  getApiFiles
+  getAllProjectFiles
 } from '../get-files';
 
 import isURL from './is-url';
@@ -434,11 +433,7 @@ export default class DevServer {
       config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        if (pkg === null) {
-          this.output.note(
-            'No `now.json` file present, serving all files as static'
-          );
-        }
+        this.output.debug('No `now.json` file present');
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
           `There is a syntax error in the \`now.json\` file: ${err.message}`
@@ -448,52 +443,34 @@ export default class DevServer {
       }
     }
 
-    const _apiFiles = await getApiFiles(this.cwd, this.output);
-    const apiFiles = _apiFiles.filter(this.filter);
+    // no builds -> zero config
+    if (!config.builds || config.builds.length === 0) {
+      const allFiles = await getAllProjectFiles(this.cwd, this.output);
+      const files = allFiles.filter(this.filter);
 
-    this.output.debug(
-      `Found ${_apiFiles.length} files in \`api\` and ` +
-        `filtered out ${_apiFiles.length - apiFiles.length} files`
-    );
+      this.output.debug(
+        `Found ${allFiles.length} and ` +
+          `filtered out ${allFiles.length - files.length} files`
+      );
 
-    const hasNoBuilds = !config.builds || config.builds.length === 0;
+      const { builders, warnings } = await detectBuilders(files, pkg);
 
-    if (apiFiles.length > 0 && hasNoBuilds) {
-      const apiBuilds = await detectApiBuilders(apiFiles);
+      if (builders) {
+        const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
 
-      if (apiBuilds && apiBuilds.length > 0) {
+        if (warnings) {
+          warnings.forEach(({ message }) => this.output.warn(message));
+        }
+
         config.builds = config.builds || [];
-        config.builds.push(...apiBuilds);
-      }
+        config.builds.push(...builders);
 
-      const { defaultRoutes, error } = await detectApiRoutes(apiFiles);
-
-      if (error) {
-        this.output.error(error.message);
-      } else if (defaultRoutes && defaultRoutes.length > 0) {
-        this.output.debug(`Found ${defaultRoutes.length} routes for \`api\``);
-        config.routes = config.routes || [];
-        config.routes.push(...(defaultRoutes as RouteConfig[]));
-      }
-    }
-
-    /**
-     * We need to use `hasNoBuilds` because it was created
-     * before the api builders were added.
-     * We also have to add this builder after all
-     * the others to prevent catch all routes etc.
-     */
-    if (pkg && hasNoBuilds) {
-      config.builds = config.builds || [];
-
-      const { builder: staticBuilder, warnings } = await detectBuilder(pkg);
-
-      if (Array.isArray(warnings)) {
-        warnings.forEach(({ message }) => this.output.warn(message));
-      }
-
-      if (staticBuilder) {
-        config.builds.push(staticBuilder);
+        if (routesError) {
+          this.output.error(routesError.message);
+        } else {
+          config.routes = config.routes || [];
+          config.routes.push(...defaultRoutes as RouteConfig[]);
+        }
       }
     }
 
