@@ -40,11 +40,13 @@ export default async function init(
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 
-  const exampleList = await fetchExampleList();
+  const examples = await fetchExampleList();
 
-  if (!exampleList) {
-    throw new Error(`Could not get examle list.`);
+  if (!examples) {
+    throw new Error(`Could not fetch example list.`);
   }
+
+  const exampleList = examples.filter(x => x.found).map(x => x.name);
 
   if (!name) {
     const chosen = await chooseFromDropdown(exampleList);
@@ -61,7 +63,23 @@ export default async function init(
     return extractExample(name, dir, force);
   }
 
-  const found = await guess(exampleList, name, dir);
+  const oldExample = examples.find(x => !x.found && x.name === name);
+  if (oldExample) {
+    if (oldExample.suggestions.length === 1) {
+      return extractExample(oldExample.suggestions[0], dir, force);
+    }
+
+    const chosen = await chooseFromDropdown(oldExample.suggestions);
+
+    if (!chosen) {
+      output.log('Aborted');
+      return 0;
+    }
+
+    return extractExample(chosen, dir, force);
+  }
+
+  const found = await guess(exampleList, name);
 
   if (typeof found === 'string') {
     return extractExample(found, dir, force);
@@ -99,11 +117,11 @@ async function fetchExampleList() {
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(exampleList: Example[]) {
-  const choices = exampleList.filter(example => example.found).map(example => ({
-    name: example.name,
-    value: example.name,
-    short: example.name
+async function chooseFromDropdown(exampleList: string[]) {
+  const choices = exampleList.map(name => ({
+    name,
+    value: name,
+    short: name
   }));
 
   return listInput({
@@ -194,7 +212,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 /**
  * Guess which example user try to init
  */
-async function guess(exampleList: string[], name: string, dir: string) {
+async function guess(exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${cmd(
       `now init`
