@@ -29,7 +29,7 @@ type Example = {
   suggestions: string[]
 }
 
-const EXAMPLE_API = 'https://api-examples-6ypbtbkt2.zeit.sh'; // TODO revert
+const EXAMPLE_API = 'https://api-examples-8n760qy10.zeit.sh'; // TODO revert
 
 export default async function init(
   ctx: NowContext,
@@ -130,7 +130,7 @@ async function extractExample(name: string, dir: string, force?: boolean) {
   const folder = prepareFolder(process.cwd(), dir || name, force);
   const stopSpinner = wait(`Fetching ${name}`);
 
-  const url = `${EXAMPLE_API}/download/${name}.tar.gz`;
+  const url = `${EXAMPLE_API}/v2/download/${name}.tar.gz`;
 
   return fetch(url)
     .then(async resp => {
