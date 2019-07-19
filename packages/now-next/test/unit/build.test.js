@@ -22,6 +22,24 @@ describe('build meta dev', () => {
       export default () => 'Index page'
     `,
     }),
+    'pages/nested/[param].js': new FileBlob({
+      mode: 0o777,
+      data: `
+      export default () => 'Dynamic page'
+    `,
+    }),
+    'pages/nested/page.tsx': new FileBlob({
+      mode: 0o777,
+      data: `
+      export default () => 'Nested page'
+    `,
+    }),
+    'pages/api/test.js': new FileBlob({
+      mode: 0o777,
+      data: `
+      export default (req, res) => res.status(200).end('API Route')
+    `,
+    }),
     // This file should be omitted because `pages/index.js` will use the same route
     'public/index': new FileBlob({
       mode: 0o777,
@@ -39,9 +57,14 @@ describe('build meta dev', () => {
           "now-build": "next build"
         },
         "dependencies": {
-          "next": "8",
+          "next": "9",
           "react": "16",
           "react-dom": "16"
+        },
+        "devDependencies": {
+          "@types/node": "12",
+          "@types/react": "16",
+          "typescript": "3"
         }
       }
     `,
@@ -80,11 +103,20 @@ describe('build meta dev', () => {
       { src: '/static/(.*)', dest: 'http://localhost:5000/static/$1' },
       { src: '/index', dest: 'http://localhost:5000/index' },
       { src: '/', dest: 'http://localhost:5000/' },
+      { src: '/nested/page', dest: 'http://localhost:5000/nested/page' },
+      { src: '/api/test', dest: 'http://localhost:5000/api/test' },
+      {
+        src: '^/(nested\\/([^\\/]+?)(?:\\/)?)$',
+        dest: 'http://localhost:5000/$1',
+      },
       { src: '/data.txt', dest: 'http://localhost:5000/data.txt' },
     ]);
     expect(watch).toEqual([
       'next.config.js',
       'pages/index.js',
+      'pages/nested/[param].js',
+      'pages/nested/page.tsx',
+      'pages/api/test.js',
       'public/index',
       'public/data.txt',
       'package.json',

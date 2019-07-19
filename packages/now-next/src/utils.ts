@@ -228,7 +228,7 @@ function getRoutes(
 
     const relativeToPages = path.relative('pages', relativePath);
     const extension = path.extname(relativeToPages);
-    const pageName = relativeToPages.replace(extension, '');
+    const pageName = relativeToPages.replace(extension, '').replace(/\\/g, '/');
 
     if (pageName.startsWith('_')) {
       continue;
