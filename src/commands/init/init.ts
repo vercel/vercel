@@ -29,7 +29,7 @@ type Example = {
   suggestions: string[]
 }
 
-const EXAMPLE_API = 'https://api-examples-527czhfis.zeit.sh'; // TODO revert
+const EXAMPLE_API = 'https://api-examples-6ypbtbkt2.zeit.sh'; // TODO revert
 
 export default async function init(
   ctx: NowContext,
@@ -90,14 +90,10 @@ export default async function init(
  */
 async function fetchExampleList() {
   const stopSpinner = wait('Fetching examples');
-  const url = `${EXAMPLE_API}/list.json`;
+  const url = `${EXAMPLE_API}/v2/list.json`;
 
   try {
-    const resp = await fetch(url, {
-      headers: {
-        'x-api-examples-version': '2'
-      }
-    });
+    const resp = await fetch(url);
     stopSpinner();
 
     if (resp.status !== 200) {
