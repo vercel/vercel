@@ -132,19 +132,13 @@ async function extractExample(name: string, dir: string, force?: boolean) {
         name
       )}" example in ${chalk.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
-      const developHint =
-        folderRel === ''
-          ? listItem(`To develop, run ${cmd('now dev')}.`)
-          : listItem(
-              `To develop, ${cmd(`cd ${folderRel}`)} and run ${cmd('now dev')}.`
-            );
       const deployHint =
         folderRel === ''
           ? listItem(`To deploy, run ${cmd('now')}.`)
           : listItem(
               `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`
             );
-      console.log(success(`${successLog}\n${developHint}\n${deployHint}`));
+      console.log(success(`${successLog}\n${deployHint}`));
       return 0;
     })
     .catch(e => {
