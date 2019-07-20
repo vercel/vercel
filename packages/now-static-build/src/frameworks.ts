@@ -42,6 +42,20 @@ export default [
     ],
   },
   {
+    name: 'Ember',
+    dependency: 'ember-cli',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Vue.js',
     dependency: '@vue/cli-service',
     getOutputDirName: async () => 'dist',
