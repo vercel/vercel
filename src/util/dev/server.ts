@@ -109,6 +109,7 @@ export default class DevServer {
   private filter: (path: string) => boolean;
   private getNowConfigPromise: Promise<NowConfig> | null;
   private updateBuildersPromise: Promise<void> | null;
+  private printStaticMessage: boolean;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -130,6 +131,7 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+    this.printStaticMessage = true;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -477,7 +479,10 @@ export default class DevServer {
     }
 
     if (!config.builds || config.builds.length === 0) {
-      this.output.note(`Serving all files as static`);
+      if (this.printStaticMessage) {
+        this.output.note(`Serving all files as static`);
+        this.printStaticMessage = false;
+      }
     } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
