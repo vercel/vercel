@@ -72,12 +72,6 @@ interface NodeRequire {
   };
 }
 
-enum ConfigState {
-  ZERO_CONFIG = 'ZERO_CONFIG',
-  STATIC = 'STATIC',
-  CONFIG = 'CONFIG'
-}
-
 declare const __non_webpack_require__: NodeRequire;
 
 function sortBuilders(buildA: BuildConfig, buildB: BuildConfig) {
@@ -115,7 +109,7 @@ export default class DevServer {
   private filter: (path: string) => boolean;
   private getNowConfigPromise: Promise<NowConfig> | null;
   private updateBuildersPromise: Promise<void> | null;
-  private configState: ConfigState | null;
+  private printStaticMessage: boolean;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -137,7 +131,7 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
-    this.configState = null;
+    this.printStaticMessage = true;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -469,7 +463,6 @@ export default class DevServer {
       }
 
       if (builders) {
-        this.configState = ConfigState.ZERO_CONFIG;
         const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
 
         config.builds = config.builds || [];
@@ -483,14 +476,12 @@ export default class DevServer {
           config.routes.push(...defaultRoutes as RouteConfig[]);
         }
       }
-    } else if (config.builds && config.builds.length > 0) {
-      this.configState = ConfigState.CONFIG;
     }
 
     if (!config.builds || config.builds.length === 0) {
-      if (this.configState !== ConfigState.STATIC) {
+      if (this.printStaticMessage) {
         this.output.note(`Serving all files as static`);
-        this.configState = ConfigState.STATIC;
+        this.printStaticMessage = false;
       }
     } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
