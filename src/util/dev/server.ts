@@ -456,7 +456,8 @@ export default class DevServer {
       const { builders, errors } = await detectBuilders(files, pkg);
 
       if (errors) {
-        throw new Error(errors[0].message);
+        this.output.error(errors[0].message);
+        process.exit(1);
       }
 
       if (builders) {
@@ -466,7 +467,8 @@ export default class DevServer {
         config.builds.push(...builders);
 
         if (routesError) {
-          throw new Error(routesError.message);
+          this.output.error(routesError.message);
+          process.exit(1);
         } else {
           config.routes = config.routes || [];
           config.routes.push(...defaultRoutes as RouteConfig[]);
@@ -512,7 +514,8 @@ export default class DevServer {
 
   validateNowConfig(config: NowConfig): void {
     if (config.version !== 2) {
-      throw new Error('Only `version: 2` is supported by `now dev`');
+      this.output.error('Only `version: 2` is supported by `now dev`');
+      process.exit(1);
     }
   }
 
