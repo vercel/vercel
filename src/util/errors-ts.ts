@@ -1119,3 +1119,43 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
     });
   }
 }
+
+export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
+  constructor({ message }: { message: string; }) {
+    super({
+      code: 'DOMAIN_CONFIGURED',
+      meta: {},
+      message
+    });
+  }
+}
+
+export class MissingBuildScript extends NowError<'MISSING_BUILD_SCRIPT', {}> {
+  constructor({ message }: { message: string; }) {
+    super({
+      code: 'MISSING_BUILD_SCRIPT',
+      meta: {},
+      message
+    });
+  }
+}
+
+export class ConflictingFilePath extends NowError<'CONFLICTING_FILE_PATH', {}> {
+  constructor({ message }: { message: string; }) {
+    super({
+      code: 'CONFLICTING_FILE_PATH',
+      meta: {},
+      message
+    });
+  }
+}
+
+export class ConflictingPathSegment extends NowError<'CONFLICTING_PATH_SEGMENT', {}> {
+  constructor({ message }: { message: string; }) {
+    super({
+      code: 'CONFLICTING_PATH_SEGMENT',
+      meta: {},
+      message
+    });
+  }
+}
