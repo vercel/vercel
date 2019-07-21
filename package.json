@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "15.9.0-test.0",
+  "version": "15.9.0-canary.15",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -11,7 +11,6 @@
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
-    "preinstall": "node ./scripts/remove-legacy.js",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "node ./scripts/build.js",
     "build-dev": "node ./scripts/build.js --dev",
@@ -46,8 +45,7 @@
     "now": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "scripts/build.js"
+    "dist"
   ],
   "ava": {
     "compileEnhancements": false,
