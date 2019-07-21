@@ -11,9 +11,10 @@
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
+    "preinstall": "node ./scripts/remove-legacy.js",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "build": "node build.js",
-    "build-dev": "node build.js --dev",
+    "build": "node ./scripts/build.js",
+    "build-dev": "node ./scripts/build.js --dev",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
@@ -45,7 +46,8 @@
     "now": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts/build.js"
   ],
   "ava": {
     "compileEnhancements": false,

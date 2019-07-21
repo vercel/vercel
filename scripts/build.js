@@ -12,7 +12,7 @@ const {
   writeFile,
   writeJSON
 } = require('fs-extra');
-const pkg = require('./package.json');
+const pkg = require('../package.json');
 
 async function createBuildersTarball() {
   const builders = Object.keys(pkg.devDependencies)
