@@ -37,7 +37,7 @@ export async function getUpgradeCommand() {
 
   return isYarn
   ? 'Please run `yarn global upgrade now` to update Now CLI.'
-  : 'Please run `npm update -g now` to update Now CLI.'
+  : 'Please run `npm install -g now@latest` to update Now CLI.'
 }
 
 export default async function main(ctx: NowContext): Promise<number> {
