@@ -453,20 +453,22 @@ export default class DevServer {
           `filtered out ${allFiles.length - files.length} files`
       );
 
-      const { builders, warnings } = await detectBuilders(files, pkg);
+      const { builders, errors } = await detectBuilders(files, pkg);
+
+      if (errors) {
+        this.output.error(errors[0].message);
+        process.exit(1);
+      }
 
       if (builders) {
         const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
-
-        if (warnings) {
-          warnings.forEach(({ message }) => this.output.warn(message));
-        }
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
         if (routesError) {
           this.output.error(routesError.message);
+          process.exit(1);
         } else {
           config.routes = config.routes || [];
           config.routes.push(...defaultRoutes as RouteConfig[]);
@@ -512,7 +514,8 @@ export default class DevServer {
 
   validateNowConfig(config: NowConfig): void {
     if (config.version !== 2) {
-      throw new Error('Only `version: 2` is supported by `now dev`');
+      this.output.error('Only `version: 2` is supported by `now dev`');
+      process.exit(1);
     }
   }
 
