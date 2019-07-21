@@ -57,6 +57,22 @@ export default async function createDeploy(
       );
     }
 
+    if (error.code === 'domain_configured') {
+      return new ERRORS_TS.AliasDomainConfigured(error);
+    }
+
+    if (error.code === 'missing_build_script') {
+      return new ERRORS_TS.MissingBuildScript(error);
+    }
+
+    if (error.code === 'conflicting_file_path') {
+      return new ERRORS_TS.ConflictingFilePath(error);
+    }
+
+    if (error.code === 'conflicting_path_segment') {
+      return new ERRORS_TS.ConflictingPathSegment(error);
+    }
+
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(
