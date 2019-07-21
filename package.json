@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "15.9.0-canary.7",
+  "version": "15.9.0-canary.15",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -81,7 +81,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.8.8",
+    "@now/build-utils": "0.9.2",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
@@ -171,7 +171,7 @@
     "jsonlines": "0.1.1",
     "load-json-file": "3.0.0",
     "micro": "9.1.2",
-    "mime-types": "2.1.18",
+    "mime-types": "2.1.24",
     "minimatch": "3.0.4",
     "mkdirp": "0.5.1",
     "mri": "1.1.0",
