@@ -89,6 +89,9 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+      - run:
+          name: Running Integration Tests for `now dev`
+          command: yarn test-integration-now-dev --clean false
 
   coverage:
     docker:
