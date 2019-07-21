@@ -453,20 +453,20 @@ export default class DevServer {
           `filtered out ${allFiles.length - files.length} files`
       );
 
-      const { builders, warnings } = await detectBuilders(files, pkg);
+      const { builders, errors } = await detectBuilders(files, pkg);
+
+      if (errors) {
+        throw new Error(errors[0].message);
+      }
 
       if (builders) {
         const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
-
-        if (warnings) {
-          warnings.forEach(({ message }) => this.output.warn(message));
-        }
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
         if (routesError) {
-          this.output.error(routesError.message);
+          throw new Error(routesError.message);
         } else {
           config.routes = config.routes || [];
           config.routes.push(...defaultRoutes as RouteConfig[]);
