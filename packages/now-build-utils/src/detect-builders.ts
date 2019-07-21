@@ -1,7 +1,7 @@
 import { PackageJson, Builder, Config } from './types';
 import minimatch from 'minimatch';
 
-interface Warning {
+interface ErrorResponse {
   code: string;
   message: string;
 }
@@ -26,11 +26,11 @@ const API_BUILDERS: Builder[] = [
   { src: 'api/**/*.sh', use: '@now/bash', config },
 ];
 
-const MISSING_BUILD_SCRIPT_WARNING: Warning = {
+const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
   code: 'missing_build_script',
   message:
-    'Your `package.json` file is missing a `build` property inside the `script` property. ' +
-    'More details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script',
+    'Your `package.json` file is missing a `build` property inside the `script` property.' +
+    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script',
 };
 
 function hasPublicDirectory(files: string[]) {
@@ -104,36 +104,38 @@ export async function detectBuilders(
   pkg?: PackageJson | undefined | null
 ): Promise<{
   builders: Builder[] | null;
-  warnings: Warning[] | null;
+  errors: ErrorResponse[] | null;
 }> {
-  const warnings: Warning[] = [];
+  const errors: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
   const builders = await detectApiBuilders(files);
 
   if (pkg && hasBuildScript(pkg)) {
     builders.push(await detectBuilder(pkg));
-  } else if (builders.length > 0) {
-    // We only want to match this if there
-    // are already builds for `api`, since
-    // we'd add builds even though we shouldn't otherwise
-
-    if (pkg) {
-      warnings.push(MISSING_BUILD_SCRIPT_WARNING);
+  } else {
+    if (pkg && builders.length === 0) {
+      // We only show this error when there are no api builders
+      // since the dependencies of the pkg could be used for those
+      errors.push(MISSING_BUILD_SCRIPT_ERROR);
+      return { errors, builders: null };
     }
 
+    // We allow a `public` directory
+    // when there are no build steps
     if (hasPublicDirectory(files)) {
       builders.push({
         use: '@now/static',
         src: 'public/**/*',
         config,
       });
-    } else {
+    } else if (builders.length > 0) {
       // We can't use pattern matching, since `!(api)` and `!(api)/**/*`
       // won't give the correct results
       builders.push(
         ...files
           .filter(name => !name.startsWith('api/'))
+          .filter(name => !(name === 'package.json'))
           .map(name => ({
             use: '@now/static',
             src: name,
@@ -145,6 +147,6 @@ export async function detectBuilders(
 
   return {
     builders: builders.length ? builders : null,
-    warnings: warnings.length ? warnings : null,
+    errors: errors.length ? errors : null,
   };
 }
