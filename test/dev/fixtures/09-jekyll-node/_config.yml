@@ -1,0 +1,11 @@
+# Site settings
+title: Jekyll + Node.js API
+email: team@zeit.co
+description: > # this means to ignore newlines until "baseurl:"
+  Welcome to an example of Jekyll with a Node.js API.
+baseurl: '/posts' # the subpath of your site, e.g. /blog/
+
+# Build settings
+markdown: kramdown
+permalink: /:year/:title:output_ext
+exclude: ['api', 'node_modules']
