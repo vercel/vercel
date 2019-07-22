@@ -370,7 +370,7 @@ export async function getBuildMatches(
   cwd: string,
   yarnDir: string,
   output: Output,
-  files: BuilderInputs
+  files: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
@@ -392,7 +392,7 @@ export async function getBuildMatches(
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
 
-    for (const file of Object.keys(files)) {
+    for (const file of files) {
       src = relative(cwd, file);
       const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
