@@ -191,6 +191,7 @@ workflows:
           requires:
             - test-unit
             - test-integration
+            - test-lint
           filters:
             tags:
               only: /.*/
