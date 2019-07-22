@@ -105,7 +105,7 @@ test('[now dev] 02-angular-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
     const response = await result;
 
     validateResponseHeaders(t, response);
@@ -441,7 +441,7 @@ test('[now dev] temporary directory listing', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    await sleep(ms('1s'));
+    await sleep(ms('20s'));
 
     const firstResponse = await fetch(`http://localhost:${port}`, 180);
     validateResponseHeaders(t, firstResponse);
