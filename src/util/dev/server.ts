@@ -396,11 +396,14 @@ export default class DevServer {
     return { ...base, ...env };
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  async getNowConfig(
+    canUseCache: boolean = true,
+    isInitialLoad: boolean = false
+  ): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -408,7 +411,10 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  async _getNowConfig(
+    canUseCache: boolean = true,
+    isInitialLoad: boolean = false
+  ): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
@@ -477,7 +483,9 @@ export default class DevServer {
     }
 
     if (!config.builds || config.builds.length === 0) {
-      this.output.note(`Serving all files as static`);
+      if (isInitialLoad) {
+        this.output.note(`Serving all files as static`);
+      }
     } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
@@ -555,7 +563,7 @@ export default class DevServer {
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig();
+    const nowConfig = await this.getNowConfig(false, true);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
