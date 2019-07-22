@@ -10,6 +10,7 @@ import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
 import ora, { Ora } from 'ora';
+import minimatch from 'minimatch';
 
 import { Output } from '../output';
 import { relative } from '../path-helpers';
@@ -370,7 +371,7 @@ export async function getBuildMatches(
   cwd: string,
   yarnDir: string,
   output: Output,
-  files: string[]
+  fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
@@ -391,6 +392,10 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+
+    const files = fileList
+      .filter((name) => name === src || minimatch(name, src))
+      .map((name) => join(cwd, name));
 
     for (const file of files) {
       src = relative(cwd, file);

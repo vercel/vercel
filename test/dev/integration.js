@@ -2,6 +2,7 @@ import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
+import { promises as fs } from 'fs';
 
 const binary = {
   darwin: 'now-macos',
@@ -433,5 +434,33 @@ test('[now dev] 17-vuepress-node', async t => {
 
   } finally {
     dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] temporary directory listing', async t => {
+  const directory = fixture('temporary-directory-listing');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const firstResponse = await fetchWithRetry(`http://localhost:${port}`, 180);
+    validateResponseHeaders(t, firstResponse);
+    t.is(firstResponse.status, 404);
+
+    await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
+
+    for (let i = 0; i < 500; i++) {
+      const response = await fetchWithRetry(`http://localhost:${port}`);
+      validateResponseHeaders(t, response);
+
+      if (response.status === 200) {
+        const body = response.text();
+        t.is(body, 'hello')
+      }
+    }
+  } finally {
+    dev.kill('SIGTERM');
   }
 });

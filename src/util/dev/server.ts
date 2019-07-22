@@ -297,7 +297,7 @@ export default class DevServer {
       this.cwd,
       this.yarnPath,
       this.output,
-      this.resolveFiles(this.files)
+      this.resolveBuildFiles(this.files)
     );
     const sources = matches.map(m => m.src);
 
@@ -547,12 +547,12 @@ export default class DevServer {
   }
 
   /**
-   * Resolve files and filter them
+   * Create an array of from builder inputs
+   * and filter them
    */
-  resolveFiles(files: BuilderInputs) {
-    return Object.keys(files).map((file) => {
-      return join(this.cwd, file);
-    }).filter(this.filter);
+  resolveBuildFiles(files: BuilderInputs) {
+    return Object.keys(files)
+      .filter(this.filter);
   }
 
   /**
