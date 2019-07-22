@@ -213,5 +213,8 @@
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
     "yarn": "1.13.0"
+  },
+  "dependencies": {
+    "then-sleep": "1.0.1"
   }
 }

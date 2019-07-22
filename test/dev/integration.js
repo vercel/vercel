@@ -1,7 +1,9 @@
+import ms from 'ms';
 import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
+import sleep from 'then-sleep';
 import { promises as fs } from 'fs';
 
 const binary = {
@@ -451,7 +453,7 @@ test('[now dev] temporary directory listing', async t => {
 
     await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
 
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 50; i++) {
       const response = await fetchWithRetry(`http://localhost:${port}`);
       validateResponseHeaders(t, response);
 
@@ -459,6 +461,8 @@ test('[now dev] temporary directory listing', async t => {
         const body = response.text();
         t.is(body, 'hello')
       }
+
+      await sleep(ms('1s'));
     }
   } finally {
     dev.kill('SIGTERM');
