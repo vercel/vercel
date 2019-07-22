@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -155,10 +157,7 @@ const main = async argv_ => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(
-        `${require('../package').version}${// $FlowFixMe
-        process.pkg ? '' : chalk.magenta(' (dev)')}`
-      );
+      console.log(require('../package').version);
       return 0;
     }
   }

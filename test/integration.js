@@ -13,13 +13,7 @@ import pkg from '../package';
 import parseList from './helpers/parse-list';
 import prepareFixtures from './helpers/prepare';
 
-const binary = {
-  darwin: 'now-macos',
-  linux: 'now-linux',
-  win32: 'now-win.exe'
-}[process.platform];
-
-const binaryPath = path.resolve(__dirname, `../packed/${binary}`);
+const binaryPath = path.resolve(__dirname, `../dist/index.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random()

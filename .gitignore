@@ -1,7 +1,6 @@
 node_modules
 package-lock.json
 dist
-packed
 test/fixtures/integration
 npm-debug.log
 yarn-error.log
