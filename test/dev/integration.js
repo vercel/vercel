@@ -453,8 +453,8 @@ test('[now dev] temporary directory listing', async t => {
 
     await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
 
-    for (let i = 0; i < 50; i++) {
-      const response = await fetchWithRetry(`http://localhost:${port}`);
+    for (let i = 0; i < 20; i++) {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
 
       if (response.status === 200) {
