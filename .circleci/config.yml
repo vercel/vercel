@@ -36,16 +36,15 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Compiling Binaries
-          command: yarn run pack
+          name: Building
+          command: yarn build
       - store_artifacts:
-          path: packed
+          path: dist
       - persist_to_workspace:
           root: .
           paths:
-            - assets
+            - bin
             - dist
-            - packed
 
   test-lint:
     docker:
@@ -104,49 +103,6 @@ jobs:
       - run:
           name: Run coverage report
           command: yarn coverage
-
-  compress:
-    docker:
-      - image: circleci/node:10
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Compressing Binaries
-          command: yarn gzip
-      - persist_to_workspace:
-          root: .
-          paths:
-            - packed
-
-  upload:
-    docker:
-      - image: circleci/golang:1.10
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - restore_cache:
-          keys:
-            - v1-pkg-cache
-      - run:
-          name: Installing Uploader
-          command: go get github.com/aktau/github-release
-      - run:
-          name: Uploading Binaries
-          command:
-            >-
-              for file in ./packed/*.gz;
-              do
-               github-release upload -R -t `git describe --tags` -n ${file##*/} -f $file
-              done
-      - save_cache:
-          key: v1-pkg-cache
-          paths:
-            - "/go/pkg"
 
   source-maps:
     docker:
@@ -235,34 +191,23 @@ workflows:
           requires:
             - test-unit
             - test-integration
-          filters:
-            tags:
-              only: /.*/
-      - compress:
-          requires:
             - test-lint
-            - test-integration
-            - test-unit
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
-      - upload:
-          requires:
-            - compress
           filters:
             tags:
               only: /.*/
       - publish-canary:
           requires:
-            - upload
+            - coverage
           filters:
             tags:
               only: /^.*canary.*($|\b)/
+            branches:
+              ignore: /.*/
       - publish-stable:
           requires:
-            - upload
+            - coverage
           filters:
             tags:
               only: /^(\d+\.)?(\d+\.)?(\*|\d+)$/
+            branches:
+              ignore: /.*/
