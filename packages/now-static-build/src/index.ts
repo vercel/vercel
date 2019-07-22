@@ -58,9 +58,7 @@ function validateDistDir(
     : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
 
   if (!exists()) {
-    throw new Error(
-      `Build was unable to create the distDir: "${distDirName}".${info}`
-    );
+    throw new Error(`No output directory named "${distDirName}" found.${info}`);
   }
 
   if (!isDirectory()) {
