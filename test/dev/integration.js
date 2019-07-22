@@ -444,9 +444,6 @@ test('[now dev] temporary directory listing', async t => {
   const { dev, port } = testFixture(directory);
 
   try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
     const firstResponse = await fetchWithRetry(`http://localhost:${port}`, 180);
     validateResponseHeaders(t, firstResponse);
     t.is(firstResponse.status, 404);
