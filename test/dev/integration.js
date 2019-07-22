@@ -441,18 +441,21 @@ test('[now dev] temporary directory listing', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const firstResponse = await fetchWithRetry(`http://localhost:${port}`, 180);
+    await sleep(ms('1s'));
+
+    const firstResponse = await fetch(`http://localhost:${port}`, 180);
     validateResponseHeaders(t, firstResponse);
-    t.is(firstResponse.status, 404);
+    const body = await firstResponse.text();
+    t.is(firstResponse.status, 404, `Received instead: ${body}`);
 
     await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
 
     for (let i = 0; i < 20; i++) {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180)
+      const response = await fetch(`http://localhost:${port}`);
       validateResponseHeaders(t, response);
 
       if (response.status === 200) {
-        const body = response.text();
+        const body = await response.text();
         t.is(body, 'hello')
       }
 
