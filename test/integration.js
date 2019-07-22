@@ -135,7 +135,7 @@ test.before(async () => {
     email = user.email;
     contextName = `${user.email.split('@')[0]}`;
 
-    prepareFixtures(contextName);
+    prepareFixtures(email);
   } catch (err) {
     console.error(err);
   }
@@ -215,7 +215,7 @@ test('deploy a node microservice', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, email);
 });
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
@@ -234,7 +234,7 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
-  t.true(host.startsWith(`node-test-${contextName}`));
+  t.true(host.startsWith(`node-test-${email}`));
 });
 
 test('find deployment in list', async t => {
@@ -310,7 +310,7 @@ test('create alias for deployment', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, email);
 
   context.alias = hosts.alias;
 });
@@ -382,7 +382,7 @@ test('list the scopes', async t => {
 
   t.is(code, 0);
 
-  const include = `✔ ${contextName}     ${email}`
+  const include = `✔ ${email}     ${email}`
   t.true(stdout.includes(include), `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`);
 });
 
