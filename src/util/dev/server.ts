@@ -396,11 +396,14 @@ export default class DevServer {
     return { ...base, ...env };
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  async getNowConfig(
+    canUseCache: boolean = true,
+    isInitialLoad: boolean = false
+  ): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -408,7 +411,10 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  async _getNowConfig(
+    canUseCache: boolean = true,
+    isInitialLoad: boolean = false
+  ): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
@@ -453,20 +459,22 @@ export default class DevServer {
           `filtered out ${allFiles.length - files.length} files`
       );
 
-      const { builders, warnings } = await detectBuilders(files, pkg);
+      const { builders, errors } = await detectBuilders(files, pkg);
+
+      if (errors) {
+        this.output.error(errors[0].message);
+        process.exit(1);
+      }
 
       if (builders) {
         const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
-
-        if (warnings) {
-          warnings.forEach(({ message }) => this.output.warn(message));
-        }
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
         if (routesError) {
           this.output.error(routesError.message);
+          process.exit(1);
         } else {
           config.routes = config.routes || [];
           config.routes.push(...defaultRoutes as RouteConfig[]);
@@ -475,7 +483,9 @@ export default class DevServer {
     }
 
     if (!config.builds || config.builds.length === 0) {
-      this.output.note(`Serving all files as static`);
+      if (isInitialLoad) {
+        this.output.note(`Serving all files as static`);
+      }
     } else if (Array.isArray(config.builds)) {
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
@@ -512,7 +522,8 @@ export default class DevServer {
 
   validateNowConfig(config: NowConfig): void {
     if (config.version !== 2) {
-      throw new Error('Only `version: 2` is supported by `now dev`');
+      this.output.error('Only `version: 2` is supported by `now dev`');
+      process.exit(1);
     }
   }
 
@@ -552,7 +563,7 @@ export default class DevServer {
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig();
+    const nowConfig = await this.getNowConfig(false, true);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),

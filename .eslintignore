@@ -2,5 +2,6 @@
 download
 dist
 test/fixtures
+test/dev/fixtures
 bin
 link

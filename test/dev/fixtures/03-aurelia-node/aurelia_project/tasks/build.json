@@ -1,0 +1,21 @@
+{
+  "name": "build",
+  "description": "Builds and processes all application assets.",
+  "flags": [
+    {
+      "name": "analyze",
+      "description": "Enable Webpack Bundle Analyzer. Typically paired with --env prod",
+      "type": "boolean"
+    },
+    {
+      "name": "env",
+      "description": "Sets the build environment.",
+      "type": "string"
+    },
+    {
+      "name": "watch",
+      "description": "Watches source files for changes and refreshes the bundles automatically.",
+      "type": "boolean"
+    }
+  ]
+}

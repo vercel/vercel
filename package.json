@@ -9,6 +9,7 @@
     "test": "yarn test-lint",
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
+    "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast",
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
@@ -58,7 +59,7 @@
     ]
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.1",
+    "@now/build-utils": "0.9.2",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
