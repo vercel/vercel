@@ -381,7 +381,9 @@ test('list the scopes', async t => {
   );
 
   t.is(code, 0);
-  t.true(stdout.includes(`✔ ${contextName}     ${email}`), `Received instead: ${stdout}, ${stderr}`);
+
+  const include = `✔ ${contextName}     ${email}`
+  t.true(stdout.includes(include), `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`);
 });
 
 test('list the payment methods', async t => {
