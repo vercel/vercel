@@ -6,14 +6,8 @@ import fetch from 'node-fetch';
 import sleep from 'then-sleep';
 import { promises as fs } from 'fs';
 
-const binary = {
-  darwin: 'now-macos',
-  linux: 'now-linux',
-  win32: 'now-win.exe'
-}[process.platform];
-
 let port = 3000;
-const binaryPath = path.resolve(__dirname, `../../packed/${binary}`);
+const binaryPath = path.resolve(__dirname, `../../dist/index.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
 function fetchWithRetry(url, retries = 3) {

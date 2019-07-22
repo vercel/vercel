@@ -10,7 +10,7 @@
 To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
 
 ```
-npm install -g now
+npm i -g now
 ```
 
 To quickly start a new project, run the following commands:
@@ -30,8 +30,9 @@ For details on how to use Now CLI, check out our [documentation](https://zeit.co
 
 1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
 2. Install dependencies with `yarn install`
-3. Link the package to the global module directory: `yarn run link` (not `yarn link`)
-4. You can now start using `now` anywhere inside the command line
+3. Compile the code: `yarn build`
+4. Link the package to the global module directory: `yarn link`
+5. You can now start using `now` anywhere inside the command line
 
 As always, you should use `yarn test` to run the tests and see if your changes have broken anything.
 

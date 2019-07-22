@@ -12,7 +12,9 @@ const {
   writeFile,
   writeJSON
 } = require('fs-extra');
-const pkg = require('./package.json');
+const pkg = require('../package.json');
+
+const dirRoot = join(__dirname, '..');
 
 async function createBuildersTarball() {
   const builders = Object.keys(pkg.devDependencies)
@@ -20,8 +22,8 @@ async function createBuildersTarball() {
     .map(d => `${d}@${pkg.devDependencies[d]}`);
   console.log(`Creating builders tarball with: ${builders.join(', ')}`);
 
-  const buildersDir = join(__dirname, '.builders');
-  const assetsDir = join(__dirname, 'assets');
+  const buildersDir = join(dirRoot, '.builders');
+  const assetsDir = join(dirRoot, 'assets');
   await mkdirp(buildersDir);
   await mkdirp(assetsDir);
 
@@ -36,7 +38,7 @@ async function createBuildersTarball() {
     }
   }
 
-  const yarn = join(__dirname, 'node_modules/yarn/bin/yarn.js');
+  const yarn = join(dirRoot, 'node_modules/yarn/bin/yarn.js');
   await execa(
     process.execPath,
     [ yarn, 'add', '--no-lockfile', ...builders ],
@@ -58,11 +60,11 @@ async function main() {
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
   // that it is not compiled by ncc, which makes the pkg'd binary size larger
   // than necessary.
-  await remove(join(__dirname, 'node_modules/fsevents'));
+  await remove(join(dirRoot, 'node_modules/fsevents'));
 
   // Do the initial `ncc` build
-  const src = join(__dirname, 'src');
-  const ncc = join(__dirname, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
+  const src = join(dirRoot, 'src');
+  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
   const args = [ ncc, 'build', '--source-map' ];
   if (!isDev) {
     args.push('--minify');
@@ -82,8 +84,8 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present on pkg's snapshot fs because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  const runtimes = join(__dirname, 'node_modules/@zeit/fun/dist/src/runtimes');
-  const dest = join(__dirname, 'dist/runtimes');
+  const runtimes = join(dirRoot, 'node_modules/@zeit/fun/dist/src/runtimes');
+  const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
   console.log('Finished building `now-cli`');
