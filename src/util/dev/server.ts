@@ -296,7 +296,8 @@ export default class DevServer {
       nowConfig,
       this.cwd,
       this.yarnPath,
-      this.output
+      this.output,
+      this.files
     );
     const sources = matches.map(m => m.src);
 
