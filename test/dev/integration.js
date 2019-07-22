@@ -1,7 +1,10 @@
+import ms from 'ms';
 import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
+import sleep from 'then-sleep';
+import { promises as fs } from 'fs';
 
 const binary = {
   darwin: 'now-macos',
@@ -108,7 +111,7 @@ test('[now dev] 02-angular-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
     const response = await result;
 
     validateResponseHeaders(t, response);
@@ -433,5 +436,38 @@ test('[now dev] 17-vuepress-node', async t => {
 
   } finally {
     dev.kill('SIGTERM')
+  }
+});
+
+test('[now dev] temporary directory listing', async t => {
+  const directory = fixture('temporary-directory-listing');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    await sleep(ms('20s'));
+
+    const firstResponse = await fetch(`http://localhost:${port}`, 180);
+    validateResponseHeaders(t, firstResponse);
+    const body = await firstResponse.text();
+    t.is(firstResponse.status, 404, `Received instead: ${body}`);
+
+    await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
+
+    for (let i = 0; i < 20; i++) {
+      const response = await fetch(`http://localhost:${port}`);
+      validateResponseHeaders(t, response);
+
+      if (response.status === 200) {
+        const body = await response.text();
+        t.is(body, 'hello')
+      }
+
+      await sleep(ms('1s'));
+    }
+  } finally {
+    dev.kill('SIGTERM');
   }
 });

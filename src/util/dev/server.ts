@@ -296,7 +296,8 @@ export default class DevServer {
       nowConfig,
       this.cwd,
       this.yarnPath,
-      this.output
+      this.output,
+      this.resolveBuildFiles(this.files)
     );
     const sources = matches.map(m => m.src);
 
@@ -543,6 +544,15 @@ export default class DevServer {
     if (missing.length >= 1) {
       throw new MissingDotenvVarsError(type, missing);
     }
+  }
+
+  /**
+   * Create an array of from builder inputs
+   * and filter them
+   */
+  resolveBuildFiles(files: BuilderInputs) {
+    return Object.keys(files)
+      .filter(this.filter);
   }
 
   /**
