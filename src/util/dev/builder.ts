@@ -394,8 +394,8 @@ export async function getBuildMatches(
     src = src.replace(/(\[|\])/g, '[$1]');
 
     const files = fileList
-      .filter((name) => name === src || minimatch(name, src))
-      .map((name) => join(cwd, name));
+      .filter(name => name === src || minimatch(name, src))
+      .map(name => join(cwd, name));
 
     for (const file of files) {
       src = relative(cwd, file);
