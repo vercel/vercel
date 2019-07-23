@@ -239,6 +239,34 @@ export default class DevServer {
         }
       }
     }
+
+    // Special case `@now/static-build`,
+    // since it won't trigger builds otherwise
+    ((nowConfig && nowConfig.builds) || []).map((build) => {
+      if (!build.use || !build.use.startsWith('@now/static-build')) {
+        return;
+      }
+
+      const match = this.buildMatches.get(build.src);
+
+      if (!match) {
+        return;
+      }
+
+      // Don't trigger when there is already a rebuild
+      for (const [requestPath, buildResult] of match.buildResults) {
+        if (needsRebuild.has(buildResult)) {
+          return;
+        }
+      }
+
+      this.output.debug(`Trigger build for ${match.src}`);
+
+      return this.triggerBuild(match, null, null).catch((err) => {
+        this.output.warn(`An error occured while building ${match.src}:`);
+        console.error(err.stack);
+      });
+    });
   }
 
   async handleFileCreated(
@@ -423,16 +451,16 @@ export default class DevServer {
 
     const pkg = await this.getPackageJson();
 
-    // The default empty `now.json` is used to serve all files as static
-    // when no `now.json` is present
-    let config: NowConfig = this.cachedNowConfig || { version: 2 };
-
     // We need to delete these properties for zero config to work
     // with file changes
     if (this.cachedNowConfig) {
       delete this.cachedNowConfig.builds;
       delete this.cachedNowConfig.routes;
     }
+
+    // The default empty `now.json` is used to serve all files as static
+    // when no `now.json` is present
+    let config: NowConfig = this.cachedNowConfig || { version: 2 };
 
     try {
       this.output.debug('Reading `now.json` file');
