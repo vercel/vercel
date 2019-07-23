@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --no-warnings
 
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
@@ -36,7 +36,7 @@ import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getUpgradeCommand } from './commands/update';
+import getUpdateCommand from './util/get-update-command';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -112,13 +112,20 @@ const main = async argv_ => {
     return 1;
   }
 
+  // the second argument to the command can be a path
+  // (as in: `now path/`) or a subcommand / provider
+  // (as in: `now ls`)
+  const targetOrSubcommand = argv._[2];
+
   let update = null;
 
   try {
-    update = await checkForUpdate(pkg, {
-      interval: ms('1d'),
-      distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
-    });
+    if (targetOrSubcommand !== 'update') {
+      update = await checkForUpdate(pkg, {
+        interval: ms('1d'),
+        distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+      });
+    }
   } catch (err) {
     console.error(
       error(`Checking for updates failed${isDebugging ? ':' : ''}`)
@@ -138,7 +145,7 @@ const main = async argv_ => {
       )
     );
     console.log(
-      info(await getUpgradeCommand())
+      info(await getUpdateCommand())
     );
     console.log(
       info(
@@ -148,11 +155,6 @@ const main = async argv_ => {
   }
 
   debug(`Using Now CLI ${pkg.version}`);
-
-  // the second argument to the command can be a path
-  // (as in: `now path/`) or a subcommand / provider
-  // (as in: `now ls`)
-  const targetOrSubcommand = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
