@@ -110,13 +110,20 @@ const main = async argv_ => {
     return 1;
   }
 
+  // the second argument to the command can be a path
+  // (as in: `now path/`) or a subcommand / provider
+  // (as in: `now ls`)
+  const targetOrSubcommand = argv._[2];
+
   let update = null;
 
   try {
-    update = await checkForUpdate(pkg, {
-      interval: ms('1d'),
-      distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
-    });
+    if (targetOrSubcommand !== 'update') {
+      update = await checkForUpdate(pkg, {
+        interval: ms('1d'),
+        distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+      });
+    }
   } catch (err) {
     console.error(
       error(`Checking for updates failed${isDebugging ? ':' : ''}`)
@@ -146,11 +153,6 @@ const main = async argv_ => {
   }
 
   debug(`Using Now CLI ${pkg.version}`);
-
-  // the second argument to the command can be a path
-  // (as in: `now path/`) or a subcommand / provider
-  // (as in: `now ls`)
-  const targetOrSubcommand = argv._[2];
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
