@@ -467,6 +467,38 @@ test('[now dev] temporary directory listing', async t => {
   }
 });
 
+test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
+  const directory = fixture('trigger-static-build');
+  const { dev, port } = testFixture(directory);
+
+   try {
+    dev.unref();
+
+     {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), 'hello:index.txt');
+    }
+
+     const rnd = Math.random().toString();
+    const pkg = { scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` } };
+    await fs.writeFile(path.join(directory, 'package.json'), JSON.stringify(pkg));
+
+     // Wait until file events have been processed
+    await sleep(ms('3s'));
+
+     {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), rnd);
+    }
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
 test.only('[now dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev, port } = testFixture(directory, {
