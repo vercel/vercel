@@ -107,7 +107,9 @@ export default class DevServer {
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
+
   private getNowConfigPromise: Promise<NowConfig> | null;
+  private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
@@ -123,13 +125,15 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowConfig = null;
-    this.getNowConfigPromise = null;
-    this.updateBuildersPromise = null;
     this.server = http.createServer(this.devServerHandler);
     this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+
+    this.getNowConfigPromise = null;
+    this.blockingBuildsPromise = null;
+    this.updateBuildersPromise = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -311,18 +315,41 @@ export default class DevServer {
     }
 
     // Add the new matches to the `buildMatches` map
+    const blockingBuilds: Promise<void>[] = [];
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
       if (!currentMatch || currentMatch.use !== match.use) {
         this.output.debug(`Adding build match for "${match.src}"`);
         this.buildMatches.set(match.src, match);
+        if (needsBlockingBuild(match)) {
+          const buildPromise = executeBuild(
+            nowConfig,
+            this,
+            this.files,
+            match,
+            null,
+            false
+          );
+          blockingBuilds.push(buildPromise);
+        }
       }
     }
 
+    if (blockingBuilds.length > 0) {
+      const cleanup = () => {
+        this.blockingBuildsPromise = null;
+      };
+      this.blockingBuildsPromise = Promise.all(blockingBuilds)
+        .then(cleanup)
+        .catch(cleanup);
+    }
+
     // Sort build matches to make sure `@now/static-build` is always last
-    this.buildMatches = new Map([...this.buildMatches.entries()].sort((matchA, matchB) => {
-      return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
-    }));
+    this.buildMatches = new Map(
+      [...this.buildMatches.entries()].sort((matchA, matchB) => {
+        return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
+      })
+    );
   }
 
   async invalidateBuildMatches(
@@ -468,7 +495,10 @@ export default class DevServer {
       }
 
       if (builders) {
-        const { defaultRoutes, error: routesError } = await detectRoutes(files, builders);
+        const { defaultRoutes, error: routesError } = await detectRoutes(
+          files,
+          builders
+        );
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
@@ -478,7 +508,7 @@ export default class DevServer {
           process.exit(1);
         } else {
           config.routes = config.routes || [];
-          config.routes.push(...defaultRoutes as RouteConfig[]);
+          config.routes.push(...(defaultRoutes as RouteConfig[]));
         }
       }
     }
@@ -551,8 +581,7 @@ export default class DevServer {
    * and filter them
    */
   resolveBuildFiles(files: BuilderInputs) {
-    return Object.keys(files)
-      .filter(this.filter);
+    return Object.keys(files).filter(this.filter);
   }
 
   /**
@@ -594,7 +623,9 @@ export default class DevServer {
     this.files = results;
 
     const builders: Set<string> = new Set(
-      (nowConfig.builds || []).filter((b: BuildConfig) => b.use).map((b: BuildConfig) => b.use as string)
+      (nowConfig.builds || [])
+        .filter((b: BuildConfig) => b.use)
+        .map((b: BuildConfig) => b.use as string)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
@@ -618,18 +649,15 @@ export default class DevServer {
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
     // that can be served by the builder.
-    const needsInitialBuild = Array.from(this.buildMatches.values()).filter(
-      (buildMatch: BuildMatch) => {
-        const { builder } = buildMatch.builderWithPkg;
-        return typeof builder.shouldServe !== 'function';
-      }
+    const blockingBuilds = Array.from(this.buildMatches.values()).filter(
+      needsBlockingBuild
     );
-    if (needsInitialBuild.length > 0) {
+    if (blockingBuilds.length > 0) {
       this.output.log(
-        `Creating initial ${plural('build', needsInitialBuild.length)}`
+        `Creating initial ${plural('build', blockingBuilds.length)}`
       );
 
-      for (const match of needsInitialBuild) {
+      for (const match of blockingBuilds) {
         await executeBuild(nowConfig, this, this.files, match, null, true);
       }
 
@@ -917,6 +945,13 @@ export default class DevServer {
     nowConfig: NowConfig,
     routes: RouteConfig[] | undefined = nowConfig.routes
   ) => {
+    if (this.blockingBuildsPromise) {
+      this.output.debug(
+        'Waiting for builds to complete before handling request'
+      );
+      await this.blockingBuildsPromise;
+    }
+
     await this.updateBuildMatches(nowConfig);
 
     const {
@@ -1459,4 +1494,9 @@ function fileRemoved(
   delete files[name];
   changed.delete(name);
   removed.add(name);
+}
+
+function needsBlockingBuild(buildMatch: BuildMatch): boolean {
+  const { builder } = buildMatch.builderWithPkg;
+  return typeof builder.shouldServe !== 'function';
 }
