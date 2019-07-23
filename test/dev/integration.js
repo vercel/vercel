@@ -443,7 +443,7 @@ test('[now dev] temporary directory listing', async t => {
 
     await sleep(ms('20s'));
 
-    const firstResponse = await fetch(`http://localhost:${port}`, 180);
+    const firstResponse = await fetch(`http://localhost:${port}`);
     validateResponseHeaders(t, firstResponse);
     const body = await firstResponse.text();
     t.is(firstResponse.status, 404, `Received instead: ${body}`);
@@ -474,7 +474,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
     dev.unref();
 
     {
-      const response = await fetch(`http://localhost:${port}`, 180);
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
       const body = await response.text();
       t.is(body.trim(), 'hello:index.txt');
@@ -488,7 +488,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
     await sleep(ms('3s'));
 
     {
-      const response = await fetch(`http://localhost:${port}`, 180);
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
       const body = await response.text();
       t.is(body.trim(), rnd);
