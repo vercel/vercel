@@ -242,7 +242,7 @@ export default class DevServer {
 
     // Special case `@now/static-build`,
     // since it won't trigger builds otherwise
-    ((nowConfig && nowConfig.builds) || []).map((build) => {
+    ((nowConfig && nowConfig.builds) || []).forEach((build) => {
       if (!build.use || !build.use.startsWith('@now/static-build')) {
         return;
       }
@@ -262,7 +262,7 @@ export default class DevServer {
 
       this.output.debug(`Trigger build for ${match.src}`);
 
-      return this.triggerBuild(match, null, null).catch((err) => {
+      this.triggerBuild(match, null, null).catch((err) => {
         this.output.warn(`An error occured while building ${match.src}:`);
         console.error(err.stack);
       });
