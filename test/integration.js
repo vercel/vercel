@@ -1448,6 +1448,11 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
+test('detect update command', async t => {
+  const { code, stderr } = await execute(['update']);
+  t.regex(stderr, /yarn global add now@/gm, `Received: "${stderr}"`);
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);

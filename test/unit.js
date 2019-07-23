@@ -20,7 +20,6 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
-import getUpdateCommand from '../src/util/get-update-command';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -897,9 +896,4 @@ test('guess user\'s intention with custom didYouMean', async t => {
   t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
   t.is(didYouMean('node', examples, 0.7), 'nodejs');
   t.is(didYouMean('12345', examples, 0.7), undefined);
-});
-
-test('update command detection', async t => {
-  const command = await getUpdateCommand();
-  t.regex(/yarn global add now@/, command);
 });
