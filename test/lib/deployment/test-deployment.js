@@ -102,6 +102,21 @@ async function testDeployment (
             + ` Response headers:\n ${headers}`
         );
       }
+    } else if (probe.responseHeaders) {
+      // eslint-disable-next-line no-loop-func
+      Object.keys(probe.responseHeaders).forEach((header) => {
+        if (resp.headers.get(header) !== probe.responseHeaders[header]) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([ k, v ]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Fetched page ${probeUrl} does not contain header ${header}: \`${
+              probe.responseHeaders[header]
+            }\`.\n\nResponse headers:\n ${headers}`
+          );
+        }
+      });
     } else {
       assert(false, 'probe must have a test condition');
     }
