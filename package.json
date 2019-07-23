@@ -147,6 +147,7 @@
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
     "jsonlines": "0.1.1",
+    "line-replace": "1.0.2",
     "load-json-file": "3.0.0",
     "micro": "9.1.2",
     "mime-types": "2.1.24",

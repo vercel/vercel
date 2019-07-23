@@ -12,6 +12,7 @@ const {
   writeFile,
   writeJSON
 } = require('fs-extra');
+const lineReplace = require('line-replace');
 const pkg = require('../package.json');
 
 const dirRoot = join(__dirname, '..');
@@ -87,6 +88,18 @@ async function main() {
   const runtimes = join(dirRoot, 'node_modules/@zeit/fun/dist/src/runtimes');
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
+
+  await new Promise((res) => {
+    lineReplace({
+      file: join(dirRoot, 'dist/index.js'),
+      line: 1,
+      text: '#!/usr/bin/env node --no-warnings',
+      addNewLine: true,
+      callback() {
+        res();
+      }
+    })
+  });
 
   console.log('Finished building `now-cli`');
 }

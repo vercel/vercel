@@ -4091,6 +4091,11 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
+line-replace@1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/line-replace/-/line-replace-1.0.2.tgz#b1995da54060d671c449196fa228395f0faaea47"
+  integrity sha1-sZldpUBg1nHESRlvoig5Xw+q6kc=
+
 load-json-file@3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/load-json-file/-/load-json-file-3.0.0.tgz#7eb3735d983a7ed2262ade4ff769af5369c5c440"
