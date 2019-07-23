@@ -54,6 +54,25 @@ function testFixture(directory) {
   };
 }
 
+function testFixtureStdio(directory) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      port = ++port;
+      const dev = execa(binaryPath, ['dev', directory, '-p', port]);
+
+      dev.stderr.on('data', async data => {
+        if (data.toString().includes('Ready! Available at')) {
+          resolve({dev, port})
+        }
+      });
+
+      await dev;
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 test('[now dev] 00-list-directory', async t => {
   const directory = fixture('00-list-directory');
   const { dev, port } = testFixture(directory);
@@ -463,5 +482,23 @@ test('[now dev] temporary directory listing', async t => {
     }
   } finally {
     dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] `stdio` 00-list-directory', async t => {
+  const directory = fixture('00-list-directory');
+  const { dev, port } = await testFixtureStdio(directory);
+
+  try {
+    const result = await fetchWithRetry(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+    const body = await response.text();
+    t.regex(body, /Files within/gm);
+    t.regex(body, /test1.txt/gm);
+    t.regex(body, /directory/gm);
+  } finally {
+    dev.kill('SIGTERM')
   }
 });
