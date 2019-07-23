@@ -73,20 +73,6 @@ async function main() {
   args.push(src);
   await execa(process.execPath, args, { stdio: 'inherit' });
 
-  await new Promise((res) => {
-    lineReplace({
-      file: join(dirRoot, 'dist/index.js'),
-      line: 1,
-      text: '#!/usr/bin/env node --no-warnings',
-      addNewLine: true,
-      callback() {
-        res();
-      }
-    })
-  });
-
-  await execa('chmod', ['+x', join(dirRoot, 'dist/index.js')]);
-
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
   //       https://github.com/zeit/ncc/pull/182
@@ -102,6 +88,18 @@ async function main() {
   const runtimes = join(dirRoot, 'node_modules/@zeit/fun/dist/src/runtimes');
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
+
+  await new Promise((res) => {
+    lineReplace({
+      file: join(dirRoot, 'dist/index.js'),
+      line: 1,
+      text: '#!/usr/bin/env node --no-warnings',
+      addNewLine: true,
+      callback() {
+        res();
+      }
+    })
+  });
 
   console.log('Finished building `now-cli`');
 }
