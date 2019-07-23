@@ -9,10 +9,12 @@ import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
+import plural from 'pluralize';
 import ora, { Ora } from 'ora';
 import minimatch from 'minimatch';
 
 import { Output } from '../output';
+import highlight from '../output/highlight';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 import { staticFiles as getFiles } from '../get-files';
@@ -22,6 +24,7 @@ import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
   EnvConfig,
   NowConfig,
+  BuildConfig,
   BuildMatch,
   BuildResult,
   BuilderInputs,
@@ -374,6 +377,7 @@ export async function getBuildMatches(
   fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
+  const noMatches: BuildConfig[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -394,8 +398,12 @@ export async function getBuildMatches(
     src = src.replace(/(\[|\])/g, '[$1]');
 
     const files = fileList
-      .filter((name) => name === src || minimatch(name, src))
-      .map((name) => join(cwd, name));
+      .filter(name => name === src || minimatch(name, src))
+      .map(name => join(cwd, name));
+
+    if (files.length === 0) {
+      noMatches.push(buildConfig);
+    }
 
     for (const file of files) {
       src = relative(cwd, file);
@@ -410,5 +418,21 @@ export async function getBuildMatches(
       });
     }
   }
+
+  if (noMatches.length > 0) {
+    output.warn(
+      `You defined ${plural(
+        'build',
+        noMatches.length,
+        true
+      )} that did not match any source files (please ensure they are NOT defined in ${highlight(
+        '.nowignore'
+      )}):`
+    );
+    for (const buildConfig of noMatches) {
+      output.print(`- ${JSON.stringify(buildConfig)}\n`);
+    }
+  }
+
   return matches;
 }
