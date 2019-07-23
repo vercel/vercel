@@ -314,13 +314,6 @@ export default class DevServer {
       }
     }
 
-    // Sort build matches to make sure `@now/static-build` is always last
-    this.buildMatches = new Map(
-      [...this.buildMatches.entries()].sort((matchA, matchB) => {
-        return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
-      })
-    );
-
     // Add the new matches to the `buildMatches` map
     const blockingBuilds: Promise<void>[] = [];
     for (const match of matches) {
@@ -350,6 +343,13 @@ export default class DevServer {
         .then(cleanup)
         .catch(cleanup);
     }
+
+    // Sort build matches to make sure `@now/static-build` is always last
+    this.buildMatches = new Map(
+      [...this.buildMatches.entries()].sort((matchA, matchB) => {
+        return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
+      })
+    );
   }
 
   async invalidateBuildMatches(
