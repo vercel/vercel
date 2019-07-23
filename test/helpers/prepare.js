@@ -4,8 +4,7 @@ const { randomBytes } = require('crypto');
 
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
-const { promises: { writeFile } } = require('fs');
-const { mkdirp } = require('fs-extra');
+const { mkdirp, writeFile } = require('fs-extra');
 
 const getDockerFile = session => `
   FROM mhart/alpine-node:latest
