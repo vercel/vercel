@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --no-warnings
 
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
