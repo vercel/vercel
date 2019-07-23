@@ -74,9 +74,27 @@ jobs:
           paths:
             - .nyc_output
 
-  test-integration:
+  test-integration-macos:
     macos:
       xcode: '10.0.0'
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Integration Tests
+          command: yarn test-integration --clean false
+      - run:
+          name: Running Integration Tests for `now dev`
+          command: yarn test-integration-now-dev --clean false
+
+  test-integration-node-8:
+    docker:
+      - image: circleci/node:8
     working_directory: ~/repo
     steps:
       - checkout
@@ -181,7 +199,13 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-integration:
+      - test-integration-macos:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-node-8:
           requires:
             - build
           filters:
@@ -190,7 +214,8 @@ workflows:
       - coverage:
           requires:
             - test-unit
-            - test-integration
+            - test-integration-macos
+            - test-integration-node-8
             - test-lint
           filters:
             tags:
