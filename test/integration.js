@@ -7,6 +7,7 @@ import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
+import { writeFile, readFile } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -119,7 +120,7 @@ test.before(async () => {
     if (!fs.existsSync(location)) {
       await createDirectory(location);
     }
-    await fs.promises.writeFile(
+    await writeFile(
       path.join(location, `auth.json`),
       JSON.stringify({ token })
     );
@@ -1084,7 +1085,7 @@ test('deploy single static file', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'image/png');
-  t.deepEqual(await fs.promises.readFile(file), await response.buffer());
+  t.deepEqual(await readFile(file), await response.buffer());
 });
 
 test('deploy a static directory', async t => {
