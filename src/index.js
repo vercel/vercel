@@ -36,7 +36,7 @@ import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getUpgradeCommand } from './commands/update';
+import getUpdateCommand from './util/get-update-command';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -145,7 +145,7 @@ const main = async argv_ => {
       )
     );
     console.log(
-      info(await getUpgradeCommand())
+      info(await getUpdateCommand())
     );
     console.log(
       info(
