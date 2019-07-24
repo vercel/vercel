@@ -495,19 +495,6 @@ test('[now dev] temporary directory listing', async t => {
   }
 });
 
-test(
-  '[now dev] 00-list-directory',
-  testFixtureStdio('00-list-directory', async (t, port) => {
-    const res = await fetch(`http://localhost:${port}/`);
-    validateResponseHeaders(t, res);
-
-    const text = await res.text();
-    t.regex(text, /Files within/gm);
-    t.regex(text, /test1.txt/gm);
-    t.regex(text, /directory/gm);
-  })
-);
-
 test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
   const directory = fixture('trigger-static-build');
   const { dev, port } = testFixture(directory);
