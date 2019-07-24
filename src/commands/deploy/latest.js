@@ -89,12 +89,14 @@ const printDeploymentStatus = async (
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
+          const firstAlias = aliasList[0];
+          const preparedAlias = prepareAlias(firstAlias);
           try {
-            await copy(`https://${aliasList[0]}`);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+            await copy(`https://${firstAlias}`);
+            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(`Aliased to ${chalk.bold(chalk.cyan(prepareAlias(aliasList[0])))} ${deployStamp()}`);
+            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${deployStamp()}`);
           }
         }
       } else {
@@ -124,7 +126,7 @@ const printDeploymentStatus = async (
         }
       }
     } else {
-      output.success(`Deployment ready ${deployStamp()}`);
+      output.ready(`Deployment complete ${deployStamp()}`);
     }
 
     return 0;
