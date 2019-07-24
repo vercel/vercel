@@ -62,7 +62,7 @@ function testFixtureStdio(directory) {
 
       dev.stderr.on('data', async data => {
         if (data.toString().includes('Ready! Available at')) {
-          resolve({dev, port})
+          resolve({ dev, port })
         }
       });
 
