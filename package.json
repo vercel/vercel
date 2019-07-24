@@ -58,6 +58,9 @@
       "esm"
     ]
   },
+  "engines": {
+    "node": ">= 10"
+  },
   "devDependencies": {
     "@now/build-utils": "0.9.4",
     "@now/go": "latest",
