@@ -7,7 +7,8 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
-import { createReadStream, promises } from 'fs';
+import { createReadStream } from 'fs';
+import fs from 'fs-extra';
 import ms from 'ms';
 import { URLSearchParams } from 'url';
 import {
@@ -177,7 +178,7 @@ export default class Now extends EventEmitter {
             [],
             await Promise.all(
               Array.from(this._files).map(async ([sha, { data, names }]) => {
-                const statFn = followSymlinks ? promises.stat : promises.lstat;
+                const statFn = followSymlinks ? fs.stat : fs.lstat;
 
                 return names.map(async name => {
                   const getMode = async () => {
@@ -861,7 +862,7 @@ function hasFile(base, files, name) {
 
 async function readAuthToken(path, name = '.npmrc') {
   try {
-    const contents = await promises.readFile(resolvePath(path, name), 'utf8');
+    const contents = await fs.readFile(resolvePath(path, name), 'utf8');
     const npmrc = parseIni(contents);
     return npmrc['//registry.npmjs.org/:_authToken'];
   } catch (err) {

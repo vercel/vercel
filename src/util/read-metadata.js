@@ -2,7 +2,7 @@ import { basename, resolve as resolvePath } from 'path';
 import chalk from 'chalk';
 import loadJSON from 'load-json-file';
 import loadPackageJSON from 'read-pkg';
-import fs from 'fs';
+import fs from 'fs-extra';
 import { parse as parseDockerfile } from 'docker-file-parser';
 import determineType from 'deployment-type';
 import getLocalConfigPath from './config/local-path';
@@ -179,6 +179,6 @@ function decorateUserErrors(fn) {
 const readPkg = decorateUserErrors(loadPackageJSON);
 const readJSON = decorateUserErrors(loadJSON);
 const readDockerfile = decorateUserErrors(async (path, name = 'Dockerfile') => {
-  const contents = await fs.promises.readFile(resolvePath(path, name), 'utf8');
+  const contents = await fs.readFile(resolvePath(path, name), 'utf8');
   return parseDockerfile(contents, { includeComments: true });
 });

@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs-extra';
 import { CantParseJSONFile } from './errors-ts';
 
 export default async function readJSONFile(
@@ -19,7 +19,7 @@ export default async function readJSONFile(
 
 async function readFileSafe(file: string) {
   if (fs.existsSync(file)) {
-    const content = await fs.promises.readFile(file);
+    const content = await fs.readFile(file);
     return content.toString();
   }
 
