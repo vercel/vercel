@@ -165,6 +165,7 @@ async function compile(
   const { fileList, esmFileList } = await nodeFileTrace([...inputFiles], {
     base: workPath,
     ts: true,
+    mixedModules: true,
     ignore: config.excludeFiles,
     readFile(fsPath: string): Buffer | string | null {
       const relPath = relative(workPath, fsPath);

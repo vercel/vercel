@@ -1,3 +1,4 @@
+//@ts-ignore test will compile during deployment
 import express from 'express';
 const router = express.Router();
 
