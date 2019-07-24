@@ -98,7 +98,7 @@ const printDeploymentStatus = async (
           }
         }
       } else {
-        output.ready(`Aliases assigned ${deployStamp()}`);
+        output.ready(`Deployment complete ${deployStamp()}`);
 
         // If `alias` is defined in the config, we need to
         // copy the first one to the clipboard.
