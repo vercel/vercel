@@ -54,23 +54,39 @@ function testFixture(directory) {
   };
 }
 
-function testFixtureStdio(directory) {
-  return new Promise(async (resolve, reject) => {
+function testFixtureStdio(directory, fn) {
+  return async t => {
+    let dev;
+    const dir = fixture(directory);
     try {
       port = ++port;
-      const dev = execa(binaryPath, ['dev', directory, '-p', port]);
+      let output = '';
+      let readyResolve;
+      let readyPromise = new Promise(resolve => {
+        readyResolve = resolve;
+      });
 
+      dev = execa(binaryPath, ['dev', dir, '-p', port]);
       dev.stderr.on('data', async data => {
+        output += data.toString();
         if (data.toString().includes('Ready! Available at')) {
-          resolve({ dev, port })
+          readyResolve();
+        }
+
+        if ( data.toString().includes('Command failed')
+          || data.toString().includes('Error!')) {
+          dev.kill('SIGTERM');
+          console.log(output);
+          process.exit(1);
         }
       });
 
-      await dev;
-    } catch (error) {
-      reject(error);
+      await readyPromise;
+      await fn(t, port);
+    } finally {
+      dev.kill('SIGTERM');
     }
-  });
+  };
 }
 
 test('[now dev] 00-list-directory', async t => {
@@ -137,25 +153,18 @@ test('[now dev] 02-angular-node', async t => {
   }
 });
 
-// test('[now dev] 03-aurelia-node', async t => {
-//   const directory = fixture('03-aurelia-node');
-//   const { dev, port } = testFixture(directory);
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
+test(
+  '[now dev] 03-aurelia',
+  testFixtureStdio('03-aurelia', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`)
+    const response = await result;
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 160);
-//     const response = await result;
+    validateResponseHeaders(t, response);
 
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Aurelia \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Aurelia Navigation Skeleton/gm);
+  })
+);
 
 // test('[now dev] 04-create-react-app-node', async t => {
 //   const directory = fixture('04-create-react-app-node');
@@ -485,20 +494,15 @@ test('[now dev] temporary directory listing', async t => {
   }
 });
 
-test('[now dev] `stdio` 00-list-directory', async t => {
-  const directory = fixture('00-list-directory');
-  const { dev, port } = await testFixtureStdio(directory);
+test(
+  '[now dev] 00-list-directory',
+  testFixtureStdio('00-list-directory', async (t, port) => {
+    const res = await fetch(`http://localhost:${port}/`);
+    validateResponseHeaders(t, res);
 
-  try {
-    const result = await fetchWithRetry(`http://localhost:${port}`);
-    const response = await result;
-
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Files within/gm);
-    t.regex(body, /test1.txt/gm);
-    t.regex(body, /directory/gm);
-  } finally {
-    dev.kill('SIGTERM')
-  }
-});
+    const text = await res.text();
+    t.regex(text, /Files within/gm);
+    t.regex(text, /test1.txt/gm);
+    t.regex(text, /directory/gm);
+  })
+);

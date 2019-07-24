@@ -4,45 +4,35 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const DuplicatePackageCheckerPlugin = require('duplicate-package-checker-webpack-plugin');
 const project = require('./aurelia_project/aurelia.json');
-const {
-  AureliaPlugin,
-  ModuleDependenciesPlugin
-} = require('aurelia-webpack-plugin');
+const { AureliaPlugin, ModuleDependenciesPlugin } = require('aurelia-webpack-plugin');
 const { ProvidePlugin } = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 // config helpers:
-const ensureArray = config =>
-  (config && (Array.isArray(config) ? config : [config])) || [];
+const ensureArray = (config) => config && (Array.isArray(config) ? config : [config]) || [];
 const when = (condition, config, negativeConfig) =>
   condition ? ensureArray(config) : ensureArray(negativeConfig);
 
 // primary config:
-const title = 'Aurelia + Node.js API';
+const title = 'Aurelia Navigation Skeleton';
 const outDir = path.resolve(__dirname, project.platform.output);
 const srcDir = path.resolve(__dirname, 'src');
 const testDir = path.resolve(__dirname, 'test', 'unit');
 const nodeModulesDir = path.resolve(__dirname, 'node_modules');
 const baseUrl = '/';
 
-const cssRules = [{ loader: 'css-loader' }];
+const cssRules = [
+  { loader: 'css-loader' },
+];
 
-module.exports = ({
-  production,
-  server,
-  extractCss,
-  coverage,
-  analyze,
-  karma
-} = {}) => ({
+
+module.exports = ({ production, server, extractCss, coverage, analyze, karma } = {}) => ({
   resolve: {
     extensions: ['.js'],
     modules: [srcDir, 'node_modules'],
     // Enforce single aurelia-binding, to avoid v1/v2 duplication due to
     // out-of-date dependencies on 3rd party aurelia plugins
-    alias: {
-      'aurelia-binding': path.resolve(__dirname, 'node_modules/aurelia-binding')
-    }
+    alias: { 'aurelia-binding': path.resolve(__dirname, 'node_modules/aurelia-binding') }
   },
   entry: {
     app: ['aurelia-bootstrapper']
@@ -51,18 +41,12 @@ module.exports = ({
   output: {
     path: outDir,
     publicPath: baseUrl,
-    filename: production
-      ? '[name].[chunkhash].bundle.js'
-      : '[name].[hash].bundle.js',
-    sourceMapFilename: production
-      ? '[name].[chunkhash].bundle.map'
-      : '[name].[hash].bundle.map',
-    chunkFilename: production
-      ? '[name].[chunkhash].chunk.js'
-      : '[name].[hash].chunk.js'
+    filename: production ? '[name].[chunkhash].bundle.js' : '[name].[hash].bundle.js',
+    sourceMapFilename: production ? '[name].[chunkhash].bundle.map' : '[name].[hash].bundle.map',
+    chunkFilename: production ? '[name].[chunkhash].chunk.js' : '[name].[hash].chunk.js'
   },
   optimization: {
-    runtimeChunk: true, // separates the runtime chunk, required for long term cacheability
+    runtimeChunk: true,  // separates the runtime chunk, required for long term cacheability
     // moduleIds is the replacement for HashedModuleIdsPlugin and NamedModulesPlugin deprecated in https://github.com/webpack/webpack/releases/tag/v4.16.0
     // changes module id's to use hashes be based on the relative path of the module, required for long term cacheability
     moduleIds: 'hashed',
@@ -70,7 +54,7 @@ module.exports = ({
     // https://webpack.js.org/plugins/split-chunks-plugin/
     splitChunks: {
       hidePathInfo: true, // prevents the path from being used in the filename when using maxSize
-      chunks: 'initial',
+      chunks: "initial",
       // sizes are compared against source before minification
       maxSize: 200000, // splits chunks if bigger than 200k, adjust as required (maxSize added in webpack v4.15)
       cacheGroups: {
@@ -92,31 +76,28 @@ module.exports = ({
         // },
 
         // This is the HTTP/1.1 optimised cacheGroup configuration
-        vendors: {
-          // picks up everything from node_modules as long as the sum of node modules is larger than minSize
+        vendors: { // picks up everything from node_modules as long as the sum of node modules is larger than minSize
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors',
           priority: 19,
           enforce: true, // causes maxInitialRequests to be ignored, minSize still respected if specified in cacheGroup
           minSize: 30000 // use the default minSize
         },
-        vendorsAsync: {
-          // vendors async chunk, remaining asynchronously used node modules as single chunk file
+        vendorsAsync: { // vendors async chunk, remaining asynchronously used node modules as single chunk file
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors.async',
           chunks: 'async',
           priority: 9,
           reuseExistingChunk: true,
-          minSize: 10000 // use smaller minSize to avoid too much potential bundle bloat due to module duplication.
+          minSize: 10000  // use smaller minSize to avoid too much potential bundle bloat due to module duplication.
         },
-        commonsAsync: {
-          // commons async chunk, remaining asynchronously used modules as single chunk file
+        commonsAsync: { // commons async chunk, remaining asynchronously used modules as single chunk file
           name: 'commons.async',
           minChunks: 2, // Minimum number of chunks that must share a module before splitting
           chunks: 'async',
           priority: 0,
           reuseExistingChunk: true,
-          minSize: 10000 // use smaller minSize to avoid too much potential bundle bloat due to module duplication.
+          minSize: 10000  // use smaller minSize to avoid too much potential bundle bloat due to module duplication.
         }
       }
     }
@@ -135,14 +116,11 @@ module.exports = ({
       {
         test: /\.css$/i,
         issuer: [{ not: [{ test: /\.html$/i }] }],
-        use: extractCss
-          ? [
-              {
-                loader: MiniCssExtractPlugin.loader
-              },
-              'css-loader'
-            ]
-          : ['style-loader', ...cssRules]
+        use: extractCss ? [{
+          loader: MiniCssExtractPlugin.loader
+        },
+        'css-loader'
+        ] : ['style-loader', ...cssRules]
       },
       {
         test: /\.css$/i,
@@ -153,39 +131,22 @@ module.exports = ({
       },
       { test: /\.html$/i, loader: 'html-loader' },
       {
-        test: /\.js$/i,
-        loader: 'babel-loader',
-        exclude: nodeModulesDir,
+        test: /\.js$/i, loader: 'babel-loader', exclude: nodeModulesDir,
         options: coverage ? { sourceMap: 'inline', plugins: ['istanbul'] } : {}
       },
       // embed small images and fonts as Data Urls and larger ones as files:
-      {
-        test: /\.(png|gif|jpg|cur)$/i,
-        loader: 'url-loader',
-        options: { limit: 8192 }
-      },
-      {
-        test: /\.woff2(\?v=[0-9]\.[0-9]\.[0-9])?$/i,
-        loader: 'url-loader',
-        options: { limit: 10000, mimetype: 'application/font-woff2' }
-      },
-      {
-        test: /\.woff(\?v=[0-9]\.[0-9]\.[0-9])?$/i,
-        loader: 'url-loader',
-        options: { limit: 10000, mimetype: 'application/font-woff' }
-      },
+      { test: /\.(png|gif|jpg|cur)$/i, loader: 'url-loader', options: { limit: 8192 } },
+      { test: /\.woff2(\?v=[0-9]\.[0-9]\.[0-9])?$/i, loader: 'url-loader', options: { limit: 10000, mimetype: 'application/font-woff2' } },
+      { test: /\.woff(\?v=[0-9]\.[0-9]\.[0-9])?$/i, loader: 'url-loader', options: { limit: 10000, mimetype: 'application/font-woff' } },
       // load these fonts normally, as files:
-      {
-        test: /\.(ttf|eot|svg|otf)(\?v=[0-9]\.[0-9]\.[0-9])?$/i,
-        loader: 'file-loader'
-      }
+      { test: /\.(ttf|eot|svg|otf)(\?v=[0-9]\.[0-9]\.[0-9])?$/i, loader: 'file-loader' },
     ]
   },
   plugins: [
     ...when(!karma, new DuplicatePackageCheckerPlugin()),
     new AureliaPlugin(),
     new ProvidePlugin({
-      Promise: ['promise-polyfill', 'default']
+      'Promise': ['promise-polyfill', 'default']
     }),
     new ModuleDependenciesPlugin({
       'aurelia-testing': ['./compile-spy', './view-spy']
@@ -194,28 +155,16 @@ module.exports = ({
       template: 'index.ejs',
       metadata: {
         // available in index.ejs //
-        title,
-        server,
-        baseUrl
+        title, server, baseUrl
       }
     }),
     // ref: https://webpack.js.org/plugins/mini-css-extract-plugin/
-    ...when(
-      extractCss,
-      new MiniCssExtractPlugin({
-        // updated to match the naming conventions for the js files
-        filename: production
-          ? 'css/[name].[contenthash].bundle.css'
-          : 'css/[name].[hash].bundle.css',
-        chunkFilename: production
-          ? 'css/[name].[contenthash].chunk.css'
-          : 'css/[name].[hash].chunk.css'
-      })
-    ),
-    ...when(
-      production || server,
-      new CopyWebpackPlugin([{ from: 'static', to: outDir, ignore: ['.*'] }])
-    ), // ignore dot (hidden) files
+    ...when(extractCss, new MiniCssExtractPlugin({ // updated to match the naming conventions for the js files
+      filename: production ? 'css/[name].[contenthash].bundle.css' : 'css/[name].[hash].bundle.css',
+      chunkFilename: production ? 'css/[name].[contenthash].chunk.css' : 'css/[name].[hash].chunk.css'
+    })),
+    ...when(production || server, new CopyWebpackPlugin([
+      { from: 'static', to: outDir, ignore: ['.*'] }])), // ignore dot (hidden) files
     ...when(analyze, new BundleAnalyzerPlugin())
   ]
 });

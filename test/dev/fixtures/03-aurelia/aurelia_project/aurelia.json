@@ -1,5 +1,5 @@
 {
-  "name": "aurelia-app",
+  "name": "aurelia",
   "type": "project:application",
   "paths": {
     "root": "src",
@@ -24,7 +24,7 @@
     "hmr": false,
     "open": false,
     "port": 8080,
-    "output": "dist"
+    "output": "public"
   },
   "packageManager": "yarn"
 }
