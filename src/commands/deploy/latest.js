@@ -366,7 +366,8 @@ export default async function main(
         new Client({
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam
+          currentTeam: ctx.config.currentTeam,
+          debug: debugEnabled
         }),
         firstDeployCall.meta.domain,
         contextName
