@@ -295,7 +295,10 @@ export default class DevServer {
     }
   }
 
-  async updateBuildMatches(nowConfig: NowConfig): Promise<void> {
+  async updateBuildMatches(
+    nowConfig: NowConfig,
+    isInitial = false
+  ): Promise<void> {
     const matches = await getBuildMatches(
       nowConfig,
       this.cwd,
@@ -321,7 +324,7 @@ export default class DevServer {
       if (!currentMatch || currentMatch.use !== match.use) {
         this.output.debug(`Adding build match for "${match.src}"`);
         this.buildMatches.set(match.src, match);
-        if (needsBlockingBuild(match)) {
+        if (!isInitial && needsBlockingBuild(match)) {
           const buildPromise = executeBuild(
             nowConfig,
             this,
@@ -629,7 +632,7 @@ export default class DevServer {
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
-    await this.updateBuildMatches(nowConfig);
+    await this.updateBuildMatches(nowConfig, true);
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
@@ -945,14 +948,14 @@ export default class DevServer {
     nowConfig: NowConfig,
     routes: RouteConfig[] | undefined = nowConfig.routes
   ) => {
+    await this.updateBuildMatches(nowConfig);
+
     if (this.blockingBuildsPromise) {
       this.output.debug(
         'Waiting for builds to complete before handling request'
       );
       await this.blockingBuildsPromise;
     }
-
-    await this.updateBuildMatches(nowConfig);
 
     const {
       dest,
