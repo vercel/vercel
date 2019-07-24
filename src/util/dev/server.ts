@@ -171,11 +171,6 @@ export default class DevServer {
       }
     }
 
-    if (filesChanged.has('now.json') || filesRemoved.has('now.json')) {
-      // The `now.json` file was changed, so invalidate the in-memory copy
-      this.output.debug('Invalidating cached `now.json`');
-    }
-
     // Update the build matches in case an entrypoint was created or deleted
     const nowConfig = await this.getNowConfig(false);
     await this.updateBuildMatches(nowConfig);
