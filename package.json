@@ -84,7 +84,7 @@
     "node": ">= 10"
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.2",
+    "@now/build-utils": "0.9.4",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
