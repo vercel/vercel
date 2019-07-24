@@ -5,7 +5,7 @@ import url from 'url';
 import childProcess from 'child_process';
 
 // Packages
-import { promises as fs } from 'fs';
+import fs from 'fs-extra';
 
 import download from 'download';
 import tmp from 'tmp-promise';

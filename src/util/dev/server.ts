@@ -617,7 +617,7 @@ export default class DevServer {
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
       const path = relative(this.cwd, fsPath);
-      const { mode } = await fs.promises.stat(fsPath);
+      const { mode } = await fs.stat(fsPath);
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;

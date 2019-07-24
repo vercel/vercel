@@ -154,6 +154,7 @@ test('print the deploy help message', async t => {
 
   t.is(code, 2);
   t.true(stderr.includes(deployHelpMessage));
+  t.false(stderr.includes('ExperimentalWarning'));
 });
 
 test('output the version', async t => {

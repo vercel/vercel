@@ -1,5 +1,5 @@
+import fs from 'fs-extra';
 import { resolve, basename, parse } from 'path';
-import { promises as fs } from 'fs';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
