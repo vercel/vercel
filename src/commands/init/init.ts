@@ -65,14 +65,7 @@ export default async function init(
 
   const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
-    const chosen = await chooseFromDropdown('Not found. Select a suggestion:', oldExample.suggestions, );
-
-    if (!chosen) {
-      output.log('Aborted');
-      return 0;
-    }
-
-    return extractExample(chosen, dir, force);
+    return extractExample(name, dir, force, 'v1');
   }
 
   const found = await guess(exampleList, name);
@@ -126,11 +119,11 @@ async function chooseFromDropdown(message: string, exampleList: string[]) {
 /**
  * Extract example to directory
  */
-async function extractExample(name: string, dir: string, force?: boolean) {
+async function extractExample(name: string, dir: string, force?: boolean, ver: string = 'v2') {
   const folder = prepareFolder(process.cwd(), dir || name, force);
   const stopSpinner = wait(`Fetching ${name}`);
 
-  const url = `${EXAMPLE_API}/v2/download/${name}.tar.gz`;
+  const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
 
   return fetch(url)
     .then(async resp => {
