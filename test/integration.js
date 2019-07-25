@@ -326,7 +326,7 @@ test('list the aliases', async t => {
 });
 
 test('scale the alias', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['scale', context.alias, 'bru', '1', ...defaultArgs],
     {
@@ -334,7 +334,7 @@ test('scale the alias', async t => {
     }
   );
 
-  t.is(code, 0);
+  t.is(code, 0, `Received:\n${stdout}\n${stderr}`);
   t.true(stdout.includes(`(min: 1, max: 1)`));
 });
 
