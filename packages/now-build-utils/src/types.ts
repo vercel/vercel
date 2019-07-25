@@ -24,6 +24,7 @@ export interface Route {
     [key: string]: string;
   };
   continue?: boolean;
+  status?: number;
 }
 
 export interface Config {
