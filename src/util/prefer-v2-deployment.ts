@@ -24,7 +24,7 @@ export default async function preferV2Deployment({
   localConfig: Config | undefined
 }): Promise<null | string> {
   if (localConfig && localConfig.version) {
-    // We will prefere anything that is set here
+    // We will prefer anything that is set here
     return null;
   }
 
