@@ -46,6 +46,8 @@ const GLOBAL_COMMANDS = new Set(['help']);
 
 epipebomb();
 
+sourceMap.install();
+
 // Configure the error reporting system
 Sentry.init({
   dsn: SENTRY_DSN,
