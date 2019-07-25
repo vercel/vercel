@@ -1,15 +1,37 @@
 import fs from 'fs-extra';
-import { resolve, basename, parse } from 'path';
+import { resolve, basename, parse, join } from 'path';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+import cmd from '../../util/output/cmd';
 import param from '../../util/output/param.ts';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
+import readPackage from '../../util/read-package';
+
+async function hasDockerfile(cwd) {
+  return fs.exists(join(cwd, 'Dockerfile')).catch(() => false);
+}
+
+async function hasPkgStartScript(cwd) {
+  const pkg = await readPackage(join(cwd, 'package.json')).catch(() => null);
+
+  if (!pkg || pkg instanceof Error) {
+    return false;
+  }
+
+  const { scripts } = pkg;
+
+  if (scripts.start || scripts['now-start']) {
+    return true;
+  }
+
+  return false;
+}
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
@@ -140,6 +162,28 @@ export default async ctx => {
     }
 
     platformVersion = versionFlag;
+  }
+
+  /**
+   * Change the platform version from 1 to 2 when:
+   * - it was not explicitly set
+   * - it is not set inside of `now.json`
+   * - there is no Dockerfile
+   * - when the package.json is missing a start script
+   */
+  if (platformVersion === 1 &&
+    versionFlag === undefined &&
+    (localConfig && localConfig.version) !== 1 &&
+    !(await hasDockerfile(paths[0])) &&
+    !(await hasPkgStartScript(paths[0]))
+  ) {
+    output.note(
+      `Changing platform version to ${code('2')} because ` +
+      `there is either no ${highlight('Dockerfile')} ` +
+      `or no ${highlight('package.json')} file or because ` +
+      `the ${cmd('start')} script is missing`
+    );
+    platformVersion = 2;
   }
 
   if (platformVersion === null || platformVersion > 1) {
