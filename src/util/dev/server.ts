@@ -144,7 +144,7 @@ export default class DevServer {
 
   async exit(code = 1) {
     await this.stop();
-    process.exit(1);
+    process.exit(code);
   }
 
   enqueueFsEvent(type: string, path: string): void {
