@@ -167,47 +167,31 @@ test(
   })
 );
 
-// test('[now dev] 04-create-react-app-node', async t => {
-//   const directory = fixture('04-create-react-app-node');
-//   const { dev, port } = testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+// test(
+//   '[now dev] 04-create-react-app-node',
+//   testFixtureStdio('create-react-app', async(t, port) => {
+//     const result = fetch(`http://localhost:${port}`);
 //     const response = await result;
 
 //     validateResponseHeaders(t, response);
 
 //     const body = await response.text();
-//     t.regex(body, /Create React App \+ Node.js API/gm);
+//     t.regex(body, /React App/gm);
+//   })
+// );
 
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+test(
+  '[now dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-// test('[now dev] 05-gatsby-node', async t => {
-//   const directory = fixture('05-gatsby-node');
-//   const { dev, port } = testFixture(directory);
+    validateResponseHeaders(t, response);
 
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Gatsby \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Gatsby Default Starter/gm);
+  })
+);
 
 // test('[now dev] 06-gridsome-node', async t => {
 //   const directory = fixture('06-gridsome-node');
