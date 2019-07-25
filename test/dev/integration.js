@@ -421,6 +421,19 @@ test('[now dev] 17-vuepress-node', async t => {
   }
 });
 
+test(
+  '[now dev] 18-marko',
+  testFixtureStdio('18-marko', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Marko Starter/gm);
+  })
+);
+
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = testFixture(directory);
