@@ -447,6 +447,19 @@ test(
   })
 );
 
+test(
+  '[now dev] 20-riot',
+  testFixtureStdio('20-riot', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Riot on ZEIT Now/gm);
+  })
+);
+
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = testFixture(directory);
