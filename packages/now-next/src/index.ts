@@ -302,7 +302,7 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const exportedPageRoutes: { src: string; dest: string }[] = [];
+  const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
@@ -558,6 +558,7 @@ export const build = async ({
             {
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join('/', entryDirectory, '_error'),
+              status: 404,
             },
           ]),
     ],
