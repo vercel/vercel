@@ -41,7 +41,8 @@ export default async ctx => {
   }
 
   const localConfig = readLocalConfig(paths[0]);
-  const output = createOutput({ debug: argv['--debug'] });
+  const debugEnabled = argv['--debug'];
+  const output = createOutput({ debug: debugEnabled });
   const stats = {};
   const versionFlag = argv['--platform-version'];
 
@@ -82,7 +83,7 @@ export default async ctx => {
       apiUrl,
       token: authConfig.token,
       currentTeam,
-      debug: false
+      debug: debugEnabled
     });
     try {
       ({ contextName, platformVersion } = await getScope(client));
