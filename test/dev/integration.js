@@ -473,6 +473,19 @@ test(
   })
 );
 
+test(
+  '[now dev] 22-brunch',
+  testFixtureStdio('22-brunch', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Bon Appétit./gm);
+  })
+);
+
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = testFixture(directory);
