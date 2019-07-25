@@ -24,7 +24,7 @@ async function hasPkgStartScript(cwd) {
     return false;
   }
 
-  const { scripts } = pkg;
+  const { scripts = {} } = pkg;
 
   if (scripts.start || scripts['now-start']) {
     return true;
