@@ -1,11 +1,12 @@
 import chalk from 'chalk';
+import {  join } from 'path';
+import { pathExists } from 'fs-extra';
 
 import logo from '../util/output/logo';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
 import createOutput from '../util/output';
-import getUpdateCommand from '../util/get-update-command';
 
 const help = () => {
   console.log(`
@@ -31,6 +32,14 @@ const help = () => {
   `);
 };
 
+export async function getUpgradeCommand() {
+  const isYarn = await pathExists(join(process.cwd(), 'yarn.lock'));
+
+  return isYarn
+  ? 'Please run `yarn global upgrade now` to update Now CLI.'
+  : 'Please run `npm install -g now@latest` to update Now CLI.'
+}
+
 export default async function main(ctx: NowContext): Promise<number> {
   let argv;
 
@@ -55,6 +64,8 @@ export default async function main(ctx: NowContext): Promise<number> {
 
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
-  output.log(await getUpdateCommand());
+  const { log } = output;
+
+  log(await getUpgradeCommand());
   return 0;
 }
