@@ -223,3 +223,35 @@ test('[dev-router] `continue: true` with match', async t => {
     matched_route_idx: 1
   });
 });
+
+test('[dev-router] match with catch-all with prefix slash', async t => {
+  const routesConfig = [{ src: '/(.*)', dest: '/www/$1' }];
+  const result = await devRouter('/', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/www/',
+    userDest: true,
+    status: undefined,
+    headers: {},
+    uri_args: {},
+    matched_route: { src: '/(.*)', dest: '/www/$1' },
+    matched_route_idx: 0
+  });
+});
+
+test('[dev-router] match with catch-all with no prefix slash', async t => {
+  const routesConfig = [{ src: '(.*)', dest: '/www$1' }];
+  const result = await devRouter('/', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: '/www/',
+    userDest: true,
+    status: undefined,
+    headers: {},
+    uri_args: {},
+    matched_route: { src: '(.*)', dest: '/www$1' },
+    matched_route_idx: 0
+  });
+});
