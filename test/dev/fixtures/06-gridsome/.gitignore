@@ -4,4 +4,6 @@
 src/.temp
 node_modules
 dist
-yarn.lock
+.env
+.env.*
+!yarn.lock

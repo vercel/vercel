@@ -193,26 +193,18 @@ test(
   })
 );
 
-// test('[now dev] 06-gridsome-node', async t => {
-//   const directory = fixture('06-gridsome-node');
-//   const { dev, port } = testFixture(directory);
+test(
+  '[now dev] 06-gridsome',
+  testFixtureStdio('06-gridsome', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
+    validateResponseHeaders(t, response);
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Gridsome \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Hello, world!/gm);
+  })
+);
 
 test('[now dev] 07-hexo-node', async t => {
   const directory = fixture('07-hexo-node');
