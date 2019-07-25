@@ -905,7 +905,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = false;
     const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
-    t.regex(reason, /no Dockerfile found/);
+    t.regex(reason, /no `?Dockerfile`? found/);
   }
 
   {
