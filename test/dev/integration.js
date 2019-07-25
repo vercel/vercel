@@ -460,6 +460,19 @@ test(
   })
 );
 
+test(
+  '[now dev] 21-charge',
+  testFixtureStdio('21-charge', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Welcome to my new Charge site/gm);
+  })
+);
+
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = testFixture(directory);

@@ -1,0 +1,11 @@
+{
+  "name": "charge-example",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "charge serve source",
+    "build": "charge build source public"
+  },
+  "devDependencies": {
+    "@static/charge": "^1.2.0"
+  }
+}
