@@ -240,26 +240,18 @@ test(
   })
 );
 
-// test('[now dev] 09-jekyll-node', async t => {
-//   const directory = fixture('09-jekyll-node');
-//   const { dev, port } = testFixture(directory);
+test(
+  '[now dev] 09-jekyll',
+  testFixtureStdio('09-jekyll', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
+    validateResponseHeaders(t, response);
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Jekyll \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Welcome to Jekyll!/gm);
+  })
+);
 
 test('[now dev] 10-nextjs-node', async t => {
   const directory = fixture('10-nextjs-node');
