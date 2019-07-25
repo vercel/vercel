@@ -1272,7 +1272,7 @@ export default class DevServer {
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
-      await findBuildMatch(this.buildMatches, this.files, requestPath, this)
+      await findBuildMatch(this.buildMatches, this.files, requestPath, this, true)
     ) {
       return true;
     }
@@ -1364,10 +1364,11 @@ async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath, devServer)) {
+    if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
     }
   }
@@ -1378,7 +1379,8 @@ async function shouldServe(
   match: BuildMatch,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<boolean> {
   const {
     src: entrypoint,
@@ -1400,7 +1402,7 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
-  } else if (await findMatchingRoute(match, requestPath, devServer)) {
+  } else if (!isFilesystem && (await findMatchingRoute(match, requestPath, devServer))) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
     // been built.
