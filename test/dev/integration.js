@@ -524,3 +524,28 @@ test.only('[now dev] no build matches warning', async t => {
     dev.kill('SIGTERM');
   }
 });
+
+test('[now dev] do not recursivly check the path', async t => {
+  const directory = fixture('trigger-static-build');
+  const { dev, port } = testFixture(directory);
+
+   try {
+    dev.unref();
+
+    {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), 'hello');
+    }
+
+    {
+      const response = await fetchWithRetry(`http://localhost:${port}/favicon.txt`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), 'hello');
+    }
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
