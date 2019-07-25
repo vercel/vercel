@@ -40,11 +40,6 @@ export default async function(
   let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
   const combinedHeaders: HttpHeadersConfig = {};
 
-  // If the pathname starts with a `/` then strip it
-  if (reqPathname.startsWith('/')) {
-    reqPathname = reqPathname.substring(1);
-  }
-
   // Try route match
   if (routes) {
     let idx = -1;
@@ -64,9 +59,6 @@ export default async function(
         continue;
       }
 
-      // Strip leading [^/] if they exist
-      src = src.replace(/^\^?\/?/, '');
-
       if (!src.startsWith('^')) {
         src = `^${src}`;
       }
@@ -78,10 +70,10 @@ export default async function(
       const keys: string[] = [];
       const matcher = PCRE(`%${src}%i`, keys);
       const match =
-        matcher.exec(reqPathname) || matcher.exec(`/${reqPathname}`);
+        matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
       if (match) {
-        let destPath: string = `/${reqPathname}`;
+        let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
           destPath = resolveRouteParameters(routeConfig.dest, match, keys);
@@ -137,7 +129,7 @@ export default async function(
   if (!found) {
     found = {
       found: false,
-      dest: `/${reqPathname}`,
+      dest: reqPathname,
       uri_args: query,
       headers: combinedHeaders
     };
