@@ -20,6 +20,7 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
+import preferV2Deployment from '../src/util/prefer-v2-deployment';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -896,4 +897,54 @@ test('guess user\'s intention with custom didYouMean', async t => {
   t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
   t.is(didYouMean('node', examples, 0.7), 'nodejs');
   t.is(didYouMean('12345', examples, 0.7), undefined);
+});
+
+test('check platform version chanage with `preferV2Deployment`', async t => {
+  {
+    const localConfig = undefined;
+    const pkg = null;
+    const hasDockerfile = false;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.regex(reason, /Dockerfile/gm);
+  }
+
+  {
+    const localConfig = undefined;
+    const pkg = { scripts: { 'start': 'echo hi' } };
+    const hasDockerfile = false;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.is(reason, null);
+  }
+
+  {
+    const localConfig = undefined;
+    const pkg = { scripts: { 'now-start': 'echo hi' } };
+    const hasDockerfile = false;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.is(reason, null);
+  }
+
+  {
+    const localConfig = { 'version': 1 };
+    const pkg = null;
+    const hasDockerfile = false;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.is(reason, null);
+  }
+
+  {
+    const localConfig = undefined;
+    const pkg = null;
+    const hasDockerfile = true;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.is(reason, null);
+  }
+
+  {
+    const localConfig = undefined;
+    const pkg = { scripts: { 'build': 'echo hi' } };
+    const hasDockerfile = false;
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
+    t.regex(reason, /package\.json/gm);
+  }
 });
