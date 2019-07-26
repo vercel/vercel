@@ -95,28 +95,33 @@ if (!process.env.CI) {
 }
 
 test.before(async () => {
-  await prepareFixtures(contextName);
+  try {
+    await retry(async () => {
+      const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+      const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+      const url = Buffer.from(str, 'base64').toString();
+      const token = await fetchTokenWithRetry(url);
 
-  await retry(async () => {
-    const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-    const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-    const url = Buffer.from(str, 'base64').toString();
-    const token = await fetchTokenWithRetry(url);
+      if (!fs.existsSync(location)) {
+        await createDirectory(location);
+      }
 
-    if (!fs.existsSync(location)) {
-      await createDirectory(location);
-    }
+      await writeFile(
+        path.join(location, `auth.json`),
+        JSON.stringify({ token })
+      );
 
-    await writeFile(
-      path.join(location, `auth.json`),
-      JSON.stringify({ token })
-    );
+      const user = await fetchTokenInformation(token);
 
-    const user = await fetchTokenInformation(token);
+      email = user.email;
+      contextName = user.username || user.email;
+    }, { retries: 5, factor: 1 });
 
-    email = user.email;
-    contextName = `${user.email.split('@')[0]}`;
-  }, { retries: 5, factor: 1 });
+    await prepareFixtures(contextName);
+  } catch (err) {
+    console.log('Failed `test.before`');
+    console.log(err);
+  }
 });
 
 const execute = (args, options) =>
