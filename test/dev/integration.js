@@ -486,6 +486,32 @@ test(
   })
 );
 
+test(
+  '[now dev] 23-docusaurus',
+  testFixtureStdio('23-docusaurus', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Test Site · A website for testing/gm);
+  })
+);
+
+test(
+  '[now dev] 24-ember',
+  testFixtureStdio('24-ember', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /HelloWorld/gm);
+  })
+);
+
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = testFixture(directory);
