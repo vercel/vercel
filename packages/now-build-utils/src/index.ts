@@ -18,6 +18,7 @@ import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import { detectBuilders } from './detect-builders';
 import { detectRoutes } from './detect-routes';
+import debug from './debug';
 
 export {
   FileBlob,
@@ -40,6 +41,7 @@ export {
   shouldServe,
   detectBuilders,
   detectRoutes,
+  debug,
 };
 
 export * from './types';
