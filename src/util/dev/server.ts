@@ -142,6 +142,11 @@ export default class DevServer {
     this.filter = path => Boolean(path);
   }
 
+  async exit(code = 1) {
+    await this.stop();
+    process.exit(code);
+  }
+
   enqueueFsEvent(type: string, path: string): void {
     this.watchAggregationEvents.push({ type, path });
     if (this.watchAggregationId === null) {
@@ -414,7 +419,7 @@ export default class DevServer {
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
-        process.exit(1);
+        await this.exit();
       } else {
         throw err;
       }
@@ -489,7 +494,7 @@ export default class DevServer {
 
       if (errors) {
         this.output.error(errors[0].message);
-        process.exit(1);
+        await this.exit();
       }
 
       if (builders) {
@@ -503,7 +508,7 @@ export default class DevServer {
 
         if (routesError) {
           this.output.error(routesError.message);
-          process.exit(1);
+          await this.exit();
         } else {
           config.routes = config.routes || [];
           config.routes.push(...(defaultRoutes as RouteConfig[]));
@@ -552,7 +557,7 @@ export default class DevServer {
   validateNowConfig(config: NowConfig): void {
     if (config.version !== 2) {
       this.output.error('Only `version: 2` is supported by `now dev`');
-      process.exit(1);
+      this.exit();
     }
   }
 
