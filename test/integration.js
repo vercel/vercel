@@ -97,7 +97,7 @@ if (!process.env.CI) {
 test.before(async () => {
   await prepareFixtures(contextName);
 
-  await retry(() => {
+  await retry(async () => {
     const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
     const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
     const url = Buffer.from(str, 'base64').toString();
@@ -113,6 +113,7 @@ test.before(async () => {
     );
 
     const user = await fetchTokenInformation(token);
+
     email = user.email;
     contextName = `${user.email.split('@')[0]}`;
   }, { retries: 5, factor: 1 });
