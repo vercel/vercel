@@ -130,7 +130,7 @@ test.before(async () => {
     email = user.email;
     contextName = `${user.email.split('@')[0]}`;
 
-    prepareFixtures(contextName);
+    await prepareFixtures(contextName);
   } catch (err) {
     console.error(err);
   }
