@@ -3,13 +3,15 @@ import { parse } from 'url';
 
 const func = (req: IncomingMessage, res: ServerResponse) => {
   if (req.url) {
-    const url = parse(req.url);
+    const { pathname, search } = parse(req.url);
+    const location = pathname
+      ? pathname.replace(/\/+/g, '/') + (search ? search : '')
+      : '/';
+    /*
     res.writeHead(302, {
-      Location: url.pathname
-        ? url.pathname.replace(/\/+/g, '/') + (url.search ? url.search : '')
-        : '/',
-    });
-    res.end();
+      Location: location
+    });*/
+    res.end(`double-redirect:RANDOMNESS_PLACEHOLDER:${location}`);
   }
 };
 
