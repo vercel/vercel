@@ -58,7 +58,7 @@ async function main() {
 
   // `now dev` uses chokidar to watch the filesystem, but opts-out of the
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
-  // that it is not compiled by ncc, which makes the pkg'd binary size larger
+  // that it is not compiled by ncc, which makes the npm package size larger
   // than necessary.
   await remove(join(dirRoot, 'node_modules/fsevents'));
 
@@ -82,7 +82,7 @@ async function main() {
   // should be copied into the output runtimes dir, specifically the `index.js`
   // files (correctly) do not get copied into the output bundle because they
   // get compiled into the final ncc bundle file, however, we want them to be
-  // present on pkg's snapshot fs because the contents of those files are involved
+  // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
   const runtimes = join(dirRoot, 'node_modules/@zeit/fun/dist/src/runtimes');
   const dest = join(dirRoot, 'dist/runtimes');

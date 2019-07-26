@@ -43,16 +43,10 @@ const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
 const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
-const insidePkg = process.pkg;
 
 epipebomb();
 
-// we only enable source maps while developing, since
-// they have a small performance hit. for this, we
-// look for `pkg`, which is only present in the final bin
-if (!insidePkg) {
-  sourceMap.install();
-}
+sourceMap.install();
 
 // Configure the error reporting system
 Sentry.init({
