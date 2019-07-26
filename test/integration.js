@@ -95,32 +95,27 @@ if (!process.env.CI) {
 }
 
 test.before(async () => {
-  try {
+  await prepareFixtures(contextName);
+
+  await retry(() => {
     const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
     const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-    const token = await fetchTokenWithRetry(
-      Buffer.from(str, 'base64').toString()
-    );
+    const url = Buffer.from(str, 'base64').toString();
+    const token = await fetchTokenWithRetry(url);
 
     if (!fs.existsSync(location)) {
       await createDirectory(location);
     }
+
     await writeFile(
       path.join(location, `auth.json`),
       JSON.stringify({ token })
     );
 
-    console.log('Token', token);
-
     const user = await fetchTokenInformation(token);
-
     email = user.email;
     contextName = `${user.email.split('@')[0]}`;
-
-    await prepareFixtures(contextName);
-  } catch (err) {
-    console.error(err);
-  }
+  }, { retries: 5, factor: 1 });
 });
 
 const execute = (args, options) =>
