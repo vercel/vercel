@@ -526,7 +526,7 @@ test('[now dev] no build matches warning', async t => {
 });
 
 test('[now dev] do not recursivly check the path', async t => {
-  const directory = fixture('trigger-static-build');
+  const directory = fixture('handle-filesystem-missing');
   const { dev, port } = testFixture(directory);
 
    try {
