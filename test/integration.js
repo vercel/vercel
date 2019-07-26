@@ -8,6 +8,7 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import { writeFile, readFile } from 'fs-extra';
+import retry from 'async-retry';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -42,50 +43,34 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenWithRetry(url, retries = 3) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      resolve(data.token);
-    } catch (error) {
-      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
-      if (retries === 0) {
-        reject(error);
-        return;
-      }
-      setTimeout(() => {
-        fetchTokenWithRetry(url, retries - 1)
-          .then(resolve)
-          .catch(reject);
-      }, 500);
+  return retry(async () => {
+    const res = await fetch(url);
+
+    if (res.ok) {
+      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
     }
-  });
+
+    const data = await res.json();
+
+    return data.token;
+  }, { retries, factor: 1 });
 }
 
 function fetchTokenInformation(token, retries = 3) {
-  return new Promise(async (resolve, reject) => {
-    const url = `https://api.zeit.co/www/user`;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      resolve(data.user);
-    } catch (error) {
-      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
-      if (retries === 0) {
-        reject(error);
-        return;
-      }
-      setTimeout(() => {
-        fetchTokenWithRetry(url, retries - 1)
-          .then(resolve)
-          .catch(reject);
-      }, 500);
+  const url = `https://api.zeit.co/www/user`;
+  const headers = { Authorization: `Bearer ${token}` };
+
+  return retry(async () => {
+    const res = await fetch(url, { headers });
+
+    if (res.ok) {
+      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
     }
-  });
+
+    const data = await res.json();
+
+    return data.user;
+  }, { retries, factor: 1 });
 }
 
 // AVA's `t.context` can only be set before the tests,
