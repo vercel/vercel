@@ -91,21 +91,6 @@ export default class Now extends EventEmitter {
 
       if (type === 'npm') {
         files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
-
-        // A `start` or `now-start` npm script, or a `server.js` file
-        // in the root directory of the deployment are required
-        if (
-          !isBuilds &&
-          !hasNpmStart(pkg) &&
-          !hasFile(paths[0], files, 'server.js')
-        ) {
-          const err = new Error(
-            'Missing `start` (or `now-start`) script in `package.json`. ' +
-              'See: https://docs.npmjs.com/cli/start'
-          );
-          throw err;
-        }
-
         engines = nowConfig.engines || pkg.engines;
         forwardNpm = forwardNpm || nowConfig.forwardNpm;
       } else if (type === 'static') {
@@ -849,15 +834,6 @@ function toRelative(path, base) {
   }
 
   return relative.replace(/\\/g, '/');
-}
-
-function hasNpmStart(pkg) {
-  return pkg.scripts && (pkg.scripts.start || pkg.scripts['now-start']);
-}
-
-function hasFile(base, files, name) {
-  const relative = files.map(file => toRelative(file, base));
-  return relative.indexOf(name) !== -1;
 }
 
 async function readAuthToken(path, name = '.npmrc') {
