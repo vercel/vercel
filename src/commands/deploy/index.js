@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { resolve, basename, parse } from 'path';
+import { resolve, basename, parse, join } from 'path';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
@@ -10,6 +10,8 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
+import readPackage from '../../util/read-package';
+import preferV2Deployment, { hasDockerfile } from '../../util/prefer-v2-deployment';
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
@@ -140,6 +142,20 @@ export default async ctx => {
     }
 
     platformVersion = versionFlag;
+  }
+
+  if (platformVersion === 1 && versionFlag !== 1) {
+    // Only check when it was not set via CLI flag
+    const reason = await preferV2Deployment({
+      localConfig,
+      hasDockerfile: await hasDockerfile(paths[0]),
+      pkg: await readPackage(join(paths[0], 'package.json'))
+    });
+
+    if (reason) {
+      output.note(reason);
+      platformVersion = 2;
+    }
   }
 
   if (platformVersion === null || platformVersion > 1) {
