@@ -78,6 +78,12 @@ export default async (sentry, error, apiUrl, configFiles) => {
       scope.setExtra('args', msg);
     }
 
+    // Report information about the version of `node` being used
+    scope.setExtra('node', {
+      execPath: process.execPath,
+      version: process.version
+    });
+
     sentry.captureException(error);
   });
 
