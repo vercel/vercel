@@ -46,7 +46,7 @@ function fetchTokenWithRetry(url, retries = 3) {
   return retry(async () => {
     const res = await fetch(url);
 
-    if (res.ok) {
+    if (!res.ok) {
       throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
     }
 
@@ -63,7 +63,7 @@ function fetchTokenInformation(token, retries = 3) {
   return retry(async () => {
     const res = await fetch(url, { headers });
 
-    if (res.ok) {
+    if (!res.ok) {
       throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
     }
 
