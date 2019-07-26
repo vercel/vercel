@@ -110,6 +110,8 @@ test.before(async () => {
       JSON.stringify({ token })
     );
 
+    console.log('Token', token);
+
     const user = await fetchTokenInformation(token);
 
     email = user.email;
