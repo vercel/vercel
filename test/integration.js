@@ -115,7 +115,7 @@ test.before(async () => {
 
       email = user.email;
       contextName = user.username || user.email;
-    }, { retries: 5, factor: 1 });
+    }, { retries: 3, factor: 1 });
 
     await prepareFixtures(contextName);
   } catch (err) {
