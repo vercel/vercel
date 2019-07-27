@@ -946,7 +946,8 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     nowConfig: NowConfig,
-    routes: RouteConfig[] | undefined = nowConfig.routes
+    routes: RouteConfig[] | undefined = nowConfig.routes,
+    callLevel: number = 0
   ) => {
     await this.updateBuildMatches(nowConfig);
 
@@ -1034,7 +1035,7 @@ export default class DevServer {
         buildResult.routes,
         this
       );
-      if (matchedRoute.found) {
+      if (matchedRoute.found && callLevel === 0) {
         this.output.debug(
           `Found matching route ${matchedRoute.dest} for ${newUrl}`
         );
@@ -1044,14 +1045,15 @@ export default class DevServer {
           res,
           nowRequestId,
           nowConfig,
-          buildResult.routes
+          buildResult.routes,
+          callLevel + 1
         );
         return;
       }
     }
 
     let foundAsset = findAsset(match, requestPath);
-    if (!foundAsset || this.shouldRebuild(req)) {
+    if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
