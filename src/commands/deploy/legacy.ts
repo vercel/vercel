@@ -19,7 +19,7 @@ import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
 // @ts-ignore
 import checkPath from '../../util/check-path';
-import cmd from '../../util/output/cmd.ts';
+import cmd from '../../util/output/cmd';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 // @ts-ignore
@@ -36,7 +36,7 @@ import toHumanPath from '../../util/humanize-path';
 import combineAsyncGenerators from '../../util/combine-async-generators';
 // @ts-ignore
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/format-dns-table.ts';
+import dnsTable from '../../util/format-dns-table';
 import eventListenerToGenerator from '../../util/event-listener-to-generator';
 // @ts-ignore
 import formatLogCmd from '../../util/output/format-log-cmd';
@@ -53,7 +53,7 @@ import normalizeRegionsList from '../../util/scale/normalize-regions-list';
 import raceAsyncGenerators from '../../util/race-async-generators';
 // @ts-ignore
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
-import stamp from '../../util/output/stamp.ts';
+import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
 // @ts-ignore
 import parseMeta from '../../util/parse-meta';
