@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
+import { URL } from 'whatwg-url';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
 import param from './util/output/param.ts';
@@ -390,6 +391,7 @@ const main = async argv_ => {
     // eslint-disable-next-line no-new
     new URL(ctx.apiUrl);
   } catch (err) {
+    console.error({ err });
     console.error(
       error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
     );
