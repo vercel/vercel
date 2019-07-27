@@ -540,10 +540,9 @@ test('[now dev] do not recursivly check the path', async t => {
     }
 
     {
-      const response = await fetchWithRetry(`http://localhost:${port}/favicon.txt`, 180);
+      const response = await fetch(`http://localhost:${port}/favicon.txt`);
       validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello');
+      t.is(response.status, 404);
     }
   } finally {
     dev.kill('SIGTERM');
