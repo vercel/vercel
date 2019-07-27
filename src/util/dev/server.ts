@@ -948,7 +948,6 @@ export default class DevServer {
     nowConfig: NowConfig,
     routes: RouteConfig[] | undefined = nowConfig.routes
   ) => {
-
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
     const parsed = url.parse(req.url || '/');
@@ -958,13 +957,21 @@ export default class DevServer {
       if (parsed.search) {
         location += parsed.search;
       }
-      this.setResponseHeaders(res, nowRequestId, {
-        'content-type': 'text/plain',
-        'location': location
-      });
-      res.statusCode = statusCode;
-      res.end(`Redirecting to ${location} (${statusCode})\n`);
-      return;
+
+      // Only `GET` requests are redirected.
+      // Other methods are normalized without redirecting.
+      if (req.method === 'GET') {
+        this.setResponseHeaders(res, nowRequestId, {
+          'content-type': 'text/plain',
+          location
+        });
+        res.statusCode = statusCode;
+        res.end(`Redirecting to ${location} (${statusCode})\n`);
+        return;
+      }
+
+      this.output.debug(`Rewriting URL from "${req.url}" to "${location}"`);
+      req.url = location;
     }
 
     await this.updateBuildMatches(nowConfig);

@@ -424,7 +424,7 @@ test('[now dev] 17-vuepress-node', async t => {
   }
 });
 
-test.only('[now dev] double slashes redirect', async t => {
+test('[now dev] double slashes redirect', async t => {
   const directory = fixture('01-node');
   const { dev, port } = testFixture(directory);
 
@@ -435,16 +435,44 @@ test.only('[now dev] double slashes redirect', async t => {
     // Wait for `now dev` to boot up
     await sleep(ms('10s'));
 
-    const res = await fetch(`http://localhost:${port}////?foo=bar`, {
-      redirect: 'manual'
-    });
+    {
+      const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+        redirect: 'manual'
+      });
 
-    validateResponseHeaders(t, res);
+      validateResponseHeaders(t, res);
 
-    const body = await res.text();
-    t.is(res.status, 301);
-    t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
-    t.is(body, 'Redirecting to /?foo=bar (301)\n');
+      const body = await res.text();
+      t.is(res.status, 301);
+      t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
+      t.is(body, 'Redirecting to /?foo=bar (301)\n');
+    }
+
+    {
+      const res = await fetch(`http://localhost:${port}///api////date.js`, {
+        method: 'POST',
+        redirect: 'manual'
+      });
+
+      validateResponseHeaders(t, res);
+
+      const body = await res.text();
+      t.is(res.status, 200);
+      t.truthy(
+        body.startsWith('January') ||
+          body.startsWith('February') ||
+          body.startsWith('March') ||
+          body.startsWith('April') ||
+          body.startsWith('May') ||
+          body.startsWith('June') ||
+          body.startsWith('July') ||
+          body.startsWith('August') ||
+          body.startsWith('September') ||
+          body.startsWith('October') ||
+          body.startsWith('November') ||
+          body.startsWith('December')
+      );
+    }
   } finally {
     dev.kill('SIGTERM');
   }
@@ -520,7 +548,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
   }
 });
 
-test.only('[now dev] no build matches warning', async t => {
+test('[now dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev, port } = testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe']
