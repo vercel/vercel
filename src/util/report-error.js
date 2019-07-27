@@ -3,8 +3,9 @@ import getScope from './get-scope.ts';
 import getArgs from './get-args';
 
 export default async (sentry, error, apiUrl, configFiles) => {
-  let user = null;
-  let team = null;
+  let user;
+  let team;
+  let scopeError;
 
   try {
     const { token } = configFiles.readAuthConfigFile();
@@ -14,6 +15,7 @@ export default async (sentry, error, apiUrl, configFiles) => {
   } catch (err) {
     // We can safely ignore this, as the error
     // reporting works even without this metadata attached.
+    scopeError = err;
   }
 
   sentry.withScope(scope => {
@@ -38,24 +40,49 @@ export default async (sentry, error, apiUrl, configFiles) => {
       scope.setTag('currentTeam', team.id);
     }
 
-    // Report process.argv without sensitive data
-    let args
+    if (scopeError) {
+      scope.setExtra('scopeError', {
+        name: scopeError.name,
+        message: scopeError.message,
+        stack: scopeError.stack
+      });
+    }
+
+    // Report `process.argv` without sensitive data
+    let args;
+    let argsError;
     try {
       args = getArgs(process.argv.slice(2), {});
-    } catch (_) {}
+    } catch (err) {
+      argsError = err;
+    }
 
     if (args) {
-      const flags = ['--env', '--build-env', '--token']
+      const flags = ['--env', '--build-env', '--token'];
       for (const flag of flags) {
         if (args[flag]) args[flag] = 'REDACTED';
       }
-      if (args._.length >= 4 && args._[0].startsWith('secret') && args._[1] === 'add') {
+      if (
+        args._.length >= 4 &&
+        args._[0].startsWith('secret') &&
+        args._[1] === 'add'
+      ) {
         args._[3] = 'REDACTED';
       }
       scope.setExtra('args', args);
     } else {
-      scope.setExtra('args', 'Unable to parse args');
+      let msg = 'Unable to parse args';
+      if (argsError) {
+        msg += `: ${argsError}`;
+      }
+      scope.setExtra('args', msg);
     }
+
+    // Report information about the version of `node` being used
+    scope.setExtra('node', {
+      execPath: process.execPath,
+      version: process.version
+    });
 
     sentry.captureException(error);
   });
