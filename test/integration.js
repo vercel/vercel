@@ -114,7 +114,7 @@ test.before(async () => {
       const user = await fetchTokenInformation(token);
 
       email = user.email;
-      contextName = user.username || user.email;
+      contextName = user.email.split('@')[0];
     }, { retries: 3, factor: 1 });
 
     await prepareFixtures(contextName);
