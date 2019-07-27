@@ -391,7 +391,6 @@ const main = async argv_ => {
     // eslint-disable-next-line no-new
     new URL(ctx.apiUrl);
   } catch (err) {
-    console.error({ err });
     console.error(
       error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
     );
