@@ -240,19 +240,6 @@ test(
   })
 );
 
-test(
-  '[now dev] 09-jekyll',
-  testFixtureStdio('09-jekyll', async(t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Welcome to Jekyll!/gm);
-  })
-);
-
 test('[now dev] 10-nextjs-node', async t => {
   const directory = fixture('10-nextjs-node');
   const { dev, port } = testFixture(directory);
