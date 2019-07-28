@@ -1,6 +1,5 @@
 {
   "scripts": {
-    "install": "sudo apt install ruby-full && gem install jekyll bundler --no-ri --no-rdoc && bundle install",
     "build": "jekyll build && mv _site public"
   }
 }
