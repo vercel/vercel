@@ -4,6 +4,7 @@ import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
+import { satisfies } from 'semver';
 import { promises as fs } from 'fs';
 
 let port = 3000;
@@ -132,25 +133,29 @@ test('[now dev] 01-node', async t => {
   }
 });
 
-test('[now dev] 02-angular-node', async t => {
-  const directory = fixture('02-angular-node');
-  const { dev, port } = testFixture(directory, { stdio: 'inherit' });
+if (satisfies(process.version, '>= 10.9')) {
+  test('[now dev] 02-angular-node', async t => {
+    const directory = fixture('02-angular-node');
+    const { dev, port } = testFixture(directory, { stdio: 'inherit' });
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Angular \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
+}
 
 test(
   '[now dev] 03-aurelia',
