@@ -16,10 +16,14 @@ const pkg = require('../package.json');
 
 const dirRoot = join(__dirname, '..');
 
+const bundledBuilders = Object.keys(pkg.devDependencies)
+  .filter(d => d.startsWith('@now/'));
+
 async function createBuildersTarball() {
-  const builders = Object.keys(pkg.devDependencies)
-    .filter(d => d.startsWith('@now/'))
-    .map(d => `${d}@${pkg.devDependencies[d]}`);
+  const distTag = pkg.version.includes('-')
+    ? pkg.version.match(/-(.*)\.\d+$/)[1]
+    : 'latest';
+  const builders = Array.from(bundledBuilders).map(b => `${b}@${distTag}`);
   console.log(`Creating builders tarball with: ${builders.join(', ')}`);
 
   const buildersDir = join(dirRoot, '.builders');
@@ -39,14 +43,17 @@ async function createBuildersTarball() {
   }
 
   const yarn = join(dirRoot, 'node_modules/yarn/bin/yarn.js');
-  await execa(
-    process.execPath,
-    [ yarn, 'add', '--no-lockfile', ...builders ],
-    { cwd: buildersDir, stdio: 'inherit' }
-  );
+  await execa(process.execPath, [yarn, 'add', '--no-lockfile', ...builders], {
+    cwd: buildersDir,
+    stdio: 'inherit'
+  });
 
   const packer = tar.pack(buildersDir);
-  await pipe(packer, createGzip(), createWriteStream(buildersTarballPath));
+  await pipe(
+    packer,
+    createGzip(),
+    createWriteStream(buildersTarballPath)
+  );
 }
 
 async function main() {
@@ -65,7 +72,7 @@ async function main() {
   // Do the initial `ncc` build
   const src = join(dirRoot, 'src');
   const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
-  const args = [ ncc, 'build', '--source-map' ];
+  const args = [ncc, 'build', '--source-map'];
   if (!isDev) {
     args.push('--minify');
   }

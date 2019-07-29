@@ -17,6 +17,7 @@ import {
   writeFile,
   remove
 } from 'fs-extra';
+import pkg from '../../../package.json';
 
 import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
@@ -39,6 +40,8 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
 const bundledBuilders = Object.keys(devDependencies).filter(d =>
   d.startsWith('@now/')
 );
+
+const distTag = getDistTag();
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -67,6 +70,16 @@ async function readFileOrNull(
     }
     throw err;
   }
+}
+
+function getDistTag(): string {
+  if (pkg.version.includes('-')) {
+    const m = pkg.version.match(/-(.*)\.\d+$/);
+    if (m) {
+      return m[1];
+    }
+  }
+  return 'latest';
 }
 
 /**
@@ -208,7 +221,7 @@ export async function installBuilders(
     }
     if (
       parsed.type === 'tag' &&
-      parsed.fetchSpec === 'latest' &&
+      parsed.fetchSpec === distTag &&
       bundledBuilders.includes(parsed.name)
     ) {
       const parsedInstalled = npa(
@@ -221,11 +234,15 @@ export async function installBuilders(
       if (!semverInstalled) {
         return true;
       }
-      return semverInstalled.prerelease.length > 0;
+      if (semverInstalled.prerelease.length > 0) {
+        return semverInstalled.prerelease[0] !== distTag;
+      }
+      return false;
     }
     return true;
   });
 
+  console.error({ packages, packagesToInstall });
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');
     return;
