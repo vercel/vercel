@@ -144,7 +144,7 @@ export default async ctx => {
     platformVersion = versionFlag;
   }
 
-  if (platformVersion === 1 && versionFlag !== 1) {
+  if (platformVersion === 1 && versionFlag !== 1 && !argv['--docker'] && !argv['--npm']) {
     // Only check when it was not set via CLI flag
     const reason = await preferV2Deployment({
       localConfig,
