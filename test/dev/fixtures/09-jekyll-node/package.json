@@ -1,6 +1,0 @@
-{
-  "scripts": {
-    "install": "yum install ruby23-devel.x86_64 && gem install jekyll bundler && bundle install",
-    "build": "jekyll build && mv _site dist"
-  }
-}

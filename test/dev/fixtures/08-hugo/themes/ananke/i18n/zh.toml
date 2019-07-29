@@ -1,0 +1,17 @@
+[more]
+other = "更多"
+
+[allTitle]
+other = "所有 {{.Title }}"
+
+[recentTitle]
+other = "最近 {{.Title }}"
+
+[readMore]
+other = "繼續閱讀"
+
+[whatsInThis]
+other = "What's in this {{ .Type }}"
+
+[related]
+other = "相關內容"

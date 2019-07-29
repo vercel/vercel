@@ -1,0 +1,13 @@
+<logs>
+
+  <h2>Logs</h2>
+
+  <button onclick={props.onclear}>
+    Clear logs
+  </button>
+
+  <ul>
+    <li each={ log in props.logs }>{ log.text }</li>
+  </ul>
+
+</logs>

@@ -947,7 +947,8 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     nowConfig: NowConfig,
-    routes: RouteConfig[] | undefined = nowConfig.routes
+    routes: RouteConfig[] | undefined = nowConfig.routes,
+    callLevel: number = 0
   ) => {
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
@@ -1061,7 +1062,7 @@ export default class DevServer {
         buildResult.routes,
         this
       );
-      if (matchedRoute.found) {
+      if (matchedRoute.found && callLevel === 0) {
         this.output.debug(
           `Found matching route ${matchedRoute.dest} for ${newUrl}`
         );
@@ -1071,14 +1072,15 @@ export default class DevServer {
           res,
           nowRequestId,
           nowConfig,
-          buildResult.routes
+          buildResult.routes,
+          callLevel + 1
         );
         return;
       }
     }
 
     let foundAsset = findAsset(match, requestPath);
-    if (!foundAsset || this.shouldRebuild(req)) {
+    if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
@@ -1304,7 +1306,7 @@ export default class DevServer {
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
-      await findBuildMatch(this.buildMatches, this.files, requestPath, this)
+      await findBuildMatch(this.buildMatches, this.files, requestPath, this, true)
     ) {
       return true;
     }
@@ -1396,10 +1398,11 @@ async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath, devServer)) {
+    if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
     }
   }
@@ -1410,7 +1413,8 @@ async function shouldServe(
   match: BuildMatch,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<boolean> {
   const {
     src: entrypoint,
@@ -1432,7 +1436,7 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
-  } else if (await findMatchingRoute(match, requestPath, devServer)) {
+  } else if (!isFilesystem && (await findMatchingRoute(match, requestPath, devServer))) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
     // been built.
