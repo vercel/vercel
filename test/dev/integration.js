@@ -55,6 +55,41 @@ function testFixture(directory, opts = {}) {
   };
 }
 
+function testFixtureStdio(directory, fn) {
+  return async t => {
+    let dev;
+    const dir = fixture(directory);
+    try {
+      port = ++port;
+      let output = '';
+      let readyResolve;
+      let readyPromise = new Promise(resolve => {
+        readyResolve = resolve;
+      });
+
+      dev = execa(binaryPath, ['dev', dir, '-p', port]);
+      dev.stderr.on('data', async data => {
+        output += data.toString();
+        if (data.toString().includes('Ready! Available at')) {
+          readyResolve();
+        }
+
+        if ( data.toString().includes('Command failed')
+          || data.toString().includes('Error!')) {
+          dev.kill('SIGTERM');
+          console.log(output);
+          process.exit(1);
+        }
+      });
+
+      await readyPromise;
+      await fn(t, port);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  };
+}
+
 test('[now dev] 00-list-directory', async t => {
   const directory = fixture('00-list-directory');
   const { dev, port } = testFixture(directory);
@@ -119,88 +154,57 @@ test('[now dev] 02-angular-node', async t => {
   }
 });
 
-// test('[now dev] 03-aurelia-node', async t => {
-//   const directory = fixture('03-aurelia-node');
-//   const { dev, port } = testFixture(directory);
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
+test(
+  '[now dev] 03-aurelia',
+  testFixtureStdio('03-aurelia', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`)
+    const response = await result;
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 160);
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Aurelia Navigation Skeleton/gm);
+  })
+);
+
+// test(
+//   '[now dev] 04-create-react-app-node',
+//   testFixtureStdio('create-react-app', async(t, port) => {
+//     const result = fetch(`http://localhost:${port}`);
 //     const response = await result;
 
 //     validateResponseHeaders(t, response);
 
 //     const body = await response.text();
-//     t.regex(body, /Aurelia \+ Node.js API/gm);
+//     t.regex(body, /React App/gm);
+//   })
+// );
 
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+test(
+  '[now dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-// test('[now dev] 04-create-react-app-node', async t => {
-//   const directory = fixture('04-create-react-app-node');
-//   const { dev, port } = testFixture(directory);
+    validateResponseHeaders(t, response);
 
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
+    const body = await response.text();
+    t.regex(body, /Gatsby Default Starter/gm);
+  })
+);
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-//     const response = await result;
+test(
+  '[now dev] 06-gridsome',
+  testFixtureStdio('06-gridsome', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-//     validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
 
-//     const body = await response.text();
-//     t.regex(body, /Create React App \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
-
-// test('[now dev] 05-gatsby-node', async t => {
-//   const directory = fixture('05-gatsby-node');
-//   const { dev, port } = testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Gatsby \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
-
-// test('[now dev] 06-gridsome-node', async t => {
-//   const directory = fixture('06-gridsome-node');
-//   const { dev, port } = testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Gridsome \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Hello, world!/gm);
+  })
+);
 
 test('[now dev] 07-hexo-node', async t => {
   const directory = fixture('07-hexo-node');
@@ -223,48 +227,18 @@ test('[now dev] 07-hexo-node', async t => {
   }
 });
 
+test(
+  '[now dev] 08-hugo',
+  testFixtureStdio('08-hugo', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-// test('[now dev] 08-hugo-node', async t => {
-//   const directory = fixture('08-hugo-node');
-//   const { dev, port } = testFixture(directory);
+    validateResponseHeaders(t, response);
 
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 280);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Hugo \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
-
-// test('[now dev] 09-jekyll-node', async t => {
-//   const directory = fixture('09-jekyll-node');
-//   const { dev, port } = testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-//     const response = await result;
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Jekyll \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
+    const body = await response.text();
+    t.regex(body, /Hugo on ZEIT Now/gm);
+  })
+);
 
 test('[now dev] 10-nextjs-node', async t => {
   const directory = fixture('10-nextjs-node');
@@ -433,6 +407,97 @@ test('[now dev] 17-vuepress-node', async t => {
     dev.kill('SIGTERM')
   }
 });
+
+test(
+  '[now dev] 18-marko',
+  testFixtureStdio('18-marko', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Marko Starter/gm);
+  })
+);
+
+test(
+  '[now dev] 19-mithril',
+  testFixtureStdio('19-mithril', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Mithril on ZEIT Now/gm);
+  })
+);
+
+test(
+  '[now dev] 20-riot',
+  testFixtureStdio('20-riot', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Riot on ZEIT Now/gm);
+  })
+);
+
+test(
+  '[now dev] 21-charge',
+  testFixtureStdio('21-charge', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Welcome to my new Charge site/gm);
+  })
+);
+
+test(
+  '[now dev] 22-brunch',
+  testFixtureStdio('22-brunch', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Bon Appétit./gm);
+  })
+);
+
+test(
+  '[now dev] 23-docusaurus',
+  testFixtureStdio('23-docusaurus', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Test Site · A website for testing/gm);
+  })
+);
+
+test(
+  '[now dev] 24-ember',
+  testFixtureStdio('24-ember', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /HelloWorld/gm);
+  })
+);
 
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
