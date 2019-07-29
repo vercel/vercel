@@ -136,7 +136,7 @@ test('[now dev] 01-node', async t => {
 if (satisfies(process.version, '>= 10.9')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
-    const { dev, port } = testFixture(directory, { stdio: 'inherit' });
+    const { dev, port } = testFixture(directory);
 
     try {
       // start `now dev` detached in child_process
