@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 
+import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
@@ -55,6 +56,6 @@ export default async function main(ctx: NowContext): Promise<number> {
 
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
-  output.log(await getUpdateCommand());
+  output.log(`Please run ${cmd(await getUpdateCommand())} to update Now CLI`);
   return 0;
 }
