@@ -10,8 +10,7 @@ const {
   mkdirp,
   remove,
   writeFile,
-  writeJSON,
-  rename
+  writeJSON
 } = require('fs-extra');
 const pkg = require('../package.json');
 
