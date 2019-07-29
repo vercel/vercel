@@ -53,8 +53,6 @@ export default async function main(ctx: NowContext) {
 
     if (argv['--debug']) {
       process.env.NOW_BUILDER_DEBUG = '1';
-    } else {
-      process.env.NOW_BUILDER_DEBUG = '';
     }
   } catch (err) {
     handleError(err);
