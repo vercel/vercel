@@ -6,7 +6,7 @@ const {
   normalizePackageJson,
   getNextConfig,
 } = require('@now/next/dist/utils');
-const FileRef = require('@now/build-utils/file-ref'); // eslint-disable-line import/no-extraneous-dependencies
+const { FileRef } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
 
 describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures');

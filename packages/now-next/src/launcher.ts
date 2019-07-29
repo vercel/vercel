@@ -3,8 +3,8 @@ if (!process.env.NODE_ENV) {
     process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
 }
 
-const { Server } = require('http');
-const { Bridge } = require('./now__bridge');
+import { Server } from 'http';
+import { Bridge } from './now__bridge';
 const page = require('./page');
 
 // page.render is for React rendering
