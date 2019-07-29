@@ -53,12 +53,7 @@ async function getNowPath() {
 
 async function isBinary(nowPath) {
   const stats = await stat(nowPath);
-
-  if (stats.isDirectory()) {
-    return false;
-  }
-
-  return true;
+  return !stats.isDirectory();
 }
 
 async function main() {
