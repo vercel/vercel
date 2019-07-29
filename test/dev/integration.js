@@ -134,7 +134,7 @@ test('[now dev] 01-node', async t => {
 
 test('[now dev] 02-angular-node', async t => {
   const directory = fixture('02-angular-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = testFixture(directory, { stdio: 'inherit' });
 
   try {
     // start `now dev` detached in child_process
