@@ -1,46 +1,65 @@
 import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
+// @ts-ignore
 import { write as copy } from 'clipboardy';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
+// @ts-ignore
 import inquirer from 'inquirer';
 import mri from 'mri';
 import ms from 'ms';
+// @ts-ignore
 import title from 'title';
 import plural from 'pluralize';
 import Progress from 'progress';
+// @ts-ignore
 import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
+// @ts-ignore
 import checkPath from '../../util/check-path';
-import cmd from '../../util/output/cmd.ts';
+import cmd from '../../util/output/cmd';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+// @ts-ignore
 import exit from '../../util/exit';
+// @ts-ignore
 import Now from '../../util';
 import uniq from '../../util/unique-strings';
 import promptBool from '../../util/input/prompt-bool';
+// @ts-ignore
 import promptOptions from '../../util/prompt-options';
+// @ts-ignore
 import readMetaData from '../../util/read-metadata';
 import toHumanPath from '../../util/humanize-path';
 import combineAsyncGenerators from '../../util/combine-async-generators';
+// @ts-ignore
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/format-dns-table.ts';
+import dnsTable from '../../util/format-dns-table';
 import eventListenerToGenerator from '../../util/event-listener-to-generator';
+// @ts-ignore
 import formatLogCmd from '../../util/output/format-log-cmd';
+// @ts-ignore
 import formatLogOutput from '../../util/output/format-log-output';
+// @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
+// @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
 import getStateChangeFromPolling from '../../util/deploy/get-state-change-from-polling';
 import joinWords from '../../util/output/join-words';
+// @ts-ignore
 import normalizeRegionsList from '../../util/scale/normalize-regions-list';
 import raceAsyncGenerators from '../../util/race-async-generators';
+// @ts-ignore
 import regionOrDCToDc from '../../util/scale/region-or-dc-to-dc';
-import stamp from '../../util/output/stamp.ts';
+import stamp from '../../util/output/stamp';
 import verifyDeploymentScale from '../../util/scale/verify-deployment-scale';
+// @ts-ignore
 import parseMeta from '../../util/parse-meta';
+// @ts-ignore
 import getProjectName from '../../util/get-project-name';
+import { Output } from '../../util/output';
 import {
   CertConfigurationError,
   CertError,
@@ -59,38 +78,54 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import handleCertError from '../../util/certs/handle-cert-error';
 
-let argv;
-let paths;
+interface Env {
+  [name: string]: string | null | undefined;
+}
+
+interface DcScale {
+  [dcId: string]: { min: number; max: number };
+}
+
+interface SyncOptions {
+  contextName: string;
+  output: any;
+  token: string;
+  config: { currentTeam?: string };
+  firstRun: boolean;
+  deploymentType?: string;
+}
+
+let argv: any;
+let paths: string[];
 
 // Options
-let forceNew;
-let deploymentName;
-let sessionAffinity;
-let log;
-let error;
-let warn;
-let debug;
-let note;
-let debugEnabled;
-let clipboard;
-let forwardNpm;
-let followSymlinks;
-let wantsPublic;
-let regions;
-let noScale;
-let noVerify;
-let apiUrl;
-let isTTY;
-let quiet;
-let alwaysForwardNpm;
+let forceNew: boolean;
+let deploymentName: string;
+let sessionAffinity: string;
+let log: any;
+let error: any;
+let warn: any;
+let debug: any;
+let note: any;
+let debugEnabled: boolean;
+let clipboard: boolean;
+let forwardNpm: boolean;
+let followSymlinks: boolean;
+let wantsPublic: boolean;
+let regions: string[];
+let noScale: boolean;
+let noVerify: boolean;
+let apiUrl: string;
+let isTTY: boolean;
+let quiet: boolean;
 
 // If the current deployment is a repo
-const gitRepo = {};
+const gitRepo: any = {};
 
 // For `env` and `buildEnv`
-const getNullFields = o => Object.keys(o).filter(k => o[k] === null);
+const getNullFields = (o: Env) => Object.keys(o).filter(k => o[k] === null);
 
-const addProcessEnv = async env => {
+const addProcessEnv = async (env: Env) => {
   let val;
   for (const key of Object.keys(env)) {
     if (typeof env[key] !== 'undefined') continue;
@@ -115,7 +150,7 @@ const addProcessEnv = async env => {
   }
 };
 
-const stopDeployment = async msg => {
+const stopDeployment = async (msg: string) => {
   handleError(msg);
   await exit(1);
 };
@@ -123,7 +158,10 @@ const stopDeployment = async msg => {
 // Converts `env` Arrays, Strings and Objects into env Objects.
 // `null` empty value means to prompt user for value upon deployment.
 // `undefined` empty value means to inherit value from user's env.
-const parseEnv = (env, empty) => {
+const parseEnv = (
+  env: string | string[] | Env | undefined,
+  empty: null | undefined
+) => {
   if (!env) {
     return {};
   }
@@ -132,7 +170,7 @@ const parseEnv = (env, empty) => {
     env = [env];
   }
   if (Array.isArray(env)) {
-    return env.reduce((o, e) => {
+    return env.reduce((o: Env, e: string) => {
       let key;
       let value;
       const equalsSign = e.indexOf('=');
@@ -151,7 +189,7 @@ const parseEnv = (env, empty) => {
   return env;
 };
 
-const promptForEnvFields = async list => {
+const promptForEnvFields = async (list: string[]) => {
   if (list.length === 0) {
     return {};
   }
@@ -182,7 +220,12 @@ const promptForEnvFields = async list => {
   return answers;
 };
 
-export default async function main(ctx, contextName, output, mriOpts) {
+export default async function main(
+  ctx: any,
+  contextName: string,
+  output: Output,
+  mriOpts: any
+) {
   argv = mri(ctx.argv.slice(2), mriOpts);
 
   if (argv._[0] === 'deploy') {
@@ -192,7 +235,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(process.cwd(), item));
+    paths = argv._.map((item: string) => resolve(process.cwd(), item));
   } else {
     paths = [process.cwd()];
   }
@@ -208,14 +251,13 @@ export default async function main(ctx, contextName, output, mriOpts) {
   wantsPublic = argv.public;
   regions = (argv.regions || '')
     .split(',')
-    .map(s => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
   noVerify = argv.verify === false;
   noScale = argv.scale === false;
   apiUrl = ctx.apiUrl;
   // https://github.com/facebook/flow/issues/1825
-  // $FlowFixMe
-  isTTY = process.stdout.isTTY;
+  isTTY = Boolean(process.stdout.isTTY);
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
@@ -223,7 +265,10 @@ export default async function main(ctx, contextName, output, mriOpts) {
     'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
   );
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
 
   try {
     return await sync({
@@ -237,7 +282,7 @@ export default async function main(ctx, contextName, output, mriOpts) {
   } catch (err) {
     await stopDeployment(err);
   }
-};
+}
 
 async function sync({
   contextName,
@@ -246,7 +291,7 @@ async function sync({
   config: { currentTeam },
   firstRun,
   deploymentType
-}) {
+}: SyncOptions): Promise<void> {
   return new Promise(async (_resolve, reject) => {
     let deployStamp = stamp();
     const rawPath = argv._[0];
@@ -420,7 +465,10 @@ async function sync({
           'multiple_manifests'
         ];
 
-        if (err.code && print.includes(err.code) || err.name === 'JSONError') {
+        if (
+          (err.code && print.includes(err.code)) ||
+          err.name === 'JSONError'
+        ) {
           error(err.message);
           return 1;
         }
@@ -432,8 +480,8 @@ async function sync({
     const nowConfig = meta.nowConfig || {};
     const scaleFromConfig = getScaleFromConfig(nowConfig);
 
-    let scale = {};
-    let dcIds;
+    let scale: DcScale = {};
+    let dcIds: any;
 
     // If there are regions coming from the args and now.json warn about it
     if (regions.length > 0 && getRegionsFromConfig(nowConfig).length > 0) {
@@ -463,8 +511,9 @@ async function sync({
       dcIds = normalizeRegionsList(regions);
       if (dcIds instanceof InvalidRegionOrDCForScale) {
         error(
-          `The value "${dcIds.meta
-            .regionOrDC}" is not a valid region or DC identifier`
+          `The value "${
+            dcIds.meta.regionOrDC
+          }" is not a valid region or DC identifier`
         );
         await exit(1);
         return 1;
@@ -477,12 +526,15 @@ async function sync({
 
       // Build the scale presets based on the given regions
       scale = dcIds.reduce(
-        (result, dcId) => ({ ...result, [dcId]: { min: 0, max: 1 } }),
+        (result: DcScale, dcId: string) => ({
+          ...result,
+          [dcId]: { min: 0, max: 1 }
+        }),
         {}
       );
     } else if (noScale) {
-      debug(`Option --no-scale was set. Skipping scale parameters`)
-      scale = {}
+      debug(`Option --no-scale was set. Skipping scale parameters`);
+      scale = {};
     } else if (Object.keys(scaleFromConfig).length > 0) {
       // If we have no regions list we get it from the scale keys but we have to validate
       // them becase we don't admin `all` in this scenario. Also normalize presets in scale.
@@ -571,19 +623,22 @@ async function sync({
       nowConfig.build.env = deploymentBuildEnv;
     }
 
-    const hasSecrets = Object.keys(deploymentEnv).some(key => deploymentEnv[key].startsWith('@'));
+    const hasSecrets = Object.keys(deploymentEnv).some(key =>
+      deploymentEnv[key].startsWith('@')
+    );
     const secretsPromise = hasSecrets ? now.listSecrets() : null;
 
-    const findSecret = async uidOrName => {
+    const findSecret = async (uidOrName: string) => {
       const secrets = await Promise.resolve(secretsPromise);
 
       return secrets.filter(
-        secret => secret.name === uidOrName || secret.uid === uidOrName
+        (secret: { name: string; uid: string }) =>
+          secret.name === uidOrName || secret.uid === uidOrName
       );
     };
 
     const env_ = await Promise.all(
-      Object.keys(deploymentEnv).map(async key => {
+      Object.keys(deploymentEnv).map(async (key: string) => {
         if (!key) {
           error(
             'Environment variable name is missing',
@@ -603,7 +658,7 @@ async function sync({
           await exit(1);
         }
 
-        let val = deploymentEnv[key];
+        let val: string | { uid: string } = deploymentEnv[key];
 
         if (val[0] === '@') {
           const uidOrName = val.substr(1);
@@ -643,15 +698,18 @@ async function sync({
       })
     );
 
-    const env = {};
+    const env: any = {};
 
-    env_.filter(v => Boolean(v)).forEach(([key, val]) => {
-      if (key in env) {
-        note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
-      }
+    env_
+      .filter(v => Boolean(v))
+      .forEach(([key, val]) => {
+        if (key in env) {
+          note(`Overriding duplicate env key ${chalk.bold(`"${key}"`)}`);
+        }
 
-      env[key] = val;
-    });
+        // @ts-ignore
+        env[key] = val;
+      });
 
     const metadata = Object.assign(
       {},
@@ -662,16 +720,21 @@ async function sync({
     let syncCount;
 
     try {
-      meta.name = getProjectName({argv, nowConfig, isFile, paths, pre: meta.name});
+      meta.name = getProjectName({
+        argv,
+        nowConfig,
+        isFile,
+        paths,
+        pre: meta.name
+      });
       log(`Using project ${chalk.bold(meta.name)}`);
-      // $FlowFixMe
       const createArgs = Object.assign(
         {
           env,
           meta: metadata,
           followSymlinks,
           forceNew,
-          forwardNpm: alwaysForwardNpm || forwardNpm,
+          forwardNpm,
           quiet,
           scale,
           wantsPublic,
@@ -718,9 +781,9 @@ async function sync({
           }
 
           const size = bytes(now.syncAmount);
-          syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-            ? 's'
-            : ''}`;
+          syncCount = `${now.syncFileCount} file${
+            now.syncFileCount > 1 ? 's' : ''
+          }`;
           const bar = new Progress(
             `${chalk.gray(
               '>'
@@ -736,17 +799,20 @@ async function sync({
 
           now.upload({ scale });
 
-          now.on('upload', ({ names, data }) => {
-            debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
-          });
+          now.on(
+            'upload',
+            ({ names, data }: { names: string[]; data: Buffer }) => {
+              debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
+            }
+          );
 
-          now.on('uploadProgress', progress => {
+          now.on('uploadProgress', (progress: number) => {
             bar.tick(progress);
           });
 
           now.on('complete', resolve);
 
-          now.on('error', err => {
+          now.on('error', (err: Error) => {
             error('Upload failed');
             reject(err);
           });
@@ -770,7 +836,7 @@ async function sync({
 
           const handledResult = handleCertError(output, secondDeployCall);
           if (handledResult === 1) {
-            return handledResult
+            return handledResult;
           }
 
           if (
@@ -891,7 +957,9 @@ async function sync({
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
           log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${dcs} ${deployStamp()}`
+            `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
+              '[v1]'
+            )} ${dcs} ${deployStamp()}`
           );
         }
       } else {
@@ -929,7 +997,8 @@ async function sync({
           eventsStream
         );
 
-        for await (const event of eventsGenerator) {
+        for await (const _event of eventsGenerator) {
+          const event = _event as any;
           // Stop when the deployment is ready
           if (
             event.type === 'state-change' &&
@@ -954,7 +1023,9 @@ async function sync({
           } else if (event.type === 'command') {
             output.log(formatLogCmd(event.payload.text));
           } else if (event.type === 'stdout' || event.type === 'stderr') {
-            formatLogOutput(event.payload.text).forEach(msg => output.log(msg));
+            formatLogOutput(event.payload.text).forEach((msg: string) =>
+              output.log(msg)
+            );
           }
         }
 
@@ -972,7 +1043,8 @@ async function sync({
             eventsStream
           );
 
-          for await (const dcOrEvent of verifyDCsGenerator) {
+          for await (const _dcOrEvent of verifyDCsGenerator) {
+            const dcOrEvent = _dcOrEvent as any;
             if (dcOrEvent instanceof VerifyScaleTimeout) {
               output.error(
                 `Instance verification timed out (${ms(
@@ -999,8 +1071,8 @@ async function sync({
               const prefix = chalk.gray(
                 `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
               );
-              formatLogOutput(dcOrEvent.payload.text, prefix).forEach(msg =>
-                output.log(msg)
+              formatLogOutput(dcOrEvent.payload.text, prefix).forEach(
+                (msg: string) => output.log(msg)
               );
             }
           }
@@ -1014,11 +1086,11 @@ async function sync({
 }
 
 async function readMeta(
-  _path,
-  _deploymentName,
-  deploymentType,
-  _sessionAffinity
-) {
+  _path: string,
+  _deploymentName: string,
+  deploymentType?: string,
+  _sessionAffinity?: string
+): Promise<any> {
   try {
     const meta = await readMetaData(_path, {
       deploymentType,
@@ -1069,15 +1141,15 @@ async function readMeta(
   }
 }
 
-function getRegionsFromConfig(config = {}) {
+function getRegionsFromConfig(config: any = {}): string[] {
   return config.regions || [];
 }
 
-function getScaleFromConfig(config = {}) {
+function getScaleFromConfig(config: any = {}): DcScale {
   return config.scale || {};
 }
 
-async function maybeGetEventsStream(now, deployment) {
+async function maybeGetEventsStream(now: Now, deployment: any) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
@@ -1088,7 +1160,12 @@ async function maybeGetEventsStream(now, deployment) {
   }
 }
 
-function getEventsGenerator(now, contextName, deployment, eventsStream) {
+function getEventsGenerator(
+  now: Now,
+  contextName: string,
+  deployment: any,
+  eventsStream: any
+) {
   const stateChangeFromPollingGenerator = getStateChangeFromPolling(
     now,
     contextName,
@@ -1105,7 +1182,12 @@ function getEventsGenerator(now, contextName, deployment, eventsStream) {
   return stateChangeFromPollingGenerator;
 }
 
-function getVerifyDCsGenerator(output, now, deployment, eventsStream) {
+function getVerifyDCsGenerator(
+  output: Output,
+  now: Now,
+  deployment: any,
+  eventsStream: any
+) {
   const verifyDeployment = verifyDeploymentScale(
     output,
     now,
@@ -1121,7 +1203,7 @@ function getVerifyDCsGenerator(output, now, deployment, eventsStream) {
     : verifyDeployment;
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output: Output, error: Error) {
   if (error instanceof DomainVerificationFailed) {
     output.error(
       `The domain used as a suffix ${chalk.underline(
@@ -1139,7 +1221,7 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { message, params, keyword, dataPath } = error.meta;
+    const { message, params, keyword, dataPath } = error.meta as any;
 
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
@@ -1185,10 +1267,12 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof TooManyRequests) {
     output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
+        error.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }

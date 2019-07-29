@@ -61,7 +61,7 @@
     ]
   },
   "engines": {
-    "node": ">= 10"
+    "node": ">= 8"
   },
   "devDependencies": {
     "@now/build-utils": "0.9.4",

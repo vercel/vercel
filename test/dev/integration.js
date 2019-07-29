@@ -1,10 +1,11 @@
 import ms from 'ms';
+import fs from 'fs-extra';
 import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
-import { promises as fs } from 'fs';
+import { satisfies } from 'semver';
 
 let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../dist/index.js`);
@@ -132,38 +133,42 @@ test('[now dev] 01-node', async t => {
   }
 });
 
-test('[now dev] 02-angular-node', async t => {
-  const directory = fixture('02-angular-node');
-  const { dev, port } = testFixture(directory);
+if (satisfies(process.version, '>= 10.9')) {
+  test('[now dev] 02-angular-node', async t => {
+    const directory = fixture('02-angular-node');
+    const { dev, port } = testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Angular \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
+}
 
-test(
-  '[now dev] 03-aurelia',
-  testFixtureStdio('03-aurelia', async(t, port) => {
-    const result = fetch(`http://localhost:${port}`)
-    const response = await result;
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Aurelia Navigation Skeleton/gm);
-  })
-);
+// test(
+//   '[now dev] 03-aurelia',
+//   testFixtureStdio('03-aurelia', async(t, port) => {
+//     const result = fetch(`http://localhost:${port}`)
+//     const response = await result;
+//
+//     validateResponseHeaders(t, response);
+//
+//     const body = await response.text();
+//     t.regex(body, /Aurelia Navigation Skeleton/gm);
+//   })
+// );
 
 // test(
 //   '[now dev] 04-create-react-app-node',

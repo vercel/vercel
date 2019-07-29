@@ -8,10 +8,10 @@ import getDeploymentByIdOrThrow from './get-deployment-by-id-or-throw';
 const POLLING_INTERVAL = 5000;
 
 async function* getStatusChangeFromPolling(
-  now,
-  contextName,
-  idOrHost,
-  initialState
+  now: any,
+  contextName: string,
+  idOrHost: string,
+  initialState: string
 ) {
   const pollDeployment = createPollingFn(
     getDeploymentByIdOrThrow,
