@@ -9,4 +9,3 @@ coverage
 *.swp
 .builders
 /assets
-preinstall

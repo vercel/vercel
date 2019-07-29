@@ -50,26 +50,12 @@ async function createBuildersTarball() {
   await pipe(packer, createGzip(), createWriteStream(buildersTarballPath));
 }
 
-async function compilePreinstall(nccPath) {
-  const scriptPath = join(dirRoot, 'scripts/preinstall.ts');
-  const outputPath = join(dirRoot, 'preinstall');
-  await execa(nccPath, ['build', '--source-map', '--out', outputPath, scriptPath], {
-    stdio: 'inherit'
-  });
-}
-
 async function main() {
   const isDev = process.argv[2] === '--dev';
 
   // Create a tarball from all the `@now` scoped builders which will be bundled
   // with Now CLI
   await createBuildersTarball();
-
-  const src = join(dirRoot, 'src');
-  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
-
-  console.log('> Compiling preinstall script');
-  await compilePreinstall(ncc);
 
   // `now dev` uses chokidar to watch the filesystem, but opts-out of the
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
@@ -78,6 +64,8 @@ async function main() {
   await remove(join(dirRoot, 'node_modules/fsevents'));
 
   // Do the initial `ncc` build
+  const src = join(dirRoot, 'src');
+  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
   const args = [ ncc, 'build', '--source-map' ];
   if (!isDev) {
     args.push('--minify');

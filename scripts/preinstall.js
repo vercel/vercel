@@ -1,12 +1,28 @@
 #!/usr/bin/env node
-import { join } from 'path';
-import { remove, existsSync, stat } from 'fs-extra';
-import cmd from '../src/util/output/cmd';
-import createOutput from '../src/util/output';
+const { join } = require('path');
+const { promisify } = require('util');
+const { existsSync, stat: _stat, unlink: _unlink } = require('fs');
+
+const stat = promisify(_stat);
+const unlink = promisify(_unlink);
+
+function cmd(command) {
+  return `\`${command}\``;
+}
+
+function error(command) {
+  console.error('> Error!', command);
+};
+
+function debug(str) {
+  if (process.argv.find((str) => str === '--debug')) {
+    console.log(`[debug] [${new Date().toISOString()}]`, str);
+  }
+}
 
 // Logic is from Now Desktop
 // See: https://git.io/fj4jD
-async function getNowPath(): Promise<string | null> {
+async function getNowPath() {
   if (process.platform === 'win32') {
     const path = `${process.env.LOCALAPPDATA}\\now-cli\\now.exe`;
     return existsSync(path) ? path : null;
@@ -35,7 +51,7 @@ async function getNowPath(): Promise<string | null> {
   return null;
 }
 
-async function isBinary(nowPath: string): Promise<boolean> {
+async function isBinary(nowPath) {
   const stats = await stat(nowPath);
 
   if (stats.isDirectory()) {
@@ -46,36 +62,35 @@ async function isBinary(nowPath: string): Promise<boolean> {
 }
 
 async function main() {
-  const output = createOutput({ debug: Boolean(process.argv.find((str) => str === '--debug')) });
   const nowPath = await getNowPath();
 
   if (nowPath === null) {
-    output.debug(`No now binary found`);
+    debug(`No now binary found`);
     return;
   }
 
   try {
     if ((await isBinary(nowPath)) === false) {
-      output.debug(
-        '[preinstall] Found file or directory named now but will not delete, ' +
+      debug(
+        'Found file or directory named now but will not delete, ' +
         'as it seems unrelated to Now CLI'
       );
       return;
     }
 
-    await remove(nowPath);
+    await unlink(nowPath);
 
-    output.debug(`Removed ${nowPath}`);
+    debug(`Removed ${nowPath}`);
   } catch (err) {
     if (process.platform !== 'win32') {
-      output.error(
-        `[preinstall] An error occured while removing the previous Now CLI installation.\n` +
+      error(
+        `An error occured while removing the previous Now CLI installation.\n` +
         `Please use the this command to remove it: ${cmd(`sudo rm ${nowPath}`)}.\n` +
         `Then try to install it again.`
       );
     } else {
-      output.error(
-        `[preinstall] An error occured while removing the previous Now CLI installation.\n` +
+      error(
+        `An error occured while removing the previous Now CLI installation.\n` +
         `Please remove ${cmd(nowPath)} manually and try to install it again.`
       );
     }
