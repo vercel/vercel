@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
+import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
 import param from './util/output/param.ts';
