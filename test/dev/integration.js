@@ -1,11 +1,11 @@
 import ms from 'ms';
+import fs from 'fs-extra';
 import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
 import { satisfies } from 'semver';
-import { promises as fs } from 'fs';
 
 let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../dist/index.js`);
