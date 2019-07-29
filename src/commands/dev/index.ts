@@ -50,6 +50,12 @@ export default async function main(ctx: NowContext) {
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
     output = createOutput({ debug: argv['--debug'] });
+
+    if (argv['--debug']) {
+      process.env.NOW_BUILDER_DEBUG = '1';
+    } else {
+      process.env.NOW_BUILDER_DEBUG = '';
+    }
   } catch (err) {
     handleError(err);
     return 1;
