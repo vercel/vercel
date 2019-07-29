@@ -1149,7 +1149,7 @@ function getScaleFromConfig(config: any = {}): DcScale {
   return config.scale || {};
 }
 
-async function maybeGetEventsStream(now: any, deployment: any) {
+async function maybeGetEventsStream(now: Now, deployment: any) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
@@ -1161,7 +1161,7 @@ async function maybeGetEventsStream(now: any, deployment: any) {
 }
 
 function getEventsGenerator(
-  now: any,
+  now: Now,
   contextName: string,
   deployment: any,
   eventsStream: any
@@ -1184,7 +1184,7 @@ function getEventsGenerator(
 
 function getVerifyDCsGenerator(
   output: Output,
-  now: any,
+  now: Now,
   deployment: any,
   eventsStream: any
 ) {
