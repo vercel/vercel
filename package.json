@@ -7,6 +7,7 @@
   "repository": "zeit/now-cli",
   "scripts": {
     "test": "yarn test-lint",
+    "preinstall": "node ./scripts/preinstall.js",
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast",
@@ -46,7 +47,8 @@
     "now": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts/preinstall.js"
   ],
   "ava": {
     "compileEnhancements": false,

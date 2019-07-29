@@ -950,6 +950,32 @@ export default class DevServer {
     routes: RouteConfig[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
+    // If there is a double-slash present in the URL,
+    // then perform a redirect to make it "clean".
+    const parsed = url.parse(req.url || '/');
+    if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
+      const statusCode = 301;
+      let location = parsed.pathname.replace(/\/+/g, '/');
+      if (parsed.search) {
+        location += parsed.search;
+      }
+
+      // Only `GET` requests are redirected.
+      // Other methods are normalized without redirecting.
+      if (req.method === 'GET') {
+        this.setResponseHeaders(res, nowRequestId, {
+          'content-type': 'text/plain',
+          location
+        });
+        res.statusCode = statusCode;
+        res.end(`Redirecting to ${location} (${statusCode})\n`);
+        return;
+      }
+
+      this.output.debug(`Rewriting URL from "${req.url}" to "${location}"`);
+      req.url = location;
+    }
+
     await this.updateBuildMatches(nowConfig);
 
     if (this.blockingBuildsPromise) {
@@ -974,10 +1000,10 @@ export default class DevServer {
 
     if (isURL(dest)) {
       // Mix the `routes` result dest query params into the req path
-      const parsed = url.parse(dest, true);
-      delete parsed.search;
-      Object.assign(parsed.query, uri_args);
-      const destUrl = url.format(parsed);
+      const destParsed = url.parse(dest, true);
+      delete destParsed.search;
+      Object.assign(destParsed.query, uri_args);
+      const destUrl = url.format(destParsed);
 
       this.output.debug(`ProxyPass: ${destUrl}`);
       this.setResponseHeaders(res, nowRequestId);
