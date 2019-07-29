@@ -137,8 +137,8 @@ const printDeploymentStatus = async (
     return 1;
   }
 
-  const failedBuils = builds.filter(isFailed);
-  const amount = failedBuils.length;
+  const failedBuilds = builds.filter(isFailed);
+  const amount = failedBuilds.length;
 
   if (amount > 0) {
     output.error('Build failed');
