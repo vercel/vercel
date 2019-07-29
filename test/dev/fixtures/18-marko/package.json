@@ -1,0 +1,30 @@
+{
+  "name": "marko",
+  "description": "Demo of how to build an app using marko-starter",
+  "version": "1.0.0",
+  "dependencies": {
+    "marko": "^4.13.10",
+    "marko-starter": "^2.0.4"
+  },
+  "devDependencies": {
+    "eslint": "^5.9.0",
+    "eslint-config-prettier": "^3.3.0",
+    "eslint-plugin-prettier": "^3.0.0",
+    "marko-prettyprint": "^1.5.2",
+    "prettier": "^1.15.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marko-js-samples/marko-starter-demo"
+  },
+  "scripts": {
+    "build": "NODE_ENV=production marko-starter build && mv dist public",
+    "format": "prettier src/**/*.{js,css,less} --write && marko-prettyprint src",
+    "lint": "eslint src",
+    "serve": "NODE_ENV=production marko-starter serve-static",
+    "start": "marko-starter server",
+    "test": "npm run lint"
+  },
+  "private": true
+}
