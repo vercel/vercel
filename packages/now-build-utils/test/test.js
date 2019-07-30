@@ -385,7 +385,7 @@ it('Test `detectBuilders`', async () => {
     const files = ['package.json', 'pages/index.js'];
 
     const { builders } = await detectBuilders(files, pkg);
-    expect(builders[0].use).toBe('@now/nuxt');
+    expect(builders[0].use).toBe('@now/static-build');
     expect(builders[0].src).toBe('package.json');
     expect(builders.length).toBe(1);
   }

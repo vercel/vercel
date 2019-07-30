@@ -16,7 +16,6 @@ const config: Config = { zeroConfig: true };
 // Static builders are special cased in `@now/static-build`
 const BUILDERS = new Map<string, Builder>([
   ['next', { src, use: '@now/next', config }],
-  ['nuxt', { src, use: '@now/nuxt', config }],
 ]);
 
 const API_BUILDERS: Builder[] = [
