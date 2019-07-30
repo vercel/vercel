@@ -397,6 +397,25 @@ it('Test `detectBuilders`', async () => {
     expect(builders).toBe(null);
     expect(errors).toBe(null);
   }
+
+  {
+    // package.json + api + canary
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = [
+      'pages/index.js',
+      'api/[endpoint].js',
+      'api/[endpoint]/[id].js',
+    ];
+
+    const { builders } = await detectBuilders(files, pkg, { tag: 'canary' });
+    expect(builders[0].use).toBe('@now/node@canary');
+    expect(builders[1].use).toBe('@now/node@canary');
+    expect(builders[2].use).toBe('@now/next@canary');
+    expect(builders.length).toBe(3);
+  }
 });
 
 it('Test `detectRoutes`', async () => {
