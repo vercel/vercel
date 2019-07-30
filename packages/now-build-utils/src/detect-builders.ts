@@ -6,6 +6,10 @@ interface ErrorResponse {
   message: string;
 }
 
+interface Options {
+  tag?: 'canary' | 'latest';
+}
+
 const src: string = 'package.json';
 const config: Config = { zeroConfig: true };
 
@@ -18,12 +22,9 @@ const BUILDERS = new Map<string, Builder>([
 const API_BUILDERS: Builder[] = [
   { src: 'api/**/*.js', use: '@now/node', config },
   { src: 'api/**/*.ts', use: '@now/node', config },
-  { src: 'api/**/*.rs', use: '@now/rust', config },
   { src: 'api/**/*.go', use: '@now/go', config },
-  { src: 'api/**/*.php', use: '@now/php', config },
   { src: 'api/**/*.py', use: '@now/python', config },
   { src: 'api/**/*.rb', use: '@now/ruby', config },
-  { src: 'api/**/*.sh', use: '@now/bash', config },
 ];
 
 const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
@@ -101,7 +102,8 @@ async function detectApiBuilders(files: string[]): Promise<Builder[]> {
 // to determine what builders to use
 export async function detectBuilders(
   files: string[],
-  pkg?: PackageJson | undefined | null
+  pkg?: PackageJson | undefined | null,
+  options?: Options
 ): Promise<{
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
@@ -109,7 +111,7 @@ export async function detectBuilders(
   const errors: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
-  const builders = await detectApiBuilders(files);
+  let builders = await detectApiBuilders(files);
 
   if (pkg && hasBuildScript(pkg)) {
     builders.push(await detectBuilder(pkg));
@@ -142,6 +144,22 @@ export async function detectBuilders(
             config,
           }))
       );
+    }
+  }
+
+  // Change the tag for the builders
+  if (builders && builders.length) {
+    const tag = options && options.tag;
+
+    if (tag) {
+      builders = builders.map((builder: Builder) => {
+        // @now/static has no canary builder
+        if (builder.use !== '@now/static') {
+          builder.use = `${builder.use}@${tag}`;
+        }
+
+        return builder;
+      });
     }
   }
 
