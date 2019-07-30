@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/glob').default;
+module.exports = require('../dist/index').glob;

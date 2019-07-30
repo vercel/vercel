@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/stream-to-buffer').default;
+module.exports = require('../dist/index').streamToBuffer;

@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/run-user-scripts');
+module.exports = require('../dist/index');

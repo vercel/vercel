@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/rename').default;
+module.exports = require('../dist/index').rename;

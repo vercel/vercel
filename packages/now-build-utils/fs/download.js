@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/download').default;
+module.exports = require('../dist/index').download;

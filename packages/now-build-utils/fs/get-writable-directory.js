@@ -1,1 +1,1 @@
-module.exports = require('../dist/fs/get-writable-directory').default;
+module.exports = require('../dist/index').getWriteableDirectory;
