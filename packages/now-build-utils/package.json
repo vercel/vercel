@@ -15,7 +15,6 @@
     "test": "./build.sh && jest",
     "prepublishOnly": "./build.sh"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/async-retry": "^1.2.1",
     "@types/cross-spawn": "6.0.0",
