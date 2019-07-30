@@ -1,6 +1,7 @@
 const cpy = require('cpy');
 const tar = require('tar-fs');
 const execa = require('execa');
+const semver = require('semver');
 const { join } = require('path');
 const pipe = require('promisepipe');
 const { createGzip } = require('zlib');
@@ -19,10 +20,16 @@ const dirRoot = join(__dirname, '..');
 const bundledBuilders = Object.keys(pkg.devDependencies)
   .filter(d => d.startsWith('@now/'));
 
+function getDistTag(version) {
+  const parsed = semver.parse(version);
+  if (parsed && typeof parsed.prerelease[0] === 'string') {
+    return parsed.prerelease[0];
+  }
+  return 'latest';
+}
+
 async function createBuildersTarball() {
-  const distTag = pkg.version.includes('-')
-    ? pkg.version.match(/-(.*)\.\d+$/)[1]
-    : 'latest';
+  const distTag = getDistTag(pkg.version);
   const builders = Array.from(bundledBuilders).map(b => `${b}@${distTag}`);
   console.log(`Creating builders tarball with: ${builders.join(', ')}`);
 

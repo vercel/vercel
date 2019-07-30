@@ -41,7 +41,7 @@ const bundledBuilders = Object.keys(devDependencies).filter(d =>
   d.startsWith('@now/')
 );
 
-const distTag = getDistTag();
+const distTag = getDistTag(pkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -72,12 +72,10 @@ async function readFileOrNull(
   }
 }
 
-function getDistTag(): string {
-  if (pkg.version.includes('-')) {
-    const m = pkg.version.match(/-(.*)\.\d+$/);
-    if (m) {
-      return m[1];
-    }
+export function getDistTag(version: string): string {
+  const parsed = semver.parse(version);
+  if (parsed && typeof parsed.prerelease[0] === 'string') {
+    return parsed.prerelease[0] as string;
   }
   return 'latest';
 }
