@@ -18,7 +18,11 @@ test('[dev-builder] filter install "canary", cached stable', async t => {
       '@now/build-utils': '0.0.1'
     }
   };
-  const result = filterPackage('@now/build-utils@canary', 'latest', buildersPkg);
+  const result = filterPackage(
+    '@now/build-utils@canary',
+    'latest',
+    buildersPkg
+  );
   t.is(result, true);
 });
 
@@ -38,7 +42,11 @@ test('[dev-builder] filter install "canary", cached canary', async t => {
       '@now/build-utils': '0.0.1-canary.0'
     }
   };
-  const result = filterPackage('@now/build-utils@canary', 'canary', buildersPkg);
+  const result = filterPackage(
+    '@now/build-utils@canary',
+    'canary',
+    buildersPkg
+  );
   t.is(result, false);
 });
 
