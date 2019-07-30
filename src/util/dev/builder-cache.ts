@@ -245,7 +245,9 @@ export async function installBuilders(
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages.filter(p => filterPackage(p, distTag, buildersPkg));
+  const packagesToInstall = packages.filter(p =>
+    filterPackage(p, distTag, buildersPkg)
+  );
 
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');

@@ -812,7 +812,7 @@ export default class DevServer {
     const allHeaders = {
       'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
-      'server': 'now',
+      server: 'now',
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
       'x-now-cache': 'MISS'
@@ -1306,7 +1306,13 @@ export default class DevServer {
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
-      await findBuildMatch(this.buildMatches, this.files, requestPath, this, true)
+      await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        requestPath,
+        this,
+        true
+      )
     ) {
       return true;
     }
@@ -1436,7 +1442,10 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
-  } else if (!isFilesystem && (await findMatchingRoute(match, requestPath, devServer))) {
+  } else if (
+    !isFilesystem &&
+    (await findMatchingRoute(match, requestPath, devServer))
+  ) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
     // been built.
