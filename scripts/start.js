@@ -10,9 +10,9 @@ const major = match && parseInt(match[1], 10);
 const minor = match && parseInt(match[2], 10);
 
 // Must be above or equal to 10.10.0
-if (major > 10 || (major === 10 && minor >= 10)) {
-  require('../dist/index.js');
-} else {
+const isVersion = major > 10 || (major === 10 && minor >= 10);
+
+if (!isVersion || (major === 8 && process.platform === 'darwin')) {
   const [node, _, ...args] = process.argv;
   const script = join(__dirname, '../dist/index.js');
 
@@ -21,4 +21,6 @@ if (major > 10 || (major === 10 && minor >= 10)) {
   });
 
   process.exit(status);
+} else {
+  require('../dist/index.js');
 }
