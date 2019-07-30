@@ -11,7 +11,7 @@ if (major > 10 || (major === 10 && minor >= 10)) {
 } else {
   const [node, _, ...args] = process.argv;
   const script = join(__dirname, '../dist/index.js');
-  spawnSync(node, ['--no-warnings', '../dist/index.js', ...args], {
+  spawnSync(node, ['--no-warnings', script, ...args], {
     stdio: 'inherit'
   });
 }
