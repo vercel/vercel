@@ -61,3 +61,23 @@ test('[dev-builder] filter install URL, cached canary', async t => {
   const result = filterPackage('https://tarball.now.sh', 'canary', buildersPkg);
   t.is(result, true);
 });
+
+test('[dev-builder] filter install "latest", cached URL - stable', async t => {
+  const buildersPkg = {
+    dependencies: {
+      '@now/build-utils': 'https://tarball.now.sh'
+    }
+  };
+  const result = filterPackage('@now/build-utils', 'latest', buildersPkg);
+  t.is(result, true);
+});
+
+test('[dev-builder] filter install "latest", cached URL - canary', async t => {
+  const buildersPkg = {
+    dependencies: {
+      '@now/build-utils': 'https://tarball.now.sh'
+    }
+  };
+  const result = filterPackage('@now/build-utils', 'canary', buildersPkg);
+  t.is(result, true);
+});
