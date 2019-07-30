@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+
+// This should only be used for the integration tests
+
 const { join } = require('path');
 const { spawnSync } = require('child_process');
 

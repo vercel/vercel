@@ -44,12 +44,11 @@
     ]
   },
   "bin": {
-    "now": "./scripts/start.js"
+    "now": "./dist/index.js"
   },
   "files": [
     "dist",
-    "scripts/preinstall.js",
-    "scripts/start.js"
+    "scripts/preinstall.js"
   ],
   "ava": {
     "compileEnhancements": false,
