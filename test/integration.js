@@ -15,7 +15,7 @@ import pkg from '../package';
 import parseList from './helpers/parse-list';
 import prepareFixtures from './helpers/prepare';
 
-const binaryPath = path.resolve(__dirname, `../dist/index.js`);
+const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random()
