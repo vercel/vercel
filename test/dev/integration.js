@@ -406,7 +406,7 @@ test('[now dev] 17-vuepress-node', async t => {
 
 test('[now dev] double slashes redirect', async t => {
   const directory = fixture('01-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = testFixture(directory, { stdio: 'inherit' });
 
   try {
     // start `now dev` detached in child_process
