@@ -185,6 +185,39 @@ export function getBuildUtils(packages: string[]): string {
   return `@now/build-utils@${version}`;
 }
 
+export function filterPackage(
+  builderSpec: string,
+  distTag: string,
+  buildersPkg: Package
+) {
+  if (builderSpec in localBuilders) return false;
+  const parsed = npa(builderSpec);
+  if (
+    parsed.name &&
+    parsed.type === 'tag' &&
+    parsed.fetchSpec === distTag &&
+    bundledBuilders.includes(parsed.name) &&
+    buildersPkg.dependencies
+  ) {
+    const parsedInstalled = npa(
+      `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
+    );
+    if (parsedInstalled.type !== 'version') {
+      return true;
+    }
+    const semverInstalled = semver.parse(parsedInstalled.rawSpec);
+    if (!semverInstalled) {
+      return true;
+    }
+    if (semverInstalled.prerelease.length > 0) {
+      return semverInstalled.prerelease[0] !== distTag;
+    } if (distTag === 'latest') {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Install a list of builders to the cache directory.
  */
@@ -213,36 +246,8 @@ export async function installBuilders(
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages.filter(p => {
-    if (p in localBuilders) return false;
-    const parsed = npa(p);
-    if (!parsed.name) {
-      return true;
-    }
-    if (
-      parsed.type === 'tag' &&
-      parsed.fetchSpec === distTag &&
-      bundledBuilders.includes(parsed.name)
-    ) {
-      const parsedInstalled = npa(
-        `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
-      );
-      if (parsedInstalled.type !== 'version') {
-        return true;
-      }
-      const semverInstalled = semver.parse(parsedInstalled.rawSpec);
-      if (!semverInstalled) {
-        return true;
-      }
-      if (semverInstalled.prerelease.length > 0) {
-        return semverInstalled.prerelease[0] !== distTag;
-      }
-      return false;
-    }
-    return true;
-  });
+  const packagesToInstall = packages.filter(p => filterPackage(p, distTag, buildersPkg));
 
-  console.error({ packages, packagesToInstall });
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');
     return;
