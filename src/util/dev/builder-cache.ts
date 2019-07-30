@@ -209,7 +209,8 @@ export function filterPackage(
     }
     if (semverInstalled.prerelease.length > 0) {
       return semverInstalled.prerelease[0] !== distTag;
-    } if (distTag === 'latest') {
+    }
+    if (distTag === 'latest') {
       return false;
     }
   }
