@@ -1,32 +1,26 @@
-const cpy = require('cpy');
-const tar = require('tar-fs');
-const execa = require('execa');
-const semver = require('semver');
-const { join } = require('path');
-const pipe = require('promisepipe');
-const { createGzip } = require('zlib');
-const {
+import cpy from 'cpy';
+import tar from 'tar-fs';
+import execa from 'execa';
+import semver from 'semver';
+import { join } from 'path';
+import pipe from 'promisepipe';
+import { createGzip } from 'zlib';
+import {
   createReadStream,
   createWriteStream,
   mkdirp,
   remove,
   writeFile,
   writeJSON
-} = require('fs-extra');
-const pkg = require('../package.json');
+} from 'fs-extra';
+
+import { getDistTag } from '../src/util/dev/builder-cache';
+import pkg from '../package.json';
 
 const dirRoot = join(__dirname, '..');
 
 const bundledBuilders = Object.keys(pkg.devDependencies)
   .filter(d => d.startsWith('@now/'));
-
-function getDistTag(version) {
-  const parsed = semver.parse(version);
-  if (parsed && typeof parsed.prerelease[0] === 'string') {
-    return parsed.prerelease[0];
-  }
-  return 'latest';
-}
 
 async function createBuildersTarball() {
   const distTag = getDistTag(pkg.version);

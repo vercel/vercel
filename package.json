@@ -14,8 +14,8 @@
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "build": "node ./scripts/build.js",
-    "build-dev": "node ./scripts/build.js --dev",
+    "build": "ts-node ./scripts/build.ts",
+    "build-dev": "ts-node ./scripts/build.ts --dev",
     "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
