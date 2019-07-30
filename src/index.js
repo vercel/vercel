@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import checkForUpdate from 'update-check';
 import ms from 'ms';
+import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import error from './util/output/error';
 import param from './util/output/param.ts';
@@ -133,17 +134,8 @@ const main = async argv_ => {
   if (update && isTTY) {
     console.log(
       info(
-        `${chalk.bgRed(
-          'UPDATE AVAILABLE'
-        )} The latest version of Now CLI is ${update.latest}`
-      )
-    );
-    console.log(
-      info(await getUpdateCommand())
-    );
-    console.log(
-      info(
-        `Changelog: https://github.com/zeit/now-cli/releases/tag/${update.latest}`
+        `${chalk.bgRed('UPDATE AVAILABLE')} ` +
+        `Run ${cmd(await getUpdateCommand())} to install Now CLI ${update.latest}`
       )
     );
   }

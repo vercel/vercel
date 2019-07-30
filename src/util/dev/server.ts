@@ -947,8 +947,35 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     nowConfig: NowConfig,
-    routes: RouteConfig[] | undefined = nowConfig.routes
+    routes: RouteConfig[] | undefined = nowConfig.routes,
+    callLevel: number = 0
   ) => {
+    // If there is a double-slash present in the URL,
+    // then perform a redirect to make it "clean".
+    const parsed = url.parse(req.url || '/');
+    if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
+      const statusCode = 301;
+      let location = parsed.pathname.replace(/\/+/g, '/');
+      if (parsed.search) {
+        location += parsed.search;
+      }
+
+      // Only `GET` requests are redirected.
+      // Other methods are normalized without redirecting.
+      if (req.method === 'GET') {
+        this.setResponseHeaders(res, nowRequestId, {
+          'content-type': 'text/plain',
+          location
+        });
+        res.statusCode = statusCode;
+        res.end(`Redirecting to ${location} (${statusCode})\n`);
+        return;
+      }
+
+      this.output.debug(`Rewriting URL from "${req.url}" to "${location}"`);
+      req.url = location;
+    }
+
     await this.updateBuildMatches(nowConfig);
 
     if (this.blockingBuildsPromise) {
@@ -973,10 +1000,10 @@ export default class DevServer {
 
     if (isURL(dest)) {
       // Mix the `routes` result dest query params into the req path
-      const parsed = url.parse(dest, true);
-      delete parsed.search;
-      Object.assign(parsed.query, uri_args);
-      const destUrl = url.format(parsed);
+      const destParsed = url.parse(dest, true);
+      delete destParsed.search;
+      Object.assign(destParsed.query, uri_args);
+      const destUrl = url.format(destParsed);
 
       this.output.debug(`ProxyPass: ${destUrl}`);
       this.setResponseHeaders(res, nowRequestId);
@@ -1035,7 +1062,7 @@ export default class DevServer {
         buildResult.routes,
         this
       );
-      if (matchedRoute.found) {
+      if (matchedRoute.found && callLevel === 0) {
         this.output.debug(
           `Found matching route ${matchedRoute.dest} for ${newUrl}`
         );
@@ -1045,14 +1072,15 @@ export default class DevServer {
           res,
           nowRequestId,
           nowConfig,
-          buildResult.routes
+          buildResult.routes,
+          callLevel + 1
         );
         return;
       }
     }
 
     let foundAsset = findAsset(match, requestPath);
-    if (!foundAsset || this.shouldRebuild(req)) {
+    if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
@@ -1278,7 +1306,7 @@ export default class DevServer {
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
-      await findBuildMatch(this.buildMatches, this.files, requestPath, this)
+      await findBuildMatch(this.buildMatches, this.files, requestPath, this, true)
     ) {
       return true;
     }
@@ -1370,10 +1398,11 @@ async function findBuildMatch(
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath, devServer)) {
+    if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
     }
   }
@@ -1384,7 +1413,8 @@ async function shouldServe(
   match: BuildMatch,
   files: BuilderInputs,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  isFilesystem?: boolean
 ): Promise<boolean> {
   const {
     src: entrypoint,
@@ -1406,7 +1436,7 @@ async function shouldServe(
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
-  } else if (await findMatchingRoute(match, requestPath, devServer)) {
+  } else if (!isFilesystem && (await findMatchingRoute(match, requestPath, devServer))) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
     // been built.

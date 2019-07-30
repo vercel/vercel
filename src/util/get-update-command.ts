@@ -26,6 +26,6 @@ async function isYarn(): Promise<boolean> {
 export default async function getUpdateCommand(): Promise<string> {
   const tag = version.includes('canary') ? 'canary' : 'latest';
   return (await isYarn())
-    ? `Please run ${cmd(`yarn global add now@${tag}`)} to update Now CLI.`
-    : `Please run ${cmd(`npm install -g now@${tag}`)} to update Now CLI.`;
+    ? `yarn global add now@${tag}`
+    : `npm install -g now@${tag}`;
 }

@@ -1,22 +1,23 @@
 import ms from 'ms';
+import fs from 'fs-extra';
 import test from 'ava';
 import path from 'path';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
-import { promises as fs } from 'fs';
+import { satisfies } from 'semver';
 
 let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../dist/index.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
-function fetchWithRetry(url, retries = 3) {
+function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, opts);
 
-      if(res.ok) {
-        resolve(res)
+      if (res.ok) {
+        resolve(res);
       }
     } catch (error) {
       if (retries === 0) {
@@ -24,7 +25,7 @@ function fetchWithRetry(url, retries = 3) {
         return;
       }
       setTimeout(() => {
-        fetchWithRetry(url, retries - 1)
+        fetchWithRetry(url, retries - 1, opts)
           .then(resolve)
           .catch(reject);
       }, 1000);
@@ -108,7 +109,7 @@ test('[now dev] 00-list-directory', async t => {
     t.regex(body, /test1.txt/gm);
     t.regex(body, /directory/gm);
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -127,32 +128,34 @@ test('[now dev] 01-node', async t => {
 
     const body = await response.text();
     t.regex(body, /A simple deployment with the Now API!/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
-test('[now dev] 02-angular-node', async t => {
-  const directory = fixture('02-angular-node');
-  const { dev, port } = testFixture(directory);
+if (satisfies(process.version, '>= 10.9')) {
+  test('[now dev] 02-angular-node', async t => {
+    const directory = fixture('02-angular-node');
+    const { dev, port } = testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
-
-  } finally {
-    dev.kill('SIGTERM')
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Angular \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
+}
 
 test(
   '[now dev] 03-aurelia',
@@ -221,9 +224,8 @@ test('[now dev] 07-hexo-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Hexo \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -255,9 +257,8 @@ test('[now dev] 10-nextjs-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Next.js \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -297,9 +298,8 @@ test('[now dev] 12-polymer-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Polymer \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -318,9 +318,8 @@ test('[now dev] 13-preact-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Preact \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -339,9 +338,8 @@ test('[now dev] 14-svelte-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Svelte \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -381,9 +379,8 @@ test('[now dev] 16-vue-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Vue.js \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
   }
 });
 
@@ -402,9 +399,62 @@ test('[now dev] 17-vuepress-node', async t => {
 
     const body = await response.text();
     t.regex(body, /VuePress \+ Node.js API/gm);
-
   } finally {
-    dev.kill('SIGTERM')
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] double slashes redirect', async t => {
+  const directory = fixture('01-node');
+  const { dev, port } = testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    // Wait for `now dev` to boot up
+    await sleep(ms('10s'));
+
+    {
+      const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+        redirect: 'manual'
+      });
+
+      validateResponseHeaders(t, res);
+
+      const body = await res.text();
+      t.is(res.status, 301);
+      t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
+      t.is(body, 'Redirecting to /?foo=bar (301)\n');
+    }
+
+    {
+      const res = await fetch(`http://localhost:${port}///api////date.js`, {
+        method: 'POST',
+        redirect: 'manual'
+      });
+
+      validateResponseHeaders(t, res);
+
+      const body = await res.text();
+      t.is(res.status, 200);
+      t.truthy(
+        body.startsWith('January') ||
+          body.startsWith('February') ||
+          body.startsWith('March') ||
+          body.startsWith('April') ||
+          body.startsWith('May') ||
+          body.startsWith('June') ||
+          body.startsWith('July') ||
+          body.startsWith('August') ||
+          body.startsWith('September') ||
+          body.startsWith('October') ||
+          body.startsWith('November') ||
+          body.startsWith('December')
+      );
+    }
+  } finally {
+    dev.kill('SIGTERM');
   }
 });
 
@@ -522,7 +572,7 @@ test('[now dev] temporary directory listing', async t => {
 
       if (response.status === 200) {
         const body = await response.text();
-        t.is(body, 'hello')
+        t.is(body, 'hello');
       }
 
       await sleep(ms('1s'));
@@ -536,24 +586,29 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
   const directory = fixture('trigger-static-build');
   const { dev, port } = testFixture(directory);
 
-   try {
+  try {
     dev.unref();
 
-     {
+    {
       const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
       const body = await response.text();
       t.is(body.trim(), 'hello:index.txt');
     }
 
-     const rnd = Math.random().toString();
-    const pkg = { scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` } };
-    await fs.writeFile(path.join(directory, 'package.json'), JSON.stringify(pkg));
+    const rnd = Math.random().toString();
+    const pkg = {
+      scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` }
+    };
+    await fs.writeFile(
+      path.join(directory, 'package.json'),
+      JSON.stringify(pkg)
+    );
 
-     // Wait until file events have been processed
+    // Wait until file events have been processed
     await sleep(ms('3s'));
 
-     {
+    {
       const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
       const body = await response.text();
@@ -585,6 +640,30 @@ test('[now dev] no build matches warning', async t => {
     });
 
     t.pass();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] do not recursivly check the path', async t => {
+  const directory = fixture('handle-filesystem-missing');
+  const { dev, port } = testFixture(directory);
+
+   try {
+    dev.unref();
+
+    {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), 'hello');
+    }
+
+    {
+      const response = await fetch(`http://localhost:${port}/favicon.txt`);
+      validateResponseHeaders(t, response);
+      t.is(response.status, 404);
+    }
   } finally {
     dev.kill('SIGTERM');
   }

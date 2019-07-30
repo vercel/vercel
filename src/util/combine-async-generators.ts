@@ -1,12 +1,12 @@
 // Combines two async generators into one that stops when all the generators
 // passed are done.
-export default async function* combineAsyncIterators(...args) {
+export default async function* combineAsyncIterators(...args: any[]) {
   let nextPromises = args.map(i => i.next());
   while (nextPromises.length > 0) {
     yield new Promise(resolve => {
       let resolved = false;
       nextPromises.forEach((nextPromise, idx) => {
-        nextPromise.then(({ value, done }) => {
+        nextPromise.then(({ value, done }: { value: any, done: boolean }) => {
           if (!resolved) {
             resolved = true;
             resolve(value);

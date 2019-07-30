@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "use": "@now/static-build",
+      "src": "package.json",
+      "config": {
+        "zeroConfig": true
+      }
+    }
+  ]
+}
