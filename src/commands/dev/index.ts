@@ -51,8 +51,8 @@ export default async function main(ctx: NowContext) {
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
     output = createOutput({ debug: argv['--debug'] });
 
-    // By default builders will be omitted logs
-    // `NOW_BUILDER_DEBUG` is needed to show debug logs from builders
+    // Builders won't show debug logs by default
+    // the `NOW_BUILDER_DEBUG` env variable will enable them
     if (argv['--debug']) {
       process.env.NOW_BUILDER_DEBUG = '1';
     }
