@@ -131,13 +131,13 @@ const execute = (args, options) =>
   });
 
 test('print the deploy help message', async t => {
-  const { stderr, code } = await execa(binaryPath, ['help', ...defaultArgs], {
+  const { stderr, stdout, code } = await execa(binaryPath, ['help', ...defaultArgs], {
     reject: false
   });
 
   t.is(code, 2);
-  t.true(stderr.includes(deployHelpMessage));
-  t.false(stderr.includes('ExperimentalWarning'));
+  t.true(stderr.includes(deployHelpMessage), `Received:\n${stderr}\n${stdout}`);
+  t.false(stderr.includes('ExperimentalWarning'), `Received:\n${stderr}\n${stdout}`);
 });
 
 test('output the version', async t => {
