@@ -11,7 +11,7 @@ import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
 import readPackage from '../../util/read-package';
-import preferV2Deployment, { hasDockerfile } from '../../util/prefer-v2-deployment';
+import preferV2Deployment, { hasDockerfile, hasServerfile } from '../../util/prefer-v2-deployment';
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
@@ -148,6 +148,7 @@ export default async ctx => {
     // Only check when it was not set via CLI flag
     const reason = await preferV2Deployment({
       localConfig,
+      hasServerfile: await hasServerfile(paths[0]),
       hasDockerfile: await hasDockerfile(paths[0]),
       pkg: await readPackage(join(paths[0], 'package.json'))
     });
