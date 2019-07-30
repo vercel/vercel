@@ -157,18 +157,18 @@ if (satisfies(process.version, '>= 10.9')) {
   console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
 }
 
-// test(
-//   '[now dev] 03-aurelia',
-//   testFixtureStdio('03-aurelia', async(t, port) => {
-//     const result = fetch(`http://localhost:${port}`)
-//     const response = await result;
-//
-//     validateResponseHeaders(t, response);
-//
-//     const body = await response.text();
-//     t.regex(body, /Aurelia Navigation Skeleton/gm);
-//   })
-// );
+test(
+  '[now dev] 03-aurelia',
+  testFixtureStdio('03-aurelia', async(t, port) => {
+    const result = fetch(`http://localhost:${port}`)
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Aurelia Navigation Skeleton/gm);
+  })
+);
 
 // test(
 //   '[now dev] 04-create-react-app-node',
