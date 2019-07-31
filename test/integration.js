@@ -15,7 +15,7 @@ import pkg from '../package';
 import parseList from './helpers/parse-list';
 import prepareFixtures from './helpers/prepare';
 
-const binaryPath = path.resolve(__dirname, `../dist/index.js`);
+const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random()
@@ -131,13 +131,13 @@ const execute = (args, options) =>
   });
 
 test('print the deploy help message', async t => {
-  const { stderr, code } = await execa(binaryPath, ['help', ...defaultArgs], {
+  const { stderr, stdout, code } = await execa(binaryPath, ['help', ...defaultArgs], {
     reject: false
   });
 
   t.is(code, 2);
-  t.true(stderr.includes(deployHelpMessage));
-  t.false(stderr.includes('ExperimentalWarning'));
+  t.true(stderr.includes(deployHelpMessage), `Received:\n${stderr}\n${stdout}`);
+  t.false(stderr.includes('ExperimentalWarning'), `Received:\n${stderr}\n${stdout}`);
 });
 
 test('output the version', async t => {
