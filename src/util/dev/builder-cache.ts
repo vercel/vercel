@@ -17,6 +17,7 @@ import {
   writeFile,
   remove
 } from 'fs-extra';
+import pkg from '../../../package.json';
 
 import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
@@ -39,6 +40,8 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
 const bundledBuilders = Object.keys(devDependencies).filter(d =>
   d.startsWith('@now/')
 );
+
+const distTag = getDistTag(pkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -67,6 +70,14 @@ async function readFileOrNull(
     }
     throw err;
   }
+}
+
+export function getDistTag(version: string): string {
+  const parsed = semver.parse(version);
+  if (parsed && typeof parsed.prerelease[0] === 'string') {
+    return parsed.prerelease[0] as string;
+  }
+  return 'latest';
 }
 
 /**
@@ -172,6 +183,40 @@ export function getBuildUtils(packages: string[]): string {
   return `@now/build-utils@${version}`;
 }
 
+export function filterPackage(
+  builderSpec: string,
+  distTag: string,
+  buildersPkg: Package
+) {
+  if (builderSpec in localBuilders) return false;
+  const parsed = npa(builderSpec);
+  if (
+    parsed.name &&
+    parsed.type === 'tag' &&
+    parsed.fetchSpec === distTag &&
+    bundledBuilders.includes(parsed.name) &&
+    buildersPkg.dependencies
+  ) {
+    const parsedInstalled = npa(
+      `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
+    );
+    if (parsedInstalled.type !== 'version') {
+      return true;
+    }
+    const semverInstalled = semver.parse(parsedInstalled.rawSpec);
+    if (!semverInstalled) {
+      return true;
+    }
+    if (semverInstalled.prerelease.length > 0) {
+      return semverInstalled.prerelease[0] !== distTag;
+    }
+    if (distTag === 'latest') {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Install a list of builders to the cache directory.
  */
@@ -200,31 +245,9 @@ export async function installBuilders(
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages.filter(p => {
-    if (p in localBuilders) return false;
-    const parsed = npa(p);
-    if (!parsed.name) {
-      return true;
-    }
-    if (
-      parsed.type === 'tag' &&
-      parsed.fetchSpec === 'latest' &&
-      bundledBuilders.includes(parsed.name)
-    ) {
-      const parsedInstalled = npa(
-        `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
-      );
-      if (parsedInstalled.type !== 'version') {
-        return true;
-      }
-      const semverInstalled = semver.parse(parsedInstalled.rawSpec);
-      if (!semverInstalled) {
-        return true;
-      }
-      return semverInstalled.prerelease.length > 0;
-    }
-    return true;
-  });
+  const packagesToInstall = packages.filter(p =>
+    filterPackage(p, distTag, buildersPkg)
+  );
 
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');
