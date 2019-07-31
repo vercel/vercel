@@ -26,6 +26,7 @@ async function main() {
 
   console.log('\nConverting template functions to TypeScript');
   for (const file of compiledFiles) {
+    const start = Date.now();
     const fnPath = join(templatesDir, file);
     const tsPath = fnPath.replace(/\.js$/, '.ts');
     const def = await readFile(fnPath.replace(/\.js$/, '.tsdef'), 'utf8');
@@ -56,6 +57,7 @@ async function main() {
       writeFile(tsPath, lines.join('\n')),
       remove(fnPath)
     ]);
+    console.log(`${file} -> ${file.replace(/\.js$/, '.ts')} (${Date.now() - start}ms)`);
   }
 }
 
