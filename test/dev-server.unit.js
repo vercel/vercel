@@ -41,7 +41,7 @@ function testFixture(name, fn) {
   };
 }
 
-function validateResponseHeaders(t, res) {
+function validateResponseHeaders(t, res, podId = null) {
   t.is(res.headers.get('x-now-trace'), 'dev1');
   t.is(res.headers.get('server'), 'now');
   t.truthy(res.headers.get('cache-control').length > 0);
@@ -50,6 +50,9 @@ function validateResponseHeaders(t, res) {
       res.headers.get('x-now-id')
     )
   );
+  if (podId) {
+    t.truthy(res.headers.get('x-now-id').startsWith(`dev1:${podId}`));
+  }
 }
 
 function get(url) {
@@ -188,26 +191,33 @@ test('[DevServer] Installs canary build-utils if one more more builders is canar
 test(
   '[DevServer] Test default builds and routes',
   testFixture('now-dev-default-builds-and-routes', async (t, server) => {
+    let podId;
+
     {
       const res = await fetch(`${server.address}/`);
+      validateResponseHeaders(t, res);
+      podId = res.headers.get('x-now-id').match(/:(\w+)-/)[1];
       const body = await res.text();
       t.is(body.includes('hello, this is the frontend'), true);
     }
 
     {
       const res = await fetch(`${server.address}/api/users`);
+      validateResponseHeaders(t, res, podId);
       const body = await res.text();
       t.is(body, 'users');
     }
 
     {
       const res = await fetch(`${server.address}/api/users/1`);
+      validateResponseHeaders(t, res, podId);
       const body = await res.text();
       t.is(body, 'users/1');
     }
 
     {
       const res = await fetch(`${server.address}/api/welcome`);
+      validateResponseHeaders(t, res, podId);
       const body = await res.text();
       t.is(body, 'hello and welcome');
     }
