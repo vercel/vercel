@@ -204,6 +204,16 @@ RUN echo $NONCE > /public/index.html
           dev: 'now dev'
         }
       }, null, 2)
+    },
+    'v1-warning-link': {
+      'now.json': JSON.stringify({
+        version: 1
+      }),
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '9.0.0'
+        }
+      })
     }
   };
 

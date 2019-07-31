@@ -1,4 +1,4 @@
-import { resolve, basename } from 'path';
+import { resolve, basename, join } from 'path';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -22,6 +22,7 @@ import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+import link from '../../util/output/link';
 // @ts-ignore
 import exit from '../../util/exit';
 // @ts-ignore
@@ -77,6 +78,8 @@ import {
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
 import handleCertError from '../../util/certs/handle-cert-error';
+import readPackage from '../../util/read-package';
+import { Package } from '../../util/dev/types';
 
 interface Env {
   [name: string]: string | null | undefined;
@@ -220,6 +223,43 @@ const promptForEnvFields = async (list: string[]) => {
   return answers;
 };
 
+async function canUseZeroConfig(cwd: string): Promise<boolean> {
+  try {
+    const pkg = (await readPackage(join(cwd, 'package.json')));
+
+    if (!pkg || pkg instanceof Error) {
+      return false;
+    }
+
+    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
+
+    // We can only check for a few frontends,
+    // since can never be sure if APIs will work
+    // with zero-config
+    if (
+      deps.next ||
+      deps.nuxt ||
+      deps.gatsby ||
+      deps.hexo ||
+      deps.gridsome ||
+      deps.umi ||
+      deps.docusaurus ||
+      deps['@docusaurus/core'] ||
+      deps['preact-cli'] ||
+      deps['ember-cli'] ||
+      deps['@vue/cli-service'] ||
+      deps['@angular/cli'] ||
+      deps['polymer-cli'] ||
+      deps['sirv-cli'] ||
+      deps['react-scripts']
+    ) {
+      return true;
+    }
+  } catch(_) {}
+
+  return false;
+}
+
 export default async function main(
   ctx: any,
   contextName: string,
@@ -261,9 +301,11 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  warn(
-    'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
-  );
+  const infoUrl = await canUseZeroConfig(paths[0])
+    ? 'https://zeit.co/guides/migrate-to-zeit-now'
+    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0'
+
+  warn(`You are using an old version of the Now Platform. More: ${link(infoUrl)}`);
 
   const {
     authConfig: { token },
@@ -1255,12 +1297,12 @@ function handleCreateDeployError(output: Output, error: Error) {
       return 1;
     }
 
-    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
-
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}: ${message}\nDocumentation: ${link}`
+      )}: ${message}\nDocumentation: ${
+        link('https://zeit.co/docs/v2/advanced/configuration')
+      }`
     );
 
     return 1;
