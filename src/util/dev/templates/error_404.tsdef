@@ -7,5 +7,3 @@ interface Inputs {
   error_code?: string;
   now_id: string;
 }
-
-export default function(inputs: Inputs): string;

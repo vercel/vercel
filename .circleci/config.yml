@@ -68,7 +68,7 @@ jobs:
           at: .
       - run:
           name: Compiling `now dev` HTML error templates
-          command: node ./node_modules/.bin/dottojs -s src/util/dev/templates/
+          command: node ./scripts/compile-templates.js
       - run:
           name: Running Unit Tests
           command: yarn test-unit --clean false
