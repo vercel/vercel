@@ -70,6 +70,14 @@ async function main() {
   // than necessary.
   await remove(join(dirRoot, 'node_modules/fsevents'));
 
+  // Compile the `doT.js` template files for `now dev`
+  const templatesDir = join(dirRoot, 'src/util/dev/templates');
+  const dotPacker = join(dirRoot, 'node_modules/dot/bin/dot-packer');
+  await execa(process.execPath, [dotPacker], {
+    cwd: templatesDir,
+    stdio: 'inherit'
+  });
+
   // Do the initial `ncc` build
   const src = join(dirRoot, 'src');
   const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');

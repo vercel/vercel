@@ -9,3 +9,4 @@ coverage
 *.swp
 .builders
 /assets
+/src/util/dev/templates/*.js

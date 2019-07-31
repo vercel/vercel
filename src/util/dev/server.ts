@@ -44,6 +44,11 @@ import {
   updateBuilders
 } from './builder-cache';
 
+// Error HTML templates
+import errorTemplate from './templates/error';
+import errorTemplateBase from './templates/error_base';
+import errorTemplate404 from './templates/error_404';
+
 import {
   EnvConfig,
   NowConfig,
@@ -792,8 +797,49 @@ export default class DevServer {
   ): Promise<void> {
     res.statusCode = statusCode;
     this.setResponseHeaders(res, nowRequestId);
-    // TODO: render an HTML page similar to Now's router
-    res.end(`${statusCode}: ${message}\nCode: ${code}\n`);
+
+    let body: string;
+    const { accept = 'text/plain' } = req.headers;
+    if (accept.includes('json')) {
+      res.setHeader('content-type', 'application/json');
+      const json = JSON.stringify({
+        error: {
+          code: statusCode,
+          message
+        }
+      });
+      body = `${json}\n`;
+    } else if (accept.includes('html')) {
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+
+      let view: string;
+      if (statusCode === 404) {
+        view = errorTemplate404({
+          app_error: true,
+          title: 'The page could not be found.',
+          subtitle: 'The page could not be found in the application.',
+          http_status_code: statusCode,
+          http_status_description: 'NOT_FOUND',
+          error_code: 'FILE_NOT_FOUND',
+          now_id: nowRequestId
+        });
+      } else {
+        view = errorTemplate({
+          http_status_code: statusCode,
+          http_status_description: 'INTERNAL_ERROR',
+          now_id: nowRequestId
+        });
+      }
+      body = errorTemplateBase({
+        http_status_code: statusCode,
+        http_status_description: 'NOT_FOUND',
+        view
+      });
+    } else {
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      body = `${message}\n\n${code}\n`;
+    }
+    res.end(body);
   }
 
   getRequestIp(req: http.IncomingMessage): string {
