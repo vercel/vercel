@@ -54,7 +54,9 @@ function validateResponseHeaders(t, res) {
 
 function get(url) {
   return new Promise((resolve, reject) => {
-    request(url, resolve).on('error', reject).end();
+    request(url, resolve)
+      .on('error', reject)
+      .end();
   });
 }
 
@@ -120,7 +122,9 @@ test(
 test(
   '[DevServer] Allow `cache-control` to be overwritten',
   testFixture('now-dev-headers', async (t, server) => {
-    const res = await get(`${server.address}/?name=cache-control&value=immutable`);
+    const res = await get(
+      `${server.address}/?name=cache-control&value=immutable`
+    );
     t.is(res.headers['cache-control'], 'immutable');
   })
 );

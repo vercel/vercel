@@ -12,10 +12,10 @@ function cmd(command) {
 
 function error(command) {
   console.error('> Error!', command);
-};
+}
 
 function debug(str) {
-  if (process.argv.find((str) => str === '--debug')) {
+  if (process.argv.find(str => str === '--debug')) {
     console.log(`[debug] [${new Date().toISOString()}]`, str);
   }
 }
@@ -68,7 +68,7 @@ async function main() {
     if ((await isBinary(nowPath)) === false) {
       debug(
         'Found file or directory named now but will not delete, ' +
-        'as it seems unrelated to Now CLI'
+          'as it seems unrelated to Now CLI'
       );
       return;
     }
@@ -80,13 +80,15 @@ async function main() {
     if (process.platform !== 'win32') {
       error(
         `An error occured while removing the previous Now CLI installation.\n` +
-        `Please use the this command to remove it: ${cmd(`sudo rm ${nowPath}`)}.\n` +
-        `Then try to install it again.`
+          `Please use the this command to remove it: ${cmd(
+            `sudo rm ${nowPath}`
+          )}.\n` +
+          `Then try to install it again.`
       );
     } else {
       error(
         `An error occured while removing the previous Now CLI installation.\n` +
-        `Please remove ${cmd(nowPath)} manually and try to install it again.`
+          `Please remove ${cmd(nowPath)} manually and try to install it again.`
       );
     }
 
@@ -94,5 +96,4 @@ async function main() {
   }
 }
 
-main()
-  .then(() => process.exit(0));
+main().then(() => process.exit(0));
