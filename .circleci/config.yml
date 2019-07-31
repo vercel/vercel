@@ -74,7 +74,25 @@ jobs:
           paths:
             - .nyc_output
 
-  test-integration-macos:
+  test-integration-macos-node-8:
+    macos:
+      xcode: '9.2.0'
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Update Node.js
+          command: curl -sfLS install-node.now.sh/8 | sh -s -- --yes
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Integration Tests
+          command: yarn test-integration --clean false
+
+  test-integration-macos-node-10:
     macos:
       xcode: '10.0.0'
     working_directory: ~/repo
@@ -89,7 +107,22 @@ jobs:
           name: Running Integration Tests
           command: yarn test-integration --clean false
 
-  test-integration-node-8:
+  test-integration-macos-node-12:
+    macos:
+      xcode: '10.3.0'
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Integration Tests
+          command: yarn test-integration --clean false
+
+  test-integration-linux-node-8:
     docker:
       - image: circleci/node:8
     working_directory: ~/repo
@@ -104,7 +137,7 @@ jobs:
           name: Running Integration Tests
           command: yarn test-integration --clean false
 
-  test-integration-node-10:
+  test-integration-linux-node-10:
     docker:
       - image: circleci/node:10
     working_directory: ~/repo
@@ -119,7 +152,7 @@ jobs:
           name: Running Integration Tests
           command: yarn test-integration --clean false
 
-  test-integration-node-12:
+  test-integration-linux-node-12:
     docker:
       - image: circleci/node:12
     working_directory: ~/repo
@@ -134,7 +167,28 @@ jobs:
           name: Running Integration Tests
           command: yarn test-integration --clean false
 
-  test-integration-now-dev-macos:
+  test-integration-macos-now-dev-node-8:
+    macos:
+      xcode: '9.2.0'
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Update Node.js
+          command: curl -sfLS install-node.now.sh/8 | sh -s -- --yes
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Downloading Hugo
+          command: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo test/dev/fixtures/08-hugo
+      - run:
+          name: Running Integration Tests for `now dev`
+          command: yarn test-integration-now-dev --clean false
+
+  test-integration-macos-now-dev-node-10:
     macos:
       xcode: '10.0.0'
     working_directory: ~/repo
@@ -152,7 +206,25 @@ jobs:
           name: Running Integration Tests for `now dev`
           command: yarn test-integration-now-dev --clean false
 
-  test-integration-now-dev-node-8:
+  test-integration-macos-now-dev-node-12:
+    macos:
+      xcode: '10.3.0'
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Downloading Hugo
+          command: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo test/dev/fixtures/08-hugo
+      - run:
+          name: Running Integration Tests for `now dev`
+          command: yarn test-integration-now-dev --clean false
+
+  test-integration-linux-now-dev-node-8:
     docker:
       - image: circleci/node:8
     working_directory: ~/repo
@@ -170,7 +242,7 @@ jobs:
           name: Running Integration Tests for `now dev`
           command: yarn test-integration-now-dev --clean false
 
-  test-integration-now-dev-node-10:
+  test-integration-linux-now-dev-node-10:
     docker:
       - image: circleci/node:10
     working_directory: ~/repo
@@ -188,7 +260,7 @@ jobs:
           name: Running Integration Tests for `now dev`
           command: yarn test-integration-now-dev --clean false
 
-  test-integration-now-dev-node-12:
+  test-integration-linux-now-dev-node-12:
     docker:
       - image: circleci/node:12
     working_directory: ~/repo
@@ -295,49 +367,73 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-integration-macos:
+      - test-integration-macos-node-8:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-node-8:
+      - test-integration-macos-node-10:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-node-10:
+      - test-integration-macos-node-12:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-node-12:
+      - test-integration-linux-node-8:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-now-dev-macos:
+      - test-integration-linux-node-10:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-now-dev-node-8:
+      - test-integration-linux-node-12:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-now-dev-node-10:
+      - test-integration-macos-now-dev-node-8:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-      - test-integration-now-dev-node-12:
+      - test-integration-macos-now-dev-node-10:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-macos-now-dev-node-12:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-linux-now-dev-node-8:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-linux-now-dev-node-10:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-linux-now-dev-node-12:
           requires:
             - build
           filters:
@@ -346,14 +442,18 @@ workflows:
       - coverage:
           requires:
             - test-unit
-            - test-integration-macos
-            - test-integration-node-8
-            - test-integration-node-10
-            - test-integration-node-12
-            - test-integration-now-dev-macos
-            - test-integration-now-dev-node-8
-            - test-integration-now-dev-node-10
-            - test-integration-now-dev-node-12
+            - test-integration-macos-node-8
+            - test-integration-macos-node-10
+            - test-integration-macos-node-12
+            - test-integration-linux-node-8
+            - test-integration-linux-node-10
+            - test-integration-linux-node-12
+            - test-integration-macos-now-dev-node-8
+            - test-integration-macos-now-dev-node-10
+            - test-integration-macos-now-dev-node-12
+            - test-integration-linux-now-dev-node-8
+            - test-integration-linux-now-dev-node-10
+            - test-integration-linux-now-dev-node-12
             - test-lint
           filters:
             tags:
