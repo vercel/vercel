@@ -8,7 +8,7 @@ import sleep from 'then-sleep';
 import { satisfies } from 'semver';
 
 let port = 3000;
-const binaryPath = path.resolve(__dirname, `../../dist/index.js`);
+const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
 function fetchWithRetry(url, retries = 3, opts = {}) {
