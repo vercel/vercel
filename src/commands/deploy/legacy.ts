@@ -1301,7 +1301,7 @@ function handleCreateDeployError(output: Output, error: Error) {
       `Failed to validate ${highlight(
         'now.json'
       )}: ${message}\nDocumentation: ${
-        link('https://zeit.co/docs/v2/deployments/configuration/')
+        link('https://zeit.co/docs/v2/advanced/configuration')
       }`
     );
 
