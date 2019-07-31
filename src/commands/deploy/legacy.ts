@@ -22,6 +22,7 @@ import checkPath from '../../util/check-path';
 import cmd from '../../util/output/cmd';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
+import link from '../../util/output/link';
 // @ts-ignore
 import exit from '../../util/exit';
 // @ts-ignore
@@ -262,7 +263,9 @@ export default async function main(
   ({ log, error, note, debug, warn } = output);
 
   warn(
-    'You are using an old version of the Now Platform. More: https://zeit.co/docs/v1-upgrade'
+    `You are using an old version of the Now Platform. More: ${
+      link('https://zeit.co/guides/migrate-to-zeit-now/')
+    }`
   );
 
   const {

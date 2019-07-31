@@ -23,6 +23,7 @@ import {
 } from '@now/build-utils';
 
 import { once } from '../once';
+import link from '../output/link';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowConfigPath from '../config/local-path';
@@ -708,7 +709,7 @@ export default class DevServer {
     }
 
     this.address = address.replace('[::]', 'localhost');
-    this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
+    this.output.ready(`Available at ${link(this.address)}`);
 
     this.serverUrlPrinted = true;
   }
