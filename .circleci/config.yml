@@ -55,6 +55,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Compiling `now dev` HTML error templates
+          command: node ./scripts/compile-templates.js
+      - run:
           name: Linting Code
           command: yarn test-lint
 
