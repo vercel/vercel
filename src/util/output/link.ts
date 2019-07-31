@@ -1,5 +1,5 @@
 import chalk from 'chalk';
 
-const link = (text: string) => chalk.cyan.underline(text);
+const link = chalk.cyan.underline;
 
 export default link;
