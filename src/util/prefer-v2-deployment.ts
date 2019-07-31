@@ -2,7 +2,7 @@ import { join } from 'path';
 import { exists } from 'fs-extra';
 import { Config } from '../types';
 import { Package } from './dev/types';
-import {CantParseJSONFile } from './errors-ts';
+import { CantParseJSONFile } from './errors-ts';
 
 import cmd from './output/cmd';
 import code from './output/code';
@@ -25,6 +25,7 @@ export default async function preferV2Deployment({
   localConfig
 }: {
   hasDockerfile: boolean,
+  hasServerfile: boolean,
   pkg: Package | CantParseJSONFile | null,
   localConfig: Config | undefined
 }): Promise<null | string> {
