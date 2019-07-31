@@ -225,7 +225,7 @@ const promptForEnvFields = async (list: string[]) => {
 
 async function canUseZeroConfig(cwd: string): Promise<boolean> {
   try {
-    const pkg = (await readPackage(join(cwd, 'package.json'))) as null | Error | Package;
+    const pkg = (await readPackage(join(cwd, 'package.json')));
 
     if (!pkg || pkg instanceof Error) {
       return false;
