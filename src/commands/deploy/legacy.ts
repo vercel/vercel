@@ -264,7 +264,7 @@ export default async function main(
 
   warn(
     `You are using an old version of the Now Platform. More: ${
-      link('https://zeit.co/guides/migrate-to-zeit-now/')
+      link('https://zeit.co/guides/migrate-to-zeit-now')
     }`
   );
 
