@@ -71,14 +71,14 @@ async function pipInstallUser(pipPath: string, ...args: string[]) {
 }
 
 async function pipenvInstall(pyUserBase: string, srcDir: string) {
-  console.log('running "pipenv_to_requirements -f');
+  console.log('running pipfile2req');
   try {
-    await execa(join(pyUserBase, 'bin', 'pipenv_to_requirements'), ['-f'], {
+    const out = await execa.stdout(join(pyUserBase, 'bin', 'pipfile2req'), [], {
       cwd: srcDir,
-      stdio: 'inherit',
     });
+    fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
   } catch (err) {
-    console.log('failed to run "pipenv_to_requirements -f"');
+    console.log('failed to run "pipfile2req"');
     throw err;
   }
 }
@@ -145,8 +145,7 @@ export const build = async ({
     console.log('found "Pipfile.lock"');
 
     // Install pipenv.
-    await pipInstallUser(pipPath, ' pipenv_to_requirements');
-
+    await pipInstallUser(pipPath, 'pipfile-requirements', '--no-warn-script-location');
     await pipenvInstall(pyUserBase, pipfileLockDir);
   }
 
