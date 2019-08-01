@@ -316,7 +316,7 @@ test(
       // HTML response
       const res = await fetch(`${server.address}/does-not-exists`, {
         headers: {
-          'Accept': 'text/html'
+          Accept: 'text/html'
         }
       });
       t.is(res.status, 404);
@@ -329,13 +329,16 @@ test(
       // JSON response
       const res = await fetch(`${server.address}/does-not-exists`, {
         headers: {
-          'Accept': 'text/html'
+          Accept: 'application/json'
         }
       });
       t.is(res.status, 404);
       t.is(res.headers.get('content-type'), 'application/json');
       const body = await res.text();
-      t.is(body, '{"error":{"code":404,"message":"The page could not be found."}}\n');
+      t.is(
+        body,
+        '{"error":{"code":404,"message":"The page could not be found."}}\n'
+      );
     }
 
     {
