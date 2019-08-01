@@ -15,3 +15,4 @@
 /packages/now-ruby/dist/*
 /packages/now-static-build/dist/*
 /packages/now-static-build/test/fixtures/**
+/packages/now-routing-utils/dist/*
