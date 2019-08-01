@@ -23,6 +23,7 @@ import {
 } from '@now/build-utils';
 
 import { once } from '../once';
+import link from '../output/link';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowConfigPath from '../config/local-path';
@@ -114,6 +115,7 @@ export default class DevServer {
   private watchAggregationEvents: FSEvent[];
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
+  private podId: string;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
@@ -147,6 +149,9 @@ export default class DevServer {
     this.watchAggregationTimeout = 500;
 
     this.filter = path => Boolean(path);
+    this.podId = Math.random()
+      .toString(32)
+      .slice(-5);
   }
 
   async exit(code = 1) {
@@ -715,7 +720,7 @@ export default class DevServer {
     }
 
     this.address = address.replace('[::]', 'localhost');
-    this.output.ready(`Available at ${chalk.cyan.underline(this.address)}`);
+    this.output.ready(`Available at ${link(this.address)}`);
 
     this.serverUrlPrinted = true;
   }
@@ -970,7 +975,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    const nowRequestId = generateRequestId();
+    const nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -1439,11 +1444,9 @@ function close(server: http.Server): Promise<void> {
  *
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
-function generateRequestId(): string {
+function generateRequestId(podId: string): string {
   return `dev1:${[
-    Math.random()
-      .toString(32)
-      .slice(-5),
+    podId,
     Date.now(),
     randomBytes(6).toString('hex')
   ].join('-')}`;
