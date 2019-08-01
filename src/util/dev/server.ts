@@ -38,6 +38,7 @@ import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches } from './builder';
+import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
   installBuilders,
@@ -48,6 +49,7 @@ import {
 import errorTemplate from './templates/error';
 import errorTemplateBase from './templates/error_base';
 import errorTemplate404 from './templates/error_404';
+import errorTemplate502 from './templates/error_502';
 
 import {
   EnvConfig,
@@ -791,12 +793,15 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    code: string,
+    errorCode: string,
     message: string,
     statusCode: number = 500
   ): Promise<void> {
     res.statusCode = statusCode;
     this.setResponseHeaders(res, nowRequestId);
+
+    const http_status_description = generateHttpStatusDescription(statusCode);
+    const errorMessage = generateErrorMessage(statusCode, errorCode);
 
     let body: string;
     const { accept = 'text/plain' } = req.headers;
@@ -815,29 +820,35 @@ export default class DevServer {
       let view: string;
       if (statusCode === 404) {
         view = errorTemplate404({
-          app_error: true,
-          title: 'The page could not be found.',
-          subtitle: 'The page could not be found in the application.',
+          ...errorMessage,
           http_status_code: statusCode,
-          http_status_description: 'NOT_FOUND',
-          error_code: 'FILE_NOT_FOUND',
+          http_status_description,
+          error_code: errorCode,
+          now_id: nowRequestId
+        });
+      } else if (statusCode === 502) {
+        view = errorTemplate502({
+          ...errorMessage,
+          http_status_code: statusCode,
+          http_status_description,
+          error_code: errorCode,
           now_id: nowRequestId
         });
       } else {
         view = errorTemplate({
           http_status_code: statusCode,
-          http_status_description: 'INTERNAL_ERROR',
+          http_status_description,
           now_id: nowRequestId
         });
       }
       body = errorTemplateBase({
         http_status_code: statusCode,
-        http_status_description: 'NOT_FOUND',
+        http_status_description,
         view
       });
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
-      body = `${message}\n\n${code}\n`;
+      body = `${message}\n\n${errorCode}\n`;
     }
     res.end(body);
   }
