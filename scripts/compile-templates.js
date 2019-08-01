@@ -13,16 +13,20 @@ async function main() {
     stdio: 'inherit'
   });
 
-  const files = await readdir(templatesDir)
+  const files = await readdir(templatesDir);
   const compiledFiles = files.filter(f => f.endsWith('.js'));
 
   // Prettier
   console.log('\nMaking the compiled template functions prettier...');
   const prettier = join(dirRoot, 'node_modules/prettier/bin-prettier.js');
-  await execa(process.execPath, [ prettier, '--write', '--single-quote', ...compiledFiles ], {
-    cwd: templatesDir,
-    stdio: 'inherit'
-  });
+  await execa(
+    process.execPath,
+    [prettier, '--write', '--single-quote', ...compiledFiles],
+    {
+      cwd: templatesDir,
+      stdio: 'inherit'
+    }
+  );
 
   console.log('\nConverting template functions to TypeScript');
   for (const file of compiledFiles) {
@@ -32,7 +36,9 @@ async function main() {
     const def = await readFile(fnPath.replace(/\.js$/, '.tsdef'), 'utf8');
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    const lines = require(fnPath).toString().split('\n');
+    const lines = require(fnPath)
+      .toString()
+      .split('\n');
     let errorHtmlStart = -1;
     let errorHtmlEnd = -1;
     for (let i = 0; i < lines.length; i++) {
@@ -40,7 +46,7 @@ async function main() {
       if (errorHtmlStart === -1 && line.includes('encodeHTML')) {
         errorHtmlStart = i;
       } else if (errorHtmlEnd === -1 && line.includes(')();')) {
-          errorHtmlEnd = i;
+        errorHtmlEnd = i;
       }
       if (/\bvar\b/.test(line)) {
         lines[i] = line.replace(/\bvar\b/g, 'let');
@@ -48,16 +54,21 @@ async function main() {
     }
     lines.splice(errorHtmlStart, errorHtmlEnd);
 
+    lines[0] = `export default ${lines[0].replace(
+      '(it)',
+      `(it: ${interfaceName}): string`
+    )}`;
 
-    lines[0] = `export default ${lines[0].replace('(it)', `(it: ${interfaceName}): string`)}`;
+    lines.unshift(
+      'import encodeHTML from \'escape-html\';',
+      '',
+      ...def.split('\n')
+    );
 
-    lines.unshift('import encodeHTML from \'escape-html\';', '', ...def.split('\n'));
-
-    await Promise.all([
-      writeFile(tsPath, lines.join('\n')),
-      remove(fnPath)
-    ]);
-    console.log(`${file} -> ${file.replace(/\.js$/, '.ts')} (${Date.now() - start}ms)`);
+    await Promise.all([writeFile(tsPath, lines.join('\n')), remove(fnPath)]);
+    console.log(
+      `${file} -> ${file.replace(/\.js$/, '.ts')} (${Date.now() - start}ms)`
+    );
   }
 }
 

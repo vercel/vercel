@@ -19,8 +19,9 @@ import pkg from '../package.json';
 
 const dirRoot = join(__dirname, '..');
 
-const bundledBuilders = Object.keys(pkg.devDependencies)
-  .filter(d => d.startsWith('@now/'));
+const bundledBuilders = Object.keys(pkg.devDependencies).filter(d =>
+  d.startsWith('@now/')
+);
 
 async function createBuildersTarball() {
   const distTag = getDistTag(pkg.version);
