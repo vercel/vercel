@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc && jest",
-    "prepublish": "tsc"
+    "prepublish": "tsc",
+    "now-postinstall": "node install.js"
   },
   "files": [
     "*.js",
