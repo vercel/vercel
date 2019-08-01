@@ -2,6 +2,7 @@
 # https://help.github.com/en/articles/about-code-owners
 
 *                         @styfle
+/packages/now-build-utils @styfle @AndyBitz
 /packages/now-node        @styfle @tootallnate @lucleray
 /packages/now-node-bridge @styfle @tootallnate @lucleray
 /packages/now-next        @timer
@@ -9,3 +10,5 @@
 /packages/now-python      @styfle @sophearak
 /packages/now-rust        @styfle @mike-engel @anmonteiro
 /packages/now-ruby        @styfle @coetry @nathancahill
+/packages/now-static-build @styfle @AndyBitz
+/packages/now-routing-utils @dav-is
