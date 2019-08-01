@@ -1183,7 +1183,13 @@ test('deploy a dockerfile project', async t => {
   t.is(host.split('-')[0], session);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+  t.is(response.status, 200);
+
   const contentType = response.headers.get('content-type');
   const textContent = await response.text();
   let content;
