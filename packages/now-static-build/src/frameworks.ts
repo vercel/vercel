@@ -227,4 +227,9 @@ export default [
       return base;
     },
   },
+  {
+    name: 'Sapper',
+    dependency: 'sapper',
+    getOutputDirName: async () => '__sapper__/export',
+  },
 ];
