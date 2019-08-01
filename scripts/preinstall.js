@@ -79,15 +79,15 @@ async function main() {
   } catch (err) {
     if (process.platform !== 'win32') {
       error(
-        `An error occured while removing the previous Now CLI installation.\n` +
-          `Please use the this command to remove it: ${cmd(
+        `Could not remove your previous Now CLI installation.\n` +
+          `Please use this command to remove it: ${cmd(
             `sudo rm ${nowPath}`
           )}.\n` +
           `Then try to install it again.`
       );
     } else {
       error(
-        `An error occured while removing the previous Now CLI installation.\n` +
+        `Could not remove your previous Now CLI installation.\n` +
           `Please remove ${cmd(nowPath)} manually and try to install it again.`
       );
     }
