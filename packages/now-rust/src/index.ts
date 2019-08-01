@@ -14,7 +14,6 @@ import {
   DownloadedFiles,
   Lambda,
 } from '@now/build-utils'; // eslint-disable-line import/no-extraneous-dependencies
-import installRust from './install-rust';
 
 interface PackageManifest {
   targets: { kind: string; name: string }[];
@@ -274,10 +273,6 @@ export async function build(opts: BuildOptions) {
   console.log('downloading files');
   const downloadedFiles = await download(files, workPath, meta);
   const entryPath = downloadedFiles[entrypoint].fsPath;
-
-  if (!meta.isDev) {
-    await installRust(config.rust);
-  }
 
   const { PATH, HOME } = process.env;
   const rustEnv: Record<string, string> = {
