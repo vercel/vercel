@@ -181,6 +181,11 @@ export async function build({
     const nodeVersion = await getNodeVersion(entrypointDir, minNodeRange);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    if (entrypointDir && spawnOpts.env && spawnOpts.env.PATH) {
+      const binstub = path.join(entrypointDir, 'node_modules', '.bin');
+      spawnOpts.env.PATH = `${binstub}${path.delimiter}${spawnOpts.env.PATH}`;
+    }
+
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
