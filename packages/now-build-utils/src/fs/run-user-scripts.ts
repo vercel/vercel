@@ -63,13 +63,11 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: process.env || {},
+    env: { ...process.env },
   };
 
   if (!meta.isDev) {
-    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${
-      opts.env.PATH
-    }`;
+    opts.env.PATH = `/node${nodeVersion.major}/bin:${opts.env.PATH}`;
   }
 
   return opts;
