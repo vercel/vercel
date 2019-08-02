@@ -8,7 +8,7 @@ import _ts from 'typescript';
  */
 
 /**
- * Debugging `ts-node`.
+ * Debugging.
  */
 const shouldDebug = false;
 const debug = shouldDebug

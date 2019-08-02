@@ -1,9 +1,0 @@
-[package]
-name = "index"
-version = "1.0.0"
-authors = ["Mike Engel <mike@mike-engel.com>"]
-edition = "2018"
-
-[dependencies]
-http = "0.1"
-now_lambda = "0.1"

@@ -295,11 +295,6 @@
     log-update "^2.3.0"
     strip-ansi "^3.0.1"
 
-"@iarna/toml@^2.2.1":
-  version "2.2.3"
-  resolved "https://registry.yarnpkg.com/@iarna/toml/-/toml-2.2.3.tgz#f060bf6eaafae4d56a7dac618980838b0696e2ab"
-  integrity sha512-FmuxfCuolpLl0AnQ2NHSzoUKWEJDFl63qXjzdoWBVyFCXzMGm1spBzk7LeHNoVCiWCF7mRVms9e6jEV9+MoPbg==
-
 "@jest/console@^24.7.1":
   version "24.7.1"
   resolved "https://registry.yarnpkg.com/@jest/console/-/console-24.7.1.tgz#32a9e42535a97aedfe037e725bd67e954b459545"
@@ -1135,13 +1130,6 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/php-bridge@^0.5.3":
-  version "0.5.3"
-  resolved "https://registry.yarnpkg.com/@now/php-bridge/-/php-bridge-0.5.3.tgz#fe8cc02af247b323979347ebbb7090b547938694"
-  integrity sha512-6o13/kY3ftKYPXwNHh2MfaQinuAWAOYzgKEbxt13hlnEp2HtH3G+R0cEuJgjKthONB2W0SQgjEU1aF9k0fGCsA==
-  dependencies:
-    fastcgi-client "0.0.1"
-
 "@octokit/endpoint@^5.1.0":
   version "5.2.2"
   resolved "https://registry.yarnpkg.com/@octokit/endpoint/-/endpoint-5.2.2.tgz#8fbb2e99ae0d8e6b30099f73063801e64467e761"
@@ -1306,13 +1294,6 @@
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-5.1.0.tgz#2a325ef97901504a3828718c390d34b8426a10a1"
   integrity sha512-AInn5+UBFIK9FK5xc9yP5e3TQSPNNgjHByqYcj9g5elVBnDQcQL7PlO1CIRy2gWlbwK7UPYqi7vRvFA44dCmYQ==
-  dependencies:
-    "@types/node" "*"
-
-"@types/fs-extra@^7.0.0":
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-7.0.0.tgz#9c4ad9e1339e7448a76698829def1f159c1b636c"
-  integrity sha512-ndoMMbGyuToTy4qB6Lex/inR98nPiNHacsgMPvy+zqMLgSxbt8VtWpDArpGp69h1fEDQHn1KB+9DWD++wgbwYA==
   dependencies:
     "@types/node" "*"
 
@@ -3281,11 +3262,6 @@ fast-levenshtein@~2.0.4:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
-
-fastcgi-client@0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/fastcgi-client/-/fastcgi-client-0.0.1.tgz#1046d42ff2cee2a9ac03fea04695b3ef7311861c"
-  integrity sha1-EEbUL/LO4qmsA/6gRpWz73MRhhw=
 
 fb-watchman@^2.0.0:
   version "2.0.0"

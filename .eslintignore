@@ -9,9 +9,7 @@
 /packages/now-next/dist/*
 /packages/now-node-bridge/*
 /packages/now-python/dist/*
-/packages/now-optipng/dist/*
 /packages/now-go/*
-/packages/now-rust/dist/*
 /packages/now-ruby/dist/*
 /packages/now-static-build/dist/*
 /packages/now-static-build/test/fixtures/**

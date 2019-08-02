@@ -8,7 +8,6 @@
 /packages/now-next        @timer
 /packages/now-go          @styfle @sophearak
 /packages/now-python      @styfle @sophearak
-/packages/now-rust        @styfle @mike-engel @anmonteiro
 /packages/now-ruby        @styfle @coetry @nathancahill
 /packages/now-static-build @styfle @AndyBitz
 /packages/now-routing-utils @dav-is
