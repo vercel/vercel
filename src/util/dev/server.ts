@@ -1076,12 +1076,8 @@ export default class DevServer {
       if ([301, 302, 303].includes(status)) {
         this.output.debug(`Redirect: ${matched_route}`);
         res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
-      } else if (status === 404) {
-        await this.send404(req, res, nowRequestId);
-      } else {
-        res.end(`${status} status code from routes config`);
+        return;
       }
-      return;
     }
 
     const requestPath = dest.replace(/^\//, '');
@@ -1236,7 +1232,9 @@ export default class DevServer {
           return;
         }
 
-        res.statusCode = result.statusCode;
+        if (!status) {
+          res.statusCode = result.statusCode;
+        }
         this.setResponseHeaders(res, nowRequestId, result.headers);
 
         let resBody: Buffer | string | undefined;
