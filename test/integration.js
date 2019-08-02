@@ -1,3 +1,4 @@
+import ms from 'ms';
 import os from 'os';
 import path from 'path';
 import { URL } from 'url';
@@ -32,12 +33,21 @@ const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
 
 const waitForDeployment = async href => {
+  const start = Date.now();
+  const max = ms('4m');
+
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
 
     if (response.status === 200) {
       break;
+    }
+
+    const current = Date.now();
+
+    if (current - start > max) {
+      throw new Error(`Waiting for "${href}" failed since it took longer than 4 minutes`);
     }
 
     await sleep(2000);
