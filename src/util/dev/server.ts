@@ -1070,8 +1070,7 @@ export default class DevServer {
       dest,
       status,
       headers = {},
-      uri_args,
-      matched_route
+      uri_args
     } = await devRouter(req.url, req.method, routes, this);
 
     // Set any headers defined in the matched `route` config
