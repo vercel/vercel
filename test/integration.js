@@ -1467,7 +1467,7 @@ test('detect update command', async t => {
     const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
     t.is(installResult.code, 0);
 
-    const { stdout, stderr } = await execa('now', ['update'], {
+    const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
       env: process.env
     });
 
