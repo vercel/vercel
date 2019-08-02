@@ -1454,9 +1454,11 @@ test('detect update command', async t => {
     const packResult = await execa('npm', ['pack']);
     t.is(packResult.code, 0);
 
-    const binPrefix = await execa('npm', ['-g', 'bin']).then(({ stdout }) => stdout.trim());
+    const prefix = os.tmpdir();
+    const binPrefix = path.join(prefix, 'bin');
+
     process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.PREFIX = binPrefix.replace(/\/bin$/, '');
+    process.env.NPM_CONFIG_PREFIX = binPrefix;
 
     console.log('Installing now to', binPrefix);
 
