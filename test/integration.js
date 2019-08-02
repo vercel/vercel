@@ -183,19 +183,15 @@ test('detect update command', async t => {
     const binPrefix = path.join(prefix, 'bin');
 
     process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
+    process.env.PREFIX = prefix;
+    process.env.npm_config_prefix = prefix;
     process.env.NPM_CONFIG_PREFIX = prefix;
 
-    console.log('Installing now to', binPrefix);
-
+    // Install now to `binPrefix`
     const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
 
     const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
     t.is(installResult.code, 0);
-
-    console.log(`Received\n"${installResult.stdout}"\n"${installResult.stderr}"`);
-
-    console.log(await fs.readdir(prefix));
-    console.log(await fs.readdir(binPrefix));
 
     const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
       env: process.env
