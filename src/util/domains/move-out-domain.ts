@@ -1,4 +1,3 @@
-import { Domain } from 'domain';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
 

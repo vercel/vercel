@@ -1,6 +1,5 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
-import ms from 'ms';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';

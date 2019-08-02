@@ -8,6 +8,7 @@ yarn-error.log
 coverage
 *.swp
 *.bak
+*.tgz
 .builders
 /assets
 /src/util/dev/templates/*.ts
