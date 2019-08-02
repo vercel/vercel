@@ -339,10 +339,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@now/build-utils@0.9.6":
-  version "0.9.6"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.9.6.tgz#491785ce18494b4df0dd0f31ce66f10f42a955af"
-  integrity sha512-B7jzCLhb9thyqZuMVFeKeqRJJXlsm7qXkCIVLYE0i7OAbct8X2h7+hxs4/dqmg8Zc55DZfN1Iwge6mYZykQ4jw==
+"@now/build-utils@0.9.7":
+  version "0.9.7"
+  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.9.7.tgz#7dcf352f5481e8c8b1d62b124d134642697e29bf"
+  integrity sha512-qua6wBpfbZex6zYsQaiqMOsaGRIGRJpa4ZjmoFYcEvfBXvkZDYcvorx42MiJ6Ov2NwKiB15ZqeDEUnDqO0bpvw==
 
 "@now/go@latest":
   version "0.5.6"
