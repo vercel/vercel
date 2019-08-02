@@ -39,11 +39,18 @@ import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches } from './builder';
+import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
   installBuilders,
   updateBuilders
 } from './builder-cache';
+
+// Error HTML templates
+import errorTemplate from './templates/error';
+import errorTemplateBase from './templates/error_base';
+import errorTemplate404 from './templates/error_404';
+import errorTemplate502 from './templates/error_502';
 
 import {
   EnvConfig,
@@ -782,7 +789,6 @@ export default class DevServer {
       res,
       nowRequestId,
       'FILE_NOT_FOUND',
-      'The page could not be found',
       404
     );
   }
@@ -791,14 +797,64 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    code: string,
-    message: string,
+    errorCode?: string,
     statusCode: number = 500
   ): Promise<void> {
     res.statusCode = statusCode;
     this.setResponseHeaders(res, nowRequestId);
-    // TODO: render an HTML page similar to Now's router
-    res.end(`${statusCode}: ${message}\nCode: ${code}\n`);
+
+    const http_status_description = generateHttpStatusDescription(statusCode);
+    const error_code = errorCode || http_status_description;
+    const errorMessage = generateErrorMessage(statusCode, error_code);
+
+    let body: string;
+    const { accept = 'text/plain' } = req.headers;
+    if (accept.includes('json')) {
+      res.setHeader('content-type', 'application/json');
+      const json = JSON.stringify({
+        error: {
+          code: statusCode,
+          message: errorMessage.title
+        }
+      });
+      body = `${json}\n`;
+    } else if (accept.includes('html')) {
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+
+      let view: string;
+      if (statusCode === 404) {
+        view = errorTemplate404({
+          ...errorMessage,
+          http_status_code: statusCode,
+          http_status_description,
+          error_code,
+          now_id: nowRequestId
+        });
+      } else if (statusCode === 502) {
+        view = errorTemplate502({
+          ...errorMessage,
+          http_status_code: statusCode,
+          http_status_description,
+          error_code,
+          now_id: nowRequestId
+        });
+      } else {
+        view = errorTemplate({
+          http_status_code: statusCode,
+          http_status_description,
+          now_id: nowRequestId
+        });
+      }
+      body = errorTemplateBase({
+        http_status_code: statusCode,
+        http_status_description,
+        view
+      });
+    } else {
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      body = `${errorMessage.title}\n\n${error_code}\n`;
+    }
+    res.end(body);
   }
 
   getRequestIp(req: http.IncomingMessage): string {
@@ -1137,8 +1193,7 @@ export default class DevServer {
             req,
             res,
             nowRequestId,
-            'INTERNAL_LAMBDA_NOT_FOUND',
-            'Lambda function has not been built'
+            'INTERNAL_LAMBDA_NOT_FOUND'
           );
           return;
         }
@@ -1176,7 +1231,6 @@ export default class DevServer {
             res,
             nowRequestId,
             'NO_STATUS_CODE_FROM_LAMBDA',
-            'An error occurred with your deployment',
             502
           );
           return;
@@ -1199,8 +1253,7 @@ export default class DevServer {
           req,
           res,
           nowRequestId,
-          'UNKNOWN_ASSET_TYPE',
-          `Don't know how to handle asset type: ${(asset as any).type}`
+          'UNKNOWN_ASSET_TYPE'
         );
     }
   };
