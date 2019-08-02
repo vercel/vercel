@@ -236,7 +236,7 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
   if (defaultRoutes.length) {
     defaultRoutes.push({
       status: 404,
-      src: '/api(\\/.*)$',
+      src: '/api(\\/.*)?$',
     });
   }
 
