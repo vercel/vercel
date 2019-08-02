@@ -4,13 +4,12 @@ import path from 'path';
 import { URL } from 'url';
 import test from 'ava';
 import semVer from 'semver';
-import fs from 'fs';
 import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
-import { writeFile, readFile } from 'fs-extra';
 import retry from 'async-retry';
+import fs, { writeFile, readFile } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -166,6 +165,44 @@ test('output the version', async t => {
   t.is(code, 0);
   t.truthy(semVer.valid(version));
   t.is(version, pkg.version);
+});
+
+test('detect update command', async t => {
+  {
+    const { code, stderr } = await execute(['update']);
+    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+  }
+
+  {
+    const pkg = require('../package.json');
+
+    const packResult = await execa('npm', ['pack']);
+    t.is(packResult.code, 0);
+
+    const prefix = os.tmpdir();
+    const binPrefix = path.join(prefix, 'bin');
+
+    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
+    process.env.NPM_CONFIG_PREFIX = binPrefix;
+
+    console.log('Installing now to', binPrefix);
+
+    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
+
+    const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
+    t.is(installResult.code, 0);
+
+    console.log(`Received\n"${installResult.stdout}"\n"${installResult.stderr}"`);
+
+    console.log(await fs.readdir(prefix));
+    console.log(await fs.readdir(binPrefix));
+
+    const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
+      env: process.env
+    });
+
+    t.regex(stderr, /npm install -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
+  }
 });
 
 test('log in', async t => {
@@ -1450,39 +1487,6 @@ test('fail `now dev` dev script without now.json', async t => {
     stderr.includes('must not contain `now dev`'),
     `Received instead: "${stderr}"`
   );
-});
-
-test('detect update command', async t => {
-  {
-    const { code, stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
-  }
-
-  {
-    const pkg = require('../package.json');
-
-    const packResult = await execa('npm', ['pack']);
-    t.is(packResult.code, 0);
-
-    const prefix = os.tmpdir();
-    const binPrefix = path.join(prefix, 'bin');
-
-    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.NPM_CONFIG_PREFIX = binPrefix;
-
-    console.log('Installing now to', binPrefix);
-
-    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
-
-    const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
-    t.is(installResult.code, 0);
-
-    const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
-      env: process.env
-    });
-
-    t.regex(stderr, /npm install -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
-  }
 });
 
 test('print correct link in legacy warning', async t => {
