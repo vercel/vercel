@@ -1,0 +1,9 @@
+<main>
+  <p class="devinfo-container">
+    <span class="error-code"><strong>{{= it.http_status_code }}</strong>: {{! it.http_status_description }}</span>
+    {{? it.error_code }}
+    <span class="devinfo-line">Code: <code>{{! it.error_code }}</code></span>
+    {{?}}
+    <span class="devinfo-line">ID: <code>{{! it.now_id }}</code>
+  </p>
+</main>

@@ -1,0 +1,43 @@
+<header>
+  <div class="header-item first{{? it.app_error }} active{{?}}">
+    <svg class="header-item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {{? it.app_error }}
+      <circle cx="8" cy="8" r="8" fill="#FF0080" />
+      {{??}}
+      <circle cx="8" cy="8" r="7.5" stroke="#CCCCCC" />
+      {{?}}
+    </svg>
+    <div class="header-item-content">
+      <h1>Application Error</h1>
+      <p>The page was not found in the hosted application</p>
+    </div>
+  </div>
+  <div class="header-item{{? !it.app_error }} active{{?}}">
+    <svg class="header-item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {{? !it.app_error }}
+      <circle cx="8" cy="8" r="8" fill="#FF0080" />
+      {{??}}
+      <circle cx="8" cy="8" r="7.5" stroke="#CCCCCC" />
+      {{?}}
+    </svg>
+    <div class="header-item-content">
+      <h1>Platform Error</h1>
+      <p>The deployment was not found in the infrastructure layer</p>
+    </div>
+  </div>
+</header>
+<main>
+  <p>
+    <h1 class="error-title">{{!it.title}}</h1>
+    {{? it.subtitle }}
+    <p>{{! it.subtitle }}</p>
+    {{?}}
+  </p>
+  <p class="devinfo-container">
+    <span class="error-code"><strong>{{= it.http_status_code }}</strong>: {{! it.http_status_description }}</span>
+    {{? it.error_code }}
+    <span class="devinfo-line">Code: <code>{{! it.error_code }}</code></span>
+    {{?}}
+    <span class="devinfo-line">ID: <code>{{! it.now_id }}</code>
+  </p>
+</main>

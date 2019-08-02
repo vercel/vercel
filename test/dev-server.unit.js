@@ -308,3 +308,46 @@ test(
     }
   })
 );
+
+test(
+  '[DevServer] 404 listing',
+  testFixture('now-dev-directory-listing', async (t, server) => {
+    {
+      // HTML response
+      const res = await fetch(`${server.address}/does-not-exists`, {
+        headers: {
+          Accept: 'text/html'
+        }
+      });
+      t.is(res.status, 404);
+      t.is(res.headers.get('content-type'), 'text/html; charset=utf-8');
+      const body = await res.text();
+      t.truthy(body.startsWith('<!DOCTYPE html>'));
+    }
+
+    {
+      // JSON response
+      const res = await fetch(`${server.address}/does-not-exists`, {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+      t.is(res.status, 404);
+      t.is(res.headers.get('content-type'), 'application/json');
+      const body = await res.text();
+      t.is(
+        body,
+        '{"error":{"code":404,"message":"The page could not be found."}}\n'
+      );
+    }
+
+    {
+      // Plain text response
+      const res = await fetch(`${server.address}/does-not-exists`);
+      t.is(res.status, 404);
+      const body = await res.text();
+      t.is(res.headers.get('content-type'), 'text/plain; charset=utf-8');
+      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+    }
+  })
+);
