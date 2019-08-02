@@ -1102,6 +1102,11 @@ export default class DevServer {
         );
         return;
       }
+
+      if (status === 404) {
+        await this.send404(req, res, nowRequestId);
+        return;
+      }
     }
 
     const requestPath = dest.replace(/^\//, '');
