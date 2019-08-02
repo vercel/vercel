@@ -46,11 +46,12 @@ import {
   updateBuilders
 } from './builder-cache';
 
-// Error HTML templates
+// HTML templates
 import errorTemplate from './templates/error';
 import errorTemplateBase from './templates/error_base';
 import errorTemplate404 from './templates/error_404';
 import errorTemplate502 from './templates/error_502';
+import redirectTemplate from './templates/redirect';
 
 import {
   EnvConfig,
@@ -784,13 +785,7 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string
   ): Promise<void> {
-    return this.sendError(
-      req,
-      res,
-      nowRequestId,
-      'FILE_NOT_FOUND',
-      404
-    );
+    return this.sendError(req, res, nowRequestId, 'FILE_NOT_FOUND', 404);
   }
 
   async sendError(
@@ -853,6 +848,37 @@ export default class DevServer {
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
       body = `${errorMessage.title}\n\n${error_code}\n`;
+    }
+    res.end(body);
+  }
+
+  async sendRedirect(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string,
+    location: string,
+    statusCode: number = 302
+  ): Promise<void> {
+    this.output.debug(`Redirect ${statusCode}: ${location}`);
+
+    res.statusCode = statusCode;
+    this.setResponseHeaders(res, nowRequestId, { location });
+
+    let body: string;
+    const { accept = 'text/plain' } = req.headers;
+    if (accept.includes('json')) {
+      res.setHeader('content-type', 'application/json');
+      const json = JSON.stringify({
+        redirect: location,
+        status: String(statusCode)
+      });
+      body = `${json}\n`;
+    } else if (accept.includes('html')) {
+      res.setHeader('content-type', 'text/html');
+      body = redirectTemplate({ location, statusCode });
+    } else {
+      res.setHeader('content-type', 'text/plain');
+      body = `Redirecting to ${location} (${statusCode})\n`;
     }
     res.end(body);
   }
@@ -1015,7 +1041,6 @@ export default class DevServer {
     // then perform a redirect to make it "clean".
     const parsed = url.parse(req.url || '/');
     if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
-      const statusCode = 301;
       let location = parsed.pathname.replace(/\/+/g, '/');
       if (parsed.search) {
         location += parsed.search;
@@ -1024,12 +1049,7 @@ export default class DevServer {
       // Only `GET` requests are redirected.
       // Other methods are normalized without redirecting.
       if (req.method === 'GET') {
-        this.setResponseHeaders(res, nowRequestId, {
-          'content-type': 'text/plain',
-          location
-        });
-        res.statusCode = statusCode;
-        res.end(`Redirecting to ${location} (${statusCode})\n`);
+        await this.sendRedirect(req, res, nowRequestId, location, 301);
         return;
       }
 
@@ -1050,8 +1070,7 @@ export default class DevServer {
       dest,
       status,
       headers = {},
-      uri_args,
-      matched_route
+      uri_args
     } = await devRouter(req.url, req.method, routes, this);
 
     // Set any headers defined in the matched `route` config
@@ -1074,8 +1093,13 @@ export default class DevServer {
     if (status) {
       res.statusCode = status;
       if ([301, 302, 303].includes(status)) {
-        this.output.debug(`Redirect: ${matched_route}`);
-        res.end(`Redirecting (${status}) to ${res.getHeader('location')}`);
+        await this.sendRedirect(
+          req,
+          res,
+          nowRequestId,
+          res.getHeader('location') as string,
+          status
+        );
         return;
       }
     }
@@ -1247,12 +1271,7 @@ export default class DevServer {
 
       default:
         // This shouldn't really ever happen...
-        await this.sendError(
-          req,
-          res,
-          nowRequestId,
-          'UNKNOWN_ASSET_TYPE'
-        );
+        await this.sendError(req, res, nowRequestId, 'UNKNOWN_ASSET_TYPE');
     }
   };
 
@@ -1443,11 +1462,9 @@ function close(server: http.Server): Promise<void> {
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
 function generateRequestId(podId: string): string {
-  return `dev1:${[
-    podId,
-    Date.now(),
-    randomBytes(6).toString('hex')
-  ].join('-')}`;
+  return `dev1:${[podId, Date.now(), randomBytes(6).toString('hex')].join(
+    '-'
+  )}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
