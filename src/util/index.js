@@ -19,7 +19,6 @@ import {
 import Agent from './agent.ts';
 import ua from './ua.ts';
 import hash from './hash';
-import cmd from './output/cmd.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
 import { responseError } from './error';

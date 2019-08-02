@@ -169,7 +169,7 @@ test('output the version', async t => {
 
 test('detect update command', async t => {
   {
-    const { code, stderr } = await execute(['update']);
+    const { stderr } = await execute(['update']);
     t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
   }
 
@@ -183,7 +183,7 @@ test('detect update command', async t => {
     const binPrefix = path.join(prefix, 'bin');
 
     process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.NPM_CONFIG_PREFIX = binPrefix;
+    process.env.NPM_CONFIG_PREFIX = prefix;
 
     console.log('Installing now to', binPrefix);
 
@@ -704,9 +704,6 @@ test('set platform version using `-V` to `2`', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -776,9 +773,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -838,9 +832,6 @@ test('ensure the `alias` property is not sent to the API', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -871,9 +862,6 @@ test('ensure the `scope` property works with email', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -903,9 +891,6 @@ test('ensure the `scope` property works with username', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
 
   t.true(stderr.includes('Building...'));
 
@@ -972,9 +957,6 @@ test('create a builds deployments without platform version flag', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
 
   t.true(stderr.includes('Building...'));
 
@@ -1475,7 +1457,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 test('whoami', async t => {
   const { code, stdout, stderr } = await execute(['whoami']);
   t.is(code, 0);
-  t.is(stdout, contextName);
+  t.is(stdout, contextName, `Received:\n"${stdout}"\n"${stderr}"`);
 });
 
 test('fail `now dev` dev script without now.json', async t => {

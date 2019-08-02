@@ -1,4 +1,4 @@
-import chalk, { Chalk, ColorSupport } from 'chalk';
+import chalk from 'chalk';
 import { format } from 'util';
 import { Console } from 'console';
 
