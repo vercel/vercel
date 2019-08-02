@@ -37,7 +37,6 @@ import toHumanPath from '../../util/humanize-path';
 import combineAsyncGenerators from '../../util/combine-async-generators';
 // @ts-ignore
 import createDeploy from '../../util/deploy/create-deploy';
-import dnsTable from '../../util/format-dns-table';
 import eventListenerToGenerator from '../../util/event-listener-to-generator';
 // @ts-ignore
 import formatLogCmd from '../../util/output/format-log-cmd';
@@ -62,8 +61,6 @@ import parseMeta from '../../util/parse-meta';
 import getProjectName from '../../util/get-project-name';
 import { Output } from '../../util/output';
 import {
-  CertConfigurationError,
-  CertError,
   DeploymentNotFound,
   DomainNotFound,
   DomainPermissionDenied,
@@ -79,7 +76,6 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import handleCertError from '../../util/certs/handle-cert-error';
 import readPackage from '../../util/read-package';
-import { Package } from '../../util/dev/types';
 
 interface Env {
   [name: string]: string | null | undefined;

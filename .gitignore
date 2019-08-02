@@ -7,5 +7,8 @@ yarn-error.log
 .nyc_output
 coverage
 *.swp
+*.bak
+*.tgz
 .builders
 /assets
+/src/util/dev/templates/*.ts

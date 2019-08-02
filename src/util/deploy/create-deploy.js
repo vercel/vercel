@@ -1,5 +1,4 @@
 import generateCertForDeploy from './generate-cert-for-deploy';
-import purchaseDomainIfAvailable from '../domains/purchase-domain-if-available';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
