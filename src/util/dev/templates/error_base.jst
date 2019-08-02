@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000">
+    <title>{{=it.http_status_code}}: {{!it.http_status_description}}</title>
+    <style>
+      html {
+        font-size: 62.5%;
+        box-sizing: border-box
+      }
+
+      *,
+      ::after,
+      ::before {
+        box-sizing: inherit
+      }
+
+      body {
+        font-family: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+        font-size: 1.6rem;
+        line-height: 1.65;
+        word-break: break-word;
+        font-kerning: auto;
+        font-variant: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        hyphens: auto;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0
+      }
+
+      ::selection {
+        background: #79FFE1;
+      }
+      ::-moz-selection {
+        background: #79FFE1;
+      }
+
+      a {
+        cursor: pointer;
+        color: #0070f3;
+        text-decoration: none;
+        transition: all .2s ease;
+        border-bottom: 1px solid transparent
+      }
+
+      a:hover {
+        border-bottom: 1px solid #0070f3
+      }
+
+      ul {
+        padding: 0;
+        margin-left: 1.5em;
+        list-style-type: none
+      }
+
+      li {
+        margin-bottom: 10px
+      }
+
+      ul li:before {
+        content: '\02013'
+      }
+
+      li:before {
+        display: inline-block;
+        color: #ccc;
+        position: absolute;
+        margin-left: -18px;
+        transition: color .2s ease
+      }
+
+      code {
+        font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+        font-size: .92em
+      }
+
+      code:after,
+      code:before {
+        content: '`'
+      }
+
+      .container {
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        min-height: 100vh
+      }
+
+      main {
+        max-width: 80rem;
+        padding: 4rem 6rem;
+        margin: auto
+      }
+
+      ul {
+        margin-bottom: 32px
+      }
+
+      .error-title {
+        font-size: 2rem;
+        border-left: 2px solid #ff0080;
+        padding-left: 22px;
+        line-height: 1.5;
+        margin-bottom: 24px;
+        font-weight: 500
+      }
+
+      main p {
+        color: #333
+      }
+
+      .devinfo-container {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 32px
+      }
+
+      .error-code {
+        margin: 0;
+        font-size: 1.6rem;
+        color: #000;
+        margin-bottom: 1.6rem
+      }
+
+      .devinfo-line {
+        color: #333
+      }
+
+      .devinfo-line code,
+      code,
+      li {
+        color: #000
+      }
+
+      .devinfo-line:not(:last-child) {
+        margin-bottom: 8px
+      }
+
+      .docs-link,
+      .contact-link {
+        font-weight: 500
+      }
+
+      header,
+      footer,
+      footer a {
+        display: flex;
+        justify-content: center;
+        align-items: center
+      }
+
+      header,
+      footer {
+        min-height: 100px;
+        height: 100px;
+      }
+
+      header {
+        border-bottom: 1px solid #eaeaea;
+      }
+
+      header h1 {
+        font-size: 1.8rem;
+        margin: 0;
+        font-weight: 500;
+      }
+
+      header p {
+        font-size: 1.3rem;
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .header-item {
+        display: flex;
+        padding: 0 2rem;
+        margin: 2rem 0;
+        text-decoration: line-through;
+        color: #999;
+      }
+
+      .header-item.active {
+        color: #ff0080;
+        text-decoration: none;
+      }
+
+      .header-item.first {
+        border-right: 1px solid #eaeaea;
+      }
+
+      .header-item-content {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header-item-icon {
+        margin-right: 1rem;
+        margin-top: 0.6rem;
+      }
+
+      footer {
+        border-top: 1px solid #eaeaea;
+      }
+
+      footer a {
+        color: #000
+      }
+
+      footer a:hover {
+        border-bottom-color: transparent
+      }
+
+      footer svg {
+        margin-left: .8rem
+      }
+
+      @media (max-width:500px) {
+        .devinfo-container .devinfo-line {
+          display: flex;
+          flex-direction: column
+        }
+        .devinfo-container .devinfo-line code {
+          margin-top: .4rem
+        }
+        .devinfo-container .devinfo-line:not(:last-child) {
+          margin-bottom: 1.6rem
+        }
+        .devinfo-container {
+          margin-bottom: 0;
+        }
+        header {
+          flex-direction: column;
+          height: auto;
+          min-height: auto;
+          align-items: flex-start;
+        }
+        .header-item.first {
+          border-right: none;
+          margin-bottom: 0;
+        }
+        main {
+          padding: 1rem 2rem;
+        }
+        body {
+          font-size: 1.4rem;
+          line-height: 1.55;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      {{=it.view}}
+      <footer>
+        <a href="https://zeit.co" target="_blank" rel="noopener noreferrer">Powered by
+          <svg
+            xmlns="http://www.w3.org/2000/svg" width="82" height="16" fill="none">
+            <path fill="url(#paint0_linear)" d="M9.01831 0l9.01829 16H0L9.01831 0z"/>
+            <path fill="#333" fill-rule="evenodd" d="M51.6336 12.0284h-6.4918V2.05194h6.4918v1.2559h-5.0237v3.0071h4.3692v1.2559h-4.3692v3.20166h5.0237v1.2559zm-14.0626 0h-7.2347v-1.0967l5.342-7.62385h-5.2536v-1.2559h7.0579v1.09671l-5.342 7.62384h5.4304v1.2559zm21.8809 0h6.3326v-1.2559h-2.4234V3.30784h2.4234v-1.2559h-6.3326v1.2559h2.4411v7.46466h-2.4411v1.2559zm18.2195 0h-1.4682V3.30784h-3.3609v-1.2559h8.2253v1.2559h-3.3962v8.72056z" clip-rule="evenodd"/>
+            <defs>
+              <linearGradient id="paint0_linear" x1="28.0221" x2="16.1889" y1="22.9909" y2="8.56865" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#fff"/>
+                <stop offset="1"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </a>
+      </footer>
+    </div>
+  </body>
+</html>
