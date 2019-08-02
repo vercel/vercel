@@ -1,5 +1,3 @@
-import execa from 'execa';
-import { tmpdir } from 'os';
 import { createHash } from 'crypto';
 import {
   mkdirp,
@@ -10,7 +8,7 @@ import {
   createReadStream
 } from 'fs-extra';
 import pipe from 'promisepipe';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import fetch from 'node-fetch';
 import { Output } from '../output/create-output';
 import { builderDirPromise } from './builder-cache';

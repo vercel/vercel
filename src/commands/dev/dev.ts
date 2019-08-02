@@ -1,5 +1,4 @@
 import path from 'path';
-import chalk from 'chalk';
 
 import pkg from '../../../package.json';
 import DevServer from '../../util/dev/server';

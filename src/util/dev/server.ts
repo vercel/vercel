@@ -1101,12 +1101,8 @@ export default class DevServer {
           res.getHeader('location') as string,
           status
         );
-      } else if (status === 404) {
-        await this.send404(req, res, nowRequestId);
-      } else {
-        res.end(`${status} status code from routes config`);
+        return;
       }
-      return;
     }
 
     const requestPath = dest.replace(/^\//, '');
@@ -1261,7 +1257,9 @@ export default class DevServer {
           return;
         }
 
-        res.statusCode = result.statusCode;
+        if (!status) {
+          res.statusCode = result.statusCode;
+        }
         this.setResponseHeaders(res, nowRequestId, result.headers);
 
         let resBody: Buffer | string | undefined;
@@ -1499,7 +1497,7 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
-    builderWithPkg: { builder, package: pkg }
+    builderWithPkg: { builder }
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({

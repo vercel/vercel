@@ -1,8 +1,8 @@
 import { Stats } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink } from 'fs-extra';
+import isInstalledGlobally from 'is-installed-globally';
 
-import cmd from './output/cmd';
 import { version } from '../../package.json';
 
 // `npm` tacks a bunch of extra properties on the `package.json` file,
@@ -10,6 +10,8 @@ import { version } from '../../package.json';
 async function isYarn(): Promise<boolean> {
   let s: Stats;
   let binPath = process.argv[1];
+
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     s = await lstat(binPath);
     if (s.isSymbolicLink()) {
@@ -25,7 +27,14 @@ async function isYarn(): Promise<boolean> {
 
 export default async function getUpdateCommand(): Promise<string> {
   const tag = version.includes('canary') ? 'canary' : 'latest';
+
+  if (isInstalledGlobally) {
+    return (await isYarn())
+      ? `yarn global add now@${tag}`
+      : `npm install -g now@${tag}`;
+  }
+
   return (await isYarn())
-    ? `yarn global add now@${tag}`
-    : `npm install -g now@${tag}`;
+    ? `yarn add now@${tag}`
+    : `npm install now@${tag}`;
 }

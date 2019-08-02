@@ -1,14 +1,15 @@
+import ms from 'ms';
+import os from 'os';
 import path from 'path';
 import { URL } from 'url';
 import test from 'ava';
 import semVer from 'semver';
-import fs from 'fs';
 import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
-import { writeFile, readFile } from 'fs-extra';
 import retry from 'async-retry';
+import fs, { writeFile, readFile } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -31,11 +32,24 @@ const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
 
 const waitForDeployment = async href => {
+  const start = Date.now();
+  const max = ms('4m');
+
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
+
     if (response.status === 200) {
       break;
+    }
+
+    const current = Date.now();
+
+    if (current - start > max || response.status >= 500) {
+      throw new Error(
+        `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
+        `Received status ${response.status}:\n"${await response.text()}"`
+      );
     }
 
     await sleep(2000);
@@ -156,6 +170,46 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('detect update command', async t => {
+  {
+    const { stderr } = await execute(['update']);
+    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+  }
+
+  if (process.version.startsWith('v8.')) {
+    // Don't do further checks for node 8 here
+    // since `npm i -g <tarball>` seems to fail
+    return;
+  }
+
+  {
+    const pkg = require('../package.json');
+
+    const packResult = await execa('npm', ['pack']);
+    t.is(packResult.code, 0);
+
+    const prefix = os.tmpdir();
+    const binPrefix = path.join(prefix, 'bin');
+
+    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
+    process.env.PREFIX = prefix;
+    process.env.npm_config_prefix = prefix;
+    process.env.NPM_CONFIG_PREFIX = prefix;
+
+    // Install now to `binPrefix`
+    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
+
+    const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
+    t.is(installResult.code, 0);
+
+    const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
+      env: process.env
+    });
+
+    t.regex(stderr, /npm install -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
+  }
+});
+
 test('log in', async t => {
   const { stdout, code } = await execa(
     binaryPath,
@@ -219,6 +273,52 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
   // Test if the output is really a URL
   const { host } = new URL(stdout);
   t.true(host.startsWith(`node-test-${contextName}`));
+});
+
+test('deploy a dockerfile project', async t => {
+  const target = fixture('dockerfile');
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    [
+      target,
+      '--public',
+      '--name',
+      session,
+      '--docker',
+      '--no-verify',
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+  const textContent = await response.text();
+  let content;
+
+  try {
+    content = JSON.parse(textContent);
+  } catch (error) {
+    console.log('Error parsing response as JSON:');
+    console.error(textContent);
+    throw error;
+  }
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
 });
 
 test('find deployment in list', async t => {
@@ -655,9 +755,6 @@ test('set platform version using `-V` to `2`', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -727,9 +824,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -789,9 +883,6 @@ test('ensure the `alias` property is not sent to the API', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -822,9 +913,6 @@ test('ensure the `scope` property works with email', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
-
   t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
@@ -854,9 +942,6 @@ test('ensure the `scope` property works with username', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
 
   t.true(stderr.includes('Building...'));
 
@@ -923,9 +1008,6 @@ test('create a builds deployments without platform version flag', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  // Ensure the listing includes the necessary parts
-  const wanted = [session, 'index.html'];
 
   t.true(stderr.includes('Building...'));
 
@@ -1156,50 +1238,6 @@ test('use build-env', async t => {
   t.is(content.trim(), 'bar');
 });
 
-test('deploy a dockerfile project', async t => {
-  const target = fixture('dockerfile');
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    [
-      target,
-      '--public',
-      '--name',
-      session,
-      '--docker',
-      '--no-verify',
-      ...defaultArgs
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-  const textContent = await response.text();
-  let content;
-
-  try {
-    content = JSON.parse(textContent);
-  } catch (error) {
-    console.log('Error parsing response as JSON:');
-    console.error(textContent);
-    throw error;
-  }
-
-  t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
-});
-
 test('use `--build-env` CLI flag', async t => {
   const directory = fixture('build-env-arg');
   const nonce = Math.random()
@@ -1424,7 +1462,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 test('whoami', async t => {
   const { code, stdout, stderr } = await execute(['whoami']);
   t.is(code, 0);
-  t.is(stdout, contextName);
+  t.is(stdout, contextName, `Received:\n"${stdout}"\n"${stderr}"`);
 });
 
 test('fail `now dev` dev script without now.json', async t => {
@@ -1438,9 +1476,16 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
-test('detect update command', async t => {
-  const { code, stderr } = await execute(['update']);
-  t.regex(stderr, /yarn global add now@/gm, `Received: "${stderr}"`);
+test('print correct link in legacy warning', async t => {
+  const deploymentPath = fixture('v1-warning-link');
+  const { code, stderr } = await execute([deploymentPath]);
+
+  console.log(stderr);
+
+  // It is expected to fail,
+  // since the package.json does not have a start script
+  t.is(code, 1);
+  t.regex(stderr, /migrate-to-zeit-now/);
 });
 
 test.after.always(async () => {
@@ -1453,16 +1498,4 @@ test.after.always(async () => {
 
   // Remove config directory entirely
   tmpDir.removeCallback();
-});
-
-test('print correct link in legacy warning', async t => {
-  const deploymentPath = fixture('v1-warning-link');
-  const { code, stderr } = await execute([deploymentPath]);
-
-  console.log(stderr);
-
-  // It is expected to fail,
-  // since the package.json does not have a start script
-  t.is(code, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
 });

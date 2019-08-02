@@ -1,5 +1,3 @@
-//
-import ms from 'ms';
 import chalk from 'chalk';
 
 import Now from '../../util';
@@ -7,7 +5,6 @@ import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import wait from '../../util/output/wait';
-import dnsTable from '../../util/format-dns-table.ts';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 

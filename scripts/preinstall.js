@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-const { join } = require('path');
+const fs = require('fs');
 const { promisify } = require('util');
-const { existsSync, stat: _stat, unlink: _unlink } = require('fs');
+const { join, delimiter } = require('path');
 
-const stat = promisify(_stat);
-const unlink = promisify(_unlink);
+const stat = promisify(fs.stat);
+const unlink = promisify(fs.unlink);
 
 function cmd(command) {
   return `\`${command}\``;
@@ -15,20 +15,32 @@ function error(command) {
 }
 
 function debug(str) {
-  if (process.argv.find(str => str === '--debug')) {
+  if (process.argv.find(str => str === '--debug') || process.env.PREINSTALL_DEBUG) {
     console.log(`[debug] [${new Date().toISOString()}]`, str);
   }
 }
 
+function isYarn() {
+  return process.env.npm_config_heading !== 'npm';
+}
+
+function isGlobal() {
+  const cmd = JSON.parse(process.env.npm_config_argv || '{ "original": [] }');
+
+  return isYarn()
+    ? cmd.original.includes('global')
+    : Boolean(process.env.npm_config_global);
+}
+
 // Logic is from Now Desktop
 // See: https://git.io/fj4jD
-async function getNowPath() {
+function getNowPath() {
   if (process.platform === 'win32') {
-    const path = `${process.env.LOCALAPPDATA}\\now-cli\\now.exe`;
-    return existsSync(path) ? path : null;
+    const path = join(process.env.LOCALAPPDATA, 'now-cli', 'now.exe');
+    return fs.existsSync(path) ? path : null;
   }
 
-  const pathEnv = (process.env.PATH || '').split(':');
+  const pathEnv = (process.env.PATH || '').split(delimiter);
 
   const paths = [
     join(process.env.HOME || '/', 'bin'),
@@ -43,7 +55,7 @@ async function getNowPath() {
 
     const nowPath = join(basePath, 'now');
 
-    if (existsSync(nowPath)) {
+    if (fs.existsSync(nowPath)) {
       return nowPath;
     }
   }
@@ -57,12 +69,19 @@ async function isBinary(nowPath) {
 }
 
 async function main() {
-  const nowPath = await getNowPath();
+  if (!isGlobal()) {
+    debug('Skip preinstall since now is being installed locally');
+    return;
+  }
+
+  const nowPath = getNowPath();
 
   if (nowPath === null) {
     debug(`No now binary found`);
     return;
   }
+
+  debug(`Located now binary at ${nowPath}`);
 
   try {
     if ((await isBinary(nowPath)) === false) {

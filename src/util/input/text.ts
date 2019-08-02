@@ -65,12 +65,15 @@ export default function text(
     // `data` contains the current keypress;
     // `futureValue` contains the current value + the
     // Keypress in the correct place
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     validateKeypress = (data, futureValue) => true, // eslint-disable-line no-unused-vars
     // Get's called before the promise is resolved
     // Returning `false` here will prevent the user from submiting the value
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     validateValue = (data: string) => true, // eslint-disable-line no-unused-vars
     // Receives the value of the input and should return a string
     // Or false if no autocomplion is available
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     autoComplete = (value: string) => false, // eslint-disable-line no-unused-vars
     // Tab
     // Right arrow

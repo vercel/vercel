@@ -1,4 +1,3 @@
-import psl from 'psl';
 import Client from '../client';
 import getAliases from './get-aliases';
 import { Alias } from '../../types';

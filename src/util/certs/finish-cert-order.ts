@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import psl from 'psl';
 
 import { Cert } from '../../types';
 import * as ERRORS from '../errors-ts';
@@ -10,7 +9,7 @@ import mapCertError from './map-cert-error';
 export default async function startCertOrder(
   client: Client,
   cns: string[],
-  context: string
+  context: string // eslint-disable-line
 ) {
   const cancelWait = wait(
     `Issuing a certificate for ${chalk.bold(cns.join(', '))}`

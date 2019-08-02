@@ -4,7 +4,6 @@ import { Output } from '../output';
 import Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
-import isDomainExternal from '../domains/is-domain-external';
 
 type DomainRecordsItem = {
   domainName: string;
