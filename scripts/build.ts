@@ -19,8 +19,9 @@ import pkg from '../package.json';
 
 const dirRoot = join(__dirname, '..');
 
-const bundledBuilders = Object.keys(pkg.devDependencies)
-  .filter(d => d.startsWith('@now/'));
+const bundledBuilders = Object.keys(pkg.devDependencies).filter(d =>
+  d.startsWith('@now/')
+);
 
 async function createBuildersTarball() {
   const distTag = getDistTag(pkg.version);
@@ -70,7 +71,14 @@ async function main() {
   // than necessary.
   await remove(join(dirRoot, 'node_modules/fsevents'));
 
+  // Compile the `doT.js` template files for `now dev`
+  console.log();
+  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
+    stdio: 'inherit'
+  });
+
   // Do the initial `ncc` build
+  console.log();
   const src = join(dirRoot, 'src');
   const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
   const args = [ncc, 'build', '--source-map'];
