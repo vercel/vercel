@@ -860,7 +860,10 @@ export default class DevServer {
     statusCode: number = 302
   ): Promise<void> {
     this.output.debug(`Redirect ${statusCode}: ${location}`);
+
     res.statusCode = statusCode;
+    this.setResponseHeaders(res, nowRequestId);
+
     let body: string;
     const { accept = 'text/plain' } = req.headers;
     if (accept.includes('json')) {
