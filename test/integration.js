@@ -45,8 +45,11 @@ const waitForDeployment = async href => {
 
     const current = Date.now();
 
-    if (current - start > max) {
-      throw new Error(`Waiting for "${href}" failed since it took longer than 4 minutes`);
+    if (current - start > max || response.status >= 500) {
+      throw new Error(
+        `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
+        `Received status ${response.status}:\n"${await response.text()}"`
+      );
     }
 
     await sleep(2000);
