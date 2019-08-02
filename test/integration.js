@@ -35,6 +35,7 @@ const waitForDeployment = async href => {
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
+
     if (response.status === 200) {
       break;
     }
@@ -1182,6 +1183,9 @@ test('deploy a dockerfile project', async t => {
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
+
+  console.log('deployed', href);
+  await waitForDeployment(href);
 
   // Send a test request to the deployment
   const response = await fetch(href);
