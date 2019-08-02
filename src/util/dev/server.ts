@@ -1113,7 +1113,7 @@ export default class DevServer {
     );
 
     if (!match) {
-      if (!this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
+      if (status === 404 || !this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
         await this.send404(req, res, nowRequestId);
       }
       return;
