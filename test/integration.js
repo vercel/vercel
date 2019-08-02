@@ -1,3 +1,4 @@
+import os from 'os';
 import path from 'path';
 import { URL } from 'url';
 import test from 'ava';
@@ -1439,20 +1440,34 @@ test('fail `now dev` dev script without now.json', async t => {
 });
 
 test('detect update command', async t => {
-  const { code, stderr } = await execute(['update']);
-  t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
-});
-
-test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
-
-  if (!tmpDir) {
-    return;
+  {
+    const { code, stderr } = await execute(['update']);
+    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
   }
 
-  // Remove config directory entirely
-  tmpDir.removeCallback();
+  {
+    const pkg = require('../package.json');
+
+    const packResult = await execa('npm', ['pack']);
+    t.is(packResult.code, 0);
+
+    const binPrefix = await execa('npm', ['-g', 'bin']).then(({ stdout }) => stdout.trim());
+    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
+    process.env.PREFIX = binPrefix.replace(/\/bin$/, '');
+
+    console.log('Installing now to', binPrefix);
+
+    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
+
+    const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
+    t.is(installResult.code, 0);
+
+    const { stdout, stderr } = await execa('now', ['update'], {
+      env: process.env
+    });
+
+    t.regex(stderr, /npm install -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
+  }
 });
 
 test('print correct link in legacy warning', async t => {
@@ -1465,4 +1480,16 @@ test('print correct link in legacy warning', async t => {
   // since the package.json does not have a start script
   t.is(code, 1);
   t.regex(stderr, /migrate-to-zeit-now/);
+});
+
+test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, ['logout', ...defaultArgs]);
+
+  if (!tmpDir) {
+    return;
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback();
 });
