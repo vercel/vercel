@@ -1184,7 +1184,6 @@ test('deploy a dockerfile project', async t => {
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
-  console.log('deployed', href);
   await waitForDeployment(href);
 
   // Send a test request to the deployment
