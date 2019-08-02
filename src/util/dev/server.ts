@@ -862,7 +862,7 @@ export default class DevServer {
     this.output.debug(`Redirect ${statusCode}: ${location}`);
 
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, nowRequestId, { location });
 
     let body: string;
     const { accept = 'text/plain' } = req.headers;
