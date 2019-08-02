@@ -269,7 +269,7 @@ test(
       t.is(body, 'Hello from Lambda!');
 
       // Trigger a 404
-      res = await fetch(`${server.address}/does-not-exists`);
+      res = await fetch(`${server.address}/does-not-exist`);
       t.is(res.status, 404);
     }
   })
@@ -314,7 +314,7 @@ test(
   testFixture('now-dev-directory-listing', async (t, server) => {
     {
       // HTML response
-      const res = await fetch(`${server.address}/does-not-exists`, {
+      const res = await fetch(`${server.address}/does-not-exist`, {
         headers: {
           Accept: 'text/html'
         }
@@ -327,7 +327,7 @@ test(
 
     {
       // JSON response
-      const res = await fetch(`${server.address}/does-not-exists`, {
+      const res = await fetch(`${server.address}/does-not-exist`, {
         headers: {
           Accept: 'application/json'
         }
@@ -343,10 +343,39 @@ test(
 
     {
       // Plain text response
-      const res = await fetch(`${server.address}/does-not-exists`);
+      const res = await fetch(`${server.address}/does-not-exist`);
       t.is(res.status, 404);
       const body = await res.text();
       t.is(res.headers.get('content-type'), 'text/plain; charset=utf-8');
+      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+    }
+  })
+);
+
+test(
+  '[DevServer] custom 404 routes',
+  testFixture('now-dev-custom-404', async (t, server) => {
+    {
+      // Test custom 404 with static dest
+      const res = await fetch(`${server.address}/error.html`);
+      t.is(res.status, 404);
+      const body = await res.text();
+      t.is(body, '<div>Custom 404 page</div>\n');
+    }
+
+    {
+      // Test custom 404 with lambda dest
+      const res = await fetch(`${server.address}/error.js`);
+      t.is(res.status, 404);
+      const body = await res.text();
+      t.is(body, 'Custom 404 Lambda\n');
+    }
+
+    {
+      // Test regular 404 still works
+      const res = await fetch(`${server.address}/does-not-exist`);
+      t.is(res.status, 404);
+      const body = await res.text();
       t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
     }
   })
