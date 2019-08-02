@@ -275,6 +275,52 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
   t.true(host.startsWith(`node-test-${contextName}`));
 });
 
+test('deploy a dockerfile project', async t => {
+  const target = fixture('dockerfile');
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    [
+      target,
+      '--public',
+      '--name',
+      session,
+      '--docker',
+      '--no-verify',
+      ...defaultArgs
+    ],
+    {
+      reject: false
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+  const textContent = await response.text();
+  let content;
+
+  try {
+    content = JSON.parse(textContent);
+  } catch (error) {
+    console.log('Error parsing response as JSON:');
+    console.error(textContent);
+    throw error;
+  }
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+});
+
 test('find deployment in list', async t => {
   const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
     reject: false
@@ -1190,52 +1236,6 @@ test('use build-env', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), 'bar');
-});
-
-test('deploy a dockerfile project', async t => {
-  const target = fixture('dockerfile');
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    [
-      target,
-      '--public',
-      '--name',
-      session,
-      '--docker',
-      '--no-verify',
-      ...defaultArgs
-    ],
-    {
-      reject: false
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-  const textContent = await response.text();
-  let content;
-
-  try {
-    content = JSON.parse(textContent);
-  } catch (error) {
-    console.log('Error parsing response as JSON:');
-    console.error(textContent);
-    throw error;
-  }
-
-  t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
 });
 
 test('use `--build-env` CLI flag', async t => {
