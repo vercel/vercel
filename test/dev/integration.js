@@ -621,7 +621,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
 
 test('[now dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
-  const { dev, port } = testFixture(directory, {
+  const { dev } = testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe']
   });
 

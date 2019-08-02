@@ -1,4 +1,3 @@
-import { Output } from '../output';
 import Client from '../client';
 
 export default async function deleteDNSRecordById(

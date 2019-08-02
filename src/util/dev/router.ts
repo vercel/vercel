@@ -5,7 +5,6 @@ import isURL from './is-url';
 import DevServer from './server';
 
 import {
-  BuilderInputs,
   HttpHeadersConfig,
   RouteConfig,
   RouteResult

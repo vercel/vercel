@@ -3,7 +3,7 @@ import chalk from 'chalk';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { NowContext, Config } from '../../types';
+import { NowContext } from '../../types';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import createOutput from '../../util/output/create-output';

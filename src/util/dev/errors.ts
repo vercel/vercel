@@ -43,6 +43,7 @@ const appError = {
   app_error: true
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infrastructureError = {
   title: 'An internal error occurred with ZEIT Now.',
   subtitle: 'This is an error with the platform itself, not the application.',
@@ -57,7 +58,7 @@ const pageNotFoundError = {
 
 export function generateErrorMessage(
   statusCode: number,
-  errorCode: string
+  errorCode: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): ErrorMessage {
   if (statusCode === 404) {
     return pageNotFoundError;

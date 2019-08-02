@@ -2,7 +2,6 @@ import { basename, extname, join } from 'path';
 import {
   BuilderParams,
   BuildResult,
-  RouteConfig,
   ShouldServeParams
 } from './types';
 

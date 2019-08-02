@@ -1,5 +1,4 @@
 import Client from '../client';
-import { Output } from '../output';
 import { Deployment, Alias } from '../../types';
 import fetchDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
 

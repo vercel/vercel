@@ -1,4 +1,3 @@
-import psl from 'psl';
 import chalk from 'chalk';
 
 import * as ERRORS from '../errors-ts';
