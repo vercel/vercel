@@ -454,9 +454,11 @@ it('Test `detectRoutes`', async () => {
 
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
-    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes.length).toBe(3);
     expect(defaultRoutes[0].dest).toBe('/api/team.js');
     expect(defaultRoutes[1].dest).toBe('/api/user.go');
+    expect(defaultRoutes[2].dest).not.toBeDefined();
+    expect(defaultRoutes[2].status).toBe(404);
   }
 
   {
@@ -488,7 +490,7 @@ it('Test `detectRoutes`', async () => {
 
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
-    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes.length).toBe(3);
   }
 
   {
@@ -500,9 +502,11 @@ it('Test `detectRoutes`', async () => {
 
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
-    expect(defaultRoutes[2].src).toBe('/(.*)');
-    expect(defaultRoutes[2].dest).toBe('/public/$1');
-    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[2].status).toBe(404);
+    expect(defaultRoutes[2].src).toBe('/api(\\/.*)$');
+    expect(defaultRoutes[3].src).toBe('/(.*)');
+    expect(defaultRoutes[3].dest).toBe('/public/$1');
+    expect(defaultRoutes.length).toBe(4);
   }
 
   {
@@ -514,6 +518,17 @@ it('Test `detectRoutes`', async () => {
 
     const { builders } = await detectBuilders(files, pkg);
     const { defaultRoutes } = await detectRoutes(files, builders);
+    expect(defaultRoutes[1].status).toBe(404);
+    expect(defaultRoutes[1].src).toBe('/api(\\/.*)$');
+    expect(defaultRoutes.length).toBe(2);
+  }
+
+  {
+    const files = ['public/index.html'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
     expect(defaultRoutes.length).toBe(1);
   }
 });

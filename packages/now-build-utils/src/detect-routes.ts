@@ -232,6 +232,14 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
     defaultRoutes.push(createRouteFromPath(file));
   }
 
+  // 404 Route to disable directory listing
+  if (defaultRoutes.length) {
+    defaultRoutes.push({
+      status: 404,
+      src: '/api(\\/.*)$',
+    });
+  }
+
   return { defaultRoutes, error: null };
 }
 
