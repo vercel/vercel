@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { NowContext, Domain, Alias, Cert } from '../../types';
+import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';

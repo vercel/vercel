@@ -1,16 +1,13 @@
 import cpy from 'cpy';
 import tar from 'tar-fs';
 import execa from 'execa';
-import semver from 'semver';
 import { join } from 'path';
 import pipe from 'promisepipe';
 import { createGzip } from 'zlib';
 import {
-  createReadStream,
   createWriteStream,
   mkdirp,
   remove,
-  writeFile,
   writeJSON
 } from 'fs-extra';
 

@@ -4,7 +4,7 @@ import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { createFunction, initializeRuntime } from '@zeit/fun';
+import { createFunction } from '@zeit/fun';
 import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
@@ -17,7 +17,6 @@ import { Output } from '../output';
 import highlight from '../output/highlight';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
-import { staticFiles as getFiles } from '../get-files';
 
 import DevServer from './server';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
@@ -139,7 +138,6 @@ export async function executeBuild(
     );
   }
 
-  const builderConfig = builder.config || {};
   const config = match.config || {};
 
   let result: BuildResult;

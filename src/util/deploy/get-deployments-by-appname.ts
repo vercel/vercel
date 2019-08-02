@@ -1,5 +1,4 @@
 import Client from '../client';
-import { Deployment } from '../../types';
 
 type Response = {
   deployments: Array<{

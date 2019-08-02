@@ -8,7 +8,6 @@ import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
-import dnsTable from '../../util/format-dns-table';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getDeploymentForAlias from '../../util/alias/get-deployment-for-alias';

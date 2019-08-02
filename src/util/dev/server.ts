@@ -1481,7 +1481,7 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
-    builderWithPkg: { builder, package: pkg }
+    builderWithPkg: { builder }
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({

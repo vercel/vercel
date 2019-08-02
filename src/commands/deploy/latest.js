@@ -5,7 +5,6 @@ import chalk from 'chalk';
 import title from 'title';
 import Progress from 'progress';
 import Client from '../../util/client';
-import eraseLines from '../../util/output/erase-lines';
 import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -15,7 +14,6 @@ import stamp from '../../util/output/stamp.ts';
 import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
-import dnsTable from '../../util/format-dns-table.ts';
 import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
@@ -24,8 +22,6 @@ import highlight from '../../util/output/highlight';
 import getProjectName from '../../util/get-project-name';
 import {
   BuildsRateLimited,
-  CertConfigurationError,
-  CertError,
   DeploymentNotFound,
   DeploymentPermissionDenied,
   InvalidDeploymentId,
@@ -206,7 +202,7 @@ export default async function main(
   }
 
   const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
-  const { log, debug, error, print, warn } = output;
+  const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
@@ -548,7 +544,6 @@ export default async function main(
   let buildSpinner = null;
 
   let deploymentSpinner = null;
-  let linesPrinted = null;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
