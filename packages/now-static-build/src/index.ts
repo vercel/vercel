@@ -298,6 +298,17 @@ export async function build({
         const outputDirName = await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
+      } else if (!config || !config.distDir) {
+        // Select either `dist` or `public` as directory
+        const publicPath = path.join(entrypointDir, 'public');
+
+        if (
+          !existsSync(distPath) &&
+          existsSync(publicPath) &&
+          statSync(publicPath).isDirectory()
+        ) {
+          distPath = publicPath;
+        }
       }
 
       validateDistDir(distPath, meta.isDev, config);
