@@ -16,7 +16,7 @@
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "ts-node ./scripts/build.ts",
     "build-dev": "ts-node ./scripts/build.ts --dev",
-    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
+    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only HEAD * | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "nyc": {
     "include": [
