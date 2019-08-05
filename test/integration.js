@@ -1239,7 +1239,7 @@ test('use `--build-env` CLI flag', async t => {
     .toString(36)
     .substring(2);
 
-  const { stdout, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -1256,7 +1256,7 @@ test('use `--build-env` CLI flag', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
