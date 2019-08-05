@@ -603,7 +603,7 @@ export default class DevServer {
   /**
    * Launches the `now dev` server.
    */
-  async start(port: number = 3000): Promise<void> {
+  async start(port: number = 3000, bind: string = '127.0.0.1'): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -707,7 +707,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, port);
+        address = await listen(this.server, port, bind);
       } catch (err) {
         this.output.debug(`Got listen error: ${err.code}`);
         if (err.code === 'EADDRINUSE') {
@@ -720,7 +720,7 @@ export default class DevServer {
       }
     }
 
-    this.address = address.replace('[::]', 'localhost');
+    this.address = address.replace('127.0.0.1', 'localhost');
     this.output.ready(`Available at ${link(this.address)}`);
 
     this.serverUrlPrinted = true;
@@ -1066,12 +1066,12 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const {
-      dest,
-      status,
-      headers = {},
-      uri_args
-    } = await devRouter(req.url, req.method, routes, this);
+    const { dest, status, headers = {}, uri_args } = await devRouter(
+      req.url,
+      req.method,
+      routes,
+      this
+    );
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -1113,7 +1113,10 @@ export default class DevServer {
     );
 
     if (!match) {
-      if (status === 404 || !this.renderDirectoryListing(req, res, requestPath, nowRequestId)) {
+      if (
+        status === 404 ||
+        !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
+      ) {
         await this.send404(req, res, nowRequestId);
       }
       return;

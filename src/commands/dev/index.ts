@@ -28,6 +28,7 @@ const help = () => {
 
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
+    -b, --bind        Network interface to bind to [127.0.0.1]
     -p, --port        Port [3000]
 
   ${chalk.dim('Examples:')}
@@ -35,6 +36,10 @@ const help = () => {
   ${chalk.gray('–')} Start the \`now dev\` server on port 8080
 
       ${chalk.cyan('$ now dev --port 8080')}
+
+  ${chalk.gray('–')} Make the \`now dev\` server bind to all network interfaces
+
+      ${chalk.cyan('$ now dev --bind 0.0.0.0')}
   `);
 };
 
@@ -45,6 +50,8 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
+      '--bind': String,
+      '-b': String,
       '--port': Number,
       '-p': Number
     });
@@ -79,8 +86,14 @@ export default async function main(ctx: NowContext) {
       const { scripts } = pkg as Package;
 
       if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(`The ${cmd('dev')} script in ${cmd('package.json')} must not contain ${cmd('now dev')}`);
-        output.error(`More details: http://err.sh/now-cli/now-dev-as-dev-script`);
+        output.error(
+          `The ${cmd('dev')} script in ${cmd(
+            'package.json'
+          )} must not contain ${cmd('now dev')}`
+        );
+        output.error(
+          `More details: http://err.sh/now-cli/now-dev-as-dev-script`
+        );
         return 1;
       }
     }
