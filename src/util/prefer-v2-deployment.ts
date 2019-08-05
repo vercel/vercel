@@ -2,7 +2,7 @@ import { join } from 'path';
 import { exists } from 'fs-extra';
 import { Config } from '../types';
 import { Package } from './dev/types';
-import { CantParseJSONFile } from './errors-ts';
+import {CantParseJSONFile } from './errors-ts';
 
 import cmd from './output/cmd';
 import code from './output/code';
@@ -12,20 +12,14 @@ export async function hasDockerfile(cwd: string) {
   return new Promise(res => exists(join(cwd, 'Dockerfile'), res));
 }
 
-export async function hasServerfile(cwd: string) {
-  return new Promise(res => exists(join(cwd, 'server.js'), res));
-}
-
 const PREFIX = `Changing platform version to ${code('2')}`;
 
 export default async function preferV2Deployment({
   hasDockerfile,
-  hasServerfile,
   pkg,
   localConfig
 }: {
   hasDockerfile: boolean,
-  hasServerfile: boolean,
   pkg: Package | CantParseJSONFile | null,
   localConfig: Config | undefined
 }): Promise<null | string> {
@@ -35,10 +29,6 @@ export default async function preferV2Deployment({
   }
 
   if (localConfig && localConfig.type) {
-    return null;
-  }
-
-  if (hasServerfile) {
     return null;
   }
 

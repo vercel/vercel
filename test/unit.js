@@ -904,8 +904,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = undefined;
     const pkg = null;
     const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.regex(reason, /Dockerfile/gm);
   }
 
@@ -913,8 +912,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = undefined;
     const pkg = { scripts: { 'start': 'echo hi' } };
     const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.is(reason, null);
   }
 
@@ -922,8 +920,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = undefined;
     const pkg = { scripts: { 'now-start': 'echo hi' } };
     const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.is(reason, null);
   }
 
@@ -931,8 +928,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = { 'version': 1 };
     const pkg = null;
     const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.is(reason, null);
   }
 
@@ -940,8 +936,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = undefined;
     const pkg = null;
     const hasDockerfile = true;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.is(reason, null);
   }
 
@@ -949,17 +944,7 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const localConfig = undefined;
     const pkg = { scripts: { 'build': 'echo hi' } };
     const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile });
     t.regex(reason, /package\.json/gm);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = null;
-    const hasDockerfile = false;
-    const hasServerfile = true;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
-    t.is(reason, null);
   }
 });
