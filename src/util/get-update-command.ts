@@ -28,6 +28,6 @@ export default async function getUpdateCommand(): Promise<string> {
   const tag = version.includes('canary') ? 'canary' : 'latest';
 
   return (await isYarn())
-    ? `yarn add now@${tag}`
-    : `npm install now@${tag}`;
+    ? `yarn global add now@${tag}`
+    : `npm install -g now@${tag}`;
 }
