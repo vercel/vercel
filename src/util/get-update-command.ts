@@ -1,7 +1,6 @@
 import { Stats } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink } from 'fs-extra';
-import isInstalledGlobally from 'is-installed-globally';
 
 import { version } from '../../package.json';
 
@@ -28,13 +27,7 @@ async function isYarn(): Promise<boolean> {
 export default async function getUpdateCommand(): Promise<string> {
   const tag = version.includes('canary') ? 'canary' : 'latest';
 
-  if (isInstalledGlobally) {
-    return (await isYarn())
-      ? `yarn global add now@${tag}`
-      : `npm install -g now@${tag}`;
-  }
-
   return (await isYarn())
-    ? `yarn add now@${tag}`
-    : `npm install now@${tag}`;
+    ? `yarn global add now@${tag}`
+    : `npm install -g now@${tag}`;
 }
