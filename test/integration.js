@@ -809,7 +809,7 @@ test('ensure type and instance count in list is right', async t => {
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -828,8 +828,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
