@@ -8,7 +8,6 @@ import { homedir } from 'os';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
-import retry from 'async-retry';
 import fs, { writeFile, readFile } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
@@ -57,34 +56,50 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenWithRetry(url, retries = 3) {
-  return retry(async () => {
-    const res = await fetch(url);
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
+  return new Promise(async (resolve, reject) => {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      resolve(data.token);
+    } catch (error) {
+      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+      if (retries === 0) {
+        reject(error);
+        return;
+      }
+      setTimeout(() => {
+        fetchTokenWithRetry(url, retries - 1)
+          .then(resolve)
+          .catch(reject);
+      }, 500);
     }
-
-    const data = await res.json();
-
-    return data.token;
-  }, { retries, factor: 1 });
+  });
 }
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
-  const headers = { Authorization: `Bearer ${token}` };
-
-  return retry(async () => {
-    const res = await fetch(url, { headers });
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
+  return new Promise(async (resolve, reject) => {
+    const url = `https://api.zeit.co/www/user`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      resolve(data.user);
+    } catch (error) {
+      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+      if (retries === 0) {
+        reject(error);
+        return;
+      }
+      setTimeout(() => {
+        fetchTokenWithRetry(url, retries - 1)
+          .then(resolve)
+          .catch(reject);
+      }, 500);
     }
-
-    const data = await res.json();
-
-    return data.user;
-  }, { retries, factor: 1 });
+  });
 }
 
 // AVA's `t.context` can only be set before the tests,
@@ -110,31 +125,28 @@ if (!process.env.CI) {
 
 test.before(async () => {
   try {
-    await retry(async () => {
-      const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-      const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-      const url = Buffer.from(str, 'base64').toString();
-      const token = await fetchTokenWithRetry(url);
+    const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+    const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+    const token = await fetchTokenWithRetry(
+      Buffer.from(str, 'base64').toString()
+    );
 
-      if (!fs.existsSync(location)) {
-        await createDirectory(location);
-      }
+    if (!fs.existsSync(location)) {
+      await createDirectory(location);
+    }
+    await writeFile(
+      path.join(location, `auth.json`),
+      JSON.stringify({ token })
+    );
 
-      await writeFile(
-        path.join(location, `auth.json`),
-        JSON.stringify({ token })
-      );
+    const user = await fetchTokenInformation(token);
 
-      const user = await fetchTokenInformation(token);
+    email = user.email;
+    contextName = `${user.email.split('@')[0]}`;
 
-      email = user.email;
-      contextName = user.email.split('@')[0];
-    }, { retries: 3, factor: 1 });
-
-    await prepareFixtures(contextName);
+    prepareFixtures(contextName);
   } catch (err) {
-    console.log('Failed `test.before`');
-    console.log(err);
+    console.error(err);
   }
 });
 

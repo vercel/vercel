@@ -217,9 +217,9 @@ RUN echo $NONCE > /public/index.html
     }
   };
 
-  for (const typeName of Object.keys(spec)) {
-    const needed = spec[typeName];
-    const directory = join(__dirname, '..', 'fixtures', 'integration', typeName);
+  for (const type of Object.keys(spec)) {
+    const needed = spec[type];
+    const directory = join(__dirname, '..', 'fixtures', 'integration', type);
     await mkdirp(directory);
 
     if (Array.isArray(needed)) {
