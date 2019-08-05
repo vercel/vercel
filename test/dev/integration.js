@@ -632,7 +632,6 @@ test('[now dev] no build matches warning', async t => {
     dev.unref();
 
     dev.stderr.setEncoding('utf8');
-
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
         if (str.includes('did not match any source files')) {
@@ -680,10 +679,6 @@ test('[now dev] render warning for empty cwd dir', async t => {
   try {
     dev.unref();
 
-    // Debugging…
-    dev.stderr.pipe(process.stderr);
-    dev.stdout.pipe(process.stderr);
-
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
     await new Promise(resolve => {
@@ -698,12 +693,11 @@ test('[now dev] render warning for empty cwd dir', async t => {
       });
     });
 
-    {
-      // Issue a request to ensure a 404 response
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-      validateResponseHeaders(t, response);
-      t.is(response.status, 404);
-    }
+    // Issue a request to ensure a 404 response
+    await sleep(ms('3s'));
+    const response = await fetch(`http://localhost:${port}`);
+    validateResponseHeaders(t, response);
+    t.is(response.status, 404);
   } finally {
     dev.kill('SIGTERM');
   }
