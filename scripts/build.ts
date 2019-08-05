@@ -6,7 +6,7 @@ import pipe from 'promisepipe';
 import { createGzip } from 'zlib';
 import { createWriteStream, mkdirp, remove, writeJSON } from 'fs-extra';
 
-import { getDistTag } from '../src/util/dev/builder-cache';
+import { getDistTag } from '../src/util/get-dist-tag';
 import pkg from '../package.json';
 
 const dirRoot = join(__dirname, '..');
