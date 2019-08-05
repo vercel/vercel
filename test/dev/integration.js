@@ -679,6 +679,10 @@ test('[now dev] render warning for empty cwd dir', async t => {
   try {
     dev.unref();
 
+    // Debugging…
+    dev.stderr.pipe(process.stderr);
+    dev.stdout.pipe(process.stderr);
+
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
     await new Promise(resolve => {
