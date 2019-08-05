@@ -14,16 +14,14 @@
     "directory": "packages/now-python"
   },
   "scripts": {
-    "build": "tsc",
-    "test": "tsc && jest",
-    "prepublishOnly": "tsc"
+    "build": "./build.sh",
+    "test": "./build.sh && jest",
+    "prepublishOnly": "./build.sh"
   },
-  "dependencies": {
-    "execa": "^1.0.0",
-    "node-fetch": "^2.2.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/execa": "^0.9.0",
+    "execa": "^1.0.0",
     "typescript": "3.5.2"
   }
 }
