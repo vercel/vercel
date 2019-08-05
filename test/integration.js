@@ -740,7 +740,7 @@ test('set platform version using `--platform-version` to invalid number', async 
 test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [
       directory,
@@ -757,12 +757,14 @@ test('set platform version using `-V` to `2`', async t => {
     }
   );
 
+  const output = `Received:\n"${stderr}"\n"${stdout}"`;
+
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(code, 0, output);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
+  t.is(host.split('-')[0], session, output);
 
   if (host) {
     context.deployment = host;
