@@ -740,7 +740,7 @@ test('set platform version using `--platform-version` to invalid number', async 
 test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -759,8 +759,6 @@ test('set platform version using `-V` to `2`', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Finalizing...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
