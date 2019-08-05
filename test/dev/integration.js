@@ -673,7 +673,9 @@ test('[now dev] do not recursivly check the path', async t => {
 
 test('[now dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
 
   try {
     dev.unref();
