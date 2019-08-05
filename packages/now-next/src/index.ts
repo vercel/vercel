@@ -156,6 +156,7 @@ export const build = async ({
   files,
   workPath,
   entrypoint,
+  config,
   meta = {} as BuildParamsMeta,
 }: BuildParamsType): Promise<{
   routes: Route[];
@@ -179,7 +180,7 @@ export const build = async ({
     await createServerlessConfig(workPath);
   }
 
-  const nodeVersion = await getNodeVersion(entryPath);
+  const nodeVersion = await getNodeVersion(entryPath, undefined, config);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   if (!nextVersion) {

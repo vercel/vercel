@@ -178,7 +178,11 @@ export async function build({
       }
     }
 
-    const nodeVersion = await getNodeVersion(entrypointDir, minNodeRange);
+    const nodeVersion = await getNodeVersion(
+      entrypointDir,
+      minNodeRange,
+      config
+    );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts);
@@ -325,7 +329,7 @@ export async function build({
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
     console.log(`Running build script "${entrypoint}"`);
-    const nodeVersion = await getNodeVersion(entrypointDir);
+    const nodeVersion = await getNodeVersion(entrypointDir, undefined, config);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
     validateDistDir(distPath, meta.isDev, config);
