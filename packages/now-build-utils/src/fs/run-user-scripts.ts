@@ -4,7 +4,7 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
-import { Meta, PackageJson, NodeVersion } from '../types';
+import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
 function spawnAsync(
@@ -75,13 +75,23 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  minNodeVersion?: string
+  minNodeVersion?: string,
+  config?: Config
 ): Promise<NodeVersion> {
   const { packageJson } = await scanParentDirs(destPath, true);
-  const range =
-    (packageJson && packageJson.engines && packageJson.engines.node) ||
-    minNodeVersion;
-  return getSupportedNodeVersion(range, typeof minNodeVersion !== 'undefined');
+  let range: string | undefined;
+  let silent = false;
+  if (packageJson && packageJson.engines && packageJson.engines.node) {
+    range = packageJson.engines.node;
+  } else if (minNodeVersion) {
+    range = minNodeVersion;
+    silent = true;
+  } else if (config && config.zeroConfig) {
+    // Use latest node version zero config detected
+    range = '10.x';
+    silent = true;
+  }
+  return getSupportedNodeVersion(range, silent);
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {
