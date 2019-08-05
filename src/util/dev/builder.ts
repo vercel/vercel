@@ -375,8 +375,16 @@ export async function getBuildMatches(
   fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
+
+  if (fileList.length === 0) {
+    // If there's no files in the cwd then we know there won't be any build
+    // matches, so bail eagerly, and avoid printing the "no matches" message.
+    return matches;
+  }
+
   const noMatches: BuildConfig[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
 
