@@ -696,7 +696,6 @@ test('[now dev] render warning for empty cwd dir', async t => {
       // Issue a request to ensure a 404 response
       const response = await fetchWithRetry(`http://localhost:${port}`, 180);
       validateResponseHeaders(t, response);
-      const body = await response.text();
       t.is(response.status, 404);
     }
   } finally {
