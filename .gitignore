@@ -15,4 +15,5 @@ coverage
 /test/**/yarn.lock
 /test/**/node_modules
 /test/dev/fixtures/08-hugo/hugo
-/test/dev/fixtures/08-hugo/public
+/test/dev/fixtures/**/dist
+/test/dev/fixtures/**/public
