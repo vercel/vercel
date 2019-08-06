@@ -59,7 +59,7 @@ async function getConfigPrefix() {
 async function isGlobal() {
   try {
     const isWindows = process.platform === 'win32';
-    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/bin'
+    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib'
 
     const installPath = resolve(__dirname);
 
