@@ -242,14 +242,12 @@ test('deploy a node microservice', async t => {
     }
   );
 
-  console.log(stderr);
-
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(code, 0, formatOutput({ stdout, stderr }));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
+  t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
 
   // Send a test request to the deployment
   const response = await fetch(href);
@@ -1338,9 +1336,9 @@ test('initialize selected example ("angular")', async t => {
 
   const { stdout, stderr, code } = await execute(['init'], { cwd, input: '\n' });
 
-  t.is(code, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleAngular(cwd, 'angular'));
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(verifyExampleAngular(cwd, 'angular'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize example to existing directory with "-f"', async t => {
