@@ -1,6 +1,6 @@
 import { Stats } from 'fs';
 import { dirname, join, resolve } from 'path';
-import { readJSON, lstat, readlink } from 'fs-extra';
+import fs, { readJSON, lstat, readlink, readFile } from 'fs-extra';
 
 import { version } from '../../package.json';
 
@@ -24,10 +24,91 @@ async function isYarn(): Promise<boolean> {
   return !('_id' in pkg);
 }
 
+async function canRead(file: string) {
+  return new Promise((res) => {
+    fs.access(file, fs.constants.F_OK | fs.constants.R_OK, (err) => {
+      if (err) {
+        res(false);
+        return;
+      }
+
+      res(true);
+    });
+  });
+}
+
+async function getConfigPrefix() {
+  const paths = [
+    process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG,
+    join(process.env.HOME || '/', '.npmrc'),
+    process.env.npm_config_globalconfig || process.env.NPM_CONFIG_GLOBALCONFIG
+  ].filter(Boolean);
+
+  for (const configPath of paths) {
+    if (!configPath) {
+      continue;
+    }
+
+    if (await canRead(configPath) === false) {
+      continue;
+    }
+
+    const content = await readFile(configPath)
+      .then((buffer: Buffer) => buffer.toString())
+      .catch(() => null);
+
+    if (content) {
+      const [prefix] = content
+        .split('\n')
+        .map((line: string) => line && line.trim())
+        .filter((line: string) => line && line.startsWith('prefix'))
+        .map((line: string) => line.slice(line.indexOf('=') + 1).trim());
+
+      if (prefix) {
+        return prefix;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function isGlobal() {
+  try {
+    const isWindows = process.platform === 'win32';
+    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/bin'
+
+    const installPath = resolve(__dirname);
+
+    const prefixPath = (
+      process.env.PREFIX ||
+      process.env.npm_config_prefix ||
+      process.env.NPM_CONFIG_PREFIX ||
+      await getConfigPrefix() ||
+      defaultPath
+    );
+
+    if (!prefixPath) {
+      return true;
+    }
+
+    return installPath.startsWith(prefixPath);
+  } catch (_) {
+    // Default to global
+    return true;
+  }
+}
+
 export default async function getUpdateCommand(): Promise<string> {
   const tag = version.includes('canary') ? 'canary' : 'latest';
 
+  if (await isGlobal()) {
+    return (await isYarn())
+      ? `yarn global add now@${tag}`
+      : `npm install -g now@${tag}`;
+  }
+
   return (await isYarn())
-    ? `yarn global add now@${tag}`
-    : `npm install -g now@${tag}`;
+    ? `yarn add now@${tag}`
+    : `npm install now@${tag}`;
 }
