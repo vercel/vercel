@@ -22,6 +22,7 @@ import pkg from '../../../package.json';
 import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
+import { getDistTag } from '../get-dist-tag';
 import { devDependencies } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
@@ -70,14 +71,6 @@ async function readFileOrNull(
     }
     throw err;
   }
-}
-
-export function getDistTag(version: string): string {
-  const parsed = semver.parse(version);
-  if (parsed && typeof parsed.prerelease[0] === 'string') {
-    return parsed.prerelease[0] as string;
-  }
-  return 'latest';
 }
 
 /**

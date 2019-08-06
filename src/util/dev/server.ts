@@ -312,14 +312,21 @@ export default class DevServer {
     nowConfig: NowConfig,
     isInitial = false
   ): Promise<void> {
+    const fileList = this.resolveBuildFiles(this.files);
     const matches = await getBuildMatches(
       nowConfig,
       this.cwd,
       this.yarnPath,
       this.output,
-      this.resolveBuildFiles(this.files)
+      fileList
     );
     const sources = matches.map(m => m.src);
+
+    if (isInitial && fileList.length === 0) {
+      this.output.warn(
+        'There are no files (or only files starting with a dot) inside your deployment.'
+      );
+    }
 
     // Delete build matches that no longer exists
     for (const src of this.buildMatches.keys()) {

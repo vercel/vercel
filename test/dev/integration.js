@@ -75,8 +75,10 @@ function testFixtureStdio(directory, fn) {
           readyResolve();
         }
 
-        if ( data.toString().includes('Command failed')
-          || data.toString().includes('Error!')) {
+        if (
+          data.toString().includes('Command failed') ||
+          data.toString().includes('Error!')
+        ) {
           dev.kill('SIGTERM');
           console.log(output);
           process.exit(1);
@@ -159,8 +161,8 @@ if (satisfies(process.version, '>= 10.9')) {
 
 test(
   '[now dev] 03-aurelia',
-  testFixtureStdio('03-aurelia', async(t, port) => {
-    const result = fetch(`http://localhost:${port}`)
+  testFixtureStdio('03-aurelia', async (t, port) => {
+    const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
     validateResponseHeaders(t, response);
@@ -185,7 +187,7 @@ test(
 
 test(
   '[now dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async(t, port) => {
+  testFixtureStdio('05-gatsby', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -198,7 +200,7 @@ test(
 
 test(
   '[now dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async(t, port) => {
+  testFixtureStdio('06-gridsome', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -231,7 +233,7 @@ test('[now dev] 07-hexo-node', async t => {
 
 test(
   '[now dev] 08-hugo',
-  testFixtureStdio('08-hugo', async(t, port) => {
+  testFixtureStdio('08-hugo', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -460,7 +462,7 @@ test('[now dev] double slashes redirect', async t => {
 
 test(
   '[now dev] 18-marko',
-  testFixtureStdio('18-marko', async(t, port) => {
+  testFixtureStdio('18-marko', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -473,7 +475,7 @@ test(
 
 test(
   '[now dev] 19-mithril',
-  testFixtureStdio('19-mithril', async(t, port) => {
+  testFixtureStdio('19-mithril', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -486,7 +488,7 @@ test(
 
 test(
   '[now dev] 20-riot',
-  testFixtureStdio('20-riot', async(t, port) => {
+  testFixtureStdio('20-riot', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -499,7 +501,7 @@ test(
 
 test(
   '[now dev] 21-charge',
-  testFixtureStdio('21-charge', async(t, port) => {
+  testFixtureStdio('21-charge', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -512,7 +514,7 @@ test(
 
 test(
   '[now dev] 22-brunch',
-  testFixtureStdio('22-brunch', async(t, port) => {
+  testFixtureStdio('22-brunch', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -525,7 +527,7 @@ test(
 
 test(
   '[now dev] 23-docusaurus',
-  testFixtureStdio('23-docusaurus', async(t, port) => {
+  testFixtureStdio('23-docusaurus', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -538,7 +540,7 @@ test(
 
 test(
   '[now dev] 24-ember',
-  testFixtureStdio('24-ember', async(t, port) => {
+  testFixtureStdio('24-ember', async (t, port) => {
     const result = fetch(`http://localhost:${port}`);
     const response = await result;
 
@@ -630,7 +632,6 @@ test('[now dev] no build matches warning', async t => {
     dev.unref();
 
     dev.stderr.setEncoding('utf8');
-
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
         if (str.includes('did not match any source files')) {
@@ -649,7 +650,7 @@ test('[now dev] do not recursivly check the path', async t => {
   const directory = fixture('handle-filesystem-missing');
   const { dev, port } = testFixture(directory);
 
-   try {
+  try {
     dev.unref();
 
     {
@@ -664,6 +665,39 @@ test('[now dev] do not recursivly check the path', async t => {
       validateResponseHeaders(t, response);
       t.is(response.status, 404);
     }
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] render warning for empty cwd dir', async t => {
+  const directory = fixture('empty');
+  const { dev, port } = testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  try {
+    dev.unref();
+
+    // Monitor `stderr` for the warning
+    dev.stderr.setEncoding('utf8');
+    await new Promise(resolve => {
+      dev.stderr.on('data', str => {
+        if (
+          str.includes(
+            'There are no files (or only files starting with a dot) inside your deployment'
+          )
+        ) {
+          resolve();
+        }
+      });
+    });
+
+    // Issue a request to ensure a 404 response
+    await sleep(ms('3s'));
+    const response = await fetch(`http://localhost:${port}`);
+    validateResponseHeaders(t, response);
+    t.is(response.status, 404);
   } finally {
     dev.kill('SIGTERM');
   }

@@ -4,14 +4,9 @@ import execa from 'execa';
 import { join } from 'path';
 import pipe from 'promisepipe';
 import { createGzip } from 'zlib';
-import {
-  createWriteStream,
-  mkdirp,
-  remove,
-  writeJSON
-} from 'fs-extra';
+import { createWriteStream, mkdirp, remove, writeJSON } from 'fs-extra';
 
-import { getDistTag } from '../src/util/dev/builder-cache';
+import { getDistTag } from '../src/util/get-dist-tag';
 import pkg from '../package.json';
 
 const dirRoot = join(__dirname, '..');
@@ -103,6 +98,18 @@ async function main() {
 
   console.log('Finished building `now-cli`');
 }
+
+process.on('unhandledRejection', (err: any) => {
+  console.error('Unhandled Rejection:');
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.error('Uncaught Exception:');
+  console.error(err);
+  process.exit(1);
+});
 
 main().catch(err => {
   console.error(err);

@@ -72,6 +72,18 @@ async function main() {
   }
 }
 
+process.on('unhandledRejection', err => {
+  console.error('Unhandled Rejection:');
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('uncaughtException', err => {
+  console.error('Uncaught Exception:');
+  console.error(err);
+  process.exit(1);
+});
+
 main().catch(err => {
   console.error(err);
   process.exit(1);
