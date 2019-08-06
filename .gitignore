@@ -14,3 +14,4 @@ coverage
 /src/util/dev/templates/*.ts
 /test/**/yarn.lock
 /test/**/node_modules
+/test/dev/fixtures/08-hugo/hugo
