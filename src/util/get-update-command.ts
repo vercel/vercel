@@ -78,8 +78,6 @@ async function isGlobal() {
     return installPath.startsWith(await realpath(prefixPath));
   } catch (_) {
     // Default to global
-    console.error(_);
-
     return true;
   }
 }
