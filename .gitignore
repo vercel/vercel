@@ -12,3 +12,5 @@ coverage
 .builders
 /assets
 /src/util/dev/templates/*.ts
+/test/**/yarn.lock
+/test/**/node_modules
