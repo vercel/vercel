@@ -43,10 +43,10 @@ export default async function preferV2Deployment({
     const { scripts = {} } = pkg;
 
     if (!scripts.start && !scripts['now-start']) {
-      return `Deploying to Now 2.0, as ${highlight('package.json')} is missing a ${cmd('start')} script`;
+      return `Deploying to Now 2.0, because ${highlight('package.json')} is missing a ${cmd('start')} script`;
     }
   } else if (!pkg && !hasDockerfile) {
-    return `Deploying to Now 2.0, as no ${highlight('Dockerfile')} was found`;
+    return `Deploying to Now 2.0, because no ${highlight('Dockerfile')} was found`;
   }
 
   return null;
