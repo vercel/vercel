@@ -1,6 +1,6 @@
 import { Stats } from 'fs';
 import { dirname, join, resolve } from 'path';
-import { readJSON, lstat, readlink, readFile } from 'fs-extra';
+import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
 
 import { version } from '../../package.json';
 
@@ -61,7 +61,7 @@ async function isGlobal() {
     const isWindows = process.platform === 'win32';
     const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib'
 
-    const installPath = resolve(__dirname);
+    const installPath = await realpath(resolve(__dirname));
 
     const prefixPath = (
       process.env.PREFIX ||
@@ -75,9 +75,11 @@ async function isGlobal() {
       return true;
     }
 
-    return installPath.startsWith(prefixPath);
+    return installPath.startsWith(await realpath(prefixPath));
   } catch (_) {
     // Default to global
+    console.error(_);
+
     return true;
   }
 }
