@@ -2,6 +2,16 @@ import { Route, Builder } from './types';
 import { parse as parsePath } from 'path';
 import { ignoreApiFilter, sortFiles } from './detect-builders';
 
+function escapeName(name: string) {
+  const special = '[]^$.|?*+()'.split('');
+
+  for (const char of special) {
+    name = name.replace(new RegExp(`\\${char}`, 'g'), `\\${char}`);
+  }
+
+  return name;
+}
+
 function joinPath(...segments: string[]) {
   const joinedPath = segments.join('/');
   return joinedPath.replace(/\/{2,}/g, '/');
@@ -46,8 +56,14 @@ function createRouteFromPath(filePath: string): Route {
         query.push(`${name}=$${counter++}`);
         return `([^\\/]+)`;
       } else if (isLast) {
-        const { name: fileName } = parsePath(segment);
-        return fileName;
+        const { name: fileName, ext } = parsePath(segment);
+        const isIndex = fileName === 'index';
+
+        // Either filename with extension, filename without extension
+        // or nothing when the filename is `index`
+        return `(${escapeName(fileName)}|${escapeName(fileName)}${escapeName(
+          ext
+        )})${isIndex ? '?' : ''}`;
       }
 
       return segment;

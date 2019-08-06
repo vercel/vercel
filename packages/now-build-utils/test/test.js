@@ -486,6 +486,15 @@ it('Test `detectRoutes`', async () => {
   }
 
   {
+    const files = ['api/date/index.js', 'api/date/index.go'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes, error } = await detectRoutes(files, builders);
+    expect(defaultRoutes).toBe(null);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { builders } = await detectBuilders(files);
@@ -530,5 +539,31 @@ it('Test `detectRoutes`', async () => {
     const { defaultRoutes } = await detectRoutes(files, builders);
 
     expect(defaultRoutes.length).toBe(1);
+  }
+
+  {
+    const files = ['api/date/index.js', 'api/date.js'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[0].src).toBe('^/api/date/(index|index\\.js)?$');
+    expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
+    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].dest).toBe('/api/date.js');
+  }
+
+  {
+    const files = ['api/date.js', 'api/[date]/index.js'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[0].src).toBe('^/api/([^\\/]+)/(index|index\\.js)?$');
+    expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
+    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 });
