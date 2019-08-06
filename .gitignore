@@ -12,3 +12,8 @@ coverage
 .builders
 /assets
 /src/util/dev/templates/*.ts
+/test/**/yarn.lock
+/test/**/node_modules
+/test/dev/fixtures/08-hugo/hugo
+/test/dev/fixtures/**/dist
+/test/dev/fixtures/**/public

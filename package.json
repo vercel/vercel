@@ -10,7 +10,7 @@
     "preinstall": "node ./scripts/preinstall.js",
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
     "test-integration": "ava test/integration.js --serial --fail-fast",
-    "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast",
+    "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
@@ -61,7 +61,7 @@
     ]
   },
   "engines": {
-    "node": ">= 8"
+    "node": ">= 8.11"
   },
   "devDependencies": {
     "@now/build-utils": "0.9.9",
