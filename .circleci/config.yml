@@ -90,7 +90,7 @@ jobs:
           at: .
       - run:
           name: Update Node.js
-          command: curl -sfLS install-node.now.sh/8 | sh -s -- --yes
+          command: curl -sfLS install-node.now.sh/8.11 | sh -s -- --yes
       - run:
           name: Output version
           command: node --version
@@ -183,7 +183,7 @@ jobs:
           at: .
       - run:
           name: Update Node.js
-          command: curl -sfLS install-node.now.sh/8 | sh -s -- --yes
+          command: curl -sfLS install-node.now.sh/8.11 | sh -s -- --yes
       - run:
           name: Output version
           command: node --version
