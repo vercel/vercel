@@ -1,6 +1,6 @@
 import { Stats } from 'fs';
 import { dirname, join, resolve } from 'path';
-import fs, { readJSON, lstat, readlink, readFile } from 'fs-extra';
+import { readJSON, lstat, readlink, readFile } from 'fs-extra';
 
 import { version } from '../../package.json';
 
@@ -24,19 +24,6 @@ async function isYarn(): Promise<boolean> {
   return !('_id' in pkg);
 }
 
-async function canRead(file: string) {
-  return new Promise((res) => {
-    fs.access(file, fs.constants.F_OK | fs.constants.R_OK, (err) => {
-      if (err) {
-        res(false);
-        return;
-      }
-
-      res(true);
-    });
-  });
-}
-
 async function getConfigPrefix() {
   const paths = [
     process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG,
@@ -46,10 +33,6 @@ async function getConfigPrefix() {
 
   for (const configPath of paths) {
     if (!configPath) {
-      continue;
-    }
-
-    if (await canRead(configPath) === false) {
       continue;
     }
 
