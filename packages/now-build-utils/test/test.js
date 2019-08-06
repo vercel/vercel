@@ -566,4 +566,21 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
+
+  {
+    const files = [
+      'api/index.ts',
+      'api/index.d.ts',
+      'api/users/index.ts',
+      'api/users/index.d.ts',
+    ];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(builders.length).toBe(2);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[1].use).toBe('@now/node');
+    expect(defaultRoutes.length).toBe(3);
+  }
 });
