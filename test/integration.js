@@ -1305,6 +1305,11 @@ const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
   fs.existsSync(path.join(cwd, dir, 'angular.json'));
 
+const verifyExampleAmp = (cwd, dir) =>
+  fs.existsSync(path.join(cwd, dir, 'index.html')) &&
+  fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
+  fs.existsSync(path.join(cwd, dir, 'favicon.png'));
+
 test('initialize example "angular"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
@@ -1329,16 +1334,16 @@ test('initialize example ("angular") to specified directory', async t => {
   t.true(verifyExampleAngular(cwd, 'ang'));
 });
 
-test('initialize selected example ("angular")', async t => {
+test('initialize selected example ("amp")', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "angular" example in';
+  const goal = '> Success! Initialized "amp" example in';
 
   const { stdout, stderr, code } = await execute(['init'], { cwd, input: '\n' });
 
   t.is(code, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
-  t.true(verifyExampleAngular(cwd, 'angular'), formatOutput({ stdout, stderr }));
+  t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize example to existing directory with "-f"', async t => {
