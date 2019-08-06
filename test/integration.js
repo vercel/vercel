@@ -87,6 +87,10 @@ function fetchTokenInformation(token, retries = 3) {
   }, { retries, factor: 1 });
 }
 
+function formatOutput({ stderr, stdout }) {
+  return `Received:\n"${stderr}"\n"${stdout}"`;
+}
+
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
@@ -1308,11 +1312,11 @@ test('initialize example "angular"', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, code } = await execute(['init', 'angular'], { cwd });
+  const { stdout, stderr, code } = await execute(['init', 'angular'], { cwd });
 
-  t.is(code, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleAngular(cwd, 'angular'));
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(verifyExampleAngular(cwd, 'angular'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize example ("angular") to specified directory', async t => {
@@ -1332,7 +1336,7 @@ test('initialize selected example ("angular")', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, code } = await execute(['init'], { cwd, input: '\n' });
+  const { stdout, stderr, code } = await execute(['init'], { cwd, input: '\n' });
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
@@ -1457,7 +1461,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 test('whoami', async t => {
   const { code, stdout, stderr } = await execute(['whoami']);
   t.is(code, 0);
-  t.is(stdout, contextName, `Received:\n"${stdout}"\n"${stderr}"`);
+  t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
 test('fail `now dev` dev script without now.json', async t => {
