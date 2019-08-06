@@ -4,7 +4,9 @@ const fs = require('fs-extra');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const execa = require('execa');
 const assert = require('assert');
-const { glob, download } = require('../');
+const {
+  glob, download, detectBuilders, detectRoutes,
+} = require('../');
 const { createZip } = require('../dist/lambda');
 const {
   getSupportedNodeVersion,
@@ -15,8 +17,6 @@ const {
   packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
-
-const { detectBuilders, detectRoutes } = require('../dist');
 
 jest.setTimeout(4 * 60 * 1000);
 const builderUrl = '@canary';
