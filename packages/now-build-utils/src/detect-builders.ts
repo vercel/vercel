@@ -20,7 +20,7 @@ const BUILDERS = new Map<string, Builder>([
 
 const API_BUILDERS: Builder[] = [
   { src: 'api/**/*.js', use: '@now/node', config },
-  { src: 'api/**/*[!d].ts', use: '@now/node', config },
+  { src: 'api/**/*.ts', use: '@now/node', config },
   { src: 'api/**/*.go', use: '@now/go', config },
   { src: 'api/**/*.py', use: '@now/python', config },
   { src: 'api/**/*.rb', use: '@now/ruby', config },
@@ -63,6 +63,10 @@ export function ignoreApiFilter(file: string) {
   }
 
   if (file.includes('/_')) {
+    return false;
+  }
+
+  if (file.endsWith('.d.ts')) {
     return false;
   }
 
