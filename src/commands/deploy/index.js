@@ -148,7 +148,7 @@ export default async ctx => {
     const reason = await preferV2Deployment({
       client,
       localConfig,
-      projectName: getProjectName({ argv, nowConfig: localConfig, isFile, paths }),
+      projectName: getProjectName({ argv, nowConfig: localConfig || {}, isFile, paths }),
       hasServerfile: await hasServerfile(paths[0]),
       hasDockerfile: await hasDockerfile(paths[0]),
       pkg: await readPackage(join(paths[0], 'package.json'))
