@@ -124,10 +124,6 @@ export default async ctx => {
         );
         return 1;
       }
-    } else {
-      output.warn(
-        `Your project is missing ${prop} in ${file}. More: https://zeit.co/docs/version-config`
-      );
     }
   }
 
