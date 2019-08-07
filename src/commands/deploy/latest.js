@@ -551,7 +551,7 @@ export default async function main(
       const { builds: freshBuilds } = await now.fetch(buildsUrl);
 
       // If there are no builds, we need to exit.
-      if (freshBuilds.length === 0) {
+      if (freshBuilds.length === 0 || freshBuilds.every(isDone)) {
         buildsCompleted = true;
       } else {
         for (const build of freshBuilds) {

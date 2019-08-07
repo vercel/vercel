@@ -769,14 +769,14 @@ test('set platform version using `-V` to `2`', async t => {
     }
   );
 
-  // Ensure the exit code is right
-  t.is(code, 0);
+  const output = `Received:\n"${stderr}"\n"${stdout}"`;
 
-  t.true(stderr.includes('Building...'));
+  // Ensure the exit code is right
+  t.is(code, 0, output);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
+  t.is(host.split('-')[0], session, output);
 
   if (host) {
     context.deployment = host;
@@ -821,7 +821,7 @@ test('ensure type and instance count in list is right', async t => {
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -840,8 +840,6 @@ test('set platform version using `--platform-version` to `2`', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -889,7 +887,7 @@ test('ensure we render a warning for deployments with no files', async t => {
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 
-  const { stderr, stdout, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -899,8 +897,6 @@ test('ensure the `alias` property is not sent to the API', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -930,8 +926,6 @@ test('ensure the `scope` property works with email', async t => {
   // Ensure the exit code is right
   t.is(code, 0);
 
-  t.true(stderr.includes('Building...'));
-
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
@@ -959,8 +953,6 @@ test('ensure the `scope` property works with username', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1015,7 +1007,7 @@ test('create a builds deployments with no actual builds', async t => {
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -1025,8 +1017,6 @@ test('create a builds deployments without platform version flag', async t => {
 
   // Ensure the exit code is right
   t.is(code, 0);
-
-  t.true(stderr.includes('Building...'));
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1261,7 +1251,7 @@ test('use `--build-env` CLI flag', async t => {
     .toString(36)
     .substring(2);
 
-  const { stdout, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -1278,7 +1268,7 @@ test('use `--build-env` CLI flag', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
