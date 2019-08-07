@@ -356,6 +356,8 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
   Object.assign(base, addEnv);
 }
 
+export const ExperimentalTraceVersion = `9.0.4-canary.1`;
+
 export {
   excludeFiles,
   validateEntrypoint,
