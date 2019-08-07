@@ -43,7 +43,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - bin
+            - assets
             - dist
 
   test-lint:
