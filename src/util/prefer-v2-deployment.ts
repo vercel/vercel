@@ -66,7 +66,7 @@ export default async function preferV2Deployment({
     }
 
     if (project && project.createdAt > 1565186886910) {
-      return `Deploying to Now 2.0, because this project was created for Now 2.0. ${INFO}`;
+      return `Deploying to Now 2.0, because this project is new. ${INFO}`;
     }
   }
 
