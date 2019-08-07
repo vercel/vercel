@@ -8,7 +8,7 @@
   "scripts": {
     "test": "yarn test-lint",
     "preinstall": "node ./scripts/preinstall.js",
-    "test-unit": "nyc ava test/*unit.js --serial --fail-fast",
+    "test-unit": "nyc ava test/*unit.js --serial --fail-fast --verbose",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "test-lint": "eslint . --ext .js,.ts",
