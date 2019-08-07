@@ -12,6 +12,7 @@ import * as parts from './args';
 import { handleError } from '../../util/error';
 import readPackage from '../../util/read-package';
 import preferV2Deployment, { hasDockerfile, hasServerfile } from '../../util/prefer-v2-deployment';
+import getProjectName from '../../util/get-project-name';
 
 export default async ctx => {
   const { authConfig, config: { currentTeam }, apiUrl } = ctx;
@@ -78,10 +79,12 @@ export default async ctx => {
     }
   }
 
+  let client = null;
+
   const isFile = Object.keys(stats).length === 1 && stats[paths[0]].isFile();
 
   if (authConfig && authConfig.token) {
-    const client = new Client({
+    client = new Client({
       apiUrl,
       token: authConfig.token,
       currentTeam,
@@ -143,7 +146,9 @@ export default async ctx => {
   if (platformVersion === 1 && versionFlag !== 1 && !argv['--docker'] && !argv['--npm']) {
     // Only check when it was not set via CLI flag
     const reason = await preferV2Deployment({
+      client,
       localConfig,
+      projectName: getProjectName({ argv, nowConfig: localConfig || {}, isFile, paths }),
       hasServerfile: await hasServerfile(paths[0]),
       hasDockerfile: await hasDockerfile(paths[0]),
       pkg: await readPackage(join(paths[0], 'package.json'))

@@ -1,8 +1,10 @@
 import { join } from 'path';
 import { exists } from 'fs-extra';
+import Client from './client';
 import { Config } from '../types';
 import { Package } from './dev/types';
-import { CantParseJSONFile } from './errors-ts';
+import { CantParseJSONFile, ProjectNotFound } from './errors-ts';
+import getProjectByIdOrName from './projects/get-project-by-id-or-name';
 
 import cmd from './output/cmd';
 import link from './output/link';
@@ -19,15 +21,19 @@ export async function hasServerfile(cwd: string) {
 const INFO = `More: ${link('https://zeit.co/docs/version-detection')}`;
 
 export default async function preferV2Deployment({
+  client,
   hasDockerfile,
   hasServerfile,
   pkg,
-  localConfig
+  localConfig,
+  projectName
 }: {
+  client?: Client,
   hasDockerfile: boolean,
   hasServerfile: boolean,
   pkg: Package | CantParseJSONFile | null,
-  localConfig: Config | undefined
+  localConfig: Config | undefined,
+  projectName?: string
 }): Promise<null | string> {
   if (localConfig && localConfig.version) {
     // We will prefer anything that is set here
@@ -50,6 +56,18 @@ export default async function preferV2Deployment({
     }
   } else if (!pkg && !hasDockerfile) {
     return `Deploying to Now 2.0, because no ${highlight('Dockerfile')} was found. ${INFO}`;
+  }
+
+  if (client && projectName) {
+    const project = await getProjectByIdOrName(client, projectName);
+
+    if (project instanceof ProjectNotFound) {
+      return `Deploying to Now 2.0, because this project does not yet exist. ${INFO}`;
+    }
+
+    if (project && project.createdAt > 1565186886910) {
+      return `Deploying to Now 2.0, because this project was created on Now 2.0. ${INFO}`;
+    }
   }
 
   return null;
