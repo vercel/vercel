@@ -610,7 +610,7 @@ export default class DevServer {
   /**
    * Launches the `now dev` server.
    */
-  async start(port: number = 3000, bind: string = '127.0.0.1'): Promise<void> {
+  async start(port: number = 3000): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -714,7 +714,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, port, bind);
+        address = await listen(this.server, port);
       } catch (err) {
         this.output.debug(`Got listen error: ${err.code}`);
         if (err.code === 'EADDRINUSE') {
@@ -727,7 +727,7 @@ export default class DevServer {
       }
     }
 
-    this.address = address.replace('127.0.0.1', 'localhost');
+    this.address = address.replace('[::]', 'localhost');
     this.output.ready(`Available at ${link(this.address)}`);
 
     this.serverUrlPrinted = true;

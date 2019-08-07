@@ -6,12 +6,10 @@ import { Output } from '../../util/output';
 import { NowContext } from '../../types';
 
 type Options = {
-  '--debug'?: boolean;
-  '-d'?: boolean;
-  '--bind'?: string;
-  '-b'?: string;
-  '--port'?: number;
-  '-p'?: number;
+  '--debug': boolean;
+  '-d': boolean;
+  '--port': number;
+  '-p': number;
 };
 
 export default async function dev(
@@ -26,12 +24,11 @@ export default async function dev(
 
   const [dir = '.'] = args;
   const cwd = path.resolve(dir);
-  const bind = opts['-b'] || opts['--bind'];
   const port = opts['-p'] || opts['--port'];
-  const debug = opts['-d'] || opts['--debug'] || false;
+  const debug = opts['-d'] || opts['--debug'];
   const devServer = new DevServer(cwd, { output, debug });
 
   process.once('SIGINT', devServer.stop.bind(devServer));
 
-  await devServer.start(port, bind);
+  await devServer.start(port);
 }
