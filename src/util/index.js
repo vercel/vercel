@@ -213,8 +213,13 @@ export default class Now extends EventEmitter {
 
       // This is a useful warning because it prevents people
       // from getting confused about a deployment that renders 404.
-      if (files.length === 0 || files.every(item => item.file.startsWith('.'))) {
-        warn('There are no files (or only files starting with a dot) inside your deployment.');
+      if (
+        files.length === 0 ||
+        files.every(item => item.file.startsWith('.'))
+      ) {
+        warn(
+          'There are no files (or only files starting with a dot) inside your deployment.'
+        );
       }
 
       const queryProps = {};
@@ -253,10 +258,7 @@ export default class Now extends EventEmitter {
         if (isBuilds) {
           // These properties are only used inside Now CLI and
           // are not supported on the API.
-          const exclude = [
-            'github',
-            'scope'
-          ];
+          const exclude = ['github', 'scope'];
 
           // Request properties that are made of a combination of
           // command flags and config properties were already set
@@ -310,7 +312,11 @@ export default class Now extends EventEmitter {
       try {
         body = await res.json();
       } catch (err) {
-        throw new Error('Unexpected response');
+        throw new Error(
+          `Unexpected response error: ${err.message} (${
+            res.status
+          } status code)`
+        );
       }
 
       if (res.status === 429) {
@@ -359,11 +365,7 @@ export default class Now extends EventEmitter {
         return body;
       }
 
-      if (
-        res.status === 404 &&
-        body.error &&
-        body.error.code === 'not_found'
-      ) {
+      if (res.status === 404 && body.error && body.error.code === 'not_found') {
         return body;
       }
 
@@ -435,7 +437,11 @@ export default class Now extends EventEmitter {
 
       if (sizeExceeded > 0) {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(`Please upgrade your plan here: ${chalk.cyan('https://zeit.co/account/plan')}`);
+        log(
+          `Please upgrade your plan here: ${chalk.cyan(
+            'https://zeit.co/account/plan'
+          )}`
+        );
       }
     }
 
@@ -449,7 +455,9 @@ export default class Now extends EventEmitter {
     if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
-          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
+          chalk`Using Node.js {bold ${
+            deployment.nodeVersion
+          }} (requested: {dim \`${engines.node}\`})`
         );
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
@@ -562,7 +570,8 @@ export default class Now extends EventEmitter {
 
   async list(app, { version = 4, meta = {} } = {}) {
     const fetchRetry = async (url, options = {}) => {
-      return this.retry(async bail => {
+      return this.retry(
+        async bail => {
           const res = await this._fetch(url, options);
 
           if (res.status === 200) {
@@ -576,12 +585,13 @@ export default class Now extends EventEmitter {
 
           // If something is wrong with the server, we retry
           throw await responseError(res, 'Failed to list deployments');
-      },
-      {
-        retries: 3,
-        minTimeout: 2500,
-        onRetry: this._onRetry
-      });
+        },
+        {
+          retries: 3,
+          minTimeout: 2500,
+          onRetry: this._onRetry
+        }
+      );
     };
 
     if (!app && !Object.keys(meta).length) {
@@ -589,11 +599,15 @@ export default class Now extends EventEmitter {
       const query = new URLSearchParams({ limit: 35 });
       const projects = await fetchRetry(`/projects/list?${query}`);
 
-      const deployments = await Promise.all(projects.map(async ({ id: projectId }) => {
-        const query = new URLSearchParams({ limit: 1, projectId });
-        const { deployments } = await fetchRetry(`/v${version}/now/deployments?${query}`);
-        return deployments[0];
-      }));
+      const deployments = await Promise.all(
+        projects.map(async ({ id: projectId }) => {
+          const query = new URLSearchParams({ limit: 1, projectId });
+          const { deployments } = await fetchRetry(
+            `/v${version}/now/deployments?${query}`
+          );
+          return deployments[0];
+        })
+      );
 
       return deployments.filter(x => x);
     }
@@ -606,7 +620,9 @@ export default class Now extends EventEmitter {
 
     Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
 
-    const { deployments } = await fetchRetry(`/v${version}/now/deployments?${query}`);
+    const { deployments } = await fetchRetry(
+      `/v${version}/now/deployments?${query}`
+    );
     return deployments;
   }
 
@@ -680,7 +696,9 @@ export default class Now extends EventEmitter {
       isBuilds = deployment.type === 'LAMBDAS';
     }
 
-    const url = `/${isBuilds ? 'v9' : 'v5'}/now/deployments/${encodeURIComponent(id)}`;
+    const url = `/${
+      isBuilds ? 'v9' : 'v5'
+    }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
