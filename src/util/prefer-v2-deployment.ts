@@ -62,7 +62,7 @@ export default async function preferV2Deployment({
     const project = await getProjectByIdOrName(client, projectName);
 
     if (project instanceof ProjectNotFound) {
-      return `Deploying to Now 2.0, because this project does not exist yet. ${INFO}`;
+      return `Deploying to Now 2.0, because this project does not yet exist. ${INFO}`;
     }
 
     if (project && project.createdAt > 1565186886910) {
