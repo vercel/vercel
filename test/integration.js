@@ -177,7 +177,7 @@ test('output the version', async t => {
 test('detect update command', async t => {
   {
     const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+    t.regex(stderr, /yarn global add now@/gm, `Received: "${stderr}"`);
   }
 
   if (process.version.startsWith('v8.')) {
