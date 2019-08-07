@@ -1,6 +1,6 @@
 {
   "name": "@now/go",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/v2/deployments/official-builders/go-now-go",
@@ -18,7 +18,6 @@
   "files": [
     "dist"
   ],
-  "dependencies": {},
   "devDependencies": {
     "@types/debug": "^4.1.3",
     "@types/execa": "^0.9.0",

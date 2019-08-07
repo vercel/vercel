@@ -1,6 +1,6 @@
 {
   "name": "@now/python",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://zeit.co/docs/v2/deployments/official-builders/python-now-python",
@@ -18,7 +18,6 @@
     "test": "./build.sh && jest",
     "prepublishOnly": "./build.sh"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/execa": "^0.9.0",
     "execa": "^1.0.0",
