@@ -16,7 +16,7 @@ export async function hasServerfile(cwd: string) {
   return new Promise(res => exists(join(cwd, 'server.js'), res));
 }
 
-const INFO = `More details: ${link('https://zeit.co/docs/version-detection')}`;
+const INFO = `More: ${link('https://zeit.co/docs/version-detection')}`;
 
 export default async function preferV2Deployment({
   hasDockerfile,
@@ -46,10 +46,10 @@ export default async function preferV2Deployment({
     const { scripts = {} } = pkg;
 
     if (!scripts.start && !scripts['now-start']) {
-      return `Deploying to Now 2.0, because ${highlight('package.json')} is missing a ${cmd('start')} script\n${INFO}`;
+      return `Deploying to Now 2.0, because ${highlight('package.json')} is missing a ${cmd('start')} script. ${INFO}`;
     }
   } else if (!pkg && !hasDockerfile) {
-    return `Deploying to Now 2.0, because no ${highlight('Dockerfile')} was found\n${INFO}`;
+    return `Deploying to Now 2.0, because no ${highlight('Dockerfile')} was found. ${INFO}`;
   }
 
   return null;
