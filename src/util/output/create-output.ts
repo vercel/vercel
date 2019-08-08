@@ -25,7 +25,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function note(str: string) {
-    log(chalk`{yellow.bold NOTE:} ${str}`, chalk.yellow);
+    log(chalk`{yellow.bold NOTE:} ${str}`);
   }
 
   function error(str: string, slug: string | null = null) {
