@@ -801,6 +801,7 @@ export default class Now extends EventEmitter {
     }
 
     opts.headers = opts.headers || {};
+    opts.headers.accept = 'application/json';
     opts.headers.authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
