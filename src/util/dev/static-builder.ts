@@ -1,9 +1,5 @@
 import { basename, extname, join } from 'path';
-import {
-  BuilderParams,
-  BuildResult,
-  ShouldServeParams
-} from './types';
+import { BuilderParams, BuildResult, ShouldServeParams } from './types';
 
 export const version = 2;
 
