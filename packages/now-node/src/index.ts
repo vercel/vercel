@@ -239,7 +239,12 @@ async function compile(
       }
     }
     // Rename .ts -> .js (except for entry)
-    if (path !== entrypoint && tsCompiled.has(path)) {
+    // There is a bug on Windows where entrypoint uses forward slashes
+    // and workPath uses backslashes so we use resolve before comparing.
+    if (
+      resolve(workPath, path) !== resolve(workPath, entrypoint) &&
+      tsCompiled.has(path)
+    ) {
       preparedFiles[
         path.slice(0, -3 - Number(path.endsWith('x'))) + '.js'
       ] = entry;
