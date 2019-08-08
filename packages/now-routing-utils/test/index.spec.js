@@ -115,12 +115,6 @@ describe('normalizeRoutes', () => {
       handle: 'filesystem',
     });
 
-    routes.push({ src: '^/about$', dest: '/about', continue: true });
-    errors.push({
-      message: 'Cannot use both continue and dest',
-      src: '^/about$',
-    });
-
     routes.push({ src: '^/(broken]$' });
     errors.push({
       message: 'Invalid regular expression: "^/(broken]$"',

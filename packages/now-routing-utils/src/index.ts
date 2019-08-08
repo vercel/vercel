@@ -70,14 +70,6 @@ export function normalizeRoutes(
         handling.push(route.handle);
       }
     } else if (route.src) {
-      // typeof normal route
-      if (route.continue && route.dest) {
-        errors.push({
-          message: `Cannot use both continue and dest`,
-          src: route.src,
-        });
-      }
-
       // Route src should always start with a '^'
       if (!route.src.startsWith('^')) {
         route.src = `^${route.src}`;
