@@ -136,7 +136,7 @@ test(
   '[DevServer] Sends `etag` header for static files',
   testFixture('now-dev-headers', async (t, server) => {
     const res = await fetch(`${server.address}/foo.txt`);
-    t.is(res.headers.get('etag'), '"55ca6286e3e4f4fba5d0448333fa99fc5a404a73"');
+    t.is(res.headers.get('etag'), '"d263af8ab880c0b97eb6c5c125b5d44f9e5addd9"');
     t.is(await res.text(), 'hi\n');
   })
 );
