@@ -65,6 +65,7 @@ import {
   HttpHandler,
   InvokePayload,
   InvokeResult,
+  ListenSpec,
   RouteConfig,
   RouteResult
 } from './types';
@@ -610,7 +611,7 @@ export default class DevServer {
   /**
    * Launches the `now dev` server.
    */
-  async start(port: number = 3000): Promise<void> {
+  async start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -713,23 +714,37 @@ export default class DevServer {
 
     let address: string | null = null;
     while (typeof address !== 'string') {
+      console.error({ listenSpec });
       try {
-        address = await listen(this.server, port);
+        address = await listen(this.server, ...listenSpec);
       } catch (err) {
         this.output.debug(`Got listen error: ${err.code}`);
         if (err.code === 'EADDRINUSE') {
-          // Increase port and try again
-          this.output.note(`Requested port ${port} is already in use`);
-          port++;
+          if (typeof listenSpec[0] === 'number') {
+            // Increase port and try again
+            this.output.note(
+              `Requested port ${chalk.yellow(
+                String(listenSpec[0])
+              )} is already in use`
+            );
+            listenSpec[0]++;
+          } else {
+            this.output.error(
+              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
+            );
+            process.exit(1);
+          }
         } else {
           throw err;
         }
       }
     }
 
-    this.address = address.replace('[::]', 'localhost');
-    this.output.ready(`Available at ${link(this.address)}`);
+    this.address = address
+      .replace('[::]', 'localhost')
+      .replace('127.0.0.1', 'localhost');
 
+    this.output.ready(`Available at ${link(this.address)}`);
     this.serverUrlPrinted = true;
   }
 
