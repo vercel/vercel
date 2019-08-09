@@ -119,7 +119,7 @@
     "cache-or-tmp-directory": "1.0.0",
     "chalk": "2.4.2",
     "chokidar": "2.1.6",
-    "clipboardy": "1.1.4",
+    "clipboardy": "2.1.0",
     "codecov": "3.1.0",
     "cpy": "7.2.0",
     "credit-card": "3.0.1",
