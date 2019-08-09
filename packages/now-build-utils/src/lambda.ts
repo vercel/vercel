@@ -86,7 +86,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
     for (const name of names) {
       const file = files[name];
-      const opts = { mode: file.mode, mtime, compress: false };
+      const opts = { mode: file.mode, mtime };
       const symlinkTarget = symlinkTargets.get(name);
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
