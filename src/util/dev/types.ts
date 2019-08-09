@@ -181,3 +181,7 @@ export interface InvokeResult {
   encoding?: string;
   body?: string;
 }
+
+export type SocketSpec = [string];
+export type HostPortSpec = [number, string?];
+export type ListenSpec = SocketSpec | HostPortSpec;

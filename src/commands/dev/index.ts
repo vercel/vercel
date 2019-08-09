@@ -26,20 +26,19 @@ const help = () => {
 
   ${chalk.dim('Options:')}
 
-    -h, --help        Output usage information
-    -d, --debug       Debug mode [off]
-    -b, --bind        Network interface to bind to [127.0.0.1]
-    -p, --port        Port [3000]
+    -h, --help             Output usage information
+    -d, --debug            Debug mode [off]
+    -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Start the \`now dev\` server on port 8080
 
-      ${chalk.cyan('$ now dev --port 8080')}
+      ${chalk.cyan('$ now dev --listen 8080')}
 
-  ${chalk.gray('–')} Make the \`now dev\` server bind to all network interfaces
+  ${chalk.gray('–')} Make the \`now dev\` server bind to localhost on port 5000
 
-      ${chalk.cyan('$ now dev --bind 0.0.0.0')}
+      ${chalk.cyan('$ now dev --listen 127.0.0.1:5000')}
   `);
 };
 
@@ -50,18 +49,25 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--bind': String,
-      '-b': String,
+      '--listen': String,
+      '-l': '--listen',
+
+      // Deprecated
       '--port': Number,
-      '-p': Number
+      '-p': '--port'
     });
+    const debug = argv['--debug'];
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
-    output = createOutput({ debug: argv['--debug'] });
+    output = createOutput({ debug });
 
     // Builders won't show debug logs by default
     // the `NOW_BUILDER_DEBUG` env variable will enable them
-    if (argv['--debug']) {
+    if (debug) {
       process.env.NOW_BUILDER_DEBUG = '1';
+    }
+
+    if ('--port' in argv) {
+      output.warn('`--port` is deprecated, please use `--listen` instead');
     }
   } catch (err) {
     handleError(err);

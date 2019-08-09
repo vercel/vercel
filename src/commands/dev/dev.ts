@@ -2,16 +2,13 @@ import path from 'path';
 
 import pkg from '../../../package.json';
 import DevServer from '../../util/dev/server';
+import parseListen from '../../util/dev/parse-listen';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
 
 type Options = {
   '--debug'?: boolean;
-  '-d'?: boolean;
-  '--bind'?: string;
-  '-b'?: string;
-  '--port'?: number;
-  '-p'?: number;
+  '--listen'?: string;
 };
 
 export default async function dev(
@@ -26,12 +23,11 @@ export default async function dev(
 
   const [dir = '.'] = args;
   const cwd = path.resolve(dir);
-  const bind = opts['-b'] || opts['--bind'];
-  const port = opts['-p'] || opts['--port'];
-  const debug = opts['-d'] || opts['--debug'] || false;
+  const listen = parseListen(opts['--listen'] || '3000');
+  const debug = opts['--debug'] || false;
   const devServer = new DevServer(cwd, { output, debug });
 
   process.once('SIGINT', devServer.stop.bind(devServer));
 
-  await devServer.start(port, bind);
+  await devServer.start(...listen);
 }
