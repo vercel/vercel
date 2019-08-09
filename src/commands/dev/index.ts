@@ -68,6 +68,7 @@ export default async function main(ctx: NowContext) {
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
+      argv['--listen'] = String(argv['--port']);
     }
   } catch (err) {
     handleError(err);
