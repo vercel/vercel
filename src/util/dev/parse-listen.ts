@@ -1,8 +1,11 @@
 import { parse } from 'url';
 import { ListenSpec } from './types';
 
-export default function parseListen(str: string): ListenSpec {
-  const port = Number(str);
+export default function parseListen(
+  str: string,
+  defaultPort = 3000
+): ListenSpec {
+  let port = Number(str);
 
   if (!isNaN(port)) {
     return [port];
@@ -30,11 +33,20 @@ export default function parseListen(str: string): ListenSpec {
 
       return [url.pathname];
     case 'tcp:':
-      url.port = url.port || '3000';
+      url.port = url.port || String(defaultPort);
       return [parseInt(url.port, 10), url.hostname];
     default:
+      if (!url.slashes) {
+        if (url.protocol === null) {
+          return [defaultPort, url.pathname];
+        }
+        port = Number(url.hostname);
+        if (url.protocol && !isNaN(port)) {
+          return [port, url.protocol.substring(0, url.protocol.length - 1)];
+        }
+      }
       throw new Error(
-        `Unknown --listen endpoint scheme (protocol): ${url.protocol}`
+        `Unknown \`--listen\` scheme (protocol): ${url.protocol}`
       );
   }
 }

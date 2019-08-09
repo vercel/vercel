@@ -7,6 +7,7 @@ import { request, createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
+import parseListen from '../src/util/dev/parse-listen';
 
 function testFixture(name, fn) {
   return async t => {
@@ -160,7 +161,7 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
   t.pass();
 });
 
-test('[DevServer] Installs canary build-utils if one more more builders is canary', async t => {
+test('[DevServer] Installs canary build-utils if one more more builders is canary', t => {
   t.is(
     getBuildUtils(['@now/static', '@now/node@canary']),
     '@now/build-utils@canary'
@@ -380,3 +381,26 @@ test(
     }
   })
 );
+
+test('[DevServer] parseListen()', t => {
+  t.deepEqual(parseListen('0'), [0]);
+  t.deepEqual(parseListen('3000'), [3000]);
+  t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
+  t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
+  t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
+  t.deepEqual(parseListen('unix:/home/user/server.sock'), [
+    '/home/user/server.sock'
+  ]);
+  t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
+    '\\\\.\\pipe\\PipeName'
+  ]);
+
+  let err;
+  try {
+    parseListen('bad://url');
+  } catch (_err) {
+    err = _err;
+  }
+  t.truthy(err);
+  t.is(err.message, 'Unknown `--listen` scheme (protocol): bad:');
+});
