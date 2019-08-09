@@ -714,7 +714,6 @@ export default class DevServer {
 
     let address: string | null = null;
     while (typeof address !== 'string') {
-      console.error({ listenSpec });
       try {
         address = await listen(this.server, ...listenSpec);
       } catch (err) {
