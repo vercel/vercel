@@ -13,7 +13,7 @@
     "build": "./build.sh",
     "test": "./build.sh && jest",
     "prepublish": "./build.sh",
-    "now-postinstall": "node dist/install/index.js"
+    "now-postinstall": "node dist/install.js"
   },
   "files": [
     "dist"
