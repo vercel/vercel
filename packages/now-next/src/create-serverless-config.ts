@@ -47,7 +47,10 @@ export default async function createServerlessConfig(
   let target = 'serverless';
   if (nextVersion) {
     try {
-      if (semver.satisfies(nextVersion, `>=${ExperimentalTraceVersion}`)) {
+      if (
+        nextVersion.includes('canary') &&
+        semver.satisfies(nextVersion, `>=${ExperimentalTraceVersion}`)
+      ) {
         target = 'experimental-serverless-trace';
       }
     } catch (_ignored) {}
