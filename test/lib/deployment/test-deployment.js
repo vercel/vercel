@@ -90,6 +90,16 @@ async function testDeployment (
     const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
     console.log('finished testing', JSON.stringify(probe));
 
+    if (probe.status) {
+      if (probe.status !== resp.status) {
+        throw new Error(
+          `Fetched page ${probeUrl} does not return the status ${
+            probe.status
+          } Instead it has ${resp.status}`
+        );
+      }
+    }
+
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
         await fs.writeFile(path.join(__dirname, 'failed-page.txt'), text);
@@ -117,7 +127,7 @@ async function testDeployment (
           );
         }
       });
-    } else {
+    } else if (!probe.status) {
       assert(false, 'probe must have a test condition');
     }
   }
@@ -140,14 +150,10 @@ async function nowDeployIndexTgz (file) {
 }
 
 async function fetchDeploymentUrl (url, opts) {
-  for (let i = 0; i < 500; i += 1) {
+  for (let i = 0; i < 50; i += 1) {
     const resp = await fetch(url, opts);
     const text = await resp.text();
-    if (
-      text
-      && !text.includes('Join Free')
-      && !text.includes('The page could not be found')
-    ) {
+    if (text && !text.includes('Join Free')) {
       return { resp, text };
     }
 

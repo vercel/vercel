@@ -58,19 +58,30 @@ function createRouteFromPath(filePath: string): Route {
       } else if (isLast) {
         const { name: fileName, ext } = parsePath(segment);
         const isIndex = fileName === 'index';
+        const prefix = isIndex ? '\\/' : '';
+
+        const names = [
+          prefix,
+          prefix + escapeName(fileName),
+          prefix + escapeName(fileName) + escapeName(ext),
+        ].filter(Boolean);
 
         // Either filename with extension, filename without extension
         // or nothing when the filename is `index`
-        return `(${escapeName(fileName)}|${escapeName(fileName)}${escapeName(
-          ext
-        )})${isIndex ? '?' : ''}`;
+        return `(${names.join('|')})${isIndex ? '?' : ''}`;
       }
 
       return segment;
     }
   );
 
-  const src = `^/${srcParts.join('/')}$`;
+  const { name: fileName } = parsePath(filePath);
+  const isIndex = fileName === 'index';
+
+  const src = isIndex
+    ? `^/${srcParts.slice(0, -1).join('/')}${srcParts.slice(-1)[0]}$`
+    : `^/${srcParts.join('/')}$`;
+
   const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}`;
 
   return { src, dest };
