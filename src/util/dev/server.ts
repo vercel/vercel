@@ -740,9 +740,11 @@ export default class DevServer {
       }
     }
 
-    this.address = address.replace('127.0.0.1', 'localhost');
-    this.output.ready(`Available at ${link(this.address)}`);
+    this.address = address
+      .replace('[::]', 'localhost')
+      .replace('127.0.0.1', 'localhost');
 
+    this.output.ready(`Available at ${link(this.address)}`);
     this.serverUrlPrinted = true;
   }
 
