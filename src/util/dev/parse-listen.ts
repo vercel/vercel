@@ -30,7 +30,7 @@ export default function parseListen(str: string): ListenSpec {
 
       return [url.pathname];
     case 'tcp:':
-      url.port = url.port || '5000';
+      url.port = url.port || '3000';
       return [parseInt(url.port, 10), url.hostname];
     default:
       throw new Error(
