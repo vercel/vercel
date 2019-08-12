@@ -66,11 +66,13 @@ export default class Client extends EventEmitter {
   }
 
   _fetch(_url: string, opts: FetchOptions = {}) {
+    const parsedUrl = parseUrl(_url, true);
+    const apiUrl = parsedUrl.host ? `${parsedUrl.protocol}//${parsedUrl.host}` : '';
+
     if (opts.useCurrentTeam !== false && this.currentTeam) {
-      const parsedUrl = parseUrl(_url, true);
       const query = parsedUrl.query;
       query.teamId = this.currentTeam;
-      _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;
+      _url = `${apiUrl}${parsedUrl.pathname}?${qs.stringify(query)}`;
       delete opts.useCurrentTeam;
     }
 
@@ -88,7 +90,7 @@ export default class Client extends EventEmitter {
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
+      `${opts.method || 'GET'} ${apiUrl ? '' : this._apiUrl}${_url} ${JSON.stringify(
         opts.body
       ) || ''}`,
       this._agent.fetch(_url, opts as AgentFetchOptions)
