@@ -1,10 +1,24 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@now/static-build", "config": { "zeroConfig": true } }
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    }
   ],
   "probes": [
     { "path": "/", "mustContain": "13-vue" },
+    {
+      "path": "/js/app.js",
+      "headers": { "cache-control": "max-age=31536000, immutable" },
+      "mustContain": "function"
+    },
+    {
+      "path": "/css/app.css",
+      "headers": { "cache-control": "max-age=31536000, immutable" },
+      "mustContain": "font-family"
+    },
     { "path": "/923h3223329ddas", "mustContain": "13-vue" }
   ]
 }
