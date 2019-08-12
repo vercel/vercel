@@ -101,7 +101,7 @@ elif 'app' in __now_variables:
             }
 
             for key, value in environ.items():
-                if isinstance(value, string_types) and key != 'QUERY_STRING':
+                if isinstance(value, string_types):
                     environ[key] = wsgi_encoding_dance(value)
 
             for key, value in headers.items():
