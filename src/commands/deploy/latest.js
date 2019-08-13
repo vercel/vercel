@@ -528,8 +528,8 @@ export default async function main(
     process.stdout.write(url);
   }
 
-  // If an error occured, we want to let it fall down to rendering
-  // builds so the user can see in which build the error occured.
+  // If an error occurred, we want to let it fall down to rendering
+  // builds so the user can see in which build the error occurred.
   if (isReady(deployment)) {
     return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
   }
