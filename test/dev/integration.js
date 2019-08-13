@@ -6,6 +6,10 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
 import { satisfies } from 'semver';
+import { getDistTag } from '../../src/util/get-dist-tag';
+import { version as cliVersion } from '../../package.json';
+
+const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
@@ -43,10 +47,10 @@ function validateResponseHeaders(t, res) {
   );
 }
 
-function testFixture(directory, opts = {}) {
+function testFixture(directory, opts = {}, args = []) {
   port = ++port;
   return {
-    dev: execa(binaryPath, ['dev', directory, '-l', String(port)], {
+    dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
       reject: false,
       detached: true,
       stdio: 'ignore',
@@ -138,9 +142,16 @@ test('[now dev] 01-node', async t => {
 if (satisfies(process.version, '>= 10.9')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
-    const { dev, port } = testFixture(directory);
+    const { dev, port } = testFixture(directory, { stdio: 'pipe' }, ['--debug']);
+
+    let stderr = '';
 
     try {
+      dev.stderr.on('data', async data => {
+        stderr += data.toString();
+        console.log({ stderr });
+      });
+
       // start `now dev` detached in child_process
       dev.unref();
 
@@ -154,6 +165,12 @@ if (satisfies(process.version, '>= 10.9')) {
     } finally {
       dev.kill('SIGTERM');
     }
+
+    if (isCanary()) {
+      stderr.includes('@now/build-utils@canary');
+    } else {
+      stderr.includes('@now/build-utils@latest');
+    }
   });
 } else {
   console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
@@ -166,6 +183,12 @@ test(
     const response = await result;
 
     validateResponseHeaders(t, response);
+
+    if (isCanary()) {
+
+    } else {
+
+    }
 
     const body = await response.text();
     t.regex(body, /Aurelia Navigation Skeleton/gm);
