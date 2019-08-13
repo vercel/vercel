@@ -134,10 +134,12 @@ export default class NowAgent {
       body = opts.body;
     }
 
+    const { host, protocol } = parse(path);
+    const url = host ? `${protocol}//${host}` : this._url;
     const handleCompleted = async <T>(res: T) => {
       currentContext.ongoingFetches--;
       if (
-        currentContext !== this._currContext &&
+        (currentContext !== this._currContext || host) &&
         currentContext.ongoingFetches <= 0
       ) {
         // We've completely moved on to a new socket
@@ -148,7 +150,7 @@ export default class NowAgent {
         // we should check if the stream has closed before disconnecting
         // hasCompleted CAN technically be called before the res body stream is closed
         debug('Closing old socket');
-        currentContext.disconnect(this._url);
+        currentContext.disconnect(url);
       }
 
       this._sema.release();
@@ -156,7 +158,7 @@ export default class NowAgent {
     };
 
     return currentContext
-      .fetch(this._url + path, { ...opts, body })
+      .fetch((host ? '' : this._url) + path, { ...opts, body })
       .then(res => handleCompleted(res))
       .catch((err: Error) => {
         handleCompleted(null);
