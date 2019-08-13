@@ -8,7 +8,7 @@ import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import verifyDomain from './verify-domain';
-import extactDomain from '../alias/extract-domain';
+import extractDomain from '../alias/extract-domain';
 
 export default async function setupDomain(
   output: Output,
