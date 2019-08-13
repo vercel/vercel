@@ -25,10 +25,11 @@ import {
 import { once } from '../once';
 import link from '../output/link';
 import { Output } from '../output';
-import getDistTag from '../get-dist-tag';
 import { relative } from '../path-helpers';
+import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
+import { version as cliVersion } from '../../../package.json';
 import {
   createIgnore,
   staticFiles as getFiles,
@@ -513,7 +514,7 @@ export default class DevServer {
       );
 
       const { builders, errors } = await detectBuilders(files, pkg, {
-        tag: getDistTag() === 'canary' ? 'canary' : 'latest'
+        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest'
       });
 
       if (errors) {
