@@ -1,5 +1,3 @@
-import { Agent as HttpAgent } from 'http';
-import { Agent as HttpsAgent } from 'https';
 import { JsonBody, StreamBody, context } from 'fetch-h2';
 
 // Packages
@@ -28,7 +26,6 @@ export interface AgentFetchOptions {
  * @return {Function} fetch
  */
 export default class NowAgent {
-  _agent: HttpAgent | HttpsAgent | null = null;
   _contexts: ReturnType<typeof context>[];
   _currContext: CurrentContext;
   _output: Output;
@@ -36,7 +33,7 @@ export default class NowAgent {
   _sema: Sema;
   _url: string;
 
-  constructor(url: string, { tls = true, debug = false } = {}) {
+  constructor(url: string, { debug = false } = {}) {
     // We use multiple contexts because each context represent one connection
     // With nginx, we're limited to 1000 requests before a connection is closed
     // http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests
@@ -55,31 +52,6 @@ export default class NowAgent {
     this._protocol = parsed.protocol;
     this._sema = new Sema(20);
     this._output = createOutput({ debug });
-    if (tls) {
-      this._initAgent();
-    }
-  }
-
-  _initAgent() {
-    const _Agent = this._protocol === 'https:' ? HttpsAgent : HttpAgent;
-    this._agent = new _Agent({
-      keepAlive: true,
-      keepAliveMsecs: 10000,
-      maxSockets: 8
-    });
-
-    // We are ignoring this error because agent implements an EventEmitter
-    // but it doesn't appear in hte definition
-    // @ts-ignore
-    this._agent.on('error', error => this._onError(error, this._agent));
-  }
-
-  _onError(error: Error, agent: HttpAgent | HttpsAgent) {
-    const { debug } = this._output;
-    debug(`Agent connection error ${error}\n${error.stack}`);
-    if (this._agent === agent) {
-      this._agent = null;
-    }
   }
 
   setConcurrency({
@@ -116,11 +88,6 @@ export default class NowAgent {
       `Concurrent requests on socket #${this._contexts.length}: ${this
         ._currContext.ongoingFetches}`
     );
-
-    if (!this._agent) {
-      debug('Re-initializing agent');
-      this._initAgent();
-    }
 
     let body: JsonBody | StreamBody | string | undefined;
     if (opts.body && typeof opts.body === 'object') {
@@ -169,10 +136,6 @@ export default class NowAgent {
   close() {
     const { debug } = this._output;
     debug('Closing agent');
-
-    if (this._agent) {
-      this._agent.destroy();
-    }
 
     this._currContext.disconnect(this._url);
   }
