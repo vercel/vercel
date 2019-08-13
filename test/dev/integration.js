@@ -149,7 +149,6 @@ if (satisfies(process.version, '>= 10.9')) {
     try {
       dev.stderr.on('data', async data => {
         stderr += data.toString();
-        console.log({ stderr });
       });
 
       // start `now dev` detached in child_process
