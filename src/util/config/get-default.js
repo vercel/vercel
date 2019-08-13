@@ -3,7 +3,7 @@ export const getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. For more information see the global configuration documentation: https://bit.ly/2qAK8bb',
+      'This is your Now config file. For more information see the global configuration documentation: https://zeit.co/docs/v2/advanced/global-configuration',
     collectMetrics: true
   };
 
@@ -66,7 +66,7 @@ export const getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      'This is your Now credentials file. DON\'T SHARE! More: https://bit.ly/2qAK8bb'
+      'This is your Now credentials file. DO NOT SHARE! More: https://zeit.co/docs/v2/advanced/global-configuration'
   };
 
   if (existing) {
