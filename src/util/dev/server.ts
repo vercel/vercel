@@ -28,6 +28,7 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
+import { version as cliVersion } from '../../../package.json';
 import {
   createIgnore,
   staticFiles as getFiles,
@@ -511,7 +512,9 @@ export default class DevServer {
           `filtered out ${allFiles.length - files.length} files`
       );
 
-      const { builders, errors } = await detectBuilders(files, pkg);
+      const { builders, errors } = await detectBuilders(files, pkg, {
+        tag: cliVersion.includes('canary') ? 'canary' : 'latest'
+      });
 
       if (errors) {
         this.output.error(errors[0].message);
