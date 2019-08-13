@@ -451,7 +451,7 @@ export const build = async ({
     try {
       if (
         realNextVersion &&
-        semver.satisfies(realNextVersion, `<${ExperimentalTraceVersion}`)
+        semver.lt(realNextVersion, ExperimentalTraceVersion)
       ) {
         if (config.debug) {
           console.log(
