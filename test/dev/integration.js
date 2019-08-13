@@ -184,12 +184,6 @@ test(
 
     validateResponseHeaders(t, response);
 
-    if (isCanary()) {
-
-    } else {
-
-    }
-
     const body = await response.text();
     t.regex(body, /Aurelia Navigation Skeleton/gm);
   })
