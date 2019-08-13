@@ -23,6 +23,7 @@ export default {
   logout: 'logout',
   logs: 'logs',
   ls: 'list',
+  project: 'projects',
   projects: 'projects',
   remove: 'remove',
   rm: 'remove',
