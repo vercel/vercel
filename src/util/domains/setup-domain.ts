@@ -16,7 +16,7 @@ export default async function setupDomain(
   alias: string,
   contextName: string
 ) {
-  const aliasDomain = extactDomain(alias);
+  const aliasDomain = extractDomain(alias);
   const parsedDomain = psl.parse(aliasDomain);
   if (parsedDomain.error) {
     return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
