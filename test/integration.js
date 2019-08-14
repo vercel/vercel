@@ -244,7 +244,7 @@ test('detect update command', async t => {
   }
 });
 
-test.only('log in', async t => {
+test('log in', async t => {
   const { stdout, code } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
@@ -1539,7 +1539,7 @@ test('print correct link in legacy warning', async t => {
   t.regex(stderr, /migrate-to-zeit-now/);
 });
 
-test.only('`now rm` 404 exits quickly', async t => {
+test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { code, stderr } = await execute([
     'rm',
