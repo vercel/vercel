@@ -234,7 +234,7 @@ test('log in', async t => {
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
-  const { stdout, stderr, code } = await execa(
+  let { stdout, stderr, code } = await execa(
     binaryPath,
     [target, '--public', '--name', session, ...defaultArgs],
     {
@@ -250,12 +250,27 @@ test('deploy a node microservice', async t => {
   t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  let response = await fetch(href);
+  t.is(response.status, 200);
   const contentType = response.headers.get('content-type');
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
   t.is(content.id, contextName);
+
+
+  // Test that it can be deleted via `now rm`
+  ({ stdout, stderr, code }) = await execa(
+    binaryPath,
+    ['rm', '--yes', href],
+    {
+      reject: false
+    }
+  );
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+
+  response = await fetch(href);
+  t.is(response.status, 404);
 });
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
