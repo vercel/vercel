@@ -260,13 +260,13 @@ test('deploy a node microservice', async t => {
 
 
   // Test that it can be deleted via `now rm`
-  ({ stdout, stderr, code }) = await execa(
+  ({ stdout, stderr, code } = await execa(
     binaryPath,
     ['rm', '--yes', href],
     {
       reject: false
     }
-  );
+  ));
   t.is(code, 0, formatOutput({ stdout, stderr }));
 
   response = await fetch(href);
