@@ -56,13 +56,13 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Enable your deployment in all datacenters (min: 0, max: 1)
+  ${chalk.gray('–')} Enable your deployment in all datacenters (min: 0, max: auto)
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh all')}
 
   ${chalk.gray(
     '-'
-  )} Enable your deployment in the SFO datacenter (min: 0, max: 1)
+  )} Enable your deployment in the SFO datacenter (min: 0, max: auto)
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh sfo')}
 
