@@ -533,12 +533,12 @@ export const build = async ({
         const label = `Creating lambda for page: "${page}"...`;
         console.time(label);
 
-        const pageFileName = path.relative(workPath, pages[page].fsPath);
+        const pageFileName = path.normalize(
+          path.relative(workPath, pages[page].fsPath)
+        );
         const launcher = launcherData.replace(
           /__LAUNCHER_PAGE_PATH__/g,
-          JSON.stringify(
-            requiresTracing ? path.join('./', pageFileName) : './page'
-          )
+          JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
         );
         const launcherFiles = {
           'now__bridge.js': new FileFsRef({
