@@ -152,7 +152,6 @@ export default async function main(ctx) {
         ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
       )
     ]);
-    console.error({ deploymentList, projectList });
 
     deployments = deploymentList.filter(searchFilter);
     projects = projectList.filter(searchFilter);
