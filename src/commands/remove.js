@@ -96,7 +96,10 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
@@ -109,6 +112,8 @@ export default async function main(ctx) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
+    client.close();
+
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
@@ -116,8 +121,6 @@ export default async function main(ctx) {
 
     throw err;
   }
-
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
   const cancelWait = wait(
     `Fetching deployment(s) ${ids
@@ -131,43 +134,57 @@ export default async function main(ctx) {
   const findStart = Date.now();
 
   try {
-    const searchFilter = (d) => ids.some((id) => (
-      (d && !(d instanceof NowError)) && (
-      d.uid === id ||
-      d.name === id ||
-      d.url === normalizeURL(id)
-    )));
+    const searchFilter = d =>
+      ids.some(
+        id =>
+          d &&
+          !(d instanceof NowError) &&
+          (d.uid === id || d.name === id || d.url === normalizeURL(id))
+      );
 
     const [deploymentList, projectList] = await Promise.all([
-      Promise.all(ids.map((idOrHost) => getDeploymentByIdOrHost(now, contextName, idOrHost))),
-      Promise.all(ids.map(async (idOrName) => getProjectByIdOrName(now, idOrName)))
+      Promise.all(
+        ids.map(idOrHost =>
+          getDeploymentByIdOrHost(client, contextName, idOrHost)
+        )
+      ),
+      Promise.all(
+        ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
+      )
     ]);
 
     deployments = deploymentList.filter(searchFilter);
     projects = projectList.filter(searchFilter);
 
     // When `--safe` is set we want to replace all projects
-    // with with deployments to verify the aliases
+    // with deployments to verify the aliases
     if (argv.safe) {
-      const projectDeployments = await Promise.all(projects.map((project) => {
-        return getDeploymentsByProjectId(client, project.id, { max: 201, continue: true });
-      }));
+      const projectDeployments = await Promise.all(
+        projects.map(project => {
+          return getDeploymentsByProjectId(client, project.id, {
+            max: 201,
+            continue: true
+          });
+        })
+      );
 
       projectDeployments
         .slice(0, 201)
-        .map((pDeployments) => deployments.push(...pDeployments));
+        .map(pDeployments => deployments.push(...pDeployments));
 
       projects = [];
     } else {
       // Remove all deployments that are included in the projects
-      deployments = deployments.filter((d) => !projects.some((p) => p.name === d.name));
+      deployments = deployments.filter(
+        d => !projects.some(p => p.name === d.name)
+      );
     }
 
-    aliases = await Promise.all(deployments.map(depl => getAliases(now, depl.uid)));
+    aliases = await Promise.all(
+      deployments.map(depl => getAliases(client, depl.uid))
+    );
+  } finally {
     cancelWait();
-  } catch (err) {
-    cancelWait();
-    throw err;
   }
 
   deployments = deployments.filter((match, i) => {
@@ -182,21 +199,24 @@ export default async function main(ctx) {
   if (deployments.length === 0 && projects.length === 0) {
     log(
       `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
-      `or projects matching ` +
-      `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd('now ls')} to list.`
+        `or projects matching ` +
+        `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd(
+          'now ls'
+        )} to list.`
     );
-    return 0;
+    client.close();
+    return 1;
   }
 
   log(
     `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
-    `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
+      `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
 
   if (deployments.length > 200) {
     output.warn(
       `Only 200 deployments can get deleted at once. ` +
-      `Please continue 10 minutes after deletion to remove the rest.`
+        `Please continue 10 minutes after deletion to remove the rest.`
     );
   }
 
@@ -209,24 +229,22 @@ export default async function main(ctx) {
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
-      now.close();
-
-      // Hangs otherwise
-      process.exit(1);
+      client.close();
       return 1;
     }
   }
 
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const start = new Date();
 
   await Promise.all([
     ...deployments.map(depl => now.remove(depl.uid, { hard })),
-    ...projects.map(project => removeProject(now, project.id))
+    ...projects.map(project => removeProject(client, project.id))
   ]);
 
   success(
     `Removed ${deploymentsAndProjects(deployments, projects)} ` +
-    `${elapsed(Date.now() - start)}`
+      `${elapsed(Date.now() - start)}`
   );
 
   deployments.forEach(depl => {
@@ -237,14 +255,7 @@ export default async function main(ctx) {
     console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
   });
 
-  // if we close normally, we get a really odd error:
-  //  Error: unexpected end of file
-  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17) Error: unexpected end of file
-  //  at Zlib.zlibOnError [as onerror] (zlib.js:142:17)
-  // which seems fixable only by exiting directly here, and only
-  // impacts this command, consistently
-  // now.close()
-  process.exit(0);
+  client.close();
   return 0;
 }
 
@@ -252,8 +263,11 @@ function readConfirmation(deployments, projects, output) {
   return new Promise(resolve => {
     if (deployments.length > 0) {
       output.log(
-        `The following ${plural('deployment', deployments.length, deployments.length > 1)} ` +
-        `will be permanently removed:`
+        `The following ${plural(
+          'deployment',
+          deployments.length,
+          deployments.length > 1
+        )} will be permanently removed:`
       );
 
       const deploymentTable = table(
@@ -268,18 +282,24 @@ function readConfirmation(deployments, projects, output) {
     }
 
     for (const depl of deployments) {
-      for (const {alias} of depl.aliases) {
+      for (const { alias } of depl.aliases) {
         output.warn(
           `${chalk.underline(`https://${alias}`)} is an alias for ` +
-          `${chalk.bold(depl.url)} and will be removed`
+            `${chalk.bold(depl.url)} and will be removed`
         );
       }
     }
 
     if (projects.length > 0) {
       console.log(
-        `The following ${plural('project', projects.length, projects.length > 1)} will be permanently removed, ` +
-        `including all ${projects.length > 1 ? 'their' : 'its'} deployments and aliases:`
+        `The following ${plural(
+          'project',
+          projects.length,
+          projects.length > 1
+        )} will be permanently removed, ` +
+          `including all ${
+            projects.length > 1 ? 'their' : 'its'
+          } deployments and aliases:`
       );
 
       for (const project of projects) {
@@ -300,9 +320,13 @@ function readConfirmation(deployments, projects, output) {
   });
 }
 
-function deploymentsAndProjects(deployments = [], projects = [], conjunction = 'and') {
+function deploymentsAndProjects(
+  deployments = [],
+  projects = [],
+  conjunction = 'and'
+) {
   if (!projects || projects.length === 0) {
-    return `${plural('deployment', deployments.length, true)}`
+    return `${plural('deployment', deployments.length, true)}`;
   }
 
   if (!deployments || deployments.length === 0) {

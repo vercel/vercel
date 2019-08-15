@@ -48,7 +48,7 @@ const waitForDeployment = async href => {
     if (current - start > max || response.status >= 500) {
       throw new Error(
         `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
-        `Received status ${response.status}:\n"${await response.text()}"`
+          `Received status ${response.status}:\n"${await response.text()}"`
       );
     }
 
@@ -57,34 +57,44 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenWithRetry(url, retries = 3) {
-  return retry(async () => {
-    const res = await fetch(url);
+  return retry(
+    async () => {
+      const res = await fetch(url);
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
-    }
+      if (!res.ok) {
+        throw new Error(
+          `Failed to fetch ${url}, received status ${res.status}`
+        );
+      }
 
-    const data = await res.json();
+      const data = await res.json();
 
-    return data.token;
-  }, { retries, factor: 1 });
+      return data.token;
+    },
+    { retries, factor: 1 }
+  );
 }
 
 function fetchTokenInformation(token, retries = 3) {
   const url = `https://api.zeit.co/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
-  return retry(async () => {
-    const res = await fetch(url, { headers });
+  return retry(
+    async () => {
+      const res = await fetch(url, { headers });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${url}, received status ${res.status}`);
-    }
+      if (!res.ok) {
+        throw new Error(
+          `Failed to fetch ${url}, received status ${res.status}`
+        );
+      }
 
-    const data = await res.json();
+      const data = await res.json();
 
-    return data.user;
-  }, { retries, factor: 1 });
+      return data.user;
+    },
+    { retries, factor: 1 }
+  );
 }
 
 function formatOutput({ stderr, stdout }) {
@@ -114,26 +124,29 @@ if (!process.env.CI) {
 
 test.before(async () => {
   try {
-    await retry(async () => {
-      const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-      const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-      const url = Buffer.from(str, 'base64').toString();
-      const token = await fetchTokenWithRetry(url);
+    await retry(
+      async () => {
+        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+        const url = Buffer.from(str, 'base64').toString();
+        const token = await fetchTokenWithRetry(url);
 
-      if (!fs.existsSync(location)) {
-        await createDirectory(location);
-      }
+        if (!fs.existsSync(location)) {
+          await createDirectory(location);
+        }
 
-      await writeFile(
-        path.join(location, `auth.json`),
-        JSON.stringify({ token })
-      );
+        await writeFile(
+          path.join(location, `auth.json`),
+          JSON.stringify({ token })
+        );
 
-      const user = await fetchTokenInformation(token);
+        const user = await fetchTokenInformation(token);
 
-      email = user.email;
-      contextName = user.email.split('@')[0];
-    }, { retries: 3, factor: 1 });
+        email = user.email;
+        contextName = user.email.split('@')[0];
+      },
+      { retries: 3, factor: 1 }
+    );
 
     await prepareFixtures(contextName);
   } catch (err) {
@@ -149,13 +162,20 @@ const execute = (args, options) =>
   });
 
 test('print the deploy help message', async t => {
-  const { stderr, stdout, code } = await execa(binaryPath, ['help', ...defaultArgs], {
-    reject: false
-  });
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    ['help', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   t.is(code, 2);
   t.true(stderr.includes(deployHelpMessage), `Received:\n${stderr}\n${stdout}`);
-  t.false(stderr.includes('ExperimentalWarning'), `Received:\n${stderr}\n${stdout}`);
+  t.false(
+    stderr.includes('ExperimentalWarning'),
+    `Received:\n${stderr}\n${stdout}`
+  );
 });
 
 test('output the version', async t => {
@@ -203,14 +223,24 @@ test('detect update command', async t => {
     // Install now to `binPrefix`
     const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
 
-    const installResult = await execa('npm', ['i', '-g', pkgPath], { env: process.env });
-    t.is(installResult.code, 0);
-
-    const { stdout, stderr } = await execa(path.join(binPrefix, 'now'), ['update'], {
+    const installResult = await execa('npm', ['i', '-g', pkgPath], {
       env: process.env
     });
+    t.is(installResult.code, 0);
 
-    t.regex(stderr, /npm install -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
+    const { stdout, stderr } = await execa(
+      path.join(binPrefix, 'now'),
+      ['update'],
+      {
+        env: process.env
+      }
+    );
+
+    t.regex(
+      stderr,
+      /npm install -g now@/gm,
+      `Received:\n"${stderr}"\n"${stdout}"`
+    );
   }
 });
 
@@ -234,7 +264,7 @@ test('log in', async t => {
 test('deploy a node microservice', async t => {
   const target = fixture('node');
 
-  const { stdout, stderr, code } = await execa(
+  let { stdout, stderr, code } = await execa(
     binaryPath,
     [target, '--public', '--name', session, ...defaultArgs],
     {
@@ -250,12 +280,22 @@ test('deploy a node microservice', async t => {
   t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  let response = await fetch(href);
+  t.is(response.status, 200);
   const contentType = response.headers.get('content-type');
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
   t.is(content.id, contextName);
+
+  // Test that it can be deleted via `now rm`
+  ({ stdout, stderr, code } = await execa(binaryPath, ['rm', '--yes', href], {
+    reject: false
+  }));
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+
+  response = await fetch(href);
+  t.is(response.status, 404);
 });
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
@@ -473,8 +513,11 @@ test('list the scopes', async t => {
 
   t.is(code, 0);
 
-  const include = `✔ ${contextName}     ${email}`
-  t.true(stdout.includes(include), `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`);
+  const include = `✔ ${contextName}     ${email}`;
+  t.true(
+    stdout.includes(include),
+    `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
+  );
 });
 
 test('list the payment methods', async t => {
@@ -1319,7 +1362,10 @@ test('initialize example "angular"', async t => {
 
   t.is(code, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
-  t.true(verifyExampleAngular(cwd, 'angular'), formatOutput({ stdout, stderr }));
+  t.true(
+    verifyExampleAngular(cwd, 'angular'),
+    formatOutput({ stdout, stderr })
+  );
 });
 
 test('initialize example ("angular") to specified directory', async t => {
@@ -1339,7 +1385,10 @@ test('initialize selected example ("amp")', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "amp" example in';
 
-  const { stdout, stderr, code } = await execute(['init'], { cwd, input: '\n' });
+  const { stdout, stderr, code } = await execute(['init'], {
+    cwd,
+    input: '\n'
+  });
 
   t.is(code, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
@@ -1488,6 +1537,26 @@ test('print correct link in legacy warning', async t => {
   // since the package.json does not have a start script
   t.is(code, 1);
   t.regex(stderr, /migrate-to-zeit-now/);
+});
+
+test('`now rm` 404 exits quickly', async t => {
+  const start = Date.now();
+  const { code, stderr } = await execute([
+    'rm',
+    'this.is.a.deployment.that.does.not.exist.example.com'
+  ]);
+  const delta = Date.now() - start;
+
+  // "does not exist" case is exit code 1, similar to Unix `rm`
+  t.is(code, 1);
+  t.truthy(
+    stderr.includes(
+      'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
+    )
+  );
+
+  // "quickly" meaning < 5 seconds, because it used to hang from a previous bug
+  t.truthy(delta < 5000);
 });
 
 test.after.always(async () => {
