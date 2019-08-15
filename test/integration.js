@@ -294,6 +294,9 @@ test('deploy a node microservice', async t => {
   }));
   t.is(code, 0, formatOutput({ stdout, stderr }));
 
+  // Give 2 seconds for the proxy purge to propagate
+  await sleep(2000);
+
   response = await fetch(href);
   t.is(response.status, 404);
 });
