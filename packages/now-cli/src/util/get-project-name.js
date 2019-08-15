@@ -1,6 +1,11 @@
-import {basename} from 'path';
+import { basename } from 'path';
 
-export default function getProjectName({argv, nowConfig, isFile, paths, pre}) {
+export default function getProjectName({
+  argv,
+  nowConfig,
+  paths,
+  pre
+}) {
   const nameCli = argv['--name'] || argv.name;
 
   if (nameCli) {
@@ -17,10 +22,6 @@ export default function getProjectName({argv, nowConfig, isFile, paths, pre}) {
     return pre;
   }
 
-  if (isFile || paths.length > 1) {
-    return 'files';
-  }
-
-  // Otherwise let's send the name of the directory
+  // Otherwise let's send the name of the file/directory
   return basename(paths[0]);
-};
+}
