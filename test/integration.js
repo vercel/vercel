@@ -1531,8 +1531,6 @@ test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
   const { code, stderr } = await execute([deploymentPath]);
 
-  console.log(stderr);
-
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(code, 1);
