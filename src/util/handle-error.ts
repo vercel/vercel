@@ -24,7 +24,7 @@ export default function handleError(
     );
   } else if ((<APIError>error).status === 429) {
     // Rate limited: display the message from the server-side,
-    // which containsmore details
+    // which contains more details
     console.error(errorOutput(error.message));
   } else if ((<APIError>error).code === 'size_limit_exceeded') {
     const { sizeLimit = 0 } = <APIError>error;
