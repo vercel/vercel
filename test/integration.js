@@ -289,7 +289,7 @@ test('deploy a node microservice', async t => {
   t.is(content.id, contextName);
 
   // Test that it can be deleted via `now rm`
-  ({ stdout, stderr, code } = await execa(binaryPath, ['rm', '--yes', href], {
+  ({ stdout, stderr, code } = await execa(binaryPath, ['rm', '--yes', href, ...defaultArgs], {
     reject: false
   }));
   t.is(code, 0, formatOutput({ stdout, stderr }));
