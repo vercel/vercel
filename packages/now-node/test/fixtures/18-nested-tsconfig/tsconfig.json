@@ -6,7 +6,7 @@
     "target": "esnext",
     "module": "esnext",
     "lib": ["dom", "es2017"],
-    "noEmit": true,
+    "noEmitOnError": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,

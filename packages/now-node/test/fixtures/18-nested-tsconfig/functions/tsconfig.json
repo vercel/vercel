@@ -15,7 +15,7 @@
     "strictPropertyInitialization": true /* Enable strict checking of property initialization in classes. */,
     "noImplicitThis": true /* Raise error on 'this' expressions with an implied 'any' type. */,
     "alwaysStrict": true /* Parse in strict mode and emit "use strict" for each source file. */,
-
+    "noEmitOnError": true,
     "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
   },
   "exclude": ["./screenshot-api/**"]

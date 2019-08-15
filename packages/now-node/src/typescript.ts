@@ -112,11 +112,11 @@ function normalizeSlashes(value: string): string {
 /**
  * Return type for registering `ts-node`.
  */
-export type Compile = (
+export type Register = (
   code: string,
   fileName: string,
   skipTypeCheck?: boolean
-) => { code: string; map: string };
+) => SourceOutput;
 
 /**
  * Cached fs operation wrapper.
@@ -136,7 +136,7 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
 /**
  * Register TypeScript compiler.
  */
-export function init(opts: Options = {}): Compile {
+export function register(opts: Options = {}): Register {
   const options = Object.assign({}, DEFAULTS, opts);
 
   const ignoreDiagnostics = [
@@ -148,7 +148,7 @@ export function init(opts: Options = {}): Compile {
 
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
-  const nowNodeBase = resolve(__dirname, '../../../');
+  const nowNodeBase = resolve(__dirname, '..', '..', '..');
   try {
     var compiler = require.resolve(options.compiler || 'typescript', {
       paths: [cwd, nowNodeBase],
@@ -182,14 +182,18 @@ export function init(opts: Options = {}): Compile {
     return new Error(diagnosticText);
   }
 
-  function reportTSError(configDiagnosticList: _ts.Diagnostic[]) {
-    const error = createTSError(configDiagnosticList);
-    if (options.logError) {
-      // Print error in red color and continue execution.
-      console.error('\x1b[31m%s\x1b[0m', error);
-    } else {
-      // Throw error and exit the script.
-      throw error;
+  function reportTSError(
+    diagnostics: _ts.Diagnostic[],
+    shouldExit: boolean | undefined
+  ) {
+    if (!diagnostics || diagnostics.length === 0) {
+      return;
+    }
+    const error = createTSError(diagnostics);
+    // Print error in red color and continue execution.
+    console.error('\x1b[31m%s\x1b[0m', error);
+    if (shouldExit) {
+      process.exit(1);
     }
   }
 
@@ -204,7 +208,7 @@ export function init(opts: Options = {}): Compile {
     /**
      * Create the basic required function using transpile mode.
      */
-    let getOutput = function(code: string, fileName: string): [string, string] {
+    let getOutput = function(code: string, fileName: string): SourceOutput {
       const result = ts.transpileModule(code, {
         fileName,
         transformers,
@@ -216,16 +220,13 @@ export function init(opts: Options = {}): Compile {
         ? filterDiagnostics(result.diagnostics, ignoreDiagnostics)
         : [];
 
-      if (diagnosticList.length) reportTSError(diagnosticList);
+      reportTSError(diagnosticList, config.options.noEmitOnError);
 
-      return [result.outputText, result.sourceMapText as string];
+      return { code: result.outputText, map: result.sourceMapText as string };
     };
 
     // Use full language services when the fast option is disabled.
-    let getOutputTypeCheck: (
-      code: string,
-      fileName: string
-    ) => [string, string];
+    let getOutputTypeCheck: (code: string, fileName: string) => SourceOutput;
     {
       const memoryCache = new MemoryCache(config.fileNames);
       const cachedReadFile = cachedLookup(debugFn('readFile', readFile));
@@ -302,7 +303,7 @@ export function init(opts: Options = {}): Compile {
           ignoreDiagnostics
         );
 
-        if (diagnosticList.length) reportTSError(diagnosticList);
+        reportTSError(diagnosticList, config.options.noEmitOnError);
 
         if (output.emitSkipped) {
           throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
@@ -319,7 +320,10 @@ export function init(opts: Options = {}): Compile {
           );
         }
 
-        return [output.outputFiles[1].text, output.outputFiles[0].text];
+        return {
+          code: output.outputFiles[1].text,
+          map: output.outputFiles[0].text,
+        };
       };
     }
 
@@ -340,7 +344,7 @@ export function init(opts: Options = {}): Compile {
 
     // Read project configuration when available.
     configFileName = options.project
-      ? normalizeSlashes(resolve(cwd, options.project))
+      ? ts.findConfigFile(normalizeSlashes(options.project), fileExists)
       : ts.findConfigFile(normalizeSlashes(cwd), fileExists);
 
     if (configFileName) return normalizeSlashes(configFileName);
@@ -369,7 +373,7 @@ export function init(opts: Options = {}): Compile {
           ignoreDiagnostics
         );
         // Render the configuration errors.
-        if (configDiagnosticList.length) reportTSError(configDiagnosticList);
+        reportTSError(configDiagnosticList, true);
         return errorResult;
       }
 
@@ -407,17 +411,21 @@ export function init(opts: Options = {}): Compile {
         ignoreDiagnostics
       );
       // Render the configuration errors.
-      if (configDiagnosticList.length) reportTSError(configDiagnosticList);
+      reportTSError(configDiagnosticList, configResult.options.noEmitOnError);
     }
 
     return configResult;
   }
 
   // Create a simple TypeScript compiler proxy.
-  function compile(code: string, fileName: string, skipTypeCheck?: boolean) {
+  function compile(
+    code: string,
+    fileName: string,
+    skipTypeCheck?: boolean
+  ): SourceOutput {
     const configFileName = detectConfig(fileName);
     const build = getBuild(configFileName);
-    const [value, sourceMap] = (skipTypeCheck
+    const { code: value, map: sourceMap } = (skipTypeCheck
       ? build.getOutput
       : build.getOutputTypeCheck)(code, fileName);
     const output = {
@@ -435,8 +443,8 @@ export function init(opts: Options = {}): Compile {
 }
 
 interface Build {
-  getOutput(code: string, fileName: string): [string, string];
-  getOutputTypeCheck(code: string, fileName: string): [string, string];
+  getOutput(code: string, fileName: string): SourceOutput;
+  getOutputTypeCheck(code: string, fileName: string): SourceOutput;
 }
 
 /**
@@ -470,6 +478,11 @@ function fixConfig(ts: TSCommon, config: _ts.ParsedCommandLine) {
 
   return config;
 }
+
+/**
+ * Internal source output.
+ */
+type SourceOutput = { code: string; map: string };
 
 /**
  * Filter diagnostics.

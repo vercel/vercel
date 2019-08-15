@@ -21,7 +21,7 @@ import {
 export { NowRequest, NowResponse } from './types';
 import { makeLauncher } from './launcher';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import { Compile } from './typescript';
+import { Register, register } from './typescript';
 
 interface CompilerConfig {
   debug?: boolean;
@@ -134,30 +134,20 @@ async function compile(
 
   const preparedFiles: Files = {};
 
-  let tsCompile: Compile;
+  let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(workPath, path);
     if (config.debug) {
       console.log('compiling typescript file ' + relPath);
     }
     if (!tsCompile) {
-      tsCompile = require('./typescript').init({
-        basePath: workPath,
-        logError: true,
+      tsCompile = register({
+        basePath: workPath, // The base is the same as root now.json dir
+        project: path, // Resolve tsconfig.json from entrypoint dir
+        files: true, // Include all files such as global `.d.ts`
       });
     }
-    try {
-      var { code, map } = tsCompile(source, path);
-    } catch (e) {
-      if (config.debug) {
-        console.error(e);
-        console.log(
-          'TypeScript compilation failed, falling back to basic transformModule'
-        );
-      }
-      // If TypeScript compile fails, attempt a direct non-typecheck compile
-      var { code, map } = tsCompile(source, path, true);
-    }
+    const { code, map } = tsCompile(source, path);
     tsCompiled.add(relPath);
     preparedFiles[
       relPath.slice(0, -3 - Number(path.endsWith('x'))) + '.js.map'
