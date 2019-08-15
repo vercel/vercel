@@ -247,7 +247,7 @@ export default class DevServer {
             filesChangedArray,
             filesRemovedArray
           ).catch((err: Error) => {
-            this.output.warn(`An error occured while rebuilding ${match.src}:`);
+            this.output.warn(`An error occurred while rebuilding ${match.src}:`);
             console.error(err.stack);
           });
         } else {
