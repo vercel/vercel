@@ -98,9 +98,20 @@ export default async function buy(
     return 0;
   }
 
+  let buyResult;
   const purchaseStamp = stamp();
   const stopPurchaseSpinner = wait('Purchasing');
-  const buyResult = await purchaseDomain(client, domainName, price);
+
+  try {
+    buyResult = await purchaseDomain(client, domainName, price);
+  } catch (err) {
+    stopPurchaseSpinner();
+    output.error(
+      'An unexpected error occurred while purchasing your domain. Please try again later.'
+    );
+    output.debug(`Server response: ${err.message}`);
+    return 1;
+  }
 
   stopPurchaseSpinner();
 
