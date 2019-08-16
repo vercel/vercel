@@ -155,6 +155,7 @@
     "jaro-winkler": "0.2.8",
     "jsonlines": "0.1.1",
     "load-json-file": "3.0.0",
+    "lodash.head": "4.0.1",
     "micro": "9.1.2",
     "mime-types": "2.1.24",
     "minimatch": "3.0.4",
@@ -196,10 +197,7 @@
     "which": "1.3.1",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
+    "xdg-portable": "7.0.3",
     "yarn": "1.17.3"
-  },
-  "dependencies": {
-    "lodash.head": "4.0.1",
-    "xdg-portable": "7.0.3"
   }
 }
