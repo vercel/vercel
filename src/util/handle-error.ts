@@ -23,22 +23,9 @@ export default function handleError(
       errorOutput('Authentication error. Run `now login` to log-in again.')
     );
   } else if ((<APIError>error).status === 429) {
-    if ((<APIError>error).retryAfter === 'never') {
-      console.error(errorOutput(error.message));
-    } else if (!(<APIError>error).retryAfter) {
-      console.error(
-        errorOutput('Rate limit exceeded error. Please try later.')
-      );
-    } else {
-      console.error(
-        errorOutput(
-          `Rate limit exceeded error. Try again in ${ms(
-            ((<APIError>error).retryAfter as number) * 1000,
-            { long: true }
-          )}, or upgrade your plan here: ${chalk.cyan('https://zeit.co/account/plan')}`
-        )
-      );
-    }
+    // Rate limited: display the message from the server-side,
+    // which contains more details
+    console.error(errorOutput(error.message));
   } else if ((<APIError>error).code === 'size_limit_exceeded') {
     const { sizeLimit = 0 } = <APIError>error;
     console.error(
