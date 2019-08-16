@@ -46,34 +46,10 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   }
 }
 
-async function pipInstallUser(pipPath: string, ...args: string[]) {
-  console.log(
-    `running "pip install --disable-pip-version-check --user ${args.join(
-      ' '
-    )}"...`
-  );
-  try {
-    await execa(
-      pipPath,
-      ['install', '--disable-pip-version-check', '--user', ...args],
-      {
-        stdio: 'inherit',
-      }
-    );
-  } catch (err) {
-    console.log(
-      `failed to run "pip install --disable-pip-version-check --user ${args.join(
-        ' '
-      )}"`
-    );
-    throw err;
-  }
-}
-
-async function pipenvInstall(pyUserBase: string, srcDir: string) {
+async function pipenvConvert(cmd: string, srcDir: string) {
   console.log('running pipfile2req');
   try {
-    const out = await execa.stdout(join(pyUserBase, 'bin', 'pipfile2req'), [], {
+    const out = await execa.stdout(cmd, [], {
       cwd: srcDir,
     });
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
@@ -108,8 +84,6 @@ export const build = async ({
     workPath = destNow;
   }
 
-  const pyUserBase = await getWriteableDirectory();
-  process.env.PYTHONUSERBASE = pyUserBase;
   const pipPath = 'pip3';
 
   try {
@@ -144,9 +118,23 @@ export const build = async ({
   if (pipfileLockDir) {
     console.log('found "Pipfile.lock"');
 
-    // Install pipenv.
-    await pipInstallUser(pipPath, 'pipfile-requirements', '--no-warn-script-location');
-    await pipenvInstall(pyUserBase, pipfileLockDir);
+    // Convert Pipenv.Lock to requirements.txt.
+    // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
+    // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
+    // it into a separate folder.
+    const tempDir = await getWriteableDirectory();
+    await pipInstall(
+      pipPath,
+      tempDir,
+      'pipfile-requirements',
+      '--no-warn-script-location'
+    );
+
+    // Python needs to know where to look up all the packages we just installed.
+    // We tell it to use the same location as used with `--target`
+    process.env.PYTHONPATH = tempDir;
+    const convertCmd = join(tempDir, 'bin', 'pipfile2req');
+    await pipenvConvert(convertCmd, pipfileLockDir);
   }
 
   fsFiles = await glob('**', workPath);
