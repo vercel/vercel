@@ -1,5 +1,3 @@
-import ms from 'ms';
-import chalk from 'chalk';
 import bytes from 'bytes';
 import info from './output/info';
 import errorOutput from './output/error';
