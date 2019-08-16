@@ -1,18 +1,20 @@
 // Native
 import { homedir } from 'os';
 import fs from 'fs';
-
 import path from 'path';
 
 // Packages
 import mri from 'mri';
+import xdg from 'xdg-portable';
+import head from 'lodash.head';
 
 // The `homeConfigPath` is the legacy configuration path located in the users home directory.
 const homeConfigPath: string = path.join(homedir(), '.now');
 
 // The `xdgConfigPath` is the configuration path which is based on the XDG standard.
+// the old legacy path is used as a fallback
 const xdgConfigPath: string = path.join(
-  process.env.XDG_DATA_HOME || path.join(homedir(), '.local', 'share'),
+  process.env.XDG_DATA_HOME || (head(xdg.dataDirs()) || homeConfigPath),
   'now'
 );
 
