@@ -1,6 +1,6 @@
 # Contributing
 
-When contributing to this repository, please first discuss the change you wish to make via issue or [spectrum](https://spectrum.chat/zeit) with the owners of this repository before submitting a Pull Request.
+When contributing to this repository, please first discuss the change you wish to make via [GitHub Issue](https://github.com/zeit/now-builders/issues/new) or [Spectrum](https://spectrum.chat/zeit) with the owners of this repository before submitting a Pull Request.
 
 Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
@@ -68,18 +68,29 @@ In such cases you can visit the URL of the failed deployment and append `/_logs`
 
 The logs of this deployment will contain the actual error which may help you to understand what went wrong.
 
-### @zeit/ncc integration
+### @zeit/node-file-trace
 
-Some of the builders use `@zeit/ncc` to bundle files before deployment. If you suspect an error with the bundling mechanism, you can run the `ncc` CLI with a couple modifications to the test.
+Some of the Builders use `@zeit/node-file-trace` to tree-shake files before deployment. If you suspect an error with this tree-shaking mechanism, you can create the following script in your project:
 
-For example if an error occurred in `now-node/test/fixtures/08-assets`
-
+```js
+const trace = require('@zeit/node-file-trace');
+trace(['path/to/entrypoint.js'], {
+  ts: true,
+  mixedModules: true,
+})
+  .then(o => console.log(o.fileList))
+  .then(e => console.error(e));
 ```
-cd packages/now-node/test/fixtures/08-assets
-yarn install
-echo 'require("http").createServer(module.exports).listen(3000)' >> index.js
-npx @zeit/ncc@0.20.1 build index.js --source-map
-node dist
-```
 
-This will compile the test with the specific version of `ncc` and run the resulting file. If it fails here, then there is likely a bug in `ncc` and not the Builder.
+When you run this script, you'll see all imported files. If anything file is missing, the bug is in [@zeit/node-file-trace](https://github.com/zeit/node-file-trace) and not the Builder.
+
+## Deploy a Builder with existing project
+
+Sometimes you want to test changes to a Builder against an existing project, maybe with `now dev` or an actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
+
+1. Change directory to the desired Builder `cd ./packages/now-node`
+2. Run `yarn build` to compile typescript and other build steps
+3. Run `npm pack` to create a tarball file
+4. Run `now *.tgz` to upload the tarball file and get a URL
+5. Edit any existing `now.json` project and replace `use` with the URL
+6. Run `now` or `now dev` to deploy with the experimental Builder
