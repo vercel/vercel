@@ -154,7 +154,7 @@ if (satisfies(process.version, '>= 10.9')) {
       // start `now dev` detached in child_process
       dev.unref();
 
-      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const result = await fetchWithRetry(`http://localhost:${port}`, 230);
       const response = await result;
 
       validateResponseHeaders(t, response);
