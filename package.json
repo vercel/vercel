@@ -64,7 +64,7 @@
     "node": ">= 8.11"
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.12",
+    "@now/build-utils": "0.9.13",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
