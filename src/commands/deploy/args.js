@@ -32,6 +32,7 @@ export const latestHelp = () => `
       scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
+      build                            Runs builders locally for debugging
 
   ${chalk.dim('Options:')}
 

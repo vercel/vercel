@@ -174,6 +174,7 @@
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",
     "read-pkg": "2.0.0",
+    "resolve-from": "5.0.0",
     "rx-lite-aggregates": "4.0.8",
     "semver": "5.5.0",
     "serve-handler": "6.1.1",
