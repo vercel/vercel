@@ -333,8 +333,14 @@ export async function build({
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
     validateDistDir(distPath, meta.isDev, config);
+    
+    const output = await glob('**', distPath, mountpoint);
 
-    return glob('**', distPath, mountpoint);
+    return {
+      output,
+      routes: [],
+      watch: []
+    };
   }
 
   let message = `Build "src" is "${entrypoint}" but expected "package.json"`;
