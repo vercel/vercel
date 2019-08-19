@@ -1100,7 +1100,7 @@ test('deploy multiple static files', async t => {
 test('create a staging deployment', async t => {
   const directory = fixture('static-multiple-files');
 
-  const targetCall = await execa(binaryPath, [directory, '--target=staging', '-p', '--name', session, ...defaultArgs]);
+  const targetCall = await execa(binaryPath, [directory, '--target=staging', '-V=2', '-p', '--name', session, ...defaultArgs]);
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
   t.regex(targetCall.stderr, /please use `--staging`/gm, formatOutput(targetCall));
@@ -1113,7 +1113,7 @@ test('create a staging deployment', async t => {
 test('create a production deployment', async t => {
   const directory = fixture('static-multiple-files');
 
-  const targetCall = await execa(binaryPath, [directory, '--target=production', '-p', '--name', session, ...defaultArgs]);
+  const targetCall = await execa(binaryPath, [directory, '--target=production', '-V=2', '-p', '--name', session, ...defaultArgs]);
 
   t.is(targetCall.code).is(0, formatOutput(targetCall));
   t.regex(targetCall.stderr, /please use `--production`/gm, formatOutput(targetCall));
