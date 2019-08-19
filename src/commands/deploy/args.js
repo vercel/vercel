@@ -111,6 +111,7 @@ export const latestArgs = {
   '--target': String,
   '--production': Boolean,
   '--staging': Boolean,
+  '--prod': '--production',
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',
