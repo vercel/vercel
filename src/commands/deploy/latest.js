@@ -75,13 +75,17 @@ const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList },
+  { url, readyState, alias: aliasList, aliasError },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
+    if (aliasError && aliasError.message) {
+      output.warn(`Failed to assign aliases: ${aliasError.message}`);
+    }
+
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
@@ -313,7 +317,6 @@ export default async function main(
 
     const createArgs = {
         name: project,
-        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -326,16 +329,19 @@ export default async function main(
         meta
     };
 
-    if (createArgs.target) {
-      const allowedValues = [
-        'staging',
-        'production'
-      ];
+    if (argv['--target']) {
+      const deprecatedTarget = argv['--target'];
 
-      if (!allowedValues.includes(createArgs.target)) {
-        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+      if (!['staging', 'production'].includes(deprecatedTarget)) {
+        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
         return 1;
       }
+
+      warn('The `--target` option is deprecated, please use `--prod`');
+
+      createArgs.target = deprecatedTarget;
+    } else if (argv['--production']) {
+      createArgs.target = 'production';
     }
 
     deployStamp = stamp();

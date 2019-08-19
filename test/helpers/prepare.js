@@ -214,6 +214,9 @@ RUN echo $NONCE > /public/index.html
           next: '9.0.0'
         }
       })
+    },
+    'static-deployment': {
+      'index.txt': 'Hello World'
     }
   };
 
