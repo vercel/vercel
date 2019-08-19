@@ -1097,6 +1097,28 @@ test('deploy multiple static files', async t => {
   t.is(content.files.length, 3);
 });
 
+test('create a staging deployment', async t => {
+  const directory = fixture('static-deployment');
+
+  const targetCall = await execa(binaryPath, [directory, '--target=staging', '-p', '--name', session, ...defaultArgs]);
+  t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
+
+  t.is(targetCall.code, 0, formatOutput(targetCall));
+});
+
+test('create a production deployment', async t => {
+  const directory = fixture('static-deployment');
+
+  const targetCall = await execa(binaryPath, [directory, '--target=production', '-p', '--name', session, ...defaultArgs]);
+
+  t.is(targetCall.code, 0, formatOutput(targetCall));
+  t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
+
+  const call = await execa(binaryPath, [directory, '--prod', '-p', '--name', session, ...defaultArgs]);
+
+  t.is(call.code, 0, formatOutput(call));
+});
+
 test('ensure we are getting a warning for the old team flag', async t => {
   const directory = fixture('static-multiple-files');
 
