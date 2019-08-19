@@ -1102,12 +1102,12 @@ test('create a staging deployment', async t => {
 
   const targetCall = await execa(binaryPath, [directory, '--target=staging', '-p', '--name', session, ...defaultArgs]);
 
-  t.is(targetCall.code).is(0, formatOutput(targetCall));
+  t.is(targetCall.code, 0, formatOutput(targetCall));
   t.regex(targetCall.stderr, /please use `--staging`/gm, formatOutput(targetCall));
 
   const call = await execa(binaryPath, [directory, '--staging', '-p', '--name', session, ...defaultArgs]);
 
-  t.is(call.code).is(0, formatOutput(call));
+  t.is(call.code, 0, formatOutput(call));
 });
 
 test('create a production deployment', async t => {
