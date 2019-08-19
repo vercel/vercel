@@ -1115,12 +1115,12 @@ test('create a production deployment', async t => {
 
   const targetCall = await execa(binaryPath, [directory, '--target=production', '-p', '--name', session, ...defaultArgs]);
 
-  t.is(targetCall.code).is(0, formatOutput(targetCall));
+  t.is(targetCall.code, 0, formatOutput(targetCall));
   t.regex(targetCall.stderr, /please use `--production`/gm, formatOutput(targetCall));
 
   const call = await execa(binaryPath, [directory, '--production', '-p', '--name', session, ...defaultArgs]);
 
-  t.is(call.code).is(0, formatOutput(call));
+  t.is(call.code, 0, formatOutput(call));
 });
 
 test('ensure we are getting a warning for the old team flag', async t => {
