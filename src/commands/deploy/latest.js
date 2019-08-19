@@ -75,13 +75,17 @@ const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList },
+  { url, readyState, alias: aliasList, aliasError },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
+    if (aliasError && aliasError.message) {
+      output.warn('Failed to assign aliases:', aliasError.message);
+    }
+
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
