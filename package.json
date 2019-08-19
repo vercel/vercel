@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "16.1.2-canary.3",
+  "version": "16.1.2-canary.5",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -64,7 +64,7 @@
     "node": ">= 8.11"
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.12",
+    "@now/build-utils": "0.9.13",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
