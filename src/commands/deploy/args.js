@@ -66,7 +66,6 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod, --production           Create a production deployment
-    --staging                      Create a staging deployment
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -110,7 +109,6 @@ export const latestArgs = {
   '--regions': String,
   '--target': String,
   '--production': Boolean,
-  '--staging': Boolean,
   '--prod': '--production',
   '-n': '--name',
   '-f': '--force',

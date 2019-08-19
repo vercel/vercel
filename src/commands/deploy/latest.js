@@ -342,8 +342,6 @@ export default async function main(
       createArgs.target = deprecatedTarget;
     } else if (argv['--production']) {
       createArgs.target = 'production';
-    } else if (argv['--staging']) {
-      createArgs.target = 'staging';
     }
 
     deployStamp = stamp();
