@@ -336,7 +336,7 @@ export default async function main(
       if (deprecatedTarget === 'staging') {
         warn('The `--target` option is deprecated, please use `--staging`');
       } else {
-        warn('The `--target` option is deprecated, please use `--production` or `-p`');
+        warn('The `--target` option is deprecated, please use `--production`');
       }
 
       createArgs.target = deprecatedTarget;
