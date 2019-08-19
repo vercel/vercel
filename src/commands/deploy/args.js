@@ -65,7 +65,7 @@ export const latestHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
-    --production                   Create a production deployment
+    --prod, --production           Create a production deployment
     --staging                      Create a staging deployment
 
   ${note(
