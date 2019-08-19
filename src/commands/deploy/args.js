@@ -65,7 +65,7 @@ export const latestHelp = () => `
     -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
-    --prod, --production           Create a production deployment
+    --prod                         Create a production deployment
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -108,8 +108,7 @@ export const latestArgs = {
   // the config property name.
   '--regions': String,
   '--target': String,
-  '--production': Boolean,
-  '--prod': '--production',
+  '--prod': Boolean,
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',

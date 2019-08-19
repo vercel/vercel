@@ -333,11 +333,7 @@ export default async function main(
         return 1;
       }
 
-      if (deprecatedTarget === 'staging') {
-        warn('The `--target` option is deprecated, please use `--staging`');
-      } else {
-        warn('The `--target` option is deprecated, please use `--production` or `--prod`');
-      }
+      warn('The `--target` option is deprecated, please use `--prod`');
 
       createArgs.target = deprecatedTarget;
     } else if (argv['--production']) {
