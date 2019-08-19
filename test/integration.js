@@ -838,52 +838,6 @@ test('output logs of a 2.0 deployment', async t => {
   t.is(code, 0);
 });
 
-test('create wildcard alias for deployment', async t => {
-  const hosts = {
-    deployment: context.deployment,
-    alias: `*.${contextName}.now.sh`
-  };
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  const goal = `> Success! https://${hosts.alias} now points to https://${
-    hosts.deployment
-  }`;
-
-  t.is(code, 0);
-  t.true(stdout.startsWith(goal));
-
-  // Send a test request to the alias
-  const response = await fetch(`https://test.${contextName}.now.sh`);
-  const content = await response.text();
-
-  t.true(response.ok);
-  t.true(content.includes(contextName));
-
-  context.wildcardAlias = hosts.alias;
-});
-
-test('remove the wildcard alias', async t => {
-  const goal = `> Success! Alias ${context.wildcardAlias} removed`;
-
-  const { stdout, code } = await execa(
-    binaryPath,
-    ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
-
-  t.is(code, 0);
-  t.true(stdout.startsWith(goal));
-});
-
 test('ensure type and instance count in list is right', async t => {
   const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
     reject: false
