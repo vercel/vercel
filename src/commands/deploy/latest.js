@@ -313,7 +313,6 @@ export default async function main(
 
     const createArgs = {
         name: project,
-        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -326,16 +325,25 @@ export default async function main(
         meta
     };
 
-    if (createArgs.target) {
-      const allowedValues = [
-        'staging',
-        'production'
-      ];
+    if (argv['--target']) {
+      const deprecatedTarget = argv['--target'];
 
-      if (!allowedValues.includes(createArgs.target)) {
-        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+      if (!['staging', 'production'].includes(deprecatedTarget)) {
+        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
         return 1;
       }
+
+      if (deprecatedTarget === 'staging') {
+        warn('The `--target` option is deprecated, please use `--staging`');
+      } else {
+        warn('The `--target` option is deprecated, please use `--production` or `-p`');
+      }
+
+      createArgs.target = deprecatedTarget;
+    } else if (argv['--production']) {
+      createArgs.target = 'production';
+    } else if (argv['--staging']) {
+      createArgs.target = 'staging';
     }
 
     deployStamp = stamp();
