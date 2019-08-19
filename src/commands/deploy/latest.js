@@ -83,7 +83,7 @@ const printDeploymentStatus = async (
 ) => {
   if (readyState === 'READY') {
     if (aliasError && aliasError.message) {
-      output.warn('Failed to assign aliases:', aliasError.message);
+      output.warn(`Failed to assign aliases: ${aliasError.message}`);
     }
 
     if (Array.isArray(aliasList) && aliasList.length > 0) {
