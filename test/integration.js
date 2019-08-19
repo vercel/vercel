@@ -1101,6 +1101,7 @@ test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
   const targetCall = await execa(binaryPath, [directory, '--target=staging', '-p', '--name', session, ...defaultArgs]);
+  t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
 });
