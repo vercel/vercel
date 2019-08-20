@@ -50,7 +50,7 @@ function validateResponseHeaders(t, res) {
 function testFixture(directory, opts = {}, args = []) {
   port = ++port;
   return {
-    dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
+    dev: execa(binaryPath, ['dev', directory, '-p', String(port), ...args], {
       reject: false,
       detached: true,
       stdio: 'ignore',
