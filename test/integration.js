@@ -107,6 +107,7 @@ const context = {};
 
 const defaultOptions = { reject: false };
 const defaultArgs = [];
+let token;
 let email;
 let contextName;
 
@@ -122,6 +123,22 @@ if (!process.env.CI) {
   defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
 }
 
+const execute = (args, options) =>
+  execa(binaryPath, [...defaultArgs, ...args], {
+    ...defaultOptions,
+    ...options
+  });
+
+const apiFetch = (url, { headers, ...options }) => {
+  return fetch(`https://api.zeit.co${url}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...headers
+    },
+    ...options
+  });
+};
+
 test.before(async () => {
   try {
     await retry(
@@ -129,7 +146,7 @@ test.before(async () => {
         const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
         const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
         const url = Buffer.from(str, 'base64').toString();
-        const token = await fetchTokenWithRetry(url);
+        token = await fetchTokenWithRetry(url);
 
         if (!fs.existsSync(location)) {
           await createDirectory(location);
@@ -154,12 +171,6 @@ test.before(async () => {
     console.log(err);
   }
 });
-
-const execute = (args, options) =>
-  execa(binaryPath, [...defaultArgs, ...args], {
-    ...defaultOptions,
-    ...options
-  });
 
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
@@ -1105,6 +1116,10 @@ test('create a staging deployment', async t => {
   t.regex(targetCall.stderr, /Setting target to staging/gm, formatOutput(targetCall));
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
+
+  const { host } = new URL(targetCall.stdout);
+  const deployment = await apiFetch(`/v10/now/deployments/?url=${host}`).then((resp) => resp.json());
+  t.is(deployment.target, 'staging', deployment);
 });
 
 test('create a production deployment', async t => {
@@ -1114,13 +1129,21 @@ test('create a production deployment', async t => {
   const targetCall = await execa(binaryPath, [directory, '--target=production', ...args]);
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
-  t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
+  t.regex(targetCall.stderr, /`--prod` option instead/gm, formatOutput(targetCall));
   t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
+
+  const { host: targetHost } = new URL(targetCall.stdout);
+  const targetDeployment = await apiFetch(`/v10/now/deployments/?url=${targetHost}`).then((resp) => resp.json());
+  t.is(targetDeployment.target, 'production', targetDeployment);
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
   t.is(call.code, 0, formatOutput(call));
   t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
+
+  const { host } = new URL(call.stdout);
+  const deployment = await apiFetch(`/v10/now/deployments/?url=${host}`).then((resp) => resp.json());
+  t.is(deployment.target, 'production', deployment);
 });
 
 test('ensure we are getting a warning for the old team flag', async t => {
