@@ -88,10 +88,10 @@ export default async function getUpdateCommand(): Promise<string> {
   if (await isGlobal()) {
     return (await isYarn())
       ? `yarn global add now@${tag}`
-      : `npm install -g now@${tag}`;
+      : `npm i -g now@${tag}`;
   }
 
   return (await isYarn())
     ? `yarn add now@${tag}`
-    : `npm install now@${tag}`;
+    : `npm i now@${tag}`;
 }
