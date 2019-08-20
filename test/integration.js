@@ -1609,6 +1609,14 @@ test('`now rm` 404 exits quickly', async t => {
   t.truthy(delta < 5000);
 });
 
+test('render build errors', async t => {
+  const deploymentPath = fixture('failing-build');
+  const output = await execute([deploymentPath]);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
