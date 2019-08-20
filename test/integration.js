@@ -129,11 +129,11 @@ const execute = (args, options) =>
     ...options
   });
 
-const apiFetch = (url, { headers, ...options }) => {
+const apiFetch = (url, { headers, ...options } = {}) => {
   return fetch(`https://api.zeit.co${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
-      ...headers
+      ...(headers || {})
     },
     ...options
   });
