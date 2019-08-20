@@ -1100,8 +1100,9 @@ test('deploy multiple static files', async t => {
 test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
-  const targetCall = await execa(binaryPath, [directory, '--target=staging', '-p', '--name', session, ...defaultArgs]);
-  t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, [directory, '--target=staging', ...args]);
+  t.regex(targetCall.stderr, /Setting target to staging/gm, formatOutput(targetCall));
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
 });
@@ -1109,14 +1110,17 @@ test('create a staging deployment', async t => {
 test('create a production deployment', async t => {
   const directory = fixture('static-deployment');
 
-  const targetCall = await execa(binaryPath, [directory, '--target=production', '-p', '--name', session, ...defaultArgs]);
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, [directory, '--target=production', ...args]);
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
   t.regex(targetCall.stderr, /please use `--prod`/gm, formatOutput(targetCall));
+  t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
 
-  const call = await execa(binaryPath, [directory, '--prod', '-p', '--name', session, ...defaultArgs]);
+  const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
   t.is(call.code, 0, formatOutput(call));
+  t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
 });
 
 test('ensure we are getting a warning for the old team flag', async t => {
