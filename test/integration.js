@@ -1118,8 +1118,8 @@ test('create a staging deployment', async t => {
   t.is(targetCall.code, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
-  const deployment = await apiFetch(`/v9/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
-  t.is(deployment.target, 'staging', deployment);
+  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  t.is(deployment.target, 'staging', JSON.stringify(deployment, null, 2));
 });
 
 test('create a production deployment', async t => {
@@ -1133,8 +1133,8 @@ test('create a production deployment', async t => {
   t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
 
   const { host: targetHost } = new URL(targetCall.stdout);
-  const targetDeployment = await apiFetch(`/v9/now/deployments/unknown?url=${targetHost}`).then((resp) => resp.json());
-  t.is(targetDeployment.target, 'production', targetDeployment);
+  const targetDeployment = await apiFetch(`/v10/now/deployments/unknown?url=${targetHost}`).then((resp) => resp.json());
+  t.is(targetDeployment.target, 'production', JSON.stringify(targetDeployment, null, 2));
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
@@ -1142,8 +1142,8 @@ test('create a production deployment', async t => {
   t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
 
   const { host } = new URL(call.stdout);
-  const deployment = await apiFetch(`/v9/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
-  t.is(deployment.target, 'production', deployment);
+  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  t.is(deployment.target, 'production', JSON.stringify(deployment, null, 2));
 });
 
 test('ensure we are getting a warning for the old team flag', async t => {
