@@ -558,6 +558,7 @@ export default async function main(
 
       // If there are no builds, we need to exit.
       if (freshBuilds.length === 0 || freshBuilds.every(isDone)) {
+        builds = freshBuilds;
         buildsCompleted = true;
       } else {
         for (const build of freshBuilds) {
@@ -576,8 +577,6 @@ export default async function main(
         if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
           builds = freshBuilds;
 
-          debug(`Re-rendering builds, because their state changed.`);
-
           if (buildSpinner === null) {
             buildSpinner = wait('Building...');
           }
@@ -587,8 +586,6 @@ export default async function main(
           if (builds.some(isFailed)) {
             break;
           }
-        } else {
-          debug(`Not re-rendering, as the build states did not change.`);
         }
       }
     } else {
