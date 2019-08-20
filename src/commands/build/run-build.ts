@@ -40,7 +40,7 @@ export default async function runBuild({
     files,
     entrypoint: build.src,
     workPath: workDir,
-    config: build.config
+    config: build.config || {}
   })
 
   const outputKeys = Object.keys(buildOutput.output)
