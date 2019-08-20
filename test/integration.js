@@ -249,7 +249,7 @@ test('detect update command', async t => {
 
     t.regex(
       stderr,
-      /npm install -g now@/gm,
+      /npm i -g now@/gm,
       `Received:\n"${stderr}"\n"${stdout}"`
     );
   }
