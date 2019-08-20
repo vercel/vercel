@@ -337,10 +337,14 @@ export default async function main(
         return 1;
       }
 
-      warn('The `--target` option is deprecated, please use `--prod`');
+      if (deprecatedTarget === 'production') {
+        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
+      }
 
+      output.debug(`Setting target to ${deprecatedTarget}`);
       createArgs.target = deprecatedTarget;
-    } else if (argv['--production']) {
+    } else if (argv['--prod']) {
+      output.debug('Setting target to production');
       createArgs.target = 'production';
     }
 
