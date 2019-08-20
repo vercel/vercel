@@ -1118,7 +1118,7 @@ test('create a staging deployment', async t => {
   t.is(targetCall.code, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(`/v9/now/deployments?url=${host}`).then((resp) => resp.json());
   t.is(deployment.target, 'staging', deployment);
 });
 
@@ -1133,7 +1133,7 @@ test('create a production deployment', async t => {
   t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
 
   const { host: targetHost } = new URL(targetCall.stdout);
-  const targetDeployment = await apiFetch(`/v10/now/deployments/?url=${targetHost}`).then((resp) => resp.json());
+  const targetDeployment = await apiFetch(`/v9/now/deployments?url=${targetHost}`).then((resp) => resp.json());
   t.is(targetDeployment.target, 'production', targetDeployment);
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
@@ -1142,7 +1142,7 @@ test('create a production deployment', async t => {
   t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
 
   const { host } = new URL(call.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(`/v9/now/deployments?url=${host}`).then((resp) => resp.json());
   t.is(deployment.target, 'production', deployment);
 });
 
