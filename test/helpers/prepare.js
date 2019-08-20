@@ -217,6 +217,13 @@ RUN echo $NONCE > /public/index.html
     },
     'static-deployment': {
       'index.txt': 'Hello World'
+    },
+    'failing-build': {
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'echo hello && exit 1'
+        }
+      })
     }
   };
 
