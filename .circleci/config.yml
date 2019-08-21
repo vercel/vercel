@@ -18,11 +18,15 @@ jobs:
       - save_cache:
           paths:
             - node_modules
+            - packages/now-cli/node_modules
+            - packages/now-client/node_modules
           key: v1-dependencies-{{ checksum "yarn.lock" }}
       - persist_to_workspace:
           root: .
           paths:
             - node_modules
+            - packages/now-cli/node_modules
+            - packages/now-client/node_modules
 
   build:
     docker:
