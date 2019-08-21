@@ -43,8 +43,8 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - /packages/now-cli/assets
-            - /packages/now-cli/dist
+            - packages/now-cli/assets
+            - packages/now-cli/dist
 
   test-lint:
     docker:
@@ -78,7 +78,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - /packages/now-cli/.nyc_output
+            - packages/now-cli/.nyc_output
 
   test-integration-macos-node-8:
     macos:
