@@ -75,13 +75,17 @@ const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList },
+  { url, readyState, alias: aliasList, aliasError },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
+    if (aliasError && aliasError.message) {
+      output.warn(`Failed to assign aliases: ${aliasError.message}`);
+    }
+
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
@@ -313,7 +317,6 @@ export default async function main(
 
     const createArgs = {
         name: project,
-        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -326,16 +329,23 @@ export default async function main(
         meta
     };
 
-    if (createArgs.target) {
-      const allowedValues = [
-        'staging',
-        'production'
-      ];
+    if (argv['--target']) {
+      const deprecatedTarget = argv['--target'];
 
-      if (!allowedValues.includes(createArgs.target)) {
-        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
+      if (!['staging', 'production'].includes(deprecatedTarget)) {
+        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
         return 1;
       }
+
+      if (deprecatedTarget === 'production') {
+        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
+      }
+
+      output.debug(`Setting target to ${deprecatedTarget}`);
+      createArgs.target = deprecatedTarget;
+    } else if (argv['--prod']) {
+      output.debug('Setting target to production');
+      createArgs.target = 'production';
     }
 
     deployStamp = stamp();
@@ -552,6 +562,7 @@ export default async function main(
 
       // If there are no builds, we need to exit.
       if (freshBuilds.length === 0 || freshBuilds.every(isDone)) {
+        builds = freshBuilds;
         buildsCompleted = true;
       } else {
         for (const build of freshBuilds) {
@@ -570,8 +581,6 @@ export default async function main(
         if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
           builds = freshBuilds;
 
-          debug(`Re-rendering builds, because their state changed.`);
-
           if (buildSpinner === null) {
             buildSpinner = wait('Building...');
           }
@@ -581,8 +590,6 @@ export default async function main(
           if (builds.some(isFailed)) {
             break;
           }
-        } else {
-          debug(`Not re-rendering, as the build states did not change.`);
         }
       }
     } else {
