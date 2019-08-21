@@ -18,6 +18,7 @@
       "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
       "publish-from-github": "./.circleci/publish.sh",
       "build": "./.circleci/build.sh",
+      "test-lint": "./.circleci/test-lint.sh",
       "test-unit": "./.circleci/test-unit.sh",
       "test-integration": "./.circleci/test-integration.sh"
     }
