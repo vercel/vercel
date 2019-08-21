@@ -214,4 +214,23 @@ export default [
     dependency: 'sapper',
     getOutputDirName: async () => '__sapper__/export',
   },
+  {
+    name: 'Saber',
+    dependency: 'saber',
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        src: '/_saber/.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '.*',
+        status: 404,
+        dest: '404.html',
+      },
+    ],
+  },
 ];
