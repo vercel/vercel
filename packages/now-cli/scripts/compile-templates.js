@@ -7,7 +7,7 @@ async function main() {
 
   // Compile the `doT.js` template files for `now dev`
   const templatesDir = join(dirRoot, 'src/util/dev/templates');
-  const dotPacker = join(dirRoot, 'node_modules/dot/bin/dot-packer');
+  const dotPacker = join(dirRoot, '../../node_modules/dot/bin/dot-packer');
   await execa(process.execPath, [dotPacker], {
     cwd: templatesDir,
     stdio: 'inherit'
@@ -18,7 +18,7 @@ async function main() {
 
   // Prettier
   console.log('\nMaking the compiled template functions prettier...');
-  const prettier = join(dirRoot, 'node_modules/prettier/bin-prettier.js');
+  const prettier = join(dirRoot, '../../node_modules/prettier/bin-prettier.js');
   await execa(
     process.execPath,
     [prettier, '--write', '--single-quote', ...compiledFiles],

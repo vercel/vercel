@@ -36,7 +36,7 @@ async function createBuildersTarball() {
     }
   }
 
-  const yarn = join(dirRoot, 'node_modules/yarn/bin/yarn.js');
+  const yarn = join(dirRoot, '../../node_modules/yarn/bin/yarn.js');
   await execa(process.execPath, [yarn, 'add', '--no-lockfile', ...builders], {
     cwd: buildersDir,
     stdio: 'inherit'
@@ -61,7 +61,7 @@ async function main() {
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
   // that it is not compiled by ncc, which makes the npm package size larger
   // than necessary.
-  await remove(join(dirRoot, 'node_modules/fsevents'));
+  await remove(join(dirRoot, '../../node_modules/fsevents'));
 
   // Compile the `doT.js` template files for `now dev`
   console.log();
@@ -72,7 +72,7 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
+  const ncc = join(dirRoot, '../../node_modules/@zeit/ncc/dist/ncc/cli.js');
   const args = [ncc, 'build', '--source-map'];
   if (!isDev) {
     args.push('--minify');
@@ -92,7 +92,7 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  const runtimes = join(dirRoot, 'node_modules/@zeit/fun/dist/src/runtimes');
+  const runtimes = join(dirRoot, '../../node_modules/@zeit/fun/dist/src/runtimes');
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
