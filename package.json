@@ -1,0 +1,23 @@
+{
+    "name": "now-builders",
+    "version": "0.0.0",
+    "private": true,
+    "license": "MIT",
+    "dependencies": {
+      "lerna": "3.16.4"
+    },
+    "devDependencies": {
+    },
+    "workspaces": [
+      "packages/*"
+    ],
+    "scripts": {
+      "lerna": "lerna",
+      "bootstrap": "lerna bootstrap",
+      "publish-stable": "git checkout master && git pull && lerna version --exact",
+      "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
+      "publish-from-github": "./.circleci/publish.sh",
+      "build": "./.circleci/build.sh"
+    }
+  }
+  
