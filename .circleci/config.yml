@@ -56,7 +56,7 @@ jobs:
           at: .
       - run:
           name: Compiling `now dev` HTML error templates
-          command: node ./scripts/compile-templates.js
+          command: node packages/now-cli/scripts/compile-templates.js
       - run:
           name: Linting Code
           command: yarn test-lint
@@ -71,7 +71,7 @@ jobs:
           at: .
       - run:
           name: Compiling `now dev` HTML error templates
-          command: node ./scripts/compile-templates.js
+          command: node packages/now-cli/scripts/compile-templates.js
       - run:
           name: Running Unit Tests
           command: yarn test-unit --clean false
