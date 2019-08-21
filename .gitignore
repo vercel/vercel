@@ -1,7 +1,6 @@
 node_modules
 package-lock.json
 dist
-test/fixtures/integration
 npm-debug.log
 yarn-error.log
 .nyc_output
@@ -10,10 +9,11 @@ coverage
 *.bak
 *.tgz
 .builders
-/assets
-/src/util/dev/templates/*.ts
-/test/**/yarn.lock
-/test/**/node_modules
-/test/dev/fixtures/08-hugo/hugo
-/test/dev/fixtures/**/dist
-/test/dev/fixtures/**/public
+assets
+src/util/dev/templates/*.ts
+test/**/yarn.lock
+test/**/node_modules
+test/dev/fixtures/08-hugo/hugo
+test/dev/fixtures/**/dist
+test/dev/fixtures/**/public
+test/fixtures/integration
