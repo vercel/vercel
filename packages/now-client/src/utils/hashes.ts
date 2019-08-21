@@ -23,7 +23,7 @@ function hash(buf: Buffer): string {
  * @param map with hashed files
  * @return {object}
  */
-export const mapToObject = (map: Map<string, DeploymentFile>) => {
+export const mapToObject = (map: Map<string, DeploymentFile>): { [key: string]: any } => {
   const obj: { [key: string]: any } = {}
   for (const [key, value] of map) {
     obj[key] = value
