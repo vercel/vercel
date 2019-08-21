@@ -20,7 +20,8 @@
       "build": "./.circleci/build.sh",
       "test-lint": "./.circleci/test-lint.sh",
       "test-unit": "./.circleci/test-unit.sh",
-      "test-integration": "./.circleci/test-integration.sh"
+      "test-integration": "./.circleci/test-integration.sh",
+      "test-integration-now-dev": "./.circleci/test-integration-now-dev.sh"
     }
   }
   
