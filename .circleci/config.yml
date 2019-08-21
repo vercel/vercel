@@ -39,12 +39,12 @@ jobs:
           name: Building
           command: yarn build
       - store_artifacts:
-          path: dist
+          path: /packages/now-cli/dist
       - persist_to_workspace:
           root: .
           paths:
-            - assets
-            - dist
+            - /packages/now-cli/assets
+            - /packages/now-cli/dist
 
   test-lint:
     docker:
@@ -78,7 +78,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - .nyc_output
+            - /packages/now-cli/.nyc_output
 
   test-integration-macos-node-8:
     macos:
