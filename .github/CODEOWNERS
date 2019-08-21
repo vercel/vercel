@@ -2,7 +2,8 @@
 # https://help.github.com/en/articles/about-code-owners
 
 *                       @tootallnate @leo
-/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
-/src/util/dev/          @tootallnate @leo @styfle @AndyBitz
-/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
-/src/commands/certs/    @javivelasco @mglagola @anatrajkovska
+/packages/now-cli/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
+/packages/now-cli/src/util/dev/          @tootallnate @leo @styfle @AndyBitz
+/packages/now-cli/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
+/packages/now-cli/src/commands/certs/    @javivelasco @mglagola @anatrajkovska
+/packages/now-client                     @leo @rdev
