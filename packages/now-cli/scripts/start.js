@@ -14,8 +14,8 @@ const major = match && parseInt(match[1], 10);
 if (major === 8 && process.platform === 'darwin') {
   const [node, _, ...args] = process.argv; // eslint-disable-line @typescript-eslint/no-unused-vars
   const script = join(__dirname, '../dist/index.js');
-  console.log('the node path is ' + node);
-  console.log('the script path is ' + script);
+  console.log(`the node path is ${  node}`);
+  console.log(`the script path is ${  script}`);
 
   const { status } = spawnSync(node, ['--no-warnings', script, ...args], {
     stdio: 'inherit'
