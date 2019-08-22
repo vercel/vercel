@@ -65,6 +65,8 @@ jobs:
       - run:
           name: Building
           command: yarn build
+      - store_artifacts:
+          path: packages/now-cli/dist
       - persist_to_workspace:
           root: .
           paths:
