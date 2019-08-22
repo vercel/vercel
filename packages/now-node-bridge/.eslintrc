@@ -1,0 +1,24 @@
+{
+  "extends": ["prettier", "airbnb-base"],
+  "rules": {
+    "no-console": 0,
+    "import/no-unresolved": 0,
+    "import/no-dynamic-require": 0,
+    "global-require": 0
+  },
+  "overrides": [
+    {
+      "files": ["test/**"],
+      "rules": {
+        "import/no-extraneous-dependencies": 0
+      },
+      "globals": {
+        "describe": true,
+        "it": true,
+        "test": true,
+        "expect": true
+      }
+    }
+  ]
+}
+

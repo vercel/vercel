@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "yodasay": "^1.1.6"
+  },
+  "scripts": {
+    "build": "mkdir public && yodasay yoda:RANDOMNESS_PLACEHOLDER > public/index.txt"
+  }
+}

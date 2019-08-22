@@ -1,0 +1,25 @@
+{
+  "name": "@now/cgi",
+  "version": "0.1.4",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-cgi"
+  },
+  "scripts": {
+    "test": "best -I test/*.js",
+    "prepublish": "./build.sh"
+  },
+  "files": [
+    "index.js",
+    "handler"
+  ],
+  "dependencies": {
+    "fs-extra": "7.0.0"
+  },
+  "devDependencies": {
+    "@zeit/best": "0.4.3",
+    "rmfr": "2.0.0"
+  }
+}

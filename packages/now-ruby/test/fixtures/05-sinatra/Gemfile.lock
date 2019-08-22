@@ -1,0 +1,25 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    cowsay (0.3.0)
+    mustermann (1.0.3)
+    rack (2.0.7)
+    rack-protection (2.0.5)
+      rack
+    sinatra (2.0.5)
+      mustermann (~> 1.0)
+      rack (~> 2.0)
+      rack-protection (= 2.0.5)
+      tilt (~> 2.0)
+    tilt (2.0.9)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  cowsay (~> 0.3.0)
+  rack (~> 2.0)
+  sinatra (~> 2.0)
+
+BUNDLED WITH
+   2.0.1
