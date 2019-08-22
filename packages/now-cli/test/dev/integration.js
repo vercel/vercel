@@ -53,7 +53,7 @@ function testFixture(directory, opts = {}, args = []) {
     dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
       reject: false,
       detached: true,
-      stdio: 'inherit',
+      stdio: 'ignore',
       ...opts
     }),
     port

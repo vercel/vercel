@@ -17,7 +17,6 @@ import parseList from './helpers/parse-list';
 import prepareFixtures from './helpers/prepare';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-console.log(`the binaryPath is ${  binaryPath}`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random()
