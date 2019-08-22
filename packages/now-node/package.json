@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test": "npm run build && jest",
+    "test-integration": "jest --env node --verbose",
     "prepublishOnly": "npm run build"
   },
   "files": [

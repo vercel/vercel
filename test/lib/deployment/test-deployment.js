@@ -1,6 +1,6 @@
 const assert = require('assert');
 const bufferReplace = require('buffer-replace');
-const fs = require('fs-extra');
+const fs = require('fs');
 const glob = require('util').promisify(require('glob'));
 const path = require('path');
 const { spawn } = require('child_process');
@@ -17,7 +17,7 @@ async function packAndDeploy (builderPath) {
   console.log('tgzPath', tgzPath);
   const url = await nowDeployIndexTgz(tgzPath);
   await fetchTgzUrl(`https://${url}`);
-  await fs.unlink(tgzPath);
+  fs.unlinkSync(tgzPath);
   return url;
 }
 
@@ -102,7 +102,7 @@ async function testDeployment (
 
     if (probe.mustContain) {
       if (!text.includes(probe.mustContain)) {
-        await fs.writeFile(path.join(__dirname, 'failed-page.txt'), text);
+        fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
         const headers = Array.from(resp.headers.entries())
           .map(([ k, v ]) => `  ${k}=${v}`)
           .join('\n');
@@ -133,7 +133,7 @@ async function testDeployment (
   }
 
   const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
-  if (await fs.exists(probeJsFullPath)) {
+  if (fs.existsSync(probeJsFullPath)) {
     await require(probeJsFullPath)({ deploymentUrl, fetch, randomness });
   }
 
@@ -142,7 +142,7 @@ async function testDeployment (
 
 async function nowDeployIndexTgz (file) {
   const bodies = {
-    'index.tgz': await fs.readFile(file),
+    'index.tgz': fs.readFileSync(file),
     'now.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 

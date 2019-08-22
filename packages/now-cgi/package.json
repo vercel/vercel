@@ -8,7 +8,7 @@
     "directory": "packages/now-cgi"
   },
   "scripts": {
-    "test": "best -I test/*.js",
+    "test-integration": "best -I test/*.js",
     "prepublish": "./build.sh"
   },
   "files": [

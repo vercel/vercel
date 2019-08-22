@@ -10,6 +10,10 @@
       "lerna": "3.16.4"
     },
     "devDependencies": {
+      "@zeit/ncc": "0.20.4",
+      "async-retry": "1.2.3",
+      "buffer-replace": "1.0.0",
+      "node-fetch": "2.6.0"
     },
     "scripts": {
       "lerna": "lerna",

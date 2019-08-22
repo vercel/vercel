@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test": "./build.sh && jest",
+    "test-integration": "jest --env node --verbose",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
