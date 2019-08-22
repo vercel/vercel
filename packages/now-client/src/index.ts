@@ -1,6 +1,8 @@
 // Polyfill Node 8 and below
 // https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-3.html#the-for-await-of-statement
-(Symbol as any).asyncIterator = Symbol.asyncIterator || Symbol.for("Symbol.asyncIterator");
+if (!Symbol.asyncIterator) {
+  (Symbol as any).asyncIterator = Symbol.for('Symbol.asyncIterator')
+}
 
 import buildCreateDeployment from './create-deployment'
 
