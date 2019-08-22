@@ -14,7 +14,10 @@ jobs:
           - v1-dependencies-
       - run:
           name: Installing Dependencies
-          command: yarn && yarn bootstrap
+          command: yarn install
+      - run:
+          name: Bootstrapping
+          command: yarn bootstrap
       - save_cache:
           paths:
             - node_modules
