@@ -3,14 +3,14 @@
     "version": "0.0.0",
     "private": true,
     "license": "MIT",
+    "workspaces": [
+        "packages/*"
+      ],
     "dependencies": {
       "lerna": "3.16.4"
     },
     "devDependencies": {
     },
-    "workspaces": [
-      "packages/*"
-    ],
     "scripts": {
       "lerna": "lerna",
       "bootstrap": "lerna bootstrap",

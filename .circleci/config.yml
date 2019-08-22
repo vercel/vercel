@@ -298,7 +298,7 @@ jobs:
           at: .
       - run:
           name: Run coverage report
-          command: yarn coverage
+          command: yarn workspace now run coverage
 
   source-maps:
     docker:
