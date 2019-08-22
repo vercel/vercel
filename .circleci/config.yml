@@ -5,6 +5,8 @@ jobs:
     docker:
       - image: circleci/node:10
     working_directory: ~/repo
+    environment:
+      GOPATH: $HOME/go
     steps:
       - checkout
       - restore_cache:
@@ -12,6 +14,12 @@ jobs:
           - v1-dependencies-{{ checksum "yarn.lock" }}
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
+      - run:
+          name: Updating apt packages
+          command: sudo apt-get update
+      - run:
+          name: Installing the latest version of Go
+          command: sudo apt-get install golang-go
       - run:
           name: Installing Dependencies
           command: yarn install
