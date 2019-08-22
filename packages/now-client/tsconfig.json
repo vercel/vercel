@@ -12,6 +12,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "ES2017"
+    "target": "ES2015"
   }
 }
