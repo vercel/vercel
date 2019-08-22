@@ -15,6 +15,9 @@ jobs:
       - run:
           name: Installing Dependencies
           command: yarn install
+      - run:
+          name: Bootstrapping
+          command: yarn bootstrap
       - save_cache:
           paths:
             - node_modules
