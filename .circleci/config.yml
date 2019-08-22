@@ -68,7 +68,6 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - packages/now-cli/dist
             - packages/now-build-utils/dist
             - packages/now-cgi/dist
             - packages/now-cli/dist
