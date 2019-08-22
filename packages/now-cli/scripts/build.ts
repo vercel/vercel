@@ -72,7 +72,7 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const ncc = join(dirRoot, '../../node_modules/@zeit/ncc/dist/ncc/cli.js');
+  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
   const args = [ncc, 'build', '--source-map'];
   if (!isDev) {
     args.push('--minify');
