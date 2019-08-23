@@ -7,7 +7,7 @@ if [ "$1" == "" ]; then
 fi
 
 circleci_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-found="$(grep -rn \"""$1"\"": packages/*/package.json | cut -d: -f1)"
+found="$(grep -rn \"""$1"\"": packages/*/package.json | cut -d: -f1 | uniq)"
 
 for pkg in $found; do
   dir="$(dirname "$pkg")"
