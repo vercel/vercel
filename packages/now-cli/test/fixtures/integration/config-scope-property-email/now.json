@@ -1,0 +1,1 @@
+{ "scope": "now-builders-ci-bot-255@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }
