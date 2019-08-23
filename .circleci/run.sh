@@ -7,10 +7,11 @@ if [ "$1" == "" ]; then
 fi
 
 circleci_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-found="$(grep -rn \"""$1"\"": packages/*/package.json | cut -d '/' -f2)"
-modified="$(git diff origin/canary...HEAD --name-only | grep '^packages/' | cut -d '/' -f2)"
-both="${found}"$'\n'"${modified}"
-pkgs="$(echo -e "${both// /\\n}" | sort -u)"
+found="$(grep -rn \"""$1"\"": packages/*/package.json | cut -d '/' -f2 | uniq)"
+modified="$(git diff origin/canary...HEAD --name-only | grep '^packages/' | cut -d '/' -f2 | uniq)"
+echo "$found" > /tmp/found.txt
+echo "$modified" > /tmp/modified.txt
+pkgs="$(comm -12 <(sort /tmp/found.txt) <(sort /tmp/modified.txt))"
 echo "The following packages were modified: "
 echo "$pkgs" | wc -l
 echo "$pkgs"
