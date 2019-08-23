@@ -83,7 +83,8 @@ jobs:
             - packages/now-go/dist
             - packages/now-next/dist
             - packages/now-node/dist
-            - packages/now-node-bridge/dist
+            - packages/now-node-bridge/index.js
+            - packages/now-node-bridge/bridge.js
             - packages/now-python/dist
             - packages/now-routing-utils/dist
             - packages/now-ruby/dist
