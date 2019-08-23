@@ -83,6 +83,8 @@ jobs:
             - packages/now-go/dist
             - packages/now-next/dist
             - packages/now-node/dist
+            - packages/now-node/test/fixtures/15-helpers/ts/types.d.ts
+            - packages/now-node/test/fixtures/11-symlinks/symlink
             - packages/now-node-bridge/index.js
             - packages/now-node-bridge/bridge.js
             - packages/now-python/dist
