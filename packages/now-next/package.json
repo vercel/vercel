@@ -6,7 +6,7 @@
   "homepage": "https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next",
   "scripts": {
     "build": "./build.sh",
-    "test-integration": "jest --env node --verbose --runInBand",
+    "test-integration-once": "jest --env node --verbose --runInBand",
     "prepublishOnly": "./build.sh"
   },
   "repository": {

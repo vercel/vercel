@@ -330,6 +330,21 @@ jobs:
           name: Running Integration Tests for `now dev`
           command: yarn test-integration-now-dev --clean false
 
+  test-integration-once:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Integration Tests Once
+          command: yarn test-integration-once --clean false
+
   coverage:
     docker:
       - image: circleci/node:10
@@ -491,6 +506,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - test-integration-once:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
       - coverage:
           requires:
             - test-unit
@@ -506,6 +527,7 @@ workflows:
             - test-integration-linux-now-dev-node-8
             - test-integration-linux-now-dev-node-10
             - test-integration-linux-now-dev-node-12
+            - test-integration-once
             - test-lint
           filters:
             tags:

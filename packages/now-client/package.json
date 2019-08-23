@@ -6,7 +6,7 @@
   "scripts": {
     "build": "ncc build ./src/index.ts -o ./lib --source-map",
     "prepare": "npm run build",
-    "test-integration": "jest --verbose --forceExit",
+    "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint --ext .ts ./src",
     "lint": "eslint --fix --ext .ts ./src",
     "lint-staged": "git diff --diff-filter=ACMRT --cached --name-only '*.ts' | xargs eslint --fix"
