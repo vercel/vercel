@@ -24,7 +24,7 @@
       "build": "./.circleci/run.sh build",
       "test-lint": "./.circleci/run.sh test-lint",
       "test-unit": "./.circleci/run.sh test-unit",
-      "test-integration": "./.circleci/run.sh build test-integration",
+      "test-integration": "./.circleci/run.sh test-integration",
       "test-integration-now-dev": "./.circleci/run.sh test-integration-now-dev"
     }
   }
