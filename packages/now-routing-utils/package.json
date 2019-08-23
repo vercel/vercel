@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc",
     "build": "tsc",
     "watch": "tsc --watch",
-    "test-integration": "jest --env node --verbose --runInBand"
+    "test-unit": "jest --env node --verbose --runInBand"
   },
   "devDependencies": {
     "ajv": "^6.0.0",
