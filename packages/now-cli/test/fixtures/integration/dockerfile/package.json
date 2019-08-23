@@ -1,0 +1,12 @@
+
+  {
+    "name": "node-test-now-builders-ci-bot-255",
+    "main": "index.js",
+    "license": "MIT",
+    "scripts": {
+      "start": "micro"
+    },
+    "dependencies": {
+      "micro": "latest"
+    }
+  }

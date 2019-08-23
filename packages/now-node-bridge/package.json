@@ -1,0 +1,24 @@
+{
+  "name": "@now/node-bridge",
+  "version": "1.2.3",
+  "license": "MIT",
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-node-bridge"
+  },
+  "files": [
+    "bridge.*",
+    "index.js"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test-integration-once": "jest --env node --verbose --runInBand",
+    "prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "typescript": "3.5.2"
+  }
+}

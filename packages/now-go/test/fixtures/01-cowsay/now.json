@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.go", "use": "@now/go" },
+    { "src": "subdirectory/index.go", "use": "@now/go" }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory", "mustContain": "subcow:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

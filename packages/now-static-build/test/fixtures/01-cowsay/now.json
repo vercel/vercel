@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@now/static-build" },
+    { "src": "subdirectory/package.json", "use": "@now/static-build" }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

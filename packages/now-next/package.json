@@ -1,0 +1,31 @@
+{
+  "name": "@now/next",
+  "version": "0.7.0",
+  "license": "MIT",
+  "main": "./dist/index",
+  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next",
+  "scripts": {
+    "build": "./build.sh",
+    "test-integration-once": "jest --env node --verbose --runInBand",
+    "prepublishOnly": "./build.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-next"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@types/next-server": "8.0.0",
+    "@types/resolve-from": "5.0.1",
+    "@types/semver": "6.0.0",
+    "@zeit/node-file-trace": "0.2.13",
+    "fs-extra": "7.0.0",
+    "get-port": "5.0.0",
+    "resolve-from": "5.0.0",
+    "semver": "6.1.1",
+    "typescript": "3.5.2"
+  }
+}

@@ -1,0 +1,6 @@
+node_modules
+dist
+*.log
+/go
+/analyze
+*.js

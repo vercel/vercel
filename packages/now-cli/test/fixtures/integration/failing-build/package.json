@@ -1,0 +1,1 @@
+{"scripts":{"build":"echo hello && exit 1"}}

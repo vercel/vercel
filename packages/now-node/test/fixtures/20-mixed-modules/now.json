@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [{ "src": "entrypoint**", "use": "@now/node" }],
+  "probes": [
+    {
+      "path": "/entrypoint.js",
+      "mustContain": "mixed-modules:js:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/entrypoint.ts",
+      "mustContain": "mixed-modules:ts:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

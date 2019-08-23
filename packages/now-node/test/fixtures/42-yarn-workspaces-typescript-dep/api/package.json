@@ -1,0 +1,10 @@
+{
+  "name": "@builders-typescript-test/api",
+  "dependencies": {
+    "@builders-typescript-test/lib": "*"
+  },
+  "engines": {
+    "node": "10.x"
+  },
+  "version": "1.0.0"
+}
