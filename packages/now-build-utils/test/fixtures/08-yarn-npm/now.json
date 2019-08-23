@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "with-npm/index.js", "use": "@now/node" },
+    { "src": "with-yarn/index.js", "use": "@now/node" }
+  ],
+  "probes": [
+    { "path": "/with-npm", "mustContain": "npm:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/with-yarn", "mustContain": "yarn:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

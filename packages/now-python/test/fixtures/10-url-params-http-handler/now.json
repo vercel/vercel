@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [{ "src": "*.py", "use": "@now/python" }],
+  "routes": [{ "src": "/another", "dest": "custom.py" }],
+  "probes": [
+    { "path": "/?hello=/", "mustContain": "path=/?hello=/" },
+    { "path": "/another?hello=/", "mustContain": "path=/another?hello=/" }
+  ]
+}

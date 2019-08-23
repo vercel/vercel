@@ -1,0 +1,5 @@
+{
+  "version": 2,
+  "builds": [{ "src": "**/**.py", "use": "@now/python" }],
+  "probes": [{ "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" }]
+}

@@ -1,0 +1,1 @@
+{ "scope": "now-builders-ci-bot-255", "builds": [ { "src": "*.html", "use": "@now/static" } ] }

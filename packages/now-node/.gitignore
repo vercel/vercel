@@ -1,0 +1,4 @@
+/dist
+/src/bridge.ts
+/test/fixtures/**/types.d.ts
+/test/fixtures/11-symlinks/symlink

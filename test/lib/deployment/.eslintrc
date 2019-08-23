@@ -1,0 +1,31 @@
+{
+  "overrides": [
+    {
+      "files": ["**"],
+      "rules": {
+        "array-bracket-spacing": [
+          "error",
+          "always"
+        ],
+        "arrow-body-style": "off",
+        "arrow-parens": [
+          "error",
+          "always"
+        ],
+        "comma-dangle": "off",
+        "import/no-extraneous-dependencies": "off",
+        "no-await-in-loop": "off",
+        "no-param-reassign": "off",
+        "no-restricted-syntax": "off",
+        "no-return-await": "off",
+        "no-use-before-define": "off",
+        "prefer-destructuring": "off",
+        "space-before-function-paren": [
+          "error",
+          "always"
+        ]
+      }
+    }
+  ]
+}
+
