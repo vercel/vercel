@@ -7,8 +7,14 @@ if [ "$1" == "" ]; then
 fi
 
 circleci_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-found="$(grep -rn \"""$1"\"": packages/*/package.json | cut -d '/' -f2 | uniq)"
-modified="$(git diff origin/canary...HEAD --name-only | grep '^packages/' | cut -d '/' -f2 | uniq)"
+found="$(grep -rn "\"$1\":" packages/*/package.json | cut -d '/' -f2 | uniq)"
+modified="$(git diff origin/canary...HEAD --name-only | grep '^packages/' ||: | cut -d '/' -f2 | uniq)"
+
+if [ -z "$modified" ]; then
+  echo "No packages with \"$1\" script were modified"
+  exit 0
+fi
+
 echo "$found" > /tmp/found.txt
 echo "$modified" > /tmp/modified.txt
 pkgs="$(comm -12 <(sort /tmp/found.txt) <(sort /tmp/modified.txt))"
