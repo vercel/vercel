@@ -118,7 +118,7 @@ export default async function verify(
     output.print(
       `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
+    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
     return 1;
   }
 
