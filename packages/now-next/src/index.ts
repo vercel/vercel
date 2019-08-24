@@ -256,7 +256,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now-builders/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
     console.log('normalizing package.json');
@@ -442,7 +442,7 @@ export const build = async ({
       }
 
       throw new Error(
-        'No serverless pages were built. https://err.sh/zeit/now-builders/now-next-no-serverless-pages-built'
+        'No serverless pages were built. https://err.sh/zeit/now/now-next-no-serverless-pages-built'
       );
     }
 
