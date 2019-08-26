@@ -175,6 +175,35 @@ export default [
     ],
   },
   {
+    name: 'Create React App (ejected)',
+    dependency: 'react-dev-utils',
+    getOutputDirName: async () => 'build',
+    defaultRoutes: [
+      {
+        src: '/static/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        src: '/sockjs-node/(.*)',
+        dest: '/sockjs-node/$1',
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Gridsome',
     dependency: 'gridsome',
     getOutputDirName: async () => 'dist',
