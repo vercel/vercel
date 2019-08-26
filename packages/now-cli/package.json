@@ -196,5 +196,8 @@
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
     "yarn": "1.17.3"
+  },
+  "dependencies": {
+    "now-client": "5.1.0"
   }
 }

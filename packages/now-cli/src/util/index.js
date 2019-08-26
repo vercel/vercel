@@ -1,5 +1,5 @@
 import { homedir } from 'os';
-import { resolve as resolvePath, join, basename } from 'path';
+import { resolve as resolvePath } from 'path';
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
@@ -7,10 +7,10 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
-import { createReadStream } from 'fs';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { URLSearchParams } from 'url';
+import { createDeployment, createLegacyDeployment } from 'now-client'
 import {
   staticFiles as getFiles,
   npm as getNpmFiles,
@@ -18,13 +18,11 @@ import {
 } from './get-files';
 import Agent from './agent.ts';
 import ua from './ua.ts';
-import hash from './hash';
 import highlight from './output/highlight';
 import createOutput from './output';
+import wait from './output/wait';
 import { responseError } from './error';
-
-// How many concurrent HTTP/2 stream uploads
-const MAX_CONCURRENT = 50;
+import stamp from './output/stamp';
 
 // Check if running windows
 const IS_WIN = process.platform.startsWith('win');
@@ -73,361 +71,209 @@ export default class Now extends EventEmitter {
       quiet = false,
       env,
       build,
-      followSymlinks = true,
       forceNew = false,
       target = null
     }
   ) {
-    const { log, warn, time } = this._output;
+    const opts = { output: this._output, hasNowJson };
+    const { log, warn, debug } = this._output;
     const isBuilds = type === null;
 
     let files = [];
+    let hashes = {};
     const relatives = {};
     let engines;
+    let deployment;
+    let requestBody = {}
 
-    await time('Getting files', async () => {
-      const opts = { output: this._output, hasNowJson };
+    if (isBuilds) {
+      requestBody = {
+        token: this._token,
+        teamId: this.currentTeam,
+        env,
+        build,
+        public: wantsPublic || nowConfig.public,
+        name,
+        project,
+        meta,
+        regions,
+        force: forceNew,
+      }
 
-      if (type === 'npm') {
-        files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
+      if (target) {
+        requestBody.target = target;
+      }
 
-        // A `start` or `now-start` npm script, or a `server.js` file
-        // in the root directory of the deployment are required
-        if (
-          !isBuilds &&
-          !hasNpmStart(pkg) &&
-          !hasFile(paths[0], files, 'server.js')
-        ) {
-          const err = new Error(
-            'Missing `start` (or `now-start`) script in `package.json`. ' +
-              'See: https://docs.npmjs.com/cli/start'
-          );
-          throw err;
+      if (isFile) {
+        requestBody.routes = [
+          {
+            src: '/',
+            dest: `/${files[0].file}`
+          }
+        ];
+      }
+    } else if (type === 'npm') {
+      files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
+
+      // A `start` or `now-start` npm script, or a `server.js` file
+      // in the root directory of the deployment are required
+      if (
+        !isBuilds &&
+        !hasNpmStart(pkg) &&
+        !hasFile(paths[0], files, 'server.js')
+      ) {
+        const err = new Error(
+          'Missing `start` (or `now-start`) script in `package.json`. ' +
+            'See: https://docs.npmjs.com/cli/start'
+        );
+        throw err;
+      }
+
+      engines = nowConfig.engines || pkg.engines;
+      forwardNpm = forwardNpm || nowConfig.forwardNpm;
+    } else if (type === 'static') {
+      if (isFile) {
+        files = [resolvePath(paths[0])];
+      } else if (paths.length === 1) {
+        files = await getFiles(paths[0], nowConfig, opts);
+      } else {
+        if (!files) {
+          files = [];
         }
 
-        engines = nowConfig.engines || pkg.engines;
-        forwardNpm = forwardNpm || nowConfig.forwardNpm;
-      } else if (type === 'static') {
-        if (isFile) {
-          files = [resolvePath(paths[0])];
-        } else if (paths.length === 1) {
-          files = await getFiles(paths[0], nowConfig, opts);
-        } else {
-          if (!files) {
-            files = [];
-          }
+        for (const path of paths) {
+          const list = await getFiles(path, {}, opts);
+          files = files.concat(list);
 
-          for (const path of paths) {
-            const list = await getFiles(path, {}, opts);
-            files = files.concat(list);
-
-            for (const file of list) {
-              relatives[file] = path;
-            }
-          }
-        }
-      } else if (type === 'docker') {
-        files = await getDockerFiles(paths[0], nowConfig, opts);
-      } else if (isBuilds) {
-        opts.isBuilds = isBuilds;
-
-        if (isFile) {
-          files = [resolvePath(paths[0])];
-        } else if (paths.length === 1) {
-          files = await getFiles(paths[0], {}, opts);
-        } else {
-          if (!files) {
-            files = [];
-          }
-
-          for (const path of paths) {
-            const list = await getFiles(path, {}, opts);
-            files = files.concat(list);
-
-            for (const file of list) {
-              relatives[file] = path;
-            }
+          for (const file of list) {
+            relatives[file] = path;
           }
         }
       }
-    });
-
-    // Read `registry.npmjs.org` authToken from .npmrc
-    let authToken;
-
-    if (type === 'npm' && forwardNpm) {
-      authToken =
-        (await readAuthToken(paths[0])) || (await readAuthToken(homedir()));
+    } else if (type === 'docker') {
+      files = await getDockerFiles(paths[0], nowConfig, opts);
     }
 
-    const hashes = await time('Computing hashes', () => {
-      const pkgDetails = Object.assign({ name }, pkg);
-      return hash(files, pkgDetails);
-    });
+    const uploadStamp = stamp();
 
-    this._files = hashes;
+    if (isBuilds) {
+      let buildSpinner = null
+      let deploySpinner = null
 
-    const deployment = await this.retry(async bail => {
-      // Flatten the array to contain files to sync where each nested input
-      // array has a group of files with the same sha but different path
-      const files = await time(
-        'Get files ready for deployment',
-        Promise.all(
-          Array.prototype.concat.apply(
-            [],
-            await Promise.all(
-              Array.from(this._files).map(async ([sha, { data, names }]) => {
-                const statFn = followSymlinks ? fs.stat : fs.lstat;
+      for await(const event of createDeployment(paths[0], requestBody)) {
+        if (event.type === 'hashes-calculated') {
+          hashes = event.payload
+        }
 
-                return names.map(async name => {
-                  const getMode = async () => {
-                    const st = await statFn(name);
-                    return st.mode;
-                  };
+        if (event.type === 'file-uploaded') {
+          debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
+        }
 
-                  const mode = await getMode();
-                  const multipleStatic = Object.keys(relatives).length !== 0;
-
-                  let file;
-
-                  if (isFile) {
-                    file = basename(paths[0]);
-                  } else if (multipleStatic) {
-                    file = toRelative(name, join(relatives[name], '..'));
-                  } else {
-                    file = toRelative(name, paths[0]);
-                  }
-
-                  return {
-                    sha,
-                    size: data.length,
-                    file,
-                    mode
-                  };
-                });
-              })
-            )
-          )
-        )
-      );
-
-      // This is a useful warning because it prevents people
-      // from getting confused about a deployment that renders 404.
-      if (
-        files.length === 0 ||
-        files.every(item => item.file.startsWith('.'))
-      ) {
-        warn(
-          'There are no files (or only files starting with a dot) inside your deployment.'
-        );
-      }
-
-      const queryProps = {};
-      const requestBody = isBuilds
-        ? {
-            version: 2,
-            env,
-            build,
-            public: wantsPublic || nowConfig.public,
-            name,
-            project,
-            files,
-            meta,
-            regions
+        if (event.type === 'all-files-uploaded') {
+          if (!quiet) {
+            log(
+              `Synced ${event.payload.size} ${uploadStamp()}`
+            );
           }
-        : {
-            env,
-            build,
-            meta,
-            public: wantsPublic || nowConfig.public,
-            forceNew,
-            name,
-            project,
-            description,
-            deploymentType: type,
-            registryAuthToken: authToken,
-            files,
-            engines,
-            scale,
-            sessionAffinity,
-            limits: nowConfig.limits,
-            atlas
-          };
+        }
 
-      if (Object.keys(nowConfig).length > 0) {
-        if (isBuilds) {
-          // These properties are only used inside Now CLI and
-          // are not supported on the API.
-          const exclude = ['github', 'scope'];
-
-          // Request properties that are made of a combination of
-          // command flags and config properties were already set
-          // earlier. Here, we are setting request properties that
-          // are purely made of their equally-named config property.
-          for (const key of Object.keys(nowConfig)) {
-            const value = nowConfig[key];
-
-            if (!requestBody[key] && !exclude.includes(key)) {
-              requestBody[key] = value;
-            }
+        if (event.type === 'build-state-changed') {
+          if (buildSpinner === null) {
+            buildSpinner = wait('Building...');
           }
-        } else {
-          requestBody.config = nowConfig;
-        }
-      }
-
-      if (isBuilds) {
-        if (forceNew) {
-          queryProps.forceNew = 1;
         }
 
-        if (target) {
-          requestBody.target = target;
+        if (event.type === 'all-builds-completed') {
+          buildSpinner()
+          deploySpinner = wait('Finalizing...')
         }
 
-        if (isFile) {
-          requestBody.routes = [
-            {
-              src: '/',
-              dest: `/${files[0].file}`
-            }
-          ];
-        }
-      }
-
-      const query = qs.stringify(queryProps);
-      const version = isBuilds ? 'v9' : 'v4';
-
-      const res = await this._fetch(
-        `/${version}/now/deployments${query ? `?${query}` : ''}`,
-        {
-          method: 'POST',
-          body: requestBody
-        }
-      );
-
-      // No retry on 4xx
-      let body;
-
-      try {
-        body = await res.json();
-      } catch (err) {
-        throw new Error(
-          `Unexpected response error: ${err.message} (${
-            res.status
-          } status code)`
-        );
-      }
-
-      if (res.status === 429) {
-        if (body.error && body.error.code === 'builds_rate_limited') {
-          const err = new Error(body.error.message);
-          err.status = res.status;
-          err.retryAfter = 'never';
-          err.code = body.error.code;
-
-          return bail(err);
+        // Handle error events
+        if (event.type === 'error') {
+          throw await this.handleDeploymentError(event.payload, { hashes, env })
         }
 
-        let msg = 'You have been creating deployments at a very fast pace. ';
+        // Handle ready event
+        if (event.type === 'ready') {
+          deployment = event.payload
+          deploySpinner()
+        }
+      }
+    } else {
+      // Read `registry.npmjs.org` authToken from .npmrc
+      let authToken;
 
-        if (body.error && body.error.limit && body.error.limit.reset) {
-          const { reset } = body.error.limit;
-          const difference = reset * 1000 - Date.now();
+      if (type === 'npm' && forwardNpm) {
+        authToken =
+          (await readAuthToken(paths[0])) || (await readAuthToken(homedir()));
+      }
 
-          msg += `Please retry in ${ms(difference, { long: true })}.`;
-        } else {
-          msg += 'Please slow down.';
+      requestBody = {
+        token: this._token,
+        teamId: this.currentTeam,
+        env,
+        build,
+        meta,
+        public: wantsPublic || nowConfig.public,
+        forceNew,
+        name,
+        project,
+        description,
+        deploymentType: type,
+        registryAuthToken: authToken,
+        engines,
+        scale,
+        sessionAffinity,
+        limits: nowConfig.limits,
+        atlas
+      }
+
+      for await(const event of createLegacyDeployment(paths[0], requestBody)) {
+        if (event.type === 'hashes-calculated') {
+          hashes = event.payload
         }
 
-        const err = new Error(msg);
+        if (event.type === 'file-uploaded') {
+          debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
+        }
 
-        err.status = res.status;
-        err.retryAfter = 'never';
-
-        return bail(err);
-      }
-
-      // If the deployment domain is missing a cert, bail with the error
-      if (
-        res.status === 400 &&
-        body.error &&
-        body.error.code === 'cert_missing'
-      ) {
-        bail(await responseError(res, null, body));
-      }
-
-      if (
-        res.status === 400 &&
-        body.error &&
-        body.error.code === 'missing_files'
-      ) {
-        return body;
-      }
-
-      if (res.status === 404 && body.error && body.error.code === 'not_found') {
-        return body;
-      }
-
-      if (res.status >= 400 && res.status < 500) {
-        const err = new Error();
-
-        if (body.error) {
-          const { code, unreferencedBuildSpecs } = body.error;
-
-          if (code === 'env_value_invalid_type') {
-            const { key } = body.error;
-            err.message =
-              `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-              'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)';
-          } else if (code === 'unreferenced_build_specifications') {
-            const count = unreferencedBuildSpecs.length;
-            const prefix = count === 1 ? 'build' : 'builds';
-
-            err.message =
-              `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-                '.nowignore'
-              )}):` +
-              `\n- ${unreferencedBuildSpecs
-                .map(item => JSON.stringify(item))
-                .join('\n- ')}`;
-          } else {
-            Object.assign(err, body.error);
+        if (event.type === 'all-files-uploaded') {
+          if (!quiet) {
+            log(
+              `Synced ${event.payload.size} ${uploadStamp()}`
+            );
           }
-        } else {
-          err.message = 'Not able to create deployment';
+
+          log('Building…');
         }
 
-        return bail(err);
-      }
+        // Handle error events
+        if (event.type === 'error') {
+          throw await this.handleDeploymentError(event.payload, { hashes, env })
+        }
 
-      if (res.status !== 200) {
-        throw new Error(body.error.message);
-      }
-
-      for (const [name, value] of res.headers.entries()) {
-        if (name.startsWith('x-now-warning-')) {
-          this._output.warn(value);
+        // Handle ready event
+        if (event.type === 'ready') {
+          log(`Build completed`);
+          deployment = event.payload
         }
       }
-
-      return body;
-    });
+    }
 
     // We report about files whose sizes are too big
     let missingVersion = false;
 
-    if (deployment.warnings) {
+    if (deployment && deployment.warnings) {
       let sizeExceeded = 0;
 
       deployment.warnings.forEach(warning => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning;
-          const n = hashes.get(sha).names.pop();
+          const n = hashes[sha].names.pop();
 
           warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
 
-          hashes.get(sha).names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
+          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
@@ -443,13 +289,6 @@ export default class Now extends EventEmitter {
           )}`
         );
       }
-    }
-
-    if (deployment.error && deployment.error.code === 'missing_files') {
-      this._missing = deployment.error.missing || [];
-      this._fileCount = files.length;
-
-      return null;
     }
 
     if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
@@ -472,81 +311,82 @@ export default class Now extends EventEmitter {
     return deployment;
   }
 
-  upload({ atlas = false, scale = {} } = {}) {
-    const { debug, time } = this._output;
-    debug(`Will upload ${this._missing.length} files`);
+  async handleDeploymentError(error, { hashes, env }) {
+    if (error.status === 429) {
+      if (error.code === 'builds_rate_limited') {
+        const err = new Error(error.message);
+        err.status = error.status;
+        err.retryAfter = 'never';
+        err.code = error.code;
 
-    this._agent.setConcurrency({
-      maxStreams: MAX_CONCURRENT,
-      capacity: this._missing.length
-    });
+        return err
+      }
 
-    time(
-      'Uploading files',
-      Promise.all(
-        this._missing.map(sha =>
-          retry(
-            async bail => {
-              const file = this._files.get(sha);
-              const fPath = file.names[0];
-              const stream = createReadStream(fPath);
-              const { data } = file;
+      let msg = 'You have been creating deployments at a very fast pace. ';
 
-              const fstreamPush = stream.push;
+      if (error.limit && error.limit.reset) {
+        const { reset } = error.limit;
+        const difference = reset * 1000 - Date.now();
 
-              let uploadedSoFar = 0;
-              stream.push = chunk => {
-                // If we're about to push the last chunk, then don't do it here
-                // But instead, we'll "hang" the progress bar and do it on 200
-                if (chunk && uploadedSoFar + chunk.length < data.length) {
-                  this.emit('uploadProgress', chunk.length);
-                  uploadedSoFar += chunk.length;
-                }
-                return fstreamPush.call(stream, chunk);
-              };
+        msg += `Please retry in ${ms(difference, { long: true })}.`;
+      } else {
+        msg += 'Please slow down.';
+      }
 
-              const url = atlas ? '/v1/now/images' : '/v2/now/files';
-              const additionalHeaders = atlas
-                ? {
-                    'x-now-dcs': Object.keys(scale).join(',')
-                  }
-                : {};
-              const res = await this._fetch(url, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                  'x-now-digest': sha,
-                  'x-now-size': data.length,
-                  ...additionalHeaders
-                },
-                body: stream
-              });
+      const err = new Error(msg);
 
-              if (res.status === 200) {
-                // What we want
-                this.emit('uploadProgress', file.data.length - uploadedSoFar);
-                this.emit('upload', file);
-              } else if (res.status > 200 && res.status < 500) {
-                // If something is wrong with our request, we don't retry
-                return bail(await responseError(res, `Failed to upload file with status: ${res.status}`));
-              } else {
-                // If something is wrong with the server, we retry
-                throw await responseError(res, 'Failed to upload file');
-              }
-            },
-            {
-              retries: 3,
-              randomize: true,
-              onRetry: this._onRetry
-            }
-          )
-        )
-      )
-    )
-      .then(() => {
-        this.emit('complete');
-      })
-      .catch(err => this.emit('error', err));
+      err.status = error.status;
+      err.retryAfter = 'never';
+
+      return err
+    }
+
+    // If the deployment domain is missing a cert, bail with the error
+    if (error.status === 400 && error.code === 'cert_missing'
+    ) {
+      return responseError(error, null, error);
+    }
+
+    if (error.status === 400 && error.code === 'missing_files') {
+      this._missing = error.missing || [];
+      this._fileCount = hashes.length;
+
+      return error;
+    }
+
+    if (error.status === 404 && error.code === 'not_found') {
+      return error;
+    }
+
+    if (error.status >= 400 && error.status < 500) {
+      const err = new Error();
+
+      const { code, unreferencedBuildSpecs } = error;
+
+      if (code === 'env_value_invalid_type') {
+        const { key } = error;
+        err.message =
+          `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
+          'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)';
+      } else if (code === 'unreferenced_build_specifications') {
+        const count = unreferencedBuildSpecs.length;
+        const prefix = count === 1 ? 'build' : 'builds';
+
+        err.message =
+          `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
+            '.nowignore'
+          )}):` +
+          `\n- ${unreferencedBuildSpecs
+            .map(item => JSON.stringify(item))
+            .join('\n- ')}`;
+      } else {
+        Object.assign(err, error);
+      }
+
+      return err
+    }
+
+    return new Error(error.message);
   }
 
   async listSecrets() {

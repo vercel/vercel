@@ -3,18 +3,15 @@ import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
-import Progress from 'progress';
 import Client from '../../util/client';
-import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import { isReady, isDone, isFailed } from '../../util/build-state';
+import { isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
-import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
@@ -75,17 +72,13 @@ const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList, aliasError },
+  { url, readyState, alias: aliasList },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
   if (readyState === 'READY') {
-    if (aliasError && aliasError.message) {
-      output.warn(`Failed to assign aliases: ${aliasError.message}`);
-    }
-
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
@@ -235,7 +228,6 @@ export default async function main(
     parseMeta(argv['--meta'])
   );
 
-  let syncCount;
   let deployStamp = stamp();
   let deployment = null;
 
@@ -317,6 +309,7 @@ export default async function main(
 
     const createArgs = {
         name: project,
+        target: argv['--target'],
         env: deploymentEnv,
         build: { env: deploymentBuildEnv },
         forceNew: argv['--force'],
@@ -329,28 +322,21 @@ export default async function main(
         meta
     };
 
-    if (argv['--target']) {
-      const deprecatedTarget = argv['--target'];
+    if (createArgs.target) {
+      const allowedValues = [
+        'staging',
+        'production'
+      ];
 
-      if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
+      if (!allowedValues.includes(createArgs.target)) {
+        error(`The specified ${param('--target')} ${code(createArgs.target)} is not valid`);
         return 1;
       }
-
-      if (deprecatedTarget === 'production') {
-        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
-      }
-
-      output.debug(`Setting target to ${deprecatedTarget}`);
-      createArgs.target = deprecatedTarget;
-    } else if (argv['--prod']) {
-      output.debug('Setting target to production');
-      createArgs.target = 'production';
     }
 
     deployStamp = stamp();
 
-    const firstDeployCall = await createDeploy(
+    deployment = await createDeploy(
       output,
       now,
       contextName,
@@ -360,11 +346,11 @@ export default async function main(
     );
 
     if (
-      firstDeployCall instanceof DomainNotFound &&
-      firstDeployCall.meta && firstDeployCall.meta.domain
+      deployment instanceof DomainNotFound &&
+      deployment.meta && deployment.meta.domain
     ) {
       output.debug(`The domain ${
-        firstDeployCall.meta.domain
+        deployment.meta.domain
       } was not found, trying to purchase it`);
 
       const purchase = await purchaseDomainIfAvailable(
@@ -375,13 +361,13 @@ export default async function main(
           currentTeam: ctx.config.currentTeam,
           debug: debugEnabled
         }),
-        firstDeployCall.meta.domain,
+        deployment.meta.domain,
         contextName
       );
 
       if (purchase === true) {
         output.success(`Successfully purchased the domain ${
-          firstDeployCall.meta.domain
+          deployment.meta.domain
         }!`);
 
         // We exit if the purchase is completed since
@@ -390,7 +376,7 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, firstDeployCall);
+        handleCreateDeployError(output, deployment);
         return 1;
       }
 
@@ -398,117 +384,50 @@ export default async function main(
       return 1;
     }
 
-    if (handleCertError(output, firstDeployCall) === 1) {
+    const deploymentResponse = handleCertError(
+      output,
+      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
+    )
+
+    if (deploymentResponse === 1) {
+      return deploymentResponse;
+    }
+
+    if (
+      deploymentResponse instanceof DeploymentNotFound ||
+      deploymentResponse instanceof DeploymentPermissionDenied ||
+      deploymentResponse instanceof InvalidDeploymentId
+    ) {
+      output.error(deploymentResponse.message);
+      return 1;
+    }
+
+    if (handleCertError(output, deployment) === 1) {
       return 1;
     }
 
     if (
-      firstDeployCall instanceof DomainNotFound ||
-      firstDeployCall instanceof DomainNotVerified ||
-      firstDeployCall instanceof DomainPermissionDenied ||
-      firstDeployCall instanceof DomainVerificationFailed ||
-      firstDeployCall instanceof SchemaValidationFailed ||
-      firstDeployCall instanceof InvalidDomain ||
-      firstDeployCall instanceof DeploymentNotFound ||
-      firstDeployCall instanceof BuildsRateLimited ||
-      firstDeployCall instanceof DeploymentsRateLimited ||
-      firstDeployCall instanceof AliasDomainConfigured ||
-      firstDeployCall instanceof MissingBuildScript ||
-      firstDeployCall instanceof ConflictingFilePath ||
-      firstDeployCall instanceof ConflictingPathSegment
+      deployment instanceof DomainNotFound ||
+      deployment instanceof DomainNotVerified ||
+      deployment instanceof DomainPermissionDenied ||
+      deployment instanceof DomainVerificationFailed ||
+      deployment instanceof SchemaValidationFailed ||
+      deployment instanceof InvalidDomain ||
+      deployment instanceof DeploymentNotFound ||
+      deployment instanceof BuildsRateLimited ||
+      deployment instanceof DeploymentsRateLimited ||
+      deployment instanceof AliasDomainConfigured ||
+      deployment instanceof MissingBuildScript ||
+      deployment instanceof ConflictingFilePath ||
+      deployment instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, firstDeployCall);
+      handleCreateDeployError(output, deployment);
       return 1;
     }
 
-    deployment = firstDeployCall;
-
-    if (now.syncFileCount > 0) {
-      const uploadStamp = stamp();
-
-      await new Promise((resolve, reject) => {
-        if (now.syncFileCount !== now.fileCount) {
-          debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
-        }
-
-        const size = bytes(now.syncAmount);
-        syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-          ? 's'
-          : ''}`;
-        const bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: now.syncAmount,
-            clear: true
-          }
-        );
-
-        now.upload({ scale: {} });
-
-        now.on('upload', ({ names, data }) => {
-          debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
-        });
-
-        now.on('uploadProgress', progress => {
-          bar.tick(progress);
-        });
-
-        now.on('complete', resolve);
-
-        now.on('error', err => {
-          error('Upload failed');
-          reject(err);
-        });
-      });
-
-      if (!quiet && syncCount) {
-        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`);
-      }
-
-      for (let i = 0; i < 4; i += 1) {
-        deployStamp = stamp();
-        const secondDeployCall = await createDeploy(
-          output,
-          now,
-          contextName,
-          paths,
-          createArgs
-        );
-
-        if (handleCertError(output, secondDeployCall) === 1) {
-          return 1;
-        }
-
-        if (
-          secondDeployCall instanceof DomainPermissionDenied ||
-          secondDeployCall instanceof DomainVerificationFailed ||
-          secondDeployCall instanceof SchemaValidationFailed ||
-          secondDeployCall instanceof DeploymentNotFound ||
-          secondDeployCall instanceof DeploymentsRateLimited ||
-          secondDeployCall instanceof AliasDomainConfigured ||
-          secondDeployCall instanceof MissingBuildScript ||
-          secondDeployCall instanceof ConflictingFilePath ||
-          secondDeployCall instanceof ConflictingPathSegment
-        ) {
-          handleCreateDeployError(output, secondDeployCall);
-          return 1;
-        }
-
-        if (now.syncFileCount === 0) {
-          deployment = secondDeployCall;
-          break;
-        }
-      }
-
-      if (deployment === null) {
-        error('Uploading failed. Please try again.');
-        return 1;
-      }
+    if (deployment === null) {
+      error('Uploading failed. Please try again.');
+      return 1;
     }
   } catch (err) {
     debug(`Error: ${err}\n${err.stack}`);
@@ -538,105 +457,7 @@ export default async function main(
     process.stdout.write(url);
   }
 
-  // If an error occurred, we want to let it fall down to rendering
-  // builds so the user can see in which build the error occurred.
-  if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
-  }
-
-  const sleepingTime = ms('1.5s');
-  const allBuildsTime = stamp();
-  const times = {};
-  const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
-
-  let builds = [];
-  let buildsCompleted = false;
-  let buildSpinner = null;
-
-  let deploymentSpinner = null;
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    if (!buildsCompleted) {
-      const { builds: freshBuilds } = await now.fetch(buildsUrl);
-
-      // If there are no builds, we need to exit.
-      if (freshBuilds.length === 0 || freshBuilds.every(isDone)) {
-        builds = freshBuilds;
-        buildsCompleted = true;
-      } else {
-        for (const build of freshBuilds) {
-          const id = build.id;
-          const done = isDone(build);
-
-          if (times[id]) {
-            if (done && typeof times[id] === 'function') {
-              times[id] = times[id]();
-            }
-          } else {
-            times[id] = done ? allBuildsTime() : stamp();
-          }
-        }
-
-        if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
-          builds = freshBuilds;
-
-          if (buildSpinner === null) {
-            buildSpinner = wait('Building...');
-          }
-
-          buildsCompleted = builds.every(isDone);
-
-          if (builds.some(isFailed)) {
-            break;
-          }
-        }
-      }
-    } else {
-      const deploymentResponse = handleCertError(
-        output,
-        await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
-      )
-
-      if (deploymentResponse === 1) {
-        return deploymentResponse;
-      }
-
-      if (
-        deploymentResponse instanceof DeploymentNotFound ||
-        deploymentResponse instanceof DeploymentPermissionDenied ||
-        deploymentResponse instanceof InvalidDeploymentId
-      ) {
-        output.error(deploymentResponse.message);
-        return 1;
-      }
-
-      if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
-        deployment = deploymentResponse;
-
-        if (typeof deploymentSpinner === 'function') {
-          // This stops it
-          deploymentSpinner();
-        }
-
-        break;
-      } else if (!deploymentSpinner) {
-        if (typeof buildSpinner === 'function') {
-          buildSpinner();
-        }
-
-        deploymentSpinner = wait('Finalizing...');
-      }
-    }
-
-    await sleep(sleepingTime);
-  }
-
-  if (typeof buildSpinner === 'function') {
-    buildSpinner();
-  }
-
-  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
 };
 
 function handleCreateDeployError(output, error) {
