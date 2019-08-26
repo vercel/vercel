@@ -21,12 +21,12 @@
       "publish-stable": "git checkout master && git pull && lerna version --exact",
       "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
       "publish-from-github": "./.circleci/publish.sh",
-      "build": "./.circleci/run.sh build",
-      "test-lint": "./.circleci/run.sh test-lint",
-      "test-unit": "./.circleci/run.sh test-unit",
-      "test-integration": "./.circleci/run.sh test-integration",
-      "test-integration-once": "./.circleci/run.sh test-integration-once",
-      "test-integration-now-dev": "./.circleci/run.sh test-integration-now-dev"
+      "build": "node run.js build all",
+      "test-lint": "node run.js test-lint",
+      "test-unit": "node run.js test-unit",
+      "test-integration": "node run.js test-integration",
+      "test-integration-once": "node run.js test-integration-once",
+      "test-integration-now-dev": "node run.js test-integration-now-dev"
     }
   }
   

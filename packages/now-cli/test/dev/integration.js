@@ -72,7 +72,7 @@ function testFixtureStdio(directory, fn) {
         readyResolve = resolve;
       });
 
-      dev = execa(binaryPath, ['dev', dir, '-p', port]);
+      dev = execa(binaryPath, ['dev', dir, '-l', port]);
       dev.stderr.on('data', async data => {
         output += data.toString();
         if (data.toString().includes('Ready! Available at')) {
