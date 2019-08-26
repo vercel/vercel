@@ -1,9 +1,9 @@
-import path from "path";
-import fs from "fs-extra";
-import { Output } from "../../util/output";
-import { Builder, FileFsRef } from "@now/build-utils";
+import path from 'path';
+import fs from 'fs-extra';
+import { Builder, FileFsRef } from '@now/build-utils';
+import { Output } from '../../util/output';
 
-const cleanDirPart = (part: string) => part.replace(/(\/|\\)/g, "_");
+const cleanDirPart = (part: string) => part.replace(/(\/|\\)/g, '_');
 
 export default async function runBuild({
   workDir,
@@ -22,8 +22,8 @@ export default async function runBuild({
 }): Promise<void> {
   output.log(`Running build: ${JSON.stringify(build)}`);
 
-  const builderName = '';
-  const builderPath = '';
+  const builderName = build.use;
+  const builderPath = path.join(buildersDir, 'node_modules', builderName);
   const builder = require(builderPath);
 
   const outputDir = path.join(
@@ -48,22 +48,22 @@ export default async function runBuild({
     let itemPath = path.join(outputDir, outputKey);
 
     if (dirNames.has(outputKey)) {
-      itemPath = path.join(itemPath, "index");
+      itemPath = path.join(itemPath, 'index');
     }
 
     await fs.ensureDir(path.dirname(itemPath));
 
-    if (item.type === "Lambda") {
+    if (item.type === 'Lambda') {
       await fs.writeFile(itemPath, item.zipBuffer);
-      item.zipBuffer = "OMITTED";
-    } else if (item.type === "FileFsRef") {
+      item.zipBuffer = 'OMITTED';
+    } else if (item.type === 'FileFsRef') {
       const writeStream = fs.createWriteStream(itemPath);
       item.toStream().pipe(writeStream);
     }
   }
 
   await fs.writeFile(
-    path.join(outputDir, "output.json"),
+    path.join(outputDir, 'output.json'),
     JSON.stringify(buildOutput, null, 2)
   );
 }

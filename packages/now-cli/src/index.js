@@ -260,7 +260,7 @@ const main = async argv_ => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'help', 'init', 'dev', 'update'];
+  const subcommandsWithoutToken = ['build', 'dev', 'help', 'init', 'login', 'update'];
 
   if (authConfigExists) {
     try {

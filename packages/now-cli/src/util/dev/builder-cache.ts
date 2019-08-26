@@ -218,7 +218,7 @@ export async function installBuilders(
   yarnDir: string,
   output: Output,
   builderDir?: string,
-  skipFilter?: boolean
+  filterPackaged: boolean = true
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -240,7 +240,7 @@ export async function installBuilders(
   let packagesToInstall = packages
 
   // Filter out any packages that come packaged with `now-cli`
-  if (!skipFilter) {
+  if (filterPackaged) {
     packagesToInstall = packages.filter(p =>
       filterPackage(p, distTag, buildersPkg)
     );
