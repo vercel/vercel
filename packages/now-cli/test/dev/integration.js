@@ -139,7 +139,8 @@ test('[now dev] 01-node', async t => {
   }
 });
 
-if (satisfies(process.version, '>= 10.9')) {
+// Angular has `engines: { node: "10.x" }` in its `package.json`
+if (satisfies(process.version, '10.x')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
     const { dev, port } = testFixture(directory, { stdio: 'pipe' }, ['--debug']);
