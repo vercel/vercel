@@ -39,6 +39,18 @@ async function main() {
     console.log(`Running "${script}" on branch "${branch}" with the following packages:`);
   }
 
+  // Sort the matches such that `utils` modules are compiled first,
+  // because other packages may rely on them
+  matches.sort((a, b) => {
+    if (a.endsWith('-utils') && !b.endsWith('-utils')) {
+      return -1;
+    }
+    if (b.endsWith('-utils') && !a.endsWith('-utils')) {
+      return 1;
+    }
+    return b - a;
+  });
+
   console.log(matches.join('\n') + '\n');
 
   for (let pkgName of matches) {
