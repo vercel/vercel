@@ -249,7 +249,7 @@ export async function build({
           );
         } catch (err) {
           throw new Error(
-            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now-builders/now-static-build-failed-to-detect-a-server`
+            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now/now-static-build-failed-to-detect-a-server`
           );
         }
 
