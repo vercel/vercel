@@ -12,9 +12,9 @@ async function main() {
     process.exit(2);
   }
 
-  if (all) {
+  if (all === 'all') {
     matches = readdirSync(join(__dirname, 'packages'));
-    console.log(`Running ${script} on all packages`)
+    console.log(`Running script "${script}" for all packages`)
   } else {
     const branch = execSync('git branch | grep "*" | cut -d " " -f2')
       .toString()
@@ -36,10 +36,10 @@ async function main() {
       console.log('No packages changed. Using default packages.');
     }
 
-    console.log(`Running ${script} on branch "${branch}" with the following packages:`);
+    console.log(`Running "${script}" on branch "${branch}" with the following packages:`);
   }
 
-  console.log(matches.join('\n'));
+  console.log(matches.join('\n') + '\n');
 
   for (let pkgName of matches) {
     await runScript(pkgName, script);
@@ -56,7 +56,7 @@ function runScript(pkgName, script) {
       pkgJson = null;
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
-      console.log(`[${pkgName}] Executing yarn ${script}`);
+      console.log(`\n[${pkgName}] Executing yarn ${script}`);
       const child = spawn('yarn', [script], { cwd, stdio: 'inherit' });
       child.on('error', reject);
       child.on('close', (code, signal) => {
