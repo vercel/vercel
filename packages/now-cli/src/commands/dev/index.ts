@@ -99,7 +99,7 @@ export default async function main(ctx: NowContext) {
           )} must not contain ${cmd('now dev')}`
         );
         output.error(
-          `More details: http://err.sh/now-cli/now-dev-as-dev-script`
+          `More details: http://err.sh/now/now-dev-as-dev-script`
         );
         return 1;
       }
