@@ -156,7 +156,7 @@ export default async function inspect(
         'now domains verify <domain>'
       )}\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n\n');
+    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
   }
 
   return null;
