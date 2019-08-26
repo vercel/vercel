@@ -354,6 +354,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Compiling `now dev` HTML error templates
+          command: node packages/now-cli/scripts/compile-templates.js
+      - run:
           name: Run unit tests
           command: yarn workspace now run test-unit
       - run:
