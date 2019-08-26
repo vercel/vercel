@@ -5,7 +5,7 @@
   "main": "./index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now-builders.git",
+    "url": "https://github.com/zeit/now.git",
     "directory": "packages/now-node-bridge"
   },
   "files": [

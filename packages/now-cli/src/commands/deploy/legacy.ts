@@ -1090,7 +1090,7 @@ async function sync({
                 )})`
               );
               output.log(
-                'Read more: https://err.sh/now-cli/verification-timeout'
+                'Read more: https://err.sh/now/verification-timeout'
               );
               await exit(1);
             } else if (Array.isArray(dcOrEvent)) {

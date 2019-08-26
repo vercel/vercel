@@ -20,7 +20,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function warn(str: string, slug: string | null = null) {
     log(chalk`{yellow.bold WARN!} ${str}`);
     if (slug !== null) {
-      log(`More details: https://err.sh/now-cli/${slug}`);
+      log(`More details: https://err.sh/now/${slug}`);
     }
   }
 
@@ -31,7 +31,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function error(str: string, slug: string | null = null) {
     log(chalk`{red.bold Error!} ${str}`, chalk.red);
     if (slug !== null) {
-      log(`More details: https://err.sh/now-cli/${slug}`);
+      log(`More details: https://err.sh/now/${slug}`);
     }
   }
 

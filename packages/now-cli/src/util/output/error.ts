@@ -11,7 +11,7 @@ export default function error(
     const { slug, message } = input[0];
     messages = [message];
     if (slug) {
-      messages.push(`> More details: https://err.sh/now-cli/${slug}`);
+      messages.push(`> More details: https://err.sh/now/${slug}`);
     }
   }
 
