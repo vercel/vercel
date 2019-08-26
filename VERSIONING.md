@@ -6,8 +6,8 @@ Builders are released to two different channels.
 
 | Channel | Git Branch                                                    | npm dist-tag | use example        |
 | ------- | ------------------------------------------------------------- | ------------ | ------------------ |
-| Canary  | [canary](https://github.com/zeit/now-builders/commits/canary) | `@canary`    | `@now/node@canary` |
-| Stable  | [master](https://github.com/zeit/now-builders/commits/master) | `@latest`    | `@now/node@latest` |
+| Canary  | [canary](https://github.com/zeit/now/commits/canary)          | `@canary`    | `@now/node@canary` |
+| Stable  | [master](https://github.com/zeit/now/commits/master)          | `@latest`    | `@now/node@latest` |
 
 All PRs are submitted to the `canary` branch. Once a PR is merged into the `canary` branch, it should be published to npm immediately using the Canary Channel.
 

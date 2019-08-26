@@ -379,7 +379,7 @@ export default class Now extends EventEmitter {
             const { key } = body.error;
             err.message =
               `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-              'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)';
+              'Please supply a String or a Number (https://err.sh/now/env-value-invalid-type)';
           } else if (code === 'unreferenced_build_specifications') {
             const count = unreferencedBuildSpecs.length;
             const prefix = count === 1 ? 'build' : 'builds';
