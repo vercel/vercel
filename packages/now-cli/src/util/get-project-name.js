@@ -1,11 +1,6 @@
 import { basename } from 'path';
 
-export default function getProjectName({
-  argv,
-  nowConfig,
-  paths,
-  pre
-}) {
+export default function getProjectName({ argv, nowConfig, paths, pre }) {
   const nameCli = argv['--name'] || argv.name;
 
   if (nameCli) {
