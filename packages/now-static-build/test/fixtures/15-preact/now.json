@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "15-preact" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "15-preact" }
+  ]
+}

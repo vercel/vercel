@@ -1,0 +1,93 @@
+{
+  "name": "now-client",
+  "version": "5.1.0",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "ncc build ./src/index.ts -o ./lib --source-map",
+    "prepare": "npm run build",
+    "test-integration-once": "jest --verbose --forceExit",
+    "test-lint": "eslint --ext .ts ./src",
+    "lint": "eslint --fix --ext .ts ./src",
+    "lint-staged": "git diff --diff-filter=ACMRT --cached --name-only '*.ts' | xargs eslint --fix"
+  },
+  "devDependencies": {
+    "@types/async-retry": "1.4.1",
+    "@types/fs-extra": "7.0.0",
+    "@types/jest": "24.0.16",
+    "@types/ms": "0.7.30",
+    "@types/node": "12.0.4",
+    "@types/node-fetch": "2.3.4",
+    "@types/recursive-readdir": "2.2.0",
+    "@typescript-eslint/eslint-plugin": "1.9.0",
+    "@typescript-eslint/parser": "1.9.0",
+    "@zeit/git-hooks": "0.1.4",
+    "@zeit/ncc": "0.18.5",
+    "eslint": "5.16.0",
+    "jest": "24.8.0",
+    "ts-jest": "24.0.2",
+    "typescript": "3.5.1"
+  },
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended"
+    ],
+    "env": {
+      "es6": true,
+      "node": true,
+      "jest": true
+    },
+    "rules": {
+      "func-names": [
+        "error",
+        "as-needed"
+      ],
+      "no-shadow": "error",
+      "no-extra-semi": 0,
+      "react/prop-types": 0,
+      "react/react-in-jsx-scope": 0,
+      "react/no-unescaped-entities": 0,
+      "react/jsx-no-target-blank": 0,
+      "react/no-string-refs": 0,
+      "semi": [
+        "error",
+        "never"
+      ],
+      "@typescript-eslint/indent": [
+        "error",
+        2
+      ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-member-accessibility": "off"
+    }
+  },
+  "git": {
+    "pre-commit": "lint-staged"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "verbose": false,
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup/index.ts"
+    ]
+  },
+  "dependencies": {
+    "@zeit/fetch": "5.1.0",
+    "async-retry": "1.2.3",
+    "async-sema": "3.0.0",
+    "fetch-h2": "2.2.0",
+    "fs-extra": "8.0.1",
+    "ms": "2.1.2",
+    "node-fetch": "2.6.0",
+    "now-client": "4.1.2",
+    "querystring": "^0.2.0",
+    "recursive-readdir": "2.2.2",
+    "sleep-promise": "8.0.1"
+  }
+}

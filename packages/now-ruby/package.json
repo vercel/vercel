@@ -1,0 +1,27 @@
+{
+  "name": "@now/ruby",
+  "author": "Nathan Cahill <nathan@nathancahill.com>",
+  "version": "0.1.4",
+  "license": "MIT",
+  "main": "./dist/index",
+  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/ruby-now-ruby",
+  "files": [
+    "dist",
+    "now_init.rb"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now-builders.git",
+    "directory": "packages/now-ruby"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "test-integration-once": "jest --env node --verbose --runInBand",
+    "prepublishOnly": "./build.sh"
+  },
+  "devDependencies": {
+    "execa": "^1.0.0",
+    "fs-extra": "^7.0.1",
+    "typescript": "3.5.2"
+  }
+}

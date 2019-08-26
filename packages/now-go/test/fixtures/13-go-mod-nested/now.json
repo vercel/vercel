@@ -1,0 +1,5 @@
+{
+  "version": 2,
+  "builds": [{ "src": "api/nested/*.go", "use": "@now/go" }],
+  "probes": [{ "path": "/api/nested", "mustContain": "RANDOMNESS_PLACEHOLDER" }]
+}
