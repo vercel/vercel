@@ -269,7 +269,7 @@ function handleSetupDomainError<T>(
     output.print(
       `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
     );
-    output.print('  Read more: https://err.sh/now-cli/domain-verification\n');
+    output.print('  Read more: https://err.sh/now/domain-verification\n');
     return 1;
   }
 
@@ -418,7 +418,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.VerifyScaleTimeout) {
     output.error(`Instance verification timed out (${ms(error.meta.timeout)})`);
-    output.log('Read more: https://err.sh/now-cli/verification-timeout');
+    output.log('Read more: https://err.sh/now/verification-timeout');
     return 1;
   }
   if (error instanceof ERRORS.NotSupportedMinScaleSlots) {
@@ -432,7 +432,7 @@ function handleCreateAliasError<T>(
         error.meta.url
       )} with \`now scale\` and try again`
     );
-    output.log('Read more: https://err.sh/now-cli/v2-no-min');
+    output.log('Read more: https://err.sh/now/v2-no-min');
     return 1;
   }
   if (error instanceof ERRORS.ForbiddenScaleMaxInstances) {
