@@ -217,7 +217,8 @@ export async function installBuilders(
   packagesSet: Set<string>,
   yarnDir: string,
   output: Output,
-  builderDir?: string
+  builderDir?: string,
+  skipFilter?: boolean
 ): Promise<void> {
   const packages = Array.from(packagesSet);
   if (
@@ -236,11 +237,14 @@ export async function installBuilders(
   const buildersPkg = await readJSON(buildersPkgPath);
 
   packages.push(getBuildUtils(packages));
+  let packagesToInstall = packages
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkg)
-  );
+  if (!skipFilter) {
+    packagesToInstall = packages.filter(p =>
+      filterPackage(p, distTag, buildersPkg)
+    );
+  }
 
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');

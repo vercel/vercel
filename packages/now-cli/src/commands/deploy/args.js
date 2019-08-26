@@ -12,27 +12,27 @@ export const latestHelp = () => `
 
       deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
       dev                              Start a local development server
+      help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
-      ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      ls | list            [app]       Lists deployments
       switch               [scope]     Switches between teams and your personal account
       update                           Updates Now CLI to the latest version
-      help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
 
-      rm | remove          [id]        Removes a deployment
-      domains              [name]      Manages your domain names
-      dns                  [name]      Manages your DNS records
+      build                            Runs builders locally for debugging
       certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
+      dns                  [name]      Manages your DNS records
+      domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment
+      rm | remove          [id]        Removes a deployment
+      secrets              [name]      Manages your secret environment variables
       scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
-      build                            Runs builders locally for debugging
 
   ${chalk.dim('Options:')}
 

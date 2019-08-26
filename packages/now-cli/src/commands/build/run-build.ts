@@ -1,9 +1,7 @@
 import path from "path";
 import fs from "fs-extra";
-import npa from "npm-package-arg";
-import resolveFrom from "resolve-from";
-import { Builder, FileFsRef } from "@now/build-utils";
 import { Output } from "../../util/output";
+import { Builder, FileFsRef } from "@now/build-utils";
 
 const cleanDirPart = (part: string) => part.replace(/(\/|\\)/g, "_");
 
@@ -23,9 +21,9 @@ export default async function runBuild({
   output: Output;
 }): Promise<void> {
   output.log(`Running build: ${JSON.stringify(build)}`);
-  const builderInfo = npa(build.use);
-  const builderName = builderInfo.name || "";
-  const builderPath = resolveFrom(buildersDir, builderName);
+
+  const builderName = '';
+  const builderPath = '';
   const builder = require(builderPath);
 
   const outputDir = path.join(
