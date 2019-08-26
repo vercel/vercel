@@ -809,7 +809,6 @@ export default class DevServer {
       await Promise.all(ops);
     } catch (err) {
       if (err.code === 'ERR_SERVER_NOT_RUNNING') {
-        // @ts-ignore: exitCode is a number
         process.exit(exitCode || 0);
       } else {
         throw err;
