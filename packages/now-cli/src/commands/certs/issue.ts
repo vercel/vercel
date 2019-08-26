@@ -247,7 +247,7 @@ async function runStartOrder(
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
   output.print(
-    '  Read more: https://err.sh/now-cli/solve-challenges-manually\n'
+    '  Read more: https://err.sh/now/solve-challenges-manually\n'
   );
   return 0;
 }
