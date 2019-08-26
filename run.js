@@ -56,17 +56,17 @@ function runScript(pkgName, script) {
       pkgJson = null;
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
-      console.log(`\n[${pkgName}] Executing yarn ${script}`);
+      console.log(`\n[${pkgName}] Running yarn ${script}`);
       const child = spawn('yarn', [script], { cwd, stdio: 'inherit' });
       child.on('error', reject);
       child.on('close', (code, signal) => {
         if (code === 0) {
           return resolve();
         }
-        reject(new Error(`Exited ${pkgName} script ${script} with ${code || signal}`));
+        reject(new Error(`[${pkgName}] Exited script "${script}" with code ${code || signal}.`));
       });
     } else {
-      console.log(`[${pkgName}] Skipping since script was missing from package.json`);
+      console.log(`[${pkgName}] Skipping since script "${script}" is missing from package.json`);
       resolve();
     }
   });
@@ -74,7 +74,7 @@ function runScript(pkgName, script) {
 
 main()
   .then(() => {
-    console.log('Done.')
+    console.log('Success!')
     process.exit(0);
   })
   .catch(e => {
