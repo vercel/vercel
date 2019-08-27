@@ -26,6 +26,7 @@ jobs:
       - save_cache:
           paths:
             - node_modules
+            - packages/gatsby-plugin-now/node_modules
             - packages/now-build-utils/node_modules
             - packages/now-cgi/node_modules
             - packages/now-cli/node_modules
@@ -43,6 +44,7 @@ jobs:
           root: .
           paths:
             - node_modules
+            - packages/gatsby-plugin-now/node_modules
             - packages/now-build-utils/node_modules
             - packages/now-cgi/node_modules
             - packages/now-cli/node_modules
