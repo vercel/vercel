@@ -14,6 +14,7 @@ import {
   glob,
   createLambda,
   BuildOptions,
+  debug,
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -45,7 +46,7 @@ async function bundleInstall(
   bundleDir: string,
   gemfilePath: string
 ) {
-  console.log(`running "bundle install --deployment"...`);
+  debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
 
   try {
@@ -60,7 +61,7 @@ async function bundleInstall(
         bundleDir,
       ],
       {
-        stdio: 'inherit',
+        stdio: 'pipe',
         env: {
           BUNDLE_SILENCE_ROOT_WARNING: '1',
           BUNDLE_APP_CONFIG: bundleAppConfig,
@@ -69,7 +70,7 @@ async function bundleInstall(
       }
     );
   } catch (err) {
-    console.log(`failed to run "bundle install --deployment"...`);
+    debug(`failed to run "bundle install --deployment"...`);
     throw err;
   }
 }
@@ -80,7 +81,7 @@ export const build = async ({
   entrypoint,
   config,
 }: BuildOptions) => {
-  console.log('downloading files...');
+  debug('downloading files...');
 
   // eslint-disable-next-line no-param-reassign
   files = await download(files, workPath);
@@ -93,7 +94,7 @@ export const build = async ({
   const fsEntryDirectory = dirname(fsFiles[entrypoint].fsPath);
 
   // check for an existing vendor directory
-  console.log(
+  debug(
     'checking for existing vendor directory at',
     '"' + REQUIRED_VENDOR_DIR + '"'
   );
@@ -107,17 +108,17 @@ export const build = async ({
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
-      console.log(
+      debug(
         'found two vendor directories, choosing the vendor directory relative to entrypoint'
       );
     } else {
-      console.log('found vendor directory relative to entrypoint');
+      debug('found vendor directory relative to entrypoint');
     }
 
     // vendor dir must be at the root for lambda to find it
     await move(relativeVendorDir, vendorDir);
   } else if (hasRootVendorDir) {
-    console.log('found vendor directory in project root');
+    debug('found vendor directory in project root');
   }
 
   await ensureDir(vendorDir);
@@ -127,7 +128,7 @@ export const build = async ({
     const gemFile = join(entryDirectory, 'Gemfile');
 
     if (fsFiles[gemFile]) {
-      console.log(
+      debug(
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
       const gemfilePath = fsFiles[gemFile].fsPath;
@@ -137,14 +138,14 @@ export const build = async ({
       try {
         await bundleInstall(bundlerPath, bundleDir, gemfilePath);
       } catch (err) {
-        console.log(
+        debug(
           'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
         );
         throw err;
       }
     }
   } else {
-    console.log('found vendor directory, skipping "bundle install"...');
+    debug('found vendor directory, skipping "bundle install"...');
   }
 
   // try to remove gem cache to slim bundle size
@@ -157,7 +158,7 @@ export const build = async ({
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
-  console.log('entrypoint is', entrypoint);
+  debug('entrypoint is', entrypoint);
   const userHandlerFilePath = entrypoint.replace(/\.rb$/, '');
   const nowHandlerRbContents = originalNowHandlerRbContents.replace(
     /__NOW_HANDLER_FILENAME/g,
