@@ -35,6 +35,10 @@ import {
   staticFiles as getFiles,
   getAllProjectFiles
 } from '../get-files';
+import {
+  validateNowConfigBuilds,
+  validateNowConfigRoutes
+} from './validate';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -159,7 +163,7 @@ export default class DevServer {
   }
 
   async exit(code = 1) {
-    await this.stop();
+    await this.stop(code);
     process.exit(code);
   }
 
@@ -551,7 +555,8 @@ export default class DevServer {
       config.builds.sort(sortBuilders);
     }
 
-    this.validateNowConfig(config);
+    await this.validateNowConfig(config);
+
     this.cachedNowConfig = config;
     return config;
   }
@@ -579,10 +584,24 @@ export default class DevServer {
     return pkg;
   }
 
-  validateNowConfig(config: NowConfig): void {
-    if (config.version !== 2) {
+  async validateNowConfig(config: NowConfig): Promise<void> {
+    if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
-      this.exit();
+      await this.exit(1);
+    }
+
+    const buildsError = validateNowConfigBuilds(config);
+
+    if (buildsError) {
+      this.output.error(buildsError);
+      await this.exit(1);
+    }
+
+    const routesError = validateNowConfigRoutes(config);
+
+    if (routesError) {
+      this.output.error(routesError);
+      await this.exit(1);
     }
   }
 
@@ -754,7 +773,7 @@ export default class DevServer {
   /**
    * Shuts down the `now dev` server, and cleans up any temporary resources.
    */
-  async stop(): Promise<void> {
+  async stop(exitCode?: number): Promise<void> {
     if (this.stopping) return;
 
     this.stopping = true;
@@ -790,8 +809,9 @@ export default class DevServer {
     try {
       await Promise.all(ops);
     } catch (err) {
-      if (err.code === 'ERR_SERVER_NOT_RUNNING') {
-        process.exit(0);
+      // Node 8 doesn't have a code for that error
+      if (err.code === 'ERR_SERVER_NOT_RUNNING' || err.message === 'Not running') {
+        process.exit(exitCode || 0);
       } else {
         throw err;
       }
