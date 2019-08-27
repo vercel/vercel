@@ -345,45 +345,6 @@ export default async function main(
       ctx
     );
 
-    if (
-      deployment instanceof DomainNotFound &&
-      deployment.meta && deployment.meta.domain
-    ) {
-      output.debug(`The domain ${
-        deployment.meta.domain
-      } was not found, trying to purchase it`);
-
-      const purchase = await purchaseDomainIfAvailable(
-        output,
-        new Client({
-          apiUrl: ctx.apiUrl,
-          token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam,
-          debug: debugEnabled
-        }),
-        deployment.meta.domain,
-        contextName
-      );
-
-      if (purchase === true) {
-        output.success(`Successfully purchased the domain ${
-          deployment.meta.domain
-        }!`);
-
-        // We exit if the purchase is completed since
-        // the domain verification can take some time
-        return 0;
-      }
-
-      if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
-        return 1;
-      }
-
-      handleCreateDeployError(output, purchase);
-      return 1;
-    }
-
     const deploymentResponse = handleCertError(
       output,
       await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
@@ -406,31 +367,70 @@ export default async function main(
       return 1;
     }
 
-    if (
-      deployment instanceof DomainNotFound ||
-      deployment instanceof DomainNotVerified ||
-      deployment instanceof DomainPermissionDenied ||
-      deployment instanceof DomainVerificationFailed ||
-      deployment instanceof SchemaValidationFailed ||
-      deployment instanceof InvalidDomain ||
-      deployment instanceof DeploymentNotFound ||
-      deployment instanceof BuildsRateLimited ||
-      deployment instanceof DeploymentsRateLimited ||
-      deployment instanceof AliasDomainConfigured ||
-      deployment instanceof MissingBuildScript ||
-      deployment instanceof ConflictingFilePath ||
-      deployment instanceof ConflictingPathSegment
-    ) {
-      handleCreateDeployError(output, deployment);
-      return 1;
-    }
-
     if (deployment === null) {
       error('Uploading failed. Please try again.');
       return 1;
     }
   } catch (err) {
     debug(`Error: ${err}\n${err.stack}`);
+
+    if (
+      err instanceof DomainNotFound &&
+      err.meta && err.meta.domain
+    ) {
+      output.debug(`The domain ${
+        err.meta.domain
+      } was not found, trying to purchase it`);
+
+      const purchase = await purchaseDomainIfAvailable(
+        output,
+        new Client({
+          apiUrl: ctx.apiUrl,
+          token: ctx.authConfig.token,
+          currentTeam: ctx.config.currentTeam,
+          debug: debugEnabled
+        }),
+        err.meta.domain,
+        contextName
+      );
+
+      if (purchase === true) {
+        output.success(`Successfully purchased the domain ${
+          err.meta.domain
+        }!`);
+
+        // We exit if the purchase is completed since
+        // the domain verification can take some time
+        return 0;
+      }
+
+      if (purchase === false || purchase instanceof UserAborted) {
+        handleCreateDeployError(output, deployment);
+        return 1;
+      }
+
+      handleCreateDeployError(output, purchase);
+      return 1;
+    }
+
+    if (
+      err instanceof DomainNotFound ||
+      err instanceof DomainNotVerified ||
+      err instanceof DomainPermissionDenied ||
+      err instanceof DomainVerificationFailed ||
+      err instanceof SchemaValidationFailed ||
+      err instanceof InvalidDomain ||
+      err instanceof DeploymentNotFound ||
+      err instanceof BuildsRateLimited ||
+      err instanceof DeploymentsRateLimited ||
+      err instanceof AliasDomainConfigured ||
+      err instanceof MissingBuildScript ||
+      err instanceof ConflictingFilePath ||
+      err instanceof ConflictingPathSegment
+    ) {
+      handleCreateDeployError(output, err);
+      return 1;
+    }
 
     if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
       const { additionalProperty = '' } = err.params || {};
