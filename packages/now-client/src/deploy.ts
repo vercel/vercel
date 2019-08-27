@@ -105,6 +105,18 @@ export default async function* deploy(
         : getDefaultName(options.path, options.isDirectory, files)
   }
 
+  if (options.totalFiles === 1 && !metadata.builds && !metadata.routes) {
+    const filePath = Array.from(files.values())[0].names[0]
+    const segments = filePath.split('/')
+
+    metadata.routes = [
+      {
+        src: '/',
+        dest: `/${segments[segments.length - 1]}`
+      }
+    ]
+  }
+
   if (!metadata.name) {
     metadata.name =
       options.defaultName ||

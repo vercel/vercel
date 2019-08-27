@@ -59,7 +59,6 @@ export default class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'random',
-      isFile = false,
       atlas = false,
 
       // Latest
@@ -103,15 +102,6 @@ export default class Now extends EventEmitter {
       if (target) {
         requestBody.target = target;
       }
-
-      if (isFile) {
-        requestBody.routes = [
-          {
-            src: '/',
-            dest: `/${files[0].file}`
-          }
-        ];
-      }
     } else if (type === 'npm') {
       files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
 
@@ -132,9 +122,7 @@ export default class Now extends EventEmitter {
       engines = nowConfig.engines || pkg.engines;
       forwardNpm = forwardNpm || nowConfig.forwardNpm;
     } else if (type === 'static') {
-      if (isFile) {
-        files = [resolvePath(paths[0])];
-      } else if (paths.length === 1) {
+      if (paths.length === 1) {
         files = await getFiles(paths[0], nowConfig, opts);
       } else {
         if (!files) {
@@ -156,17 +144,6 @@ export default class Now extends EventEmitter {
 
     const uploadStamp = stamp();
 
-    // This is a useful warning because it prevents people
-    // from getting confused about a deployment that renders 404.
-    if (
-      files.length === 0 ||
-      files.every(item => item.file && item.file.startsWith('.'))
-    ) {
-      warn(
-        'There are no files (or only files starting with a dot) inside your deployment.'
-      );
-    }
-
     if (isBuilds) {
       let buildSpinner = null
       let deploySpinner = null
@@ -174,6 +151,10 @@ export default class Now extends EventEmitter {
       for await(const event of createDeployment(paths[0], requestBody)) {
         if (event.type === 'hashes-calculated') {
           hashes = event.payload
+        }
+
+        if (event.type === 'warning') {
+          warn(event.payload);
         }
 
         if (event.type === 'file-uploaded') {
