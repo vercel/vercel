@@ -1,4 +1,8 @@
-![now](https://og-image.now.sh/%3Cb%3ENow%20Monorepo%3C%2Fb%3E%3Cbr%2F%3EThe%20easiest%20way%20to%20deploy%20websites.png?theme=light&md=1&fontSize=75px&images=https%3A%2F%2Fassets.zeit.co%2Fimage%2Fupload%2Ffront%2Fassets%2Fdesign%2Fnow-black.svg)
+<p align="center">
+  <a href="https://zeit.co">
+    <img alt="ZEIT Now" src="https://og-image.now.sh/%3Cb%3EZEIT%20Now%3C%2Fb%3E%3Cbr%2F%3EThe%20easiest%20way%20to%20deploy%20websites.png?theme=light&md=1&fontSize=75px&images=https%3A%2F%2Fassets.zeit.co%2Fimage%2Fupload%2Ffront%2Fassets%2Fdesign%2Fnow-black.svg" height="350" />
+  </a>
+</p>
 
 [![Build Status](https://circleci.com/gh/zeit/now.svg?&style=shield)](https://circleci.com/gh/zeit/workflows/now)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
