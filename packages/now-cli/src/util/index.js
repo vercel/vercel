@@ -156,6 +156,17 @@ export default class Now extends EventEmitter {
 
     const uploadStamp = stamp();
 
+    // This is a useful warning because it prevents people
+    // from getting confused about a deployment that renders 404.
+    if (
+      files.length === 0 ||
+      files.every(item => item.file && item.file.startsWith('.'))
+    ) {
+      warn(
+        'There are no files (or only files starting with a dot) inside your deployment.'
+      );
+    }
+
     if (isBuilds) {
       let buildSpinner = null
       let deploySpinner = null
@@ -717,6 +728,7 @@ function hasNpmStart(pkg) {
 
 function hasFile(base, files, name) {
   const relative = files.map(file => toRelative(file, base));
+  console.log(731, relative)
   return relative.indexOf(name) !== -1;
 }
 
