@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
-import {NowConfig} from './types';
-import {schema as routesSchema} from '@now/routing-utils';
+import { NowConfig } from './types';
+import { schema as routesSchema } from '@now/routing-utils';
 
 const ajv = new Ajv();
 
@@ -11,7 +11,7 @@ const buildsSchema = {
   items: {
     type: 'object',
     additionalProperties: false,
-      required: ['use'],
+    required: ['use'],
     properties: {
       src: {
         type: 'string',
@@ -43,14 +43,7 @@ export function validateNowConfigBuilds({ builds }: NowConfig) {
 
     const error = validateBuilds.errors[0];
 
-    // @ts-ignore
-    const { allowedValues } = error.params || { allowedValues: null };
-
-    return (
-      `Invalid \`builds\` property: ` +
-      `${error.dataPath} ` +
-      `${error.message}${allowedValues ? ` (${allowedValues.join(', ')})` : ''}`
-    );
+    return `Invalid \`builds\` property: ${error.dataPath} ${error.message}`;
   }
 
   return null;
@@ -68,14 +61,7 @@ export function validateNowConfigRoutes({ routes }: NowConfig) {
 
     const error = validateRoutes.errors[0];
 
-    // @ts-ignore
-    const { allowedValues } = error.params || { allowedValues: null };
-
-    return (
-      `Invalid \`routes\` property: ` +
-      `${error.dataPath} ` +
-      `${error.message}${allowedValues ? ` (${allowedValues.join(', ')})` : ''}`
-    );
+    return `Invalid \`routes\` property: ${error.dataPath} ${error.message}`;
   }
 
   return null;
