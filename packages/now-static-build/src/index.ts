@@ -17,6 +17,7 @@ import {
   BuildOptions,
   Config,
 } from '@now/build-utils';
+import isPortReachable from "is-port-reachable"
 
 interface PackageJson {
   scripts?: {
@@ -231,12 +232,8 @@ export async function build({
         try {
           await timeout(
             new Promise(resolve => {
-              const checkForPort = (data: string) => {
-                // Check the logs for the URL being printed with the port number
-                // (i.e. `http://localhost:47521`).
-                if (data.indexOf(`:${devPort}`) !== -1) {
-                  resolve();
-                }
+              const checkForPort = () => {
+                isPortReachable(devPort).then(resolve);
               };
               if (child.stdout) {
                 child.stdout.on('data', checkForPort);
