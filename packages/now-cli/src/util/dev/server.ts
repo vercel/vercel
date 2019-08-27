@@ -584,7 +584,7 @@ export default class DevServer {
     return pkg;
   }
 
-  async validateNowConfig(config: NowConfig): void {
+  async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
