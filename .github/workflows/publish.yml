@@ -1,0 +1,33 @@
+name: Publish
+
+on:
+  push:
+    branches:
+    - master
+    - canary
+    tags:
+    - '!*'
+
+jobs:
+  publish:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10.x]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Install
+      run: yarn install --pure-lockfile
+    - name: Build
+      run: yarn build
+    - name: Publish
+      run: yarn publish-from-github
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
