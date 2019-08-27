@@ -334,6 +334,25 @@ export default async function main(
       }
     }
 
+    if (argv['--target']) {
+      const deprecatedTarget = argv['--target'];
+
+      if (!['staging', 'production'].includes(deprecatedTarget)) {
+        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
+        return 1;
+      }
+
+      if (deprecatedTarget === 'production') {
+        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
+      }
+
+      output.debug(`Setting target to ${deprecatedTarget}`);
+      createArgs.target = deprecatedTarget;
+    } else if (argv['--prod']) {
+      output.debug('Setting target to production');
+      createArgs.target = 'production';
+    }
+
     deployStamp = stamp();
 
     deployment = await createDeploy(
