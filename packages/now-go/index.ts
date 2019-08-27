@@ -59,7 +59,7 @@ export async function build({
   }
 
   if (process.env.GO111MODULE) {
-    debug(`\nManually assigning 'GO111MODULE' is not recommended.
+    console.log(`\nManually assigning 'GO111MODULE' is not recommended.
 
 By default:
   - 'GO111MODULE=on' If entrypoint package name is not 'main'
@@ -110,7 +110,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
 Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       `
     );
-    debug(err.message);
+    console.log(err.message);
     throw err;
   }
 
