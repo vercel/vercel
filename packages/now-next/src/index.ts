@@ -6,9 +6,12 @@ import {
   writeFile,
 } from 'fs-extra';
 import os from 'os';
+import zlib from 'zlib';
 import path from 'path';
+import { ZipFile } from 'yazl'
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
+import { Sema } from 'async-sema'
 
 import {
   BuildOptions,
@@ -27,6 +30,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   debug,
+  streamToBuffer,
 } from '@now/build-utils';
 import nodeFileTrace from '@zeit/node-file-trace';
 
@@ -466,11 +470,13 @@ export const build = async ({
       );
     }
 
-    let assets:
-      | {
-          [filePath: string]: FileFsRef;
-        }
-      | undefined;
+    let assets: undefined | {
+      [filePath: string]: FileFsRef;
+    };
+    let seedSema: Sema
+    let seedBufferKeys: string[] = []
+    let seedBuffers: { [file: string]: Buffer } = {}
+
     const tracedFiles: {
       [filePath: string]: FileFsRef;
     } = {};
@@ -488,8 +494,30 @@ export const build = async ({
           fsPath: path.join(workPath, file),
         });
       });
-
       console.timeEnd(tracingLabel);
+
+      seedSema = new Sema(10)
+      const zippingLabel = 'Creating Zipped Seed Buffers'
+      console.time(zippingLabel)
+
+      const compressBuffer = (buf: Buffer): Promise<Buffer> => {
+        return new Promise((resolve, reject) => {
+          zlib.deflateRaw(buf, (err, compBuf) => {
+            if (err) return reject(err)
+            resolve(compBuf)
+          })
+        })
+      }
+      seedBufferKeys = Object.keys(tracedFiles)
+
+      for (const fileName of seedBufferKeys) {
+        const file = tracedFiles[fileName]
+        const origBuffer = await streamToBuffer(file.toStream())
+        const compBuffer = await compressBuffer(origBuffer)
+        seedBuffers[fileName] = compBuffer
+      }
+
+      console.timeEnd(zippingLabel)
     } else {
       // An optional assets folder that is placed alongside every page
       // entrypoint.
@@ -512,6 +540,7 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
+
     await Promise.all(
       pageKeys.map(async page => {
         // These default pages don't have to be handled as they'd always 404
@@ -535,23 +564,59 @@ export const build = async ({
           /__LAUNCHER_PAGE_PATH__/g,
           JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
         );
-        const launcherFiles = {
+        const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
           'now__bridge.js': new FileFsRef({
             fsPath: path.join(__dirname, 'now__bridge.js'),
           }),
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
-        lambdas[path.join(entryDirectory, pathname)] = await createLambda({
-          files: {
-            ...launcherFiles,
-            ...assets,
-            ...tracedFiles,
-            [requiresTracing ? pageFileName : 'page.js']: pages[page],
-          },
-          handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime,
-        });
+        if (seedSema) {
+          await seedSema.acquire()
+
+          try {
+            const lambda = await createLambda({
+              files: {},
+              handler: 'now__launcher.launcher',
+              runtime: nodeVersion.runtime,
+            })
+            const zipFile = new ZipFile()
+
+            for (const seedKey of seedBufferKeys) {
+              // add already compressed seed buffers
+              zipFile.addBuffer(seedBuffers[seedKey], seedKey, { compress: false })
+            }
+
+            for (const file of Object.keys(launcherFiles)) {
+              const buffer = await streamToBuffer(launcherFiles[file].toStream())
+              zipFile.addBuffer(buffer, file)
+            }
+
+            const pageBuffer = await streamToBuffer(pages[page].toStream())
+            zipFile.addBuffer(
+              pageBuffer,
+              requiresTracing ? pageFileName : 'page.js'
+            )
+
+            zipFile.end()
+            lambda.zipBuffer = await streamToBuffer(zipFile.outputStream)
+            lambdas[path.join(entryDirectory, pathname)] = lambda;
+          } catch (error) {
+            console.error("Error occurred creating lambda:", page, error)
+          }
+          seedSema.release()
+        } else {
+          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+            files: {
+              ...launcherFiles,
+              ...assets,
+              ...tracedFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+            },
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime,
+          });
+        }
         console.timeEnd(label);
       })
     );
