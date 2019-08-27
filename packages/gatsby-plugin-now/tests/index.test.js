@@ -1,7 +1,7 @@
 const execa = require('execa')
 const { join } = require('path')
 
-jest.setTimeout(15000)
+jest.setTimeout(30000)
 
 test('test generated now routes', async () => {
   await execa('gatsby', ['build'], {
