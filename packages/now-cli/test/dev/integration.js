@@ -47,6 +47,16 @@ function validateResponseHeaders(t, res) {
   );
 }
 
+async function exec(directory, args = []) {
+  return execa(binaryPath, ['dev', directory, ...args], {
+    reject: false
+  });
+}
+
+function formatOutput({ stderr, stdout }) {
+  return `Received:\n"${stderr}"\n"${stdout}"`;
+}
+
 function testFixture(directory, opts = {}, args = []) {
   port = ++port;
   return {
@@ -96,6 +106,22 @@ function testFixtureStdio(directory, fn) {
     }
   };
 }
+
+test('[now dev] validate builds', async t => {
+  const directory = fixture('invalid-builds');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Invalid `builds` property: \[0\]\.src should be string/gm);
+});
+
+test('[now dev] validate routes', async t => {
+  const directory = fixture('invalid-routes');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Invalid `routes` property: \[0\]\.src should be string/gm);
+});
 
 test('[now dev] 00-list-directory', async t => {
   const directory = fixture('00-list-directory');

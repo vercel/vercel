@@ -1,6 +1,6 @@
 import { join } from 'path';
 import execa from 'execa';
-import { getWriteableDirectory } from '@now/build-utils';
+import { getWriteableDirectory, debug } from '@now/build-utils';
 
 const RUBY_VERSION = '2.5.5';
 
@@ -24,15 +24,15 @@ async function installRuby(version: string = RUBY_VERSION) {
       'ruby-devel',
       'zlib-devel',
     ],
-    { stdio: 'inherit' }
+    { stdio: 'pipe' }
   );
   await execa(
     'git',
     ['clone', 'git://github.com/rbenv/ruby-build.git', rubyBuildDir],
-    { stdio: 'inherit' }
+    { stdio: 'pipe' }
   );
   await execa(join(rubyBuildDir, 'bin', 'ruby-build'), [version, rubyDir], {
-    stdio: 'inherit',
+    stdio: 'pipe',
   });
 
   return {
@@ -46,12 +46,12 @@ async function installRuby(version: string = RUBY_VERSION) {
 // process.env.GEM_HOME), and returns
 // the absolute path to it
 export async function installBundler() {
-  console.log('installing ruby...');
+  debug('installing ruby...');
   const { gemHome, rubyPath, gemPath } = await installRuby();
 
-  console.log('installing bundler...');
+  debug('installing bundler...');
   await execa(gemPath, ['install', 'bundler', '--no-document'], {
-    stdio: 'inherit',
+    stdio: 'pipe',
     env: {
       GEM_HOME: gemHome,
     },

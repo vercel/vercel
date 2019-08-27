@@ -11,6 +11,7 @@ import {
   BuildOptions,
   shouldServe,
   Files,
+  debug,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
@@ -53,7 +54,7 @@ export async function build({
   meta = {} as BuildParamsMeta,
 }: BuildParamsType) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
-    console.log('Initialize Git credentials...');
+    debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
   }
 
@@ -69,7 +70,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
 
-  console.log('Downloading user files...');
+  debug('Downloading user files...');
   const entrypointArr = entrypoint.split(sep);
 
   let [goPath, outDir] = await Promise.all([
@@ -85,7 +86,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
     downloadedFiles = await download(files, srcPath);
   }
 
-  console.log(`Parsing AST for "${entrypoint}"`);
+  debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
   try {
     let goModAbsPathDir = '';
@@ -172,9 +173,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   }
 
   const handlerFunctionName = parsedAnalyzed.functionName;
-  console.log(
-    `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
-  );
+  debug(`Found exported function "${handlerFunctionName}" in "${entrypoint}"`);
 
   if (!isGoModExist && 'vendor' in downloadedFiles) {
     throw new Error('`go.mod` is required to use a `vendor` directory.');
@@ -312,7 +311,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       }
     }
 
-    console.log('Tidy `go.mod` file...');
+    debug('Tidy `go.mod` file...');
     try {
       // ensure go.mod up-to-date
       await go.mod();
@@ -321,7 +320,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       throw err;
     }
 
-    console.log('Running `go build`...');
+    debug('Running `go build`...');
     const destPath = join(outDir, 'handler');
 
     try {
@@ -377,7 +376,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
     // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
     // and download any packages that aren't part of the stdlib
-    console.log('Running `go get`...');
+    debug('Running `go get`...');
     try {
       await go.get();
     } catch (err) {
@@ -385,7 +384,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       throw err;
     }
 
-    console.log('Running `go build`...');
+    debug('Running `go build`...');
     const destPath = join(outDir, 'handler');
     try {
       const src = [
