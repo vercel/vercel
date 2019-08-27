@@ -1,6 +1,6 @@
 {
   "name": "@now/routing-utils",
-  "version": "1.2.2",
+  "version": "1.2.3-canary.0",
   "description": "ZEIT Now route validation utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
