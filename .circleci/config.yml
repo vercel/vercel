@@ -107,24 +107,24 @@ jobs:
           name: Linting Code
           command: yarn test-lint
 
-  test-unit:
-    docker:
-      - image: circleci/node:10
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Compiling `now dev` HTML error templates
-          command: node packages/now-cli/scripts/compile-templates.js
-      - run:
-          name: Running Unit Tests
-          command: yarn test-unit --clean false
-      - persist_to_workspace:
-          root: .
-          paths:
-            - packages/now-cli/.nyc_output
+  # test-unit:
+  #   docker:
+  #     - image: circleci/node:10
+  #   working_directory: ~/repo
+  #   steps:
+  #     - checkout
+  #     - attach_workspace:
+  #         at: .
+  #     - run:
+  #         name: Compiling `now dev` HTML error templates
+  #         command: node packages/now-cli/scripts/compile-templates.js
+  #     - run:
+  #         name: Running Unit Tests
+  #         command: yarn test-unit --clean false
+  #     - persist_to_workspace:
+  #         root: .
+  #         paths:
+  #           - packages/now-cli/.nyc_output
 
   test-integration-macos-node-8:
     macos:
@@ -354,6 +354,12 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Compiling `now dev` HTML error templates
+          command: node packages/now-cli/scripts/compile-templates.js
+      - run:
+          name: Run unit tests
+          command: yarn workspace now run test-unit
+      - run:
           name: Run coverage report
           command: yarn workspace now run coverage
 
@@ -428,12 +434,12 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - test-unit:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
+      # - test-unit:
+      #     requires:
+      #       - build
+      #     filters:
+      #       tags:
+      #         only: /.*/
       - test-integration-macos-node-8:
           requires:
             - build
@@ -514,7 +520,7 @@ workflows:
               only: /.*/
       - coverage:
           requires:
-            - test-unit
+            #- test-unit
             - test-integration-macos-node-8
             - test-integration-macos-node-10
             - test-integration-macos-node-12

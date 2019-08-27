@@ -13,8 +13,8 @@ import fetch from 'node-fetch';
 import { Output } from '../output/create-output';
 import { builderDirPromise } from './builder-cache';
 
-const YARN_VERSION = '1.15.2';
-const YARN_SHA = '97efd1871117e60c24f157289d61a7595e142070';
+const YARN_VERSION = '1.17.3';
+const YARN_SHA = '77f28b2793ca7d0ab5bd5da072afc423f7fdf733';
 const YARN_URL = `https://github.com/yarnpkg/yarn/releases/download/v${YARN_VERSION}/yarn-${YARN_VERSION}.js`;
 
 function plusxSync(file: string): void {
