@@ -454,20 +454,16 @@ export const build = async ({
         realNextVersion &&
         semver.lt(realNextVersion, ExperimentalTraceVersion)
       ) {
-        if (config.debug) {
-          debug(
-            'Next.js version is too old for us to trace the required dependencies.\n' +
-              'Assuming Next.js has handled it!'
-          );
-        }
+        debug(
+          'Next.js version is too old for us to trace the required dependencies.\n' +
+            'Assuming Next.js has handled it!'
+        );
         requiresTracing = false;
       }
     } catch (err) {
-      if (config.debug) {
-        debug(
-          'Failed to check Next.js version for tracing compatibility: ' + err
-        );
-      }
+      console.log(
+        'Failed to check Next.js version for tracing compatibility: ' + err
+      );
     }
 
     let assets:
@@ -486,9 +482,7 @@ export const build = async ({
         Object.keys(pages).map(page => pages[page].fsPath),
         { base: workPath }
       );
-      if (config.debug) {
-        debug(`node-file-trace result for pages: ${fileList}`);
-      }
+      debug(`node-file-trace result for pages: ${fileList}`);
       fileList.forEach(file => {
         tracedFiles[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
