@@ -555,7 +555,7 @@ export default class DevServer {
       config.builds.sort(sortBuilders);
     }
 
-    await this.async validateNowConfig(config);
+    await this.validateNowConfig(config);
 
     this.cachedNowConfig = config;
     return config;
