@@ -131,7 +131,7 @@ export shouldServe(options: ShouldServeOptions) {
 }
 ```
 
-If this method is not defined, Now CLI will default to [this function](https://github.com/zeit/now-builders/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
+If this method is not defined, Now CLI will default to [this function](https://github.com/zeit/now/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
 ### Builder Options
 
