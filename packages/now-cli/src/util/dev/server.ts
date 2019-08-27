@@ -555,7 +555,8 @@ export default class DevServer {
       config.builds.sort(sortBuilders);
     }
 
-    this.validateNowConfig(config);
+    await this.async validateNowConfig(config);
+
     this.cachedNowConfig = config;
     return config;
   }
@@ -583,24 +584,24 @@ export default class DevServer {
     return pkg;
   }
 
-  validateNowConfig(config: NowConfig): void {
+  async validateNowConfig(config: NowConfig): void {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
-      this.exit(1);
+      await this.exit(1);
     }
 
     const buildsError = validateNowConfigBuilds(config);
 
     if (buildsError) {
       this.output.error(buildsError);
-      this.exit(1);
+      await this.exit(1);
     }
 
     const routesError = validateNowConfigRoutes(config);
 
     if (routesError) {
       this.output.error(routesError);
-      this.exit(1);
+      await this.exit(1);
     }
   }
 
