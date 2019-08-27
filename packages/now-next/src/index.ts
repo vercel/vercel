@@ -8,7 +8,14 @@ import {
 import os from 'os';
 import zlib from 'zlib';
 import path from 'path';
-import { ZipFile } from 'yazl'
+// @ts-ignore
+import JSZip from 'jszip';
+// @ts-ignore
+import CompressedObject from 'jszip/lib/compressedObject';
+// @ts-ignore
+import compressions from 'jszip/lib/compressions';
+// @ts-ignore
+import crc32 from 'jszip/lib/crc32';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import { Sema } from 'async-sema'
@@ -474,8 +481,9 @@ export const build = async ({
       [filePath: string]: FileFsRef;
     };
     let seedSema: Sema
+    let seedLambda: Lambda
     let seedBufferKeys: string[] = []
-    let seedBuffers: { [file: string]: Buffer } = {}
+    let seedBuffers: { [file: string]: CompressedObject } = {}
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -497,6 +505,12 @@ export const build = async ({
       console.timeEnd(tracingLabel);
 
       seedSema = new Sema(10)
+      seedLambda = await createLambda({
+        files: {},
+        handler: 'now__launcher.launcher',
+        runtime: nodeVersion.runtime,
+      })
+
       const zippingLabel = 'Creating Zipped Seed Buffers'
       console.time(zippingLabel)
 
@@ -514,7 +528,13 @@ export const build = async ({
         const file = tracedFiles[fileName]
         const origBuffer = await streamToBuffer(file.toStream())
         const compBuffer = await compressBuffer(origBuffer)
-        seedBuffers[fileName] = compBuffer
+        seedBuffers[fileName] = new CompressedObject(
+          compBuffer.byteLength,
+          origBuffer.byteLength,
+          crc32(origBuffer),
+          compressions.DEFLATE,
+          compBuffer
+        )
       }
 
       console.timeEnd(zippingLabel)
@@ -575,31 +595,28 @@ export const build = async ({
           await seedSema.acquire()
 
           try {
-            const lambda = await createLambda({
-              files: {},
-              handler: 'now__launcher.launcher',
-              runtime: nodeVersion.runtime,
-            })
-            const zipFile = new ZipFile()
+            const lambda = {...seedLambda}
+            const zipFile = new JSZip()
 
             for (const seedKey of seedBufferKeys) {
               // add already compressed seed buffers
-              zipFile.addBuffer(seedBuffers[seedKey], seedKey, { compress: false })
+              zipFile.file(seedKey, seedBuffers[seedKey])
             }
 
             for (const file of Object.keys(launcherFiles)) {
               const buffer = await streamToBuffer(launcherFiles[file].toStream())
-              zipFile.addBuffer(buffer, file)
+              zipFile.file(file, buffer)
+            }
+            const curPageFileName = requiresTracing ? pageFileName : 'page.js'
+
+            if (!zipFile.files[curPageFileName]) {
+              const pageBuffer = await streamToBuffer(pages[page].toStream())
+              zipFile.file(curPageFileName, pageBuffer)
             }
 
-            const pageBuffer = await streamToBuffer(pages[page].toStream())
-            zipFile.addBuffer(
-              pageBuffer,
-              requiresTracing ? pageFileName : 'page.js'
+            lambda.zipBuffer = await streamToBuffer(
+              zipFile.generateNodeStream()
             )
-
-            zipFile.end()
-            lambda.zipBuffer = await streamToBuffer(zipFile.outputStream)
             lambdas[path.join(entryDirectory, pathname)] = lambda;
           } catch (error) {
             console.error("Error occurred creating lambda:", page, error)

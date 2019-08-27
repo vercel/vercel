@@ -25,6 +25,7 @@
     "async-sema": "3.0.1",
     "fs-extra": "7.0.0",
     "get-port": "5.0.0",
+    "jszip": "3.2.2",
     "resolve-from": "5.0.0",
     "semver": "6.1.1",
     "typescript": "3.5.2"
