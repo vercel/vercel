@@ -112,6 +112,8 @@ declare interface DeploymentOptions {
 }
 
 declare interface NowJsonOptions {
+  github?: any;
+  scope?: string;
   type?: 'NPM' | 'STATIC' | 'DOCKER';
   version?: number;
 }

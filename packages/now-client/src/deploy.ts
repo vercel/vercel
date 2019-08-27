@@ -90,6 +90,9 @@ export default async function* deploy(
   )
   const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson)
 
+  delete nowJsonMetadata.github
+  delete nowJsonMetadata.scope
+
   const meta = options.metadata || {}
   const metadata = { ...nowJsonMetadata, ...meta }
 
@@ -112,8 +115,12 @@ export default async function* deploy(
     metadata.deploymentType = nowJsonMetadata.type
   }
 
-  delete metadata.github
-  delete metadata.scope
+  if (metadata.version === 1) {
+    const nowConfig = { ...nowJsonMetadata }
+    delete nowConfig.version
+
+    metadata.config = nowConfig
+  }
 
   let deployment: Deployment | undefined
 

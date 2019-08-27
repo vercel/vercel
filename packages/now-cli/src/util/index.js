@@ -184,7 +184,9 @@ export default class Now extends EventEmitter {
         }
 
         if (event.type === 'all-builds-completed') {
-          buildSpinner()
+          if (buildSpinner) {
+            buildSpinner()
+          }
           deploySpinner = wait('Finalizing...')
         }
 
