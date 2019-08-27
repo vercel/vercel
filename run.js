@@ -14,7 +14,7 @@ async function main() {
 
   if (all === 'all') {
     matches = readdirSync(join(__dirname, 'packages'));
-    console.log(`Running script "${script}" for all packages`)
+    console.log(`Running script "${script}" for all packages`);
   } else {
     const branch = execSync('git branch | grep "*" | cut -d " " -f2')
       .toString()
@@ -27,7 +27,7 @@ async function main() {
       .split('\n')
       .filter(item => Boolean(item) && item.includes('packages/'))
       .map(item => relative('packages', item).split('/')[0]);
-    
+
     matches = Array.from(new Set(changed));
 
     if (matches.length === 0) {
@@ -36,8 +36,22 @@ async function main() {
       console.log('No packages changed. Using default packages.');
     }
 
-    console.log(`Running "${script}" on branch "${branch}" with the following packages:`);
+    console.log(
+      `Running "${script}" on branch "${branch}" with the following packages:`
+    );
   }
+
+  // Sort the matches such that `utils` modules are compiled first,
+  // because other packages may rely on them
+  matches.sort((a, b) => {
+    if (a.endsWith('-utils') && !b.endsWith('-utils')) {
+      return -1;
+    }
+    if (b.endsWith('-utils') && !a.endsWith('-utils')) {
+      return 1;
+    }
+    return b - a;
+  });
 
   console.log(matches.join('\n') + '\n');
 
@@ -52,7 +66,7 @@ function runScript(pkgName, script) {
     let pkgJson = null;
     try {
       pkgJson = require(join(cwd, 'package.json'));
-    } catch(e) {
+    } catch (e) {
       pkgJson = null;
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
@@ -63,10 +77,17 @@ function runScript(pkgName, script) {
         if (code === 0) {
           return resolve();
         }
-        reject(new Error(`[${pkgName}] Exited script "${script}" with code ${code || signal}.`));
+        reject(
+          new Error(
+            `[${pkgName}] Exited script "${script}" with code ${code ||
+              signal}.`
+          )
+        );
       });
     } else {
-      console.log(`[${pkgName}] Skipping since script "${script}" is missing from package.json`);
+      console.log(
+        `[${pkgName}] Skipping since script "${script}" is missing from package.json`
+      );
       resolve();
     }
   });
@@ -74,7 +95,7 @@ function runScript(pkgName, script) {
 
 main()
   .then(() => {
-    console.log('Success!')
+    console.log('Success!');
     process.exit(0);
   })
   .catch(e => {
