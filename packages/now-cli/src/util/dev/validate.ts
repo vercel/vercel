@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
-import { NowConfig } from './types';
 import { schema as routesSchema } from '@now/routing-utils';
+import { NowConfig } from './types';
 
 const ajv = new Ajv();
 
