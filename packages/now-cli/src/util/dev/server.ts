@@ -809,7 +809,8 @@ export default class DevServer {
     try {
       await Promise.all(ops);
     } catch (err) {
-      if (err.code === 'ERR_SERVER_NOT_RUNNING') {
+      // Node 8 doesn't have a code for that error
+      if (err.code === 'ERR_SERVER_NOT_RUNNING' || err.message === 'Not running') {
         process.exit(exitCode || 0);
       } else {
         throw err;
