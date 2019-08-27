@@ -48,7 +48,9 @@ function validateResponseHeaders(t, res) {
 }
 
 async function exec(directory, args = []) {
-  return execa(binaryPath, ['dev', directory, ...args]);
+  return execa(binaryPath, ['dev', directory, ...args], {
+    reject: false
+  });
 }
 
 function formatOutput({ stderr, stdout }) {
