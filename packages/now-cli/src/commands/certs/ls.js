@@ -4,10 +4,12 @@ import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
 import Now from '../../util';
+import cmd from '../../util/output/cmd';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import getCerts from '../../util/certs/get-certs';
+import { CertNotFound } from '../../util/errors-ts';
 import strlen from '../../util/strlen.ts';
 
 async function ls(ctx, opts, args, output) {
@@ -15,6 +17,7 @@ async function ls(ctx, opts, args, output) {
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
+  const after = opts['--after'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
@@ -41,16 +44,34 @@ async function ls(ctx, opts, args, output) {
   }
 
   // Get the list of certificates
-  const certs = sortByCn(await getCerts(output, now));
+  const certificates = await getCerts(output, now, { after }).catch(err => err);
+
+  if (certificates instanceof CertNotFound) {
+    output.error(certificates.message);
+    return 1;
+  }
+
+  if (certificates instanceof Error) {
+    throw certificates;
+  }
+
+  const { uid: lastCert } = certificates[certificates.length - 1];
+  const certs = sortByCn(certificates);
+
   output.log(
     `${plural('certificate', certs.length, true)} found under ${chalk.bold(
       contextName
     )} ${lsStamp()}`
   );
 
+  if (certs.length >= 100) {
+    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
+  }
+
   if (certs.length > 0) {
     console.log(formatCertsTable(certs));
   }
+
   return 0;
 }
 
