@@ -415,7 +415,9 @@ interface CreateLambdaFromPseudoLayersOptions {
   environment?: { [name: string]: string };
 }
 
-const createLambdaSema = new Sema(5)
+// measured with 1, 2, 5, 10, and `os.cpus().length || 5`
+// and sema(1) produced the best results
+const createLambdaSema = new Sema(1)
 
 export async function createLambdaFromPseudoLayers({
   files,
