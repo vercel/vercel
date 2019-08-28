@@ -175,10 +175,10 @@ test.before(async () => {
 test('login', async t => {
   // Delete the current token
   const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput, 0, formatOutput(logoutOutput));
+  t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
 
   const loginOutput = await execa(binaryPath, ['login', email]);
-  t.is(loginOutput, 0, formatOutput(loginOutput));
+  t.is(loginOutput.code, 0, formatOutput(loginOutput));
   t.regex(loginOutput.stdout, /You are now logged in\./gm, formatOutput(loginOutput));
 
   // Save the new token
