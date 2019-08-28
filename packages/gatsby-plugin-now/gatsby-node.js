@@ -10,13 +10,21 @@ exports.onPostBuild = async ({ store }) => {
     return;
   }
 
-  const routes = redirects.map(redirect => {
-    return {
+  const routes = [{ handle: 'filesystem' }]
+
+  for (let redirect of redirects) {
+    let route = {
       src: redirect.fromPath,
       status: redirect.statusCode || (redirect.isPermanent ? 301 : 302),
       headers: { Location: redirect.toPath }
     };
-  });
+
+    if(redirect.force) {
+      routes.unshift(route)
+    } else {
+      routes.push(route);
+    }
+  }
 
   await writeFile(
     path.join(program.directory, "public", REDIRECT_FILE_NAME),

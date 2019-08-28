@@ -96,4 +96,10 @@ exports.createPages = ({ actions }) => {
     // Uncomment next line to see forEach in action during build
     // console.log('\nRedirecting:\n' + f + '\nTo:\n' + t + '\n');
   });
+
+  createRedirect({
+    fromPath: '/blue',
+    toPath: homePath,
+    force: true
+  });
 };

@@ -4,6 +4,16 @@ exports[`test generated now routes 1`] = `
 Array [
   Object {
     "headers": Object {
+      "Location": "/",
+    },
+    "src": "/blue",
+    "status": 302,
+  },
+  Object {
+    "handle": "filesystem",
+  },
+  Object {
+    "headers": Object {
       "Location": "/page-2",
     },
     "src": "/page2",
