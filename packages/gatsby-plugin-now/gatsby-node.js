@@ -14,8 +14,7 @@ exports.onPostBuild = async ({ store }) => {
     return {
       src: redirect.fromPath,
       status: redirect.statusCode || (redirect.isPermanent ? 301 : 302),
-      headers: { Location: redirect.toPath },
-      force: redirect.force
+      headers: { Location: redirect.toPath }
     };
   });
 
