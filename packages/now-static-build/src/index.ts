@@ -115,18 +115,18 @@ const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
 
 async function getFrameworkRoutes(framework: Framework, dirPrefix: string): Promise<Route[]> {
   if(!framework.defaultRoutes) {
-    return []
+    return [];
   }
 
-  let routes: Route[]
+  let routes: Route[];
 
   if(typeof framework.defaultRoutes === 'function') {
-    routes = await framework.defaultRoutes(dirPrefix)
+    routes = await framework.defaultRoutes(dirPrefix);
   } else {
-    routes = framework.defaultRoutes
+    routes = framework.defaultRoutes;
   }
 
-  return routes
+  return routes;
 }
 
 export async function build({
@@ -323,7 +323,7 @@ export async function build({
       output = await glob('**', distPath, mountpoint);
 
       if (framework) {
-        const frameworkRoutes = await getFrameworkRoutes(framework, outputDirPrefix)
+        const frameworkRoutes = await getFrameworkRoutes(framework, outputDirPrefix);
         routes.push(...frameworkRoutes);
       }
     }
