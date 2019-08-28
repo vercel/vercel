@@ -512,9 +512,6 @@ export const build = async ({
       const zippingLabel = 'Creating Pseudo Layers';
       console.time(zippingLabel);
 
-      if (typeof assets !== 'undefined') {
-        pseudoLayers.push(await createPseudoLayer(assets))
-      }
       pseudoLayers.push(await createPseudoLayer(tracedFiles))
       console.timeEnd(zippingLabel)
     } else {
