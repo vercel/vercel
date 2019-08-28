@@ -11,27 +11,7 @@
     "gatsby": ">=2.0.0"
   },
   "devDependencies": {
-    "babel-eslint": "^10.0.3",
-    "eslint": "^6.2.2",
-    "eslint-config-prettier": "^6.1.0",
-    "jest": "^24.9.0",
-    "prettier": "^1.18.2"
-  },
-  "prettier": {
-    "singleQuote": true,
-    "semi": false
-  },
-  "eslintConfig": {
-    "parser": "babel-eslint",
-    "extends": [
-      "eslint:recommended",
-      "prettier"
-    ],
-    "env": {
-      "node": true,
-      "es6": true,
-      "jest": true
-    }
+    "jest": "^24.9.0"
   },
   "jest": {
     "testPathIgnorePatterns": [

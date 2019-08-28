@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 // Implement the Gatsby API “createPages”. This is called once the
 // data layer is bootstrapped to let plugins create pages from data.
@@ -6,15 +6,15 @@ exports.createPages = ({ actions }) => {
   // need createRedirect action in actions collection
   // to make the redirection magic happen.
   // https://www.gatsbyjs.org/docs/bound-action-creators/
-  const { createRedirect } = actions
+  const { createRedirect } = actions;
 
   // Let’s set up some string consts to use thoroughout the following.
   // MDN > JavaScript reference > Statements and declarations
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/const
   // Maybe we usually redirect to page 2, with trailing slash.
-  const page2Path = `/page-2/`
+  const page2Path = `/page-2/`;
   // But sometimes to homepage.
-  const homePath = `/`
+  const homePath = `/`;
 
   // One-off redirect, note trailing slash missing on fromPath and
   // toPath here.
@@ -23,7 +23,7 @@ exports.createPages = ({ actions }) => {
     isPermanent: true,
     redirectInBrowser: true,
     toPath: `/page-2`
-  })
+  });
 
   // Another one-off redirect, note trailing slash on toPath here.
   // This time we want trailing slash on toPath so we use
@@ -41,7 +41,7 @@ exports.createPages = ({ actions }) => {
     isPermanent: true,
     redirectInBrowser: true,
     toPath: page2Path
-  })
+  });
 
   // One approach to handle several redirects at once is to create an
   // array of from/to path pairs.
@@ -52,7 +52,7 @@ exports.createPages = ({ actions }) => {
     { f: `/blue`, t: page2Path },
     // or leave to empty and swap for page2Path later on.
     { f: `/randirect`, t: `` }
-  ]
+  ];
 
   // Then we can loop through the array of object literals to create
   // each redirect. A for loop would do the trick
@@ -60,13 +60,13 @@ exports.createPages = ({ actions }) => {
     // Here we swap any empty toPath values for trusty page 2 via
     // page2Path.
     if (t === ``) {
-      t = page2Path
+      t = page2Path;
     }
     createRedirect({
       fromPath: f,
       redirectInBrowser: true,
       toPath: t
-    })
+    });
     // Uncomment next line to see loop in action during build
     // console.log('\nRedirecting:\n' + f + '\nTo:\n' + t + '\n');
     // or check .cache/redirects.json post-compile.
@@ -82,18 +82,18 @@ exports.createPages = ({ actions }) => {
     { f: `/soda`, t: `/` },
     { f: `/donut`, t: page2Path },
     { f: `/randorect`, t: `` }
-  ]
+  ];
 
   redirectBatch2.forEach(({ f, t }) => {
     if (t === ``) {
-      t = page2Path
+      t = page2Path;
     }
     createRedirect({
       fromPath: f,
       redirectInBrowser: true,
       toPath: t
-    })
+    });
     // Uncomment next line to see forEach in action during build
     // console.log('\nRedirecting:\n' + f + '\nTo:\n' + t + '\n');
-  })
-}
+  });
+};

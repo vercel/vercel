@@ -1,3 +1,3 @@
 module.exports = {
-  plugins: [{ resolve: require.resolve('../../') }]
-}
+  plugins: [{ resolve: require.resolve("../../") }]
+};
