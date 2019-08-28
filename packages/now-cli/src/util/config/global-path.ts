@@ -40,7 +40,7 @@ const getNowDir = (): string => {
   // at last the first best xdg-config-path is used
   return (
     (customPath && path.resolve(customPath)) ||
-    possibleConfigPaths.filter(configPath => isDirectory(configPath))[0] ||
+    possibleConfigPaths.find(configPath => isDirectory(configPath)) ||
     xdgConfigPaths[0]
   );
 };
