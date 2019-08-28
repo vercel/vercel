@@ -6,17 +6,10 @@ import path from 'path';
 
 // Packages
 import mri from 'mri';
-import xdg from 'xdg-portable';
+import XDGAppPaths from 'xdg-app-paths';
 
 // The `homeConfigPath` is the legacy configuration path located in the users home directory.
 const homeConfigPath: string = path.join(homedir(), '.now');
-
-// The `xdgConfigPath` is the configuration path which is based on the XDG standard.
-// the old legacy path is used as a fallback
-const xdgConfigPath: string = path.join(
-  xdg.dataDirs()[0] || homeConfigPath,
-  'now'
-);
 
 // Returns whether a directory exists
 const isDirectory = (path: string): boolean => {
@@ -38,14 +31,17 @@ const getNowDir = (): string => {
   });
 
   const customPath = args['global-config'];
+  const xdgConfigPaths = XDGAppPaths('now').dataDirs();
+  const possibleConfigPaths = [homeConfigPath, ...xdgConfigPaths];
 
-  // We use the customPath if it is available,
-  // otherwise the config at the users home directory if it is present
-  // and if nothing of this is there we use the XDG-standard
+  // customPath is the preferred location
+  // the legacy home directory config path is the second most wanted location
+  // otherwise the first matching xdg-config-path is used which already exists
+  // at last the first best xdg-config-path is used
   return (
     (customPath && path.resolve(customPath)) ||
-    (isDirectory(homeConfigPath) && homeConfigPath) ||
-    xdgConfigPath
+    possibleConfigPaths.filter(configPath => isDirectory(configPath))[0] ||
+    xdgConfigPaths[0]
   );
 };
 
