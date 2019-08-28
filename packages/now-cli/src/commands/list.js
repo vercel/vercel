@@ -136,7 +136,7 @@ export default async function main(ctx) {
     return 1;
   }
 
-  if (!isValidName(app)) {
+  if (app && !isValidName(app)) {
     error(`The provided argument "${app}" is not a valid project name`);
     return 1;
   }
