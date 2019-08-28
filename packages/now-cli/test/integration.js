@@ -1699,6 +1699,13 @@ test('invalid deployment, projects and alias names', async t => {
   ]);
 });
 
+test('now cert ls --after=cert_test', async t => {
+  const output = await execute(['certs', 'ls', '--after=cert_test']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /The cert cert_test can't be found\./gm, formatOutput(output));
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
