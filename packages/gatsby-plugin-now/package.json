@@ -4,7 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test-integration": "./test-integration.sh"
+    "build": "./build.sh",
+    "test-integration-once": "jest"
   },
   "peerDependencies": {
     "gatsby": ">=2.0.0"
