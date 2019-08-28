@@ -211,9 +211,7 @@ export const build = async ({
       urls[entrypoint] = await getUrl();
       childProcess = forked;
       debug(
-        `${name} Development server for ${entrypoint} running at ${
-          urls[entrypoint]
-        }`
+        `${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`
       );
     }
 
@@ -478,12 +476,27 @@ export const build = async ({
       const tracingLabel = 'Tracing Next.js lambdas for external files ...';
       console.time(tracingLabel);
 
-      const { fileList } = await nodeFileTrace(
+      const { fileList, reasons } = ((await nodeFileTrace(
         Object.keys(pages).map(page => pages[page].fsPath),
         { base: workPath }
-      );
+      )) as any) as {
+        fileList: string[];
+        reasons: {
+          [fileName: string]: {
+            type: string;
+            ignored: boolean;
+            parents: string[];
+          };
+        };
+      };
       debug(`node-file-trace result for pages: ${fileList}`);
       fileList.forEach(file => {
+        const reason = reasons[file];
+        if (reason && reason.type === 'initial') {
+          // Initial files are manually added to the lambda later
+          return;
+        }
+
         tracedFiles[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
         });
