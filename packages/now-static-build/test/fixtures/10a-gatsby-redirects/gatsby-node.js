@@ -20,4 +20,15 @@ exports.createPages = ({ actions }) => {
     statusCode: 404,
     toPath: "/blog"
   });
+
+  createRedirect({
+    fromPath: "/page1",
+    toPath: "/about",
+    force: true
+  });
+
+  createRedirect({
+    fromPath: "/page2",
+    toPath: "/"
+  });
 };
