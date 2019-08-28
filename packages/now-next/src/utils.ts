@@ -6,19 +6,9 @@ import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
 import { Files, FileFsRef, streamToBuffer, Lambda } from '@now/build-utils';
 
-interface ICompressedObject {
-  new(
-    compressedSize: number,
-    uncompressedSize: number,
-    crc32: number,
-    compression: 'DEFLATE' | 'STORE',
-    compressedData: Buffer
-  ): this
-}
-
 const crc32 = require('jszip/lib/crc32');
 const compressions = require('jszip/lib/compressions');
-const CompressedObject: ICompressedObject = require('jszip/lib/compressedObject');
+const CompressedObject: JSZip.ICompressedObject = require('jszip/lib/compressedObject');
 
 const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
@@ -384,7 +374,7 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
-export type PseudoLayer = { [fileName: string]: ICompressedObject };
+export type PseudoLayer = { [fileName: string]: JSZip.ICompressedObject };
 
 export async function createPseudoLayer(
   files: { [fileName: string]: FileFsRef }
