@@ -12,12 +12,12 @@ exports.createPages = ({ actions }) => {
   createRedirect({
     fromPath: "/not-permanent",
     isPermanent: false,
-    toPath: "/"
+    toPath: "/about"
   });
 
   createRedirect({
     fromPath: "/custom-status",
     statusCode: 404,
-    toPath: "/"
+    toPath: "/blog"
   });
 };
