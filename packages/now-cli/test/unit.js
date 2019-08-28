@@ -20,6 +20,7 @@ import {
   staticFiles as getStaticFiles_
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
+import { isValidName } from '../src/util/is-valid-name';
 import preferV2Deployment from '../src/util/prefer-v2-deployment';
 
 const output = createOutput({ debug: false });
@@ -962,4 +963,16 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
     t.is(reason, null);
   }
+});
+
+test('check valid name', async t => {
+  t.is(isValidName('hello world'), true);
+  t.is(isValidName('käse'), true);
+  t.is(isValidName('ねこ'), true);
+  t.is(isValidName('/'), false);
+  t.is(isValidName('/#'), false);
+  t.is(isValidName('//'), false);
+  t.is(isValidName('/ねこ'), true);
+  t.is(isValidName('привет'), true);
+  t.is(isValidName('привет#'), true);
 });
