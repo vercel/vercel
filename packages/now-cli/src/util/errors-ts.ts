@@ -1159,3 +1159,13 @@ export class ConflictingPathSegment extends NowError<'CONFLICTING_PATH_SEGMENT',
     });
   }
 }
+
+export class BuildError extends NowError<'BUILD_ERROR', {}> {
+  constructor({ message, meta }: { message: string; meta: { entrypoint: string; } }) {
+    super({
+      code: 'BUILD_ERROR',
+      meta,
+      message
+    });
+  }
+}

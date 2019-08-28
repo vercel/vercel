@@ -9,7 +9,6 @@ import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
-import { isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import parseMeta from '../../util/parse-meta';
@@ -33,7 +32,8 @@ import {
   AliasDomainConfigured,
   MissingBuildScript,
   ConflictingFilePath,
-  ConflictingPathSegment
+  ConflictingPathSegment,
+  BuildError
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -72,7 +72,7 @@ const prepareAlias = input => `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { url, readyState, alias: aliasList },
+  { readyState, alias: aliasList },
   deployStamp,
   clipboardEnabled,
   localConfig,
@@ -127,20 +127,6 @@ const printDeploymentStatus = async (
 
   if (!builds) {
     output.error(deploymentErrorMsg);
-    return 1;
-  }
-
-  const failedBuilds = builds.filter(isFailed);
-  const amount = failedBuilds.length;
-
-  if (amount > 0) {
-    output.error('Build failed');
-    output.error(
-      `Check your logs at https://${url}/_logs or run ${code(
-        `now logs ${url}`
-      )}`
-    );
-
     return 1;
   }
 
@@ -448,6 +434,17 @@ export default async function main(
       err instanceof ConflictingPathSegment
     ) {
       handleCreateDeployError(output, err);
+      return 1;
+    }
+
+    if (err instanceof BuildError) {
+      output.error('Build failed');
+      output.error(
+        `Check your logs at https://${now.url}/_logs or run ${code(
+          `now logs ${now.url}`
+        )}`
+      );
+
       return 1;
     }
 

@@ -23,6 +23,7 @@ import createOutput from './output';
 import wait from './output/wait';
 import { responseError } from './error';
 import stamp from './output/stamp';
+import { BuildError } from './errors-ts';
 
 // Check if running windows
 const IS_WIN = process.platform.startsWith('win');
@@ -169,6 +170,10 @@ export default class Now extends EventEmitter {
           }
         }
 
+        if (event.type === 'created') {
+          this._host = event.payload.url
+        }
+
         if (event.type === 'build-state-changed') {
           if (buildSpinner === null) {
             buildSpinner = wait('Building...');
@@ -184,6 +189,12 @@ export default class Now extends EventEmitter {
 
         // Handle error events
         if (event.type === 'error') {
+          if (buildSpinner) {
+            buildSpinner()
+          }
+          if (deploySpinner) {
+            deploySpinner()
+          }
           throw await this.handleDeploymentError(event.payload, { hashes, env })
         }
 
@@ -240,6 +251,10 @@ export default class Now extends EventEmitter {
           }
 
           log('Building…');
+        }
+
+        if (event.type === 'created') {
+          this._host = event.payload.url
         }
 
         // Handle error events
@@ -379,6 +394,15 @@ export default class Now extends EventEmitter {
       }
 
       return err
+    }
+
+    // Handle build errors
+    if (error.id && error.id.startsWith('bld_')) {
+      return new BuildError({
+        meta: {
+          entrypoint: error.entrypoint
+        }
+      })
     }
 
     return new Error(error.message);
