@@ -17,6 +17,7 @@ import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
+import { isValidName } from '../util/is-valid-name';
 
 const help = () => {
   console.log(`
@@ -132,6 +133,11 @@ export default async function main(ctx) {
 
   if (argv['--all'] && !app) {
     error('You must define an app when using `-a` / `--all`');
+    return 1;
+  }
+
+  if (app && !isValidName(app)) {
+    error(`The provided argument "${app}" is not a valid project name`);
     return 1;
   }
 

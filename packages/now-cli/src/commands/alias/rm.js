@@ -9,6 +9,7 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
+import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 export default async function rm(ctx, opts, args, output) {
@@ -39,17 +40,23 @@ export default async function rm(ctx, opts, args, output) {
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const [aliasOrId] = args;
 
-  if (!aliasOrId) {
-    output.error(`${cmd('now alias rm <alias>')} expects one argument`);
-    return 1;
-  }
-
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         '`now alias rm <alias>`'
       )}`
     );
+    return 1;
+  }
+
+  if (!aliasOrId) {
+    output.error(`${cmd('now alias rm <alias>')} expects one argument`);
+    return 1;
+  }
+
+  // E.g. "/" would not be a valid alias or id
+  if (!isValidName(aliasOrId)) {
+    output.error(`The provided argument "${aliasOrId}" is not a valid alias`);
     return 1;
   }
 
