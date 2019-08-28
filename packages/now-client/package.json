@@ -1,10 +1,10 @@
 {
   "name": "now-client",
   "version": "5.1.1-canary.0",
-  "main": "lib/index.js",
+  "main": "lib/src/index.js",
   "license": "MIT",
   "scripts": {
-    "build": "ncc build ./src/index.ts -o ./lib --source-map",
+    "build": "tsc",
     "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint --ext .ts ./src",
@@ -22,7 +22,6 @@
     "@typescript-eslint/eslint-plugin": "1.9.0",
     "@typescript-eslint/parser": "1.9.0",
     "@zeit/git-hooks": "0.1.4",
-    "@zeit/ncc": "0.18.5",
     "eslint": "5.16.0",
     "jest": "24.8.0",
     "ts-jest": "24.0.2",
