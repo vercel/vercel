@@ -35,7 +35,7 @@ interface Framework {
   name: string;
   dependency: string;
   getOutputDirName: (dirPrefix: string) => Promise<string>;
-  defaultRoutes?: Route[];
+  defaultRoutes?: Route[] | (() => Promise<Route[]>);
   minNodeRange?: string;
 }
 
@@ -112,6 +112,22 @@ const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
 
   return basic;
 };
+
+async function getFrameworkRoutes(framework: Framework): Promise<Route[]> {
+  if(!framework.defaultRoutes) {
+    return []
+  }
+
+  let routes: Route[]
+
+  if(typeof framework.defaultRoutes === 'function') {
+    routes = await framework.defaultRoutes()
+  } else {
+    routes = framework.defaultRoutes
+  }
+
+  return routes
+}
 
 export async function build({
   files,
@@ -259,8 +275,10 @@ export async function build({
         srcBase = `/${srcBase}`;
       }
 
-      if (framework && framework.defaultRoutes) {
-        for (const route of framework.defaultRoutes) {
+      if (framework) {
+        const frameworkRoutes = await getFrameworkRoutes(framework)
+
+        for (const route of frameworkRoutes) {
           routes.push(getDevRoute(srcBase, devPort, route));
         }
       }
@@ -315,8 +333,9 @@ export async function build({
       validateDistDir(distPath, meta.isDev, config);
       output = await glob('**', distPath, mountpoint);
 
-      if (framework && framework.defaultRoutes) {
-        routes.push(...framework.defaultRoutes);
+      if (framework) {
+        const frameworkRoutes = await getFrameworkRoutes(framework)
+        routes.push(...frameworkRoutes);
       }
     }
 
