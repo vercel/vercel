@@ -596,7 +596,7 @@ const main = async argv_ => {
   }
 
   if (shouldCollectMetrics) {
-    metric.event(eventCategory, exitCode, pkg.version).send();
+    metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 
   return exitCode;

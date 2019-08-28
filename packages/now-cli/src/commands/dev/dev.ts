@@ -27,7 +27,7 @@ export default async function dev(
   const debug = opts['--debug'] || false;
   const devServer = new DevServer(cwd, { output, debug });
 
-  process.once('SIGINT', devServer.stop.bind(devServer));
+  process.once('SIGINT', () => devServer.stop());
 
   await devServer.start(...listen);
 }
