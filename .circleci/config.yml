@@ -94,6 +94,7 @@ jobs:
             - packages/now-routing-utils/dist
             - packages/now-ruby/dist
             - packages/now-static-build/dist
+            - packages/now-static-build/test/fixtures/10a-gatsby-redirects/plugins
 
   test-lint:
     docker:
