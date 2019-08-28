@@ -219,7 +219,8 @@ export default class Now extends EventEmitter {
         scale,
         sessionAffinity,
         limits: nowConfig.limits,
-        atlas
+        atlas,
+        config: nowConfig
       }
 
       for await(const event of createLegacyDeployment(paths[0], requestBody)) {

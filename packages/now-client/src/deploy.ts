@@ -131,7 +131,10 @@ export default async function* deploy(
     const nowConfig = { ...nowJsonMetadata }
     delete nowConfig.version
 
-    metadata.config = nowConfig
+    metadata.config = {
+      ...nowConfig,
+      ...metadata.config,
+    }
   }
 
   let deployment: Deployment | undefined

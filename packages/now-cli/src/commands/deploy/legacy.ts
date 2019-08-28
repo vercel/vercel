@@ -769,7 +769,8 @@ async function sync({
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile
+          isFile,
+          nowConfig
         },
         meta
       );
