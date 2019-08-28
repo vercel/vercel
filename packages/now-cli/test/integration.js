@@ -383,14 +383,12 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const output = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
-  });
+  const output = await execute(binaryPath, ['ls']);
 
   const deployments = parseList(output.stdout);
 
-  t.true(deployments.length > 0);
-  t.is(output.code, 0);
+  t.true(deployments.length > 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
 
   const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
@@ -1664,7 +1662,7 @@ test('render build errors', async t => {
 test('invalid deployment, projects and alias names', async t => {
   const check = async (...args) => {
     const output = await execute(args);
-    const pring = `\`${args.join(' ')}\`\n${formatOutput(output)}`
+    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`
     t.is(output.code, 1, print);
     t.regex(output.stderr, /The provided argument/gm, print);
   };
