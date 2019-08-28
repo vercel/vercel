@@ -383,20 +383,18 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
+  const output = await execa(binaryPath, ['ls', ...defaultArgs], {
     reject: false
   });
 
-  const deployments = parseList(stdout);
+  const deployments = parseList(output.stdout);
 
   t.true(deployments.length > 0);
-  t.is(code, 0);
+  t.is(output.code, 0);
 
-  const target = deployments.find(deployment =>
-    deployment.includes(`${session}-`)
-  );
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
 
-  t.truthy(target);
+  t.truthy(target, formatOutput(output));
 
   if (target) {
     context.deployment = target;
