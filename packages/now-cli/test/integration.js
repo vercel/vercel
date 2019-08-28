@@ -172,6 +172,24 @@ test.before(async () => {
   }
 });
 
+test('login', async t => {
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
+
+  const loginOutput = await execa(binaryPath, ['login', email]);
+  t.is(loginOutput.code, 0, formatOutput(loginOutput));
+  t.regex(loginOutput.stdout, /You are now logged in\./gm, formatOutput(loginOutput));
+
+  // Save the new token
+  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+
+  token = auth.token;
+
+  t.is(typeof token, 'string');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
