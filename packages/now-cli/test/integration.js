@@ -174,7 +174,7 @@ test.before(async () => {
 
 test('login', async t => {
   // Delete the current token
-  const logoutOutput = await execute(binaryPath, ['logout']);
+  const logoutOutput = await execute(['logout']);
   t.is(logoutOutput, 0, formatOutput(logoutOutput));
 
   const loginOutput = await execa(binaryPath, ['login', email]);
