@@ -29,26 +29,24 @@ async function getBuilds(
   files: string[],
   output: Output
 ): Promise<Builder[] | null> {
+  let builds = [];
   let nowJson;
-  let builds;
 
   try {
     nowJson = await fs.readJson(path.join(cwd, 'now.json'));
-    builds = nowJson.builds;
+    builds = nowJson.builds || [];
   } catch (err) {
     output.debug('No now.json found, assuming zero-config');
   }
 
-  // if no builds defined, should be zero-config
-  if (!Array.isArray(builds) || builds.length === 0) {
-    let pkg;
-    try {
-      pkg = await fs.readJson(path.join(cwd, 'package.json'));
-    } catch (err) {
-      output.debug('No package.json found');
-    }
-    builds = (await detectBuilders(files, pkg)).builders;
+  let pkg;
+  try {
+    pkg = await fs.readJson(path.join(cwd, 'package.json'));
+  } catch (err) {
+    output.debug('No package.json found');
   }
+  const { builders } = await detectBuilders(files, pkg)
+  builds.push(...(builders || []))
 
   return builds;
 }
