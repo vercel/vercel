@@ -1663,6 +1663,22 @@ test('render build errors', async t => {
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
 });
 
+test('invalid deployment, projects and alias names', async t => {
+  const check = async (...args) => {
+    const output = await execute(args);
+    const pring = `\`${args.join(' ')}\`\n${formatOutput(output)}`
+    t.is(output.code, 1, print);
+    t.regex(output.stderr, /The provided argument/gm, print);
+  };
+
+  await Promise.all([
+    check('alias', '/', 'test'),
+    check('alias', 'test', '/'),
+    check('rm', '/'),
+    check('ls', '/')
+  ]);
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
