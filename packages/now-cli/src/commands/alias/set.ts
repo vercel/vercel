@@ -19,6 +19,7 @@ import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
+import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 
 type Options = {
   '--debug': boolean;
@@ -215,9 +216,12 @@ export default async function set(
     if (handleResult === 1) {
       return 1;
     }
+
+    const prefix = isWildcardAlias(handleResult.alias) ? '' : 'https://';
+
     console.log(
       `${chalk.cyan('> Success!')} ${chalk.bold(
-        `https://${handleResult.alias}`
+        `${prefix}${handleResult.alias}`
       )} now points to https://${deployment.url} ${setStamp()}`
     );
   }

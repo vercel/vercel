@@ -1,15 +1,21 @@
 import psl from 'psl';
 import { InvalidDomain } from '../errors-ts';
+import isWildcardAlias from '../alias/is-wildcard-alias';
+import extractDomain from '../alias/extract-domain';
 
-export default function getWildcardCNSForDomain(rawDomain: string) {
-  const parsedDomain = psl.parse(rawDomain);
+export default function getWildcardCNSForAlias(alias: string) {
+  if (isWildcardAlias(alias)) {
+    return [extractDomain(alias), alias];
+  }
+
+  const parsedDomain = psl.parse(alias);
   if (parsedDomain.error) {
-    throw new InvalidDomain(rawDomain);
+    throw new InvalidDomain(alias);
   }
 
   const { domain, subdomain } = parsedDomain;
   if (!domain) {
-    throw new InvalidDomain(rawDomain);
+    throw new InvalidDomain(alias);
   }
 
   const secondLevel =

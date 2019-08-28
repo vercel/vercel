@@ -1,0 +1,3 @@
+# Ignore test fixtures in GitHub Languages
+# See https://github.com/github/linguist#vendored-code
+packages/*/test/* linguist-vendored
