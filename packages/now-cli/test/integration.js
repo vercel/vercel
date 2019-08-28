@@ -383,7 +383,13 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const output = await execute(binaryPath, ['ls']);
+  const output = await execa(
+    binaryPath,
+    ['--debug', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
 
   const deployments = parseList(output.stdout);
 
