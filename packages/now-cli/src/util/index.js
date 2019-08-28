@@ -10,7 +10,6 @@ import { parse as parseIni } from 'ini';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { URLSearchParams } from 'url';
-import { createDeployment, createLegacyDeployment } from 'now-client'
 import {
   staticFiles as getFiles,
   npm as getNpmFiles,
@@ -18,9 +17,9 @@ import {
 } from './get-files';
 import Agent from './agent.ts';
 import ua from './ua.ts';
+import processDeployment from './deploy/process-deployment.ts';
 import highlight from './output/highlight';
 import createOutput from './output';
-import wait from './output/wait';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { BuildError } from './errors-ts';
@@ -146,64 +145,15 @@ export default class Now extends EventEmitter {
     const uploadStamp = stamp();
 
     if (isBuilds) {
-      let buildSpinner = null
-      let deploySpinner = null
-
-      for await(const event of createDeployment(paths[0], requestBody)) {
-        if (event.type === 'hashes-calculated') {
-          hashes = event.payload
-        }
-
-        if (event.type === 'warning') {
-          warn(event.payload);
-        }
-
-        if (event.type === 'file-uploaded') {
-          debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
-        }
-
-        if (event.type === 'all-files-uploaded') {
-          if (!quiet) {
-            log(
-              `Synced ${event.payload.size} ${uploadStamp()}`
-            );
-          }
-        }
-
-        if (event.type === 'created') {
-          this._host = event.payload.url
-        }
-
-        if (event.type === 'build-state-changed') {
-          if (buildSpinner === null) {
-            buildSpinner = wait('Building...');
-          }
-        }
-
-        if (event.type === 'all-builds-completed') {
-          if (buildSpinner) {
-            buildSpinner()
-          }
-          deploySpinner = wait('Finalizing...')
-        }
-
-        // Handle error events
-        if (event.type === 'error') {
-          if (buildSpinner) {
-            buildSpinner()
-          }
-          if (deploySpinner) {
-            deploySpinner()
-          }
-          throw await this.handleDeploymentError(event.payload, { hashes, env })
-        }
-
-        // Handle ready event
-        if (event.type === 'ready') {
-          deployment = event.payload
-          deploySpinner()
-        }
-      }
+      deployment = await processDeployment({
+        now: this,
+        debug,
+        hashes,
+        paths,
+        requestBody,
+        uploadStamp,
+        quiet
+      })
     } else {
       // Read `registry.npmjs.org` authToken from .npmrc
       let authToken;
@@ -234,40 +184,17 @@ export default class Now extends EventEmitter {
         config: nowConfig
       }
 
-      for await(const event of createLegacyDeployment(paths[0], requestBody)) {
-        if (event.type === 'hashes-calculated') {
-          hashes = event.payload
-        }
-
-        if (event.type === 'file-uploaded') {
-          debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
-        }
-
-        if (event.type === 'all-files-uploaded') {
-          if (!quiet) {
-            log(
-              `Synced ${event.payload.size} ${uploadStamp()}`
-            );
-          }
-
-          log('Building…');
-        }
-
-        if (event.type === 'created') {
-          this._host = event.payload.url
-        }
-
-        // Handle error events
-        if (event.type === 'error') {
-          throw await this.handleDeploymentError(event.payload, { hashes, env })
-        }
-
-        // Handle ready event
-        if (event.type === 'ready') {
-          log(`Build completed`);
-          deployment = event.payload
-        }
-      }
+      deployment = await processDeployment({
+        legacy: true,
+        now: this,
+        debug,
+        hashes,
+        paths,
+        requestBody,
+        uploadStamp,
+        quiet,
+        env
+      })
     }
 
     // We report about files whose sizes are too big
