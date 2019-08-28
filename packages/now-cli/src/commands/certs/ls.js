@@ -65,7 +65,7 @@ async function ls(ctx, opts, args, output) {
   );
 
   if (certs.length >= 100) {
-    output.note(`There might be more certificates can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
+    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
   }
 
   if (certs.length > 0) {
