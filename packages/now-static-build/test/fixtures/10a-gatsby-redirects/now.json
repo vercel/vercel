@@ -6,31 +6,5 @@
       "use": "@now/static-build",
       "config": { "zeroConfig": true }
     }
-  ],
-  "probes": [
-    {
-      "path": "/permanent",
-      "mustContain": "",
-      "status": 301,
-      "headers": {
-        "Location": "/"
-      }
-    },
-    {
-      "path": "/not-permanent",
-      "mustContain": "",
-      "status": 302,
-      "headers": {
-        "Location": "/"
-      }
-    },
-    {
-      "path": "/custom-status",
-      "mustContain": "",
-      "status": 404,
-      "headers": {
-        "Location": "/"
-      }
-    }
   ]
 }
