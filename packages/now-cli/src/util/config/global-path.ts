@@ -19,7 +19,7 @@ const xdgConfigPath: string = path.join(
   'now'
 );
 
-// Returns wether a directory exists
+// Returns whether a directory exists
 const isDirectory = (path: string): boolean => {
   try {
     return fs.lstatSync(path).isDirectory();
@@ -29,7 +29,7 @@ const isDirectory = (path: string): boolean => {
   }
 };
 
-// Returns in which directory the cofig should be present
+// Returns in which directory the config should be present
 const getNowDir = (): string => {
   const args = mri(process.argv.slice(2), {
     string: ['global-config'],
@@ -41,7 +41,7 @@ const getNowDir = (): string => {
   const customPath = args['global-config'];
 
   // We use the customPath if it is available,
-  // otherwise the config at the users homedirectory if it is present
+  // otherwise the config at the users home directory if it is present
   // and if nothing of this is there we use the XDG-standard
   return (
     (customPath && path.resolve(customPath)) ||
