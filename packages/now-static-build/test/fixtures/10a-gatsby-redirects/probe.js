@@ -13,9 +13,9 @@ module.exports = async ({ deploymentUrl, fetch }) => {
   assert.equal(resp2.status, 302);
   assert.equal(resp2.headers.get("location"), "/");
 
-  const resp1 = await fetch(`https://${deploymentUrl}/custom-status`, {
+  const resp3 = await fetch(`https://${deploymentUrl}/custom-status`, {
     redirect: "manual"
   });
-  assert.equal(resp1.status, 404);
-  assert.equal(resp1.headers.get("location"), "/");
+  assert.equal(resp3.status, 404);
+  assert.equal(resp3.headers.get("location"), "/");
 };
