@@ -3,6 +3,7 @@
 // Definitions by: mzeiher <https://github.com/mzeiher>, forabi <https://github.com/forabi>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.3
+// License (MIT): https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/LICENSE
 
 /// <reference types="node" />
 
