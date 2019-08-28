@@ -8,17 +8,8 @@ import {
 import os from 'os';
 import zlib from 'zlib';
 import path from 'path';
-// @ts-ignore
-import JSZip from 'jszip';
-// @ts-ignore
-import CompressedObject from 'jszip/lib/compressedObject';
-// @ts-ignore
-import compressions from 'jszip/lib/compressions';
-// @ts-ignore
-import crc32 from 'jszip/lib/crc32';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
-import { Sema } from 'async-sema'
+import resolveFrom from 'resolve-from';
 
 import {
   BuildOptions,
@@ -59,6 +50,9 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  createLambdaFromPseudoLayers,
+  PseudoLayer,
+  createPseudoLayer,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -478,10 +472,8 @@ export const build = async ({
     let assets: undefined | {
       [filePath: string]: FileFsRef;
     };
-    let seedSema: Sema
-    let seedLambda: Lambda
-    let seedBufferKeys: string[] = []
-    let seedBuffers: { [file: string]: CompressedObject } = {}
+
+    const pseudoLayers: PseudoLayer[] = []
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -517,39 +509,13 @@ export const build = async ({
       });
       console.timeEnd(tracingLabel);
 
-      seedSema = new Sema(10)
-      seedLambda = await createLambda({
-        files: {},
-        handler: 'now__launcher.launcher',
-        runtime: nodeVersion.runtime,
-      })
+      const zippingLabel = 'Creating Pseudo Layers';
+      console.time(zippingLabel);
 
-      const zippingLabel = 'Creating Zipped Seed Buffers'
-      console.time(zippingLabel)
-
-      const compressBuffer = (buf: Buffer): Promise<Buffer> => {
-        return new Promise((resolve, reject) => {
-          zlib.deflateRaw(buf, (err, compBuf) => {
-            if (err) return reject(err)
-            resolve(compBuf)
-          })
-        })
+      if (typeof assets !== 'undefined') {
+        pseudoLayers.push(await createPseudoLayer(assets))
       }
-      seedBufferKeys = Object.keys(tracedFiles)
-
-      for (const fileName of seedBufferKeys) {
-        const file = tracedFiles[fileName]
-        const origBuffer = await streamToBuffer(file.toStream())
-        const compBuffer = await compressBuffer(origBuffer)
-        seedBuffers[fileName] = new CompressedObject(
-          compBuffer.byteLength,
-          origBuffer.byteLength,
-          crc32(origBuffer),
-          compressions.DEFLATE,
-          compBuffer
-        )
-      }
-
+      pseudoLayers.push(await createPseudoLayer(tracedFiles))
       console.timeEnd(zippingLabel)
     } else {
       // An optional assets folder that is placed alongside every page
@@ -573,6 +539,8 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
+    const allLambdasLabel = `All lambdas created`
+    console.time(allLambdasLabel)
 
     await Promise.all(
       pageKeys.map(async page => {
@@ -604,37 +572,16 @@ export const build = async ({
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
-        if (seedSema) {
-          await seedSema.acquire()
-
-          try {
-            const lambda = {...seedLambda}
-            const zipFile = new JSZip()
-
-            for (const seedKey of seedBufferKeys) {
-              // add already compressed seed buffers
-              zipFile.file(seedKey, seedBuffers[seedKey])
-            }
-
-            for (const file of Object.keys(launcherFiles)) {
-              const buffer = await streamToBuffer(launcherFiles[file].toStream())
-              zipFile.file(file, buffer)
-            }
-            const curPageFileName = requiresTracing ? pageFileName : 'page.js'
-
-            if (!zipFile.files[curPageFileName]) {
-              const pageBuffer = await streamToBuffer(pages[page].toStream())
-              zipFile.file(curPageFileName, pageBuffer)
-            }
-
-            lambda.zipBuffer = await streamToBuffer(
-              zipFile.generateNodeStream()
-            )
-            lambdas[path.join(entryDirectory, pathname)] = lambda;
-          } catch (error) {
-            console.error("Error occurred creating lambda:", page, error)
-          }
-          seedSema.release()
+        if (requiresTracing) {
+          lambdas[path.join(entryDirectory, pathname)] = await createLambdaFromPseudoLayers({
+            files: {
+              ...launcherFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+            },
+            layers: pseudoLayers,
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime,
+          });
         } else {
           lambdas[path.join(entryDirectory, pathname)] = await createLambda({
             files: {
@@ -650,6 +597,7 @@ export const build = async ({
         console.timeEnd(label);
       })
     );
+    console.timeEnd(allLambdasLabel)
   }
 
   const nextStaticFiles = await glob(

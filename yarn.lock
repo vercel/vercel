@@ -1637,6 +1637,13 @@
   resolved "https://registry.yarnpkg.com/@types/json5/-/json5-0.0.29.tgz#ee28707ae94e11d2b827bcbe5270bcea7f3e71ee"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
 
+"@types/jszip@3.1.6":
+  version "3.1.6"
+  resolved "https://registry.yarnpkg.com/@types/jszip/-/jszip-3.1.6.tgz#0512574a2b35f3194b41769c56e4b35065e67000"
+  integrity sha512-m8uFcI+O2EupCfbEVQWsBM/4nhbegjOHL7cQgBpM95FeF98kdFJXzy9/8yhx4b3lCRl/gMBhcvyh30Qt3X+XPQ==
+  dependencies:
+    "@types/node" "*"
+
 "@types/load-json-file@2.0.7":
   version "2.0.7"
   resolved "https://registry.yarnpkg.com/@types/load-json-file/-/load-json-file-2.0.7.tgz#c887826f5230b7507d5230994d26315c6776be06"
