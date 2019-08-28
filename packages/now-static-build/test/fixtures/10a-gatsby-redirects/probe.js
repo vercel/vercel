@@ -2,7 +2,7 @@ const assert = require("assert");
 
 // we need this due to https://github.com/bitinn/node-fetch/issues/417
 const getRawLocation = res => {
-  const location = resp1.headers.get("location");
+  const location = res.headers.get("location");
   const parsed = new URL(location);
   return parsed.pathname;
 };
