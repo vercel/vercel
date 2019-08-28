@@ -1,7 +1,7 @@
+import { URLSearchParams } from 'url';
 import Client from '../client';
 import { Output } from '../output';
 import { Cert } from '../../types';
-import { URLSearchParams } from 'url';
 import getCertById from './get-cert-by-id';
 import { CertNotFound } from '../errors-ts';
 

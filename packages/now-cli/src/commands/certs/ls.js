@@ -49,7 +49,9 @@ async function ls(ctx, opts, args, output) {
   if (certificates instanceof CertNotFound) {
     output.error(certificates.message);
     return 1;
-  } else if (certificates instanceof Error) {
+  }
+
+  if (certificates instanceof Error) {
     throw certificates;
   }
 
