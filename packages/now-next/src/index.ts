@@ -509,7 +509,7 @@ export const build = async ({
       });
       console.timeEnd(tracingLabel);
 
-      const zippingLabel = 'Creating Pseudo Layers';
+      const zippingLabel = 'Compressing shared lambda files';
       console.time(zippingLabel);
 
       pseudoLayers.push(await createPseudoLayer(tracedFiles))
