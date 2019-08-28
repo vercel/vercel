@@ -56,47 +56,6 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenWithRetry(url, retries = 3) {
-  return retry(
-    async () => {
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.token;
-    },
-    { retries, factor: 1 }
-  );
-}
-
-function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
-  const headers = { Authorization: `Bearer ${token}` };
-
-  return retry(
-    async () => {
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.user;
-    },
-    { retries, factor: 1 }
-  );
-}
-
 function formatOutput({ stderr, stdout }) {
   return `Received:\n"${stderr}"\n"${stdout}"`;
 }
@@ -141,35 +100,28 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 
 test.before(async () => {
   try {
-    await retry(
-      async () => {
-        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-        const url = Buffer.from(str, 'base64').toString();
-        token = await fetchTokenWithRetry(url);
+    const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
 
-        if (!fs.existsSync(location)) {
-          await createDirectory(location);
-        }
-
-        await writeFile(
-          path.join(location, `auth.json`),
-          JSON.stringify({ token })
-        );
-
-        const user = await fetchTokenInformation(token);
-
-        email = user.email;
-        contextName = user.email.split('@')[0];
-      },
-      { retries: 3, factor: 1 }
-    );
+    if (!fs.existsSync(location)) {
+      await createDirectory(location);
+    }
 
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
   }
+});
+
+test('login', async t => {
+  contextName = `now-cli-bot-${Math.round(Math.random() * 1000)}`;
+  email = `${contextName}@zeit.pub`;
+
+  const output = await execute(['login', email, '--debug']);
+
+  t.is(output.code, 0, formatOutput(output));
+  t.regex(output.stderr, /\.now\/auth\.json/gm, formatOutput(output));
+  t.regex(output.stdout, /You are now logged in\./gm, formatOutput(output));
 });
 
 test('print the deploy help message', async t => {
