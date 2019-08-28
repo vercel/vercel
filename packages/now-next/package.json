@@ -18,6 +18,8 @@
     "dist"
   ],
   "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "@types/fs-extra": "8.0.0",
     "@types/jszip": "3.1.6",
     "@types/next-server": "8.0.0",
     "@types/resolve-from": "5.0.1",
