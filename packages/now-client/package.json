@@ -2,6 +2,7 @@
   "name": "now-client",
   "version": "5.1.1-canary.0",
   "main": "lib/index.js",
+  "typings": "lib/src/index.d.ts",
   "license": "MIT",
   "scripts": {
     "build": "ncc build ./src/index.ts -o ./lib --source-map",
