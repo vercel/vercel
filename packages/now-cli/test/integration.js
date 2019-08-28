@@ -401,20 +401,22 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
-  });
-
-  const deployments = parseList(stdout);
-
-  t.true(deployments.length > 0);
-  t.is(code, 0);
-
-  const target = deployments.find(deployment =>
-    deployment.includes(`${session}-`)
+  const output = await execa(
+    binaryPath,
+    ['--debug', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
   );
 
-  t.truthy(target);
+  const deployments = parseList(output.stdout);
+
+  t.true(deployments.length > 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
+
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
+
+  t.truthy(target, formatOutput(output));
 
   if (target) {
     context.deployment = target;
@@ -1679,6 +1681,22 @@ test('render build errors', async t => {
 
   t.is(output.code, 1, formatOutput(output));
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+});
+
+test('invalid deployment, projects and alias names', async t => {
+  const check = async (...args) => {
+    const output = await execute(args);
+    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`
+    t.is(output.code, 1, print);
+    t.regex(output.stderr, /The provided argument/gm, print);
+  };
+
+  await Promise.all([
+    check('alias', '/', 'test'),
+    check('alias', 'test', '/'),
+    check('rm', '/'),
+    check('ls', '/')
+  ]);
 });
 
 test.after.always(async () => {
