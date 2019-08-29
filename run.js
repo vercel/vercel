@@ -43,22 +43,23 @@ async function main() {
 
   // Sort the matches such that `utils` modules are compiled first,
   // because other packages may rely on them
+  // We also need to ensure that `now-client` is built before the CLI
+
   matches.sort((a, b) => {
-    if (a.endsWith('-utils') && !b.endsWith('-utils')) {
+    if (a.endsWith('-client') && !b.endsWith('-client')) {
       return -1;
     }
-    if (b.endsWith('-utils') && !a.endsWith('-utils')) {
+    if (b.endsWith('-client') && !a.endsWith('-client')) {
       return 1;
     }
     return b - a;
   });
 
-  // We also need to ensure that `now-client` is built before the CLI
   matches.sort((a, b) => {
-    if (a.endsWith('-client') && b.endsWith('-cli')) {
+    if (a.endsWith('-utils') && !b.endsWith('-utils')) {
       return -1;
     }
-    if (b.endsWith('-client') && !a.endsWith('-cli')) {
+    if (b.endsWith('-utils') && !a.endsWith('-utils')) {
       return 1;
     }
     return b - a;
