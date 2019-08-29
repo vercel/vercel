@@ -1,4 +1,3 @@
-/* global expect */
 const getWritableDirectory = require('../../packages/now-build-utils/fs/get-writable-directory.js');
 const glob = require('../../packages/now-build-utils/fs/glob.js');
 
@@ -20,13 +19,14 @@ async function runBuildLambda(inputPath) {
   expect(build.src.includes('*')).toBeFalsy();
   const entrypoint = build.src.replace(/^\//, ''); // strip leftmost slash
   expect(inputFiles[entrypoint]).toBeDefined();
-  inputFiles[entrypoint].digest = 'this-is-a-fake-digest-for-non-default-analyze';
+  inputFiles[entrypoint].digest =
+    'this-is-a-fake-digest-for-non-default-analyze';
   const wrapper = require(build.use);
 
   const analyzeResult = runAnalyze(wrapper, {
     files: inputFiles,
     entrypoint,
-    config: build.config,
+    config: build.config
   });
 
   const workPath = await getWritableDirectory();
@@ -34,7 +34,7 @@ async function runBuildLambda(inputPath) {
     files: inputFiles,
     entrypoint,
     config: build.config,
-    workPath,
+    workPath
   });
   const { output } = buildResult;
 
@@ -43,16 +43,16 @@ async function runBuildLambda(inputPath) {
     buildResult.output = Object.keys(output).reduce(
       (result, path) => ({
         ...result,
-        [path.replace(/\\/g, '/')]: output[path],
+        [path.replace(/\\/g, '/')]: output[path]
       }),
-      {},
+      {}
     );
   }
 
   return {
     analyzeResult,
     buildResult,
-    workPath,
+    workPath
   };
 }
 

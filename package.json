@@ -15,10 +15,17 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "2.0.0",
+    "@typescript-eslint/parser": "2.0.0",
     "@zeit/ncc": "0.20.4",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "node-fetch": "2.6.0"
+    "eslint": "6.2.2",
+    "eslint-config-prettier": "6.1.0",
+    "husky": "3.0.4",
+    "lint-staged": "9.2.5",
+    "node-fetch": "2.6.0",
+    "prettier": "1.18.2"
   },
   "scripts": {
     "lerna": "lerna",
@@ -31,6 +38,23 @@
     "test-unit": "node run.js test-unit",
     "test-integration": "node run.js test-integration",
     "test-integration-once": "node run.js test-integration-once",
-    "test-integration-now-dev": "node run.js test-integration-now-dev"
+    "test-integration-now-dev": "node run.js test-integration-now-dev",
+    "lint": "eslint . --ext .ts,.js"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "prettier --write",
+      "eslint",
+      "git add"
+    ],
+    "*.{json,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }

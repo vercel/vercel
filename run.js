@@ -55,7 +55,7 @@ async function main() {
 
   console.log(matches.join('\n') + '\n');
 
-  for (let pkgName of matches) {
+  for (const pkgName of matches) {
     await runScript(pkgName, script);
   }
 }

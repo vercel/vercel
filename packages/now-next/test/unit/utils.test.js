@@ -4,9 +4,9 @@ const {
   validateEntrypoint,
   includeOnlyEntryDirectory,
   normalizePackageJson,
-  getNextConfig,
+  getNextConfig
 } = require('@now/next/dist/utils');
-const { FileRef } = require('@now/build-utils'); // eslint-disable-line import/no-extraneous-dependencies
+const { FileRef } = require('@now/build-utils');
 
 describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures');
@@ -33,11 +33,11 @@ describe('excludeFiles', () => {
     const files = {
       'pages/index.js': new FileRef({ digest: 'index' }),
       'package.json': new FileRef({ digest: 'package' }),
-      'package-lock.json': new FileRef({ digest: 'package-lock' }),
+      'package-lock.json': new FileRef({ digest: 'package-lock' })
     };
     const result = excludeFiles(
       files,
-      filePath => filePath === 'package-lock.json',
+      filePath => filePath === 'package-lock.json'
     );
     expect(result['pages/index.js']).toBeDefined();
     expect(result['package.json']).toBeDefined();
@@ -69,7 +69,7 @@ describe('includeOnlyEntryDirectory', () => {
     const files = {
       'frontend/pages/index.js': new FileRef({ digest: 'index' }),
       'package.json': new FileRef({ digest: 'package' }),
-      'package-lock.json': new FileRef({ digest: 'package-lock' }),
+      'package-lock.json': new FileRef({ digest: 'package-lock' })
     };
     const result = includeOnlyEntryDirectory(files, entryDirectory);
     expect(result['frontend/pages/index.js']).toBeDefined();
@@ -85,15 +85,15 @@ describe('normalizePackageJson', () => {
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
         'now-build':
-          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-      },
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+      }
     });
   });
 
@@ -102,29 +102,29 @@ describe('normalizePackageJson', () => {
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
-        'now-build': 'next build',
-      },
+        'now-build': 'next build'
+      }
     };
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
         'now-build':
-          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-      },
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+      }
     });
   });
 
@@ -133,23 +133,23 @@ describe('normalizePackageJson', () => {
       dependencies: {
         react: 'latest',
         'react-dom': 'latest',
-        next: 'latest',
-      },
+        next: 'latest'
+      }
     };
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
         'now-build':
-          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-      },
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+      }
     });
   });
 
@@ -158,23 +158,23 @@ describe('normalizePackageJson', () => {
       dependencies: {
         react: 'latest',
         'react-dom': 'latest',
-        next: 'latest',
-      },
+        next: 'latest'
+      }
     };
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
         'now-build':
-          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-      },
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+      }
     });
   });
 
@@ -183,23 +183,23 @@ describe('normalizePackageJson', () => {
       dependencies: {
         react: 'latest',
         'react-dom': 'latest',
-        next: 'latest',
-      },
+        next: 'latest'
+      }
     };
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: 'latest',
-        'react-dom': 'latest',
+        'react-dom': 'latest'
       },
       devDependencies: {
-        next: 'v7.0.2-canary.49',
+        next: 'v7.0.2-canary.49'
       },
       scripts: {
         'now-build':
-          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-      },
+          'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+      }
     });
   });
 
@@ -211,7 +211,7 @@ describe('normalizePackageJson', () => {
         dev: 'next',
         build: 'next build',
         start: 'next start',
-        test: "xo && stylelint './pages/**/*.js' && jest",
+        test: "xo && stylelint './pages/**/*.js' && jest"
       },
       main: 'pages/index.js',
       license: 'MIT',
@@ -226,7 +226,7 @@ describe('normalizePackageJson', () => {
         'stylelint-config-recommended': '^2.1.0',
         'stylelint-config-styled-components': '^0.1.1',
         'stylelint-processor-styled-components': '^1.5.1',
-        xo: '^0.23.0',
+        xo: '^0.23.0'
       },
       dependencies: {
         consola: '^2.2.6',
@@ -234,7 +234,7 @@ describe('normalizePackageJson', () => {
         next: '^7.0.2',
         react: '^16.6.3',
         'react-dom': '^16.6.3',
-        'styled-components': '^4.1.1',
+        'styled-components': '^4.1.1'
       },
       xo: {
         extends: 'xo-react',
@@ -244,15 +244,15 @@ describe('normalizePackageJson', () => {
           'test',
           'pages/_document.js',
           'pages/index.js',
-          'pages/home.js',
+          'pages/home.js'
         ],
         rules: {
-          'react/no-unescaped-entities': null,
-        },
+          'react/no-unescaped-entities': null
+        }
       },
       jest: {
-        testEnvironment: 'node',
-      },
+        testEnvironment: 'node'
+      }
     };
     const result = normalizePackageJson(defaultPackage);
     expect(result).toEqual({
@@ -263,7 +263,7 @@ describe('normalizePackageJson', () => {
         'now-build':
           'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
         start: 'next start',
-        test: "xo && stylelint './pages/**/*.js' && jest",
+        test: "xo && stylelint './pages/**/*.js' && jest"
       },
       main: 'pages/index.js',
       license: 'MIT',
@@ -283,12 +283,12 @@ describe('normalizePackageJson', () => {
         xo: '^0.23.0',
         consola: '^2.2.6',
         fontfaceobserver: '^2.0.13',
-        'styled-components': '^4.1.1',
+        'styled-components': '^4.1.1'
       },
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
         react: '^16.6.3',
-        'react-dom': '^16.6.3',
+        'react-dom': '^16.6.3'
       },
       xo: {
         extends: 'xo-react',
@@ -298,15 +298,15 @@ describe('normalizePackageJson', () => {
           'test',
           'pages/_document.js',
           'pages/index.js',
-          'pages/home.js',
+          'pages/home.js'
         ],
         rules: {
-          'react/no-unescaped-entities': null,
-        },
+          'react/no-unescaped-entities': null
+        }
       },
       jest: {
-        testEnvironment: 'node',
-      },
+        testEnvironment: 'node'
+      }
     });
   });
 });

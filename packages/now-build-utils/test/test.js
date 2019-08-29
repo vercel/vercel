@@ -1,20 +1,16 @@
-/* global beforeAll, expect, it, jest */
 const path = require('path');
 const fs = require('fs-extra');
-// eslint-disable-next-line import/no-extraneous-dependencies
 const execa = require('execa');
 const assert = require('assert');
 const { createZip } = require('../dist/lambda');
-const {
-  glob, download, detectBuilders, detectRoutes,
-} = require('../');
+const { glob, download, detectBuilders, detectRoutes } = require('../');
 const {
   getSupportedNodeVersion,
-  defaultSelection,
+  defaultSelection
 } = require('../dist/fs/node-version');
 const {
   packAndDeploy,
-  testDeployment,
+  testDeployment
 } = require('../../../test/lib/deployment/test-deployment');
 
 jest.setTimeout(4 * 60 * 1000);
@@ -42,7 +38,7 @@ it('should re-create symlinks properly', async () => {
 
   const [linkStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'a.txt'))
   ]);
   assert(linkStat.isSymbolicLink());
   assert(aStat.isFile());
@@ -64,7 +60,7 @@ it('should create zip files with symlinks properly', async () => {
 
   const [linkStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'a.txt'))
   ]);
   assert(linkStat.isSymbolicLink());
   assert(aStat.isFile());
@@ -86,33 +82,33 @@ it('should match all semver ranges', () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(getSupportedNodeVersion('10.0.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
   expect(getSupportedNodeVersion('>=10')).resolves.toHaveProperty('major', 10);
   expect(getSupportedNodeVersion('>=10.3.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('8.5.0 - 10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('>=9.0.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('>=9.5.0 <=10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('~10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('^10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
 });
 
@@ -124,7 +120,7 @@ it('should support require by path for legacy builders', () => {
   const glob2 = require('@now/build-utils/fs/glob.js');
   const rename2 = require('@now/build-utils/fs/rename.js');
   const {
-    runNpmInstall: runNpmInstall2,
+    runNpmInstall: runNpmInstall2
   } = require('@now/build-utils/fs/run-user-scripts.js');
   const streamToBuffer2 = require('@now/build-utils/fs/stream-to-buffer.js');
 
@@ -162,8 +158,8 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture),
-      ),
+        path.join(fixturesPath, fixture)
+      )
     ).resolves.toBeDefined();
   });
 }
@@ -176,7 +172,7 @@ const buildersToTestWith = ['now-next', 'now-node', 'now-static-build'];
 for (const builder of buildersToTestWith) {
   const fixturesPath2 = path.resolve(
     __dirname,
-    `../../${builder}/test/fixtures`,
+    `../../${builder}/test/fixtures`
   );
 
   // eslint-disable-next-line no-restricted-syntax
@@ -188,8 +184,8 @@ for (const builder of buildersToTestWith) {
         await expect(
           testDeployment(
             { builderUrl, buildUtilsUrl },
-            path.join(fixturesPath2, fixture),
-          ),
+            path.join(fixturesPath2, fixture)
+          )
         ).resolves.toBeDefined();
       });
     }
@@ -210,7 +206,7 @@ it('Test `detectBuilders`', async () => {
     // package.json + no build + next
     const pkg = {
       scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
+      dependencies: { next: '9.0.0' }
     };
     const files = ['package.json', 'pages/index.js'];
     const { builders, errors } = await detectBuilders(files, pkg);
@@ -222,7 +218,7 @@ it('Test `detectBuilders`', async () => {
     // package.json + no build + next
     const pkg = {
       scripts: { build: 'next build' },
-      devDependencies: { next: '9.0.0' },
+      devDependencies: { next: '9.0.0' }
     };
     const files = ['package.json', 'pages/index.js'];
     const { builders, errors } = await detectBuilders(files, pkg);
@@ -286,7 +282,7 @@ it('Test `detectBuilders`', async () => {
     const files = [
       'api/_utils/handler.js',
       'api/[endpoint]/.helper.js',
-      'api/[endpoint]/[id].js',
+      'api/[endpoint]/[id].js'
     ];
 
     const { builders } = await detectBuilders(files);
@@ -299,7 +295,7 @@ it('Test `detectBuilders`', async () => {
     // api + next + public
     const pkg = {
       scripts: { build: 'next build' },
-      devDependencies: { next: '9.0.0' },
+      devDependencies: { next: '9.0.0' }
     };
     const files = ['package.json', 'api/endpoint.js', 'public/index.html'];
 
@@ -315,7 +311,7 @@ it('Test `detectBuilders`', async () => {
     // api + next + raw static
     const pkg = {
       scripts: { build: 'next build' },
-      devDependencies: { next: '9.0.0' },
+      devDependencies: { next: '9.0.0' }
     };
     const files = ['package.json', 'api/endpoint.js', 'index.html'];
 
@@ -347,7 +343,7 @@ it('Test `detectBuilders`', async () => {
       'api/endpoint.js',
       'public/index.html',
       'public/favicon.ico',
-      'README.md',
+      'README.md'
     ];
 
     const { builders } = await detectBuilders(files);
@@ -371,7 +367,7 @@ it('Test `detectBuilders`', async () => {
     // next + public
     const pkg = {
       scripts: { build: 'next build' },
-      devDependencies: { next: '9.0.0' },
+      devDependencies: { next: '9.0.0' }
     };
     const files = ['package.json', 'public/index.html', 'README.md'];
 
@@ -385,7 +381,7 @@ it('Test `detectBuilders`', async () => {
     // nuxt
     const pkg = {
       scripts: { build: 'nuxt build' },
-      dependencies: { nuxt: '2.8.1' },
+      dependencies: { nuxt: '2.8.1' }
     };
     const files = ['package.json', 'pages/index.js'];
 
@@ -437,12 +433,12 @@ it('Test `detectBuilders`', async () => {
     // package.json + api + canary
     const pkg = {
       scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
+      dependencies: { next: '9.0.0' }
     };
     const files = [
       'pages/index.js',
       'api/[endpoint].js',
-      'api/[endpoint]/[id].js',
+      'api/[endpoint]/[id].js'
     ];
 
     const { builders } = await detectBuilders(files, pkg, { tag: 'canary' });
@@ -456,12 +452,12 @@ it('Test `detectBuilders`', async () => {
     // package.json + api + latest
     const pkg = {
       scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
+      dependencies: { next: '9.0.0' }
     };
     const files = [
       'pages/index.js',
       'api/[endpoint].js',
-      'api/[endpoint]/[id].js',
+      'api/[endpoint]/[id].js'
     ];
 
     const { builders } = await detectBuilders(files, pkg, { tag: 'latest' });
@@ -475,12 +471,12 @@ it('Test `detectBuilders`', async () => {
     // package.json + api + random tag
     const pkg = {
       scripts: { build: 'next build' },
-      dependencies: { next: '9.0.0' },
+      dependencies: { next: '9.0.0' }
     };
     const files = [
       'pages/index.js',
       'api/[endpoint].js',
-      'api/[endpoint]/[id].js',
+      'api/[endpoint]/[id].js'
     ];
 
     const { builders } = await detectBuilders(files, pkg, { tag: 'haha' });
@@ -549,7 +545,7 @@ it('Test `detectRoutes`', async () => {
     const files = [
       'public/index.html',
       'api/[endpoint].js',
-      'api/[endpoint]/[id].js',
+      'api/[endpoint]/[id].js'
     ];
 
     const { builders } = await detectBuilders(files);
@@ -564,7 +560,7 @@ it('Test `detectRoutes`', async () => {
   {
     const pkg = {
       scripts: { build: 'next build' },
-      devDependencies: { next: '9.0.0' },
+      devDependencies: { next: '9.0.0' }
     };
     const files = ['public/index.html', 'api/[endpoint].js'];
 
@@ -592,7 +588,7 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes.length).toBe(3);
     expect(defaultRoutes[0].src).toBe(
-      '^/api/date(\\/|\\/index|\\/index\\.js)?$',
+      '^/api/date(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
     expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
@@ -607,7 +603,7 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes.length).toBe(3);
     expect(defaultRoutes[0].src).toBe(
-      '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$',
+      '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
     expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
@@ -621,7 +617,7 @@ it('Test `detectRoutes`', async () => {
       'api/users/index.ts',
       'api/users/index.d.ts',
       'api/food.ts',
-      'api/ts/gold.ts',
+      'api/ts/gold.ts'
     ];
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
@@ -645,39 +641,39 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
     {
       path: '/api/my-endpoint',
       mustContain: 'my-endpoint',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/other-endpoint',
       mustContain: 'other-endpoint',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/team/zeit',
       mustContain: 'team/zeit',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/user/myself',
       mustContain: 'user/myself',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/not-okay/',
-      status: 404,
+      status: 404
     },
     {
       path: '/api',
-      status: 404,
+      status: 404
     },
     {
       path: '/api/',
-      status: 404,
+      status: 404
     },
     {
       path: '/',
-      mustContain: 'hello from index.txt',
-    },
+      mustContain: 'hello from index.txt'
+    }
   ];
 
   const { builders } = await detectBuilders(files, pkg);
@@ -686,12 +682,12 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
   await fs.writeFile(
     path.join(fixture, 'now.json'),
-    JSON.stringify(nowConfig, null, 2),
+    JSON.stringify(nowConfig, null, 2)
   );
 
   const deployment = await testDeployment(
     { builderUrl, buildUtilsUrl },
-    fixture,
+    fixture
   );
   expect(deployment).toBeDefined();
 });
@@ -705,32 +701,32 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
   const probes = [
     {
       path: '/api/not-okay',
-      status: 404,
+      status: 404
     },
     {
       path: '/api',
       mustContain: 'hello from api/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/',
       mustContain: 'hello from api/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/index',
       mustContain: 'hello from api/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/index.js',
       mustContain: 'hello from api/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/date.js',
       mustContain: 'hello from api/date.js',
-      status: 200,
+      status: 200
     },
     {
       // Someone might expect this to be `date.js`,
@@ -739,27 +735,27 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
       // so it is not special cased
       path: '/api/date',
       mustContain: 'hello from api/date/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/date/',
       mustContain: 'hello from api/date/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/date/index',
       mustContain: 'hello from api/date/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/api/date/index.js',
       mustContain: 'hello from api/date/index.js',
-      status: 200,
+      status: 200
     },
     {
       path: '/',
-      mustContain: 'hello from index.txt',
-    },
+      mustContain: 'hello from index.txt'
+    }
   ];
 
   const { builders } = await detectBuilders(files, pkg);
@@ -768,12 +764,12 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
   await fs.writeFile(
     path.join(fixture, 'now.json'),
-    JSON.stringify(nowConfig, null, 2),
+    JSON.stringify(nowConfig, null, 2)
   );
 
   const deployment = await testDeployment(
     { builderUrl, buildUtilsUrl },
-    fixture,
+    fixture
   );
   expect(deployment).toBeDefined();
 });
