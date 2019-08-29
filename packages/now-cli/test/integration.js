@@ -177,7 +177,7 @@ test('login', async t => {
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
 
-  const loginOutput = await execa(binaryPath, ['login', email]);
+  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
   t.is(loginOutput.code, 0, formatOutput(loginOutput));
   t.regex(loginOutput.stdout, /You are now logged in\./gm, formatOutput(loginOutput));
 
