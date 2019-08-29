@@ -6,9 +6,10 @@ import {
   writeFile,
 } from 'fs-extra';
 import os from 'os';
+import zlib from 'zlib';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
+import resolveFrom from 'resolve-from';
 
 import {
   BuildOptions,
@@ -27,6 +28,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   debug,
+  streamToBuffer,
 } from '@now/build-utils';
 import nodeFileTrace from '@zeit/node-file-trace';
 
@@ -48,6 +50,9 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  createLambdaFromPseudoLayers,
+  PseudoLayer,
+  createPseudoLayer,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -464,11 +469,12 @@ export const build = async ({
       );
     }
 
-    let assets:
-      | {
-          [filePath: string]: FileFsRef;
-        }
-      | undefined;
+    let assets: undefined | {
+      [filePath: string]: FileFsRef;
+    };
+
+    const pseudoLayers: PseudoLayer[] = []
+
     const tracedFiles: {
       [filePath: string]: FileFsRef;
     } = {};
@@ -501,8 +507,13 @@ export const build = async ({
           fsPath: path.join(workPath, file),
         });
       });
-
       console.timeEnd(tracingLabel);
+
+      const zippingLabel = 'Compressing shared lambda files';
+      console.time(zippingLabel);
+
+      pseudoLayers.push(await createPseudoLayer(tracedFiles))
+      console.timeEnd(zippingLabel)
     } else {
       // An optional assets folder that is placed alongside every page
       // entrypoint.
@@ -525,6 +536,9 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
+    const allLambdasLabel = `All lambdas created`
+    console.time(allLambdasLabel)
+
     await Promise.all(
       pageKeys.map(async page => {
         // These default pages don't have to be handled as they'd always 404
@@ -548,26 +562,39 @@ export const build = async ({
           /__LAUNCHER_PAGE_PATH__/g,
           JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
         );
-        const launcherFiles = {
+        const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
           'now__bridge.js': new FileFsRef({
             fsPath: path.join(__dirname, 'now__bridge.js'),
           }),
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
-        lambdas[path.join(entryDirectory, pathname)] = await createLambda({
-          files: {
-            ...launcherFiles,
-            ...assets,
-            ...tracedFiles,
-            [requiresTracing ? pageFileName : 'page.js']: pages[page],
-          },
-          handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime,
-        });
+        if (requiresTracing) {
+          lambdas[path.join(entryDirectory, pathname)] = await createLambdaFromPseudoLayers({
+            files: {
+              ...launcherFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+            },
+            layers: pseudoLayers,
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime,
+          });
+        } else {
+          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+            files: {
+              ...launcherFiles,
+              ...assets,
+              ...tracedFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+            },
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime,
+          });
+        }
         console.timeEnd(label);
       })
     );
+    console.timeEnd(allLambdasLabel)
   }
 
   const nextStaticFiles = await glob(

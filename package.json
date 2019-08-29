@@ -1,32 +1,36 @@
 {
-    "name": "now-builders",
-    "version": "0.0.0",
-    "private": true,
-    "license": "MIT",
-    "workspaces": [
-        "packages/*"
-      ],
-    "dependencies": {
-      "lerna": "3.16.4"
-    },
-    "devDependencies": {
-      "@zeit/ncc": "0.20.4",
-      "async-retry": "1.2.3",
-      "buffer-replace": "1.0.0",
-      "node-fetch": "2.6.0"
-    },
-    "scripts": {
-      "lerna": "lerna",
-      "bootstrap": "lerna bootstrap",
-      "publish-stable": "git checkout master && git pull && lerna version --exact",
-      "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
-      "publish-from-github": "./.circleci/publish.sh",
-      "build": "node run.js build all",
-      "test-lint": "node run.js test-lint",
-      "test-unit": "node run.js test-unit",
-      "test-integration": "node run.js test-integration",
-      "test-integration-once": "node run.js test-integration-once",
-      "test-integration-now-dev": "node run.js test-integration-now-dev"
-    }
+  "name": "now-builders",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "nohoist": [
+      "**/@types/**"
+    ]
+  },
+  "dependencies": {
+    "lerna": "3.16.4"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "0.20.4",
+    "async-retry": "1.2.3",
+    "buffer-replace": "1.0.0",
+    "node-fetch": "2.6.0"
+  },
+  "scripts": {
+    "lerna": "lerna",
+    "bootstrap": "lerna bootstrap",
+    "publish-stable": "git checkout master && git pull && lerna version --exact",
+    "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
+    "publish-from-github": "./.circleci/publish.sh",
+    "build": "node run.js build all",
+    "test-lint": "node run.js test-lint",
+    "test-unit": "node run.js test-unit",
+    "test-integration": "node run.js test-integration",
+    "test-integration-once": "node run.js test-integration-once",
+    "test-integration-now-dev": "node run.js test-integration-now-dev"
   }
-  
+}
