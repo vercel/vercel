@@ -1235,27 +1235,27 @@
     "@nodelib/fs.scandir" "2.1.1"
     fastq "^1.6.0"
 
-"@now/go@latest":
-  version "0.5.10"
-  resolved "https://registry.yarnpkg.com/@now/go/-/go-0.5.10.tgz#11c19f171a5277ad0732768c3d44b636e67c91c4"
-  integrity sha512-f1i0XsR27KZjXFyiH1CeX0UiIVVfR+JZTAJtZ7BItNtOpFzUy4D6UmA//ovlqabPvhVK9e7hReCAlE/6IsQ47A==
+"@now/build-utils@./packages/now-build-utils":
+  version "0.9.14-canary.1"
 
-"@now/next@latest":
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/@now/next/-/next-0.7.0.tgz#b172b4cc036c11a499ee6957b394cc7e4f4c9ff9"
-  integrity sha512-UuVWFvyIENTX8mH2dyoD2tnK5MZhDz3cSUHkxDdVx03XRhbwnXCs56y0L1FSPdTKpn9WoHi9GnG5JcfaqAJMGQ==
+"@now/go@./packages/now-go":
+  version "0.5.11-canary.0"
 
-"@now/node@latest":
-  version "0.12.7"
-  resolved "https://registry.yarnpkg.com/@now/node/-/node-0.12.7.tgz#d70e4357fd50a3a3bfd62a7f341947a8f47f8cf3"
-  integrity sha512-ksV0lf9sF/ppS9UMPoBxaHLw6bh2jceJzjoSCrhKZJbKi0Hi82UiZCHJ7R7ZSVXxP1B++dRis4f2xvIEIyvbOA==
+"@now/next@./packages/now-next":
+  version "0.7.1-canary.2"
+
+"@now/node@./packages/now-node":
+  version "0.12.8-canary.1"
   dependencies:
     "@types/node" "*"
 
-"@now/static-build@latest":
-  version "0.9.8"
-  resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.9.8.tgz#6a503d02342ba9f99097368bf0c380065c20b07f"
-  integrity sha512-sIO8BdlqUnNTE7XajBQm5Sk18VfOCGKqDTjhCQm0pxBQY2yfazCk715LLhuE7u6kljP+3z2qkKHKlkZFZUDcrw==
+"@now/routing-utils@./packages/now-routing-utils":
+  version "1.2.3-canary.0"
+  optionalDependencies:
+    ajv "^6.0.0"
+
+"@now/static-build@./packages/now-static-build":
+  version "0.9.9-canary.1"
 
 "@octokit/endpoint@^5.1.0":
   version "5.3.2"
@@ -8008,23 +8008,8 @@ normalize-url@^4.1.0:
   resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-4.3.0.tgz#9c49e10fc1876aeb76dba88bf1b2b5d9fa57b2ee"
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
 
-now-client@4.1.2:
-  version "4.1.2"
-  resolved "https://registry.yarnpkg.com/now-client/-/now-client-4.1.2.tgz#70b4ea577a605d1df7e2fdef761fb7c38bcf78b2"
-  integrity sha512-quHDR6pRv4XBdKZC7u36KuoT8+zZfSBULCQUFlHPOEY3GElyGYpEa/CDquChezZqyLg8PMnZNu7iuVrAXSFsBw==
-  dependencies:
-    "@zeit/fetch" "5.1.0"
-    async-retry "1.2.3"
-    fetch-h2 "2.2.0"
-    fs-extra "8.0.1"
-    node-fetch "2.6.0"
-    querystring "^0.2.0"
-    recursive-readdir "2.2.2"
-
-now-client@5.1.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/now-client/-/now-client-5.1.0.tgz#7b5e8f5150cf11bdeb27505acd5c8748ede1d486"
-  integrity sha512-m4670Z8jeB0+0YhhJNLSvoX8F7mVvFq67NddrCGCqOLw2R/lP11A0qJYi7/qclJ4ZXq8V9Vf6mXKcxlSDPLj5w==
+now-client@./packages/now-client:
+  version "5.1.1-canary.0"
   dependencies:
     "@zeit/fetch" "5.1.0"
     async-retry "1.2.3"
@@ -8033,7 +8018,6 @@ now-client@5.1.0:
     fs-extra "8.0.1"
     ms "2.1.2"
     node-fetch "2.6.0"
-    now-client "4.1.2"
     querystring "^0.2.0"
     recursive-readdir "2.2.2"
     sleep-promise "8.0.1"
