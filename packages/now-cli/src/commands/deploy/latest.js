@@ -41,6 +41,7 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
+import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -71,7 +72,7 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input => `https://${input}`;
+const prepareAlias = input => isWildcardAlias(input) ? input : `https://${input}`;
 
 const printDeploymentStatus = async (
   output,

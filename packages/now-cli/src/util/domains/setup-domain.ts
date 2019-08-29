@@ -8,6 +8,7 @@ import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import verifyDomain from './verify-domain';
+import extractDomain from '../alias/extract-domain';
 
 export default async function setupDomain(
   output: Output,
@@ -15,7 +16,8 @@ export default async function setupDomain(
   alias: string,
   contextName: string
 ) {
-  const parsedDomain = psl.parse(alias);
+  const aliasDomain = extractDomain(alias);
+  const parsedDomain = psl.parse(aliasDomain);
   if (parsedDomain.error) {
     return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
   }
@@ -60,7 +62,7 @@ export default async function setupDomain(
   const purchased = await purchaseDomainIfAvailable(
     output,
     client,
-    alias,
+    aliasDomain,
     contextName
   );
   if (purchased instanceof NowError) {

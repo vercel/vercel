@@ -17,8 +17,10 @@ import getTargetsForAlias from '../../util/alias/get-targets-for-alias';
 import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
+import { isValidName } from '../../util/is-valid-name';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
+import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 
 type Options = {
   '--debug': boolean;
@@ -74,6 +76,16 @@ export default async function set(
     output.error(
       `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
     );
+    return 1;
+  }
+
+  if (!isValidName(args[0])) {
+    output.error(`The provided argument "${args[0]}" is not a valid deployment`);
+    return 1;
+  }
+
+  if (!isValidName(args[1])) {
+    output.error(`The provided argument "${args[1]}" is not a valid domain`);
     return 1;
   }
 
@@ -215,9 +227,12 @@ export default async function set(
     if (handleResult === 1) {
       return 1;
     }
+
+    const prefix = isWildcardAlias(handleResult.alias) ? '' : 'https://';
+
     console.log(
       `${chalk.cyan('> Success!')} ${chalk.bold(
-        `https://${handleResult.alias}`
+        `${prefix}${handleResult.alias}`
       )} now points to https://${deployment.url} ${setStamp()}`
     );
   }

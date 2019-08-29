@@ -172,6 +172,24 @@ test.before(async () => {
   }
 });
 
+test('login', async t => {
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
+
+  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+  t.is(loginOutput.code, 0, formatOutput(loginOutput));
+  t.regex(loginOutput.stdout, /You are now logged in\./gm, formatOutput(loginOutput));
+
+  // Save the new token
+  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+
+  token = auth.token;
+
+  t.is(typeof token, 'string');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -383,20 +401,22 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
-  });
-
-  const deployments = parseList(stdout);
-
-  t.true(deployments.length > 0);
-  t.is(code, 0);
-
-  const target = deployments.find(deployment =>
-    deployment.includes(`${session}-`)
+  const output = await execa(
+    binaryPath,
+    ['--debug', 'ls', ...defaultArgs],
+    {
+      reject: false
+    }
   );
 
-  t.truthy(target);
+  const deployments = parseList(output.stdout);
+
+  t.true(deployments.length > 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
+
+  const target = deployments.find(deployment => deployment.includes(`${session}-`));
+
+  t.truthy(target, formatOutput(output));
 
   if (target) {
     context.deployment = target;
@@ -847,6 +867,52 @@ test('output logs of a 2.0 deployment', async t => {
 
   t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
   t.is(code, 0);
+});
+
+test('create wildcard alias for deployment', async t => {
+  const hosts = {
+    deployment: context.deployment,
+    alias: `*.${contextName}.now.sh`
+  };
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  const goal = `> Success! ${hosts.alias} now points to https://${
+    hosts.deployment
+  }`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://test.${contextName}.now.sh`);
+  const content = await response.text();
+
+  t.true(response.ok);
+  t.true(content.includes(contextName));
+
+  context.wildcardAlias = hosts.alias;
+});
+
+test('remove the wildcard alias', async t => {
+  const goal = `> Success! Alias ${context.wildcardAlias} removed`;
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
 });
 
 test('ensure type and instance count in list is right', async t => {
@@ -1615,6 +1681,36 @@ test('render build errors', async t => {
 
   t.is(output.code, 1, formatOutput(output));
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+});
+
+test('invalid deployment, projects and alias names', async t => {
+  const check = async (...args) => {
+    const output = await execute(args);
+    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`
+    t.is(output.code, 1, print);
+    t.regex(output.stderr, /The provided argument/gm, print);
+  };
+
+  await Promise.all([
+    check('alias', '/', 'test'),
+    check('alias', 'test', '/'),
+    check('rm', '/'),
+    check('ls', '/')
+  ]);
+});
+
+test('now cert ls --after=cert_test', async t => {
+  const output = await execute(['certs', 'ls', '--after=cert_test']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /The cert cert_test can't be found\./gm, formatOutput(output));
+});
+
+test('now hasOwnProperty not a valid subcommand', async t => {
+  const output = await execute(['hasOwnProperty']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /The specified file or directory "hasOwnProperty" does not exist/gm, formatOutput(output));
 });
 
 test.after.always(async () => {
