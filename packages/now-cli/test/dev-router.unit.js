@@ -255,3 +255,22 @@ test('[dev-router] match with catch-all with no prefix slash', async t => {
     matched_route_idx: 0
   });
 });
+
+test('[dev-router] `continue: true` with `dest`', async t => {
+  const routesConfig = [
+    { src: '/(.*)', dest: '/www/$1', continue: true },
+    { src: '^/www/(a\\/([^\\/]+?)(?:\\/)?)$', dest: 'http://localhost:5000/$1' }
+  ];
+  const result = await devRouter('/a/foo', 'GET', routesConfig);
+
+  t.deepEqual(result, {
+    found: true,
+    dest: 'http://localhost:5000/a/foo',
+    status: undefined,
+    headers: {},
+    uri_args: {},
+    matched_route: routesConfig[1],
+    matched_route_idx: 1,
+    userDest: false
+  });
+});

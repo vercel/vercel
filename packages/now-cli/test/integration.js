@@ -1706,6 +1706,13 @@ test('now cert ls --after=cert_test', async t => {
   t.regex(output.stderr, /The cert cert_test can't be found\./gm, formatOutput(output));
 });
 
+test('now hasOwnProperty not a valid subcommand', async t => {
+  const output = await execute(['hasOwnProperty']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /The specified file or directory "hasOwnProperty" does not exist/gm, formatOutput(output));
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
