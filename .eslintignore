@@ -1,1 +1,14 @@
 node_modules
+
+# now-cli
+packages/now-cli/@types
+packages/now-cli/download
+packages/now-cli/dist
+packages/now-cli/test/fixtures
+packages/now-cli/test/dev/fixtures
+packages/now-cli/bin
+packages/now-cli/link
+packages/now-cli/src/util/dev/templates/*.ts
+
+# now-static-build
+packages/now-static-build/test/fixtures
