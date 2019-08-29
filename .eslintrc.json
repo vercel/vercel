@@ -18,12 +18,16 @@
     "jest": true,
     "es6": true
   },
+  "rules": {
+    "@typescript-eslint/ban-ts-ignore": 0,
+    "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/explicit-function-return-type": 0
+  },
   "overrides": [
     {
       "files": ["**/*.js"],
       "rules": {
-        "@typescript-eslint/no-var-requires": "off",
-        "@typescript-eslint/explicit-function-return-type": "off"
+        "@typescript-eslint/no-var-requires": "off"
       }
     },
     {
@@ -36,16 +40,13 @@
         "prefer-const": 0,
         "prefer-destructuring": 0,
         "require-atomic-updates": 0,
-        "@typescript-eslint/ban-ts-ignore": 0,
         "@typescript-eslint/ban-types": 0,
         "@typescript-eslint/camelcase": 0,
         "@typescript-eslint/consistent-type-assertions": 0,
-        "@typescript-eslint/explicit-function-return-type": 0,
         "@typescript-eslint/member-delimiter-style": 0,
         "@typescript-eslint/no-empty-function": 0,
         "@typescript-eslint/no-explicit-any": 0,
         "@typescript-eslint/no-inferrable-types": 0,
-        "@typescript-eslint/no-use-before-define": 0,
         "@typescript-eslint/no-var-requires": 0
       }
     },

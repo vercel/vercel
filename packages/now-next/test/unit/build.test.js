@@ -1,4 +1,3 @@
-/* global expect, it, jest */
 const path = require('path');
 const os = require('os');
 const { build } = require('@now/next');
@@ -14,40 +13,40 @@ describe('build meta dev', () => {
       module.exports = {
         target: 'serverless'
       }
-    `,
+    `
     }),
     'pages/index.js': new FileBlob({
       mode: 0o777,
       data: `
       export default () => 'Index page'
-    `,
+    `
     }),
     'pages/nested/[param].js': new FileBlob({
       mode: 0o777,
       data: `
       export default () => 'Dynamic page'
-    `,
+    `
     }),
     'pages/nested/page.tsx': new FileBlob({
       mode: 0o777,
       data: `
       export default () => 'Nested page'
-    `,
+    `
     }),
     'pages/api/test.js': new FileBlob({
       mode: 0o777,
       data: `
       export default (req, res) => res.status(200).end('API Route')
-    `,
+    `
     }),
     // This file should be omitted because `pages/index.js` will use the same route
     'public/index': new FileBlob({
       mode: 0o777,
-      data: 'text',
+      data: 'text'
     }),
     'public/data.txt': new FileBlob({
       mode: 0o777,
-      data: 'data',
+      data: 'data'
     }),
     'package.json': new FileBlob({
       mode: 0o777,
@@ -67,15 +66,15 @@ describe('build meta dev', () => {
           "typescript": "3"
         }
       }
-    `,
-    }),
+    `
+    })
   };
   const entrypoint = 'next.config.js';
   const workPath = path.join(
     os.tmpdir(),
     Math.random()
       .toString()
-      .slice(3),
+      .slice(3)
   );
   console.log('workPath directory: ', workPath);
 
@@ -85,15 +84,13 @@ describe('build meta dev', () => {
     await download(files, workPath);
 
     const meta = { isDev: true, requestPath: null };
-    const {
-      output, routes, watch, childProcesses,
-    } = await build({
+    const { output, routes, watch, childProcesses } = await build({
       files,
       workPath,
       entrypoint,
-      meta,
+      meta
     });
-    routes.forEach((route) => {
+    routes.forEach(route => {
       // eslint-disable-next-line no-param-reassign
       route.dest = route.dest.replace(':4000', ':5000');
     });
@@ -107,9 +104,9 @@ describe('build meta dev', () => {
       { src: '/api/test', dest: 'http://localhost:5000/api/test' },
       {
         src: '^/(nested\\/([^\\/]+?)(?:\\/)?)$',
-        dest: 'http://localhost:5000/$1',
+        dest: 'http://localhost:5000/$1'
       },
-      { src: '/data.txt', dest: 'http://localhost:5000/data.txt' },
+      { src: '/data.txt', dest: 'http://localhost:5000/data.txt' }
     ]);
     expect(watch).toEqual([
       'next.config.js',
@@ -119,7 +116,7 @@ describe('build meta dev', () => {
       'pages/api/test.js',
       'public/index',
       'public/data.txt',
-      'package.json',
+      'package.json'
     ]);
     childProcesses.forEach(cp => cp.kill());
   });
