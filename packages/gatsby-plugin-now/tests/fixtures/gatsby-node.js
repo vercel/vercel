@@ -98,7 +98,7 @@ exports.createPages = ({ actions }) => {
   });
 
   createRedirect({
-    fromPath: '/blue',
+    fromPath: '/my-special-redirect',
     toPath: homePath,
     force: true
   });

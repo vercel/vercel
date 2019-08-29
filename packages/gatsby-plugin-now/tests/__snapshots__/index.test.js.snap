@@ -6,7 +6,7 @@ Array [
     "headers": Object {
       "Location": "/",
     },
-    "src": "/blue",
+    "src": "/my-special-redirect",
     "status": 302,
   },
   Object {
