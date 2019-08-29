@@ -61,7 +61,7 @@ export default function buildCreateDeployment(version: number): CreateDeployment
       fileList.length === 0 ||
       fileList.every((item): boolean => {
         if (!item) {
-          return false
+          return true
         }
 
         const segments = item.split('/')
