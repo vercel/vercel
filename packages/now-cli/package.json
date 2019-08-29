@@ -68,7 +68,6 @@
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
-    "@now/php": "latest",
     "@now/routing-utils": "1.2.3-canary.0",
     "@now/static-build": "latest",
     "@sentry/node": "5.5.0",
