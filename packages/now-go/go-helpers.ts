@@ -85,10 +85,23 @@ class GoWrapper {
     return this.execute(...args);
   }
 
-  build(src: string | string[], dest: string, ldsflags = '-s -w') {
+  build(src: string | string[], dest: string) {
     debug('Building optimized `go` binary %o -> %o', src, dest);
     const sources = Array.isArray(src) ? src : [src];
-    return this.execute('build', '-ldflags', ldsflags, '-o', dest, ...sources);
+
+    let flags = ['-ldflags', '-s -w'];
+    if (process.env.GO_BUILD_FLAGS) {
+      // the regular expression is ensure to not split when there are
+      // space between ' ' with fallback to split()
+      let flagsArr = process.env.GO_BUILD_FLAGS.match(/(?:[^\s']+|'[^']*')+/g)
+        || process.env.GO_BUILD_FLAGS.split(' ');
+      
+      // clean up quote
+      flagsArr = flagsArr.map(flag => flag.replace(/'/g, ''))
+      flags = [...flagsArr];
+    }
+
+    return this.execute('build', ...flags, '-o', dest, ...sources);
   }
 }
 
