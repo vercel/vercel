@@ -87,7 +87,7 @@ const DEFAULTS: Options = {
   ignore: undefined,
   project: undefined,
   ignoreDiagnostics: undefined,
-  logError: null,
+  logError: null
 };
 
 /**
@@ -99,7 +99,7 @@ const TS_NODE_COMPILER_OPTIONS = {
   inlineSources: true,
   declaration: false,
   noEmit: false,
-  outDir: '$$ts-node$$',
+  outDir: '$$ts-node$$'
 };
 
 /**
@@ -143,7 +143,7 @@ export function register(opts: Options = {}): Register {
     6059, // "'rootDir' is expected to contain all source files."
     18002, // "The 'files' list in config file is empty."
     18003, // "No inputs were found in config file."
-    ...(options.ignoreDiagnostics || []),
+    ...(options.ignoreDiagnostics || [])
   ].map(Number);
 
   // Require the TypeScript compiler and configuration.
@@ -151,7 +151,7 @@ export function register(opts: Options = {}): Register {
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
   try {
     var compiler = require.resolve(options.compiler || 'typescript', {
-      paths: [cwd, nowNodeBase],
+      paths: [cwd, nowNodeBase]
     });
   } catch (e) {
     compiler = require.resolve(eval('"./typescript"'));
@@ -174,7 +174,7 @@ export function register(opts: Options = {}): Register {
   const diagnosticHost: _ts.FormatDiagnosticsHost = {
     getNewLine: () => ts.sys.newLine,
     getCurrentDirectory: () => cwd,
-    getCanonicalFileName: path => path,
+    getCanonicalFileName: path => path
   };
 
   function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
@@ -199,7 +199,7 @@ export function register(opts: Options = {}): Register {
 
   // we create a custom build per tsconfig.json instance
   const builds = new Map<string, Build>();
-  function getBuild(configFileName: string = ''): Build {
+  function getBuild(configFileName = ''): Build {
     let build = builds.get(configFileName);
     if (build) return build;
 
@@ -208,12 +208,12 @@ export function register(opts: Options = {}): Register {
     /**
      * Create the basic required function using transpile mode.
      */
-    let getOutput = function(code: string, fileName: string): SourceOutput {
+    const getOutput = function(code: string, fileName: string): SourceOutput {
       const result = ts.transpileModule(code, {
         fileName,
         transformers,
         compilerOptions: config.options,
-        reportDiagnostics: true,
+        reportDiagnostics: true
       });
 
       const diagnosticList = result.diagnostics
@@ -268,7 +268,7 @@ export function register(opts: Options = {}): Register {
         getCurrentDirectory: () => cwd,
         getCompilationSettings: () => config.options,
         getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
-        getCustomTransformers: () => transformers,
+        getCustomTransformers: () => transformers
       };
 
       const registry = ts.createDocumentRegistry(
@@ -322,7 +322,7 @@ export function register(opts: Options = {}): Register {
 
         return {
           code: output.outputFiles[1].text,
-          map: output.outputFiles[0].text,
+          map: output.outputFiles[0].text
         };
       };
     }
@@ -331,7 +331,7 @@ export function register(opts: Options = {}): Register {
       configFileName,
       (build = {
         getOutput,
-        getOutputTypeCheck,
+        getOutputTypeCheck
       })
     );
     return build;
@@ -355,7 +355,7 @@ export function register(opts: Options = {}): Register {
    */
   function readConfig(configFileName: string): _ts.ParsedCommandLine {
     let config: any = { compilerOptions: {} };
-    let basePath = normalizeSlashes(dirname(configFileName));
+    const basePath = normalizeSlashes(dirname(configFileName));
 
     // Read project configuration when available.
     if (configFileName) {
@@ -366,7 +366,7 @@ export function register(opts: Options = {}): Register {
         const errorResult = {
           errors: [result.error],
           fileNames: [],
-          options: {},
+          options: {}
         };
         const configDiagnosticList = filterDiagnostics(
           errorResult.errors,
@@ -432,8 +432,8 @@ export function register(opts: Options = {}): Register {
       code: value,
       map: Object.assign(JSON.parse(sourceMap), {
         file: basename(fileName),
-        sources: [fileName],
-      }),
+        sources: [fileName]
+      })
     };
     delete output.map.sourceRoot;
     return output;

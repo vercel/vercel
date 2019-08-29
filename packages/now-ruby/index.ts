@@ -6,7 +6,7 @@ import {
   remove,
   pathExists,
   readFile,
-  writeFile,
+  writeFile
 } from 'fs-extra';
 import {
   download,
@@ -14,7 +14,7 @@ import {
   glob,
   createLambda,
   BuildOptions,
-  debug,
+  debug
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -58,15 +58,15 @@ async function bundleInstall(
         '--gemfile',
         gemfilePath,
         '--path',
-        bundleDir,
+        bundleDir
       ],
       {
         stdio: 'pipe',
         env: {
           BUNDLE_SILENCE_ROOT_WARNING: '1',
           BUNDLE_APP_CONFIG: bundleAppConfig,
-          BUNDLE_JOBS: '4',
-        },
+          BUNDLE_JOBS: '4'
+        }
       }
     );
   } catch (err) {
@@ -79,7 +79,7 @@ export const build = async ({
   workPath,
   files,
   entrypoint,
-  config,
+  config
 }: BuildOptions) => {
   debug('downloading files...');
 
@@ -102,9 +102,9 @@ export const build = async ({
   const bundleDir = join(workPath, 'vendor/bundle');
   const relativeVendorDir = join(fsEntryDirectory, REQUIRED_VENDOR_DIR);
 
-  let hasRootVendorDir = await pathExists(vendorDir);
-  let hasRelativeVendorDir = await pathExists(relativeVendorDir);
-  let hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
+  const hasRootVendorDir = await pathExists(vendorDir);
+  const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -209,10 +209,10 @@ export const build = async ({
     files: outputFiles,
     handler: `${nowHandlerRbFilename}.now__handler`,
     runtime: 'ruby2.5',
-    environment: {},
+    environment: {}
   });
 
   return {
-    [entrypoint]: lambda,
+    [entrypoint]: lambda
   };
 };
