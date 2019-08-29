@@ -53,6 +53,17 @@ async function main() {
     return b - a;
   });
 
+  // We also need to ensure that `now-client` is built before the CLI
+  matches.sort((a, b) => {
+    if (a.endsWith('-client') && b.endsWith('-cli')) {
+      return -1;
+    }
+    if (b.endsWith('-client') && !a.endsWith('-cli')) {
+      return 1;
+    }
+    return b - a;
+  });
+
   console.log(matches.join('\n') + '\n');
 
   for (let pkgName of matches) {
