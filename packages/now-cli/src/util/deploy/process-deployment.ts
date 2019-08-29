@@ -1,6 +1,5 @@
 import bytes from 'bytes';
-// TODO: Disable linter bypass once https://github.com/zeit/now/pull/2914 is merged
-import { createDeployment, createLegacyDeployment } from 'now-client'; // eslint-disable-line import/no-unresolved
+import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
 
