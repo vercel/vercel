@@ -23,6 +23,9 @@ jobs:
       - run:
           name: Installing Dependencies
           command: yarn install --check-files --frozen-lockfile
+      - run:
+          name: Linking packages
+          command: yarn bootstrap
       - save_cache:
           paths:
             - node_modules
