@@ -1252,20 +1252,6 @@
   dependencies:
     "@types/node" "*"
 
-"@now/php-bridge@^0.5.3":
-  version "0.5.3"
-  resolved "https://registry.yarnpkg.com/@now/php-bridge/-/php-bridge-0.5.3.tgz#fe8cc02af247b323979347ebbb7090b547938694"
-  integrity sha512-6o13/kY3ftKYPXwNHh2MfaQinuAWAOYzgKEbxt13hlnEp2HtH3G+R0cEuJgjKthONB2W0SQgjEU1aF9k0fGCsA==
-  dependencies:
-    fastcgi-client "0.0.1"
-
-"@now/php@latest":
-  version "0.5.7"
-  resolved "https://registry.yarnpkg.com/@now/php/-/php-0.5.7.tgz#a6d3d0d25e565b52bd1d03f5559d50af011e09d6"
-  integrity sha512-XwdT1/RiyViZ/1Y3I6VlamSEcGxacVPed3QBr4CHkQcxmpwNEJ97u3AflQzXTafy6Yov7VogEAL6mKXjGLbzFQ==
-  dependencies:
-    "@now/php-bridge" "^0.5.3"
-
 "@now/static-build@latest":
   version "0.9.8"
   resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.9.8.tgz#6a503d02342ba9f99097368bf0c380065c20b07f"
@@ -4790,11 +4776,6 @@ fast-url-parser@1.1.3:
   integrity sha1-9K8+qfNNiicc9YrSs3WfQx8LMY0=
   dependencies:
     punycode "^1.3.2"
-
-fastcgi-client@0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/fastcgi-client/-/fastcgi-client-0.0.1.tgz#1046d42ff2cee2a9ac03fea04695b3ef7311861c"
-  integrity sha1-EEbUL/LO4qmsA/6gRpWz73MRhhw=
 
 fastq@^1.6.0:
   version "1.6.0"
