@@ -22,7 +22,7 @@ jobs:
           command: sudo apt-get install golang-go
       - run:
           name: Installing Dependencies
-          command: yarn install
+          command: yarn install --check-files --frozen-lockfile
       - save_cache:
           paths:
             - node_modules

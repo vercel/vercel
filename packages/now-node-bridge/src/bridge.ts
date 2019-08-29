@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { AddressInfo } from 'net';
 import { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import {
