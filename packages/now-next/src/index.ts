@@ -3,10 +3,9 @@ import {
   pathExists,
   readFile,
   unlink as unlinkFile,
-  writeFile,
+  writeFile
 } from 'fs-extra';
 import os from 'os';
-import zlib from 'zlib';
 import path from 'path';
 import semver from 'semver';
 import resolveFrom from 'resolve-from';
@@ -27,8 +26,7 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  debug,
-  streamToBuffer,
+  debug
 } from '@now/build-utils';
 import nodeFileTrace from '@zeit/node-file-trace';
 
@@ -52,7 +50,7 @@ import {
   validateEntrypoint,
   createLambdaFromPseudoLayers,
   PseudoLayer,
-  createPseudoLayer,
+  createPseudoLayer
 } from './utils';
 
 interface BuildParamsMeta {
@@ -87,7 +85,10 @@ async function readPackageJson(entryPath: string) {
 /**
  * Write package.json
  */
-async function writePackageJson(workPath: string, packageJson: Object) {
+async function writePackageJson(
+  workPath: string,
+  packageJson: Record<string, any>
+) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
@@ -150,7 +151,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   // makes it default to `process.env`
   const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
     cwd: entryPath,
-    execArgv: [],
+    execArgv: []
   });
 
   const getUrl = () =>
@@ -167,7 +168,7 @@ export const build = async ({
   workPath,
   entrypoint,
   config = {} as Config,
-  meta = {} as BuildParamsMeta,
+  meta = {} as BuildParamsMeta
 }: BuildParamsType): Promise<{
   routes: Route[];
   output: Files;
@@ -232,7 +233,7 @@ export const build = async ({
         urls[entrypoint]
       ),
       watch: pathsInside,
-      childProcesses: childProcess ? [childProcess] : [],
+      childProcesses: childProcess ? [childProcess] : []
     };
   }
 
@@ -275,7 +276,7 @@ export const build = async ({
     );
     pkg.scripts = {
       'now-build': 'next build',
-      ...(pkg.scripts || {}),
+      ...(pkg.scripts || {})
     };
     await writePackageJson(entryPath, pkg);
   }
@@ -350,14 +351,14 @@ export const build = async ({
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
-        fsPath: path.join(__dirname, 'now__bridge.js'),
-      }),
+        fsPath: path.join(__dirname, 'now__bridge.js')
+      })
     };
     const nextFiles: { [key: string]: FileFsRef } = {
       ...nodeModules,
       ...dotNextRootFiles,
       ...dotNextServerRootFiles,
-      ...launcherFiles,
+      ...launcherFiles
     };
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
@@ -394,7 +395,7 @@ export const build = async ({
           ],
           [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
             `.next/server/static/${buildId}/pages/${page}`
-          ],
+          ]
         };
 
         debug(`Creating lambda for page: "${page}"...`);
@@ -402,10 +403,10 @@ export const build = async ({
           files: {
             ...nextFiles,
             ...pageFiles,
-            'now__launcher.js': new FileBlob({ data: launcher }),
+            'now__launcher.js': new FileBlob({ data: launcher })
           },
           handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime,
+          runtime: nodeVersion.runtime
         });
         debug(`Created lambda for page: "${page}"`);
       })
@@ -430,7 +431,7 @@ export const build = async ({
 
       exportedPageRoutes.push({
         src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
+        dest: path.join('/', staticRoute)
       });
     });
 
@@ -469,11 +470,13 @@ export const build = async ({
       );
     }
 
-    let assets: undefined | {
-      [filePath: string]: FileFsRef;
-    };
+    let assets:
+      | undefined
+      | {
+          [filePath: string]: FileFsRef;
+        };
 
-    const pseudoLayers: PseudoLayer[] = []
+    const pseudoLayers: PseudoLayer[] = [];
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -504,7 +507,7 @@ export const build = async ({
         }
 
         tracedFiles[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(workPath, file)
         });
       });
       console.timeEnd(tracingLabel);
@@ -512,8 +515,8 @@ export const build = async ({
       const zippingLabel = 'Compressing shared lambda files';
       console.time(zippingLabel);
 
-      pseudoLayers.push(await createPseudoLayer(tracedFiles))
-      console.timeEnd(zippingLabel)
+      pseudoLayers.push(await createPseudoLayer(tracedFiles));
+      console.timeEnd(zippingLabel);
     } else {
       // An optional assets folder that is placed alongside every page
       // entrypoint.
@@ -536,8 +539,8 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
-    const allLambdasLabel = `All lambdas created`
-    console.time(allLambdasLabel)
+    const allLambdasLabel = `All lambdas created`;
+    console.time(allLambdasLabel);
 
     await Promise.all(
       pageKeys.map(async page => {
@@ -564,20 +567,22 @@ export const build = async ({
         );
         const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
           'now__bridge.js': new FileFsRef({
-            fsPath: path.join(__dirname, 'now__bridge.js'),
+            fsPath: path.join(__dirname, 'now__bridge.js')
           }),
-          'now__launcher.js': new FileBlob({ data: launcher }),
+          'now__launcher.js': new FileBlob({ data: launcher })
         };
 
         if (requiresTracing) {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambdaFromPseudoLayers({
+          lambdas[
+            path.join(entryDirectory, pathname)
+          ] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+              [requiresTracing ? pageFileName : 'page.js']: pages[page]
             },
             layers: pseudoLayers,
             handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime,
+            runtime: nodeVersion.runtime
           });
         } else {
           lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -585,16 +590,16 @@ export const build = async ({
               ...launcherFiles,
               ...assets,
               ...tracedFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page],
+              [requiresTracing ? pageFileName : 'page.js']: pages[page]
             },
             handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime,
+            runtime: nodeVersion.runtime
           });
         }
         console.timeEnd(label);
       })
     );
-    console.timeEnd(allLambdasLabel)
+    console.timeEnd(allLambdasLabel);
   }
 
   const nextStaticFiles = await glob(
@@ -604,9 +609,7 @@ export const build = async ({
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[
-        file
-      ],
+      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[file]
     }),
     {}
   );
@@ -623,14 +626,14 @@ export const build = async ({
   const publicFiles = Object.keys(publicDirectoryFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file],
+      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file]
     }),
     {}
   );
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  let dynamicRoutes = getDynamicRoutes(
+  const dynamicRoutes = getDynamicRoutes(
     entryPath,
     entryDirectory,
     dynamicPages
@@ -650,7 +653,7 @@ export const build = async ({
       ...lambdas,
       ...staticPages,
       ...staticFiles,
-      ...staticDirectoryFiles,
+      ...staticDirectoryFiles
     },
     routes: [
       // Static exported pages (.html rewrites)
@@ -663,7 +666,7 @@ export const build = async ({
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-        continue: true,
+        continue: true
       },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
@@ -676,18 +679,18 @@ export const build = async ({
             {
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join('/', entryDirectory, '_error'),
-              status: 404,
-            },
-          ]),
+              status: 404
+            }
+          ])
     ],
     watch: [],
-    childProcesses: [],
+    childProcesses: []
   };
 };
 
 export const prepareCache = async ({
   workPath,
-  entrypoint,
+  entrypoint
 }: PrepareCacheOptions) => {
   debug('preparing cache ...');
   const entryDirectory = path.dirname(entrypoint);
@@ -709,7 +712,7 @@ export const prepareCache = async ({
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
+    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath))
   };
   debug('cache file manifest produced');
   return cache;

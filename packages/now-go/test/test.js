@@ -1,10 +1,9 @@
-/* global beforeAll, expect, it, jest */
 const fs = require('fs');
 const path = require('path');
 
 const {
   packAndDeploy,
-  testDeployment,
+  testDeployment
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(4 * 60 * 1000);

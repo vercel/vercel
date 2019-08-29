@@ -202,7 +202,6 @@ const promptForEnvFields = async (list: string[]) => {
     });
   }
 
-  // eslint-disable-next-line import/no-unassigned-import
   require('../../util/input/patch-inquirer');
 
   log('Please enter values for the following environment variables:');

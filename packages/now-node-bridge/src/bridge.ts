@@ -5,7 +5,7 @@ import {
   Server,
   IncomingHttpHeaders,
   OutgoingHttpHeaders,
-  request,
+  request
 } from 'http';
 
 interface NowProxyEvent {
@@ -107,10 +107,10 @@ export class Bridge {
   private listening: Promise<AddressInfo>;
   private resolveListening: (info: AddressInfo) => void;
   private events: { [key: string]: NowProxyRequest } = {};
-  private reqIdSeed: number = 1;
-  private shouldStoreEvents: boolean = false;
+  private reqIdSeed = 1;
+  private shouldStoreEvents = false;
 
-  constructor(server?: ServerLike, shouldStoreEvents: boolean = false) {
+  constructor(server?: ServerLike, shouldStoreEvents = false) {
     this.server = null;
     this.shouldStoreEvents = shouldStoreEvents;
     if (server) {
@@ -141,7 +141,7 @@ export class Bridge {
     return this.server.listen(
       {
         host: '127.0.0.1',
-        port: 0,
+        port: 0
       },
       function listeningCallback() {
         if (!this || typeof this.address !== 'function') {
@@ -206,7 +206,7 @@ export class Bridge {
             statusCode: response.statusCode || 200,
             headers: response.headers,
             body: bodyBuffer.toString('base64'),
-            encoding: 'base64',
+            encoding: 'base64'
           });
         });
       });
