@@ -1,6 +1,7 @@
 import path from 'path';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
+import { timeout } from 'promise-timeout';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import frameworks from './frameworks';
 import {
@@ -225,11 +226,25 @@ export async function build({
           child.stderr.pipe(process.stderr);
         }
 
+
+        async function checkForPort(port: number | undefined): Promise<void> {
+          while (!(await isPortReachable(port))) {
+            await new Promise(resolve => {
+              setTimeout(resolve, 100);
+            });
+          }
+        }
+
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
         // for this builder.
         try {
-          await isPortReachable(devPort, {timeout: 5 * 60 * 1000});
+          await timeout(
+            new Promise(resolve => {
+              checkForPort(devPort).then(resolve);
+            }),
+            5 * 60 * 1000
+          );
         } catch (err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now/now-static-build-failed-to-detect-a-server`
