@@ -26,13 +26,13 @@ export function resolveRouteParameters(
 }
 
 export default async function(
-  reqPath: string = '/',
+  reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-  let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+  let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = {};
 
   // Try route match
@@ -85,6 +85,7 @@ export default async function(
         }
 
         if (routeConfig.continue) {
+          reqPathname = destPath;
           continue;
         }
 
