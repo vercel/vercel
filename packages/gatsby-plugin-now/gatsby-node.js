@@ -1,7 +1,7 @@
-const path = require("path");
-const writeFile = require("util").promisify(require("fs").writeFile);
+const path = require('path');
+const writeFile = require('util').promisify(require('fs').writeFile);
 
-const REDIRECT_FILE_NAME = "__now_routes.json";
+const REDIRECT_FILE_NAME = '__now_routes.json';
 
 exports.onPostBuild = async ({ store }) => {
   const { redirects, program } = store.getState();
@@ -10,7 +10,7 @@ exports.onPostBuild = async ({ store }) => {
     return;
   }
 
-  const routes = [{ handle: 'filesystem' }]
+  const routes = [{ handle: 'filesystem' }];
 
   for (let redirect of redirects) {
     let route = {
@@ -19,15 +19,15 @@ exports.onPostBuild = async ({ store }) => {
       headers: { Location: redirect.toPath }
     };
 
-    if(redirect.force) {
-      routes.unshift(route)
+    if (redirect.force) {
+      routes.unshift(route);
     } else {
       routes.push(route);
     }
   }
 
   await writeFile(
-    path.join(program.directory, "public", REDIRECT_FILE_NAME),
+    path.join(program.directory, 'public', REDIRECT_FILE_NAME),
     JSON.stringify(routes)
   );
 };
