@@ -11283,10 +11283,22 @@ ws@^5.2.0:
   dependencies:
     async-limiter "~1.0.0"
 
+xdg-app-paths@5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/xdg-app-paths/-/xdg-app-paths-5.1.0.tgz#f52f724f91e88244148c085c09bcd396443d8cae"
+  integrity sha512-RAQ3WkPf4KTU1A8RtFx3gWywzVKe00tfOPFfl2NDGqbIFENQO4kqAJp7mhQjNj/33W5x5hiWWUdyfPq/5SU3QA==
+  dependencies:
+    xdg-portable "^7.0.0"
+
 xdg-basedir@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/xdg-basedir/-/xdg-basedir-3.0.0.tgz#496b2cc109eca8dbacfe2dc72b603c17c5870ad4"
   integrity sha1-SWsswQnsqNus/i3HK2A8F8WHCtQ=
+
+xdg-portable@^7.0.0:
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/xdg-portable/-/xdg-portable-7.1.0.tgz#0b44ed91808262bdb1eac2155692b8e52e453cca"
+  integrity sha512-QBi9hgiacopF0dMgBKO9Josh52YiBw6Chf0AqqMfc96go6EJqNBImFTws7NHIsWX2rWBlEzHC1I+pABYcYM9RQ==
 
 xml-name-validator@^3.0.0:
   version "3.0.0"
