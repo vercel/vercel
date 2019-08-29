@@ -20,7 +20,7 @@ import {
   getDefaultAuthConfig
 } from './util/config/get-default';
 import hp from './util/humanize-path';
-import commands from './commands';
+import commands from './commands/index.ts';
 import * as configFiles from './util/config/files';
 import pkg from './util/pkg.ts';
 import createOutput from './util/output';
@@ -339,7 +339,7 @@ const main = async argv_ => {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands[targetOrSubcommand];
+      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -456,7 +456,7 @@ const main = async argv_ => {
   }
 
   const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
-  const targetCommand = commands[subcommand];
+  const targetCommand = commands.get(subcommand);
 
   if (argv['--team']) {
     output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
