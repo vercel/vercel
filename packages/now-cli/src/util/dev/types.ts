@@ -155,7 +155,7 @@ export interface RouteResult {
   // "status": <integer in case exit code is intended to be changed>
   status?: number;
   // "headers": <object of the added response header values>
-  headers?: HttpHeadersConfig;
+  headers: HttpHeadersConfig;
   // "uri_args": <object (key=value) list of new uri args to be passed along to dest >
   uri_args?: { [key: string]: any };
   // "matched_route": <object of the route spec that matched>
