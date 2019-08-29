@@ -2,7 +2,7 @@ import { NowError } from '../now-error';
 import { Output } from '../output';
 import Client from '../client';
 import createCertForCns from './create-cert-for-cns';
-import getWildcardCnsForDomain from './get-wildcard-cns-for-domain';
+import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
 import wait from '../output/wait';
@@ -14,7 +14,7 @@ export default async function createCertificateForAlias(
   alias: string,
   shouldBeWildcard: boolean
 ) {
-  const cns = shouldBeWildcard ? getWildcardCnsForDomain(alias) : [alias];
+  const cns = shouldBeWildcard ? getWildcardCnsForAlias(alias) : [alias];
   const cancelMessage = wait(`Generating a certificate...`);
   const certStamp = stamp();
   const cert = await createCertForCns(client, cns, context);

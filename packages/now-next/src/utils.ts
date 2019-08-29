@@ -1,7 +1,33 @@
-import fs from 'fs-extra';
+import zlib from 'zlib';
 import path from 'path';
+import fs from 'fs-extra';
+import JSZip from 'jszip';
+import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
-import { Files } from '@now/build-utils';
+import { Files, FileFsRef, streamToBuffer, Lambda } from '@now/build-utils';
+
+interface ICompressedObject {
+  new(
+    compressedSize: number,
+    uncompressedSize: number,
+    crc32: number,
+    compression: 'DEFLATE' | 'STORE',
+    compressedData: Buffer
+  ): this
+}
+
+const crc32 = require('jszip/lib/crc32');
+const compressions = require('jszip/lib/compressions');
+const CompressedObject: ICompressedObject = require('jszip/lib/compressedObject');
+
+const compressBuffer = (buf: Buffer): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    zlib.deflateRaw(buf, (err, compBuf) => {
+      if (err) return reject(err)
+      resolve(compBuf)
+    })
+  })
+}
 
 type stringMap = { [key: string]: string };
 
@@ -357,6 +383,80 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
 }
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
+
+export type PseudoLayer = { [fileName: string]: ICompressedObject };
+
+export async function createPseudoLayer(
+  files: { [fileName: string]: FileFsRef }
+): Promise<PseudoLayer> {
+  const pseudoLayer: PseudoLayer = {}
+
+  for (const fileName of Object.keys(files)) {
+    const file = files[fileName]
+    const origBuffer = await streamToBuffer(file.toStream())
+    const compBuffer = await compressBuffer(origBuffer)
+    pseudoLayer[fileName] = new CompressedObject(
+      compBuffer.byteLength,
+      origBuffer.byteLength,
+      crc32(origBuffer),
+      compressions.DEFLATE,
+      compBuffer
+    )
+  }
+
+  return pseudoLayer
+}
+
+interface CreateLambdaFromPseudoLayersOptions {
+  files: Files;
+  layers: PseudoLayer[];
+  handler: string;
+  runtime: string;
+  environment?: { [name: string]: string };
+}
+
+// measured with 1, 2, 5, 10, and `os.cpus().length || 5`
+// and sema(1) produced the best results
+const createLambdaSema = new Sema(1)
+
+export async function createLambdaFromPseudoLayers({
+  files,
+  layers,
+  handler,
+  runtime,
+  environment = {},
+}: CreateLambdaFromPseudoLayersOptions) {
+  await createLambdaSema.acquire()
+  const zipFile = new JSZip()
+
+  // apply pseudo layers (already compressed objects)
+  for (const layer of layers) {
+    for (const seedKey of Object.keys(layer)) {
+      const seedObject = layer[seedKey]
+      zipFile.file(seedKey, seedObject)
+    }
+  }
+
+  for (const fileName of Object.keys(files)) {
+    // was already added in a pseudo layer
+    if (zipFile.files[fileName]) continue
+    const file = files[fileName]
+    const fileBuffer = await streamToBuffer(file.toStream())
+    zipFile.file(fileName, fileBuffer)
+  }
+
+  const zipBuffer = await streamToBuffer(
+    zipFile.generateNodeStream()
+  )
+  createLambdaSema.release()
+
+  return new Lambda({
+    handler,
+    runtime,
+    zipBuffer,
+    environment,
+  })
+}
 
 export {
   excludeFiles,

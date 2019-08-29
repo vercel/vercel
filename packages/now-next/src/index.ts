@@ -3,12 +3,12 @@ import {
   pathExists,
   readFile,
   unlink as unlinkFile,
-  writeFile,
+  writeFile
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
+import resolveFrom from 'resolve-from';
 
 import {
   BuildOptions,
@@ -26,6 +26,7 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
+  debug
 } from '@now/build-utils';
 import nodeFileTrace from '@zeit/node-file-trace';
 
@@ -47,6 +48,9 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  createLambdaFromPseudoLayers,
+  PseudoLayer,
+  createPseudoLayer
 } from './utils';
 
 interface BuildParamsMeta {
@@ -73,7 +77,7 @@ async function readPackageJson(entryPath: string) {
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
   } catch (err) {
-    console.log('package.json not found in entry');
+    debug('package.json not found in entry');
     return {};
   }
 }
@@ -81,7 +85,10 @@ async function readPackageJson(entryPath: string) {
 /**
  * Write package.json
  */
-async function writePackageJson(workPath: string, packageJson: Object) {
+async function writePackageJson(
+  workPath: string,
+  packageJson: Record<string, any>
+) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
@@ -144,7 +151,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   // makes it default to `process.env`
   const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
     cwd: entryPath,
-    execArgv: [],
+    execArgv: []
   });
 
   const getUrl = () =>
@@ -161,7 +168,7 @@ export const build = async ({
   workPath,
   entrypoint,
   config = {} as Config,
-  meta = {} as BuildParamsMeta,
+  meta = {} as BuildParamsMeta
 }: BuildParamsType): Promise<{
   routes: Route[];
   output: Files;
@@ -174,7 +181,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
-  console.log(`${name} Downloading user files...`);
+  debug(`${name} Downloading user files...`);
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
@@ -194,7 +201,7 @@ export const build = async ({
 
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
-      console.log(`${name} Installing dependencies...`);
+      debug(`${name} Installing dependencies...`);
       await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
 
       if (!process.env.NODE_ENV) {
@@ -209,10 +216,8 @@ export const build = async ({
       const { forked, getUrl } = startDevServer(entryPath, runtimeEnv);
       urls[entrypoint] = await getUrl();
       childProcess = forked;
-      console.log(
-        `${name} Development server for ${entrypoint} running at ${
-          urls[entrypoint]
-        }`
+      debug(
+        `${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`
       );
     }
 
@@ -228,7 +233,7 @@ export const build = async ({
         urls[entrypoint]
       ),
       watch: pathsInside,
-      childProcesses: childProcess ? [childProcess] : [],
+      childProcesses: childProcess ? [childProcess] : []
     };
   }
 
@@ -240,48 +245,48 @@ export const build = async ({
 
   const isLegacy = isLegacyNext(nextVersion);
 
-  console.log(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
+  debug(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
 
   if (isLegacy) {
     try {
       await unlinkFile(path.join(entryPath, 'yarn.lock'));
     } catch (err) {
-      console.log('no yarn.lock removed');
+      debug('no yarn.lock removed');
     }
 
     try {
       await unlinkFile(path.join(entryPath, 'package-lock.json'));
     } catch (err) {
-      console.log('no package-lock.json removed');
+      debug('no package-lock.json removed');
     }
 
     console.warn(
       "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
-    console.log('normalizing package.json');
+    debug('normalizing package.json');
     const packageJson = normalizePackageJson(pkg);
-    console.log('normalized package.json result: ', packageJson);
+    debug('normalized package.json result: ', packageJson);
     await writePackageJson(entryPath, packageJson);
   } else if (!pkg.scripts || !pkg.scripts['now-build']) {
-    console.log(
+    debug(
       'Your application is being built using `next build`. ' +
         'If you need to define a different build step, please create a `now-build` script in your `package.json` ' +
         '(e.g. `{ "scripts": { "now-build": "npm run prepare && next build" } }`).'
     );
     pkg.scripts = {
       'now-build': 'next build',
-      ...(pkg.scripts || {}),
+      ...(pkg.scripts || {})
     };
     await writePackageJson(entryPath, pkg);
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
-    console.log('found NPM_AUTH_TOKEN in environment, creating .npmrc');
+    debug('found NPM_AUTH_TOKEN in environment, creating .npmrc');
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  console.log('installing dependencies...');
+  debug('installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
 
   let realNextVersion: string | undefined;
@@ -289,23 +294,23 @@ export const build = async ({
     realNextVersion = require(resolveFrom(entryPath, 'next/package.json'))
       .version;
 
-    console.log(`detected Next.js version: ${realNextVersion}`);
+    debug(`detected Next.js version: ${realNextVersion}`);
   } catch (_ignored) {
-    console.warn(`could not identify real Next.js version, that's OK!`);
+    debug(`could not identify real Next.js version, that's OK!`);
   }
 
   if (!isLegacy) {
     await createServerlessConfig(workPath, realNextVersion);
   }
 
-  console.log('running user script...');
+  debug('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env = { ...spawnOpts.env } as any;
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
   if (isLegacy) {
-    console.log('running npm install --production...');
+    debug('running npm install --production...');
     await runNpmInstall(
       entryPath,
       ['--prefer-offline', '--production'],
@@ -325,7 +330,7 @@ export const build = async ({
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
 
-    console.log('preparing lambda files...');
+    debug('preparing lambda files...');
     let buildId: string;
     try {
       buildId = await readFile(
@@ -346,14 +351,14 @@ export const build = async ({
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
-        fsPath: path.join(__dirname, 'now__bridge.js'),
-      }),
+        fsPath: path.join(__dirname, 'now__bridge.js')
+      })
     };
     const nextFiles: { [key: string]: FileFsRef } = {
       ...nodeModules,
       ...dotNextRootFiles,
       ...dotNextServerRootFiles,
-      ...launcherFiles,
+      ...launcherFiles
     };
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
@@ -390,24 +395,24 @@ export const build = async ({
           ],
           [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
             `.next/server/static/${buildId}/pages/${page}`
-          ],
+          ]
         };
 
-        console.log(`Creating lambda for page: "${page}"...`);
+        debug(`Creating lambda for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
             ...nextFiles,
             ...pageFiles,
-            'now__launcher.js': new FileBlob({ data: launcher }),
+            'now__launcher.js': new FileBlob({ data: launcher })
           },
           handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime,
+          runtime: nodeVersion.runtime
         });
-        console.log(`Created lambda for page: "${page}"`);
+        debug(`Created lambda for page: "${page}"`);
       })
     );
   } else {
-    console.log('preparing lambda files...');
+    debug('preparing lambda files...');
     const pagesDir = path.join(entryPath, '.next', 'serverless', 'pages');
 
     const pages = await glob('**/*.js', pagesDir);
@@ -426,7 +431,7 @@ export const build = async ({
 
       exportedPageRoutes.push({
         src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
+        dest: path.join('/', staticRoute)
       });
     });
 
@@ -453,27 +458,26 @@ export const build = async ({
         realNextVersion &&
         semver.lt(realNextVersion, ExperimentalTraceVersion)
       ) {
-        if (config.debug) {
-          console.log(
-            'Next.js version is too old for us to trace the required dependencies.\n' +
-              'Assuming Next.js has handled it!'
-          );
-        }
+        debug(
+          'Next.js version is too old for us to trace the required dependencies.\n' +
+            'Assuming Next.js has handled it!'
+        );
         requiresTracing = false;
       }
     } catch (err) {
-      if (config.debug) {
-        console.log(
-          'Failed to check Next.js version for tracing compatibility: ' + err
-        );
-      }
+      console.log(
+        'Failed to check Next.js version for tracing compatibility: ' + err
+      );
     }
 
     let assets:
+      | undefined
       | {
           [filePath: string]: FileFsRef;
-        }
-      | undefined;
+        };
+
+    const pseudoLayers: PseudoLayer[] = [];
+
     const tracedFiles: {
       [filePath: string]: FileFsRef;
     } = {};
@@ -481,20 +485,38 @@ export const build = async ({
       const tracingLabel = 'Tracing Next.js lambdas for external files ...';
       console.time(tracingLabel);
 
-      const { fileList } = await nodeFileTrace(
+      const { fileList, reasons } = ((await nodeFileTrace(
         Object.keys(pages).map(page => pages[page].fsPath),
         { base: workPath }
-      );
-      if (config.debug) {
-        console.log(`node-file-trace result for pages: ${fileList}`);
-      }
+      )) as any) as {
+        fileList: string[];
+        reasons: {
+          [fileName: string]: {
+            type: string;
+            ignored: boolean;
+            parents: string[];
+          };
+        };
+      };
+      debug(`node-file-trace result for pages: ${fileList}`);
       fileList.forEach(file => {
+        const reason = reasons[file];
+        if (reason && reason.type === 'initial') {
+          // Initial files are manually added to the lambda later
+          return;
+        }
+
         tracedFiles[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(workPath, file)
         });
       });
-
       console.timeEnd(tracingLabel);
+
+      const zippingLabel = 'Compressing shared lambda files';
+      console.time(zippingLabel);
+
+      pseudoLayers.push(await createPseudoLayer(tracedFiles));
+      console.timeEnd(zippingLabel);
     } else {
       // An optional assets folder that is placed alongside every page
       // entrypoint.
@@ -507,9 +529,9 @@ export const build = async ({
 
       const assetKeys = Object.keys(assets!);
       if (assetKeys.length > 0) {
-        console.log('detected (legacy) assets to be bundled with lambda:');
-        assetKeys.forEach(assetFile => console.log(`\t${assetFile}`));
-        console.log(
+        debug('detected (legacy) assets to be bundled with lambda:');
+        assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
+        debug(
           '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
         );
       }
@@ -517,6 +539,9 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
+    const allLambdasLabel = `All lambdas created`;
+    console.time(allLambdasLabel);
+
     await Promise.all(
       pageKeys.map(async page => {
         // These default pages don't have to be handled as they'd always 404
@@ -540,26 +565,41 @@ export const build = async ({
           /__LAUNCHER_PAGE_PATH__/g,
           JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
         );
-        const launcherFiles = {
+        const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
           'now__bridge.js': new FileFsRef({
-            fsPath: path.join(__dirname, 'now__bridge.js'),
+            fsPath: path.join(__dirname, 'now__bridge.js')
           }),
-          'now__launcher.js': new FileBlob({ data: launcher }),
+          'now__launcher.js': new FileBlob({ data: launcher })
         };
 
-        lambdas[path.join(entryDirectory, pathname)] = await createLambda({
-          files: {
-            ...launcherFiles,
-            ...assets,
-            ...tracedFiles,
-            [requiresTracing ? pageFileName : 'page.js']: pages[page],
-          },
-          handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime,
-        });
+        if (requiresTracing) {
+          lambdas[
+            path.join(entryDirectory, pathname)
+          ] = await createLambdaFromPseudoLayers({
+            files: {
+              ...launcherFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page]
+            },
+            layers: pseudoLayers,
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime
+          });
+        } else {
+          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+            files: {
+              ...launcherFiles,
+              ...assets,
+              ...tracedFiles,
+              [requiresTracing ? pageFileName : 'page.js']: pages[page]
+            },
+            handler: 'now__launcher.launcher',
+            runtime: nodeVersion.runtime
+          });
+        }
         console.timeEnd(label);
       })
     );
+    console.timeEnd(allLambdasLabel);
   }
 
   const nextStaticFiles = await glob(
@@ -569,9 +609,7 @@ export const build = async ({
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[
-        file
-      ],
+      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[file]
     }),
     {}
   );
@@ -588,14 +626,14 @@ export const build = async ({
   const publicFiles = Object.keys(publicDirectoryFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file],
+      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file]
     }),
     {}
   );
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  let dynamicRoutes = getDynamicRoutes(
+  const dynamicRoutes = getDynamicRoutes(
     entryPath,
     entryDirectory,
     dynamicPages
@@ -615,7 +653,7 @@ export const build = async ({
       ...lambdas,
       ...staticPages,
       ...staticFiles,
-      ...staticDirectoryFiles,
+      ...staticDirectoryFiles
     },
     routes: [
       // Static exported pages (.html rewrites)
@@ -628,7 +666,7 @@ export const build = async ({
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-        continue: true,
+        continue: true
       },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
@@ -641,20 +679,20 @@ export const build = async ({
             {
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join('/', entryDirectory, '_error'),
-              status: 404,
-            },
-          ]),
+              status: 404
+            }
+          ])
     ],
     watch: [],
-    childProcesses: [],
+    childProcesses: []
   };
 };
 
 export const prepareCache = async ({
   workPath,
-  entrypoint,
+  entrypoint
 }: PrepareCacheOptions) => {
-  console.log('preparing cache ...');
+  debug('preparing cache ...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
 
@@ -668,14 +706,14 @@ export const prepareCache = async ({
     return {};
   }
 
-  console.log('producing cache file manifest ...');
+  debug('producing cache file manifest ...');
   const cacheEntrypoint = path.relative(workPath, entryPath);
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
+    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath))
   };
-  console.log('cache file manifest produced');
+  debug('cache file manifest produced');
   return cache;
 };

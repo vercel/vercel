@@ -43,37 +43,35 @@ function getSegmentName(segment: string): string | null {
 function createRouteFromPath(filePath: string): Route {
   const parts = filePath.split('/');
 
-  let counter: number = 1;
+  let counter = 1;
   const query: string[] = [];
 
-  const srcParts = parts.map(
-    (segment, index): string => {
-      const name = getSegmentName(segment);
-      const isLast = index === parts.length - 1;
+  const srcParts = parts.map((segment, index): string => {
+    const name = getSegmentName(segment);
+    const isLast = index === parts.length - 1;
 
-      if (name !== null) {
-        // We can't use `URLSearchParams` because `$` would get escaped
-        query.push(`${name}=$${counter++}`);
-        return `([^\\/]+)`;
-      } else if (isLast) {
-        const { name: fileName, ext } = parsePath(segment);
-        const isIndex = fileName === 'index';
-        const prefix = isIndex ? '\\/' : '';
+    if (name !== null) {
+      // We can't use `URLSearchParams` because `$` would get escaped
+      query.push(`${name}=$${counter++}`);
+      return `([^\\/]+)`;
+    } else if (isLast) {
+      const { name: fileName, ext } = parsePath(segment);
+      const isIndex = fileName === 'index';
+      const prefix = isIndex ? '\\/' : '';
 
-        const names = [
-          prefix,
-          prefix + escapeName(fileName),
-          prefix + escapeName(fileName) + escapeName(ext),
-        ].filter(Boolean);
+      const names = [
+        prefix,
+        prefix + escapeName(fileName),
+        prefix + escapeName(fileName) + escapeName(ext)
+      ].filter(Boolean);
 
-        // Either filename with extension, filename without extension
-        // or nothing when the filename is `index`
-        return `(${names.join('|')})${isIndex ? '?' : ''}`;
-      }
-
-      return segment;
+      // Either filename with extension, filename without extension
+      // or nothing when the filename is `index`
+      return `(${names.join('|')})${isIndex ? '?' : ''}`;
     }
-  );
+
+    return segment;
+  });
 
   const { name: fileName } = parsePath(filePath);
   const isIndex = fileName === 'index';
@@ -230,8 +228,8 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
           message:
             `The segment "${conflictingSegment}" occurres more than ` +
             `one time in your path "${file}". Please make sure that ` +
-            `every segment in a path is unique`,
-        },
+            `every segment in a path is unique`
+        }
       };
     }
 
@@ -251,8 +249,8 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
           message:
             `Two or more files have conflicting paths or names. ` +
             `Please make sure path segments and filenames, without their extension, are unique. ` +
-            `The path "${file}" has conflicts with ${messagePaths}`,
-        },
+            `The path "${file}" has conflicts with ${messagePaths}`
+        }
       };
     }
 
@@ -263,7 +261,7 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
   if (defaultRoutes.length) {
     defaultRoutes.push({
       status: 404,
-      src: '/api(\\/.*)?$',
+      src: '/api(\\/.*)?$'
     });
   }
 
@@ -289,7 +287,7 @@ export async function detectRoutes(
   if (routesResult.defaultRoutes && hasPublicBuilder(builders)) {
     routesResult.defaultRoutes.push({
       src: '/(.*)',
-      dest: '/public/$1',
+      dest: '/public/$1'
     });
   }
 

@@ -6,7 +6,7 @@ import {
   remove,
   pathExists,
   readFile,
-  writeFile,
+  writeFile
 } from 'fs-extra';
 import {
   download,
@@ -14,6 +14,7 @@ import {
   glob,
   createLambda,
   BuildOptions,
+  debug
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -45,7 +46,7 @@ async function bundleInstall(
   bundleDir: string,
   gemfilePath: string
 ) {
-  console.log(`running "bundle install --deployment"...`);
+  debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
 
   try {
@@ -57,19 +58,19 @@ async function bundleInstall(
         '--gemfile',
         gemfilePath,
         '--path',
-        bundleDir,
+        bundleDir
       ],
       {
-        stdio: 'inherit',
+        stdio: 'pipe',
         env: {
           BUNDLE_SILENCE_ROOT_WARNING: '1',
           BUNDLE_APP_CONFIG: bundleAppConfig,
-          BUNDLE_JOBS: '4',
-        },
+          BUNDLE_JOBS: '4'
+        }
       }
     );
   } catch (err) {
-    console.log(`failed to run "bundle install --deployment"...`);
+    debug(`failed to run "bundle install --deployment"...`);
     throw err;
   }
 }
@@ -78,12 +79,11 @@ export const build = async ({
   workPath,
   files,
   entrypoint,
-  config,
+  config
 }: BuildOptions) => {
-  console.log('downloading files...');
+  debug('downloading files...');
 
-  // eslint-disable-next-line no-param-reassign
-  files = await download(files, workPath);
+  await download(files, workPath);
 
   const { gemHome, bundlerPath } = await installBundler();
   process.env.GEM_HOME = gemHome;
@@ -93,7 +93,7 @@ export const build = async ({
   const fsEntryDirectory = dirname(fsFiles[entrypoint].fsPath);
 
   // check for an existing vendor directory
-  console.log(
+  debug(
     'checking for existing vendor directory at',
     '"' + REQUIRED_VENDOR_DIR + '"'
   );
@@ -101,23 +101,23 @@ export const build = async ({
   const bundleDir = join(workPath, 'vendor/bundle');
   const relativeVendorDir = join(fsEntryDirectory, REQUIRED_VENDOR_DIR);
 
-  let hasRootVendorDir = await pathExists(vendorDir);
-  let hasRelativeVendorDir = await pathExists(relativeVendorDir);
-  let hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
+  const hasRootVendorDir = await pathExists(vendorDir);
+  const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
-      console.log(
+      debug(
         'found two vendor directories, choosing the vendor directory relative to entrypoint'
       );
     } else {
-      console.log('found vendor directory relative to entrypoint');
+      debug('found vendor directory relative to entrypoint');
     }
 
     // vendor dir must be at the root for lambda to find it
     await move(relativeVendorDir, vendorDir);
   } else if (hasRootVendorDir) {
-    console.log('found vendor directory in project root');
+    debug('found vendor directory in project root');
   }
 
   await ensureDir(vendorDir);
@@ -127,7 +127,7 @@ export const build = async ({
     const gemFile = join(entryDirectory, 'Gemfile');
 
     if (fsFiles[gemFile]) {
-      console.log(
+      debug(
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
       const gemfilePath = fsFiles[gemFile].fsPath;
@@ -137,27 +137,29 @@ export const build = async ({
       try {
         await bundleInstall(bundlerPath, bundleDir, gemfilePath);
       } catch (err) {
-        console.log(
+        debug(
           'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
         );
         throw err;
       }
     }
   } else {
-    console.log('found vendor directory, skipping "bundle install"...');
+    debug('found vendor directory, skipping "bundle install"...');
   }
 
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {}
+  } catch (e) {
+    // don't do anything here
+  }
 
   const originalRbPath = join(__dirname, '..', 'now_init.rb');
   const originalNowHandlerRbContents = await readFile(originalRbPath, 'utf8');
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
-  console.log('entrypoint is', entrypoint);
+  debug('entrypoint is', entrypoint);
   const userHandlerFilePath = entrypoint.replace(/\.rb$/, '');
   const nowHandlerRbContents = originalNowHandlerRbContents.replace(
     /__NOW_HANDLER_FILENAME/g,
@@ -208,10 +210,10 @@ export const build = async ({
     files: outputFiles,
     handler: `${nowHandlerRbFilename}.now__handler`,
     runtime: 'ruby2.5',
-    environment: {},
+    environment: {}
   });
 
   return {
-    [entrypoint]: lambda,
+    [entrypoint]: lambda
   };
 };
