@@ -150,9 +150,8 @@ export function register(opts: Options = {}): Register {
   const cwd = options.basePath || process.cwd();
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
 
-  let compiler;
   try {
-    compiler = require.resolve(options.compiler || 'typescript', {
+    var compiler = require.resolve(options.compiler || 'typescript', {
       paths: [cwd, nowNodeBase]
     });
   } catch (e) {

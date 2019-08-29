@@ -120,7 +120,7 @@ export class Bridge {
 
     // This is just to appease TypeScript strict mode, since it doesn't
     // understand that the Promise constructor is synchronous
-    this.resolveListening = () => {};
+    this.resolveListening = (info: AddressInfo) => {};
 
     this.listening = new Promise(resolve => {
       this.resolveListening = resolve;
