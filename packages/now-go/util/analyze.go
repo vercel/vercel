@@ -209,6 +209,19 @@ func main() {
 					fmt.Print(string(analyzedJSON))
 					os.Exit(0)
 				}
+
+				// fallback, when ast coudn't parse, with multi-line comments
+				paramStr := fmt.Sprintf("%s", param.Type)
+				if strings.Contains(string(paramStr), "http ResponseWriter") {
+					analyzed := analyze{
+						PackageName: parsed.Name.Name,
+						FuncName:    fn.Name.Name,
+						Watch:       unique(relatedFiles),
+					}
+					analyzedJSON, _ := json.Marshal(analyzed)
+					fmt.Print(string(analyzedJSON))
+					os.Exit(0)
+				}
 			}
 		}
 	}
