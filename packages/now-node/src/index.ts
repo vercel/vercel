@@ -17,7 +17,7 @@ import {
   BuildOptions,
   shouldServe,
   Config,
-  debug,
+  debug
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
 import { makeLauncher } from './launcher';
@@ -57,7 +57,7 @@ async function downloadInstallAndBundle({
   entrypoint,
   workPath,
   config,
-  meta,
+  meta
 }: DownloadOptions) {
   debug('downloading user files...');
   const downloadTime = Date.now();
@@ -94,7 +94,7 @@ async function compile(
 
   const sourceCache = new Map<string, string | Buffer | null>();
   const fsCache = new Map<string, File>();
-  const tsCompiled = new Set<String>();
+  const tsCompiled = new Set<string>();
 
   let shouldAddSourcemapSupport = false;
 
@@ -141,7 +141,7 @@ async function compile(
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
-        files: true, // Include all files such as global `.d.ts`
+        files: true // Include all files such as global `.d.ts`
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -149,7 +149,7 @@ async function compile(
     preparedFiles[
       relPath.slice(0, -3 - Number(path.endsWith('x'))) + '.js.map'
     ] = new FileBlob({
-      data: JSON.stringify(map),
+      data: JSON.stringify(map)
     });
     source = code;
     shouldAddSourcemapSupport = true;
@@ -189,7 +189,7 @@ async function compile(
         }
         throw e;
       }
-    },
+    }
   });
 
   debug('traced files:');
@@ -252,17 +252,17 @@ async function compile(
 
       const filename = basename(path);
       const { data: source } = await FileBlob.fromStream({
-        stream: preparedFiles[path].toStream(),
+        stream: preparedFiles[path].toStream()
       });
 
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
-        data: `${code}\n//# sourceMappingURL=${filename}.map`,
+        data: `${code}\n//# sourceMappingURL=${filename}.map`
       });
       delete map.sourcesContent;
       preparedFiles[path + '.map'] = new FileBlob({
-        data: JSON.stringify(map),
+        data: JSON.stringify(map)
       });
     }
   }
@@ -270,7 +270,7 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList,
+    watch: fileList
   };
 }
 
@@ -281,7 +281,7 @@ export async function build({
   entrypoint,
   workPath,
   config = {},
-  meta = {},
+  meta = {}
 }: BuildOptions) {
   const shouldAddHelpers = config.helpers !== false;
 
@@ -289,13 +289,13 @@ export async function build({
     entrypointPath,
     entrypointFsDirname,
     nodeVersion,
-    spawnOpts,
+    spawnOpts
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
     workPath,
     config,
-    meta,
+    meta
   });
 
   debug('running user script...');
@@ -321,23 +321,23 @@ export async function build({
         helpersPath: `./${HELPERS_FILENAME}`,
         sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
         shouldAddHelpers,
-        shouldAddSourcemapSupport,
-      }),
+        shouldAddSourcemapSupport
+      })
     }),
     [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
-      fsPath: join(__dirname, 'bridge.js'),
-    }),
+      fsPath: join(__dirname, 'bridge.js')
+    })
   };
 
   if (shouldAddSourcemapSupport) {
     launcherFiles[`${SOURCEMAP_SUPPORT_FILENAME}.js`] = new FileFsRef({
-      fsPath: join(__dirname, 'source-map-support.js'),
+      fsPath: join(__dirname, 'source-map-support.js')
     });
   }
 
   if (shouldAddHelpers) {
     launcherFiles[`${HELPERS_FILENAME}.js`] = new FileFsRef({
-      fsPath: join(__dirname, 'helpers.js'),
+      fsPath: join(__dirname, 'helpers.js')
     });
   }
 
@@ -350,10 +350,10 @@ export async function build({
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
-      ...(awsLambdaHandler ? {} : launcherFiles),
+      ...(awsLambdaHandler ? {} : launcherFiles)
     },
     handler: awsLambdaHandler || `${LAUNCHER_FILENAME}.launcher`,
-    runtime,
+    runtime
   });
 
   const output = { [entrypoint]: lambda };
@@ -365,7 +365,7 @@ export async function prepareCache({ workPath }: PrepareCacheOptions) {
   return {
     ...(await glob('node_modules/**', workPath)),
     ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath)),
+    ...(await glob('yarn.lock', workPath))
   };
 }
 
