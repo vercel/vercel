@@ -8021,6 +8021,23 @@ now-client@4.1.2:
     querystring "^0.2.0"
     recursive-readdir "2.2.2"
 
+now-client@5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/now-client/-/now-client-5.1.0.tgz#7b5e8f5150cf11bdeb27505acd5c8748ede1d486"
+  integrity sha512-m4670Z8jeB0+0YhhJNLSvoX8F7mVvFq67NddrCGCqOLw2R/lP11A0qJYi7/qclJ4ZXq8V9Vf6mXKcxlSDPLj5w==
+  dependencies:
+    "@zeit/fetch" "5.1.0"
+    async-retry "1.2.3"
+    async-sema "3.0.0"
+    fetch-h2 "2.2.0"
+    fs-extra "8.0.1"
+    ms "2.1.2"
+    node-fetch "2.6.0"
+    now-client "4.1.2"
+    querystring "^0.2.0"
+    recursive-readdir "2.2.2"
+    sleep-promise "8.0.1"
+
 npm-bundled@^1.0.1:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/npm-bundled/-/npm-bundled-1.0.6.tgz#e7ba9aadcef962bb61248f91721cd932b3fe6bdd"
