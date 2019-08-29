@@ -11341,6 +11341,12 @@ yazl@2.4.3:
   dependencies:
     buffer-crc32 "~0.2.3"
 
+"yazl@https://github.com/ijjk/yazl":
+  version "2.5.1"
+  resolved "https://github.com/ijjk/yazl#70949c55b482647669ce37023017b1514c42b33c"
+  dependencies:
+    buffer-crc32 "~0.2.3"
+
 yn@^3.0.0:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/yn/-/yn-3.1.1.tgz#1e87401a09d767c1d5eab26a6e4c185182d2eb50"

@@ -31,6 +31,7 @@
     "jszip": "3.2.2",
     "resolve-from": "5.0.0",
     "semver": "6.1.1",
-    "typescript": "3.5.2"
+    "typescript": "3.5.2",
+    "yazl": "https://github.com/ijjk/yazl"
   }
 }
