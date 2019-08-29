@@ -39,8 +39,7 @@
     "test-integration": "node run.js test-integration",
     "test-integration-once": "node run.js test-integration-once",
     "test-integration-now-dev": "node run.js test-integration-now-dev",
-    "lint": "eslint . --ext .ts,.js",
-    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only HEAD * | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
+    "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
     "*.{js,ts}": [
