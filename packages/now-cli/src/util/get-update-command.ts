@@ -1,5 +1,5 @@
 import { Stats } from 'fs';
-import { dirname, join, resolve } from 'path';
+import {sep, dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
 
 import { version } from '../../package.json';
@@ -68,7 +68,7 @@ async function isGlobal() {
 
     const installPath = await realpath(resolve(__dirname));
 
-    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(path.sep))) {
+    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))) {
       return true;
     }
 
