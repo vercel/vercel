@@ -1,4 +1,3 @@
-/* eslint-disable import/no-unresolved */
 import path from 'path';
 import pkg from '../../package.json';
 
