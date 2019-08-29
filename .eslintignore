@@ -11,5 +11,8 @@ packages/now-cli/bin
 packages/now-cli/link
 packages/now-cli/src/util/dev/templates/*.ts
 
+# now-client
+packages/now-client/tests/fixtures
+
 # now-static-build
 packages/now-static-build/test/fixtures
