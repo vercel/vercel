@@ -17,12 +17,12 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "2.0.0",
     "@typescript-eslint/parser": "2.0.0",
-    "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.20.4",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
+    "husky": "3.0.4",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
     "prettier": "1.18.2"
@@ -40,8 +40,7 @@
     "test-integration-once": "node run.js test-integration-once",
     "test-integration-now-dev": "node run.js test-integration-now-dev",
     "lint": "eslint . --ext .ts,.js",
-    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only HEAD * | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`",
-    "git-pre-commit": "lint-staged"
+    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only HEAD * | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
   },
   "lint-staged": {
     "*.{js,ts}": [
@@ -53,5 +52,10 @@
       "prettier --write",
       "git add"
     ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }
