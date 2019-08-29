@@ -68,6 +68,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: Linking dependencies
+          command: yarn bootstrap
+      - run:
           name: Building
           command: yarn build
       - store_artifacts:
