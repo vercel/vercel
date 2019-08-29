@@ -1,4 +1,4 @@
-![now](https://assets.zeit.co/image/upload/v1542240976/repositories/now-cli/now-cli-repo-banner-v2.png)
+![now](https://assets.zeit.co/image/upload/v1542240976/repositories/now-cli/now-cli-repo-banner-v3.png)
 
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
