@@ -11,17 +11,15 @@
     "directory": "packages/now-cli"
   },
   "scripts": {
-    "test": "yarn test-lint",
     "preinstall": "node ./scripts/preinstall.js",
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast --verbose",
     "test-integration": "ava test/integration.js --serial --fail-fast",
     "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
-    "test-lint": "eslint . --ext .js,.ts",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "ts-node ./scripts/build.ts",
     "build-dev": "ts-node ./scripts/build.ts --dev",
-    "format-modified": "prettier --parser typescript --write --single-quote `git diff --name-only HEAD * | grep -e \".*\\.ts$\" -e \".*\\.js$\" | xargs echo`"
+    "test-lint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore"
   },
   "nyc": {
     "include": [
@@ -41,12 +39,6 @@
     "sourceMap": true,
     "instrument": true,
     "all": true
-  },
-  "git": {
-    "pre-commit": [
-      "test-lint",
-      "format-modified"
-    ]
   },
   "bin": {
     "now": "./dist/index.js"
@@ -106,11 +98,8 @@
     "@types/universal-analytics": "0.4.2",
     "@types/which": "1.3.1",
     "@types/write-json-file": "2.2.1",
-    "@typescript-eslint/eslint-plugin": "1.6.0",
-    "@typescript-eslint/parser": "1.1.0",
     "@zeit/dockerignore": "0.0.5",
     "@zeit/fun": "0.9.1",
-    "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.10.2",
@@ -142,13 +131,6 @@
     "email-validator": "1.1.1",
     "epipebomb": "1.0.0",
     "escape-html": "1.0.3",
-    "eslint": "5.16.0",
-    "eslint-config-airbnb": "17.1.0",
-    "eslint-config-prettier": "4.1.0",
-    "eslint-import-resolver-typescript": "1.1.1",
-    "eslint-plugin-import": "2.16.0",
-    "eslint-plugin-jsx-a11y": "6.2.1",
-    "eslint-plugin-react": "7.12.4",
     "esm": "3.1.4",
     "execa": "1.0.0",
     "fetch-h2": "2.0.3",
@@ -173,7 +155,6 @@
     "pcre-to-regexp": "0.0.5",
     "pluralize": "7.0.0",
     "pre-commit": "1.2.2",
-    "prettier": "1.16.2",
     "printf": "0.2.5",
     "progress": "2.0.3",
     "promisepipe": "3.0.0",

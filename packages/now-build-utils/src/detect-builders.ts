@@ -10,20 +10,20 @@ interface Options {
   tag?: 'canary' | 'latest' | string;
 }
 
-const src: string = 'package.json';
+const src = 'package.json';
 const config: Config = { zeroConfig: true };
 
 const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
   code: 'missing_build_script',
   message:
     'Your `package.json` file is missing a `build` property inside the `script` property.' +
-    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script',
+    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script'
 };
 
 // Static builders are special cased in `@now/static-build`
 function getBuilders(): Map<string, Builder> {
   return new Map<string, Builder>([
-    ['next', { src, use: '@now/next', config }],
+    ['next', { src, use: '@now/next', config }]
   ]);
 }
 
@@ -35,7 +35,7 @@ function getApiBuilders(): Builder[] {
     { src: 'api/**/*.ts', use: '@now/node', config },
     { src: 'api/**/*.go', use: '@now/go', config },
     { src: 'api/**/*.py', use: '@now/python', config },
-    { src: 'api/**/*.rb', use: '@now/ruby', config },
+    { src: 'api/**/*.rb', use: '@now/ruby', config }
   ];
 }
 
@@ -96,8 +96,8 @@ async function detectApiBuilders(files: string[]): Promise<Builder[]> {
     .sort(sortFiles)
     .filter(ignoreApiFilter)
     .map(file => {
-      const result = getApiBuilders().find(
-        ({ src }): boolean => minimatch(file, src)
+      const result = getApiBuilders().find(({ src }): boolean =>
+        minimatch(file, src)
       );
 
       return result ? { ...result, src: file } : null;
@@ -138,7 +138,7 @@ export async function detectBuilders(
       builders.push({
         use: '@now/static',
         src: 'public/**/*',
-        config,
+        config
       });
     } else if (builders.length > 0) {
       // We can't use pattern matching, since `!(api)` and `!(api)/**/*`
@@ -150,7 +150,7 @@ export async function detectBuilders(
           .map(name => ({
             use: '@now/static',
             src: name,
-            config,
+            config
           }))
       );
     }
@@ -177,6 +177,6 @@ export async function detectBuilders(
 
   return {
     builders: builders.length ? builders : null,
-    errors: errors.length ? errors : null,
+    errors: errors.length ? errors : null
   };
 }
