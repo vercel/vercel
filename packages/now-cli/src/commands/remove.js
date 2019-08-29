@@ -14,6 +14,7 @@ import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { NowError } from '../util/now-error';
+import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
@@ -94,6 +95,13 @@ export default async function main(ctx) {
   if (argv.help || ids[0] === 'help') {
     help();
     return 2;
+  }
+
+  const invalidName = ids.find(name => !isValidName(name));
+
+  if (invalidName) {
+    error(`The provided argument "${invalidName}" is not a valid deployment or project`);
+    return 1;
   }
 
   const {

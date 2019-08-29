@@ -79,6 +79,7 @@ export default async function main(ctx) {
       '--challenge-only': Boolean,
       '--overwrite': Boolean,
       '--output': String,
+      '--after': String,
       '--crt': String,
       '--key': String,
       '--ca': String
