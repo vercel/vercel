@@ -362,7 +362,11 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
-export type PseudoLayer = { [fileName: string]: any };
+export type PseudoLayer = { [fileName: string]: {
+  crc32: number,
+  compBuffer: Buffer,
+  uncompressedSize: number
+} };
 
 const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
@@ -389,7 +393,7 @@ export async function createPseudoLayer(
     }
   }
 
-  return pseudoLayer
+  return pseudoLayer;
 }
 
 interface CreateLambdaFromPseudoLayersOptions {
@@ -402,7 +406,7 @@ interface CreateLambdaFromPseudoLayersOptions {
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
 // and sema(1) produced the best results
-const createLambdaSema = new Sema(1)
+const createLambdaSema = new Sema(1);
 
 export async function createLambdaFromPseudoLayers({
   files,
@@ -411,42 +415,42 @@ export async function createLambdaFromPseudoLayers({
   runtime,
   environment = {},
 }: CreateLambdaFromPseudoLayersOptions) {
-  await createLambdaSema.acquire()
-  const zipFile = new ZipFile()
-  const addedFiles = new Set()
+  await createLambdaSema.acquire();
+  const zipFile = new ZipFile();
+  const addedFiles = new Set();
 
   // apply pseudo layers (already compressed objects)
   for (const layer of layers) {
     for (const seedKey of Object.keys(layer)) {
-      const { compBuffer, crc32, uncompressedSize } = layer[seedKey]
-      zipFile.addDeflatedBuffer(compBuffer, seedKey, {
+      const { compBuffer, crc32, uncompressedSize } = layer[seedKey];
+      (zipFile as any).addDeflatedBuffer(compBuffer, seedKey, {
         crc32,
         uncompressedSize,
-      })
-      addedFiles.add(seedKey)
+      });
+      addedFiles.add(seedKey);
     }
   }
 
   for (const fileName of Object.keys(files)) {
     // was already added in a pseudo layer
-    if (addedFiles.has(fileName)) continue
-    const file = files[fileName]
-    const fileBuffer = await streamToBuffer(file.toStream())
-    zipFile.addBuffer(fileBuffer, fileName)
+    if (addedFiles.has(fileName)) continue;
+    const file = files[fileName];
+    const fileBuffer = await streamToBuffer(file.toStream());
+    zipFile.addBuffer(fileBuffer, fileName);
   }
-  zipFile.end()
+  zipFile.end();
 
   const zipBuffer = await streamToBuffer(
     zipFile.outputStream
-  )
-  createLambdaSema.release()
+  );
+  createLambdaSema.release();
 
   return new Lambda({
     handler,
     runtime,
     zipBuffer,
     environment,
-  })
+  });
 }
 
 export {
