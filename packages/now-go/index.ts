@@ -11,7 +11,7 @@ import {
   BuildOptions,
   shouldServe,
   Files,
-  debug,
+  debug
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
@@ -38,7 +38,7 @@ async function initPrivateGit(credentials: string) {
     'config',
     '--global',
     'credential.helper',
-    `store --file ${join(homedir(), '.git-credentials')}`,
+    `store --file ${join(homedir(), '.git-credentials')}`
   ]);
 
   await writeFile(join(homedir(), '.git-credentials'), credentials);
@@ -51,7 +51,7 @@ export async function build({
   entrypoint,
   config,
   workPath,
-  meta = {} as BuildParamsMeta,
+  meta = {} as BuildParamsMeta
 }: BuildParamsType) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
@@ -73,9 +73,10 @@ Learn more: https://github.com/golang/go/wiki/Modules
   debug('Downloading user files...');
   const entrypointArr = entrypoint.split(sep);
 
+  // eslint-disable-next-line prefer-const
   let [goPath, outDir] = await Promise.all([
     getWriteableDirectory(),
-    getWriteableDirectory(),
+    getWriteableDirectory()
   ]);
 
   const srcPath = join(goPath, 'src', 'lambda');
@@ -161,7 +162,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   }
 
   const input = entrypointDirname;
-  var includedFiles: Files = {};
+  const includedFiles: Files = {};
 
   if (config && config.includeFiles) {
     for (const pattern of config.includeFiles) {
@@ -193,7 +194,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       process.platform,
       process.arch,
       {
-        cwd: entrypointDirname,
+        cwd: entrypointDirname
       },
       true
     );
@@ -222,7 +223,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       const usrModName = goModContents.split('\n')[0].split(' ')[1];
 
       if (entrypointArr.length > 1 && isGoModInRootDir) {
-        let cleanPackagePath = [...entrypointArr];
+        const cleanPackagePath = [...entrypointArr];
         cleanPackagePath.pop();
         goPackageName = `${usrModName}/${cleanPackagePath.join('/')}`;
       } else {
@@ -276,7 +277,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         !isGoModExist
       ) {
         await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
-          overwrite: forceMove,
+          overwrite: forceMove
         });
       }
     } catch (err) {
@@ -324,7 +325,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     const destPath = join(outDir, 'handler');
 
     try {
-      let src = [join(baseGoModPath, mainModGoFileName)];
+      const src = [join(baseGoModPath, mainModGoFileName)];
 
       await go.build(src, destPath, config.ldsflags);
     } catch (err) {
@@ -353,7 +354,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       process.platform,
       process.arch,
       {
-        cwd: entrypointDirname,
+        cwd: entrypointDirname
       },
       false
     );
@@ -389,7 +390,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       const src = [
         join(entrypointDirname, mainGoFileName),
-        downloadedFiles[entrypoint].fsPath,
+        downloadedFiles[entrypoint].fsPath
       ];
       await go.build(src, destPath);
     } catch (err) {
@@ -402,13 +403,13 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     files: { ...(await glob('**', outDir)), ...includedFiles },
     handler: 'handler',
     runtime: 'go1.x',
-    environment: {},
+    environment: {}
   });
   const output = {
-    [entrypoint]: lambda,
+    [entrypoint]: lambda
   };
 
-  let watch = parsedAnalyzed.watch;
+  const watch = parsedAnalyzed.watch;
   let watchSub: string[] = [];
   // if `entrypoint` located in subdirectory
   // we will need to concat it with return watch array
@@ -419,7 +420,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
   return {
     output,
-    watch: watch.concat(watchSub),
+    watch: watch.concat(watchSub)
   };
 }
 
