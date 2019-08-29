@@ -1,12 +1,11 @@
 import zlib from 'zlib';
 import path from 'path';
 import fs from 'fs-extra';
+import { ZipFile} from 'yazl';
+import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
 import { Files, FileFsRef, streamToBuffer, Lambda } from '@now/build-utils';
-
-const { ZipFile } = require('yazl')
-const crc32 = require('buffer-crc32')
 
 type stringMap = { [key: string]: string };
 

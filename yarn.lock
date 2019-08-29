@@ -1490,6 +1490,13 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
+"@types/buffer-crc32@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@types/buffer-crc32/-/buffer-crc32-0.2.0.tgz#a4d94b1a4f01ea414268e9ef7576c7d32a1a14e4"
+  integrity sha512-6lBhJ55o2DKVCxTanyS6ohWRyebCcyivIK7pRHiwZuOYbUhivcByYBrvm2dc9f72LZP12mH5mGxUhG7JQ64lQg==
+  dependencies:
+    "@types/node" "*"
+
 "@types/bytes@3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@types/bytes/-/bytes-3.0.0.tgz#549eeacd0a8fecfaa459334583a4edcee738e6db"
@@ -1932,7 +1939,7 @@
   dependencies:
     "@types/yargs-parser" "*"
 
-"@types/yazl@^2.4.1":
+"@types/yazl@2.4.1", "@types/yazl@^2.4.1":
   version "2.4.1"
   resolved "https://registry.yarnpkg.com/@types/yazl/-/yazl-2.4.1.tgz#0441a6ee151bf8be9307a2318b89df50f174ea00"
   integrity sha512-uTgQOl6gCKZ6ys5x2BmnNCd/Em8TqCltjPtyHFc1mz8Q6/+Na7yWnoPgCPhsl44M7S6MfaL6spL6pUM1c7NcDg==
@@ -2924,7 +2931,7 @@ buffer-alloc@^1.2.0:
     buffer-alloc-unsafe "^1.1.0"
     buffer-fill "^1.0.0"
 
-buffer-crc32@~0.2.3:
+buffer-crc32@0.2.13, buffer-crc32@~0.2.3:
   version "0.2.13"
   resolved "https://registry.yarnpkg.com/buffer-crc32/-/buffer-crc32-0.2.13.tgz#0d333e3f00eac50aa1454abd30ef8c2a5d9a7242"
   integrity sha1-DTM+PwDqxQqhRUq9MO+MKl2ackI=
@@ -11366,7 +11373,7 @@ yazl@2.4.3:
   dependencies:
     buffer-crc32 "~0.2.3"
 
-"yazl@https://github.com/ijjk/yazl":
+"yazl@https://github.com/ijjk/yazl#70949c55b482647669ce37023017b1514c42b33c":
   version "2.5.1"
   resolved "https://github.com/ijjk/yazl#70949c55b482647669ce37023017b1514c42b33c"
   dependencies:
