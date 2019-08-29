@@ -7,9 +7,7 @@
     "build": "ncc build ./src/index.ts -o ./lib --source-map",
     "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
-    "test-lint": "eslint --ext .ts ./src",
-    "lint": "eslint --fix --ext .ts ./src",
-    "lint-staged": "git diff --diff-filter=ACMRT --cached --name-only '*.ts' | xargs eslint --fix"
+    "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
@@ -21,9 +19,7 @@
     "@types/recursive-readdir": "2.2.0",
     "@typescript-eslint/eslint-plugin": "1.9.0",
     "@typescript-eslint/parser": "1.9.0",
-    "@zeit/git-hooks": "0.1.4",
     "@zeit/ncc": "0.18.5",
-    "eslint": "5.16.0",
     "jest": "24.8.0",
     "ts-jest": "24.0.2",
     "typescript": "3.5.1"
@@ -65,9 +61,6 @@
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/explicit-member-accessibility": "off"
     }
-  },
-  "git": {
-    "pre-commit": "lint-staged"
   },
   "jest": {
     "preset": "ts-jest",

@@ -1,4 +1,5 @@
 node_modules
+dist
 
 # now-cli
 packages/now-cli/@types
