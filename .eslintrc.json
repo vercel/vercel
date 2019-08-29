@@ -19,8 +19,11 @@
     "es6": true
   },
   "rules": {
+    "require-atomic-updates": 0,
     "@typescript-eslint/ban-ts-ignore": 0,
+    "@typescript-eslint/camelcase": 0,
     "@typescript-eslint/explicit-function-return-type": 0,
+    "@typescript-eslint/no-empty-function": 0,
     "@typescript-eslint/no-use-before-define": 0
   },
   "overrides": [
@@ -39,9 +42,7 @@
         "no-empty": 0,
         "prefer-const": 0,
         "prefer-destructuring": 0,
-        "require-atomic-updates": 0,
         "@typescript-eslint/ban-types": 0,
-        "@typescript-eslint/camelcase": 0,
         "@typescript-eslint/consistent-type-assertions": 0,
         "@typescript-eslint/member-delimiter-style": 0,
         "@typescript-eslint/no-empty-function": 0,

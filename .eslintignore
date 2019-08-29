@@ -19,7 +19,11 @@ packages/now-client/lib
 packages/now-next/test/fixtures
 
 # now-node
+packages/now-node/src/bridge.ts
 packages/now-node/test/fixtures
+
+# now-node-bridge
+packages/now-node-bridge/bridge.*
 
 # now-static-build
 packages/now-static-build/test/fixtures

@@ -149,8 +149,10 @@ export function register(opts: Options = {}): Register {
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
+
+  let compiler;
   try {
-    var compiler = require.resolve(options.compiler || 'typescript', {
+    compiler = require.resolve(options.compiler || 'typescript', {
       paths: [cwd, nowNodeBase]
     });
   } catch (e) {
@@ -338,8 +340,7 @@ export function register(opts: Options = {}): Register {
   }
 
   // determine the tsconfig.json path for a given folder
-  function detectConfig(basePath: string): string | undefined {
-    basePath = normalizeSlashes(basePath);
+  function detectConfig(): string | undefined {
     let configFileName: string | undefined = undefined;
 
     // Read project configuration when available.
@@ -423,7 +424,7 @@ export function register(opts: Options = {}): Register {
     fileName: string,
     skipTypeCheck?: boolean
   ): SourceOutput {
-    const configFileName = detectConfig(fileName);
+    const configFileName = detectConfig();
     const build = getBuild(configFileName);
     const { code: value, map: sourceMap } = (skipTypeCheck
       ? build.getOutput

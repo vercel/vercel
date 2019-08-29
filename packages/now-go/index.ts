@@ -73,6 +73,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
   debug('Downloading user files...');
   const entrypointArr = entrypoint.split(sep);
 
+  // eslint-disable-next-line prefer-const
   let [goPath, outDir] = await Promise.all([
     getWriteableDirectory(),
     getWriteableDirectory()

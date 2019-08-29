@@ -83,8 +83,7 @@ export const build = async ({
 }: BuildOptions) => {
   debug('downloading files...');
 
-  // eslint-disable-next-line no-param-reassign
-  files = await download(files, workPath);
+  await download(files, workPath);
 
   const { gemHome, bundlerPath } = await installBundler();
   process.env.GEM_HOME = gemHome;
@@ -151,7 +150,9 @@ export const build = async ({
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {}
+  } catch (e) {
+    // don't do anything here
+  }
 
   const originalRbPath = join(__dirname, '..', 'now_init.rb');
   const originalNowHandlerRbContents = await readFile(originalRbPath, 'utf8');

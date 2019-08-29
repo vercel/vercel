@@ -6,7 +6,6 @@ import {
   writeFile
 } from 'fs-extra';
 import os from 'os';
-import zlib from 'zlib';
 import path from 'path';
 import semver from 'semver';
 import resolveFrom from 'resolve-from';
@@ -27,8 +26,7 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  debug,
-  streamToBuffer
+  debug
 } from '@now/build-utils';
 import nodeFileTrace from '@zeit/node-file-trace';
 
