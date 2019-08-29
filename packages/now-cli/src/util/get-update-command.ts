@@ -68,7 +68,7 @@ async function isGlobal() {
 
     const installPath = await realpath(resolve(__dirname));
 
-    if (installPath.includes('/yarn/global/node_modules/')) {
+    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(path.sep))) {
       return true;
     }
 
