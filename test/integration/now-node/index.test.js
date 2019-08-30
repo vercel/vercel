@@ -1,4 +1,3 @@
-/* global it, expect */
 const path = require('path');
 const runBuildLambda = require('../../lib/run-build-lambda');
 
@@ -14,7 +13,7 @@ it(
     const { buildResult } = await runBuildForFolder('airtable');
     expect(buildResult.output['index.js']).toBeDefined();
   },
-  TWO_MINUTES,
+  TWO_MINUTES
 );
 
 it(
@@ -23,7 +22,7 @@ it(
     const { buildResult } = await runBuildForFolder('aws-sdk');
     expect(buildResult.output['index.js']).toBeDefined();
   },
-  TWO_MINUTES,
+  TWO_MINUTES
 );
 
 it(
@@ -32,7 +31,7 @@ it(
     const { buildResult } = await runBuildForFolder('axios');
     expect(buildResult.output['index.js']).toBeDefined();
   },
-  TWO_MINUTES,
+  TWO_MINUTES
 );
 
 it(
@@ -41,5 +40,5 @@ it(
     const { buildResult } = await runBuildForFolder('mongoose');
     expect(buildResult.output['index.js']).toBeDefined();
   },
-  TWO_MINUTES,
+  TWO_MINUTES
 );
