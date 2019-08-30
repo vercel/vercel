@@ -321,7 +321,7 @@ export default async function main(
       }
     }
 
-    if (argv['--target']) {
+    if (createArgs.target) {
       const deprecatedTarget = argv['--target'];
 
       if (!['staging', 'production'].includes(deprecatedTarget)) {
