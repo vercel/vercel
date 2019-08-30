@@ -322,7 +322,7 @@ export default async function main(
     }
 
     if (createArgs.target) {
-      const deprecatedTarget = argv['--target'];
+      const deprecatedTarget = createArgs.target;
 
       if (!['staging', 'production'].includes(deprecatedTarget)) {
         error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
