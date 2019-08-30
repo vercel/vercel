@@ -16,7 +16,7 @@ import {
   Route,
   BuildOptions,
   Config,
-  debug,
+  debug
 } from '@now/build-utils';
 
 interface PackageJson {
@@ -103,7 +103,7 @@ const nowDevScriptPorts = new Map();
 const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   const basic: Route = {
     src: `${srcBase}${route.src}`,
-    dest: `http://localhost:${devPort}${route.dest}`,
+    dest: `http://localhost:${devPort}${route.dest}`
   };
 
   if (route.headers) {
@@ -118,7 +118,7 @@ export async function build({
   entrypoint,
   workPath,
   config,
-  meta = {},
+  meta = {}
 }: BuildOptions) {
   debug('Downloading user files...');
   await download(files, workPath, meta);
@@ -166,15 +166,11 @@ export async function build({
       if (framework.minNodeRange) {
         minNodeRange = framework.minNodeRange;
         debug(
-          `${framework.name} requires Node.js ${
-            framework.minNodeRange
-          }. Switching...`
+          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
         );
       } else {
         debug(
-          `${
-            framework.name
-          } does not require a specific Node.js version. Continuing ...`
+          `${framework.name} does not require a specific Node.js version. Continuing ...`
         );
       }
     }
@@ -186,7 +182,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts);
+    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
@@ -208,7 +204,7 @@ export async function build({
 
         const opts = {
           cwd: entrypointDir,
-          env: { ...process.env, PORT: String(devPort) },
+          env: { ...process.env, PORT: String(devPort) }
         };
 
         const child = spawn('yarn', ['run', devScript], opts);
@@ -268,7 +264,7 @@ export async function build({
       routes.push(
         getDevRoute(srcBase, devPort, {
           src: '/(.*)',
-          dest: '/$1',
+          dest: '/$1'
         })
       );
     } else {
@@ -336,7 +332,7 @@ export async function build({
     return {
       output,
       routes: [],
-      watch: [],
+      watch: []
     };
   }
 
