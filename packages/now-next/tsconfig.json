@@ -7,8 +7,7 @@
     "module": "commonjs",
     "outDir": "dist",
     "sourceMap": false,
-    "declaration": false,
-    "typeRoots": ["./@types", "./node_modules/@types"]
+    "declaration": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
