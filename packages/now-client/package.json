@@ -5,7 +5,7 @@
   "typings": "lib/src/index.d.ts",
   "license": "MIT",
   "scripts": {
-    "build": "ncc build ./src/index.ts -o ./lib --source-map",
+    "build": "tsc",
     "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
