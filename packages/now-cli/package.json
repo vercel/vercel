@@ -111,7 +111,6 @@
     "async-sema": "2.1.4",
     "ava": "2.2.0",
     "bytes": "3.0.0",
-    "cache-or-tmp-directory": "1.0.0",
     "chalk": "2.4.2",
     "chokidar": "2.1.6",
     "clipboardy": "2.1.0",
