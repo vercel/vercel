@@ -262,4 +262,23 @@ export default [
       },
     ],
   },
+  {
+    name: 'VuePress',
+    dependency: 'vuepress',
+    getOutputDirName: async () => 'docs/.vuepress/dist',
+    defaultRoutes: [
+      {
+        src: '/assets/.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '.*',
+        status: 404,
+        dest: '404.html',
+      },
+    ],
+  },
 ];

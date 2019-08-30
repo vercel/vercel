@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Vue-powered Static Site Generator"
+    },
+    {
+      "path": "/assets/js/app.js",
+      "headers": { "cache-control": "max-age=31536000, immutable" },
+      "mustContain": "function"
+    },
+    {
+      "path": "/not-exist",
+      "mustContain": "Take me home"
+    }
+  ]
+}
