@@ -136,7 +136,6 @@ async function compile(
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(workPath, path);
-    debug('compiling typescript file ' + relPath);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
