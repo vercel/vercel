@@ -1,10 +1,10 @@
 # gatsby-plugin-now
 
-This plugin generates [Now Routes](https://zeit.co/docs/v2/advanced/routes/) for [redirects](https://www.gatsbyjs.org/docs/actions/#createRedirect) you configured for to your Gatsby project.
+This plugin generates [Now Routes](https://zeit.co/docs/v2/advanced/routes) for [redirects](https://www.gatsbyjs.org/docs/actions/#createRedirect) you configured for to your Gatsby project.
 
 ### Usage
 
-1. Install the plugin with:
+1. Install the plugin:
 
 ```
 npm install gatsby-plugin-now --save-dev
