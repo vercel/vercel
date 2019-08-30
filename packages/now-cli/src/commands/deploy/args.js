@@ -10,7 +10,9 @@ export const latestHelp = () => `
 
     ${chalk.dim('Basic')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       dev                              Start a local development server
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
@@ -29,7 +31,6 @@ export const latestHelp = () => `
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your secret environment variables
       logs                 [url]       Displays the logs for a deployment
-      scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
