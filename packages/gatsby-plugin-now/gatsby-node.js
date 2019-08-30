@@ -12,8 +12,8 @@ exports.onPostBuild = async ({ store }) => {
 
   const routes = [{ handle: 'filesystem' }];
 
-  for (let redirect of redirects) {
-    let route = {
+  for (const redirect of redirects) {
+    const route = {
       src: redirect.fromPath,
       status: redirect.statusCode || (redirect.isPermanent ? 301 : 302),
       headers: { Location: redirect.toPath }
