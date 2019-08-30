@@ -1,10 +1,11 @@
-import { readdir, stat, readFile } from 'fs';
+import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
 const statPromise = promisify(stat);
+const unlinkPromise = promisify(unlink);
 const isDir = async (file: string): Promise<boolean> =>
   (await statPromise(file)).isDirectory();
 
@@ -24,9 +25,13 @@ export default [
     getOutputDirName: async () => 'public',
     defaultRoutes: async (dirPrefix: string) => {
       try {
-        const nowRoutesPath = join(dirPrefix, 'public', '__now_routes.json')
+        const nowRoutesPath = join(dirPrefix, 'public', '__now_routes_g4t5bY.json')
         const content = await readFilePromise(nowRoutesPath, 'utf8')
         const nowRoutes = JSON.parse(content)
+        try { await unlinkPromise(nowRoutesPath) } 
+        catch (err) { 
+            // do nothing if deleting the file fails
+        }
         return nowRoutes
       } catch(err) {
         // if the file doesn't exist, we don't create routes

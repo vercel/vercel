@@ -26,4 +26,9 @@ module.exports = async ({ deploymentUrl, fetch }) => {
 
   const resp6 = await fetch(`https://${deploymentUrl}/page2`);
   assert.ok((await resp6.text()).includes("page2"), "should include `page2`");
+
+  const resp7 = await fetch(
+    `https://${deploymentUrl}/__now_routes_g4t5bY.json`
+  );
+  assert.equal(resp7.status, 404);
 };

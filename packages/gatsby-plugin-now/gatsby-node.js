@@ -1,7 +1,7 @@
 const path = require('path');
 const writeFile = require('util').promisify(require('fs').writeFile);
 
-const REDIRECT_FILE_NAME = '__now_routes.json';
+const REDIRECT_FILE_NAME = '__now_routes_g4t5bY.json';
 
 exports.onPostBuild = async ({ store }) => {
   const { redirects, program } = store.getState();
