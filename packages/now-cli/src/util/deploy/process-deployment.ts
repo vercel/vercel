@@ -1,4 +1,5 @@
 import bytes from 'bytes';
+// @ts-ignore
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
