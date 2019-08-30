@@ -192,9 +192,6 @@ async function compile(
     }
   });
 
-  debug('traced files:');
-  console.log('\t' + fileList.join('\n[now-builder-debug] \t'));
-
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
