@@ -20,7 +20,7 @@
   "jest": {
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "<rootDir>/tests/fixtures/"
+      "<rootDir>/test/fixtures/"
     ]
   }
 }

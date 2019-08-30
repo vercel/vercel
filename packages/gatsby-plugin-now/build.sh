@@ -2,5 +2,5 @@
 set -euo pipefail
 
 # build fixtures for tests
-yarn --cwd tests/fixtures install
-yarn --cwd tests/fixtures run build
+yarn --cwd test/fixtures install
+yarn --cwd test/fixtures run build
