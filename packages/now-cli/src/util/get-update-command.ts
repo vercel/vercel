@@ -1,5 +1,5 @@
 import { Stats } from 'fs';
-import { dirname, join, resolve } from 'path';
+import {sep, dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
 
 import { version } from '../../package.json';
@@ -58,10 +58,19 @@ async function getConfigPrefix() {
 
 async function isGlobal() {
   try {
+    // This is true for e.g. nvm, node path will be equal to now path
+    if (dirname(process.argv[0]) === dirname(process.argv[1])) {
+      return true;
+    }
+
     const isWindows = process.platform === 'win32';
     const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib'
 
     const installPath = await realpath(resolve(__dirname));
+
+    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))) {
+      return true;
+    }
 
     const prefixPath = (
       process.env.PREFIX ||

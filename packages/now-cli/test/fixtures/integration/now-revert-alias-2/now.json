@@ -1,1 +1,0 @@
-{"version":2,"name":"now-revert-alias-c57c0734d878","builds":[{"src":"*.json","use":"@now/static"}]}
