@@ -38,7 +38,7 @@ async function readMetaData(
       const err = new Error(
         'You have a `now` configuration field inside `package.json` ' +
           'but configuration is also present in `now.json`! ' +
-          'Please ensure there\'s a single source of configuration by removing one.'
+          "Please ensure there's a single source of configuration by removing one."
       );
       err.code = 'config_prop_and_file';
       throw err;
@@ -105,12 +105,14 @@ async function readMetaData(
 
     const labels = {};
 
-    dockerfile.filter(cmd => cmd.name === 'LABEL').forEach(({ args }) => {
-      for (const key of Object.keys(args)) {
-        // Unescape and convert into string
-        labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
-      }
-    });
+    dockerfile
+      .filter(cmd => cmd.name === 'LABEL')
+      .forEach(({ args }) => {
+        for (const key of Object.keys(args)) {
+          // Unescape and convert into string
+          labels[key] = args[key].replace(/^"(.+?)"$/g, '$1');
+        }
+      });
 
     if (!name && labels.name) {
       name = labels.name;

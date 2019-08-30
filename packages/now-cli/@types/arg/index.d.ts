@@ -1,4 +1,7 @@
-declare function arg<T extends arg.Spec>(spec: T, options?: { permissive?: boolean, argv: string[] }): arg.Result<T>;
+declare function arg<T extends arg.Spec>(
+  spec: T,
+  options?: { permissive?: boolean; argv: string[] }
+): arg.Result<T>;
 
 declare namespace arg {
   export type Handler = (value: string) => any;
@@ -14,10 +17,10 @@ declare namespace arg {
       ? ReturnType<T[K]>
       : T[K] extends [Handler]
       ? Array<ReturnType<T[K][0]>>
-      : never
+      : never;
   };
 }
 
-declare module "arg" {
+declare module 'arg' {
   export = arg;
 }

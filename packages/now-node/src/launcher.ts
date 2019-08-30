@@ -13,7 +13,7 @@ export function makeLauncher({
   helpersPath,
   sourcemapSupportPath,
   shouldAddHelpers = false,
-  shouldAddSourcemapSupport = false,
+  shouldAddSourcemapSupport = false
 }: LauncherConfiguration): string {
   return `const { Bridge } = require("${bridgePath}");
 const { Server } = require("http");
@@ -50,7 +50,7 @@ try {
       shouldAddHelpers
         ? [
             'bridge = new Bridge(undefined, true);',
-            `server = require("${helpersPath}").createServerWithHelpers(listener, bridge);`,
+            `server = require("${helpersPath}").createServerWithHelpers(listener, bridge);`
           ].join('\n')
         : ['server = require("http").createServer(listener);'].join('\n')
     }

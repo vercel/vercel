@@ -70,8 +70,8 @@ export default async function promptBool(label: string, options: Options = {}) {
       defaultValue === null
         ? `[${yesChar}|${noChar}]`
         : defaultValue
-          ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
-          : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`;
+        ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
+        : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`;
     stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `);
     stdin.on('data', onData);
   });

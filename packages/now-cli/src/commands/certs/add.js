@@ -8,10 +8,7 @@ import wait from '../../util/output/wait';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 
-import {
-  DomainPermissionDenied,
-  InvalidCert,
-} from '../../util/errors-ts';
+import { DomainPermissionDenied, InvalidCert } from '../../util/errors-ts';
 import handleCertError from '../../util/certs/handle-cert-error';
 
 async function add(ctx, opts, args, output) {
@@ -116,7 +113,7 @@ async function add(ctx, opts, args, output) {
 
     const result = handleCertError(output, cert);
     if (result === 1) {
-      return result
+      return result;
     }
 
     if (cert instanceof DomainPermissionDenied) {

@@ -60,7 +60,7 @@ async function main() {
     )}`;
 
     lines.unshift(
-      'import encodeHTML from \'escape-html\';',
+      "import encodeHTML from 'escape-html';",
       '',
       ...def.split('\n')
     );

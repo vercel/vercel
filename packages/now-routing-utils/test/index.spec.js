@@ -3,7 +3,7 @@ const Ajv = require('ajv');
 const { normalizeRoutes, isHandler, schema } = require('../dist');
 
 const ajv = new Ajv();
-const assertValid = (routes) => {
+const assertValid = routes => {
   const validate = ajv.compile(schema);
   const valid = validate(routes);
 
@@ -35,10 +35,10 @@ describe('normalizeRoutes', () => {
         src: '^/blog$',
         methods: ['GET'],
         headers: { 'Cache-Control': 'no-cache' },
-        dest: '/blog',
+        dest: '/blog'
       },
       { handle: 'filesystem' },
-      { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
+      { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' }
     ];
 
     assertValid(routes);
@@ -59,7 +59,7 @@ describe('normalizeRoutes', () => {
       { src: '^/about' },
       { src: '^/about$' },
       { src: '^\\/about' },
-      { src: '^\\/about$' },
+      { src: '^\\/about$' }
     ];
 
     assertValid(sources);
@@ -70,12 +70,10 @@ describe('normalizeRoutes', () => {
     assert.notEqual(normalized.routes, null);
 
     if (normalized.routes) {
-      normalized.routes.forEach((route) => {
+      normalized.routes.forEach(route => {
         if (isHandler(route)) {
           assert.fail(
-            `Normalizer returned: { handle: ${
-              route.handle
-            } } instead of { src: ${expected} }`,
+            `Normalizer returned: { handle: ${route.handle} } instead of { src: ${expected} }`
           );
         } else {
           assert.ok(route.src === expected || route.src === expected2);
@@ -107,7 +105,7 @@ describe('normalizeRoutes', () => {
     routes.push({ handle: 'doesnotexist' });
     errors.push({
       message: 'This is not a valid handler (handle: doesnotexist)',
-      handle: 'doesnotexist',
+      handle: 'doesnotexist'
     });
 
     // @ts-ignore
@@ -115,25 +113,25 @@ describe('normalizeRoutes', () => {
     errors.push({
       message:
         'Cannot have any other keys when handle is used (handle: filesystem)',
-      handle: 'filesystem',
+      handle: 'filesystem'
     });
 
     routes.push({ handle: 'filesystem' });
     errors.push({
       message: 'You can only handle something once (handle: filesystem)',
-      handle: 'filesystem',
+      handle: 'filesystem'
     });
 
     routes.push({ src: '^/(broken]$' });
     errors.push({
       message: 'Invalid regular expression: "^/(broken]$"',
-      src: '^/(broken]$',
+      src: '^/(broken]$'
     });
 
     // @ts-ignore
     routes.push({ doesNotExist: true });
     errors.push({
-      message: 'A route must set either handle or src',
+      message: 'A route must set either handle or src'
     });
 
     // @ts-ignore
@@ -147,9 +145,9 @@ describe('normalizeRoutes', () => {
       message: `One or more invalid routes were found: \n${JSON.stringify(
         errors,
         null,
-        2,
+        2
       )}`,
-      errors,
+      errors
     });
   });
 
@@ -161,10 +159,10 @@ describe('normalizeRoutes', () => {
         keyword: 'type',
         message: 'should be array',
         params: {
-          type: 'array',
+          type: 'array'
         },
-        schemaPath: '#/type',
-      },
+        schemaPath: '#/type'
+      }
     ]);
 
     const arr = new Array(1026);
@@ -177,10 +175,10 @@ describe('normalizeRoutes', () => {
         keyword: 'maxItems',
         message: 'should NOT have more than 1024 items',
         params: {
-          limit: '1024',
+          limit: '1024'
         },
-        schemaPath: '#/maxItems',
-      },
+        schemaPath: '#/maxItems'
+      }
     ]);
   });
 
@@ -189,8 +187,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          src: false,
-        },
+          src: false
+        }
       ],
       [
         {
@@ -198,11 +196,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be string',
           params: {
-            type: 'string',
+            type: 'string'
           },
-          schemaPath: '#/items/properties/src/type',
-        },
-      ],
+          schemaPath: '#/items/properties/src/type'
+        }
+      ]
     );
   });
 
@@ -211,8 +209,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          dest: false,
-        },
+          dest: false
+        }
       ],
       [
         {
@@ -220,11 +218,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be string',
           params: {
-            type: 'string',
+            type: 'string'
           },
-          schemaPath: '#/items/properties/dest/type',
-        },
-      ],
+          schemaPath: '#/items/properties/dest/type'
+        }
+      ]
     );
   });
 
@@ -233,8 +231,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          methods: false,
-        },
+          methods: false
+        }
       ],
       [
         {
@@ -242,11 +240,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be array',
           params: {
-            type: 'array',
+            type: 'array'
           },
-          schemaPath: '#/items/properties/methods/type',
-        },
-      ],
+          schemaPath: '#/items/properties/methods/type'
+        }
+      ]
     );
   });
 
@@ -255,8 +253,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          methods: [false],
-        },
+          methods: [false]
+        }
       ],
       [
         {
@@ -264,11 +262,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be string',
           params: {
-            type: 'string',
+            type: 'string'
           },
-          schemaPath: '#/items/properties/methods/items/type',
-        },
-      ],
+          schemaPath: '#/items/properties/methods/items/type'
+        }
+      ]
     );
   });
 
@@ -277,8 +275,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          headers: false,
-        },
+          headers: false
+        }
       ],
       [
         {
@@ -286,11 +284,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be object',
           params: {
-            type: 'object',
+            type: 'object'
           },
-          schemaPath: '#/items/properties/headers/type',
-        },
-      ],
+          schemaPath: '#/items/properties/headers/type'
+        }
+      ]
     );
   });
 
@@ -300,9 +298,9 @@ describe('normalizeRoutes', () => {
         // @ts-ignore
         {
           headers: {
-            test: false,
-          },
-        },
+            test: false
+          }
+        }
       ],
       [
         {
@@ -310,12 +308,12 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be string',
           params: {
-            type: 'string',
+            type: 'string'
           },
           schemaPath:
-            '#/items/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
-        },
-      ],
+            '#/items/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type'
+        }
+      ]
     );
   });
 
@@ -324,8 +322,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          handle: false,
-        },
+          handle: false
+        }
       ],
       [
         {
@@ -333,11 +331,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be string',
           params: {
-            type: 'string',
+            type: 'string'
           },
-          schemaPath: '#/items/properties/handle/type',
-        },
-      ],
+          schemaPath: '#/items/properties/handle/type'
+        }
+      ]
     );
   });
 
@@ -346,8 +344,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          continue: 'false',
-        },
+          continue: 'false'
+        }
       ],
       [
         {
@@ -355,11 +353,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be boolean',
           params: {
-            type: 'boolean',
+            type: 'boolean'
           },
-          schemaPath: '#/items/properties/continue/type',
-        },
-      ],
+          schemaPath: '#/items/properties/continue/type'
+        }
+      ]
     );
   });
 
@@ -368,8 +366,8 @@ describe('normalizeRoutes', () => {
       [
         // @ts-ignore
         {
-          status: '404',
-        },
+          status: '404'
+        }
       ],
       [
         {
@@ -377,11 +375,11 @@ describe('normalizeRoutes', () => {
           keyword: 'type',
           message: 'should be integer',
           params: {
-            type: 'integer',
+            type: 'integer'
           },
-          schemaPath: '#/items/properties/status/type',
-        },
-      ],
+          schemaPath: '#/items/properties/status/type'
+        }
+      ]
     );
   });
 
@@ -390,8 +388,8 @@ describe('normalizeRoutes', () => {
       [
         {
           // @ts-ignore
-          doesNotExist: false,
-        },
+          doesNotExist: false
+        }
       ],
       [
         {
@@ -399,11 +397,11 @@ describe('normalizeRoutes', () => {
           keyword: 'additionalProperties',
           message: 'should NOT have additional properties',
           params: {
-            additionalProperty: 'doesNotExist',
+            additionalProperty: 'doesNotExist'
           },
-          schemaPath: '#/items/additionalProperties',
-        },
-      ],
+          schemaPath: '#/items/additionalProperties'
+        }
+      ]
     );
   });
 });

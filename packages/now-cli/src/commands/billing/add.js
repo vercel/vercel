@@ -156,9 +156,9 @@ export default async function({ creditCards, clear = false, contextName }) {
       stopSpinner();
       const linesToClear = state.error ? 15 : 14;
       process.stdout.write(ansiEscapes.eraseLines(linesToClear));
-      state.error = `${chalk.red(
-        '> Error!'
-      )} ${err.message} Please make sure the info is correct`;
+      state.error = `${chalk.red('> Error!')} ${
+        err.message
+      } Please make sure the info is correct`;
       await render();
     }
   }

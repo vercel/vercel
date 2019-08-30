@@ -13,7 +13,10 @@ import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 export default async function rm(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
@@ -70,7 +73,7 @@ export default async function rm(ctx, opts, args, output) {
   }
 
   const removeStamp = stamp();
-  if (!opts['--yes'] && !await confirmAliasRemove(output, alias)) {
+  if (!opts['--yes'] && !(await confirmAliasRemove(output, alias))) {
     output.log('Aborted');
     return 0;
   }

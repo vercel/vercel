@@ -18,7 +18,7 @@ export const httpStatusDescriptionMap = new Map([
 export const errorMessageMap = new Map([
   [400, 'Bad request'],
   [402, 'Payment required'],
-  [403, 'You don\'t have the required permissions'],
+  [403, "You don't have the required permissions"],
   [404, 'The page could not be found'],
   [405, 'Method not allowed'],
   [410, 'The deployment has been removed'],

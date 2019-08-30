@@ -7,7 +7,9 @@ export default async function getProjectByNameOrId(
   projectNameOrId: string
 ) {
   try {
-    const project = await client.fetch<Project>(`/projects/${encodeURIComponent(projectNameOrId)}`);
+    const project = await client.fetch<Project>(
+      `/projects/${encodeURIComponent(projectNameOrId)}`
+    );
     return project;
   } catch (error) {
     if (error.status === 404) {

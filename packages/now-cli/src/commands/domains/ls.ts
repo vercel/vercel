@@ -21,7 +21,10 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];

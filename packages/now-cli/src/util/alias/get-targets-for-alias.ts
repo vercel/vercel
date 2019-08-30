@@ -21,11 +21,7 @@ function targetToHost(target: string) {
   return target.indexOf('.') !== -1 ? toHost(target) : target;
 }
 
-async function getTargets(
-  output: Output,
-  args: string[],
-  localConfig: Config
-) {
+async function getTargets(output: Output, args: string[], localConfig: Config) {
   return args.length === 0
     ? getInferredTargets(output, localConfig)
     : [args[args.length - 1]];

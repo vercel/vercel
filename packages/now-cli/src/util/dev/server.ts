@@ -255,9 +255,7 @@ export default class DevServer {
           });
         } else {
           this.output.debug(
-            `Not rebuilding because \`shouldServe()\` returned \`false\` for "${
-              match.use
-            }" request path "${requestPath}"`
+            `Not rebuilding because \`shouldServe()\` returned \`false\` for "${match.use}" request path "${requestPath}"`
           );
         }
       }
@@ -1183,9 +1181,7 @@ export default class DevServer {
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
       this.output.debug(
-        `Checking build result's ${
-          buildResult.routes.length
-        } \`routes\` to match ${newUrl}`
+        `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
       const matchedRoute = await devRouter(
         newUrl,

@@ -92,7 +92,10 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  const runtimes = join(dirRoot, '../../node_modules/@zeit/fun/dist/src/runtimes');
+  const runtimes = join(
+    dirRoot,
+    '../../node_modules/@zeit/fun/dist/src/runtimes'
+  );
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 

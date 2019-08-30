@@ -14,7 +14,8 @@ export default function getMaxFromArgs(args: string[]) {
   if (isValidMinMaxValue(args[2])) {
     if (args.length > 4) {
       return new ERRORS.InvalidArgsForMinMaxScale(min as string);
-    } if (isValidMinMaxValue(args[3])) {
+    }
+    if (isValidMinMaxValue(args[3])) {
       return toNumberOrAuto(args[3]);
     }
   } else {

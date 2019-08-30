@@ -246,8 +246,6 @@ async function runStartOrder(
   process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
-  output.print(
-    '  Read more: https://err.sh/now/solve-challenges-manually\n'
-  );
+  output.print('  Read more: https://err.sh/now/solve-challenges-manually\n');
   return 0;
 }

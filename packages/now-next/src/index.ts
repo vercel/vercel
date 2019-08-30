@@ -526,7 +526,7 @@ export const build = async ({
         }
 
         files[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(workPath, file)
         });
       };
 

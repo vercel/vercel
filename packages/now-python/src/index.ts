@@ -11,7 +11,7 @@ import {
   createLambda,
   shouldServe,
   BuildOptions,
-  debug,
+  debug
 } from '@now/build-utils';
 
 async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
@@ -30,11 +30,11 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
         '--target',
         target,
         '--upgrade',
-        ...args,
+        ...args
       ],
       {
         cwd: workDir,
-        stdio: 'pipe',
+        stdio: 'pipe'
       }
     );
   } catch (err) {
@@ -51,7 +51,7 @@ async function pipenvConvert(cmd: string, srcDir: string) {
   debug('running pipfile2req');
   try {
     const out = await execa.stdout(cmd, [], {
-      cwd: srcDir,
+      cwd: srcDir
     });
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
   } catch (err) {
@@ -65,7 +65,7 @@ export const build = async ({
   files: originalFiles,
   entrypoint,
   meta = {},
-  config,
+  config
 }: BuildOptions) => {
   debug('downloading files...');
   let downloadedFiles = await download(originalFiles, workPath, meta);
@@ -178,11 +178,11 @@ export const build = async ({
     files: await glob('**', workPath),
     handler: `${nowHandlerPyFilename}.now_handler`,
     runtime: 'python3.6',
-    environment: {},
+    environment: {}
   });
 
   return {
-    [entrypoint]: lambda,
+    [entrypoint]: lambda
   };
 };
 

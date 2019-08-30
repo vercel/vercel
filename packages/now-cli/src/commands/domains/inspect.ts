@@ -104,16 +104,22 @@ export default async function inspect(
     `    ${chalk.cyan('Bought At')}\t\t\t${formatDate(domain.boughtAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(domain.transferredAt)}\n`
+    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(
+      domain.transferredAt
+    )}\n`
   );
   output.print(
     `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(domain.nsVerifiedAt)}\n`
+    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(
+      domain.nsVerifiedAt
+    )}\n`
   );
   output.print(
-    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
+    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(
+      domain.txtVerifiedAt
+    )}\n`
   );
   output.print(`    ${chalk.cyan('CDN Enabled')}\t\t${true}\n`);
   output.print('\n');

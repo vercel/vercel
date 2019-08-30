@@ -28,12 +28,12 @@ export default async function preferV2Deployment({
   localConfig,
   projectName
 }: {
-  client?: Client,
-  hasDockerfile: boolean,
-  hasServerfile: boolean,
-  pkg: Package | CantParseJSONFile | null,
-  localConfig: Config | undefined,
-  projectName?: string
+  client?: Client;
+  hasDockerfile: boolean;
+  hasServerfile: boolean;
+  pkg: Package | CantParseJSONFile | null;
+  localConfig: Config | undefined;
+  projectName?: string;
 }): Promise<null | string> {
   if (localConfig && localConfig.version) {
     // We will prefer anything that is set here
@@ -52,10 +52,14 @@ export default async function preferV2Deployment({
     const { scripts = {} } = pkg;
 
     if (!scripts.start && !scripts['now-start']) {
-      return `Deploying to Now 2.0, because ${highlight('package.json')} is missing a ${cmd('start')} script. ${INFO}`;
+      return `Deploying to Now 2.0, because ${highlight(
+        'package.json'
+      )} is missing a ${cmd('start')} script. ${INFO}`;
     }
   } else if (!pkg && !hasDockerfile) {
-    return `Deploying to Now 2.0, because no ${highlight('Dockerfile')} was found. ${INFO}`;
+    return `Deploying to Now 2.0, because no ${highlight(
+      'Dockerfile'
+    )} was found. ${INFO}`;
   }
 
   if (client && projectName) {

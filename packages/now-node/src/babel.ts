@@ -1,5 +1,5 @@
-const babel = require('@babel/core');
-const pluginTransformModulesCommonJs = require('@babel/plugin-transform-modules-commonjs');
+const babel = require('@babel/core'); // eslint-disable-line
+const pluginTransformModulesCommonJs = require('@babel/plugin-transform-modules-commonjs'); // eslint-disable-line
 
 export function compile(
   filename: string,
@@ -22,9 +22,9 @@ export function compile(
         'objectRestSpread',
         'numericSeparator',
         'dynamicImport',
-        'importMeta',
-      ],
+        'importMeta'
+      ]
     },
-    plugins: [pluginTransformModulesCommonJs],
+    plugins: [pluginTransformModulesCommonJs]
   });
 }

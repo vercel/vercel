@@ -102,7 +102,10 @@ const main = async argv_ => {
     return 1;
   }
 
-  if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
+  if (
+    localConfig instanceof NowError &&
+    !(localConfig instanceof ERRORS.CantFindConfig)
+  ) {
     output.error(`Failed to load local config file: ${localConfig.message}`);
     return 1;
   }
@@ -135,7 +138,9 @@ const main = async argv_ => {
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
-        `Run ${cmd(await getUpdateCommand())} to install Now CLI ${update.latest}`
+          `Run ${cmd(await getUpdateCommand())} to install Now CLI ${
+            update.latest
+          }`
       )
     );
   }
@@ -307,9 +312,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(
-              NOW_AUTH_CONFIG_PATH
-            )}" `}${err.message}`
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message
+          }`
         )
       );
       return 1;
@@ -339,7 +344,8 @@ const main = async argv_ => {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands.has(targetOrSubcommand);
+      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
+      commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -459,11 +465,22 @@ const main = async argv_ => {
   const targetCommand = commands.get(subcommand);
 
   if (argv['--team']) {
-    output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
+    output.warn(
+      `The ${param('--team')} flag is deprecated. Please use ${param(
+        '--scope'
+      )} instead.`
+    );
   }
 
-  if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'dev' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
-    const { authConfig: { token } } = ctx;
+  if (
+    typeof scope === 'string' &&
+    targetCommand !== 'login' &&
+    targetCommand !== 'dev' &&
+    !(targetCommand === 'teams' && argv._[3] !== 'invite')
+  ) {
+    const {
+      authConfig: { token }
+    } = ctx;
     const client = new Client({ apiUrl, token });
 
     let user = null;
@@ -577,7 +594,8 @@ const main = async argv_ => {
       if (shouldCollectMetrics) {
         metric
           .event(eventCategory, '1', pkg.version)
-          .exception(err.message).send();
+          .exception(err.message)
+          .send();
       }
 
       return 1;
@@ -586,7 +604,8 @@ const main = async argv_ => {
     if (shouldCollectMetrics) {
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(err.message).send();
+        .exception(err.message)
+        .send();
     }
 
     // Otherwise it is an unexpected error and we should show the trace

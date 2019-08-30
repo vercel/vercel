@@ -5,7 +5,7 @@ import { Config } from '../types';
 import { Package } from './dev/types';
 
 interface CustomPackage extends Package {
-  now?: Config
+  now?: Config;
 }
 
 export default async function readPackage(file?: string) {
@@ -16,8 +16,8 @@ export default async function readPackage(file?: string) {
     return result;
   }
 
-  if (result){
-    return result as CustomPackage
+  if (result) {
+    return result as CustomPackage;
   }
 
   return null;

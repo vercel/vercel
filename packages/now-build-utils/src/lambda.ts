@@ -48,7 +48,7 @@ export async function createLambda({
   files,
   handler,
   runtime,
-  environment = {},
+  environment = {}
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
@@ -63,7 +63,7 @@ export async function createLambda({
       zipBuffer,
       handler,
       runtime,
-      environment,
+      environment
     });
   } finally {
     sema.release();

@@ -79,7 +79,10 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
@@ -174,7 +177,9 @@ export default async function main(ctx) {
   print(`    ${chalk.cyan('version')}\t${version}\n`);
   print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  print(`    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`);
+  print(
+    `    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`
+  );
   if (!isBuilds) {
     print(`    ${chalk.cyan('type')}\t${type}\n`);
   }
@@ -269,9 +274,9 @@ export default async function main(ctx) {
     events.forEach(data => {
       if (!data.event) return; // keepalive
       print(
-        `    ${chalk.gray(
-          new Date(data.created).toISOString()
-        )} ${data.event} ${getEventMetadata(data)}\n`
+        `    ${chalk.gray(new Date(data.created).toISOString())} ${
+          data.event
+        } ${getEventMetadata(data)}\n`
       );
     });
     print('\n');

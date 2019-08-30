@@ -24,7 +24,7 @@ import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
 import createOutput from '../util/output';
-import executeLogin from '../util/login/login.ts'
+import executeLogin from '../util/login/login.ts';
 
 const debug = debugFactory('now:sh:login');
 
@@ -200,7 +200,7 @@ const login = async ctx => {
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(error(err.message))
+    console.log(error(err.message));
     return 1;
   }
 
@@ -257,7 +257,7 @@ const login = async ctx => {
 
   console.log(
     `${chalk.cyan('> Congratulations!')} ` +
-    `You are now logged in. In order to deploy something, run ${cmd('now')}.`
+      `You are now logged in. In order to deploy something, run ${cmd('now')}.`
   );
 
   return ctx;

@@ -21,7 +21,7 @@ test('`APIGatewayProxyEvent` normalizing', async () => {
       JSON.stringify({
         method: req.method,
         path: req.url,
-        headers: req.headers,
+        headers: req.headers
       })
     )
   );
@@ -33,7 +33,7 @@ test('`APIGatewayProxyEvent` normalizing', async () => {
       httpMethod: 'GET',
       headers: { foo: 'bar' },
       path: '/apigateway',
-      body: null,
+      body: null
     },
     context
   );
@@ -54,7 +54,7 @@ test('`NowProxyEvent` normalizing', async () => {
       JSON.stringify({
         method: req.method,
         path: req.url,
-        headers: req.headers,
+        headers: req.headers
       })
     )
   );
@@ -68,8 +68,8 @@ test('`NowProxyEvent` normalizing', async () => {
         method: 'POST',
         headers: { foo: 'baz' },
         path: '/nowproxy',
-        body: 'body=1',
-      }),
+        body: 'body=1'
+      })
     },
     context
   );
@@ -101,8 +101,8 @@ test('consumeEvent', async () => {
         method: 'POST',
         headers: { foo: 'baz' },
         path: '/nowproxy',
-        body: 'body=1',
-      }),
+        body: 'body=1'
+      })
     },
     context
   );

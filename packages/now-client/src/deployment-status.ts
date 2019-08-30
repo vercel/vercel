@@ -1,7 +1,7 @@
-import sleep from 'sleep-promise'
-import ms from 'ms'
-import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils'
-import { isDone, isReady, isFailed } from './utils/ready-state'
+import sleep from 'sleep-promise';
+import ms from 'ms';
+import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils';
+import { isDone, isReady, isFailed } from './utils/ready-state';
 
 interface DeploymentStatus {
   type: string;
@@ -68,7 +68,7 @@ export default async function* checkDeploymentStatus(
       const deploymentUpdate = await deploymentData.json();
 
       if (deploymentUpdate.error) {
-        return yield { type: 'error', payload: deploymentUpdate.error }
+        return yield { type: 'error', payload: deploymentUpdate.error };
       }
 
       if (isReady(deploymentUpdate)) {
@@ -76,7 +76,10 @@ export default async function* checkDeploymentStatus(
       }
 
       if (isFailed(deploymentUpdate)) {
-        return yield { type: 'error', payload: deploymentUpdate.error || deploymentUpdate };
+        return yield {
+          type: 'error',
+          payload: deploymentUpdate.error || deploymentUpdate
+        };
       }
     }
 

@@ -86,7 +86,10 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
 
   return run({ token, config });
 };

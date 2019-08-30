@@ -100,7 +100,9 @@ export default async function main(ctx) {
   const invalidName = ids.find(name => !isValidName(name));
 
   if (invalidName) {
-    error(`The provided argument "${invalidName}" is not a valid deployment or project`);
+    error(
+      `The provided argument "${invalidName}" is not a valid deployment or project`
+    );
     return 1;
   }
 

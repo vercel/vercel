@@ -19,7 +19,10 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -112,12 +115,16 @@ function readConfirmation(
 }
 
 function getDeleteTableRow(domainName: string, record: DNSRecord) {
-  const recordName = `${record.name.length > 0
-    ? `${record.name}.`
-    : ''}${domainName}`;
+  const recordName = `${
+    record.name.length > 0 ? `${record.name}.` : ''
+  }${domainName}`;
   return [
     record.id,
-    chalk.bold(`${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`),
-    chalk.gray(`${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`)
+    chalk.bold(
+      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
+    ),
+    chalk.gray(
+      `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`
+    )
   ];
 }

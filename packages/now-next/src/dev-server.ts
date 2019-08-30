@@ -11,12 +11,12 @@ process.on('unhandledRejection', err => {
 });
 
 async function main(cwd: string) {
-  const next = require(resolveFrom(cwd, 'next'));
+  const next = require(resolveFrom(cwd, 'next')); // eslint-disable-line
   const app = next({ dev: true, dir: cwd });
   const handler = app.getRequestHandler();
 
   const openPort = await getPort({
-    port: [5000, 4000],
+    port: [5000, 4000]
   });
 
   const url = `http://localhost:${openPort}`;

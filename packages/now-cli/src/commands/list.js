@@ -103,7 +103,10 @@ export default async function main(ctx) {
   }
 
   const meta = parseMeta(argv['--meta']);
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam, includeScheme } = config;
   const client = new Client({
     apiUrl,
@@ -250,7 +253,9 @@ export default async function main(ctx) {
 
   // information to help the user find other deployments or instances
   if (app == null) {
-    log(`To list more deployments for a project run ${cmd('now ls [project]')}`);
+    log(
+      `To list more deployments for a project run ${cmd('now ls [project]')}`
+    );
   } else if (!argv['--all']) {
     log(`To list deployment instances run ${cmd('now ls --all [project]')}`);
   }
@@ -260,7 +265,9 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(
+          s => chalk.dim(s)
+        ),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -310,7 +317,7 @@ function getProjectName(d) {
     return 'files';
   }
 
-  return d.name
+  return d.name;
 }
 
 // renders the state string

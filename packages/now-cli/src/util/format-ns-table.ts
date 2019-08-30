@@ -28,7 +28,11 @@ export default function formatNSTable(
 
   return table(
     [
-      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers'), ''],
+      [
+        chalk.gray('Intended Nameservers'),
+        chalk.gray('Current Nameservers'),
+        ''
+      ],
       ...rows
     ],
     {

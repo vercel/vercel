@@ -19,7 +19,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
   if (mode && isSymbolicLink(mode) && file.type === 'FileFsRef') {
     const [target] = await Promise.all([
       readlink((file as FileFsRef).fsPath),
-      mkdirp(path.dirname(fsPath)),
+      mkdirp(path.dirname(fsPath))
     ]);
     await symlink(target, fsPath);
     return FileFsRef.fromFsPath({ mode, fsPath });
@@ -39,8 +39,12 @@ export default async function download(
   basePath: string,
   meta?: Meta
 ): Promise<DownloadedFiles> {
-  const { isDev = false, skipDownload = false, filesChanged = null, filesRemoved = null } =
-    meta || {};
+  const {
+    isDev = false,
+    skipDownload = false,
+    filesChanged = null,
+    filesRemoved = null
+  } = meta || {};
 
   if (isDev || skipDownload) {
     // In `now dev`, the `download()` function is a no-op because

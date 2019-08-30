@@ -23,7 +23,10 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -97,7 +100,9 @@ function getDNSRecordsTable(dnsRecords: DNSRecords) {
 
 function getDNSRecordRow(record: DNSRecord) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`;
+  const createdAt = `${ms(
+    Date.now() - new Date(Number(record.created)).getTime()
+  )} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',

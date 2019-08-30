@@ -195,28 +195,31 @@ export type DNSRecord = {
 };
 
 type SRVRecordData = {
-  name: string,
-  type: 'SRV',
+  name: string;
+  type: 'SRV';
   srv: {
-    port: number,
-    priority: number,
-    target: string,
-    weight: number,
-  }
-}
-
-type MXRecordData = {
-  name: string,
-  type: 'MX',
-  value: string,
-  mxPriority: number,
+    port: number;
+    priority: number;
+    target: string;
+    weight: number;
+  };
 };
 
-export type DNSRecordData = {
-  name: string,
-  type: string,
-  value: string,
-} | SRVRecordData | MXRecordData;
+type MXRecordData = {
+  name: string;
+  type: 'MX';
+  value: string;
+  mxPriority: number;
+};
+
+export type DNSRecordData =
+  | {
+      name: string;
+      type: string;
+      value: string;
+    }
+  | SRVRecordData
+  | MXRecordData;
 
 export interface Project {
   id: string;

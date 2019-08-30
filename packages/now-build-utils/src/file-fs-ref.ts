@@ -33,7 +33,7 @@ class FileFsRef implements File {
 
   static async fromFsPath({
     mode,
-    fsPath,
+    fsPath
   }: FileFsRefOptions): Promise<FileFsRef> {
     let m = mode;
     if (!m) {
@@ -46,7 +46,7 @@ class FileFsRef implements File {
   static async fromStream({
     mode = 0o100644,
     stream,
-    fsPath,
+    fsPath
   }: FromStreamOptions): Promise<FileFsRef> {
     assert(typeof mode === 'number');
     assert(typeof stream.pipe === 'function'); // is-stream
@@ -55,7 +55,7 @@ class FileFsRef implements File {
 
     await new Promise<void>((resolve, reject) => {
       const dest = fs.createWriteStream(fsPath, {
-        mode: mode & 0o777,
+        mode: mode & 0o777
       });
       stream.pipe(dest);
       stream.on('error', reject);

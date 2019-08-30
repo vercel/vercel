@@ -16,9 +16,11 @@ const MAX_OUTPUTS_PER_GROUP = 5;
 const prepareState = state => title(state.replace('_', ' '));
 
 // Get the common path out of multiple builds
-const getCommonPath = (buildGroup) => {
+const getCommonPath = buildGroup => {
   const commonPath = [];
-  const splits = buildGroup.map((build) => getDirPath(build.entrypoint).split('/'));
+  const splits = buildGroup.map(build =>
+    getDirPath(build.entrypoint).split('/')
+  );
   const shortest = splits.reduce((prevValue, currentValue) =>
     prevValue.length < currentValue.length
       ? prevValue.length
@@ -27,7 +29,7 @@ const getCommonPath = (buildGroup) => {
 
   for (let i = 0; i <= shortest; i++) {
     const first = splits[0][i];
-    if (splits.every((pathParts) => pathParts[i] === first)) {
+    if (splits.every(pathParts => pathParts[i] === first)) {
       commonPath.push(first);
       continue;
     }
@@ -59,11 +61,18 @@ const styleBuild = (build, times, longestSource) => {
   return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
 };
 
-const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidden = false) => {
+const styleHiddenBuilds = (
+  commonPath,
+  buildGroup,
+  times,
+  longestSource,
+  isHidden = false
+) => {
   const { id } = buildGroup[0];
   const entry = commonPath.padEnd(longestSource + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
-  const prefix = isHidden === false && buildGroup.some((build) => build.hasOutput) ? '┌' : '╶';
+  const prefix =
+    isHidden === false && buildGroup.some(build => build.hasOutput) ? '┌' : '╶';
 
   // Set the defaults so that they will be sorted
   const stateMap = {
@@ -73,23 +82,24 @@ const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidd
   };
 
   buildGroup.map(({ readyState }) => {
-    stateMap[readyState] = stateMap[readyState]
-      ? stateMap[readyState] + 1
-      : 1;
+    stateMap[readyState] = stateMap[readyState] ? stateMap[readyState] + 1 : 1;
 
     return readyState;
   });
 
-  let state = Object.keys(stateMap).map((readyState) => {
-    const counter = stateMap[readyState];
-    const name = prepareState(readyState);
+  let state = Object.keys(stateMap)
+    .map(readyState => {
+      const counter = stateMap[readyState];
+      const name = prepareState(readyState);
 
-    if (!counter) {
-      return null;
-    }
+      if (!counter) {
+        return null;
+      }
 
-    return `${counter > 9 ? '9+' : counter} ${name}`;
-  }).filter(s => s).join(', ')
+      return `${counter > 9 ? '9+' : counter} ${name}`;
+    })
+    .filter(s => s)
+    .join(', ');
 
   // Since the longestState might still be shorter
   // than multiple states we still want to ensure
@@ -113,7 +123,7 @@ const styleHiddenBuilds =  (commonPath, buildGroup, times, longestSource, isHidd
   return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
 };
 
-const styleOutput = (output) => {
+const styleOutput = output => {
   const { type, path, readyState, size, isLast, lambda } = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
   const finalSize = size ? ` ${chalk.grey(`(${bytes(size)})`)}` : '';
@@ -176,11 +186,15 @@ const sortByEntrypoint = (a, b) => {
 };
 
 const groupBuilds = (buildList, highestLevel, counter) => {
-  const currentIndex = counter % (buildList.length);
+  const currentIndex = counter % buildList.length;
   const __level = Math.ceil(counter / buildList.length);
   const _level = (__level === 0 ? 1 : __level) - 1;
   const level = _level > highestLevel ? highestLevel : _level;
-  const currentPath = getDirPath(buildList[currentIndex][0].entrypoint, level, highestLevel);
+  const currentPath = getDirPath(
+    buildList[currentIndex][0].entrypoint,
+    level,
+    highestLevel
+  );
 
   const nextList = [];
   let currentGroup = [];
@@ -205,17 +219,17 @@ const groupBuilds = (buildList, highestLevel, counter) => {
   return nextList;
 };
 
-const prepareBuild = (build) => {
-   build.hasOutput = Array.isArray(build.output) && build.output.length > 0;
+const prepareBuild = build => {
+  build.hasOutput = Array.isArray(build.output) && build.output.length > 0;
 
-   if (build.hasOutput) {
-     build.output = build.output.map((item) => {
-       item.readyState = build.readyState;
-       return item;
-     });
-   }
+  if (build.hasOutput) {
+    build.output = build.output.map(item => {
+      item.readyState = build.readyState;
+      return item;
+    });
+  }
 
-   return build;
+  return build;
 };
 
 export default (builds, times) => {
@@ -260,19 +274,19 @@ export default (builds, times) => {
 
     for (const group of path) {
       if (getCommonPath(group) === '/') {
-        group.map((item) => rootList.push([item]));
+        group.map(item => rootList.push([item]));
       } else {
         nextList.push(group);
       }
     }
 
     lengthWithoutRootPaths = nextList.length;
-    rootList.map((group) => nextList.push(group));
+    rootList.map(group => nextList.push(group));
 
     return nextList;
   })();
 
-  path.map((buildGroup) => {
+  path.map(buildGroup => {
     const commonPath = getCommonPath(buildGroup);
 
     // All items with the common path / are a single group
@@ -293,40 +307,56 @@ export default (builds, times) => {
       final.push(`${styleBuild(item, times, longestSource)}\n`);
       finalBuildsLength++;
     } else {
-      final.push(`${styleHiddenBuilds(`${commonPath}/*`, buildGroup, times, longestSource)}\n`);
+      final.push(
+        `${styleHiddenBuilds(
+          `${commonPath}/*`,
+          buildGroup,
+          times,
+          longestSource
+        )}\n`
+      );
       finalBuildsLength++;
     }
 
     // Get the first five outputs when the deployment is ready
-    const outputs = buildGroup.reduce((prevValue, currentValue) => (
-      prevValue.concat(Array.isArray(currentValue.output)
-        ? currentValue.output
-        : []
-      )
-    ), []);
+    const outputs = buildGroup.reduce(
+      (prevValue, currentValue) =>
+        prevValue.concat(
+          Array.isArray(currentValue.output) ? currentValue.output : []
+        ),
+      []
+    );
 
-    outputs.slice(0, MAX_OUTPUTS_PER_GROUP).map((output, index) => (
-      final.push(`${styleOutput({
-        ...output,
-        isLast: outputs.length === (index + 1)
-      })}\n`)
-    ));
+    outputs.slice(0, MAX_OUTPUTS_PER_GROUP).map((output, index) =>
+      final.push(
+        `${styleOutput({
+          ...output,
+          isLast: outputs.length === index + 1
+        })}\n`
+      )
+    );
 
     if (outputs.length > MAX_OUTPUTS_PER_GROUP) {
-      final.push(chalk.grey(`└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`));
+      final.push(
+        chalk.grey(
+          `└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`
+        )
+      );
     }
 
     return buildGroup;
   });
 
   if (hiddenBuildGroup.length) {
-    final.push(`${styleHiddenBuilds(
-      `${hiddenBuildGroup.length} builds hidden`,
-      hiddenBuildGroup,
-      times,
-      longestSource,
-      true
-    )}\n`);
+    final.push(
+      `${styleHiddenBuilds(
+        `${hiddenBuildGroup.length} builds hidden`,
+        hiddenBuildGroup,
+        times,
+        longestSource,
+        true
+      )}\n`
+    );
   }
 
   return {

@@ -88,7 +88,10 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config: { currentTeam } } = ctx;
+  const {
+    authConfig: { token },
+    config: { currentTeam }
+  } = ctx;
   const output = createOutput({ debug });
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;

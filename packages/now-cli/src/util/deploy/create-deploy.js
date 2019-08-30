@@ -90,7 +90,7 @@ export default async function createDeploy(
       return new ERRORS_TS.DeploymentNotFound({ context: contextName });
     }
 
-    const certError = mapCertError(error)
+    const certError = mapCertError(error);
     if (certError) {
       return certError;
     }

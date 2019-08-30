@@ -85,14 +85,14 @@ const randomAliasSuffix = randomBytes(6).toString('hex');
 
 const getRevertAliasConfigFile = () => {
   return JSON.stringify({
-      'version': 2,
-      'name': `now-revert-alias-${randomAliasSuffix}`,
-      'builds': [
-        {
-          'src': '*.json',
-          'use': '@now/static'
-        }
-      ]
+    version: 2,
+    name: `now-revert-alias-${randomAliasSuffix}`,
+    builds: [
+      {
+        src: '*.json',
+        use: '@now/static'
+      }
+    ]
   });
 };
 
@@ -128,13 +128,11 @@ module.exports = async session => {
       'index.html': '<span>test alias</span'
     },
     'config-scope-property-email': {
-      'now.json':
-        `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
+      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span'
     },
     'config-scope-property-username': {
-      'now.json':
-        `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'now.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
       'index.html': '<span>test scope username</span'
     },
     'builds-wrong': {
@@ -153,7 +151,7 @@ module.exports = async session => {
       }
     }
   ]
-}`,
+}`
     },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
@@ -199,11 +197,15 @@ RUN echo $NONCE > /public/index.html
       'now.json': getRevertAliasConfigFile()
     },
     'now-dev-fail-dev-script': {
-      'package.json': JSON.stringify({
-        scripts: {
-          dev: 'now dev'
-        }
-      }, null, 2)
+      'package.json': JSON.stringify(
+        {
+          scripts: {
+            dev: 'now dev'
+          }
+        },
+        null,
+        2
+      )
     },
     'v1-warning-link': {
       'now.json': JSON.stringify({
@@ -229,7 +231,13 @@ RUN echo $NONCE > /public/index.html
 
   for (const typeName of Object.keys(spec)) {
     const needed = spec[typeName];
-    const directory = join(__dirname, '..', 'fixtures', 'integration', typeName);
+    const directory = join(
+      __dirname,
+      '..',
+      'fixtures',
+      'integration',
+      typeName
+    );
     await mkdirp(directory);
 
     if (Array.isArray(needed)) {

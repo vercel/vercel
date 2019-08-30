@@ -52,7 +52,10 @@ const main = async ctx => {
   }
 
   const debug = argv['--debug'];
-  const { authConfig: { token }, apiUrl } = ctx;
+  const {
+    authConfig: { token },
+    apiUrl
+  } = ctx;
   const output = createOutput({ debug });
   const client = new Client({ apiUrl, token, debug });
   let contextName = null;

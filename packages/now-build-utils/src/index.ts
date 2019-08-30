@@ -12,7 +12,7 @@ import {
   runNpmInstall,
   runShellScript,
   getNodeVersion,
-  getSpawnOptions,
+  getSpawnOptions
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
@@ -41,7 +41,7 @@ export {
   shouldServe,
   detectBuilders,
   detectRoutes,
-  debug,
+  debug
 };
 
 export * from './types';

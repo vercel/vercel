@@ -3,7 +3,7 @@ import {
   NowResponse,
   NowRequestCookies,
   NowRequestQuery,
-  NowRequestBody,
+  NowRequestBody
 } from './types';
 import { Server } from 'http';
 import { Bridge } from './bridge';
@@ -14,7 +14,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
       return undefined;
     }
 
-    const { parse: parseContentType } = require('content-type');
+    const { parse: parseContentType } = require('content-type'); // eslint-disable-line
     const { type } = parseContentType(req.headers['content-type']);
 
     if (type === 'application/json') {
@@ -30,7 +30,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
     }
 
     if (type === 'application/x-www-form-urlencoded') {
-      const { parse: parseQS } = require('querystring');
+      const { parse: parseQS } = require('querystring'); // eslint-disable-line
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
       return parseQS(body.toString());
@@ -46,7 +46,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
 
 function getQueryParser({ url = '/' }: NowRequest) {
   return function parseQuery(): NowRequestQuery {
-    const { URL } = require('url');
+    const { URL } = require('url'); // eslint-disable-line
     // we provide a placeholder base url because we only want searchParams
     const params = new URL(url, 'https://n').searchParams;
 
@@ -67,7 +67,7 @@ function getCookieParser(req: NowRequest) {
       return {};
     }
 
-    const { parse } = require('cookie');
+    const { parse } = require('cookie'); // eslint-disable-line
     return parse(Array.isArray(header) ? header.join(';') : header);
   };
 }
@@ -78,14 +78,14 @@ function status(res: NowResponse, statusCode: number): NowResponse {
 }
 
 function setCharset(type: string, charset: string) {
-  const { parse, format } = require('content-type');
+  const { parse, format } = require('content-type'); // eslint-disable-line
   const parsed = parse(type);
   parsed.parameters.charset = charset;
   return format(parsed);
 }
 
 function createETag(body: any, encoding: 'utf8' | undefined) {
-  const etag = require('etag');
+  const etag = require('etag'); // eslint-disable-line
   const buf = !Buffer.isBuffer(body) ? Buffer.from(body, encoding) : body;
   return etag(buf, { weak: true });
 }
@@ -231,7 +231,7 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
     },
     set: value => {
       Object.defineProperty(req, prop, { ...optsReset, value });
-    },
+    }
   });
 }
 

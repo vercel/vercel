@@ -313,9 +313,7 @@ export default class Now extends EventEmitter {
         body = await res.json();
       } catch (err) {
         throw new Error(
-          `Unexpected response error: ${err.message} (${
-            res.status
-          } status code)`
+          `Unexpected response error: ${err.message} (${res.status} status code)`
         );
       }
 
@@ -455,9 +453,7 @@ export default class Now extends EventEmitter {
     if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
-          chalk`Using Node.js {bold ${
-            deployment.nodeVersion
-          }} (requested: {dim \`${engines.node}\`})`
+          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
         );
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
@@ -528,7 +524,12 @@ export default class Now extends EventEmitter {
                 this.emit('upload', file);
               } else if (res.status > 200 && res.status < 500) {
                 // If something is wrong with our request, we don't retry
-                return bail(await responseError(res, `Failed to upload file with status: ${res.status}`));
+                return bail(
+                  await responseError(
+                    res,
+                    `Failed to upload file with status: ${res.status}`
+                  )
+                );
               } else {
                 // If something is wrong with the server, we retry
                 throw await responseError(res, 'Failed to upload file');

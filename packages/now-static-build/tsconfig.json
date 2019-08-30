@@ -15,7 +15,5 @@
     "strict": true,
     "target": "esnext"
   },
-  "exclude": [
-    "test/fixtures"
-  ]
+  "exclude": ["test/fixtures"]
 }

@@ -1,5 +1,5 @@
 import { Stats } from 'fs';
-import {sep, dirname, join, resolve } from 'path';
+import { sep, dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
 
 import { version } from '../../package.json';
@@ -64,21 +64,22 @@ async function isGlobal() {
     }
 
     const isWindows = process.platform === 'win32';
-    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib'
+    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib';
 
     const installPath = await realpath(resolve(__dirname));
 
-    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))) {
+    if (
+      installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))
+    ) {
       return true;
     }
 
-    const prefixPath = (
+    const prefixPath =
       process.env.PREFIX ||
       process.env.npm_config_prefix ||
       process.env.NPM_CONFIG_PREFIX ||
-      await getConfigPrefix() ||
-      defaultPath
-    );
+      (await getConfigPrefix()) ||
+      defaultPath;
 
     if (!prefixPath) {
       return true;
@@ -100,7 +101,5 @@ export default async function getUpdateCommand(): Promise<string> {
       : `npm i -g now@${tag}`;
   }
 
-  return (await isYarn())
-    ? `yarn add now@${tag}`
-    : `npm i now@${tag}`;
+  return (await isYarn()) ? `yarn add now@${tag}` : `npm i now@${tag}`;
 }

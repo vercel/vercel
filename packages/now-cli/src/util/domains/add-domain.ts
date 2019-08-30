@@ -27,10 +27,7 @@ export default async function addDomain(
   }
 }
 
-async function performAddRequest(
-  client: Client,
-  domainName: string
-) {
+async function performAddRequest(client: Client, domainName: string) {
   return retry(
     async () => {
       try {

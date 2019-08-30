@@ -77,7 +77,10 @@ async function performCreateAlias(
       return { uid: error.uid, alias: error.alias } as AliasRecord;
     }
     if (error.code === 'deployment_not_found') {
-      return new ERRORS.DeploymentNotFound({ context: contextName, id: deployment.uid });
+      return new ERRORS.DeploymentNotFound({
+        context: contextName,
+        id: deployment.uid
+      });
     }
     if (error.code === 'gone') {
       return new ERRORS.DeploymentFailedAliasImpossible();
@@ -94,7 +97,7 @@ async function performCreateAlias(
       }
     }
     if (error.status === 400) {
-      return new ERRORS.DeploymentNotReady({url: deployment.url })
+      return new ERRORS.DeploymentNotReady({ url: deployment.url });
     }
 
     throw error;

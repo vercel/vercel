@@ -24,10 +24,10 @@ type Options = {
 };
 
 type Example = {
-  name: string,
-  visible: boolean,
-  suggestions: string[]
-}
+  name: string;
+  visible: boolean;
+  suggestions: string[];
+};
 
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
@@ -93,7 +93,7 @@ async function fetchExampleList() {
       throw new Error(`Failed fetching list.json (${resp.statusText}).`);
     }
 
-    return await resp.json() as Example[];
+    return (await resp.json()) as Example[];
   } catch (e) {
     stopSpinner();
   }
@@ -119,7 +119,12 @@ async function chooseFromDropdown(message: string, exampleList: string[]) {
 /**
  * Extract example to directory
  */
-async function extractExample(name: string, dir: string, force?: boolean, ver: string = 'v2') {
+async function extractExample(
+  name: string,
+  dir: string,
+  force?: boolean,
+  ver: string = 'v2'
+) {
   const folder = prepareFolder(process.cwd(), dir || name, force);
   const stopSpinner = wait(`Fetching ${name}`);
 

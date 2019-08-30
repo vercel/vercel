@@ -22,7 +22,7 @@ async function installRuby(version: string = RUBY_VERSION) {
       'readline-devel',
       'openssl-devel',
       'ruby-devel',
-      'zlib-devel',
+      'zlib-devel'
     ],
     { stdio: 'pipe' }
   );
@@ -32,13 +32,13 @@ async function installRuby(version: string = RUBY_VERSION) {
     { stdio: 'pipe' }
   );
   await execa(join(rubyBuildDir, 'bin', 'ruby-build'), [version, rubyDir], {
-    stdio: 'pipe',
+    stdio: 'pipe'
   });
 
   return {
     gemHome: rubyDir,
     rubyPath: join(rubyDir, 'bin', 'ruby'),
-    gemPath: join(rubyDir, 'bin', 'gem'),
+    gemPath: join(rubyDir, 'bin', 'gem')
   };
 }
 
@@ -53,14 +53,14 @@ export async function installBundler() {
   await execa(gemPath, ['install', 'bundler', '--no-document'], {
     stdio: 'pipe',
     env: {
-      GEM_HOME: gemHome,
-    },
+      GEM_HOME: gemHome
+    }
   });
 
   return {
     gemHome,
     rubyPath,
     gemPath,
-    bundlerPath: join(gemHome, 'bin', 'bundler'),
+    bundlerPath: join(gemHome, 'bin', 'bundler')
   };
 }

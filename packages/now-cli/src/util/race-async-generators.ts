@@ -6,7 +6,7 @@ export default async function* raceAsyncGenerators(...args: any[]) {
     yield new Promise(resolve => {
       let resolved = false;
       nextPromises.forEach((nextPromise, idx) => {
-        nextPromise.then(({ value, done }: { value: any, done: boolean }) => {
+        nextPromise.then(({ value, done }: { value: any; done: boolean }) => {
           if (!resolved) {
             resolved = true;
             resolve(value);

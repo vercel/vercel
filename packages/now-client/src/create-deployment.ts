@@ -1,14 +1,16 @@
-import { readdir as readRootFolder, lstatSync } from 'fs-extra'
+import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import readdir from 'recursive-readdir'
-import hashes, { mapToObject } from './utils/hashes'
-import uploadAndDeploy from './upload'
-import { getNowIgnore } from './utils'
-import { DeploymentError } from './errors'
+import readdir from 'recursive-readdir';
+import hashes, { mapToObject } from './utils/hashes';
+import uploadAndDeploy from './upload';
+import { getNowIgnore } from './utils';
+import { DeploymentError } from './errors';
 
-export { EVENTS } from './utils'
+export { EVENTS } from './utils';
 
-export default function buildCreateDeployment(version: number): CreateDeploymentFunction {
+export default function buildCreateDeployment(
+  version: number
+): CreateDeploymentFunction {
   return async function* createDeployment(
     path: string | string[],
     options: DeploymentOptions = {}
@@ -17,51 +19,51 @@ export default function buildCreateDeployment(version: number): CreateDeployment
       throw new DeploymentError({
         code: 'missing_path',
         message: 'Path not provided'
-      })
+      });
     }
 
     if (typeof options.token !== 'string') {
       throw new DeploymentError({
         code: 'token_not_provided',
         message: 'Options object must include a `token`'
-      })
+      });
     }
 
-    const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory()
+    const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
 
     // Get .nowignore
-    let rootFiles
+    let rootFiles;
 
     if (isDirectory && !Array.isArray(path)) {
-      rootFiles = await readRootFolder(path)
+      rootFiles = await readRootFolder(path);
     } else if (Array.isArray(path)) {
-      rootFiles = path
+      rootFiles = path;
     } else {
-      rootFiles = [path]
+      rootFiles = [path];
     }
 
-    let ignores: string[] = await getNowIgnore(rootFiles, path)
+    let ignores: string[] = await getNowIgnore(rootFiles, path);
 
-    let fileList
+    let fileList;
 
     if (isDirectory && !Array.isArray(path)) {
       // Directory path
-      fileList = await readdir(path, ignores)
+      fileList = await readdir(path, ignores);
     } else if (Array.isArray(path)) {
       // Array of file paths
-      fileList = path
+      fileList = path;
     } else {
       // Single file
-      fileList = [path]
+      fileList = [path];
     }
 
-    const files = await hashes(fileList)
+    const files = await hashes(fileList);
 
-    yield { type: 'hashes-calculated', payload: mapToObject(files) }
+    yield { type: 'hashes-calculated', payload: mapToObject(files) };
 
-    const { token, teamId, force, defaultName, ...metadata } = options
+    const { token, teamId, force, defaultName, ...metadata } = options;
 
-    metadata.version = version
+    metadata.version = version;
 
     const deploymentOpts = {
       totalFiles: files.size,
@@ -72,10 +74,10 @@ export default function buildCreateDeployment(version: number): CreateDeployment
       force,
       defaultName,
       metadata
-    }
+    };
 
     for await (const event of uploadAndDeploy(files, deploymentOpts)) {
-      yield event
+      yield event;
     }
-  }
+  };
 }

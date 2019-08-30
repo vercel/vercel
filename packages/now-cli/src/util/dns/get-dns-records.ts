@@ -19,8 +19,8 @@ export default async function getDNSRecords(
   const domainsRecords = await Promise.all(
     domainNames.map(createGetDomainRecords(output, client))
   );
-  const onlyRecords = domainsRecords.map(
-    item => ((item instanceof DomainNotFound) ? [] : item)
+  const onlyRecords = domainsRecords.map(item =>
+    item instanceof DomainNotFound ? [] : item
   ) as DNSRecord[][];
   return onlyRecords.reduce(getAddDomainName(domainNames), []);
 }
@@ -43,7 +43,5 @@ function getAddDomainName(domainNames: string[]) {
 
 async function getDomainNames(client: Client, contextName: string) {
   const domains = await getDomains(client, contextName);
-  return domains
-    .map(domain => domain.name)
-    .sort((a, b) => a.localeCompare(b));
+  return domains.map(domain => domain.name).sort((a, b) => a.localeCompare(b));
 }

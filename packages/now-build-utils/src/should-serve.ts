@@ -5,7 +5,7 @@ import FileFsRef from './file-fs-ref';
 export default function shouldServe({
   entrypoint,
   files,
-  requestPath,
+  requestPath
 }: ShouldServeOptions): boolean {
   requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
   entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility

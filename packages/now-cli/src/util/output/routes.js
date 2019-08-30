@@ -5,7 +5,7 @@ const longestProperty = (routes, name) => {
     const firstItem = a[name] ? a[name].length : 0;
     const secondItem = b[name] ? b[name].length : 0;
 
-    return secondItem - firstItem
+    return secondItem - firstItem;
   })[0];
 
   if (!longestItem[name]) {
@@ -24,7 +24,7 @@ export default routes => {
   const padding = 6;
   const space = ' '.repeat(padding);
   const destSpace = ' '.repeat(longestDest || 10);
-  const arrow = chalk.grey('->')
+  const arrow = chalk.grey('->');
 
   for (const item of routes) {
     if (item.handle) {
@@ -33,11 +33,13 @@ export default routes => {
     }
 
     const { src, dest, status, headers } = item;
-    const last = routes.indexOf(item) === (routes.length - 1);
+    const last = routes.indexOf(item) === routes.length - 1;
     const suffix = last ? '' : `\n`;
 
     const finalSrc = chalk.cyan(src.padEnd(longestSrc + padding));
-    const finalDest = dest ? `${arrow}${space}${dest}` : `  ${space}${destSpace}`;
+    const finalDest = dest
+      ? `${arrow}${space}${dest}`
+      : `  ${space}${destSpace}`;
     const finalStatus = status ? chalk.grey(`[${status}]`) : '';
 
     let finalHeaders = null;
@@ -49,7 +51,7 @@ export default routes => {
 
       for (const header of headerKeys) {
         const value = headers[header];
-        const last = headerKeys.indexOf(header) === (headerKeys.length - 1);
+        const last = headerKeys.indexOf(header) === headerKeys.length - 1;
         const suffix = last ? '' : `\n`;
         const prefix = chalk.grey(last ? '└──' : '├──');
 

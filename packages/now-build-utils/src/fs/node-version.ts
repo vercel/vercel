@@ -3,7 +3,7 @@ import { NodeVersion } from '../types';
 
 const supportedOptions: NodeVersion[] = [
   { major: 10, range: '10.x', runtime: 'nodejs10.x' },
-  { major: 8, range: '8.10.x', runtime: 'nodejs8.10' },
+  { major: 8, range: '8.10.x', runtime: 'nodejs8.10' }
 ];
 
 // This version should match Fargate's default in the PATH

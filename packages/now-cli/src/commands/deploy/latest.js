@@ -72,7 +72,8 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input => isWildcardAlias(input) ? input : `https://${input}`;
+const prepareAlias = input =>
+  isWildcardAlias(input) ? input : `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
@@ -94,10 +95,18 @@ const printDeploymentStatus = async (
           const preparedAlias = prepareAlias(firstAlias);
           try {
             await copy(`https://${firstAlias}`);
-            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
+            output.ready(
+              `Deployed to ${chalk.bold(
+                chalk.cyan(preparedAlias)
+              )} ${chalk.gray('[in clipboard]')} ${deployStamp()}`
+            );
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${deployStamp()}`);
+            output.ready(
+              `Deployed to ${chalk.bold(
+                chalk.cyan(preparedAlias)
+              )} ${deployStamp()}`
+            );
           }
         }
       } else {
@@ -109,13 +118,17 @@ const printDeploymentStatus = async (
 
         for (const alias of aliasList) {
           const index = aliasList.indexOf(alias);
-          const isLast = index === (aliasList.length - 1);
+          const isLast = index === aliasList.length - 1;
           const shouldCopy = matching ? alias === matching : isLast;
 
           if (shouldCopy && clipboardEnabled) {
             try {
               await copy(`https://${alias}`);
-              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
+              output.print(
+                `- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray(
+                  '[in clipboard]'
+                )}\n`
+              );
 
               continue;
             } catch (err) {
@@ -206,7 +219,11 @@ export default async function main(
     return 1;
   }
 
-  const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
+  const {
+    apiUrl,
+    authConfig: { token },
+    config: { currentTeam }
+  } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
@@ -313,33 +330,44 @@ export default async function main(
 
   try {
     // $FlowFixMe
-    const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
+    const project = getProjectName({
+      argv,
+      nowConfig: localConfig,
+      isFile,
+      paths
+    });
     log(`Using project ${chalk.bold(project)}`);
 
     const createArgs = {
-        name: project,
-        env: deploymentEnv,
-        build: { env: deploymentBuildEnv },
-        forceNew: argv['--force'],
-        quiet,
-        wantsPublic: argv['--public'] || localConfig.public,
-        isFile,
-        type: null,
-        nowConfig: localConfig,
-        regions,
-        meta
+      name: project,
+      env: deploymentEnv,
+      build: { env: deploymentBuildEnv },
+      forceNew: argv['--force'],
+      quiet,
+      wantsPublic: argv['--public'] || localConfig.public,
+      isFile,
+      type: null,
+      nowConfig: localConfig,
+      regions,
+      meta
     };
 
     if (argv['--target']) {
       const deprecatedTarget = argv['--target'];
 
       if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
+        error(
+          `The specified ${param('--target')} ${code(
+            deprecatedTarget
+          )} is not valid`
+        );
         return 1;
       }
 
       if (deprecatedTarget === 'production') {
-        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
+        warn(
+          'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+        );
       }
 
       output.debug(`Setting target to ${deprecatedTarget}`);
@@ -362,11 +390,12 @@ export default async function main(
 
     if (
       firstDeployCall instanceof DomainNotFound &&
-      firstDeployCall.meta && firstDeployCall.meta.domain
+      firstDeployCall.meta &&
+      firstDeployCall.meta.domain
     ) {
-      output.debug(`The domain ${
-        firstDeployCall.meta.domain
-      } was not found, trying to purchase it`);
+      output.debug(
+        `The domain ${firstDeployCall.meta.domain} was not found, trying to purchase it`
+      );
 
       const purchase = await purchaseDomainIfAvailable(
         output,
@@ -381,9 +410,9 @@ export default async function main(
       );
 
       if (purchase === true) {
-        output.success(`Successfully purchased the domain ${
-          firstDeployCall.meta.domain
-        }!`);
+        output.success(
+          `Successfully purchased the domain ${firstDeployCall.meta.domain}!`
+        );
 
         // We exit if the purchase is completed since
         // the domain verification can take some time
@@ -433,9 +462,9 @@ export default async function main(
         }
 
         const size = bytes(now.syncAmount);
-        syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
-          ? 's'
-          : ''}`;
+        syncCount = `${now.syncFileCount} file${
+          now.syncFileCount > 1 ? 's' : ''
+        }`;
         const bar = new Progress(
           `${chalk.gray(
             '>'
@@ -542,7 +571,13 @@ export default async function main(
   // If an error occurred, we want to let it fall down to rendering
   // builds so the user can see in which build the error occurred.
   if (isReady(deployment)) {
-    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
+    return printDeploymentStatus(
+      output,
+      deployment,
+      deployStamp,
+      !argv['--no-clipboard'],
+      localConfig
+    );
   }
 
   const sleepingTime = ms('1.5s');
@@ -597,7 +632,7 @@ export default async function main(
       const deploymentResponse = handleCertError(
         output,
         await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
-      )
+      );
 
       if (deploymentResponse === 1) {
         return deploymentResponse;
@@ -637,8 +672,15 @@ export default async function main(
     buildSpinner();
   }
 
-  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
-};
+  return printDeploymentStatus(
+    output,
+    deployment,
+    deployStamp,
+    !argv['--no-clipboard'],
+    localConfig,
+    builds
+  );
+}
 
 function handleCreateDeployError(output, error) {
   if (error instanceof InvalidDomain) {
@@ -708,18 +750,20 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof TooManyRequests) {
     output.error(
-      `Too many requests detected for ${error.meta
-        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
-        long: true
-      })}.`
+      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
+        error.meta.retryAfter * 1000,
+        {
+          long: true
+        }
+      )}.`
     );
     return 1;
   }
   if (error instanceof DomainNotVerified) {
     output.error(
-      `The domain used as an alias ${
-        chalk.underline(error.meta.domain)
-      } is not verified yet. Please verify it.`
+      `The domain used as an alias ${chalk.underline(
+        error.meta.domain
+      )} is not verified yet. Please verify it.`
     );
     return 1;
   }

@@ -13,7 +13,10 @@ import { CertNotFound } from '../../util/errors-ts';
 import strlen from '../../util/strlen.ts';
 
 async function ls(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -65,7 +68,11 @@ async function ls(ctx, opts, args, output) {
   );
 
   if (certs.length >= 100) {
-    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
+    output.note(
+      `There may be more certificates that can be retrieved with ${cmd(
+        `now ${process.argv.slice(2).join(' ')} --after=${lastCert}`
+      )}.`
+    );
   }
 
   if (certs.length > 0) {
@@ -105,11 +112,10 @@ function formatCertsTableBody(certsList) {
 }
 
 function formatCert(time, cert) {
-  return cert.cns.map(
-    (cn, idx) =>
-      idx === 0
-        ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
-        : formatCertNonFirstCn(cn, cert.cns.length > 1)
+  return cert.cns.map((cn, idx) =>
+    idx === 0
+      ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
+      : formatCertNonFirstCn(cn, cert.cns.length > 1)
   );
 }
 

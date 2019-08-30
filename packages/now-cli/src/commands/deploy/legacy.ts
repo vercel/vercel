@@ -220,7 +220,7 @@ const promptForEnvFields = async (list: string[]) => {
 
 async function canUseZeroConfig(cwd: string): Promise<boolean> {
   try {
-    const pkg = (await readPackage(join(cwd, 'package.json')));
+    const pkg = await readPackage(join(cwd, 'package.json'));
 
     if (!pkg || pkg instanceof Error) {
       return false;
@@ -250,7 +250,7 @@ async function canUseZeroConfig(cwd: string): Promise<boolean> {
     ) {
       return true;
     }
-  } catch(_) {}
+  } catch (_) {}
 
   return false;
 }
@@ -296,11 +296,13 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = await canUseZeroConfig(paths[0])
+  const infoUrl = (await canUseZeroConfig(paths[0]))
     ? 'https://zeit.co/guides/migrate-to-zeit-now'
-    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0'
+    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0';
 
-  warn(`You are using an old version of the Now Platform. More: ${link(infoUrl)}`);
+  warn(
+    `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
+  );
 
   const {
     authConfig: { token },
@@ -537,7 +539,7 @@ async function sync({
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
       error(
-        'Can\'t set both `regions` and `scale` options simultaneously',
+        "Can't set both `regions` and `scale` options simultaneously",
         'regions-and-scale-at-once'
       );
       await exit(1);
@@ -548,9 +550,7 @@ async function sync({
       dcIds = normalizeRegionsList(regions);
       if (dcIds instanceof InvalidRegionOrDCForScale) {
         error(
-          `The value "${
-            dcIds.meta.regionOrDC
-          }" is not a valid region or DC identifier`
+          `The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`
         );
         await exit(1);
         return 1;
@@ -1088,9 +1088,7 @@ async function sync({
                   dcOrEvent.meta.timeout
                 )})`
               );
-              output.log(
-                'Read more: https://err.sh/now/verification-timeout'
-              );
+              output.log('Read more: https://err.sh/now/verification-timeout');
               await exit(1);
             } else if (Array.isArray(dcOrEvent)) {
               const [dc, instances] = dcOrEvent;
@@ -1295,9 +1293,9 @@ function handleCreateDeployError(output: Output, error: Error) {
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}: ${message}\nDocumentation: ${
-        link('https://zeit.co/docs/v2/advanced/configuration')
-      }`
+      )}: ${message}\nDocumentation: ${link(
+        'https://zeit.co/docs/v2/advanced/configuration'
+      )}`
     );
 
     return 1;

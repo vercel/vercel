@@ -169,11 +169,9 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
   const path = 'now-json-static-gitignore-override';
 
   // Simulate custom args passed by the user
-  process.argv = [...process.argv, '--local-config', './now.json']
+  process.argv = [...process.argv, '--local-config', './now.json'];
 
-  let files = await getStaticFiles(
-    fixture(path)
-  );
+  let files = await getStaticFiles(fixture(path));
 
   files = files.sort(alpha);
 
@@ -185,9 +183,7 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
 
 test('`now.files` overrides `.gitignore` in Static', async t => {
   const path = 'now-json-static-gitignore-override';
-  let files = await getStaticFiles(
-    fixture(path)
-  );
+  let files = await getStaticFiles(fixture(path));
   files = files.sort(alpha);
 
   t.is(files.length, 3);
@@ -544,8 +540,8 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
 });
 
 test('friendly error for malformed JSON', async t => {
-  const err = await t.throwsAsync(
-    () => readMetadata(fixture('json-syntax-error'), {
+  const err = await t.throwsAsync(() =>
+    readMetadata(fixture('json-syntax-error'), {
       quiet: true,
       strict: false
     })
@@ -553,7 +549,7 @@ test('friendly error for malformed JSON', async t => {
   t.is(err.name, 'JSONError');
   t.is(
     err.message,
-    'Unexpected token \'o\' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^'
+    "Unexpected token 'o' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^"
   );
 });
 
@@ -733,23 +729,27 @@ test('5xx response error with random JSON', async t => {
 });
 
 test('getProjectName with argv - option 1', t => {
-  const project = getProjectName({argv: {
-    name: 'abc'
-  }});
+  const project = getProjectName({
+    argv: {
+      name: 'abc'
+    }
+  });
   t.is(project, 'abc');
 });
 
 test('getProjectName with argv - option 2', t => {
-  const project = getProjectName({argv: {
-    '--name': 'abc'
-  }});
+  const project = getProjectName({
+    argv: {
+      '--name': 'abc'
+    }
+  });
   t.is(project, 'abc');
 });
 
 test('getProjectName with now.json', t => {
   const project = getProjectName({
     argv: {},
-    nowConfig: {name: 'abc'}
+    nowConfig: { name: 'abc' }
   });
   t.is(project, 'abc');
 });
@@ -891,8 +891,41 @@ test('429 response error without retry header', async t => {
   t.is(formatted.retryAfter, undefined);
 });
 
-test('guess user\'s intention with custom didYouMean', async t => {
-  const examples = ['apollo','create-react-app','docz','gatsby','go','gridsome','html-minifier','mdx-deck','monorepo','nextjs','nextjs-news','nextjs-static','node-server','nodejs','nodejs-canvas-partyparrot','nodejs-coffee','nodejs-express','nodejs-hapi','nodejs-koa','nodejs-koa-ts','nodejs-pdfkit','nuxt-static','optipng','php-7','puppeteer-screenshot','python','redirect','serverless-ssr-reddit','static','vue','vue-ssr','vuepress'];
+test("guess user's intention with custom didYouMean", async t => {
+  const examples = [
+    'apollo',
+    'create-react-app',
+    'docz',
+    'gatsby',
+    'go',
+    'gridsome',
+    'html-minifier',
+    'mdx-deck',
+    'monorepo',
+    'nextjs',
+    'nextjs-news',
+    'nextjs-static',
+    'node-server',
+    'nodejs',
+    'nodejs-canvas-partyparrot',
+    'nodejs-coffee',
+    'nodejs-express',
+    'nodejs-hapi',
+    'nodejs-koa',
+    'nodejs-koa-ts',
+    'nodejs-pdfkit',
+    'nuxt-static',
+    'optipng',
+    'php-7',
+    'puppeteer-screenshot',
+    'python',
+    'redirect',
+    'serverless-ssr-reddit',
+    'static',
+    'vue',
+    'vue-ssr',
+    'vuepress'
+  ];
 
   t.is(didYouMean('md', examples, 0.7), 'mdx-deck');
   t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
@@ -906,16 +939,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.regex(reason, /Dockerfile/gm);
   }
 
   {
     const localConfig = undefined;
-    const pkg = { scripts: { 'start': 'echo hi' } };
+    const pkg = { scripts: { start: 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.is(reason, null);
   }
 
@@ -924,16 +967,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = { scripts: { 'now-start': 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.is(reason, null);
   }
 
   {
-    const localConfig = { 'version': 1 };
+    const localConfig = { version: 1 };
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.is(reason, null);
   }
 
@@ -942,16 +995,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = true;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.is(reason, null);
   }
 
   {
     const localConfig = undefined;
-    const pkg = { scripts: { 'build': 'echo hi' } };
+    const pkg = { scripts: { build: 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.regex(reason, /package\.json/gm);
   }
 
@@ -960,7 +1023,12 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = true;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile
+    });
     t.is(reason, null);
   }
 });

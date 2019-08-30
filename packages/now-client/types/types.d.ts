@@ -29,19 +29,19 @@ declare interface Deployment {
   public: boolean;
   ownerId: string;
   readyState:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   state?:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   createdAt: string;
   createdIn: string;
   env: {
@@ -62,19 +62,19 @@ declare interface DeploymentBuild {
   createdIn: string;
   deployedTo: string;
   readyState:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   state?:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   readyStateAt: string;
   path: string;
 }
@@ -116,4 +116,7 @@ declare interface NowJsonOptions {
   version?: number;
 }
 
-declare type CreateDeploymentFunction = (path: string | string[], options?: DeploymentOptions) => AsyncIterableIterator<any>;
+declare type CreateDeploymentFunction = (
+  path: string | string[],
+  options?: DeploymentOptions
+) => AsyncIterableIterator<any>;

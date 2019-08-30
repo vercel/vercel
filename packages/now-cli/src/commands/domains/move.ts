@@ -115,12 +115,7 @@ export default async function move(
 
   const context = contextName;
   const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(
-      client,
-      context,
-      domainName,
-      matchId || destination
-    );
+    return moveOutDomain(client, context, domainName, matchId || destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;

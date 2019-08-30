@@ -81,12 +81,10 @@ export default class NowAgent {
     currentContext = this._currContext;
 
     debug(
-      `Total requests made on socket #${this._contexts.length}: ${this
-        ._currContext.fetchesMade}`
+      `Total requests made on socket #${this._contexts.length}: ${this._currContext.fetchesMade}`
     );
     debug(
-      `Concurrent requests on socket #${this._contexts.length}: ${this
-        ._currContext.ongoingFetches}`
+      `Concurrent requests on socket #${this._contexts.length}: ${this._currContext.ongoingFetches}`
     );
 
     let body: JsonBody | StreamBody | string | undefined;
