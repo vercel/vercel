@@ -1,4 +1,6 @@
 import bytes from 'bytes';
+import Progress from 'progress';
+import chalk from 'chalk';
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
@@ -15,6 +17,7 @@ export default async function processDeployment({
   quiet
 }: any) {
   const { warn, log } = createOutput({ debug });
+  let bar: Progress | null = null;
 
   if (!legacy) {
     let buildSpinner = null;
@@ -29,12 +32,45 @@ export default async function processDeployment({
         warn(event.payload);
       }
 
+      if (event.type === 'file_count') {
+        debug(
+          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
+        );
+
+        const size = Object.values(hashes).reduce((acc: number, file: any) => {
+          const fileSize = file.data.byteLength || file.data.length;
+
+          return acc + fileSize;
+        }, 0);
+
+        const missingSize = event.payload.missing
+          .map((sha: string) => event.payload.total.get(sha).data.length)
+          .reduce((a: number, b: number) => a + b, 0);
+
+        bar = new Progress(
+          `${chalk.gray(
+            '>'
+          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
+          {
+            width: 20,
+            complete: '=',
+            incomplete: '',
+            total: missingSize,
+            clear: true
+          }
+        );
+      }
+
       if (event.type === 'file-uploaded') {
         debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
         );
+
+        if (bar) {
+          bar.tick(event.payload.file.data.length);
+        }
       }
 
       if (event.type === 'all-files-uploaded') {
@@ -89,12 +125,45 @@ export default async function processDeployment({
         hashes = event.payload;
       }
 
+      if (event.type === 'file_count') {
+        debug(
+          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
+        );
+
+        const size = Object.values(hashes).reduce((acc: number, file: any) => {
+          const fileSize = file.data.byteLength || file.data.length;
+
+          return acc + fileSize;
+        }, 0);
+
+        const missingSize = event.payload.missing
+          .map((sha: string) => event.payload.total.get(sha).data.length)
+          .reduce((a: number, b: number) => a + b, 0);
+
+        bar = new Progress(
+          `${chalk.gray(
+            '>'
+          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
+          {
+            width: 20,
+            complete: '=',
+            incomplete: '',
+            total: missingSize,
+            clear: true
+          }
+        );
+      }
+
       if (event.type === 'file-uploaded') {
         debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
         );
+
+        if (bar) {
+          bar.tick(event.payload.file.data.length);
+        }
       }
 
       if (event.type === 'all-files-uploaded') {
