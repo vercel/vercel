@@ -10,7 +10,7 @@ import {
   FileFsRef,
   streamToBuffer,
   Lambda,
-  Route
+  Route,
 } from '@now/build-utils';
 
 type stringMap = { [key: string]: string };
