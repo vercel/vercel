@@ -243,10 +243,6 @@ async function compile(
   if (esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
-      if (config.debug) {
-        debug('compiling es module file ' + path);
-      }
-
       const filename = basename(path);
       const { data: source } = await FileBlob.fromStream({
         stream: preparedFiles[path].toStream()
