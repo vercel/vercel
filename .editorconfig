@@ -35,3 +35,6 @@ spaces_around_operators = true
 spaces_around_brackets = outside
 # close enough to 1TB
 indent_brace_style = K&R
+
+[*.go]
+indent_style = tab

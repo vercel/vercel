@@ -4238,6 +4238,14 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
+editorconfig-checker@3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/editorconfig-checker/-/editorconfig-checker-3.0.2.tgz#9665161ef2d63184d085d89c42b0834638b89d1f"
+  integrity sha512-P/CmMPX0tKR4gEiXU3mLRmR0usV8l40AS5wUpElOUW/3UU16u47wFg5JBJKx7WS7v+lt6tn9/dK7xUn6JHx/FQ==
+  dependencies:
+    request "^2.88.0"
+    tar "^4.4.10"
+
 elegant-spinner@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/elegant-spinner/-/elegant-spinner-1.0.1.tgz#db043521c95d7e303fd8f345bedc3349cfb0729e"

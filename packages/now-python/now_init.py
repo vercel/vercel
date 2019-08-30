@@ -13,13 +13,13 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
         print('Handler must inherit from BaseHTTPRequestHandler')
         print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
         exit(1)
-    
+
     print('using HTTP Handler')
     from http.server import HTTPServer
     from urllib.parse import unquote
     import requests
     import _thread
-    
+
     server = HTTPServer(('', 0), base)
     port = server.server_address[1]
     def now_handler(event, context):

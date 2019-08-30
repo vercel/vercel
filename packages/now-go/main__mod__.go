@@ -1,12 +1,12 @@
 package main
 
 import (
-  "net/http"
-  "__NOW_HANDLER_PACKAGE_NAME"
+	"__NOW_HANDLER_PACKAGE_NAME"
+	"net/http"
 
-  now "github.com/zeit/now/utils/go/bridge"
+	now "github.com/zeit/now/utils/go/bridge"
 )
 
 func main() {
-  now.Start(http.HandlerFunc(__NOW_HANDLER_FUNC_NAME))
+	now.Start(http.HandlerFunc(__NOW_HANDLER_FUNC_NAME))
 }

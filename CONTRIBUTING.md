@@ -53,7 +53,7 @@ Integration tests create deployments to your ZEIT account using the `test` proje
 [Error: Fetched page https://test-8ashcdlew.now.sh/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
 
     NO_STATUS_CODE_FRO Response headers:
-       cache-control=s-maxage=0
+      cache-control=s-maxage=0
       connection=close
       content-type=text/plain; charset=utf-8
       date=Wed, 19 Jun 2019 18:01:37 GMT
@@ -76,7 +76,7 @@ Some of the Builders use `@zeit/node-file-trace` to tree-shake files before depl
 const trace = require('@zeit/node-file-trace');
 trace(['path/to/entrypoint.js'], {
   ts: true,
-  mixedModules: true,
+  mixedModules: true
 })
   .then(o => console.log(o.fileList))
   .then(e => console.error(e));

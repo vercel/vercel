@@ -20,6 +20,7 @@
     "@zeit/ncc": "0.20.4",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
+    "editorconfig-checker": "3.0.2",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
     "husky": "3.0.4",
