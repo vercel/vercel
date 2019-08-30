@@ -50,7 +50,7 @@ export default async function createServerlessConfig(
       if (semver.gte(nextVersion, ExperimentalTraceVersion)) {
         target = 'experimental-serverless-trace';
       }
-    } catch (_ignored) {}
+    } catch (_ignored) {} // eslint-disable-line
   }
 
   const configPath = path.join(workPath, 'next.config.js');

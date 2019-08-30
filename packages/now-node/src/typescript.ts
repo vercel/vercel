@@ -151,13 +151,14 @@ export function register(opts: Options = {}): Register {
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
 
   try {
+    // eslint-disable-next-line
     var compiler = require.resolve(options.compiler || 'typescript', {
       paths: [cwd, nowNodeBase]
     });
   } catch (e) {
     compiler = require.resolve(eval('"./typescript"'));
   }
-  const ts: typeof _ts = require(compiler);
+  const ts: typeof _ts = require(compiler); // eslint-disable-line
   if (compiler.startsWith(nowNodeBase)) {
     console.log('Using TypeScript ' + ts.version + ' (now internal)');
   } else {

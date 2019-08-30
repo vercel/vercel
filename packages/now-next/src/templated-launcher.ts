@@ -6,7 +6,7 @@ if (!process.env.NODE_ENV) {
 import { Server } from 'http';
 import { Bridge } from './now__bridge';
 // @ts-ignore
-const page = require(__LAUNCHER_PAGE_PATH__);
+const page = require(__LAUNCHER_PAGE_PATH__); // eslint-disable-line
 
 // page.render is for React rendering
 // page.default is for /api rendering

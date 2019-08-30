@@ -182,7 +182,7 @@ export const build = async ({
   if (config && (config.includeFiles || config.excludeFiles)) {
     const includedPaths = await matchPaths(config.includeFiles, workPath);
     const excludedPaths = await matchPaths(
-      <string | string[]>config.excludeFiles,
+      <string | string[]>config.excludeFiles, // eslint-disable-line
       workPath
     );
 
