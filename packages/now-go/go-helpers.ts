@@ -5,6 +5,7 @@ import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
 import { debug } from '@now/build-utils';
+import stringArgv from 'string-argv';
 
 const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
 const platformMap = new Map([['win32', 'windows']]);
@@ -91,13 +92,7 @@ class GoWrapper {
 
     let flags = ['-ldflags', '-s -w'];
     if (process.env.GO_BUILD_FLAGS) {
-      // the regular expression is ensure to not split when there are
-      // space between ' ' with fallback to split()
-      let flagsArr = process.env.GO_BUILD_FLAGS.match(/(?:[^\s']+|'[^']*')+/g)
-        || process.env.GO_BUILD_FLAGS.split(' ');
-      
-      // clean up quote
-      flagsArr = flagsArr.map(flag => flag.replace(/'/g, ''))
+      let flagsArr = stringArgv(process.env.GO_BUILD_FLAGS);
       flags = [...flagsArr];
     }
 
