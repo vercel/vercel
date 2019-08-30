@@ -59,12 +59,6 @@
         "@typescript-eslint/ban-ts-ignore": 0,
         "@typescript-eslint/no-explicit-any": 0
       }
-    },
-    {
-      "files": ["packages/now-next/**/*"],
-      "rules": {
-        "comma-dangle": [1, "always-multiline"]
-      }
     }
   ]
 }
