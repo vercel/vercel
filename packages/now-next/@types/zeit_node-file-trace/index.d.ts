@@ -27,7 +27,7 @@ declare module '@zeit/node-file-trace' {
     birthtime: Date;
   }
 
-  interface NodeFileTraceOptions {
+  export interface NodeFileTraceOptions {
     base?: string;
     ignore?: string | string[] | ((path: string) => boolean);
     ts?: boolean;
@@ -38,7 +38,7 @@ declare module '@zeit/node-file-trace' {
     readlink?: (path: string) => string | null;
   }
 
-  interface FileTraceReasons {
+  export interface NodeFileTraceReasons {
     [fileName: string]: {
       type: string;
       ignored: boolean;
@@ -46,10 +46,10 @@ declare module '@zeit/node-file-trace' {
     };
   }
 
-  interface NodeFileTraceResult {
+  export interface NodeFileTraceResult {
     fileList: string[];
     esmFileList: string[];
-    reasons: FileTraceReasons;
+    reasons: NodeFileTraceReasons;
   }
 
   export default function NodeFileTrace(

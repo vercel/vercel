@@ -29,7 +29,7 @@ import {
   debug,
   PackageJson
 } from '@now/build-utils';
-import nodeFileTrace from '@zeit/node-file-trace';
+import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
@@ -303,7 +303,7 @@ export const build = async ({
 
   debug('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const env = { ...spawnOpts.env } as { [key: string]: string };
+  const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
@@ -503,18 +503,6 @@ export const build = async ({
         }
       }
 
-      type FileTraceReasons = {
-        [fileName: string]: {
-          type: string;
-          ignored: boolean;
-          parents: string[];
-        };
-      };
-      type FileTraceResult = {
-        fileList: string[];
-        reasons: FileTraceReasons;
-      };
-
       const {
         fileList: apiFileList,
         reasons: apiReasons
@@ -528,7 +516,7 @@ export const build = async ({
       debug(`node-file-trace result for pages: ${fileList}`);
 
       const collectTracedFiles = (
-        reasons: FileTraceReasons,
+        reasons: NodeFileTraceReasons,
         files: { [filePath: string]: FileFsRef }
       ) => (file: string) => {
         const reason = reasons[file];
