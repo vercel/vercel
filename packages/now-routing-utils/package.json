@@ -17,7 +17,10 @@
     "prepublishOnly": "tsc",
     "build": "tsc",
     "watch": "tsc --watch",
-    "test-unit": "jest --env node --verbose --runInBand"
+    "test-unit": "jest --env node --verbose --runInBand",
+    "test-lint": "yarn test-eslint && yarn test-editorconfig",
+    "test-eslint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore",
+    "test-editorconfig": "ec --config ../../.ecrc"
   },
   "devDependencies": {
     "ajv": "^6.0.0",

@@ -7,7 +7,9 @@
     "build": "ncc build ./src/index.ts -o ./lib --source-map",
     "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
-    "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
+    "test-lint": "yarn test-eslint && yarn test-editorconfig",
+    "test-eslint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore",
+    "test-editorconfig": "ec --config ../../.ecrc"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",

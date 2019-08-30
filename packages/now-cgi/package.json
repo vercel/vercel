@@ -9,6 +9,9 @@
   },
   "scripts": {
     "test-integration": "best -I test/*.js",
+    "test-lint": "yarn test-eslint && yarn test-editorconfig",
+    "test-eslint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore",
+    "test-editorconfig": "ec --config ../../.ecrc",
     "prepublish": "./build.sh"
   },
   "files": [

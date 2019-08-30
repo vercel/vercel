@@ -17,6 +17,9 @@
   "scripts": {
     "build": "./build.sh",
     "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-lint": "yarn test-eslint && yarn test-editorconfig",
+    "test-eslint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore",
+    "test-editorconfig": "ec --config ../../.ecrc",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
