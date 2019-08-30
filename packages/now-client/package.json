@@ -1,7 +1,7 @@
 {
   "name": "now-client",
   "version": "5.1.1-canary.0",
-  "main": "lib/index.js",
+  "main": "lib/src/index.js",
   "typings": "lib/src/index.d.ts",
   "license": "MIT",
   "scripts": {
