@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest"
+    "test-integration-once": "jest --verbose"
   },
   "files": [
     "index.js",
