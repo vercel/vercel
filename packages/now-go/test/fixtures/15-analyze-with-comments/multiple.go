@@ -13,6 +13,11 @@ func Index1(w http.ResponseWriter) {
 }
 
 // Index2 func
-func Index2(w http.ResponseWriter, r *http.Request) {
+func Index2(w http.ResponseWriter, str string, req *http.Request) {
 	fmt.Fprintf(w, "two:RANDOMNESS_PLACEHOLDER")
+}
+
+// Index3 func
+func Index3(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "three:RANDOMNESS_PLACEHOLDER")
 }

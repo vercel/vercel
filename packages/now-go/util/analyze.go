@@ -197,7 +197,7 @@ func main() {
 			// find a valid `http.HandlerFunc` handler function
 			params := rf[fn.Type.Params.Pos()-offset : fn.Type.Params.End()-offset]
 			validHandlerFunc := (strings.Contains(string(params), "http.ResponseWriter") &&
-				strings.Contains(string(params), "*http.Request"))
+				strings.Contains(string(params), "*http.Request") && len(fn.Type.Params.List) == 2)
 
 			if validHandlerFunc {
 				// we found the first exported function with `http.HandlerFunc`

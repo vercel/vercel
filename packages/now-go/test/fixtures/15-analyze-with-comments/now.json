@@ -3,6 +3,6 @@
   "builds": [{ "src": "*.go", "use": "@now/go" }],
   "probes": [
     { "path": "/", "mustContain": "RANDOMNESS_PLACEHOLDER" },
-    { "path": "/multiple.go", "mustContain": "two:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/multiple.go", "mustContain": "three:RANDOMNESS_PLACEHOLDER" }
   ]
 }
