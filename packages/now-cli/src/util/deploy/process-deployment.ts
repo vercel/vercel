@@ -1,5 +1,4 @@
 import bytes from 'bytes';
-// @ts-ignore
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
@@ -15,15 +14,15 @@ export default async function processDeployment({
   env,
   quiet
 }: any) {
-  const { warn, log } = createOutput({ debug })
+  const { warn, log } = createOutput({ debug });
 
   if (!legacy) {
-    let buildSpinner = null
-    let deploySpinner = null
+    let buildSpinner = null;
+    let deploySpinner = null;
 
-    for await(const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(paths[0], requestBody)) {
       if (event.type === 'hashes-calculated') {
-        hashes = event.payload
+        hashes = event.payload;
       }
 
       if (event.type === 'warning') {
@@ -31,19 +30,21 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
-        debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
+        debug(
+          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
+            event.payload.file.data.length
+          )})`
+        );
       }
 
       if (event.type === 'all-files-uploaded') {
         if (!quiet) {
-          log(
-            `Synced ${event.payload.size} ${uploadStamp()}`
-          );
+          log(`Synced ${event.payload.size} ${uploadStamp()}`);
         }
       }
 
       if (event.type === 'created') {
-        now._host = event.payload.url
+        now._host = event.payload.url;
       }
 
       if (event.type === 'build-state-changed') {
@@ -54,67 +55,69 @@ export default async function processDeployment({
 
       if (event.type === 'all-builds-completed') {
         if (buildSpinner) {
-          buildSpinner()
+          buildSpinner();
         }
 
-        deploySpinner = wait('Finalizing...')
+        deploySpinner = wait('Finalizing...');
       }
 
       // Handle error events
       if (event.type === 'error') {
         if (buildSpinner) {
-          buildSpinner()
+          buildSpinner();
         }
 
         if (deploySpinner) {
-          deploySpinner()
+          deploySpinner();
         }
 
-        throw await now.handleDeploymentError(event.payload, { hashes, env })
+        throw await now.handleDeploymentError(event.payload, { hashes, env });
       }
 
       // Handle ready event
       if (event.type === 'ready') {
         if (deploySpinner) {
-          deploySpinner()
+          deploySpinner();
         }
 
-        return event.payload
+        return event.payload;
       }
     }
   } else {
-    for await(const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
       if (event.type === 'hashes-calculated') {
-        hashes = event.payload
+        hashes = event.payload;
       }
 
       if (event.type === 'file-uploaded') {
-        debug(`Uploaded: ${event.payload.file.names.join(' ')} (${bytes(event.payload.file.data.length)})`);
+        debug(
+          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
+            event.payload.file.data.length
+          )})`
+        );
       }
 
       if (event.type === 'all-files-uploaded') {
         if (!quiet) {
-          log(
-            `Synced ${event.payload.size} ${uploadStamp()}`
-          );
+          log(`Synced ${event.payload.size} ${uploadStamp()}`);
         }
 
         log('Building…');
       }
 
       if (event.type === 'created') {
-        now._host = event.payload.url
+        now._host = event.payload.url;
       }
 
       // Handle error events
       if (event.type === 'error') {
-        throw await now.handleDeploymentError(event.payload, { hashes, env })
+        throw await now.handleDeploymentError(event.payload, { hashes, env });
       }
 
       // Handle ready event
       if (event.type === 'ready') {
         log(`Build completed`);
-        return event.payload
+        return event.payload;
       }
     }
   }
