@@ -223,7 +223,7 @@ func main() {
 		if fn.Name.IsExported() == true {
 			for _, param := range fn.Type.Params.List {
 				paramStr := fmt.Sprintf("%s", param.Type)
-				if strings.Contains(string(paramStr), "http ResponseWriter") {
+				if strings.Contains(string(paramStr), "http ResponseWriter") && len(fn.Type.Params.List) == 2 {
 					analyzed := analyze{
 						PackageName: parsed.Name.Name,
 						FuncName:    fn.Name.Name,
