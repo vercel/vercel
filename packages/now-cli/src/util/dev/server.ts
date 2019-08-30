@@ -35,10 +35,7 @@ import {
   staticFiles as getFiles,
   getAllProjectFiles
 } from '../get-files';
-import {
-  validateNowConfigBuilds,
-  validateNowConfigRoutes
-} from './validate';
+import { validateNowConfigBuilds, validateNowConfigRoutes } from './validate';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -251,7 +248,9 @@ export default class DevServer {
             filesChangedArray,
             filesRemovedArray
           ).catch((err: Error) => {
-            this.output.warn(`An error occurred while rebuilding ${match.src}:`);
+            this.output.warn(
+              `An error occurred while rebuilding ${match.src}:`
+            );
             console.error(err.stack);
           });
         } else {
@@ -810,7 +809,10 @@ export default class DevServer {
       await Promise.all(ops);
     } catch (err) {
       // Node 8 doesn't have a code for that error
-      if (err.code === 'ERR_SERVER_NOT_RUNNING' || err.message === 'Not running') {
+      if (
+        err.code === 'ERR_SERVER_NOT_RUNNING' ||
+        err.message === 'Not running'
+      ) {
         process.exit(exitCode || 0);
       } else {
         throw err;
@@ -1111,7 +1113,7 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const { dest, status, headers = {}, uri_args } = await devRouter(
+    const { dest, status, headers, uri_args } = await devRouter(
       req.url,
       req.method,
       routes,

@@ -25,7 +25,7 @@ export type Handler = {
 export type Route = Source | Handler;
 
 export function isHandler(route: Route): route is Handler {
-  return typeof (<Handler>route).handle !== 'undefined';
+  return typeof (route as Handler).handle !== 'undefined';
 }
 
 export function normalizeRoutes(
@@ -47,24 +47,20 @@ export function normalizeRoutes(
       // typeof { handle: string }
       if (Object.keys(route).length !== 1) {
         errors.push({
-          message: `Cannot have any other keys when handle is used (handle: ${
-            route.handle
-          })`,
-          handle: route.handle,
+          message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
+          handle: route.handle
         });
       }
       if (!['filesystem'].includes(route.handle)) {
         errors.push({
           message: `This is not a valid handler (handle: ${route.handle})`,
-          handle: route.handle,
+          handle: route.handle
         });
       }
       if (handling.includes(route.handle)) {
         errors.push({
-          message: `You can only handle something once (handle: ${
-            route.handle
-          })`,
-          handle: route.handle,
+          message: `You can only handle something once (handle: ${route.handle})`,
+          handle: route.handle
         });
       } else {
         handling.push(route.handle);
@@ -86,12 +82,12 @@ export function normalizeRoutes(
       } catch (err) {
         errors.push({
           message: `Invalid regular expression: "${route.src}"`,
-          src: route.src,
+          src: route.src
         });
       }
     } else {
       errors.push({
-        message: 'A route must set either handle or src',
+        message: 'A route must set either handle or src'
       });
     }
   }
@@ -105,7 +101,7 @@ export function normalizeRoutes(
             null,
             2
           )}`,
-          errors,
+          errors
         }
       : null;
 
@@ -124,19 +120,19 @@ export const schema = {
     properties: {
       src: {
         type: 'string',
-        maxLength: 4096,
+        maxLength: 4096
       },
       dest: {
         type: 'string',
-        maxLength: 4096,
+        maxLength: 4096
       },
       methods: {
         type: 'array',
         maxItems: 10,
         items: {
           type: 'string',
-          maxLength: 32,
-        },
+          maxLength: 32
+        }
       },
       headers: {
         type: 'object',
@@ -146,22 +142,22 @@ export const schema = {
         patternProperties: {
           '^.{1,256}$': {
             type: 'string',
-            maxLength: 4096,
-          },
-        },
+            maxLength: 4096
+          }
+        }
       },
       handle: {
         type: 'string',
-        maxLength: 32,
+        maxLength: 32
       },
       continue: {
-        type: 'boolean',
+        type: 'boolean'
       },
       status: {
         type: 'integer',
         minimum: 100,
-        maximum: 999,
-      },
-    },
-  },
+        maximum: 999
+      }
+    }
+  }
 };
