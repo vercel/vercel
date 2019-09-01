@@ -10,7 +10,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "Vue-powered Static Site Generator"
+      "mustContain": "VuePress 1.x"
     },
     {
       "path": "/assets/js/app.js",
