@@ -35,8 +35,8 @@ export default async function runBuild({
 
   const buildOutput = await builder.build({
     files,
-    entrypoint: build.src,
     workPath: workDir,
+    entrypoint: build.src,
     config: build.config || {}
   });
 

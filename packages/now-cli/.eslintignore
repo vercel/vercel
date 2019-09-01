@@ -3,6 +3,8 @@ download
 dist
 test/fixtures
 test/dev/fixtures
+test/build/fixtures
+test/build/fixtures/*/.now
 bin
 link
 src/util/dev/templates/*.ts

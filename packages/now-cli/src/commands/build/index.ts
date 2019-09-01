@@ -1,5 +1,5 @@
 import path from 'path';
-import _glob from 'glob';
+import _glob, { IOptions as GlobOptions } from 'glob';
 import fs from 'fs-extra';
 import plural from 'pluralize';
 import { promisify } from 'util';
@@ -17,7 +17,12 @@ import { getAllProjectFiles } from '../../util/get-files';
 import { getYarnPath } from '../../util/dev/yarn-installer';
 import { installBuilders } from '../../util/dev/builder-cache';
 
-const glob = promisify(_glob);
+const globP = promisify(_glob);
+const glob = async (pattern: string, options: GlobOptions) => {
+  return (await globP(pattern, options)).map((p: string) =>
+    p.replace(/\\/g, '/')
+  );
+};
 
 const cwd = process.cwd();
 const outputDir = path.join(cwd, '.now');
@@ -29,24 +34,44 @@ async function getBuilds(
   files: string[],
   output: Output
 ): Promise<Builder[] | null> {
-  let builds = [];
+  let builds: Builder[] = [];
   let nowJson;
 
   try {
     nowJson = await fs.readJson(path.join(cwd, 'now.json'));
-    builds = nowJson.builds || [];
+    const toResolve: Builder[] = [];
+    builds = (nowJson.builds || []).filter((build: Builder) => {
+      if (_glob.hasMagic(build.src)) {
+        toResolve.push(build);
+        return false;
+      }
+      return true;
+    });
+
+    for (const build of toResolve) {
+      const results = await glob(build.src, { cwd, nodir: true });
+      results.forEach((src: string) => {
+        builds.push({
+          src,
+          use: build.use,
+          config: build.config
+        });
+      });
+    }
   } catch (err) {
-    output.debug('No now.json found, assuming zero-config');
+    output.debug('No now.json found, using zero-config');
   }
 
-  let pkg;
-  try {
-    pkg = await fs.readJson(path.join(cwd, 'package.json'));
-  } catch (err) {
-    output.debug('No package.json found');
+  if (builds.length === 0) {
+    let pkg;
+    try {
+      pkg = await fs.readJson(path.join(cwd, 'package.json'));
+    } catch (err) {
+      output.debug('No package.json found');
+    }
+    const { builders } = await detectBuilders(files, pkg);
+    builds.push(...(builders || []));
   }
-  const { builders } = await detectBuilders(files, pkg)
-  builds.push(...(builders || []))
 
   return builds;
 }
@@ -63,9 +88,7 @@ export default async function main(ctx: NowContext) {
   const files = (await getAllProjectFiles(cwd, output))
     .concat(
       // getAllProjectFiles doesn't include dotfiles (.babelrc) so grab those
-      (await glob('**/.*', { cwd, nodir: true })).map(f =>
-        f.replace(/\\/g, '/')
-      )
+      await glob('**/.*', { cwd, nodir: true })
     )
     .filter(file => {
       return !file.startsWith('node_modules') && !file.startsWith('.now');

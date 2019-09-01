@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/next@canary"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@now/node@canary"
+    }
+  ]
+}

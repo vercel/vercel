@@ -1,0 +1,14 @@
+{
+  "name": "00-now-next",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "9.0.5",
+    "react": "16.9.0",
+    "react-dom": "16.9.0"
+  }
+}
