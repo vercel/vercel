@@ -185,7 +185,6 @@ func main() {
 
 	parsed := parse(fileName)
 	offset := parsed.Pos()
-	reqRep := "*http.Request http.ResponseWriter"
 
 	for _, decl := range parsed.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -195,11 +194,36 @@ func main() {
 			continue
 		}
 		if fn.Name.IsExported() == true {
-			// find a valid `net/http` handler function
+			// find a valid `http.HandlerFunc` handler function
+			params := rf[fn.Type.Params.Pos()-offset : fn.Type.Params.End()-offset]
+			validHandlerFunc := (strings.Contains(string(params), "http.ResponseWriter") &&
+				strings.Contains(string(params), "*http.Request") && len(fn.Type.Params.List) == 2)
+
+			if validHandlerFunc {
+				// we found the first exported function with `http.HandlerFunc`
+				// we're done!
+				analyzed := analyze{
+					PackageName: parsed.Name.Name,
+					FuncName:    fn.Name.Name,
+					Watch:       unique(relatedFiles),
+				}
+				analyzedJSON, _ := json.Marshal(analyzed)
+				fmt.Print(string(analyzedJSON))
+				os.Exit(0)
+			}
+		}
+	}
+
+	// fallback, when ast coudn't parse, with multi-line comments
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if fn.Name.IsExported() == true {
 			for _, param := range fn.Type.Params.List {
-				if strings.Contains(reqRep, string(rf[param.Type.Pos()-offset:param.Type.End()-offset])) {
-					// we found the first exported function with `net/http`
-					// we're done!
+				paramStr := fmt.Sprintf("%s", param.Type)
+				if strings.Contains(string(paramStr), "http ResponseWriter") && len(fn.Type.Params.List) == 2 {
 					analyzed := analyze{
 						PackageName: parsed.Name.Name,
 						FuncName:    fn.Name.Name,

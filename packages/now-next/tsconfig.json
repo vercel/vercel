@@ -9,6 +9,6 @@
     "sourceMap": false,
     "declaration": false
   },
-  "include": ["src/**/*", "global.d.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
