@@ -7,7 +7,7 @@ packages/now-cli/download
 packages/now-cli/dist
 packages/now-cli/test/fixtures
 packages/now-cli/test/dev/fixtures
-packages/now-cli/test/build/fixtures/*/.now
+packages/now-cli/test/build/fixtures
 packages/now-cli/bin
 packages/now-cli/link
 packages/now-cli/src/util/dev/templates/*.ts
