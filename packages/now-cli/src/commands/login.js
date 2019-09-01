@@ -5,8 +5,8 @@ import promptEmail from 'email-prompt';
 import ms from 'ms';
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import mri from 'mri';
 import ua from '../util/ua.ts';
+import getArgs from '../util/get-args';
 import error from '../util/output/error';
 import aborted from '../util/output/aborted';
 import wait from '../util/output/wait';
@@ -14,15 +14,16 @@ import highlight from '../util/output/highlight';
 import info from '../util/output/info';
 import ok from '../util/output/ok';
 import cmd from '../util/output/cmd.ts';
-import ready from '../util/output/ready';
 import param from '../util/output/param.ts';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
+import { handleError } from '../util/error';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import getNowDir from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
+import createOutput from '../util/output';
 import executeLogin from '../util/login/login.ts'
 
 const debug = debugFactory('now:sh:login');
@@ -128,17 +129,22 @@ const readEmail = async () => {
 };
 
 const login = async ctx => {
-  const argv = mri(ctx.argv.slice(2), {
-    boolean: ['help'],
-    alias: {
-      help: 'h'
-    }
-  });
+  let argv;
+
+  try {
+    argv = getArgs(ctx.argv.slice(2));
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
   if (argv.help) {
     help();
     await exit(0);
   }
+
+  const debugEnabled = argv['--debug'];
+  const output = createOutput({ debug: debugEnabled });
 
   argv._ = argv._.slice(1);
 
@@ -247,12 +253,11 @@ const login = async ctx => {
   writeToAuthConfigFile(ctx.authConfig);
   writeToConfigFile(ctx.config);
 
+  output.debug(`Saved credentials in "${hp(getNowDir())}"`);
+
   console.log(
-    ready(
-      `Authentication token and personal details saved in ${param(
-        hp(getNowDir())
-      )}`
-    )
+    `${chalk.cyan('> Congratulations!')} ` +
+    `You are now logged in. In order to deploy something, run ${cmd('now')}.`
   );
 
   return ctx;

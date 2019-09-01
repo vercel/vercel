@@ -8,7 +8,7 @@ import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
-import cacheDirectory from 'cache-or-tmp-directory';
+import XDGAppPaths from 'xdg-app-paths';
 import {
   createReadStream,
   mkdirp,
@@ -80,7 +80,7 @@ export async function prepareCacheDir() {
   const { NOW_BUILDER_CACHE_DIR } = process.env;
   const designated = NOW_BUILDER_CACHE_DIR
     ? resolve(NOW_BUILDER_CACHE_DIR)
-    : cacheDirectory('co.zeit.now');
+    : XDGAppPaths('co.zeit.now').cache();
 
   if (!designated) {
     throw new NoBuilderCacheError();
