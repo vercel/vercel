@@ -16,7 +16,7 @@ export const API_DELETE_DEPLOYMENTS_LEGACY =
 export const EVENTS = new Set([
   // File events
   'hashes-calculated',
-  'file-count',
+  'file_count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
