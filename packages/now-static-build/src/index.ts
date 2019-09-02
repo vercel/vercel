@@ -319,7 +319,6 @@ export async function build({
       }
 
       validateDistDir(distPath, meta.isDev, config);
-      output = await glob('**', distPath, mountpoint);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -328,6 +327,8 @@ export async function build({
         );
         routes.push(...frameworkRoutes);
       }
+
+      output = await glob('**', distPath, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
