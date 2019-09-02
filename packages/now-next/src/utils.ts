@@ -1,11 +1,17 @@
 import zlib from 'zlib';
 import path from 'path';
 import fs from 'fs-extra';
-import { ZipFile} from 'yazl';
+import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
-import { Files, FileFsRef, streamToBuffer, Lambda } from '@now/build-utils';
+import {
+  Files,
+  FileFsRef,
+  streamToBuffer,
+  Lambda,
+  Route,
+} from '@now/build-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -14,6 +20,7 @@ export interface EnvConfig {
 }
 
 // Identify /[param]/ in route string
+// eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
 
 function isDynamicRoute(route: string): boolean {
@@ -48,7 +55,7 @@ function excludeFiles(
     }
     return {
       ...newFiles,
-      [filePath]: files[filePath],
+      [filePath]: files[filePath]
     };
   }, {});
 }
@@ -109,7 +116,7 @@ function normalizePackageJson(
   const dependencies: stringMap = {};
   const devDependencies: stringMap = {
     ...defaultPackageJson.dependencies,
-    ...defaultPackageJson.devDependencies,
+    ...defaultPackageJson.devDependencies
   };
 
   if (devDependencies.react) {
@@ -122,6 +129,8 @@ function normalizePackageJson(
     delete devDependencies['react-dom'];
   }
 
+  delete devDependencies['next-server'];
+
   return {
     ...defaultPackageJson,
     dependencies: {
@@ -130,20 +139,17 @@ function normalizePackageJson(
       'react-dom': 'latest',
       ...dependencies, // override react if user provided it
       // next-server is forced to canary
-      'next-server': 'v7.0.2-canary.49',
+      'next-server': 'v7.0.2-canary.49'
     },
     devDependencies: {
       ...devDependencies,
       // next is forced to canary
-      next: 'v7.0.2-canary.49',
-      // next-server is a dependency here
-      'next-server': undefined,
+      next: 'v7.0.2-canary.49'
     },
     scripts: {
       ...defaultPackageJson.scripts,
-      'now-build':
-        'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
-    },
+      'now-build': 'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
+    }
   };
 }
 
@@ -197,7 +203,7 @@ function getRoutes(
   pathsInside: string[],
   files: Files,
   url: string
-): any[] {
+): Route[] {
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
 
@@ -209,15 +215,15 @@ function getRoutes(
     filesInside[file] = files[file];
   }
 
-  const routes: any[] = [
+  const routes: Route[] = [
     {
       src: `${prefix}_next/(.*)`,
-      dest: `${url}/_next/$1`,
+      dest: `${url}/_next/$1`
     },
     {
       src: `${prefix}static/(.*)`,
-      dest: `${url}/static/$1`,
-    },
+      dest: `${url}/static/$1`
+    }
   ];
   const filePaths = Object.keys(filesInside);
   const dynamicPages = [];
@@ -245,7 +251,7 @@ function getRoutes(
 
     routes.push({
       src: `${prefix}${pageName}`,
-      dest: `${url}/${pageName}`,
+      dest: `${url}/${pageName}`
     });
 
     if (pageName.endsWith('index')) {
@@ -253,7 +259,7 @@ function getRoutes(
 
       routes.push({
         src: `${prefix}${resolvedIndex}`,
-        dest: `${url}/${resolvedIndex}`,
+        dest: `${url}/${resolvedIndex}`
       });
     }
   }
@@ -282,7 +288,7 @@ function getRoutes(
     const fileName = path.relative('public', relativePath);
     const route = {
       src: `${prefix}${fileName}`,
-      dest: `${url}/${fileName}`,
+      dest: `${url}/${fileName}`
     };
 
     // Only add the route if a page is not already using it
@@ -318,7 +324,7 @@ export function getDynamicRoutes(
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
-  } catch (_) {}
+  } catch (_) {} // eslint-disable-line no-empty
 
   if (!getRouteRegex || !getSortedRoutes) {
     throw new Error(
@@ -328,7 +334,7 @@ export function getDynamicRoutes(
 
   const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
     pageName,
-    matcher: getRouteRegex!(pageName).re,
+    matcher: getRouteRegex && getRouteRegex(pageName).re
   }));
 
   const routes: { src: string; dest: string }[] = [];
@@ -338,10 +344,12 @@ export function getDynamicRoutes(
       ? path.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;
 
-    routes.push({
-      src: pageMatcher.matcher.source,
-      dest,
-    });
+    if (pageMatcher && pageMatcher.matcher) {
+      routes.push({
+        src: pageMatcher.matcher.source,
+        dest
+      });
+    }
   });
   return routes;
 }
@@ -362,35 +370,41 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
-export type PseudoLayer = { [fileName: string]: {
-  crc32: number,
-  compBuffer: Buffer,
-  uncompressedSize: number
-} };
+export type PseudoLayer = {
+  [fileName: string]: {
+    crc32: number;
+    compBuffer: Buffer;
+    uncompressedSize: number;
+  };
+};
 
 const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
-    zlib.deflateRaw(buf, {level: zlib.constants.Z_BEST_COMPRESSION}, (err, compBuf) => {
-      if (err) return reject(err)
-      resolve(compBuf)
-    })
-  })
-}
+    zlib.deflateRaw(
+      buf,
+      { level: zlib.constants.Z_BEST_COMPRESSION },
+      (err, compBuf) => {
+        if (err) return reject(err);
+        resolve(compBuf);
+      }
+    );
+  });
+};
 
-export async function createPseudoLayer(
-  files: { [fileName: string]: FileFsRef }
-): Promise<PseudoLayer> {
-  const pseudoLayer: PseudoLayer = {}
+export async function createPseudoLayer(files: {
+  [fileName: string]: FileFsRef;
+}): Promise<PseudoLayer> {
+  const pseudoLayer: PseudoLayer = {};
 
   for (const fileName of Object.keys(files)) {
-    const file = files[fileName]
-    const origBuffer = await streamToBuffer(file.toStream())
-    const compBuffer = await compressBuffer(origBuffer)
+    const file = files[fileName];
+    const origBuffer = await streamToBuffer(file.toStream());
+    const compBuffer = await compressBuffer(origBuffer);
     pseudoLayer[fileName] = {
       compBuffer,
       crc32: crc32.unsigned(origBuffer),
-      uncompressedSize: origBuffer.byteLength,
-    }
+      uncompressedSize: origBuffer.byteLength
+    };
   }
 
   return pseudoLayer;
@@ -413,7 +427,7 @@ export async function createLambdaFromPseudoLayers({
   layers,
   handler,
   runtime,
-  environment = {},
+  environment = {}
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
   const zipFile = new ZipFile();
@@ -423,10 +437,13 @@ export async function createLambdaFromPseudoLayers({
   for (const layer of layers) {
     for (const seedKey of Object.keys(layer)) {
       const { compBuffer, crc32, uncompressedSize } = layer[seedKey];
-      (zipFile as any).addDeflatedBuffer(compBuffer, seedKey, {
+
+      // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
+      zipFile.addDeflatedBuffer(compBuffer, seedKey, {
         crc32,
-        uncompressedSize,
+        uncompressedSize
       });
+
       addedFiles.add(seedKey);
     }
   }
@@ -440,16 +457,14 @@ export async function createLambdaFromPseudoLayers({
   }
   zipFile.end();
 
-  const zipBuffer = await streamToBuffer(
-    zipFile.outputStream
-  );
+  const zipBuffer = await streamToBuffer(zipFile.outputStream);
   createLambdaSema.release();
 
   return new Lambda({
     handler,
     runtime,
     zipBuffer,
-    environment,
+    environment
   });
 }
 
@@ -466,5 +481,5 @@ export {
   stringMap,
   syncEnvVars,
   normalizePage,
-  isDynamicRoute,
+  isDynamicRoute
 };
