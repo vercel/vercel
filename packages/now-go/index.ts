@@ -327,7 +327,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       const src = [join(baseGoModPath, mainModGoFileName)];
 
-      await go.build(src, destPath, config.ldsflags);
+      await go.build(src, destPath);
     } catch (err) {
       console.log('failed to `go build`');
       throw err;
