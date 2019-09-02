@@ -49,7 +49,7 @@ function createGoPathTree(goPath: string, platform: string, arch: string) {
   debug('Creating GOPATH directory structure for %o (%s)', goPath, tuple);
   return Promise.all([
     mkdirp(join(goPath, 'bin')),
-    mkdirp(join(goPath, 'pkg', tuple)),
+    mkdirp(join(goPath, 'pkg', tuple))
   ]);
 }
 
@@ -90,11 +90,9 @@ class GoWrapper {
     debug('Building optimized `go` binary %o -> %o', src, dest);
     const sources = Array.isArray(src) ? src : [src];
 
-    let flags = ['-ldflags', '-s -w'];
-    if (process.env.GO_BUILD_FLAGS) {
-      let flagsArr = stringArgv(process.env.GO_BUILD_FLAGS);
-      flags = [...flagsArr];
-    }
+    const flags = process.env.GO_BUILD_FLAGS
+      ? stringArgv(process.env.GO_BUILD_FLAGS)
+      : ['-ldflags', '-s -w'];
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }
@@ -112,7 +110,7 @@ export async function createGo(
     ...process.env,
     PATH: path,
     GOPATH: goPath,
-    ...opts.env,
+    ...opts.env
   };
   if (goMod) {
     env.GO111MODULE = 'on';
