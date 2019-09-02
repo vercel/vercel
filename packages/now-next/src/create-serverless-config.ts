@@ -36,8 +36,8 @@ module.exports = function(...args) {
   `.trim();
 }
 
-function getDefaultData() {
-  return `module.exports = { target: 'serverless' };`;
+function getDefaultData(target: string) {
+  return `module.exports = { target: '${target}' };`;
 }
 
 export default async function createServerlessConfig(
@@ -61,6 +61,6 @@ export default async function createServerlessConfig(
     await fs.rename(configPath, backupConfigPath);
     await fs.writeFile(configPath, getCustomData(backupConfigName, target));
   } else {
-    await fs.writeFile(configPath, getDefaultData());
+    await fs.writeFile(configPath, getDefaultData(target));
   }
 }
