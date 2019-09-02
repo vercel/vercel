@@ -1,6 +1,5 @@
 version: 2
 jobs:
-
   install:
     docker:
       - image: circleci/node:10
@@ -11,9 +10,9 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "yarn.lock" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+            - v1-dependencies-{{ checksum "yarn.lock" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
       - run:
           name: Updating apt packages
           command: sudo apt-get update
@@ -77,7 +76,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - packages/gatsby-plugin-now/tests/fixtures
+            - packages/gatsby-plugin-now/test/fixtures
             - packages/now-build-utils/dist
             - packages/now-cgi/dist
             - packages/now-cli/dist
