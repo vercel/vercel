@@ -2084,10 +2084,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.2.13":
-  version "0.2.13"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.2.13.tgz#44b21a2c6bedc381f696ea03046c27cdd793cc9b"
-  integrity sha512-DxpZ1G1w88NnFwNcfUJlhkGsFCcx5kXksFEmhlBiI+k53km5vhRo6uO+ExI09YIcr29gOKglm1gusNiFEJaN8A==
+"@zeit/node-file-trace@0.2.14":
+  version "0.2.14"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.2.14.tgz#c3f00340a739ee598fcb866f24e0da42fb72a4e7"
+  integrity sha512-BF2HRQPuCr1+lRXBTlHVRGk5sFe9fZB3lIi0BhGPvrugPqZPSDjBua+ky07rnOIq5sj1cZdqMZ0fghtieOQqkw==
   dependencies:
     acorn "^6.1.1"
     acorn-stage3 "^2.0.0"

@@ -26,9 +26,10 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  debug
+  debug,
+  PackageJson
 } from '@now/build-utils';
-import nodeFileTrace from '@zeit/node-file-trace';
+import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
@@ -85,10 +86,7 @@ async function readPackageJson(entryPath: string) {
 /**
  * Write package.json
  */
-async function writePackageJson(
-  workPath: string,
-  packageJson: Record<string, any>
-) {
+async function writePackageJson(workPath: string, packageJson: PackageJson) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
@@ -202,7 +200,7 @@ export const build = async ({
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
       debug(`${name} Installing dependencies...`);
-      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
+      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
       if (!process.env.NODE_ENV) {
         process.env.NODE_ENV = 'development';
@@ -287,7 +285,7 @@ export const build = async ({
   }
 
   debug('installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
   try {
@@ -305,7 +303,7 @@ export const build = async ({
 
   debug('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const env = { ...spawnOpts.env } as any;
+  const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
@@ -314,7 +312,8 @@ export const build = async ({
     await runNpmInstall(
       entryPath,
       ['--prefer-offline', '--production'],
-      spawnOpts
+      spawnOpts,
+      meta
     );
   }
 
@@ -479,7 +478,7 @@ export const build = async ({
     const pseudoLayers: PseudoLayer[] = [];
     const apiPseudoLayers: PseudoLayer[] = [];
     const isApiPage = (page: string) =>
-      page.replace(/\\/g, '/').match(/serverless\/pages\/api/)
+      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -494,41 +493,31 @@ export const build = async ({
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath)
+      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
 
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
-          apiPages.push(page)
+          apiPages.push(page);
         } else {
-          nonApiPages.push(page)
+          nonApiPages.push(page);
         }
       }
 
-      type FileTraceReasons = {
-        [fileName: string]: {
-          type: string;
-          ignored: boolean;
-          parents: string[];
-        };
-      };
-      type FileTraceResult = {
-        fileList: string[];
-        reasons: FileTraceReasons;
-      };
+      const {
+        fileList: apiFileList,
+        reasons: apiReasons
+      } = await nodeFileTrace(apiPages, { base: workPath });
 
-      const { fileList: apiFileList, reasons: apiReasons } = ((
-        await nodeFileTrace(apiPages, { base: workPath })
-      ) as any) as FileTraceResult
-
-      const { fileList, reasons: nonApiReasons } = ((await nodeFileTrace(
+      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
         Object.keys(pages).map(page => pages[page].fsPath),
         { base: workPath }
-      )) as any) as FileTraceResult
+      );
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
       const collectTracedFiles = (
-        reasons: FileTraceReasons, files: { [filePath: string]: FileFsRef }
+        reasons: NodeFileTraceReasons,
+        files: { [filePath: string]: FileFsRef }
       ) => (file: string) => {
         const reason = reasons[file];
         if (reason && reason.type === 'initial') {
@@ -537,9 +526,9 @@ export const build = async ({
         }
 
         files[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(workPath, file)
         });
-      }
+      };
 
       fileList.forEach(collectTracedFiles(nonApiReasons, tracedFiles));
       apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
@@ -561,7 +550,7 @@ export const build = async ({
         path.join(entryPath, '.next', 'serverless')
       );
 
-      const assetKeys = Object.keys(assets!);
+      const assetKeys = Object.keys(assets);
       if (assetKeys.length > 0) {
         debug('detected (legacy) assets to be bundled with lambda:');
         assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
