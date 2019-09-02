@@ -136,7 +136,10 @@ export default async function main(ctx) {
   types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit'];
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const client = new Client({
@@ -296,9 +299,16 @@ function printLogShort(log) {
 
   data.split('\n').forEach((line, i) => {
     if (i === 0) {
-      console.log(`${chalk.dim(date)}  ${line}`);
+      console.log(
+        `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
+      );
     } else {
-      console.log(`${' '.repeat(date.length)}  ${line}`);
+      console.log(
+        `${' '.repeat(date.length)}  ${line.replace(
+          '[now-builder-debug] ',
+          ''
+        )}`
+      );
     }
   });
 
