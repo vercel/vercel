@@ -8658,10 +8658,10 @@ path-type@^4.0.0:
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
-pcre-to-regexp@0.0.5:
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/pcre-to-regexp/-/pcre-to-regexp-0.0.5.tgz#95ba2462c12aeb375c7f8de1168c85c6eef61cdd"
-  integrity sha512-0FCWn56OoWhaEeekT+C8z+vYBgZdGj05Auu3KeKkzj+CWQ6jTtHGdffaoU7WH/f37ZyHAHnRmFvKYZwR31DByg==
+pcre-to-regexp@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/pcre-to-regexp/-/pcre-to-regexp-1.0.0.tgz#c1055d7d3ea9c53c15f083597a4376ebdd83ae2b"
+  integrity sha512-hbi3LC+/UxkBfIXL88My/+AhY2c/EHVRNlpS24NLH4THskln/Cx2uNu9x2CzplsI67r2m9VNlA3PoGyIqWHF1w==
 
 pend@~1.2.0:
   version "1.2.0"
@@ -10022,6 +10022,11 @@ stream-to-promise@2.2.0:
     any-promise "~1.3.0"
     end-of-stream "~1.1.0"
     stream-to-array "~2.3.0"
+
+string-argv@0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/string-argv/-/string-argv-0.3.1.tgz#95e2fbec0427ae19184935f816d74aaa4c5c19da"
+  integrity sha512-a1uQGz7IyVy9YwhqjZIZu1c8JO8dNIe20xBmSS6qu9kv++k3JGzCVmprbNN5Kn+BgzD5E7YYwg1CcjuJMRNsvg==
 
 string-argv@^0.3.0:
   version "0.3.0"
