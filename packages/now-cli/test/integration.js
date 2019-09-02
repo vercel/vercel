@@ -179,7 +179,11 @@ test('login', async t => {
 
   const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
   t.is(loginOutput.code, 0, formatOutput(loginOutput));
-  t.regex(loginOutput.stdout, /You are now logged in\./gm, formatOutput(loginOutput));
+  t.regex(
+    loginOutput.stdout,
+    /You are now logged in\./gm,
+    formatOutput(loginOutput)
+  );
 
   // Save the new token
   const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
@@ -265,11 +269,7 @@ test('detect update command', async t => {
       }
     );
 
-    t.regex(
-      stderr,
-      /npm i -g now@/gm,
-      `Received:\n"${stderr}"\n"${stdout}"`
-    );
+    t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
   }
 });
 
@@ -318,9 +318,13 @@ test('deploy a node microservice', async t => {
   t.is(content.id, contextName);
 
   // Test that it can be deleted via `now rm`
-  ({ stdout, stderr, code } = await execa(binaryPath, ['rm', '--yes', href, ...defaultArgs], {
-    reject: false
-  }));
+  ({ stdout, stderr, code } = await execa(
+    binaryPath,
+    ['rm', '--yes', href, ...defaultArgs],
+    {
+      reject: false
+    }
+  ));
   t.is(code, 0, formatOutput({ stdout, stderr }));
 
   // Give 2 seconds for the proxy purge to propagate
@@ -401,20 +405,18 @@ test('deploy a dockerfile project', async t => {
 });
 
 test('find deployment in list', async t => {
-  const output = await execa(
-    binaryPath,
-    ['--debug', 'ls', ...defaultArgs],
-    {
-      reject: false
-    }
-  );
+  const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
+    reject: false
+  });
 
   const deployments = parseList(output.stdout);
 
   t.true(deployments.length > 0, formatOutput(output));
   t.is(output.code, 0, formatOutput(output));
 
-  const target = deployments.find(deployment => deployment.includes(`${session}-`));
+  const target = deployments.find(deployment =>
+    deployment.includes(`${session}-`)
+  );
 
   t.truthy(target, formatOutput(output));
 
@@ -462,9 +464,7 @@ test('create alias for deployment', async t => {
     }
   );
 
-  const goal = `> Success! https://${hosts.alias} now points to https://${
-    hosts.deployment
-  }`;
+  const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
@@ -869,6 +869,21 @@ test('output logs of a 2.0 deployment', async t => {
   t.is(code, 0);
 });
 
+test('output logs of a 2.0 deployment without annotate', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false
+    }
+  );
+  t.true(!stderr.includes('[now-builder-debug]'));
+  t.true(!stderr.includes('START RequestId'));
+  t.true(!stderr.includes('END RequestId'));
+  t.true(!stderr.includes('REPORT RequestId'));
+  t.is(code, 0);
+});
+
 test('create wildcard alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
@@ -883,9 +898,7 @@ test('create wildcard alias for deployment', async t => {
     }
   );
 
-  const goal = `> Success! ${hosts.alias} now points to https://${
-    hosts.deployment
-  }`;
+  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
@@ -1178,13 +1191,23 @@ test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [directory, '--target=staging', ...args]);
-  t.regex(targetCall.stderr, /Setting target to staging/gm, formatOutput(targetCall));
+  const targetCall = await execa(binaryPath, [
+    directory,
+    '--target=staging',
+    ...args
+  ]);
+  t.regex(
+    targetCall.stderr,
+    /Setting target to staging/gm,
+    formatOutput(targetCall)
+  );
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
   t.is(deployment.target, 'staging', JSON.stringify(deployment, null, 2));
 });
 
@@ -1192,23 +1215,47 @@ test('create a production deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [directory, '--target=production', ...args]);
+  const targetCall = await execa(binaryPath, [
+    directory,
+    '--target=production',
+    ...args
+  ]);
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
-  t.regex(targetCall.stderr, /`--prod` option instead/gm, formatOutput(targetCall));
-  t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
+  t.regex(
+    targetCall.stderr,
+    /`--prod` option instead/gm,
+    formatOutput(targetCall)
+  );
+  t.regex(
+    targetCall.stderr,
+    /Setting target to production/gm,
+    formatOutput(targetCall)
+  );
 
   const { host: targetHost } = new URL(targetCall.stdout);
-  const targetDeployment = await apiFetch(`/v10/now/deployments/unknown?url=${targetHost}`).then((resp) => resp.json());
-  t.is(targetDeployment.target, 'production', JSON.stringify(targetDeployment, null, 2));
+  const targetDeployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${targetHost}`
+  ).then(resp => resp.json());
+  t.is(
+    targetDeployment.target,
+    'production',
+    JSON.stringify(targetDeployment, null, 2)
+  );
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
   t.is(call.code, 0, formatOutput(call));
-  t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
+  t.regex(
+    call.stderr,
+    /Setting target to production/gm,
+    formatOutput(targetCall)
+  );
 
   const { host } = new URL(call.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
   t.is(deployment.target, 'production', JSON.stringify(deployment, null, 2));
 });
 
@@ -1605,9 +1652,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(
       result.name,
       'now-revert-alias-2',
-      `[Second run] Received ${
-        result.name
-      } instead on ${url} (${deploymentUrl})`
+      `[Second run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
 
@@ -1686,7 +1731,7 @@ test('render build errors', async t => {
 test('invalid deployment, projects and alias names', async t => {
   const check = async (...args) => {
     const output = await execute(args);
-    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`
+    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`;
     t.is(output.code, 1, print);
     t.regex(output.stderr, /The provided argument/gm, print);
   };
@@ -1710,14 +1755,22 @@ test('now certs ls --after=cert_test', async t => {
   const output = await execute(['certs', 'ls', '--after=cert_test']);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /The cert cert_test can't be found\./gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /The cert cert_test can't be found\./gm,
+    formatOutput(output)
+  );
 });
 
 test('now hasOwnProperty not a valid subcommand', async t => {
   const output = await execute(['hasOwnProperty']);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /The specified file or directory "hasOwnProperty" does not exist/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /The specified file or directory "hasOwnProperty" does not exist/gm,
+    formatOutput(output)
+  );
 });
 
 test.after.always(async () => {
