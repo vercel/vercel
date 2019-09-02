@@ -298,6 +298,14 @@ function printLogShort(log) {
   const date = new Date(log.created).toISOString();
 
   data.split('\n').forEach((line, i) => {
+    if (line.includes('START RequestId:') || line.includes('END RequestId:')) {
+      return;
+    }
+
+    if (line.includes('REPORT RequestId:')) {
+      line = line.substring(line.indexOf('Duration:'), line.length);
+    }
+
     if (i === 0) {
       console.log(
         `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
