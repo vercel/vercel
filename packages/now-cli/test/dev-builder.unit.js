@@ -1,5 +1,4 @@
 import test from 'ava';
-
 import { filterPackage } from '../src/util/dev/builder-cache';
 
 test('[dev-builder] filter install "latest", cached canary', async t => {
