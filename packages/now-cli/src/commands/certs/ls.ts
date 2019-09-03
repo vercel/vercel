@@ -77,7 +77,7 @@ async function ls(
 
   if (certs.length >= 100) {
     const { uid: lastCert } = certificates[certificates.length - 1];
-    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
+    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.\n`);
   }
 
   if (certs.length > 0) {
