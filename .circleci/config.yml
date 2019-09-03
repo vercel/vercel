@@ -1,6 +1,5 @@
 version: 2
 jobs:
-
   install:
     docker:
       - image: circleci/node:10
@@ -11,9 +10,9 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "yarn.lock" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+            - v1-dependencies-{{ checksum "yarn.lock" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
       - run:
           name: Updating apt packages
           command: sudo apt-get update
@@ -26,6 +25,7 @@ jobs:
       - save_cache:
           paths:
             - node_modules
+            - packages/gatsby-plugin-now/node_modules
             - packages/now-build-utils/node_modules
             - packages/now-cgi/node_modules
             - packages/now-cli/node_modules
@@ -43,6 +43,7 @@ jobs:
           root: .
           paths:
             - node_modules
+            - packages/gatsby-plugin-now/node_modules
             - packages/now-build-utils/node_modules
             - packages/now-cgi/node_modules
             - packages/now-cli/node_modules
@@ -75,6 +76,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
+            - packages/gatsby-plugin-now/test/fixtures
             - packages/now-build-utils/dist
             - packages/now-cgi/dist
             - packages/now-cli/dist
@@ -91,6 +93,7 @@ jobs:
             - packages/now-routing-utils/dist
             - packages/now-ruby/dist
             - packages/now-static-build/dist
+            - packages/now-static-build/test/fixtures/10a-gatsby-redirects/plugins
 
   test-lint:
     docker:
