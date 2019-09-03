@@ -11,7 +11,10 @@ import strlen from '../../util/strlen.ts';
 import wait from '../../util/output/wait';
 
 export default async function ls(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
@@ -48,15 +51,13 @@ export default async function ls(ctx, opts, args, output) {
     return 1;
   }
 
-  if (!opts['--json']) {
-    cancelWait = wait(
-      args[0]
-        ? `Fetching alias details for "${args[0]}" under ${chalk.bold(
-            contextName
-          )}`
-        : `Fetching aliases under ${chalk.bold(contextName)}`
-    );
-  }
+  cancelWait = wait(
+    args[0]
+      ? `Fetching alias details for "${args[0]}" under ${chalk.bold(
+          contextName
+        )}`
+      : `Fetching aliases under ${chalk.bold(contextName)}`
+  );
 
   const aliases = await getAliases(now);
   if (cancelWait) cancelWait();
@@ -72,7 +73,7 @@ export default async function ls(ctx, opts, args, output) {
     }
 
     if (opts['--json']) {
-      output.print(JSON.stringify({ rules: alias.rules }, null, 2));
+      console.log(JSON.stringify({ rules: alias.rules }, null, 2));
     } else {
       const rules = alias.rules || [];
       output.log(
@@ -105,11 +106,11 @@ function printAliasTable(aliases) {
         a.rules && a.rules.length
           ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
           : // for legacy reasons, we might have situations
-            // where the deployment was deleted and the alias
-            // not collected appropriately, and we need to handle it
-            a.deployment && a.deployment.url
-            ? a.deployment.url
-            : chalk.gray('–'),
+          // where the deployment was deleted and the alias
+          // not collected appropriately, and we need to handle it
+          a.deployment && a.deployment.url
+          ? a.deployment.url
+          : chalk.gray('–'),
         a.alias,
         ms(Date.now() - new Date(a.created))
       ])

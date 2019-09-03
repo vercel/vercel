@@ -185,8 +185,8 @@ export interface ShouldServeOptions {
 }
 
 export interface PackageJson {
-  name: string;
-  version: string;
+  name?: string;
+  version?: string;
   engines?: {
     [key: string]: string;
     node: string;

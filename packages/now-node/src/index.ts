@@ -38,6 +38,7 @@ interface DownloadOptions {
   meta: Meta;
 }
 
+// eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
 const LAUNCHER_FILENAME = '___now_launcher';
@@ -73,7 +74,12 @@ async function downloadInstallAndBundle({
     config
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(entrypointFsDirname, ['--prefer-offline'], spawnOpts);
+  await runNpmInstall(
+    entrypointFsDirname,
+    ['--prefer-offline'],
+    spawnOpts,
+    meta
+  );
   debug(`install complete [${Date.now() - installTime}ms]`);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
@@ -136,7 +142,6 @@ async function compile(
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(workPath, path);
-    debug('compiling typescript file ' + relPath);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
@@ -192,9 +197,6 @@ async function compile(
     }
   });
 
-  debug('traced files:');
-  debug('\t' + fileList.join('\n\t'));
-
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
@@ -246,10 +248,6 @@ async function compile(
   if (esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
-      if (config.debug) {
-        debug('compiling es module file ' + path);
-      }
-
       const filename = basename(path);
       const { data: source } = await FileBlob.fromStream({
         stream: preparedFiles[path].toStream()
