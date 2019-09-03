@@ -53,13 +53,9 @@ async function exec(directory, args = []) {
   });
 }
 
-async function runNpmInstall(fixturePath, t) {
+async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    if (t) {
-      t.log(`Install dependencies for "${fixturePath}"`);
-    }
-
-    return execa('yarn', ['install'], { cwd: fixturePath, reject: false });
+    return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
 
@@ -87,15 +83,7 @@ function testFixtureStdio(directory, fn) {
     let dev;
     const dir = fixture(directory);
 
-    const installOutput = await runNpmInstall(dir, t);
-    t.is(installOutput.code, 0, formatOutput(installOutput));
-
-    t.log(`yarn output for ${directory}:\n\n${formatOutput(installOutput)}`);
-    console.log(`yarn output for ${directory}:\n\n${formatOutput(installOutput)}`);
-
-    const contents = await fs.readdir(dir);
-    t.log(`contents: ${contents.map(n => `"${n}"`).join(',')}`);
-    console.log(`contents: ${contents.map(n => `"${n}"`).join(',')}`);
+    await runNpmInstall(dir);
 
     try {
       port = ++port;
