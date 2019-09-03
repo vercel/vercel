@@ -704,29 +704,33 @@ test('[now dev] no build matches warning', async t => {
   }
 });
 
-test('[now dev] do not recursivly check the path', async t => {
-  const directory = fixture('handle-filesystem-missing');
-  const { dev, port } = await testFixture(directory);
+if (satisfies(process.version, '^8.10.0 || ^10.13.0 || >=11.10.1')) {
+  test('[now dev] do not recursivly check the path', async t => {
+    const directory = fixture('handle-filesystem-missing');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    dev.unref();
+    try {
+      dev.unref();
 
-    {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello');
+      {
+        const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), 'hello');
+      }
+
+      {
+        const response = await fetch(`http://localhost:${port}/favicon.txt`);
+        validateResponseHeaders(t, response);
+        t.is(response.status, 404);
+      }
+    } finally {
+      dev.kill('SIGTERM');
     }
-
-    {
-      const response = await fetch(`http://localhost:${port}/favicon.txt`);
-      validateResponseHeaders(t, response);
-      t.is(response.status, 404);
-    }
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+  });
+} else {
+  console.log('Skipping `do not recursivly check the path` test since it requires Node ^8.10.0 || ^10.13.0 || >=11.10.1');
+}
 
 test('[now dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
