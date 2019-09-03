@@ -253,6 +253,31 @@ export type TXTVerificationError = {
 };
 
 /**
+ * This error is returned when the domain is not verified by nameservers for wildcard alias.
+ */
+export class DomainNsNotVerifiedForWildcard extends NowError<
+  'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
+  {
+    domain: string;
+    nsVerification: NSVerificationError;
+  }
+> {
+  constructor({
+    domain,
+    nsVerification
+  }: {
+    domain: string;
+    nsVerification: NSVerificationError;
+  }) {
+    super({
+      code: 'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
+      meta: { domain, nsVerification },
+      message: `The domain ${domain} is not verified by nameservers for wildcard alias.`
+    });
+  }
+}
+
+/**
  * Used when a domain is validated because we tried to add it to an account
  * via API or for any other reason.
  */
@@ -561,7 +586,7 @@ export class DeploymentNotFound extends NowError<
  */
 export class DeploymentNotReady extends NowError<
   'DEPLOYMENT_NOT_READY',
-  { url: string; }
+  { url: string }
 > {
   constructor({ url = '' }: { url: string }) {
     super({
@@ -986,8 +1011,14 @@ export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
   }
 }
 
-export class AccountNotFound extends NowError<'ACCOUNT_NOT_FOUND', { email: string }> {
-  constructor(email: string, message: string = `Please sign up: https://zeit.co/signup`) {
+export class AccountNotFound extends NowError<
+  'ACCOUNT_NOT_FOUND',
+  { email: string }
+> {
+  constructor(
+    email: string,
+    message: string = `Please sign up: https://zeit.co/signup`
+  ) {
     super({
       code: 'ACCOUNT_NOT_FOUND',
       message,
@@ -1090,7 +1121,10 @@ export class MissingDotenvVarsError extends NowError<
   }
 }
 
-export class DeploymentsRateLimited extends NowError<'DEPLOYMENTS_RATE_LIMITED', {}> {
+export class DeploymentsRateLimited extends NowError<
+  'DEPLOYMENTS_RATE_LIMITED',
+  {}
+> {
   constructor(message: string) {
     super({
       code: 'DEPLOYMENTS_RATE_LIMITED',
@@ -1121,7 +1155,7 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
 }
 
 export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
-  constructor({ message }: { message: string; }) {
+  constructor({ message }: { message: string }) {
     super({
       code: 'DOMAIN_CONFIGURED',
       meta: {},
@@ -1131,7 +1165,7 @@ export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
 }
 
 export class MissingBuildScript extends NowError<'MISSING_BUILD_SCRIPT', {}> {
-  constructor({ message }: { message: string; }) {
+  constructor({ message }: { message: string }) {
     super({
       code: 'MISSING_BUILD_SCRIPT',
       meta: {},
@@ -1141,7 +1175,7 @@ export class MissingBuildScript extends NowError<'MISSING_BUILD_SCRIPT', {}> {
 }
 
 export class ConflictingFilePath extends NowError<'CONFLICTING_FILE_PATH', {}> {
-  constructor({ message }: { message: string; }) {
+  constructor({ message }: { message: string }) {
     super({
       code: 'CONFLICTING_FILE_PATH',
       meta: {},
@@ -1150,8 +1184,11 @@ export class ConflictingFilePath extends NowError<'CONFLICTING_FILE_PATH', {}> {
   }
 }
 
-export class ConflictingPathSegment extends NowError<'CONFLICTING_PATH_SEGMENT', {}> {
-  constructor({ message }: { message: string; }) {
+export class ConflictingPathSegment extends NowError<
+  'CONFLICTING_PATH_SEGMENT',
+  {}
+> {
+  constructor({ message }: { message: string }) {
     super({
       code: 'CONFLICTING_PATH_SEGMENT',
       meta: {},
