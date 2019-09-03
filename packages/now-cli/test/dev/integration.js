@@ -440,29 +440,29 @@ if (satisfies(process.version, '^8.12.0 || >=9.7.0')) {
       dev.kill('SIGTERM');
     }
   });
+
+  test('[now dev] 17-vuepress-node', async t => {
+    const directory = fixture('17-vuepress-node');
+    const { dev, port } = await testFixture(directory);
+
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
+
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
+
+      validateResponseHeaders(t, response);
+
+      const body = await response.text();
+      t.regex(body, /VuePress \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
 } else {
-  console.log('Skipping `10-vue-node` test since it requires Node ^8.12.0 || >=9.7.0');
+  console.log('Skipping `10-vue-node` and `17-vuepress-node` test since it requires Node ^8.12.0 || >=9.7.0');
 }
-
-test('[now dev] 17-vuepress-node', async t => {
-  const directory = fixture('17-vuepress-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /VuePress \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
 
 test('[now dev] double slashes redirect', async t => {
   const directory = fixture('01-node');
