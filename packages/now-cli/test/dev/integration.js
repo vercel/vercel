@@ -88,6 +88,9 @@ function testFixtureStdio(directory, fn) {
 
     t.log(`yarn output for ${directory}:\n\n${formatOutput(installOutput)}`);
 
+    const contents = await fs.readdir(dir);
+    t.log(`contents: ${contents.map(n => `"${n}"`).join(',')}`);
+
     try {
       port = ++port;
       let output = '';
