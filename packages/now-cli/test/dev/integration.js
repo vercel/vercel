@@ -83,7 +83,8 @@ function testFixtureStdio(directory, fn) {
     let dev;
     const dir = fixture(directory);
 
-    await runNpmInstall(dir);
+    const installOutput = await runNpmInstall(dir);
+    t.is(installOutput.code, 0, formatOutput(installOutput));
 
     try {
       port = ++port;
