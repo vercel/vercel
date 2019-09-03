@@ -86,6 +86,8 @@ function testFixtureStdio(directory, fn) {
     const installOutput = await runNpmInstall(dir);
     t.is(installOutput.code, 0, formatOutput(installOutput));
 
+    t.log(`yarn output for ${directory}:\n\n${formatOutput(installOutput)}`);
+
     try {
       port = ++port;
       let output = '';
