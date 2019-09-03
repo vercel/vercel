@@ -61,7 +61,7 @@
     "node": ">= 8.11"
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.14-canary.2",
+    "@now/build-utils": "1.0.0-canary.1",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
