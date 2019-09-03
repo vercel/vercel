@@ -82,6 +82,8 @@ function testFixtureStdio(directory, fn) {
         readyResolve = resolve;
       });
 
+      await execa('yarn', ['install'], { cwd: dir });
+
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
       dev.stderr.on('data', async data => {
         output += data.toString();
@@ -112,7 +114,10 @@ test('[now dev] validate builds', async t => {
   const output = await exec(directory);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `builds` property: \[0\]\.src should be string/gm);
+  t.regex(
+    output.stderr,
+    /Invalid `builds` property: \[0\]\.src should be string/gm
+  );
 });
 
 test('[now dev] validate routes', async t => {
@@ -120,7 +125,10 @@ test('[now dev] validate routes', async t => {
   const output = await exec(directory);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `routes` property: \[0\]\.src should be string/gm);
+  t.regex(
+    output.stderr,
+    /Invalid `routes` property: \[0\]\.src should be string/gm
+  );
 });
 
 test('[now dev] 00-list-directory', async t => {
@@ -169,7 +177,9 @@ test('[now dev] 01-node', async t => {
 if (satisfies(process.version, '10.x')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
-    const { dev, port } = testFixture(directory, { stdio: 'pipe' }, ['--debug']);
+    const { dev, port } = testFixture(directory, { stdio: 'pipe' }, [
+      '--debug'
+    ]);
 
     let stderr = '';
 
