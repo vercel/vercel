@@ -53,11 +53,19 @@ async function exec(directory, args = []) {
   });
 }
 
+async function runNpmInstall(fixturePath) {
+  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    return execa('yarn', ['install'], { cwd: fixturePath });
+  }
+}
+
 function formatOutput({ stderr, stdout }) {
   return `Received:\n"${stderr}"\n"${stdout}"`;
 }
 
-function testFixture(directory, opts = {}, args = []) {
+async function testFixture(directory, opts = {}, args = []) {
+  await runNpmInstall(directory);
+
   port = ++port;
   return {
     dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
@@ -74,6 +82,9 @@ function testFixtureStdio(directory, fn) {
   return async t => {
     let dev;
     const dir = fixture(directory);
+
+    await runNpmInstall(dir);
+
     try {
       port = ++port;
       let output = '';
@@ -112,7 +123,10 @@ test('[now dev] validate builds', async t => {
   const output = await exec(directory);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `builds` property: \[0\]\.src should be string/gm);
+  t.regex(
+    output.stderr,
+    /Invalid `builds` property: \[0\]\.src should be string/gm
+  );
 });
 
 test('[now dev] validate routes', async t => {
@@ -120,12 +134,15 @@ test('[now dev] validate routes', async t => {
   const output = await exec(directory);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `routes` property: \[0\]\.src should be string/gm);
+  t.regex(
+    output.stderr,
+    /Invalid `routes` property: \[0\]\.src should be string/gm
+  );
 });
 
 test('[now dev] 00-list-directory', async t => {
   const directory = fixture('00-list-directory');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -147,7 +164,7 @@ test('[now dev] 00-list-directory', async t => {
 
 test('[now dev] 01-node', async t => {
   const directory = fixture('01-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -169,7 +186,9 @@ test('[now dev] 01-node', async t => {
 if (satisfies(process.version, '10.x')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
-    const { dev, port } = testFixture(directory, { stdio: 'pipe' }, ['--debug']);
+    const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
+      '--debug'
+    ]);
 
     let stderr = '';
 
@@ -256,7 +275,7 @@ test(
 
 test('[now dev] 07-hexo-node', async t => {
   const directory = fixture('07-hexo-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -289,7 +308,7 @@ test(
 
 test('[now dev] 10-nextjs-node', async t => {
   const directory = fixture('10-nextjs-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -309,7 +328,7 @@ test('[now dev] 10-nextjs-node', async t => {
 
 // test('[now dev] 11-nuxtjs-node', async t => {
 //   const directory = fixture('11-nuxtjs-node');
-//   const { dev, port } = testFixture(directory);
+//   const { dev, port } = await testFixture(directory);
 
 //   try {
 //     // start `now dev` detached in child_process
@@ -330,7 +349,7 @@ test('[now dev] 10-nextjs-node', async t => {
 
 test('[now dev] 12-polymer-node', async t => {
   const directory = fixture('12-polymer-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -350,7 +369,7 @@ test('[now dev] 12-polymer-node', async t => {
 
 test('[now dev] 13-preact-node', async t => {
   const directory = fixture('13-preact-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -370,7 +389,7 @@ test('[now dev] 13-preact-node', async t => {
 
 test('[now dev] 14-svelte-node', async t => {
   const directory = fixture('14-svelte-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -390,7 +409,7 @@ test('[now dev] 14-svelte-node', async t => {
 
 // test('[now dev] 15-umijs-node', async t => {
 //   const directory = fixture('15-umijs-node');
-//   const { dev, port } = testFixture(directory);
+//   const { dev, port } = await testFixture(directory);
 
 //   try {
 //     // start `now dev` detached in child_process
@@ -409,49 +428,54 @@ test('[now dev] 14-svelte-node', async t => {
 //   }
 // });
 
-test('[now dev] 16-vue-node', async t => {
-  const directory = fixture('16-vue-node');
-  const { dev, port } = testFixture(directory);
+if (satisfies(process.version, '^8.12.0 || >=9.7.0')) {
+  test('[now dev] 16-vue-node', async t => {
+    const directory = fixture('16-vue-node');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Vue.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Vue.js \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+  test('[now dev] 17-vuepress-node', async t => {
+    const directory = fixture('17-vuepress-node');
+    const { dev, port } = await testFixture(directory);
 
-test('[now dev] 17-vuepress-node', async t => {
-  const directory = fixture('17-vuepress-node');
-  const { dev, port } = testFixture(directory);
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await result;
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+      validateResponseHeaders(t, response);
 
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /VuePress \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /VuePress \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log(
+    'Skipping `10-vue-node` and `17-vuepress-node` test since it requires Node ^8.12.0 || >=9.7.0'
+  );
+}
 
 test('[now dev] double slashes redirect', async t => {
   const directory = fixture('01-node');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -596,7 +620,7 @@ test(
 
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     // start `now dev` detached in child_process
@@ -629,7 +653,7 @@ test('[now dev] temporary directory listing', async t => {
 
 test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
   const directory = fixture('trigger-static-build');
-  const { dev, port } = testFixture(directory);
+  const { dev, port } = await testFixture(directory);
 
   try {
     dev.unref();
@@ -666,7 +690,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
 
 test('[now dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
-  const { dev } = testFixture(directory, {
+  const { dev } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
@@ -689,33 +713,39 @@ test('[now dev] no build matches warning', async t => {
   }
 });
 
-test('[now dev] do not recursivly check the path', async t => {
-  const directory = fixture('handle-filesystem-missing');
-  const { dev, port } = testFixture(directory);
+if (satisfies(process.version, '^8.10.0 || ^10.13.0 || >=11.10.1')) {
+  test('[now dev] do not recursivly check the path', async t => {
+    const directory = fixture('handle-filesystem-missing');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    dev.unref();
+    try {
+      dev.unref();
 
-    {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello');
+      {
+        const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), 'hello');
+      }
+
+      {
+        const response = await fetch(`http://localhost:${port}/favicon.txt`);
+        validateResponseHeaders(t, response);
+        t.is(response.status, 404);
+      }
+    } finally {
+      dev.kill('SIGTERM');
     }
-
-    {
-      const response = await fetch(`http://localhost:${port}/favicon.txt`);
-      validateResponseHeaders(t, response);
-      t.is(response.status, 404);
-    }
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+  });
+} else {
+  console.log(
+    'Skipping `do not recursivly check the path` test since it requires Node ^8.10.0 || ^10.13.0 || >=11.10.1'
+  );
+}
 
 test('[now dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
-  const { dev, port } = testFixture(directory, {
+  const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe']
   });
 

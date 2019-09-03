@@ -1,6 +1,8 @@
 import url from 'url';
 import test from 'ava';
 import path from 'path';
+import execa from 'execa';
+import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { request, createServer } from 'http';
@@ -9,9 +11,20 @@ import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
 import parseListen from '../src/util/dev/parse-listen';
 
+async function runNpmInstall(fixturePath) {
+  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    return execa('yarn', ['install'], { cwd: fixturePath });
+  }
+}
+
 function testFixture(name, fn) {
   return async t => {
     let server;
+
+    const fixturePath = path.join(__dirname, 'fixtures', 'unit', name);
+
+    await runNpmInstall(fixturePath);
+
     try {
       let readyResolve;
       let readyPromise = new Promise(resolve => {
@@ -29,7 +42,6 @@ function testFixture(name, fn) {
         origReady(msg);
       };
 
-      const fixturePath = path.join(__dirname, `fixtures/unit/${name}`);
       server = new DevServer(fixturePath, { output, debug });
 
       await server.start(0);
