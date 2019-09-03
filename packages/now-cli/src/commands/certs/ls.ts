@@ -110,7 +110,7 @@ function formatCertsTableHead(): string[] {
 
 function formatCertsTableBody(certsList: Cert[]) {
   const now = new Date();
-  return certsList.reduce<string[][]>((result, cert) => result.concat(...formatCert(now, cert)), []);
+  return certsList.reduce<string[][]>((result, cert) => result.concat(formatCert(now, cert)), []);
 }
 
 function formatCert(time: Date, cert: Cert) {
@@ -122,7 +122,7 @@ function formatCert(time: Date, cert: Cert) {
   );
 }
 
-function formatCertNonFirstCn(cn: string, multiple: boolean) {
+function formatCertNonFirstCn(cn: string, multiple: boolean): string[] {
   return ['', formatCertCn(cn, multiple), '', '', ''];
 }
 
@@ -130,7 +130,7 @@ function formatCertCn(cn: string, multiple: boolean) {
   return multiple ? `${chalk.gray('-')} ${chalk.bold(cn)}` : chalk.bold(cn);
 }
 
-function formatCertFirstCn(time: Date, cert: Cert, cn: string, multiple: boolean) {
+function formatCertFirstCn(time: Date, cert: Cert, cn: string, multiple: boolean): string[] {
   return [
     cert.uid,
     formatCertCn(cn, multiple),
