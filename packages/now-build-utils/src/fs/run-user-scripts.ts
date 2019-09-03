@@ -1,6 +1,7 @@
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
+import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
@@ -128,8 +129,14 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
 ) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
