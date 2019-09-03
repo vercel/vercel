@@ -1,5 +1,6 @@
 const path = require('path');
 const os = require('os');
+const execa = require('execa');
 const { build } = require('@now/next');
 const { download, FileBlob } = require('@now/build-utils');
 
@@ -82,6 +83,13 @@ describe('build meta dev', () => {
     // Since `download()` is a no-op when `isDev=true`, the assumption is that the
     // source files are already present, so manually download them here first.
     await download(files, workPath);
+
+    // Since we won't install dependecies when `isDev=true`
+    await execa('yarn', ['install'], {
+      cwd: workPath,
+      env: process.env,
+      reject: true
+    });
 
     const meta = { isDev: true, requestPath: null };
     const { output, routes, watch, childProcesses } = await build({
