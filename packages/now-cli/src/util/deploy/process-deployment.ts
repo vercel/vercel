@@ -1,7 +1,10 @@
 import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
-import { createDeployment, createLegacyDeployment } from 'now-client';
+import {
+  createDeployment,
+  createLegacyDeployment
+} from '../../../../now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
 
