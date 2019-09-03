@@ -35,7 +35,7 @@ interface Framework {
   name: string;
   dependency: string;
   getOutputDirName: (dirPrefix: string) => Promise<string>;
-  defaultRoutes?: Route[];
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
 }
 
@@ -113,6 +113,25 @@ const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   return basic;
 };
 
+async function getFrameworkRoutes(
+  framework: Framework,
+  dirPrefix: string
+): Promise<Route[]> {
+  if (!framework.defaultRoutes) {
+    return [];
+  }
+
+  let routes: Route[];
+
+  if (typeof framework.defaultRoutes === 'function') {
+    routes = await framework.defaultRoutes(dirPrefix);
+  } else {
+    routes = framework.defaultRoutes;
+  }
+
+  return routes;
+}
+
 export async function build({
   files,
   entrypoint,
@@ -187,13 +206,6 @@ export async function build({
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
-      if (framework && framework.defaultRoutes) {
-        // We need to delete the routes for `now dev`
-        // since in this case it will get proxied to
-        // a custom server we don't have controll over
-        delete framework.defaultRoutes;
-      }
-
       if (typeof devPort === 'number') {
         debug('`%s` server already running for %j', devScript, entrypoint);
       } else {
@@ -255,12 +267,9 @@ export async function build({
         srcBase = `/${srcBase}`;
       }
 
-      if (framework && framework.defaultRoutes) {
-        for (const route of framework.defaultRoutes) {
-          routes.push(getDevRoute(srcBase, devPort, route));
-        }
-      }
-
+      // We ignore defaultRoutes for `now dev`
+      // since in this case it will get proxied to
+      // a custom server we don't have control over
       routes.push(
         getDevRoute(srcBase, devPort, {
           src: '/(.*)',
@@ -290,8 +299,9 @@ export async function build({
         );
       }
 
+      const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
+
       if (framework) {
-        const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
         const outputDirName = await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
@@ -309,11 +319,16 @@ export async function build({
       }
 
       validateDistDir(distPath, meta.isDev, config);
-      output = await glob('**', distPath, mountpoint);
 
-      if (framework && framework.defaultRoutes) {
-        routes.push(...framework.defaultRoutes);
+      if (framework) {
+        const frameworkRoutes = await getFrameworkRoutes(
+          framework,
+          outputDirPrefix
+        );
+        routes.push(...frameworkRoutes);
       }
+
+      output = await glob('**', distPath, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

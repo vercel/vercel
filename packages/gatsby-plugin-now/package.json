@@ -1,0 +1,32 @@
+{
+  "name": "gatsby-plugin-now",
+  "version": "1.2.0",
+  "main": "index.js",
+  "license": "MIT",
+  "homepage": "https://github.com/zeit/now/tree/canary/packages/gatsby-plugin-now",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeit/now.git",
+    "directory": "packages/gatsby-plugin-now"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "test-integration-once": "jest --verbose"
+  },
+  "files": [
+    "index.js",
+    "gatsby-node.js"
+  ],
+  "peerDependencies": {
+    "gatsby": ">=2.0.0"
+  },
+  "devDependencies": {
+    "jest": "24.9.0"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/test/fixtures/"
+    ]
+  }
+}
