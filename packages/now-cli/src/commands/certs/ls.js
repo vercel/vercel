@@ -55,7 +55,6 @@ async function ls(ctx, opts, args, output) {
     throw certificates;
   }
 
-  const { uid: lastCert } = certificates[certificates.length - 1];
   const certs = sortByCn(certificates);
 
   output.log(
@@ -65,6 +64,7 @@ async function ls(ctx, opts, args, output) {
   );
 
   if (certs.length >= 100) {
+    const { uid: lastCert } = certificates[certificates.length - 1];
     output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
   }
 
