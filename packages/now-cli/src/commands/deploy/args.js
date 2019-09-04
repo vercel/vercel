@@ -20,7 +20,6 @@ export const latestHelp = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       switch               [scope]     Switches between teams and your personal account
-      update                           Updates Now CLI to the latest version
       help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
@@ -116,7 +115,7 @@ export const latestArgs = {
   '-e': '--env',
   '-b': '--build-env',
   '-C': '--no-clipboard',
-  '-m': '--meta'
+  '-m': '--meta',
 };
 
 export const legacyArgsMri = {
@@ -127,7 +126,7 @@ export const legacyArgsMri = {
     'meta',
     'session-affinity',
     'regions',
-    'dotenv'
+    'dotenv',
   ],
   boolean: [
     'help',
@@ -144,11 +143,11 @@ export const legacyArgsMri = {
     'public',
     'no-scale',
     'no-verify',
-    'dotenv'
+    'dotenv',
   ],
   default: {
     C: false,
-    clipboard: true
+    clipboard: true,
   },
   alias: {
     env: 'e',
@@ -165,8 +164,8 @@ export const legacyArgsMri = {
     'session-affinity': 'S',
     name: 'n',
     project: 'P',
-    alias: 'a'
-  }
+    alias: 'a',
+  },
 };
 
 // The following arg parsing is simply to make it compatible
