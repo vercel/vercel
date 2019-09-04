@@ -80,11 +80,11 @@ const printDeploymentStatus = async (
   localConfig,
   builds
 ) => {
-  if (aliasError && aliasError.message) {
-    output.warn(`Failed to assign aliases: ${aliasError.message}`);
-  }
-
   if (readyState === 'READY') {
+    if (aliasError && aliasError.message) {
+      output.warn(`Failed to assign aliases: ${aliasError.message}`);
+    }
+
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
         if (clipboardEnabled) {
