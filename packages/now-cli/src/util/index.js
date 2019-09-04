@@ -13,7 +13,7 @@ import { URLSearchParams } from 'url';
 import {
   staticFiles as getFiles,
   npm as getNpmFiles,
-  docker as getDockerFiles
+  docker as getDockerFiles,
 } from './get-files';
 import Agent from './agent.ts';
 import ua from './ua.ts';
@@ -71,7 +71,7 @@ export default class Now extends EventEmitter {
       env,
       build,
       forceNew = false,
-      target = null
+      target = null,
     }
   ) {
     const opts = { output: this._output, hasNowJson };
@@ -83,7 +83,7 @@ export default class Now extends EventEmitter {
     const relatives = {};
     let engines;
     let deployment;
-    let requestBody = {}
+    let requestBody = {};
 
     if (isBuilds) {
       requestBody = {
@@ -97,7 +97,7 @@ export default class Now extends EventEmitter {
         meta,
         regions,
         force: forceNew,
-      }
+      };
 
       if (target) {
         requestBody.target = target;
@@ -152,8 +152,8 @@ export default class Now extends EventEmitter {
         paths,
         requestBody,
         uploadStamp,
-        quiet
-      })
+        quiet,
+      });
     } else {
       // Read `registry.npmjs.org` authToken from .npmrc
       let authToken;
@@ -181,8 +181,8 @@ export default class Now extends EventEmitter {
         sessionAffinity,
         limits: nowConfig.limits,
         atlas,
-        config: nowConfig
-      }
+        config: nowConfig,
+      };
 
       deployment = await processDeployment({
         legacy: true,
@@ -193,8 +193,8 @@ export default class Now extends EventEmitter {
         requestBody,
         uploadStamp,
         quiet,
-        env
-      })
+        env,
+      });
     }
 
     // We report about files whose sizes are too big
@@ -231,9 +231,7 @@ export default class Now extends EventEmitter {
     if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
-          chalk`Using Node.js {bold ${
-            deployment.nodeVersion
-          }} (requested: {dim \`${engines.node}\`})`
+          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
         );
       } else {
         log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
@@ -256,7 +254,7 @@ export default class Now extends EventEmitter {
         err.retryAfter = 'never';
         err.code = error.code;
 
-        return err
+        return err;
       }
 
       let msg = 'You have been creating deployments at a very fast pace. ';
@@ -275,12 +273,11 @@ export default class Now extends EventEmitter {
       err.status = error.status;
       err.retryAfter = 'never';
 
-      return err
+      return err;
     }
 
     // If the deployment domain is missing a cert, bail with the error
-    if (error.status === 400 && error.code === 'cert_missing'
-    ) {
+    if (error.status === 400 && error.code === 'cert_missing') {
       return responseError(error, null, error);
     }
 
@@ -320,16 +317,16 @@ export default class Now extends EventEmitter {
         Object.assign(err, error);
       }
 
-      return err
+      return err;
     }
 
     // Handle build errors
     if (error.id && error.id.startsWith('bld_')) {
       return new BuildError({
         meta: {
-          entrypoint: error.entrypoint
-        }
-      })
+          entrypoint: error.entrypoint,
+        },
+      });
     }
 
     return new Error(error.message);
@@ -375,7 +372,7 @@ export default class Now extends EventEmitter {
         {
           retries: 3,
           minTimeout: 2500,
-          onRetry: this._onRetry
+          onRetry: this._onRetry,
         }
       );
     };
@@ -433,7 +430,7 @@ export default class Now extends EventEmitter {
       {
         retries: 3,
         minTimeout: 2500,
-        onRetry: this._onRetry
+        onRetry: this._onRetry,
       }
     );
 
@@ -513,7 +510,7 @@ export default class Now extends EventEmitter {
 
     await this.retry(async bail => {
       const res = await this._fetch(url, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (res.status === 200) {
@@ -534,7 +531,7 @@ export default class Now extends EventEmitter {
     return retry(fn, {
       retries,
       maxTimeout,
-      onRetry: this._onRetry
+      onRetry: this._onRetry,
     });
   }
 
@@ -613,8 +610,8 @@ export default class Now extends EventEmitter {
         opts = Object.assign({}, opts, {
           body: JSON.stringify(opts.body),
           headers: Object.assign({}, opts.headers, {
-            'Content-Type': 'application/json'
-          })
+            'Content-Type': 'application/json',
+          }),
         });
       }
       const res = await this._fetch(url, opts);
@@ -661,7 +658,7 @@ function hasNpmStart(pkg) {
 
 function hasFile(base, files, name) {
   const relative = files.map(file => toRelative(file, base));
-  console.log(731, relative)
+  console.log(731, relative);
   return relative.indexOf(name) !== -1;
 }
 
