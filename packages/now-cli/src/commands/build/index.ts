@@ -27,7 +27,7 @@ const glob = async (pattern: string, options: GlobOptions) => {
 const cwd = process.cwd();
 const outputDir = path.join(cwd, '.now');
 const workDir = path.join(outputDir, 'workDir');
-const buildersDir = path.join(outputDir, '/builders');
+const buildersDir = path.join(outputDir, 'builders');
 const buildsOutputDir = path.join(outputDir, 'builds');
 
 async function getBuilds(
