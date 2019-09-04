@@ -1,11 +1,10 @@
 {
   "name": "now-client",
   "version": "5.1.1",
-  "main": "dist/src/index.js",
-  "typings": "dist/src/index.d.ts",
+  "main": "lib/index.js",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "build": "ncc build ./src/index.ts -o ./lib --source-map",
     "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
@@ -39,6 +38,7 @@
     "fs-extra": "8.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
+    "now-client": "4.1.2",
     "querystring": "^0.2.0",
     "recursive-readdir": "2.2.2",
     "sleep-promise": "8.0.1"

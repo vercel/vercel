@@ -55,23 +55,6 @@ export default function buildCreateDeployment(version: number): CreateDeployment
       fileList = [path]
     }
 
-    // This is a useful warning because it prevents people
-    // from getting confused about a deployment that renders 404.
-    if (
-      fileList.length === 0 ||
-      fileList.every((item): boolean => {
-        if (!item) {
-          return true
-        }
-
-        const segments = item.split('/')
-
-        return segments[segments.length - 1].startsWith('.')
-      }))
-    {
-      yield { type: 'warning', payload: 'There are no files (or only files starting with a dot) inside your deployment.' }
-    }
-
     const files = await hashes(fileList)
 
     yield { type: 'hashes-calculated', payload: mapToObject(files) }

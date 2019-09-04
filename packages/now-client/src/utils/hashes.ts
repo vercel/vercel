@@ -1,5 +1,5 @@
-import { createHash } from 'crypto';
-import fs from 'fs-extra';
+import { createHash } from 'crypto'
+import fs from 'fs-extra'
 
 export interface DeploymentFile {
   names: string[];
@@ -15,7 +15,7 @@ export interface DeploymentFile {
 function hash(buf: Buffer): string {
   return createHash('sha1')
     .update(buf)
-    .digest('hex');
+    .digest('hex')
 }
 
 /**
@@ -23,16 +23,14 @@ function hash(buf: Buffer): string {
  * @param map with hashed files
  * @return {object}
  */
-export const mapToObject = (
-  map: Map<string, DeploymentFile>
-): { [key: string]: DeploymentFile } => {
-  const obj: { [key: string]: DeploymentFile } = {};
+export const mapToObject = (map: Map<string, DeploymentFile>): { [key: string]: any } => {
+  const obj: { [key: string]: any } = {}
   for (const [key, value] of map) {
-    obj[key] = value;
+    obj[key] = value
   }
 
-  return obj;
-};
+  return obj
+}
 
 /**
  * Computes hashes for the contents of each file given.
@@ -41,25 +39,25 @@ export const mapToObject = (
  * @return {Map}
  */
 async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
-  const map = new Map();
+  const map = new Map()
 
   await Promise.all(
     files.map(
       async (name: string): Promise<void> => {
-        const data = await fs.readFile(name);
+        const data = await fs.readFile(name)
 
-        const h = hash(data);
-        const entry = map.get(h);
+        const h = hash(data)
+        const entry = map.get(h)
 
         if (entry) {
-          entry.names.push(name);
+          entry.names.push(name)
         } else {
-          map.set(h, { names: [name], data });
+          map.set(h, { names: [name], data })
         }
-      }
-    )
-  );
-  return map;
+      },
+    ),
+  )
+  return map
 }
 
-export default hashes;
+export default hashes

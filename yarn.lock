@@ -1235,39 +1235,27 @@
     "@nodelib/fs.scandir" "2.1.1"
     fastq "^1.6.0"
 
-"@now/build-utils@latest":
-  version "0.9.14"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-0.9.14.tgz#9e81828d3a2be697db0d8c44cbe9ae519003ee6f"
-  integrity sha512-fDyo/1Zb2StDhFKfoNf+M9nY5RhfuofpGXVwL8IjYUodze1VPDFX039Ut8zUVlujIFkSl8QMl8iu9fYr0H2ERg==
-
 "@now/go@latest":
-  version "0.5.11"
-  resolved "https://registry.yarnpkg.com/@now/go/-/go-0.5.11.tgz#c3c6a9eaabe1de9fb4de0d6a163db8d713287dfd"
-  integrity sha512-IR8ZsIrwkN42yccmS5/ZxLaukYR7r4qdN0eeLK9X88rlR8/hxWVA5TmOyj5cr/7sVL0RSiOZXDQucHtDf9hEhg==
+  version "0.5.10"
+  resolved "https://registry.yarnpkg.com/@now/go/-/go-0.5.10.tgz#11c19f171a5277ad0732768c3d44b636e67c91c4"
+  integrity sha512-f1i0XsR27KZjXFyiH1CeX0UiIVVfR+JZTAJtZ7BItNtOpFzUy4D6UmA//ovlqabPvhVK9e7hReCAlE/6IsQ47A==
 
 "@now/next@latest":
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/@now/next/-/next-0.7.1.tgz#678783031c21edcf4d7c6344fc084c2ae48f5136"
-  integrity sha512-XIUdS+51aDiVYdlUzeqcI5T1VITO84ogVAeWJuSkz2ITtOrYFmgq0z+1rxvkBHP+EW5/Z173v6wUsmZRjTZ3xw==
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@now/next/-/next-0.7.0.tgz#b172b4cc036c11a499ee6957b394cc7e4f4c9ff9"
+  integrity sha512-UuVWFvyIENTX8mH2dyoD2tnK5MZhDz3cSUHkxDdVx03XRhbwnXCs56y0L1FSPdTKpn9WoHi9GnG5JcfaqAJMGQ==
 
 "@now/node@latest":
-  version "0.12.8"
-  resolved "https://registry.yarnpkg.com/@now/node/-/node-0.12.8.tgz#9b8f5c81f80119401cb61fa0f9aa30fda5cf292a"
-  integrity sha512-FgSrSECIA57YbV/m8HdLJBlK1h74rmkuppuTLMe1fHxPWypJbaXWlSrToYv8zP34x2Lv481W2YDYJ3EQFm9Hcg==
+  version "0.12.7"
+  resolved "https://registry.yarnpkg.com/@now/node/-/node-0.12.7.tgz#d70e4357fd50a3a3bfd62a7f341947a8f47f8cf3"
+  integrity sha512-ksV0lf9sF/ppS9UMPoBxaHLw6bh2jceJzjoSCrhKZJbKi0Hi82UiZCHJ7R7ZSVXxP1B++dRis4f2xvIEIyvbOA==
   dependencies:
     "@types/node" "*"
 
-"@now/routing-utils@latest":
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/@now/routing-utils/-/routing-utils-1.2.3.tgz#3301ea4fb1060a8cd0f65c3146ecd6f129fdbf86"
-  integrity sha512-YhN/YM7Lko5jBE+FNDJjTAarpLDU0RUy37/q6nFfZ/eGaGfLW0qBASk1Llc+79Zg7oMvRnuHbtoxc64LxikULw==
-  optionalDependencies:
-    ajv "^6.0.0"
-
 "@now/static-build@latest":
-  version "0.9.9"
-  resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.9.9.tgz#847397b8de33c4dc611f5a933d14245134698cda"
-  integrity sha512-HNTIvJOEo/Afy8MbPFWXibgFreXDXSLhDZWeXhBdK3jC76R8LK3wM3EUlUbJuLMtzhn+i44tQHdagOey3nK8kg==
+  version "0.9.8"
+  resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.9.8.tgz#6a503d02342ba9f99097368bf0c380065c20b07f"
+  integrity sha512-sIO8BdlqUnNTE7XajBQm5Sk18VfOCGKqDTjhCQm0pxBQY2yfazCk715LLhuE7u6kljP+3z2qkKHKlkZFZUDcrw==
 
 "@octokit/endpoint@^5.1.0":
   version "5.3.2"
@@ -8013,19 +8001,18 @@ normalize-url@^4.1.0:
   resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-4.3.0.tgz#9c49e10fc1876aeb76dba88bf1b2b5d9fa57b2ee"
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
 
-now-client@./packages/now-client:
-  version "5.1.1-canary.1"
+now-client@4.1.2:
+  version "4.1.2"
+  resolved "https://registry.yarnpkg.com/now-client/-/now-client-4.1.2.tgz#70b4ea577a605d1df7e2fdef761fb7c38bcf78b2"
+  integrity sha512-quHDR6pRv4XBdKZC7u36KuoT8+zZfSBULCQUFlHPOEY3GElyGYpEa/CDquChezZqyLg8PMnZNu7iuVrAXSFsBw==
   dependencies:
     "@zeit/fetch" "5.1.0"
     async-retry "1.2.3"
-    async-sema "3.0.0"
     fetch-h2 "2.2.0"
     fs-extra "8.0.1"
-    ms "2.1.2"
     node-fetch "2.6.0"
     querystring "^0.2.0"
     recursive-readdir "2.2.2"
-    sleep-promise "8.0.1"
 
 npm-bundled@^1.0.1:
   version "1.0.6"

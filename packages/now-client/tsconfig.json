@@ -5,7 +5,7 @@
     "lib": ["esnext", "dom"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "outDir": "./dist",
+    "outDir": "./lib",
     "resolveJsonModule": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
@@ -13,8 +13,6 @@
     "noUnusedParameters": true,
     "strict": true,
     "target": "ES2015",
-    "downlevelIteration": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
-  },
-  "include": ["./src", "./types"]
+    "downlevelIteration": true
+  }
 }

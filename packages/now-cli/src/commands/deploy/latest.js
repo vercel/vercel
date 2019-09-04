@@ -3,14 +3,18 @@ import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
+import Progress from 'progress';
 import Client from '../../util/client';
+import wait from '../../util/output/wait';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
+import { isReady, isDone, isFailed } from '../../util/build-state';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
+import sleep from '../../util/sleep';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
@@ -32,8 +36,7 @@ import {
   AliasDomainConfigured,
   MissingBuildScript,
   ConflictingFilePath,
-  ConflictingPathSegment,
-  BuildError,
+  ConflictingPathSegment
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -69,12 +72,11 @@ const addProcessEnv = async (log, env) => {
 };
 
 const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input =>
-  isWildcardAlias(input) ? input : `https://${input}`;
+const prepareAlias = input => isWildcardAlias(input) ? input : `https://${input}`;
 
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError },
+  { url, readyState, alias: aliasList, aliasError },
   deployStamp,
   clipboardEnabled,
   localConfig,
@@ -92,18 +94,10 @@ const printDeploymentStatus = async (
           const preparedAlias = prepareAlias(firstAlias);
           try {
             await copy(`https://${firstAlias}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${chalk.gray('[in clipboard]')} ${deployStamp()}`
-            );
+            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${chalk.gray('[in clipboard]')} ${deployStamp()}`);
           } catch (err) {
             output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${deployStamp()}`
-            );
+            output.ready(`Deployed to ${chalk.bold(chalk.cyan(preparedAlias))} ${deployStamp()}`);
           }
         }
       } else {
@@ -115,17 +109,13 @@ const printDeploymentStatus = async (
 
         for (const alias of aliasList) {
           const index = aliasList.indexOf(alias);
-          const isLast = index === aliasList.length - 1;
+          const isLast = index === (aliasList.length - 1);
           const shouldCopy = matching ? alias === matching : isLast;
 
           if (shouldCopy && clipboardEnabled) {
             try {
               await copy(`https://${alias}`);
-              output.print(
-                `- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray(
-                  '[in clipboard]'
-                )}\n`
-              );
+              output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray('[in clipboard]')}\n`);
 
               continue;
             } catch (err) {
@@ -145,6 +135,20 @@ const printDeploymentStatus = async (
 
   if (!builds) {
     output.error(deploymentErrorMsg);
+    return 1;
+  }
+
+  const failedBuilds = builds.filter(isFailed);
+  const amount = failedBuilds.length;
+
+  if (amount > 0) {
+    output.error('Build failed');
+    output.error(
+      `Check your logs at https://${url}/_logs or run ${code(
+        `now logs ${url}`
+      )}`
+    );
+
     return 1;
   }
 
@@ -202,11 +206,7 @@ export default async function main(
     return 1;
   }
 
-  const {
-    apiUrl,
-    authConfig: { token },
-    config: { currentTeam },
-  } = ctx;
+  const { apiUrl, authConfig: { token }, config: { currentTeam } } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
@@ -236,6 +236,7 @@ export default async function main(
     parseMeta(argv['--meta'])
   );
 
+  let syncCount;
   let deployStamp = stamp();
   let deployment = null;
 
@@ -312,44 +313,33 @@ export default async function main(
 
   try {
     // $FlowFixMe
-    const project = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
+    const project = getProjectName({argv, nowConfig: localConfig, isFile, paths});
     log(`Using project ${chalk.bold(project)}`);
 
     const createArgs = {
-      name: project,
-      env: deploymentEnv,
-      build: { env: deploymentBuildEnv },
-      forceNew: argv['--force'],
-      quiet,
-      wantsPublic: argv['--public'] || localConfig.public,
-      isFile,
-      type: null,
-      nowConfig: localConfig,
-      regions,
-      meta,
+        name: project,
+        env: deploymentEnv,
+        build: { env: deploymentBuildEnv },
+        forceNew: argv['--force'],
+        quiet,
+        wantsPublic: argv['--public'] || localConfig.public,
+        isFile,
+        type: null,
+        nowConfig: localConfig,
+        regions,
+        meta
     };
 
     if (argv['--target']) {
       const deprecatedTarget = argv['--target'];
 
       if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(
-          `The specified ${param('--target')} ${code(
-            deprecatedTarget
-          )} is not valid`
-        );
+        error(`The specified ${param('--target')} ${code(deprecatedTarget)} is not valid`);
         return 1;
       }
 
       if (deprecatedTarget === 'production') {
-        warn(
-          'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-        );
+        warn('We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)');
       }
 
       output.debug(`Setting target to ${deprecatedTarget}`);
@@ -361,7 +351,7 @@ export default async function main(
 
     deployStamp = stamp();
 
-    deployment = await createDeploy(
+    const firstDeployCall = await createDeploy(
       output,
       now,
       contextName,
@@ -370,39 +360,13 @@ export default async function main(
       ctx
     );
 
-    const deploymentResponse = handleCertError(
-      output,
-      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
-    );
-
-    if (deploymentResponse === 1) {
-      return deploymentResponse;
-    }
-
     if (
-      deploymentResponse instanceof DeploymentNotFound ||
-      deploymentResponse instanceof DeploymentPermissionDenied ||
-      deploymentResponse instanceof InvalidDeploymentId
+      firstDeployCall instanceof DomainNotFound &&
+      firstDeployCall.meta && firstDeployCall.meta.domain
     ) {
-      output.error(deploymentResponse.message);
-      return 1;
-    }
-
-    if (handleCertError(output, deployment) === 1) {
-      return 1;
-    }
-
-    if (deployment === null) {
-      error('Uploading failed. Please try again.');
-      return 1;
-    }
-  } catch (err) {
-    debug(`Error: ${err}\n${err.stack}`);
-
-    if (err instanceof DomainNotFound && err.meta && err.meta.domain) {
-      output.debug(
-        `The domain ${err.meta.domain} was not found, trying to purchase it`
-      );
+      output.debug(`The domain ${
+        firstDeployCall.meta.domain
+      } was not found, trying to purchase it`);
 
       const purchase = await purchaseDomainIfAvailable(
         output,
@@ -410,14 +374,16 @@ export default async function main(
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
           currentTeam: ctx.config.currentTeam,
-          debug: debugEnabled,
+          debug: debugEnabled
         }),
-        err.meta.domain,
+        firstDeployCall.meta.domain,
         contextName
       );
 
       if (purchase === true) {
-        output.success(`Successfully purchased the domain ${err.meta.domain}!`);
+        output.success(`Successfully purchased the domain ${
+          firstDeployCall.meta.domain
+        }!`);
 
         // We exit if the purchase is completed since
         // the domain verification can take some time
@@ -425,7 +391,7 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, firstDeployCall);
         return 1;
       }
 
@@ -433,35 +399,120 @@ export default async function main(
       return 1;
     }
 
+    if (handleCertError(output, firstDeployCall) === 1) {
+      return 1;
+    }
+
     if (
-      err instanceof DomainNotFound ||
-      err instanceof DomainNotVerified ||
-      err instanceof DomainPermissionDenied ||
-      err instanceof DomainVerificationFailed ||
-      err instanceof SchemaValidationFailed ||
-      err instanceof InvalidDomain ||
-      err instanceof DeploymentNotFound ||
-      err instanceof BuildsRateLimited ||
-      err instanceof DeploymentsRateLimited ||
-      err instanceof AliasDomainConfigured ||
-      err instanceof MissingBuildScript ||
-      err instanceof ConflictingFilePath ||
-      err instanceof ConflictingPathSegment
+      firstDeployCall instanceof DomainNotFound ||
+      firstDeployCall instanceof DomainNotVerified ||
+      firstDeployCall instanceof DomainPermissionDenied ||
+      firstDeployCall instanceof DomainVerificationFailed ||
+      firstDeployCall instanceof SchemaValidationFailed ||
+      firstDeployCall instanceof InvalidDomain ||
+      firstDeployCall instanceof DeploymentNotFound ||
+      firstDeployCall instanceof BuildsRateLimited ||
+      firstDeployCall instanceof DeploymentsRateLimited ||
+      firstDeployCall instanceof AliasDomainConfigured ||
+      firstDeployCall instanceof MissingBuildScript ||
+      firstDeployCall instanceof ConflictingFilePath ||
+      firstDeployCall instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, firstDeployCall);
       return 1;
     }
 
-    if (err instanceof BuildError) {
-      output.error('Build failed');
-      output.error(
-        `Check your logs at https://${now.url}/_logs or run ${code(
-          `now logs ${now.url}`
-        )}`
-      );
+    deployment = firstDeployCall;
 
-      return 1;
+    if (now.syncFileCount > 0) {
+      const uploadStamp = stamp();
+
+      await new Promise((resolve, reject) => {
+        if (now.syncFileCount !== now.fileCount) {
+          debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
+        }
+
+        const size = bytes(now.syncAmount);
+        syncCount = `${now.syncFileCount} file${now.syncFileCount > 1
+          ? 's'
+          : ''}`;
+        const bar = new Progress(
+          `${chalk.gray(
+            '>'
+          )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
+          {
+            width: 20,
+            complete: '=',
+            incomplete: '',
+            total: now.syncAmount,
+            clear: true
+          }
+        );
+
+        now.upload({ scale: {} });
+
+        now.on('upload', ({ names, data }) => {
+          debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
+        });
+
+        now.on('uploadProgress', progress => {
+          bar.tick(progress);
+        });
+
+        now.on('complete', resolve);
+
+        now.on('error', err => {
+          error('Upload failed');
+          reject(err);
+        });
+      });
+
+      if (!quiet && syncCount) {
+        log(`Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`);
+      }
+
+      for (let i = 0; i < 4; i += 1) {
+        deployStamp = stamp();
+        const secondDeployCall = await createDeploy(
+          output,
+          now,
+          contextName,
+          paths,
+          createArgs
+        );
+
+        if (handleCertError(output, secondDeployCall) === 1) {
+          return 1;
+        }
+
+        if (
+          secondDeployCall instanceof DomainPermissionDenied ||
+          secondDeployCall instanceof DomainVerificationFailed ||
+          secondDeployCall instanceof SchemaValidationFailed ||
+          secondDeployCall instanceof DeploymentNotFound ||
+          secondDeployCall instanceof DeploymentsRateLimited ||
+          secondDeployCall instanceof AliasDomainConfigured ||
+          secondDeployCall instanceof MissingBuildScript ||
+          secondDeployCall instanceof ConflictingFilePath ||
+          secondDeployCall instanceof ConflictingPathSegment
+        ) {
+          handleCreateDeployError(output, secondDeployCall);
+          return 1;
+        }
+
+        if (now.syncFileCount === 0) {
+          deployment = secondDeployCall;
+          break;
+        }
+      }
+
+      if (deployment === null) {
+        error('Uploading failed. Please try again.');
+        return 1;
+      }
     }
+  } catch (err) {
+    debug(`Error: ${err}\n${err.stack}`);
 
     if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
       const { additionalProperty = '' } = err.params || {};
@@ -488,14 +539,106 @@ export default async function main(
     process.stdout.write(url);
   }
 
-  return printDeploymentStatus(
-    output,
-    deployment,
-    deployStamp,
-    !argv['--no-clipboard'],
-    localConfig
-  );
-}
+  // If an error occurred, we want to let it fall down to rendering
+  // builds so the user can see in which build the error occurred.
+  if (isReady(deployment)) {
+    return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig);
+  }
+
+  const sleepingTime = ms('1.5s');
+  const allBuildsTime = stamp();
+  const times = {};
+  const buildsUrl = `/v1/now/deployments/${deployment.id}/builds`;
+
+  let builds = [];
+  let buildsCompleted = false;
+  let buildSpinner = null;
+
+  let deploymentSpinner = null;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (!buildsCompleted) {
+      const { builds: freshBuilds } = await now.fetch(buildsUrl);
+
+      // If there are no builds, we need to exit.
+      if (freshBuilds.length === 0 || freshBuilds.every(isDone)) {
+        builds = freshBuilds;
+        buildsCompleted = true;
+      } else {
+        for (const build of freshBuilds) {
+          const id = build.id;
+          const done = isDone(build);
+
+          if (times[id]) {
+            if (done && typeof times[id] === 'function') {
+              times[id] = times[id]();
+            }
+          } else {
+            times[id] = done ? allBuildsTime() : stamp();
+          }
+        }
+
+        if (JSON.stringify(builds) !== JSON.stringify(freshBuilds)) {
+          builds = freshBuilds;
+
+          if (buildSpinner === null) {
+            buildSpinner = wait('Building...');
+          }
+
+          buildsCompleted = builds.every(isDone);
+
+          if (builds.some(isFailed)) {
+            break;
+          }
+        }
+      }
+    } else {
+      const deploymentResponse = handleCertError(
+        output,
+        await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
+      )
+
+      if (deploymentResponse === 1) {
+        return deploymentResponse;
+      }
+
+      if (
+        deploymentResponse instanceof DeploymentNotFound ||
+        deploymentResponse instanceof DeploymentPermissionDenied ||
+        deploymentResponse instanceof InvalidDeploymentId
+      ) {
+        output.error(deploymentResponse.message);
+        return 1;
+      }
+
+      if (isReady(deploymentResponse) || isFailed(deploymentResponse)) {
+        deployment = deploymentResponse;
+
+        if (typeof deploymentSpinner === 'function') {
+          // This stops it
+          deploymentSpinner();
+        }
+
+        break;
+      } else if (!deploymentSpinner) {
+        if (typeof buildSpinner === 'function') {
+          buildSpinner();
+        }
+
+        deploymentSpinner = wait('Finalizing...');
+      }
+    }
+
+    await sleep(sleepingTime);
+  }
+
+  if (typeof buildSpinner === 'function') {
+    buildSpinner();
+  }
+
+  return printDeploymentStatus(output, deployment, deployStamp, !argv['--no-clipboard'], localConfig, builds);
+};
 
 function handleCreateDeployError(output, error) {
   if (error instanceof InvalidDomain) {
@@ -565,20 +708,18 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof TooManyRequests) {
     output.error(
-      `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
-        error.meta.retryAfter * 1000,
-        {
-          long: true,
-        }
-      )}.`
+      `Too many requests detected for ${error.meta
+        .api} API. Try again in ${ms(error.meta.retryAfter * 1000, {
+        long: true
+      })}.`
     );
     return 1;
   }
   if (error instanceof DomainNotVerified) {
     output.error(
-      `The domain used as an alias ${chalk.underline(
-        error.meta.domain
-      )} is not verified yet. Please verify it.`
+      `The domain used as an alias ${
+        chalk.underline(error.meta.domain)
+      } is not verified yet. Please verify it.`
     );
     return 1;
   }
