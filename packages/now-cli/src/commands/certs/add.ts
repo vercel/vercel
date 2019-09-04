@@ -126,7 +126,7 @@ async function add(
     }
 
     // Create the certificate from the given array of CNs
-    const cns = args.reduce<string[]>((res, item) => res.concat(...item.split(',')), []);
+    const cns = args.reduce<string[]>((res, item) => res.concat(item.split(',')), []);
     const cancelWait = wait(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
