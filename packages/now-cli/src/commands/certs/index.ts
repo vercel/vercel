@@ -1,6 +1,6 @@
-//
 import chalk from 'chalk';
 
+// @ts-ignore
 import { handleError } from '../../util/error';
 
 import createOutput from '../../util/output';
@@ -12,6 +12,7 @@ import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
+import { NowContext } from '../../types';
 
 const help = () => {
   console.log(`
@@ -71,7 +72,7 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove']
 };
 
-export default async function main(ctx) {
+export default async function main(ctx: NowContext) {
   let argv;
 
   try {
