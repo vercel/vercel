@@ -33,7 +33,7 @@ import {
   MissingBuildScript,
   ConflictingFilePath,
   ConflictingPathSegment,
-  BuildError
+  BuildError,
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -74,12 +74,16 @@ const prepareAlias = input =>
 
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList },
+  { readyState, alias: aliasList, aliasError },
   deployStamp,
   clipboardEnabled,
   localConfig,
   builds
 ) => {
+  if (aliasError && aliasError.message) {
+    output.warn(`Failed to assign aliases: ${aliasError.message}`);
+  }
+
   if (readyState === 'READY') {
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       if (aliasList.length === 1) {
@@ -201,7 +205,7 @@ export default async function main(
   const {
     apiUrl,
     authConfig: { token },
-    config: { currentTeam }
+    config: { currentTeam },
   } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
@@ -312,13 +316,12 @@ export default async function main(
       argv,
       nowConfig: localConfig,
       isFile,
-      paths
+      paths,
     });
     log(`Using project ${chalk.bold(project)}`);
 
     const createArgs = {
       name: project,
-      target: argv['--target'],
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -328,7 +331,7 @@ export default async function main(
       type: null,
       nowConfig: localConfig,
       regions,
-      meta
+      meta,
     };
 
     if (createArgs.target) {
@@ -407,7 +410,7 @@ export default async function main(
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
           currentTeam: ctx.config.currentTeam,
-          debug: debugEnabled
+          debug: debugEnabled,
         }),
         err.meta.domain,
         contextName
@@ -565,7 +568,7 @@ function handleCreateDeployError(output, error) {
       `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
         error.meta.retryAfter * 1000,
         {
-          long: true
+          long: true,
         }
       )}.`
     );

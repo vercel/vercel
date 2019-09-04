@@ -56,7 +56,6 @@ export default async function* upload(
         const fstreamPush = stream.push;
 
         let uploadedSoFar = 0;
-        // let lastEvent = 0
 
         stream.push = (chunk: any): boolean => {
           // If we're about to push the last chunk, then don't do it here
@@ -85,16 +84,16 @@ export default async function* upload(
             headers: {
               'Content-Type': 'application/octet-stream',
               'x-now-digest': sha,
-              'x-now-length': data.length
+              'x-now-length': data.length,
             },
             body: stream,
-            teamId
+            teamId,
           });
 
           if (res.status === 200) {
             result = {
               type: 'file-uploaded',
-              payload: { sha, file }
+              payload: { sha, file },
             };
           } else if (res.status > 200 && res.status < 500) {
             // If something is wrong with our request, we don't retry
@@ -122,7 +121,7 @@ export default async function* upload(
       },
       {
         retries: 6,
-        randomize: true
+        randomize: true,
       }
     );
   });
