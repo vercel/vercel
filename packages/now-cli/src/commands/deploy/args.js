@@ -10,7 +10,9 @@ export const latestHelp = () => `
 
     ${chalk.dim('Basic')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       dev                              Start a local development server
       help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
@@ -19,7 +21,6 @@ export const latestHelp = () => `
       logout                           Logs out of your account
       ls | list            [app]       Lists deployments
       switch               [scope]     Switches between teams and your personal account
-      update                           Updates Now CLI to the latest version
 
     ${chalk.dim('Advanced')}
 
@@ -30,7 +31,6 @@ export const latestHelp = () => `
       logs                 [url]       Displays the logs for a deployment
       rm | remove          [id]        Removes a deployment
       secrets              [name]      Manages your secret environment variables
-      scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
@@ -116,7 +116,7 @@ export const latestArgs = {
   '-e': '--env',
   '-b': '--build-env',
   '-C': '--no-clipboard',
-  '-m': '--meta'
+  '-m': '--meta',
 };
 
 export const legacyArgsMri = {
@@ -127,7 +127,7 @@ export const legacyArgsMri = {
     'meta',
     'session-affinity',
     'regions',
-    'dotenv'
+    'dotenv',
   ],
   boolean: [
     'help',
@@ -144,11 +144,11 @@ export const legacyArgsMri = {
     'public',
     'no-scale',
     'no-verify',
-    'dotenv'
+    'dotenv',
   ],
   default: {
     C: false,
-    clipboard: true
+    clipboard: true,
   },
   alias: {
     env: 'e',
@@ -165,8 +165,8 @@ export const legacyArgsMri = {
     'session-affinity': 'S',
     name: 'n',
     project: 'P',
-    alias: 'a'
-  }
+    alias: 'a',
+  },
 };
 
 // The following arg parsing is simply to make it compatible

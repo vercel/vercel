@@ -38,6 +38,7 @@ interface DownloadOptions {
   meta: Meta;
 }
 
+// eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
 const LAUNCHER_FILENAME = '___now_launcher';
@@ -73,7 +74,12 @@ async function downloadInstallAndBundle({
     config
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(entrypointFsDirname, ['--prefer-offline'], spawnOpts);
+  await runNpmInstall(
+    entrypointFsDirname,
+    ['--prefer-offline'],
+    spawnOpts,
+    meta
+  );
   debug(`install complete [${Date.now() - installTime}ms]`);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;

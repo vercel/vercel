@@ -1,6 +1,9 @@
 node_modules
 dist
 
+# gatsby-plugin-now
+packages/gatsby-plugin-now/test/fixtures
+
 # now-cli
 packages/now-cli/@types
 packages/now-cli/download

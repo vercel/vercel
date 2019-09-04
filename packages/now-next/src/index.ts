@@ -3,7 +3,7 @@ import {
   pathExists,
   readFile,
   unlink as unlinkFile,
-  writeFile
+  writeFile,
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
@@ -26,9 +26,10 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  debug
+  debug,
+  PackageJson,
 } from '@now/build-utils';
-import nodeFileTrace from '@zeit/node-file-trace';
+import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
@@ -50,7 +51,7 @@ import {
   validateEntrypoint,
   createLambdaFromPseudoLayers,
   PseudoLayer,
-  createPseudoLayer
+  createPseudoLayer,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -85,10 +86,7 @@ async function readPackageJson(entryPath: string) {
 /**
  * Write package.json
  */
-async function writePackageJson(
-  workPath: string,
-  packageJson: Record<string, any>
-) {
+async function writePackageJson(workPath: string, packageJson: PackageJson) {
   await writeFile(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
@@ -151,7 +149,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   // makes it default to `process.env`
   const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
     cwd: entryPath,
-    execArgv: []
+    execArgv: [],
   });
 
   const getUrl = () =>
@@ -168,7 +166,7 @@ export const build = async ({
   workPath,
   entrypoint,
   config = {} as Config,
-  meta = {} as BuildParamsMeta
+  meta = {} as BuildParamsMeta,
 }: BuildParamsType): Promise<{
   routes: Route[];
   output: Files;
@@ -202,7 +200,7 @@ export const build = async ({
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
       debug(`${name} Installing dependencies...`);
-      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
+      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
       if (!process.env.NODE_ENV) {
         process.env.NODE_ENV = 'development';
@@ -233,7 +231,7 @@ export const build = async ({
         urls[entrypoint]
       ),
       watch: pathsInside,
-      childProcesses: childProcess ? [childProcess] : []
+      childProcesses: childProcess ? [childProcess] : [],
     };
   }
 
@@ -276,7 +274,7 @@ export const build = async ({
     );
     pkg.scripts = {
       'now-build': 'next build',
-      ...(pkg.scripts || {})
+      ...(pkg.scripts || {}),
     };
     await writePackageJson(entryPath, pkg);
   }
@@ -287,7 +285,7 @@ export const build = async ({
   }
 
   debug('installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts);
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
   try {
@@ -305,7 +303,7 @@ export const build = async ({
 
   debug('running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const env = { ...spawnOpts.env } as any;
+  const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
@@ -314,7 +312,8 @@ export const build = async ({
     await runNpmInstall(
       entryPath,
       ['--prefer-offline', '--production'],
-      spawnOpts
+      spawnOpts,
+      meta
     );
   }
 
@@ -351,14 +350,14 @@ export const build = async ({
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
-        fsPath: path.join(__dirname, 'now__bridge.js')
-      })
+        fsPath: path.join(__dirname, 'now__bridge.js'),
+      }),
     };
     const nextFiles: { [key: string]: FileFsRef } = {
       ...nodeModules,
       ...dotNextRootFiles,
       ...dotNextServerRootFiles,
-      ...launcherFiles
+      ...launcherFiles,
     };
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
@@ -395,7 +394,7 @@ export const build = async ({
           ],
           [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
             `.next/server/static/${buildId}/pages/${page}`
-          ]
+          ],
         };
 
         debug(`Creating lambda for page: "${page}"...`);
@@ -403,10 +402,10 @@ export const build = async ({
           files: {
             ...nextFiles,
             ...pageFiles,
-            'now__launcher.js': new FileBlob({ data: launcher })
+            'now__launcher.js': new FileBlob({ data: launcher }),
           },
           handler: 'now__launcher.launcher',
-          runtime: nodeVersion.runtime
+          runtime: nodeVersion.runtime,
         });
         debug(`Created lambda for page: "${page}"`);
       })
@@ -431,7 +430,7 @@ export const build = async ({
 
       exportedPageRoutes.push({
         src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute)
+        dest: path.join('/', staticRoute),
       });
     });
 
@@ -479,7 +478,7 @@ export const build = async ({
     const pseudoLayers: PseudoLayer[] = [];
     const apiPseudoLayers: PseudoLayer[] = [];
     const isApiPage = (page: string) =>
-      page.replace(/\\/g, '/').match(/serverless\/pages\/api/)
+      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -494,41 +493,31 @@ export const build = async ({
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath)
+      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
 
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
-          apiPages.push(page)
+          apiPages.push(page);
         } else {
-          nonApiPages.push(page)
+          nonApiPages.push(page);
         }
       }
 
-      type FileTraceReasons = {
-        [fileName: string]: {
-          type: string;
-          ignored: boolean;
-          parents: string[];
-        };
-      };
-      type FileTraceResult = {
-        fileList: string[];
-        reasons: FileTraceReasons;
-      };
+      const {
+        fileList: apiFileList,
+        reasons: apiReasons,
+      } = await nodeFileTrace(apiPages, { base: workPath });
 
-      const { fileList: apiFileList, reasons: apiReasons } = ((
-        await nodeFileTrace(apiPages, { base: workPath })
-      ) as any) as FileTraceResult
-
-      const { fileList, reasons: nonApiReasons } = ((await nodeFileTrace(
+      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
         Object.keys(pages).map(page => pages[page].fsPath),
         { base: workPath }
-      )) as any) as FileTraceResult
+      );
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
       const collectTracedFiles = (
-        reasons: FileTraceReasons, files: { [filePath: string]: FileFsRef }
+        reasons: NodeFileTraceReasons,
+        files: { [filePath: string]: FileFsRef }
       ) => (file: string) => {
         const reason = reasons[file];
         if (reason && reason.type === 'initial') {
@@ -539,7 +528,7 @@ export const build = async ({
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
         });
-      }
+      };
 
       fileList.forEach(collectTracedFiles(nonApiReasons, tracedFiles));
       apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
@@ -561,7 +550,7 @@ export const build = async ({
         path.join(entryPath, '.next', 'serverless')
       );
 
-      const assetKeys = Object.keys(assets!);
+      const assetKeys = Object.keys(assets);
       if (assetKeys.length > 0) {
         debug('detected (legacy) assets to be bundled with lambda:');
         assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
@@ -601,9 +590,9 @@ export const build = async ({
         );
         const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
           'now__bridge.js': new FileFsRef({
-            fsPath: path.join(__dirname, 'now__bridge.js')
+            fsPath: path.join(__dirname, 'now__bridge.js'),
           }),
-          'now__launcher.js': new FileBlob({ data: launcher })
+          'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
         if (requiresTracing) {
@@ -612,11 +601,11 @@ export const build = async ({
           ] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page]
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
             },
             layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
             handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime
+            runtime: nodeVersion.runtime,
           });
         } else {
           lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -624,10 +613,10 @@ export const build = async ({
               ...launcherFiles,
               ...assets,
               ...tracedFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page]
+              [requiresTracing ? pageFileName : 'page.js']: pages[page],
             },
             handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime
+            runtime: nodeVersion.runtime,
           });
         }
         console.timeEnd(label);
@@ -643,7 +632,9 @@ export const build = async ({
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[file]
+      [path.join(entryDirectory, `_next/static/${file}`)]: nextStaticFiles[
+        file
+      ],
     }),
     {}
   );
@@ -660,7 +651,7 @@ export const build = async ({
   const publicFiles = Object.keys(publicDirectoryFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file]
+      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file],
     }),
     {}
   );
@@ -687,7 +678,7 @@ export const build = async ({
       ...lambdas,
       ...staticPages,
       ...staticFiles,
-      ...staticDirectoryFiles
+      ...staticDirectoryFiles,
     },
     routes: [
       // Static exported pages (.html rewrites)
@@ -700,7 +691,7 @@ export const build = async ({
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-        continue: true
+        continue: true,
       },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
@@ -713,18 +704,18 @@ export const build = async ({
             {
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join('/', entryDirectory, '_error'),
-              status: 404
-            }
-          ])
+              status: 404,
+            },
+          ]),
     ],
     watch: [],
-    childProcesses: []
+    childProcesses: [],
   };
 };
 
 export const prepareCache = async ({
   workPath,
-  entrypoint
+  entrypoint,
 }: PrepareCacheOptions) => {
   debug('preparing cache ...');
   const entryDirectory = path.dirname(entrypoint);
@@ -746,7 +737,7 @@ export const prepareCache = async ({
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath))
+    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
   debug('cache file manifest produced');
   return cache;

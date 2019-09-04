@@ -1,0 +1,86 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`test generated now routes 1`] = `
+Array [
+  Object {
+    "headers": Object {
+      "Location": "/",
+    },
+    "src": "/my-special-redirect",
+    "status": 302,
+  },
+  Object {
+    "handle": "filesystem",
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2",
+    },
+    "src": "/page2",
+    "status": 301,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2/",
+    },
+    "src": "/page2/",
+    "status": 301,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/",
+    },
+    "src": "/orange",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/",
+    },
+    "src": "/grape",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2/",
+    },
+    "src": "/blue",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2/",
+    },
+    "src": "/randirect",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/",
+    },
+    "src": "/juice",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/",
+    },
+    "src": "/soda",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2/",
+    },
+    "src": "/donut",
+    "status": 302,
+  },
+  Object {
+    "headers": Object {
+      "Location": "/page-2/",
+    },
+    "src": "/randorect",
+    "status": 302,
+  },
+]
+`;
