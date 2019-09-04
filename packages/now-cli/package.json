@@ -98,7 +98,7 @@
     "@types/which": "1.3.1",
     "@types/write-json-file": "2.2.1",
     "@zeit/dockerignore": "0.0.5",
-    "@zeit/fun": "0.9.3",
+    "@zeit/fun": "0.10.0",
     "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.10.2",
