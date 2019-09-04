@@ -1699,7 +1699,14 @@ test('invalid deployment, projects and alias names', async t => {
   ]);
 });
 
-test('now cert ls --after=cert_test', async t => {
+test('now certs ls', async t => {
+  const output = await execute(['certs', 'ls']);
+
+  t.is(output.code, 0, formatOutput(output));
+  t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
+});
+
+test('now certs ls --after=cert_test', async t => {
   const output = await execute(['certs', 'ls', '--after=cert_test']);
 
   t.is(output.code, 1, formatOutput(output));
