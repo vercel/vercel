@@ -1,10 +1,7 @@
 import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
-import {
-  createDeployment,
-  createLegacyDeployment
-} from '../../../../now-client';
+import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
 
@@ -17,7 +14,7 @@ export default async function processDeployment({
   uploadStamp,
   legacy,
   env,
-  quiet
+  quiet,
 }: any) {
   const { warn, log } = createOutput({ debug });
   let bar: Progress | null = null;
@@ -59,7 +56,7 @@ export default async function processDeployment({
             complete: '=',
             incomplete: '',
             total: missingSize,
-            clear: true
+            clear: true,
           }
         );
       }
@@ -152,7 +149,7 @@ export default async function processDeployment({
             complete: '=',
             incomplete: '',
             total: missingSize,
-            clear: true
+            clear: true,
           }
         );
       }
