@@ -23,7 +23,7 @@ export default async function verify(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -122,7 +122,7 @@ export default async function verify(
     return 1;
   }
 
-  if (result.txtVerifiedAt) {
+  if (result.nsVerifiedAt) {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
         domain.name
