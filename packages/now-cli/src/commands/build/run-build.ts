@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { Builder, FileFsRef } from '@now/build-utils';
+import { Builder, FileFsRef, Route } from '@now/build-utils';
 import { Output } from '../../util/output';
 
 const cleanDirPart = (part: string) => part.replace(/(\/|\\)/g, '_');
@@ -21,25 +21,39 @@ export default async function runBuild({
   output: Output;
 }): Promise<void> {
   output.log(`Running build: ${JSON.stringify(build)}`);
+  let buildOutput: {
+    routes: Route[];
+    output: { [path: string]: any };
+  } = {
+    output: {},
+    routes: []
+  };
 
   const builderName = build.use;
-  const builderPath = path.join(buildersDir, 'node_modules', builderName);
-  const builder = require(builderPath);
-
   const outputDir = path.join(
     buildsOutputDir,
     `${cleanDirPart(build.src)}-${cleanDirPart(builderName)}`
   );
+
   await fs.remove(outputDir);
   await fs.ensureDir(outputDir);
 
-  const buildOutput = await builder.build({
-    files,
-    workPath: workDir,
-    entrypoint: build.src,
-    config: build.config || {}
-  });
+  if (build.use === '@now/static') {
+    // the source is the output for @now/static
+    buildOutput.output = {
+      [build.src]: files[build.src]
+    }
+  } else {
+    const builderPath = path.join(buildersDir, 'node_modules', builderName);
+    const builder = require(builderPath);
 
+    buildOutput = await builder.build({
+      files,
+      workPath: workDir,
+      entrypoint: build.src,
+      config: build.config || {}
+    });
+  }
   const outputKeys = Object.keys(buildOutput.output);
   const dirNames = new Set(outputKeys.map(p => path.dirname(p)));
 

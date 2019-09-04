@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "meta/**/*.json",
+      "use": "@now/static"
+    },
+    {
+      "src": "posts/**/*.{json,md}",
+      "use": "@now/static"
+    }
+  ]
+}

@@ -276,3 +276,44 @@ test('[now-build] 03-api-and-next-zero-config', async t => {
     'output!!api/nested/index.js!!handler': '___now_launcher.launcher',
   }))
 });
+
+test('[now-build] 04-now-static', async t => {
+  const fixtureName = '04-now-static';
+  await buildFixture(fixtureName);
+  const builds = [
+    {
+      name: 'meta_1.json',
+      files: ['meta/1.json'],
+      output: {
+        'output!!meta/1.json!!type': 'FileFsRef'
+      }
+    },
+    {
+      name: 'meta_another_2.json',
+      files: ['meta/another/2.json'],
+      output: {
+        'output!!meta/another/2.json!!type': 'FileFsRef'
+      }
+    },
+    {
+      name: 'posts_1.json',
+      files: ['posts/1.json'],
+      output: {
+        'output!!posts/1.json!!type': 'FileFsRef'
+      }
+    },
+    {
+      name: 'posts_another_2.md',
+      files: ['posts/another/2.md'],
+      output: {
+        'output!!posts/another/2.md!!type': 'FileFsRef'
+      }
+    },
+  ]
+  for (const build of builds) {
+    const buildName = `${build.name}-@now_static`
+
+    await t.notThrowsAsync(hasBuildFiles(fixtureName, buildName, build.files))
+    await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, build.output))
+  }
+});

@@ -122,6 +122,8 @@ export default async function main(ctx: NowContext) {
     dependencies: {},
     version: '0.0.1'
   };
+  // this doesn't need to be installed since it's not a builder
+  packagesSet.delete('@now/static')
 
   await fs.ensureDir(buildersDir);
   await fs.writeFile(buildersPkgPath, JSON.stringify(buildersPkg), 'utf8');
