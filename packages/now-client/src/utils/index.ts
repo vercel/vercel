@@ -15,11 +15,13 @@ export const API_DELETE_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v2/now/deploym
 export const EVENTS = new Set([
   // File events
   'hashes-calculated',
+  'file_count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
   'created',
   'ready',
+  'warning',
   'error',
   // Build events
   'build-state-changed',

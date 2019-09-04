@@ -1,13 +1,13 @@
-import { DeploymentFile } from './utils/hashes'
+import { DeploymentFile } from './utils/hashes';
 import {
   parseNowJSON,
   fetch,
   API_DEPLOYMENTS,
   prepareFiles,
-  API_DEPLOYMENTS_LEGACY
-} from './utils'
-import checkDeploymentStatus from './deployment-status'
-import { generateQueryString } from './utils/query-string'
+  API_DEPLOYMENTS_LEGACY,
+} from './utils';
+import checkDeploymentStatus from './deployment-status';
+import { generateQueryString } from './utils/query-string';
 
 export interface Options {
   metadata: DeploymentOptions;
@@ -26,10 +26,10 @@ async function* createDeployment(
   files: Map<string, DeploymentFile>,
   options: Options
 ): AsyncIterableIterator<{ type: string; payload: any }> {
-  const preparedFiles = prepareFiles(files, options)
+  const preparedFiles = prepareFiles(files, options);
 
   let apiDeployments =
-    metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY
+    metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
   try {
     const dpl = await fetch(
       `${apiDeployments}${generateQueryString(options)}`,
@@ -38,25 +38,36 @@ async function* createDeployment(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${options.token}`
+          Authorization: `Bearer ${options.token}`,
         },
         body: JSON.stringify({
           ...metadata,
-          files: preparedFiles
-        })
+          files: preparedFiles,
+        }),
       }
-    )
+    );
 
-    const json = await dpl.json()
+    const json = await dpl.json();
 
     if (!dpl.ok || json.error) {
       // Return error object
-      return yield { type: 'error', payload: json.error ? { ...json.error, status: dpl.status } : { ...json, status: dpl.status } }
+      return yield {
+        type: 'error',
+        payload: json.error
+          ? { ...json.error, status: dpl.status }
+          : { ...json, status: dpl.status },
+      };
     }
 
-    yield { type: 'created', payload: json }
+    for (const [name, value] of dpl.headers.entries()) {
+      if (name.startsWith('x-now-warning-')) {
+        yield { type: 'warning', payload: value };
+      }
+    }
+
+    yield { type: 'created', payload: json };
   } catch (e) {
-    return yield { type: 'error', payload: e }
+    return yield { type: 'error', payload: e };
   }
 }
 
@@ -66,16 +77,16 @@ const getDefaultName = (
   files: Map<string, DeploymentFile>
 ): string => {
   if (isDirectory && typeof path === 'string') {
-    const segments = path.split('/')
+    const segments = path.split('/');
 
-    return segments[segments.length - 1]
+    return segments[segments.length - 1];
   } else {
-    const filePath = Array.from(files.values())[0].names[0]
-    const segments = filePath.split('/')
+    const filePath = Array.from(files.values())[0].names[0];
+    const segments = filePath.split('/');
 
-    return segments[segments.length - 1]
+    return segments[segments.length - 1];
   }
-}
+};
 
 export default async function* deploy(
   files: Map<string, DeploymentFile>,
@@ -85,53 +96,75 @@ export default async function* deploy(
     (file: DeploymentFile): boolean => {
       return Boolean(
         file.names.find((name: string): boolean => name.includes('now.json'))
-      )
+      );
     }
-  )
-  const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson)
+  );
+  const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson);
 
-  const meta = options.metadata || {}
-  const metadata = { ...nowJsonMetadata, ...meta }
+  delete nowJsonMetadata.github;
+  delete nowJsonMetadata.scope;
+
+  const meta = options.metadata || {};
+  const metadata = { ...nowJsonMetadata, ...meta };
 
   // Check if we should default to a static deployment
   if (!metadata.version && !metadata.name) {
-    metadata.version = 2
+    metadata.version = 2;
     metadata.name =
       options.totalFiles === 1
         ? 'file'
-        : getDefaultName(options.path, options.isDirectory, files)
+        : getDefaultName(options.path, options.isDirectory, files);
+  }
+
+  if (options.totalFiles === 1 && !metadata.builds && !metadata.routes) {
+    const filePath = Array.from(files.values())[0].names[0];
+    const segments = filePath.split('/');
+
+    metadata.routes = [
+      {
+        src: '/',
+        dest: `/${segments[segments.length - 1]}`,
+      },
+    ];
   }
 
   if (!metadata.name) {
     metadata.name =
       options.defaultName ||
-      getDefaultName(options.path, options.isDirectory, files)
+      getDefaultName(options.path, options.isDirectory, files);
   }
 
   if (metadata.version === 1 && !metadata.deploymentType) {
-    metadata.deploymentType = nowJsonMetadata.type
+    metadata.deploymentType = nowJsonMetadata.type;
   }
 
-  delete metadata.github
-  delete metadata.scope
+  if (metadata.version === 1) {
+    const nowConfig = { ...nowJsonMetadata };
+    delete nowConfig.version;
 
-  let deployment: Deployment | undefined
+    metadata.config = {
+      ...nowConfig,
+      ...metadata.config,
+    };
+  }
+
+  let deployment: Deployment | undefined;
 
   try {
     for await (const event of createDeployment(metadata, files, options)) {
       if (event.type === 'created') {
-        deployment = event.payload
+        deployment = event.payload;
       }
 
-      yield event
+      yield event;
     }
   } catch (e) {
-    return yield { type: 'error', payload: e }
+    return yield { type: 'error', payload: e };
   }
 
   if (deployment) {
     if (deployment.readyState === 'READY') {
-      return yield { type: 'ready', payload: deployment }
+      return yield { type: 'ready', payload: deployment };
     }
 
     try {
@@ -141,10 +174,10 @@ export default async function* deploy(
         metadata.version,
         options.teamId
       )) {
-        yield event
+        yield event;
       }
     } catch (e) {
-      return yield { type: 'error', payload: e }
+      return yield { type: 'error', payload: e };
     }
   }
 }
