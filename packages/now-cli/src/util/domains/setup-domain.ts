@@ -9,6 +9,7 @@ import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import verifyDomain from './verify-domain';
 import extractDomain from '../alias/extract-domain';
+import isWildcardAlias from '../alias/is-wildcard-alias';
 
 export default async function setupDomain(
   output: Output,
@@ -34,7 +35,7 @@ export default async function setupDomain(
 
   if (info) {
     output.debug(`Domain ${domain} found for the given context`);
-    if (!info.verified) {
+    if (!info.verified || (!info.nsVerifiedAt && isWildcardAlias(alias))) {
       output.debug(
         `Domain ${domain} is not verified, trying to perform a verification`
       );
@@ -47,8 +48,17 @@ export default async function setupDomain(
         output.debug(`Domain ${domain} verification failed`);
         return verificationResult;
       }
+      if (!verificationResult.nsVerifiedAt && isWildcardAlias(alias)) {
+        return new ERRORS.DomainNsNotVerifiedForWildcard({
+          domain,
+          nsVerification: {
+            intendedNameservers: verificationResult.intendedNameservers,
+            nameservers: verificationResult.nameservers
+          }
+        });
+      }
 
-      output.debug(`Domain ${domain}  successfuly verified`);
+      output.debug(`Domain ${domain} successfuly verified`);
       return maybeGetDomainByName(client, contextName, domain) as Promise<
         Domain
       >;

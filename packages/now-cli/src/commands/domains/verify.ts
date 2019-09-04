@@ -23,7 +23,7 @@ export default async function verify(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -122,16 +122,11 @@ export default async function verify(
     return 1;
   }
 
-  if (result.txtVerifiedAt) {
+  if (result.nsVerifiedAt) {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${chalk.bold(
         domain.name
-      )} was verified using DNS TXT record. ${verifyStamp()}`
-    );
-    output.print(
-      `  You can verify with nameservers too. Run ${cmd(
-        `now domains inspect ${domain.name}`
-      )} to find out the intended set.\n`
+      )} was verified using nameservers. ${verifyStamp()}`
     );
     return 0;
   }
@@ -139,7 +134,12 @@ export default async function verify(
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
       domain.name
-    )} was verified using nameservers. ${verifyStamp()}`
+    )} was verified using DNS TXT record. ${verifyStamp()}`
+  );
+  output.print(
+    `  You can verify with nameservers too. Run ${cmd(
+      `now domains inspect ${domain.name}`
+    )} to find out the intended set.\n`
   );
   return 0;
 }
