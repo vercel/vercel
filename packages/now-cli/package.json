@@ -61,11 +61,11 @@
     "node": ">= 8.11"
   },
   "devDependencies": {
-    "@now/build-utils": "0.9.14",
+    "@now/build-utils": "latest",
     "@now/go": "latest",
     "@now/next": "latest",
     "@now/node": "latest",
-    "@now/routing-utils": "1.2.3-canary.0",
+    "@now/routing-utils": "latest",
     "@now/static-build": "latest",
     "@sentry/node": "5.5.0",
     "@types/ansi-escapes": "3.0.0",
