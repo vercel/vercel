@@ -9,7 +9,7 @@ on:
     - '!*'
 
 jobs:
-  publish:
+  Publish:
 
     runs-on: ubuntu-latest
 
