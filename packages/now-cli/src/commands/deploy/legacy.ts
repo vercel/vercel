@@ -2,7 +2,6 @@ import { resolve, basename, join } from 'path';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
-import bytes from 'bytes';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
@@ -13,7 +12,6 @@ import ms from 'ms';
 // @ts-ignore
 import title from 'title';
 import plural from 'pluralize';
-import Progress from 'progress';
 // @ts-ignore
 import { handleError } from '../../util/error';
 import chars from '../../util/output/chars';
@@ -34,19 +32,15 @@ import promptOptions from '../../util/prompt-options';
 // @ts-ignore
 import readMetaData from '../../util/read-metadata';
 import toHumanPath from '../../util/humanize-path';
-import combineAsyncGenerators from '../../util/combine-async-generators';
 // @ts-ignore
 import createDeploy from '../../util/deploy/create-deploy';
 import eventListenerToGenerator from '../../util/event-listener-to-generator';
-// @ts-ignore
-import formatLogCmd from '../../util/output/format-log-cmd';
 // @ts-ignore
 import formatLogOutput from '../../util/output/format-log-output';
 // @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
 // @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
-import getStateChangeFromPolling from '../../util/deploy/get-state-change-from-polling';
 import joinWords from '../../util/output/join-words';
 // @ts-ignore
 import normalizeRegionsList from '../../util/scale/normalize-regions-list';
@@ -754,8 +748,6 @@ async function sync({
       parseMeta(argv.meta)
     );
 
-    let syncCount;
-
     try {
       meta.name = getProjectName({
         argv,
@@ -776,13 +768,14 @@ async function sync({
           scale,
           wantsPublic,
           sessionAffinity,
-          isFile
+          isFile,
+          nowConfig
         },
         meta
       );
 
       deployStamp = stamp();
-      const firstDeployCall = await createDeploy(
+      deployment = await createDeploy(
         output,
         now,
         contextName,
@@ -790,117 +783,22 @@ async function sync({
         createArgs
       );
 
-      const handledResult = handleCertError(output, firstDeployCall);
+      const handledResult = handleCertError(output, deployment);
       if (handledResult === 1) {
         return handledResult;
       }
 
       if (
-        firstDeployCall instanceof DomainNotFound ||
-        firstDeployCall instanceof DomainPermissionDenied ||
-        firstDeployCall instanceof DomainVerificationFailed ||
-        firstDeployCall instanceof SchemaValidationFailed ||
-        firstDeployCall instanceof DeploymentNotFound ||
-        firstDeployCall instanceof DeploymentsRateLimited
+        deployment instanceof DomainNotFound ||
+        deployment instanceof DomainPermissionDenied ||
+        deployment instanceof DomainVerificationFailed ||
+        deployment instanceof SchemaValidationFailed ||
+        deployment instanceof DeploymentNotFound ||
+        deployment instanceof DeploymentsRateLimited
       ) {
-        handleCreateDeployError(output, firstDeployCall);
+        handleCreateDeployError(output, deployment);
         await exit(1);
         return;
-      }
-
-      deployment = firstDeployCall;
-
-      if (now.syncFileCount > 0) {
-        const uploadStamp = stamp();
-        await new Promise(resolve => {
-          if (now.syncFileCount !== now.fileCount) {
-            debug(`Total files ${now.fileCount}, ${now.syncFileCount} changed`);
-          }
-
-          const size = bytes(now.syncAmount);
-          syncCount = `${now.syncFileCount} file${
-            now.syncFileCount > 1 ? 's' : ''
-          }`;
-          const bar = new Progress(
-            `${chalk.gray(
-              '>'
-            )} Upload [:bar] :percent :etas (${size}) [${syncCount}]`,
-            {
-              width: 20,
-              complete: '=',
-              incomplete: '',
-              total: now.syncAmount,
-              clear: true
-            }
-          );
-
-          now.upload({ scale });
-
-          now.on(
-            'upload',
-            ({ names, data }: { names: string[]; data: Buffer }) => {
-              debug(`Uploaded: ${names.join(' ')} (${bytes(data.length)})`);
-            }
-          );
-
-          now.on('uploadProgress', (progress: number) => {
-            bar.tick(progress);
-          });
-
-          now.on('complete', resolve);
-
-          now.on('error', (err: Error) => {
-            error('Upload failed');
-            reject(err);
-          });
-        });
-
-        if (!quiet && syncCount) {
-          log(
-            `Synced ${syncCount} (${bytes(now.syncAmount)}) ${uploadStamp()}`
-          );
-        }
-
-        for (let i = 0; i < 4; i += 1) {
-          deployStamp = stamp();
-          const secondDeployCall = await createDeploy(
-            output,
-            now,
-            contextName,
-            paths,
-            createArgs
-          );
-
-          const handledResult = handleCertError(output, secondDeployCall);
-          if (handledResult === 1) {
-            return handledResult;
-          }
-
-          if (
-            secondDeployCall instanceof DomainNotFound ||
-            secondDeployCall instanceof DomainPermissionDenied ||
-            secondDeployCall instanceof DomainVerificationFailed ||
-            secondDeployCall instanceof SchemaValidationFailed ||
-            secondDeployCall instanceof TooManyRequests ||
-            secondDeployCall instanceof DeploymentNotFound ||
-            secondDeployCall instanceof DeploymentsRateLimited
-          ) {
-            handleCreateDeployError(output, secondDeployCall);
-            await exit(1);
-            return;
-          }
-
-          if (now.syncFileCount === 0) {
-            deployment = secondDeployCall;
-            break;
-          }
-        }
-
-        if (deployment === null) {
-          error('Uploading failed. Please try again.');
-          await exit(1);
-          return;
-        }
       }
     } catch (err) {
       if (err.code === 'plan_requires_public') {
@@ -1022,96 +920,54 @@ async function sync({
     // Show build logs
     // (We have to add this check for flow but it will never happen)
     if (deployment !== null) {
-      // If the created deployment is ready it was a deduping and we should exit
-      if (deployment.readyState !== 'READY') {
-        require('assert')(deployment); // mute linter
-        const instanceIndex = getInstanceIndex();
-        const eventsStream = await maybeGetEventsStream(now, deployment);
-        const eventsGenerator = getEventsGenerator(
+      const instanceIndex = getInstanceIndex();
+      const eventsStream = await maybeGetEventsStream(now, deployment);
+
+      if (!noVerify) {
+        output.log(
+          `Verifying instantiation in ${joinWords(
+            Object.keys(deployment.scale).map(dc => chalk.bold(dc))
+          )}`
+        );
+        const verifyStamp = stamp();
+        const verifyDCsGenerator = getVerifyDCsGenerator(
+          output,
           now,
-          contextName,
           deployment,
           eventsStream
         );
 
-        for await (const _event of eventsGenerator) {
-          const event = _event as any;
-          // Stop when the deployment is ready
-          if (
-            event.type === 'state-change' &&
-            event.payload.value === 'READY'
-          ) {
-            output.log(`Build completed`);
-            break;
-          }
-
-          // Stop then there is an error state
-          if (
-            event.type === 'state-change' &&
-            event.payload.value === 'ERROR'
-          ) {
-            output.error(`Build failed`);
-            await exit(1);
-          }
-
-          // For any relevant event we receive, print the result
-          if (event.type === 'build-start') {
-            output.log('Building…');
-          } else if (event.type === 'command') {
-            output.log(formatLogCmd(event.payload.text));
-          } else if (event.type === 'stdout' || event.type === 'stderr') {
-            formatLogOutput(event.payload.text).forEach((msg: string) =>
-              output.log(msg)
+        for await (const _dcOrEvent of verifyDCsGenerator) {
+          const dcOrEvent = _dcOrEvent as any;
+          if (dcOrEvent instanceof VerifyScaleTimeout) {
+            output.error(
+              `Instance verification timed out (${ms(
+                dcOrEvent.meta.timeout
+              )})`
             );
-          }
-        }
-
-        if (!noVerify) {
-          output.log(
-            `Verifying instantiation in ${joinWords(
-              Object.keys(deployment.scale).map(dc => chalk.bold(dc))
-            )}`
-          );
-          const verifyStamp = stamp();
-          const verifyDCsGenerator = getVerifyDCsGenerator(
-            output,
-            now,
-            deployment,
-            eventsStream
-          );
-
-          for await (const _dcOrEvent of verifyDCsGenerator) {
-            const dcOrEvent = _dcOrEvent as any;
-            if (dcOrEvent instanceof VerifyScaleTimeout) {
-              output.error(
-                `Instance verification timed out (${ms(
-                  dcOrEvent.meta.timeout
-                )})`
-              );
-              output.log(
-                'Read more: https://err.sh/now/verification-timeout'
-              );
-              await exit(1);
-            } else if (Array.isArray(dcOrEvent)) {
-              const [dc, instances] = dcOrEvent;
-              output.log(
-                `${chalk.cyan(chars.tick)} Scaled ${plural(
-                  'instance',
-                  instances,
-                  true
-                )} in ${chalk.bold(dc)} ${verifyStamp()}`
-              );
-            } else if (
-              dcOrEvent &&
-              (dcOrEvent.type === 'stdout' || dcOrEvent.type === 'stderr')
-            ) {
-              const prefix = chalk.gray(
-                `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
-              );
-              formatLogOutput(dcOrEvent.payload.text, prefix).forEach(
-                (msg: string) => output.log(msg)
-              );
-            }
+            output.log(
+              'Read more: https://err.sh/now-cli/verification-timeout'
+            );
+            await exit(1);
+          } else if (Array.isArray(dcOrEvent)) {
+            const [dc, instances] = dcOrEvent;
+            output.log(
+              `${chalk.cyan(chars.tick)} Scaled ${plural(
+                'instance',
+                instances,
+                true
+              )} in ${chalk.bold(dc)} ${verifyStamp()}`
+            );
+          } else if (
+            dcOrEvent &&
+            (dcOrEvent.type === 'stdout' || dcOrEvent.type === 'stderr')
+          ) {
+            const prefix = chalk.gray(
+              `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
+            );
+            formatLogOutput(dcOrEvent.payload.text, prefix).forEach(
+              (msg: string) => output.log(msg)
+            );
           }
         }
       }
@@ -1197,28 +1053,6 @@ async function maybeGetEventsStream(now: Now, deployment: any) {
   }
 }
 
-function getEventsGenerator(
-  now: Now,
-  contextName: string,
-  deployment: any,
-  eventsStream: any
-) {
-  const stateChangeFromPollingGenerator = getStateChangeFromPolling(
-    now,
-    contextName,
-    deployment.deploymentId,
-    deployment.readyState
-  );
-  if (eventsStream !== null) {
-    return combineAsyncGenerators(
-      eventListenerToGenerator('data', eventsStream),
-      stateChangeFromPollingGenerator
-    );
-  }
-
-  return stateChangeFromPollingGenerator;
-}
-
 function getVerifyDCsGenerator(
   output: Output,
   now: Now,
@@ -1228,7 +1062,7 @@ function getVerifyDCsGenerator(
   const verifyDeployment = verifyDeploymentScale(
     output,
     now,
-    deployment.deploymentId,
+    deployment.deploymentId || deployment.uid,
     deployment.scale
   );
 
