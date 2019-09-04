@@ -3,16 +3,29 @@ import ms from 'ms';
 import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
+// @ts-ignore
 import Now from '../../util';
 import cmd from '../../util/output/cmd';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
+import Client from '../../util/client';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import { CertNotFound } from '../../util/errors-ts';
-import strlen from '../../util/strlen.ts';
+import strlen from '../../util/strlen';
+import { Output } from '../../util/output';
+import { NowContext, Cert } from '../../types';
 
-async function ls(ctx, opts, args, output) {
+interface Options {
+  '--debug'?: boolean;
+  '--after'?: string;
+}
+
+async function ls(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+): Promise<number> {
   const { authConfig: { token }, config } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -32,7 +45,6 @@ async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const lsStamp = stamp();
 
@@ -55,7 +67,6 @@ async function ls(ctx, opts, args, output) {
     throw certificates;
   }
 
-  const { uid: lastCert } = certificates[certificates.length - 1];
   const certs = sortByCn(certificates);
 
   output.log(
@@ -65,7 +76,8 @@ async function ls(ctx, opts, args, output) {
   );
 
   if (certs.length >= 100) {
-    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.`);
+    const { uid: lastCert } = certificates[certificates.length - 1];
+    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.\n`);
   }
 
   if (certs.length > 0) {
@@ -75,7 +87,7 @@ async function ls(ctx, opts, args, output) {
   return 0;
 }
 
-function formatCertsTable(certsList) {
+function formatCertsTable(certsList: Cert[]) {
   return `${table(
     [formatCertsTableHead(), ...formatCertsTableBody(certsList)],
     {
@@ -86,7 +98,7 @@ function formatCertsTable(certsList) {
   ).replace(/^(.*)/gm, '  $1')}\n`;
 }
 
-function formatCertsTableHead() {
+function formatCertsTableHead(): string[] {
   return [
     chalk.dim('id'),
     chalk.dim('cns'),
@@ -96,15 +108,12 @@ function formatCertsTableHead() {
   ];
 }
 
-function formatCertsTableBody(certsList) {
+function formatCertsTableBody(certsList: Cert[]) {
   const now = new Date();
-  return certsList.reduce(
-    (result, cert) => [...result, ...formatCert(now, cert)],
-    []
-  );
+  return certsList.reduce<string[][]>((result, cert) => result.concat(formatCert(now, cert)), []);
 }
 
-function formatCert(time, cert) {
+function formatCert(time: Date, cert: Cert) {
   return cert.cns.map(
     (cn, idx) =>
       idx === 0
@@ -113,26 +122,26 @@ function formatCert(time, cert) {
   );
 }
 
-function formatCertNonFirstCn(cn, multiple) {
+function formatCertNonFirstCn(cn: string, multiple: boolean): string[] {
   return ['', formatCertCn(cn, multiple), '', '', ''];
 }
 
-function formatCertCn(cn, multiple) {
+function formatCertCn(cn: string, multiple: boolean) {
   return multiple ? `${chalk.gray('-')} ${chalk.bold(cn)}` : chalk.bold(cn);
 }
 
-function formatCertFirstCn(time, cert, cn, multiple) {
+function formatCertFirstCn(time: Date, cert: Cert, cn: string, multiple: boolean): string[] {
   return [
     cert.uid,
     formatCertCn(cn, multiple),
     formatExpirationDate(new Date(cert.expiration)),
     cert.autoRenew ? 'yes' : 'no',
-    chalk.gray(ms(time - new Date(cert.created)))
+    chalk.gray(ms(time.getTime() - new Date(cert.created).getTime()))
   ];
 }
 
-function formatExpirationDate(date) {
-  const diff = date - Date.now();
+function formatExpirationDate(date: Date) {
+  const diff = date.getTime() - Date.now();
   return diff < 0
     ? chalk.gray(`${ms(-diff)} ago`)
     : chalk.gray(`in ${ms(diff)}`);
@@ -143,8 +152,8 @@ function formatExpirationDate(date) {
  * to 'wildcard' since that will allow psl get the root domain
  * properly to make the comparison.
  */
-function sortByCn(certsList) {
-  return certsList.concat().sort((a, b) => {
+function sortByCn(certsList: Cert[]) {
+  return certsList.concat().sort((a: Cert, b: Cert) => {
     const domainA = psl.get(a.cns[0].replace('*', 'wildcard'));
     const domainB = psl.get(b.cns[0].replace('*', 'wildcard'));
     if (!domainA || !domainB) return 0;

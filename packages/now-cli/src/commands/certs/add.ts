@@ -1,12 +1,15 @@
 import chalk from 'chalk';
 
+// @ts-ignore
 import Now from '../../util';
-import Client from '../../util/client.ts';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
+import Client from '../../util/client';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
 import wait from '../../util/output/wait';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
+import { NowContext } from '../../types';
+import { Output } from '../../util/output';
 
 import {
   DomainPermissionDenied,
@@ -14,7 +17,20 @@ import {
 } from '../../util/errors-ts';
 import handleCertError from '../../util/certs/handle-cert-error';
 
-async function add(ctx, opts, args, output) {
+interface Options {
+  '--overwrite'?: boolean;
+  '--debug'?: boolean;
+  '--crt'?: string;
+  '--key'?: string;
+  '--ca'?: string;
+}
+
+async function add(
+  ctx: NowContext,
+  opts: Options,
+  args: string[],
+  output: Output
+): Promise<number> {
   const {
     authConfig: { token },
     config
@@ -77,10 +93,12 @@ async function add(ctx, opts, args, output) {
 
     // Create a custom certificate from the given file paths
     cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName);
+
     if (cert instanceof InvalidCert) {
       output.error(`The provided certificate is not valid and can't be added.`);
       return 1;
     }
+
     if (cert instanceof DomainPermissionDenied) {
       output.error(
         `You don't have permissions over domain ${chalk.underline(
@@ -97,6 +115,7 @@ async function add(ctx, opts, args, output) {
         'now certs issue <cn> <cns>'
       )} instead`
     );
+
     if (args.length < 1) {
       output.error(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
@@ -107,34 +126,43 @@ async function add(ctx, opts, args, output) {
     }
 
     // Create the certificate from the given array of CNs
-    const cns = args.reduce((res, item) => [...res, ...item.split(',')], []);
+    const cns = args.reduce<string[]>((res, item) => res.concat(item.split(',')), []);
     const cancelWait = wait(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
+
     cert = await createCertForCns(now, cns, contextName);
     cancelWait();
-
-    const result = handleCertError(output, cert);
-    if (result === 1) {
-      return result
-    }
-
-    if (cert instanceof DomainPermissionDenied) {
-      output.error(
-        `You don't have permissions over domain ${chalk.underline(
-          cert.meta.domain
-        )} under ${chalk.bold(cert.meta.context)}.`
-      );
-      return 1;
-    }
   }
 
-  // Print success message
-  output.success(
-    `Certificate entry for ${chalk.bold(
-      cert.cns.join(', ')
-    )} created ${addStamp()}`
-  );
+  const result = handleCertError(output, cert);
+
+  if (result === 1) {
+    return result;
+  }
+
+  if (cert instanceof DomainPermissionDenied) {
+    output.error(
+      `You don't have permissions over domain ${chalk.underline(
+        cert.meta.domain
+      )} under ${chalk.bold(cert.meta.context)}.`
+    );
+    return 1;
+  }
+
+  if (cert instanceof Error) {
+    // All cert errors are handled above,
+    // so this is only for typescript
+    throw cert;
+  } else {
+    // Print success message
+    output.success(
+      `Certificate entry for ${chalk.bold(
+        cert.cns.join(', ')
+      )} created ${addStamp()}`
+    );
+  }
+
   return 0;
 }
 
