@@ -7,7 +7,11 @@ export default async function getInferredTargets(
   output: Output,
   config: Config
 ) {
-  output.warn(`The ${cmd('now alias')} command (no arguments) was deprecated in favour of ${cmd('now --prod')}.`);
+  output.warn(
+    `The ${cmd(
+      'now alias'
+    )} command (no arguments) was deprecated in favor of ${cmd('now --prod')}.`
+  );
 
   // This field is deprecated, warn about it
   if (config.aliases) {

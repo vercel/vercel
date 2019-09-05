@@ -38,7 +38,7 @@ export default async function set(
   const {
     authConfig: { token },
     config,
-    localConfig
+    localConfig,
   } = ctx;
 
   const { currentTeam } = config;
@@ -48,14 +48,14 @@ export default async function set(
   const {
     '--debug': debugEnabled,
     '--no-verify': noVerify,
-    '--rules': rulesPath
+    '--rules': rulesPath,
   } = opts;
 
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
   let user = null;
@@ -79,14 +79,14 @@ export default async function set(
     return 1;
   }
 
-  if (!isValidName(args[0])) {
+  if (args.length >= 1 && !isValidName(args[0])) {
     output.error(
       `The provided argument "${args[0]}" is not a valid deployment`
     );
     return 1;
   }
 
-  if (!isValidName(args[1])) {
+  if (args.length >= 2 && !isValidName(args[1])) {
     output.error(`The provided argument "${args[1]}" is not a valid domain`);
     return 1;
   }
