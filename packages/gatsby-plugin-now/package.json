@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-now",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "index.js",
   "license": "MIT",
   "homepage": "https://github.com/zeit/now/tree/canary/packages/gatsby-plugin-now",

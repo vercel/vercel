@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "0.12.8",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/v2/deployments/official-builders/node-js-now-node",
