@@ -170,8 +170,8 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-missing')
     );
 
-    expect(output.index).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output['nested/index']).toBeDefined();
+    expect(output['nested/goodbye']).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -203,8 +203,8 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-present')
     );
 
-    expect(output.index).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output['nested/index']).toBeDefined();
+    expect(output['nested/goodbye']).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
