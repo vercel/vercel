@@ -140,7 +140,7 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
-  console.log(`installing to ${destPath}`);
+  debug(`installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
   const opts = spawnOpts || { env: process.env };
