@@ -72,6 +72,7 @@ export default class Now extends EventEmitter {
       build,
       forceNew = false,
       target = null,
+      deployStamp,
     }
   ) {
     const opts = { output: this._output, hasNowJson };
@@ -152,6 +153,7 @@ export default class Now extends EventEmitter {
         paths,
         requestBody,
         uploadStamp,
+        deployStamp,
         quiet,
       });
     } else {
@@ -192,6 +194,7 @@ export default class Now extends EventEmitter {
         paths,
         requestBody,
         uploadStamp,
+        deployStamp,
         quiet,
         env,
       });

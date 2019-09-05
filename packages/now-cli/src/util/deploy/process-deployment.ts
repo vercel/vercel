@@ -12,6 +12,7 @@ export default async function processDeployment({
   paths,
   requestBody,
   uploadStamp,
+  deployStamp,
   legacy,
   env,
   quiet,
@@ -81,6 +82,12 @@ export default async function processDeployment({
 
       if (event.type === 'created') {
         now._host = event.payload.url;
+
+        if (!quiet) {
+          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+        } else {
+          process.stdout.write(event.payload.url);
+        }
       }
 
       if (event.type === 'build-state-changed') {
@@ -170,12 +177,16 @@ export default async function processDeployment({
         if (!quiet) {
           log(`Synced ${event.payload.size} ${uploadStamp()}`);
         }
-
-        log('Building…');
       }
 
       if (event.type === 'created') {
         now._host = event.payload.url;
+
+        if (!quiet) {
+          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+        } else {
+          process.stdout.write(event.payload.url);
+        }
       }
 
       // Handle error events
