@@ -3,11 +3,10 @@ const path = require('path');
 
 const {
   packAndDeploy,
-  testDeployment
+  testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(5 * 60 * 1000);
-const buildUtilsUrl = '@canary';
 let builderUrl;
 
 beforeAll(async () => {
@@ -23,10 +22,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
-      testDeployment(
-        { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture)
-      )
+      testDeployment({ builderUrl }, path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
   });
 }
