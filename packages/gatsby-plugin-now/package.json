@@ -9,6 +9,10 @@
     "url": "https://github.com/zeit/now.git",
     "directory": "packages/gatsby-plugin-now"
   },
+  "keywords": [
+    "gatsby",
+    "gatsby-plugin"
+  ],
   "scripts": {
     "build": "./build.sh",
     "test-integration-once": "jest --verbose"
