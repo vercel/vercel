@@ -1,45 +1,47 @@
-import { DeploymentFile } from './hashes'
-import { parse as parseUrl } from 'url'
-import { fetch as fetch_ } from 'fetch-h2'
-import { readFile } from 'fs-extra'
-import { join } from 'path'
-import qs from 'querystring'
-import pkg from '../../package.json'
-import { Options } from '../deploy'
+import { DeploymentFile } from './hashes';
+import { parse as parseUrl } from 'url';
+import { fetch as fetch_ } from 'fetch-h2';
+import { readFile } from 'fs-extra';
+import { join } from 'path';
+import qs from 'querystring';
+import pkg from '../../package.json';
+import { Options } from '../deploy';
 
-export const API_FILES = 'https://api.zeit.co/v2/now/files'
-export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments'
-export const API_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v3/now/deployments'
+export const API_FILES = 'https://api.zeit.co/v2/now/files';
+export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
+export const API_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v3/now/deployments';
 export const API_DELETE_DEPLOYMENTS_LEGACY =
-  'https://api.zeit.co/v2/now/deployments'
+  'https://api.zeit.co/v2/now/deployments';
 
 export const EVENTS = new Set([
   // File events
   'hashes-calculated',
+  'file_count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
   'created',
   'ready',
+  'warning',
   'error',
   // Build events
   'build-state-changed'
-])
+]);
 
 export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
   if (!file) {
-    return {}
+    return {};
   }
 
   try {
-    const jsonString = file.data.toString()
+    const jsonString = file.data.toString();
 
-    return JSON.parse(jsonString)
+    return JSON.parse(jsonString);
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error(e)
+    console.error(e);
 
-    return {}
+    return {};
   }
 }
 
@@ -71,7 +73,7 @@ export async function getNowIgnore(
     '__pycache__/',
     'venv/',
     'CVS'
-  ]
+  ];
 
   await Promise.all(
     files.map(
@@ -80,21 +82,21 @@ export async function getNowIgnore(
           const filePath = Array.isArray(path)
             ? file
             : file.includes(path)
-              ? file
-              : join(path, file)
-          const nowIgnore = await readFile(filePath)
+            ? file
+            : join(path, file);
+          const nowIgnore = await readFile(filePath);
 
           nowIgnore
             .toString()
             .split('\n')
             .filter((s: string): boolean => s.length > 0)
-            .forEach((entry: string): number => ignores.push(entry))
+            .forEach((entry: string): number => ignores.push(entry));
         }
       }
     )
-  )
+  );
 
-  return ignores
+  return ignores;
 }
 
 export const fetch = (
@@ -103,22 +105,22 @@ export const fetch = (
   opts: any = {}
 ): Promise<any> => {
   if (opts.teamId) {
-    const parsedUrl = parseUrl(url, true)
-    const query = parsedUrl.query
+    const parsedUrl = parseUrl(url, true);
+    const query = parsedUrl.query;
 
-    query.teamId = opts.teamId
-    url = `${parsedUrl.href}?${qs.encode(query)}`
-    delete opts.teamId
+    query.teamId = opts.teamId;
+    url = `${parsedUrl.href}?${qs.encode(query)}`;
+    delete opts.teamId;
   }
 
-  opts.headers = opts.headers || {}
+  opts.headers = opts.headers || {};
   // @ts-ignore
-  opts.headers.authorization = `Bearer ${token}`
+  opts.headers.authorization = `Bearer ${token}`;
   // @ts-ignore
-  opts.headers['user-agent'] = `now-client-v${pkg.version}`
+  opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
-  return fetch_(url, opts)
-}
+  return fetch_(url, opts);
+};
 
 export interface PreparedFile {
   file: string;
@@ -132,33 +134,33 @@ export const prepareFiles = (
 ): PreparedFile[] => {
   const preparedFiles = [...files.keys()].reduce(
     (acc: PreparedFile[], sha: string): PreparedFile[] => {
-      const next = [...acc]
+      const next = [...acc];
 
-      const file = files.get(sha) as DeploymentFile
+      const file = files.get(sha) as DeploymentFile;
 
       for (const name of file.names) {
-        let fileName
+        let fileName;
 
         if (options.isDirectory) {
           // Directory
-          fileName = options.path ? name.replace(`${options.path}/`, '') : name
+          fileName = options.path ? name.replace(`${options.path}/`, '') : name;
         } else {
           // Array of files or single file
-          const segments = name.split('/')
-          fileName = segments[segments.length - 1]
+          const segments = name.split('/');
+          fileName = segments[segments.length - 1];
         }
 
         next.push({
           file: fileName,
           size: file.data.byteLength || file.data.length,
           sha
-        })
+        });
       }
 
-      return next
+      return next;
     },
     []
-  )
+  );
 
-  return preparedFiles
-}
+  return preparedFiles;
+};

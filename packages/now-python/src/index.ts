@@ -174,10 +174,13 @@ export const build = async ({
     nowHandlerPyContents
   );
 
+  // Use the system-installed version of `python3` when running via `now dev`
+  const runtime = meta.isDev ? 'python3' : 'python3.6';
+
   const lambda = await createLambda({
     files: await glob('**', workPath),
     handler: `${nowHandlerPyFilename}.now_handler`,
-    runtime: 'python3.6',
+    runtime,
     environment: {},
   });
 
