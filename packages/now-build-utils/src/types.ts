@@ -2,7 +2,7 @@ import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
 
 export interface Env {
-  [name: string]: string;
+  [name: string]: string | undefined;
 }
 
 export interface File {
