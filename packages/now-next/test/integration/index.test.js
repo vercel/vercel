@@ -189,9 +189,6 @@ it(
     const contents = await fs.readdir(workPath);
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
-    expect(
-      contents.some(name => name.includes('next.config.original.'))
-    ).toBeTruthy();
   },
   FOUR_MINUTES
 );
