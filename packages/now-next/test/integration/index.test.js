@@ -186,7 +186,7 @@ it(
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
     expect(serverlessError).toBeTruthy();
 
-    const contents = await fs.readdir(workPath);
+    const contents = await fs.readdir(path.join(workPath, 'nested'));
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
   },
@@ -219,7 +219,7 @@ it(
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
     expect(serverlessError).toBeTruthy();
 
-    const contents = await fs.readdir(workPath);
+    const contents = await fs.readdir(path.join(workPath, 'nested'));
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
