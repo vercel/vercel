@@ -38,6 +38,10 @@ export default async function processDeployment({
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
 
+        if (!quiet) {
+          log(`Synced ${event.payload.missing.length} ${uploadStamp()}`);
+        }
+
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
           const fileSize = file.data.byteLength || file.data.length;
 
@@ -71,12 +75,6 @@ export default async function processDeployment({
 
         if (bar) {
           bar.tick(event.payload.file.data.length);
-        }
-      }
-
-      if (event.type === 'all-files-uploaded') {
-        if (!quiet) {
-          log(`Synced ${event.payload.size} ${uploadStamp()}`);
         }
       }
 
@@ -136,6 +134,9 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
+        if (!quiet) {
+          log(`Synced ${event.payload.missing.length} ${uploadStamp()}`);
+        }
 
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
           const fileSize = file.data.byteLength || file.data.length;
@@ -170,12 +171,6 @@ export default async function processDeployment({
 
         if (bar) {
           bar.tick(event.payload.file.data.length);
-        }
-      }
-
-      if (event.type === 'all-files-uploaded') {
-        if (!quiet) {
-          log(`Synced ${event.payload.size} ${uploadStamp()}`);
         }
       }
 
