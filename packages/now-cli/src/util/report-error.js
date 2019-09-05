@@ -22,7 +22,7 @@ export default async (sentry, error, apiUrl, configFiles) => {
     if (user) {
       const spec = {
         email: user.email,
-        id: user.uid
+        id: user.uid,
       };
 
       if (user.username) {
@@ -44,7 +44,7 @@ export default async (sentry, error, apiUrl, configFiles) => {
       scope.setExtra('scopeError', {
         name: scopeError.name,
         message: scopeError.message,
-        stack: scopeError.stack
+        stack: scopeError.stack,
       });
     }
 
@@ -81,7 +81,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
     // Report information about the version of `node` being used
     scope.setExtra('node', {
       execPath: process.execPath,
-      version: process.version
+      version: process.version,
+      platform: process.platform,
     });
 
     sentry.captureException(error);
