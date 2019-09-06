@@ -8,7 +8,7 @@ import { createWriteStream, mkdirp, remove, writeJSON } from 'fs-extra';
 
 import { getDistTag } from '../src/util/get-dist-tag';
 import pkg from '../package.json';
-import { getBundledBuilders } from '../src/util/dev/builder-cache';
+import { getBundledBuilders } from '../src/util/dev/get-bundled-builders';
 
 const dirRoot = join(__dirname, '..');
 

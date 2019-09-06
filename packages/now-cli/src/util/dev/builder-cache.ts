@@ -27,6 +27,7 @@ import { getDistTag } from '../get-dist-tag';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
+import { getBundledBuilders } from './get-bundled-builders';
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
@@ -37,18 +38,6 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
     package: Object.freeze({ name: '@now/static', version: '' }),
   },
 };
-
-export function getBundledBuilders() {
-  return [
-    '@now/go',
-    '@now/next',
-    '@now/node',
-    '@now/ruby',
-    '@now/python',
-    '@now/static-build',
-    '@now/build-utils',
-  ];
-}
 
 const distTag = getDistTag(pkg.version);
 
