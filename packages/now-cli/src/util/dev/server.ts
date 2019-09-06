@@ -414,7 +414,7 @@ export default class DevServer {
         builderWithPkg: { package: pkg },
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
-      if (updatedBuilders.includes(pkg.name)) {
+      if (pkg.name && updatedBuilders.includes(pkg.name)) {
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
