@@ -124,7 +124,7 @@ async function checkConflictingFiles(
       return {
         code: 'conflicting_files',
         message:
-          'It is not possible to use `api/` and `pages/api/` at the same time, please only use one option',
+          'It is not possible to use `api` and `pages/api` at the same time, please only use one option',
       };
     }
   }
@@ -141,8 +141,10 @@ export async function detectBuilders(
 ): Promise<{
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
+  warnings: ErrorResponse[];
 }> {
   const errors: ErrorResponse[] = [];
+  const warnings: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
   let builders = await detectApiBuilders(files);
@@ -153,15 +155,14 @@ export async function detectBuilders(
     const conflictError = await checkConflictingFiles(files, builders);
 
     if (conflictError) {
-      errors.push(conflictError);
-      return { errors, builders: null };
+      warnings.push(conflictError);
     }
   } else {
     if (pkg && builders.length === 0) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push(MISSING_BUILD_SCRIPT_ERROR);
-      return { errors, builders: null };
+      return { errors, warnings, builders: null };
     }
 
     // We allow a `public` directory
@@ -210,5 +211,6 @@ export async function detectBuilders(
   return {
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
+    warnings,
   };
 }
