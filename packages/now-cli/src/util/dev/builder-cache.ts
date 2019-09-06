@@ -38,12 +38,8 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   },
 };
 
-const bundledBuilders = Object.keys(pkg.devDependencies).filter(d =>
-  d.startsWith('@now/')
-);
-
 export function getBundledBuilders() {
-  return ['@now/go', '@now/next', '@now/node'];
+  return ['@now/go', '@now/next', '@now/node', '@now/build-utils'];
 }
 
 const distTag = getDistTag(pkg.version);
