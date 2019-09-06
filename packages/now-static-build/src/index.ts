@@ -125,9 +125,9 @@ function spawnAsync(cmd: string, args: string[], opts: SpawnOptions) {
     }
     if (child.stderr) {
       child.stderr.setEncoding('utf8');
-      child.stderr.on('data', reject);
       child.stderr.pipe(process.stderr);
     }
+    setTimeout(() => child.emit('exit'), 60000);
   });
 }
 
