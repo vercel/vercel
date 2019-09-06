@@ -25,7 +25,7 @@ export const EVENTS = new Set([
   'warning',
   'error',
   // Build events
-  'build-state-changed'
+  'build-state-changed',
 ]);
 
 export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
@@ -72,7 +72,7 @@ export async function getNowIgnore(
     'node_modules',
     '__pycache__/',
     'venv/',
-    'CVS'
+    'CVS',
   ];
 
   await Promise.all(
@@ -128,6 +128,8 @@ export interface PreparedFile {
   size: number;
 }
 
+const isWin = process.platform.includes('win');
+
 export const prepareFiles = (
   files: Map<string, DeploymentFile>,
   options: Options
@@ -143,17 +145,19 @@ export const prepareFiles = (
 
         if (options.isDirectory) {
           // Directory
-          fileName = options.path ? name.replace(`${options.path}/`, '') : name;
+          fileName = options.path
+            ? name.replace(isWin ? `${options.path}\\` : `${options.path}/`, '')
+            : name;
         } else {
           // Array of files or single file
-          const segments = name.split('/');
+          const segments = isWin ? name.split('\\') : name.split('/');
           fileName = segments[segments.length - 1];
         }
 
         next.push({
-          file: fileName,
+          file: fileName.replace(/\\/g, '/'),
           size: file.data.byteLength || file.data.length,
-          sha
+          sha,
         });
       }
 
