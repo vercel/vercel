@@ -73,8 +73,8 @@ const main = async ctx => {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd'
-    }
+      debug: 'd',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -88,7 +88,10 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config: { currentTeam } } = ctx;
+  const {
+    authConfig: { token },
+    config: { currentTeam },
+  } = ctx;
   const output = createOutput({ debug });
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
@@ -105,7 +108,7 @@ const main = async ctx => {
   }
 
   try {
-    await run({ token, contextName, currentTeam });
+    await run({ output, token, contextName, currentTeam });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -121,7 +124,7 @@ export default async ctx => {
   }
 };
 
-async function run({ token, contextName, currentTeam }) {
+async function run({ output, token, contextName, currentTeam }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -153,13 +156,13 @@ async function run({ token, contextName, currentTeam }) {
           list.map(secret => [
             '',
             chalk.bold(secret.name),
-            chalk.gray(`${ms(cur - new Date(secret.created))} ago`)
+            chalk.gray(`${ms(cur - new Date(secret.created))} ago`),
           ])
         ),
         {
           align: ['l', 'l', 'l'],
           hsep: ' '.repeat(2),
-          stringLength: strlen
+          stringLength: strlen,
         }
       );
 
@@ -250,6 +253,10 @@ async function run({ token, contextName, currentTeam }) {
     await secrets.add(name, value);
     const elapsed = ms(new Date() - start);
 
+    if (name !== name.toLowerCase()) {
+      output.warn(`Your secret name was converted to lower-case`);
+    }
+
     console.log(
       `${chalk.cyan('> Success!')} Secret ${chalk.bold(
         name.toLowerCase()
@@ -275,7 +282,7 @@ function readConfirmation(secret) {
     const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
     const tbl = table([[chalk.bold(secret.name), time]], {
       align: ['r', 'l'],
-      hsep: ' '.repeat(6)
+      hsep: ' '.repeat(6),
     });
 
     process.stdout.write(
