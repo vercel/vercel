@@ -43,7 +43,7 @@ async function createBuildersTarball() {
   await pipe(
     packer,
     createGzip(),
-    createWriteStream(buildersTarballPath, { flags: 'w' })
+    createWriteStream(buildersTarballPath)
   );
 }
 
@@ -99,13 +99,12 @@ async function main() {
   console.log('Finished building `now-cli`');
 }
 
-process.on('unhandledRejection', (err: any) => {
-  console.error('Unhandled Rejection:');
-  console.error(err);
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
-process.on('uncaughtException', (err: any) => {
+process.on('uncaughtException', err => {
   console.error('Uncaught Exception:');
   console.error(err);
   process.exit(1);
