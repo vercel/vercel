@@ -1,4 +1,5 @@
 import path from 'path';
+import { SpawnOptions } from 'child_process';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
@@ -113,6 +114,23 @@ async function getFrameworkRoutes(
   return routes;
 }
 
+function spawnAsync(cmd: string, args: string[], opts: SpawnOptions) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, opts);
+    child.on('close', resolve);
+    child.on('error', reject);
+    if (child.stdout) {
+      child.stdout.setEncoding('utf8');
+      child.stdout.pipe(process.stdout);
+    }
+    if (child.stderr) {
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', reject);
+      child.stderr.pipe(process.stderr);
+    }
+  });
+}
+
 export async function build({
   files,
   entrypoint,
@@ -147,19 +165,11 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
-
+      console.log('gemfilePath is ' + gemfilePath);
       if (existsSync(gemfilePath) && !meta.isDev) {
-        debug('Detected Gemfile, executing bundle install...');
-        const child = spawn('bundle', ['install']);
-        child.on('exit', () => debug('bundle install complete'));
-        if (child.stdout) {
-          child.stdout.setEncoding('utf8');
-          child.stdout.pipe(process.stdout);
-        }
-        if (child.stderr) {
-          child.stderr.setEncoding('utf8');
-          child.stderr.pipe(process.stderr);
-        }
+        console.log('Detected Gemfile, executing bundle install...');
+        await spawnAsync('bundle', ['install'], { cwd: workPath });
+        console.log('bundle install complete');
       }
 
       // `public` is the default for zero config
