@@ -1,6 +1,7 @@
 import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
+import { Route } from '@now/build-utils';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
@@ -18,7 +19,7 @@ const isDir = async (file: string): Promise<boolean> =>
 // Instead, you need to look for `preact-cli`
 // when optimizing Preact CLI projects.
 
-export default [
+export const frameworks: Framework[] = [
   {
     name: 'Gatsby.js',
     dependency: 'gatsby',
@@ -285,3 +286,11 @@ export default [
     ]
   }
 ];
+
+export interface Framework {
+  name: string;
+  dependency?: string;
+  getOutputDirName: (dirPrefix: string) => Promise<string>;
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
+  minNodeRange?: string;
+}
