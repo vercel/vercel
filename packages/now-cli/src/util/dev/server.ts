@@ -16,10 +16,11 @@ import { basename, dirname, extname, join } from 'path';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
+  Builder,
   FileFsRef,
   PackageJson,
   detectBuilders,
-  detectRoutes
+  detectRoutes,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -33,7 +34,7 @@ import { version as cliVersion } from '../../../package.json';
 import {
   createIgnore,
   staticFiles as getFiles,
-  getAllProjectFiles
+  getAllProjectFiles,
 } from '../get-files';
 import { validateNowConfigBuilds, validateNowConfigRoutes } from './validate';
 
@@ -46,7 +47,7 @@ import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
   installBuilders,
-  updateBuilders
+  updateBuilders,
 } from './builder-cache';
 
 // HTML templates
@@ -60,7 +61,6 @@ import {
   EnvConfig,
   NowConfig,
   DevServerOptions,
-  BuildConfig,
   BuildMatch,
   BuildResult,
   BuilderInputs,
@@ -70,7 +70,7 @@ import {
   InvokeResult,
   ListenSpec,
   RouteConfig,
-  RouteResult
+  RouteResult,
 } from './types';
 
 interface FSEvent {
@@ -87,7 +87,7 @@ interface NodeRequire {
 
 declare const __non_webpack_require__: NodeRequire;
 
-function sortBuilders(buildA: BuildConfig, buildB: BuildConfig) {
+function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
     return 1;
   }
@@ -255,9 +255,7 @@ export default class DevServer {
           });
         } else {
           this.output.debug(
-            `Not rebuilding because \`shouldServe()\` returned \`false\` for "${
-              match.use
-            }" request path "${requestPath}"`
+            `Not rebuilding because \`shouldServe()\` returned \`false\` for "${match.use}" request path "${requestPath}"`
           );
         }
       }
@@ -376,7 +374,7 @@ export default class DevServer {
     // Sort build matches to make sure `@now/static-build` is always last
     this.buildMatches = new Map(
       [...this.buildMatches.entries()].sort((matchA, matchB) => {
-        return sortBuilders(matchA[1] as BuildConfig, matchB[1] as BuildConfig);
+        return sortBuilders(matchA[1] as Builder, matchB[1] as Builder);
       })
     );
   }
@@ -413,7 +411,7 @@ export default class DevServer {
     for (const buildMatch of this.buildMatches.values()) {
       const {
         src,
-        builderWithPkg: { package: pkg }
+        builderWithPkg: { package: pkg },
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
       if (updatedBuilders.includes(pkg.name)) {
@@ -517,7 +515,7 @@ export default class DevServer {
       );
 
       const { builders, errors } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest'
+        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
       });
 
       if (errors) {
@@ -652,7 +650,7 @@ export default class DevServer {
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfigBuild.env)
+      this.getLocalEnv('.env.build', nowConfigBuild.env),
     ]);
     Object.assign(process.env, buildEnv);
     this.env = env;
@@ -670,8 +668,8 @@ export default class DevServer {
 
     const builders: Set<string> = new Set(
       (nowConfig.builds || [])
-        .filter((b: BuildConfig) => b.use)
-        .map((b: BuildConfig) => b.use as string)
+        .filter((b: Builder) => b.use)
+        .map((b: Builder) => b.use as string)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
@@ -716,7 +714,7 @@ export default class DevServer {
       ignoreInitial: true,
       useFsEvents: false,
       usePolling: false,
-      persistent: true
+      persistent: true,
     });
     this.watcher.on('add', (path: string) => {
       this.enqueueFsEvent('add', path);
@@ -856,8 +854,8 @@ export default class DevServer {
       const json = JSON.stringify({
         error: {
           code: statusCode,
-          message: errorMessage.title
-        }
+          message: errorMessage.title,
+        },
       });
       body = `${json}\n`;
     } else if (accept.includes('html')) {
@@ -870,7 +868,7 @@ export default class DevServer {
           http_status_code: statusCode,
           http_status_description,
           error_code,
-          now_id: nowRequestId
+          now_id: nowRequestId,
         });
       } else if (statusCode === 502) {
         view = errorTemplate502({
@@ -878,19 +876,19 @@ export default class DevServer {
           http_status_code: statusCode,
           http_status_description,
           error_code,
-          now_id: nowRequestId
+          now_id: nowRequestId,
         });
       } else {
         view = errorTemplate({
           http_status_code: statusCode,
           http_status_description,
-          now_id: nowRequestId
+          now_id: nowRequestId,
         });
       }
       body = errorTemplateBase({
         http_status_code: statusCode,
         http_status_description,
-        view
+        view,
       });
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
@@ -917,7 +915,7 @@ export default class DevServer {
       res.setHeader('content-type', 'application/json');
       const json = JSON.stringify({
         redirect: location,
-        status: String(statusCode)
+        status: String(statusCode),
       });
       body = `${json}\n`;
     } else if (accept.includes('html')) {
@@ -949,7 +947,7 @@ export default class DevServer {
       server: 'now',
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
-      'x-now-cache': 'MISS'
+      'x-now-cache': 'MISS',
     };
     for (const [name, value] of Object.entries(allHeaders)) {
       res.setHeader(name, value);
@@ -976,7 +974,7 @@ export default class DevServer {
       'x-now-deployment-url': host,
       'x-now-id': nowRequestId,
       'x-now-log-id': nowRequestId.split('-')[2],
-      'x-zeit-co-forwarded-for': ip
+      'x-zeit-co-forwarded-for': ip,
     };
   }
 
@@ -1183,9 +1181,7 @@ export default class DevServer {
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
       this.output.debug(
-        `Checking build result's ${
-          buildResult.routes.length
-        } \`routes\` to match ${newUrl}`
+        `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
       const matchedRoute = await devRouter(
         newUrl,
@@ -1238,17 +1234,17 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: getMimeType(assetKey)
-                }
-              ]
-            }
-          ]
+                  value: getMimeType(assetKey),
+                },
+              ],
+            },
+          ],
         });
 
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': getMimeType(assetKey)
+          'Content-Type': getMimeType(assetKey),
         };
         this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
@@ -1273,7 +1269,7 @@ export default class DevServer {
         Object.assign(parsed.query, uri_args);
         const path = url.format({
           pathname: parsed.pathname,
-          query: parsed.query
+          query: parsed.query,
         });
 
         const body = await rawBody(req);
@@ -1283,7 +1279,7 @@ export default class DevServer {
           path,
           headers: this.getNowProxyHeaders(req, nowRequestId),
           encoding: 'base64',
-          body: body.toString('base64')
+          body: body.toString('base64'),
         };
 
         this.output.debug(`Invoking lambda: "${assetKey}" with ${path}`);
@@ -1292,7 +1288,7 @@ export default class DevServer {
         try {
           result = await asset.fn<InvokeResult>({
             Action: 'Invoke',
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
           });
         } catch (err) {
           console.error(err);
@@ -1379,7 +1375,7 @@ export default class DevServer {
           relative: href,
           ext,
           title: href,
-          base
+          base,
         };
       });
 
@@ -1391,13 +1387,13 @@ export default class DevServer {
     const paths = [
       {
         name: directory,
-        url: requestPath
-      }
+        url: requestPath,
+      },
     ];
     const directoryHtml = directoryTemplate({
       files,
       paths,
-      directory
+      directory,
     });
     this.setResponseHeaders(res, nowRequestId);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1459,7 +1455,7 @@ function proxyPass(
     ws: true,
     xfwd: true,
     ignorePath: true,
-    target: dest
+    target: dest,
   });
 
   proxy.on('error', (error: NodeJS.ErrnoException) => {
@@ -1490,7 +1486,7 @@ function serveStaticFile(
     public: cwd,
     cleanUrls: false,
     etag: true,
-    ...opts
+    ...opts,
   });
 }
 
@@ -1546,7 +1542,7 @@ async function shouldServe(
   const {
     src: entrypoint,
     config,
-    builderWithPkg: { builder }
+    builderWithPkg: { builder },
   } = match;
   if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
@@ -1554,7 +1550,7 @@ async function shouldServe(
       files,
       config,
       requestPath,
-      workPath: devServer.cwd
+      workPath: devServer.cwd,
     });
     if (shouldServe) {
       return true;

@@ -5,7 +5,7 @@ import {
   writeFile,
   statSync,
   chmodSync,
-  createReadStream
+  createReadStream,
 } from 'fs-extra';
 import pipe from 'promisepipe';
 import { join } from 'path';
@@ -63,7 +63,7 @@ async function installYarn(output: Output): Promise<string> {
   output.debug(`Downloading ${YARN_URL}`);
   const response = await fetch(YARN_URL, {
     compress: false,
-    redirect: 'follow'
+    redirect: 'follow',
   });
 
   if (response.status !== 200) {
@@ -90,7 +90,7 @@ async function installYarn(output: Output): Promise<string> {
         '@echo off',
         '@SETLOCAL',
         '@SET PATHEXT=%PATHEXT:;.JS;=;%',
-        'node "%~dp0\\yarn" %*'
+        'node "%~dp0\\yarn" %*',
       ].join('\r\n')
     );
   }
