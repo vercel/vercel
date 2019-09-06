@@ -165,11 +165,10 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
-      console.log('gemfilePath is ' + gemfilePath);
+
       if (existsSync(gemfilePath) && !meta.isDev) {
-        console.log('Detected Gemfile, executing bundle install...');
+        debug('Detected Gemfile, executing bundle install...');
         await spawnAsync('bundle', ['install'], { cwd: workPath });
-        console.log('bundle install complete');
       }
 
       // `public` is the default for zero config
