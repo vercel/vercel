@@ -494,10 +494,13 @@ it('Test `detectBuilders`', async () => {
     };
     const files = ['api/user.js', 'pages/api/user.js'];
 
-    const { errors, builders } = await detectBuilders(files, pkg);
-    expect(errors).toBeDefined();
-    expect(errors[0].code).toBe('conflicting_files');
-    expect(builders).toBe(null);
+    const { warnings, errors, builders } = await detectBuilders(files, pkg);
+    expect(errors).toBe(null);
+    expect(warnings[0].code).toBe('conflicting_files');
+    expect(builders).toBeDefined();
+    expect(builders.length).toBe(2);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[1].use).toBe('@now/next');
   }
 });
 

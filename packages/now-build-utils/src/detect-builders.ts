@@ -124,7 +124,7 @@ async function checkConflictingFiles(
       return {
         code: 'conflicting_files',
         message:
-          'It is not possible to use `api/` and `pages/api/` at the same time, please only use one option',
+          'It is not possible to use `api` and `pages/api` at the same time, please only use one option',
       };
     }
   }
