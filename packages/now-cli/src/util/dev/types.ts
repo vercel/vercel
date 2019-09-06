@@ -1,7 +1,13 @@
 import http from 'http';
 import { ChildProcess } from 'child_process';
 import { Lambda as FunLambda } from '@zeit/fun';
-import { FileBlob, FileFsRef, Lambda } from '@now/build-utils';
+import {
+  Builder as BuildConfig,
+  FileBlob,
+  FileFsRef,
+  Lambda,
+  PackageJson,
+} from '@now/build-utils';
 import { Output } from '../output';
 
 export interface DevServerOptions {
@@ -11,12 +17,6 @@ export interface DevServerOptions {
 
 export interface EnvConfig {
   [name: string]: string | undefined;
-}
-
-export interface BuildConfig {
-  src: string;
-  use?: string;
-  config?: object;
 }
 
 export interface BuildMatch extends BuildConfig {
@@ -129,18 +129,10 @@ export interface ShouldServeParams {
   workPath: string;
 }
 
-export interface Package {
-  name: string;
-  version: string;
-  scripts?: { [key: string]: string };
-  dependencies?: { [name: string]: string };
-  devDependencies?: { [name: string]: string };
-}
-
 export interface BuilderWithPackage {
   runInProcess?: boolean;
   builder: Readonly<Builder>;
-  package: Readonly<Package>;
+  package: Readonly<PackageJson>;
 }
 
 export interface HttpHeadersConfig {

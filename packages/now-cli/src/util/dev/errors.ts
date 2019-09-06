@@ -12,13 +12,13 @@ export const httpStatusDescriptionMap = new Map([
   [502, 'BAD_GATEWAY'],
   [503, 'SERVICE_UNAVAILABLE'],
   [504, 'GATEWAY_TIMEOUT'],
-  [508, 'INFINITE_LOOP']
+  [508, 'INFINITE_LOOP'],
 ]);
 
 export const errorMessageMap = new Map([
   [400, 'Bad request'],
   [402, 'Payment required'],
-  [403, 'You don\'t have the required permissions'],
+  [403, "You don't have the required permissions"],
   [404, 'The page could not be found'],
   [405, 'Method not allowed'],
   [410, 'The deployment has been removed'],
@@ -28,7 +28,7 @@ export const errorMessageMap = new Map([
   [501, 'Not implemented'],
   [503, 'The deployment is currently unavailable'],
   [504, 'An error occurred with your deployment'],
-  [508, 'Infinite loop detected']
+  [508, 'Infinite loop detected'],
 ]);
 
 interface ErrorMessage {
@@ -40,20 +40,20 @@ interface ErrorMessage {
 const appError = {
   title: 'An error occurred with this application.',
   subtitle: 'This is an error with the application itself, not the platform.',
-  app_error: true
+  app_error: true,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infrastructureError = {
   title: 'An internal error occurred with ZEIT Now.',
   subtitle: 'This is an error with the platform itself, not the application.',
-  app_error: false
+  app_error: false,
 };
 
 const pageNotFoundError = {
   title: 'The page could not be found.',
   subtitle: 'The page could not be found in the application.',
-  app_error: true
+  app_error: true,
 };
 
 export function generateErrorMessage(
@@ -68,7 +68,7 @@ export function generateErrorMessage(
   }
   return {
     title: errorMessageMap.get(statusCode) || 'Error occurred',
-    app_error: false
+    app_error: false,
   };
 }
 

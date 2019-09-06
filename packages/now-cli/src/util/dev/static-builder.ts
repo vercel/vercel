@@ -5,7 +5,7 @@ export const version = 2;
 
 export function build({ files, entrypoint }: BuilderParams): BuildResult {
   const output = {
-    [entrypoint]: files[entrypoint]
+    [entrypoint]: files[entrypoint],
   };
   const watch = [entrypoint];
 
@@ -15,7 +15,7 @@ export function build({ files, entrypoint }: BuilderParams): BuildResult {
 export function shouldServe({
   entrypoint,
   files,
-  requestPath
+  requestPath,
 }: ShouldServeParams) {
   if (isIndex(entrypoint)) {
     const indexPath = join(requestPath, basename(entrypoint));

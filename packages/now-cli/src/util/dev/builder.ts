@@ -5,7 +5,7 @@ import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
@@ -23,12 +23,11 @@ import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
   EnvConfig,
   NowConfig,
-  BuildConfig,
   BuildMatch,
   BuildResult,
   BuilderInputs,
   BuilderOutput,
-  BuilderOutputs
+  BuilderOutputs,
 } from './types';
 
 interface BuildMessage {
@@ -69,7 +68,7 @@ async function createBuildProcess(
   }
   const [execPath, modulePath] = await Promise.all([
     nodeBinPromise,
-    builderModulePathPromise
+    builderModulePathPromise,
   ]);
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
   if (yarnPath) {
@@ -81,11 +80,11 @@ async function createBuildProcess(
       ...process.env,
       PATH,
       ...buildEnv,
-      NOW_REGION: 'dev1'
+      NOW_REGION: 'dev1',
     },
     execPath,
     execArgv: [],
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   match.buildProcess = buildProcess;
 
@@ -122,7 +121,7 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { runInProcess, builder, package: pkg }
+    builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
   const { src: entrypoint } = match;
   const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
@@ -165,8 +164,8 @@ export async function executeBuild(
       filesChanged,
       filesRemoved,
       env,
-      buildEnv
-    }
+      buildEnv,
+    },
   };
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
@@ -203,7 +202,7 @@ export async function executeBuild(
       buildProcess.send({
         type: 'build',
         builderName: pkg.name,
-        buildParams
+        buildParams,
       });
 
       buildResultOrOutputs = await new Promise((resolve, reject) => {
@@ -260,7 +259,7 @@ export async function executeBuild(
     result = {
       output: buildResultOrOutputs as BuilderOutputs,
       routes: [],
-      watch: []
+      watch: [],
     };
   } else {
     result = buildResultOrOutputs as BuildResult;
@@ -346,9 +345,9 @@ export async function executeBuild(
               ...nowConfig.env,
               ...asset.environment,
               ...env,
-              NOW_REGION: 'dev1'
-            }
-          }
+              NOW_REGION: 'dev1',
+            },
+          },
         });
       }
 
@@ -382,7 +381,7 @@ export async function getBuildMatches(
     return matches;
   }
 
-  const noMatches: BuildConfig[] = [];
+  const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
 
   for (const buildConfig of builds) {
@@ -420,7 +419,7 @@ export async function getBuildMatches(
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
-        buildTimestamp: 0
+        buildTimestamp: 0,
       });
     }
   }

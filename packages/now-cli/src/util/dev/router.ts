@@ -98,7 +98,7 @@ export default async function(
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
-            matched_route_idx: idx
+            matched_route_idx: idx,
           };
           break;
         } else {
@@ -114,7 +114,7 @@ export default async function(
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
-            matched_route_idx: idx
+            matched_route_idx: idx,
           };
           break;
         }
@@ -127,7 +127,7 @@ export default async function(
       found: false,
       dest: reqPathname,
       uri_args: query,
-      headers: combinedHeaders
+      headers: combinedHeaders,
     };
   }
 
