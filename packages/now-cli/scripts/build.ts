@@ -8,16 +8,13 @@ import { createWriteStream, mkdirp, remove, writeJSON } from 'fs-extra';
 
 import { getDistTag } from '../src/util/get-dist-tag';
 import pkg from '../package.json';
+import { getBundledBuilders } from '../src/util/dev/builder-cache';
 
 const dirRoot = join(__dirname, '..');
 
-const bundledBuilders = Object.keys(pkg.devDependencies).filter(d =>
-  d.startsWith('@now/')
-);
-
 async function createBuildersTarball() {
   const distTag = getDistTag(pkg.version);
-  const builders = Array.from(bundledBuilders).map(b => `${b}@${distTag}`);
+  const builders = Array.from(getBundledBuilders()).map(b => `${b}@${distTag}`);
   console.log(`Creating builders tarball with: ${builders.join(', ')}`);
 
   const buildersDir = join(dirRoot, '.builders');
@@ -39,7 +36,7 @@ async function createBuildersTarball() {
   const yarn = join(dirRoot, '../../node_modules/yarn/bin/yarn.js');
   await execa(process.execPath, [yarn, 'add', '--no-lockfile', ...builders], {
     cwd: buildersDir,
-    stdio: 'inherit'
+    stdio: 'inherit',
   });
 
   const packer = tar.pack(buildersDir);
@@ -66,7 +63,7 @@ async function main() {
   // Compile the `doT.js` template files for `now dev`
   console.log();
   await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-    stdio: 'inherit'
+    stdio: 'inherit',
   });
 
   // Do the initial `ncc` build
@@ -92,7 +89,10 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  const runtimes = join(dirRoot, '../../node_modules/@zeit/fun/dist/src/runtimes');
+  const runtimes = join(
+    dirRoot,
+    '../../node_modules/@zeit/fun/dist/src/runtimes'
+  );
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
