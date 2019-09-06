@@ -43,7 +43,7 @@ async function createBuildersTarball() {
   await pipe(
     packer,
     createGzip(),
-    createWriteStream(buildersTarballPath)
+    createWriteStream(buildersTarballPath, { flags: 'w' })
   );
 }
 
