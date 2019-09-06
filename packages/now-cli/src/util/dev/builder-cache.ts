@@ -39,7 +39,13 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
 };
 
 export function getBundledBuilders() {
-  return ['@now/go', '@now/next', '@now/node', '@now/build-utils'];
+  return [
+    '@now/go',
+    '@now/next',
+    '@now/node',
+    '@now/static-build',
+    '@now/build-utils',
+  ];
 }
 
 const distTag = getDistTag(pkg.version);
